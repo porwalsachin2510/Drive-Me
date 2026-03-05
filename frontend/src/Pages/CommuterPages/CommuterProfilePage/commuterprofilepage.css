@@ -1,0 +1,84 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8f9fa;
+  color: #1a1a1a;
+}
+
+.commuter-profile-page-container {
+  display: flex;
+  position: relative;
+  width: 100%;
+  padding: 0 30px;
+  min-height: 100vh;
+  margin-top: 80px;
+  overflow-x: hidden;
+}
+
+.commuter-profile-page-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 20px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.commuter-profile-page-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Desktop below 1400px */
+@media (max-width: 1399px) {
+  .commuter-profile-page-main {
+    margin-left: 16px;
+  }
+
+  .commuter-profile-page-content {
+    padding: 24px;
+  }
+}
+
+/* Tablet (768px to 1199px) */
+@media (max-width: 1199px) {
+  .commuter-profile-page-container {
+    flex-direction: column;
+  }
+
+  .commuter-profile-page-main {
+    margin-left: 0;
+  }
+
+  .commuter-profile-page-content {
+    padding: 20px;
+  }
+}
+
+/* Mobile (below 768px) */
+@media (max-width: 767px) {
+  .commuter-profile-page-container {
+    flex-direction: column;
+  }
+
+  .commuter-profile-page-main {
+    margin-left: 0;
+  }
+
+  .commuter-profile-page-content {
+    padding: 15px;
+  }
+}

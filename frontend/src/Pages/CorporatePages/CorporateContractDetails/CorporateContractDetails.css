@@ -1,0 +1,609 @@
+.corporate-contract-details-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.corporate-contract-back-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.corporate-contract-back-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.corporate-contract-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.corporate-contract-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+}
+
+.corporate-contract-status {
+  padding: 8px 16px;
+  border-radius: 20px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.corporate-contract-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.corporate-contract-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.corporate-contract-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 20px 0;
+}
+
+.corporate-contract-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.corporate-contract-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.corporate-contract-info-item .label {
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.corporate-contract-info-item .value {
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+}
+
+.corporate-contract-vehicles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.corporate-contract-vehicle-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  border-radius: 12px;
+  color: white;
+}
+
+.corporate-contract-vehicle-card .corporate-contract-vehicle-name {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.corporate-contract-vehicle-card .corporate-contract-vehicle-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.corporate-contract-document {
+  text-align: center;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.corporate-contract-document a {
+  font-size: 18px;
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.corporate-contract-document a:hover {
+  text-decoration: underline;
+}
+
+.corporate-contract-document .uploaded-info {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+.corporate-contract-financials {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.corporate-contract-financials .financial-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.corporate-contract-financials .financial-item .label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 600;
+}
+
+.corporate-contract-financials .financial-item .value {
+  font-size: 18px;
+  color: #333;
+  font-weight: 700;
+}
+
+.corporate-contract-signatures {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.corporate-contract-signatures .signature-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.corporate-contract-signatures .signature-status .label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 600;
+}
+
+.corporate-contract-signatures .signature-status .status {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.corporate-contract-signatures .signature-status .status.signed {
+  background: #4caf50;
+  color: white;
+}
+
+.corporate-contract-signatures .signature-status .status.pending {
+  background: #ffa500;
+  color: white;
+}
+
+.corporate-contract-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.corporate-contract-btn-primary,
+.corporate-contract-btn-success,
+.corporate-contract-btn-secondary {
+  padding: 12px 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.corporate-contract-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.corporate-contract-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.corporate-contract-btn-success {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+}
+
+.corporate-contract-btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4);
+}
+
+.corporate-contract-btn-primary:disabled,
+.corporate-contract-btn-success:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.corporate-contract-btn-secondary {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.corporate-contract-btn-secondary:hover {
+  background: #d0d0d0;
+}
+
+.corporate-contract-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.corporate-contract-modal {
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.corporate-contract-modal h2 {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.corporate-contract-modal p {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.corporate-contract-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-bottom: 20px;
+  transition: border-color 0.3s ease;
+}
+
+.corporate-contract-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.corporate-contract-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.corporate-contract-details-loading,
+.corporate-contract-details-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+}
+
+.corporate-contract-details-error .error-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.corporate-contract-details-error h3 {
+  font-size: 24px;
+  color: #333;
+  margin: 0 0 12px 0;
+}
+
+.corporate-contract-details-error p {
+  color: #666;
+  margin: 0 0 24px 0;
+}
+
+.corporate-contract-details-error button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.corporate-contract-details-error button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.payment-methods-section {
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  border: 2px solid #667eea;
+}
+
+.payment-methods-subtitle {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.accepted-payment-methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.payment-method-badge {
+  display: inline-flex;              /* IMPORTANT */
+  align-items: center;               /* vertical center */
+  justify-content: center;
+  gap: 6px;
+
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #797979;
+  background: #fff;
+
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;                    /* 🔥 MAIN FIX */
+  white-space: nowrap;
+}
+
+
+.payment-method-badge:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.method-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;                   /* reduce size */
+  line-height: 1;                    /* 🔥 icon extra height remove */
+}
+
+.method-name {
+  display: inline-flex;
+  align-items: center;
+
+  font-size: 13px;
+  line-height: 1;                    /* 🔥 text height match */
+}
+
+
+.payment-status.status-completed {
+  background: #4caf50;
+  color: white;
+}
+
+.payment-status.status-pending {
+  background: #ffa500;
+  color: white;
+}
+
+.payment-status.status-failed {
+  background: #f44336;
+  color: white;
+}
+
+/* Adding waiting section styles for contract document pending state */
+.corporate-contract-waiting-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 48px 32px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+  margin: 20px 0;
+}
+
+.waiting-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.corporate-contract-waiting-section h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: white;
+}
+
+.corporate-contract-waiting-section p {
+  font-size: 16px;
+  margin: 0 0 12px 0;
+  opacity: 0.95;
+}
+
+.waiting-details {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 32px auto;
+  max-width: 600px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.waiting-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.waiting-info-item:last-child {
+  border-bottom: none;
+}
+
+.waiting-info-item .label {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.waiting-info-item .value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.waiting-actions {
+  margin-top: 32px;
+}
+
+.waiting-actions .btn-secondary {
+  background: white;
+  color: #667eea;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.waiting-actions .btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+}
+
+/* Add styles for the new info button */
+.corporate-contract-btn-info {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  color: white;
+  padding: 12px 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.corporate-contract-btn-info:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+.corporate-contract-btn-info:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 768px) {
+  .corporate-contract-details-container {
+    padding: 12px;
+  }
+
+  .corporate-contract-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .corporate-contract-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .corporate-contract-vehicles-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .corporate-contract-actions {
+    flex-direction: column;
+  }
+
+  .corporate-contract-modal {
+    width: 95%;
+    padding: 20px;
+  }
+
+  .accepted-payment-methods {
+  grid-template-columns: 1fr;
+}
+
+.corporate-contract-payment-info {
+  grid-template-columns: 1fr;
+}
+
+.corporate-contract-waiting-section {
+    padding: 32px 20px;
+  }
+
+  .waiting-icon {
+    font-size: 48px;
+  }
+
+  .corporate-contract-waiting-section h2 {
+    font-size: 22px;
+  }
+
+  .waiting-details {
+    padding: 16px;
+  }
+}

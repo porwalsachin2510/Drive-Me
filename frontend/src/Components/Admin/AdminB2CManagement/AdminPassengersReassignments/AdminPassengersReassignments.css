@@ -1,0 +1,306 @@
+/* ============ PASSENGERS & BOOKINGS ============ */
+.ad-dash-passenger-reassignments {
+  width: 100%;
+}
+
+/* Header */
+.ad-dash-pr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.ad-dash-pr-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.ad-dash-pr-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Filters */
+.ad-dash-pr-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.ad-dash-pr-filters select {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+  min-width: 140px;
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+  line-height: 1.5;
+}
+
+.ad-dash-pr-filters select:focus {
+  border-color: #00a699;
+  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1);
+}
+
+.ad-dash-pr-filters input[type="text"] {
+  flex: 1;
+  min-width: 240px;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background-color: #ffffff;
+  transition: all 0.2s;
+  outline: none;
+  line-height: 1.5;
+}
+
+.ad-dash-pr-filters input[type="text"]:focus {
+  border-color: #00a699;
+  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1);
+}
+
+.ad-dash-pr-filters input[type="text"]::placeholder {
+  color: #9ca3af;
+}
+
+/* Table Container */
+.ad-dash-pr-table {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.ad-dash-pr-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ad-dash-pr-table thead {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ad-dash-pr-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: #f8fafc;
+}
+
+.ad-dash-pr-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.15s;
+}
+
+.ad-dash-pr-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.ad-dash-pr-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.ad-dash-pr-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #374151;
+  vertical-align: middle;
+  background-color: transparent;
+}
+
+/* Passenger Info */
+.ad-dash-passenger-reassignments .passenger-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ad-dash-passenger-reassignments .passenger-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.ad-dash-passenger-reassignments .passenger-email {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Route Info */
+.ad-dash-passenger-reassignments .route-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ad-dash-passenger-reassignments .route-name {
+  font-weight: 500;
+  color: #1e293b;
+  font-size: 13px;
+}
+
+.ad-dash-passenger-reassignments .provider-name {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Provider Text */
+.ad-dash-passenger-reassignments .provider-text {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* Amount */
+.ad-dash-passenger-reassignments .amount-text {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Payment Badge */
+.ad-dash-passenger-reassignments .payment-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+/* Status Badge */
+.ad-dash-passenger-reassignments .status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Date Info */
+.ad-dash-passenger-reassignments .date-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ad-dash-passenger-reassignments .request-date {
+  font-size: 13px;
+  color: #374151;
+}
+
+/* Action Buttons */
+.ad-dash-passenger-reassignments .action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ad-dash-passenger-reassignments .view-btn {
+  padding: 6px 14px;
+  border: 1px solid #3b82f6;
+  background-color: #eff6ff;
+  color: #2563eb;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.ad-dash-passenger-reassignments .view-btn:hover {
+  background-color: #dbeafe;
+}
+
+.ad-dash-passenger-reassignments .approve-btn {
+  padding: 6px 14px;
+  border: none;
+  background-color: #10b981;
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.ad-dash-passenger-reassignments .approve-btn:hover {
+  background-color: #059669;
+}
+
+.ad-dash-passenger-reassignments .reject-btn {
+  padding: 6px 14px;
+  border: none;
+  background-color: #ef4444;
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.ad-dash-passenger-reassignments .reject-btn:hover {
+  background-color: #dc2626;
+}
+
+/* No Reassignments */
+.ad-dash-passenger-reassignments .no-reassignments {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* Loading */
+.ad-dash-passenger-reassignments .loading {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1024px) {
+  .ad-dash-pr-filters {
+    flex-direction: column;
+  }
+
+  .ad-dash-pr-filters input[type="text"] {
+    min-width: unset;
+  }
+}
+
+@media (max-width: 768px) {
+  .ad-dash-pr-table {
+    overflow-x: auto;
+  }
+
+  .ad-dash-pr-table table {
+    min-width: 800px;
+  }
+}

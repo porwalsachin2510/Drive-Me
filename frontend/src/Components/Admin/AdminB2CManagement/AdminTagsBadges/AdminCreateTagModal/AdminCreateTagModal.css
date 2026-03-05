@@ -1,0 +1,250 @@
+/* ============ MODAL OVERLAY ============ */
+.ad-dash-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+/* ============ MODAL CONTENT ============ */
+.ad-dash-modal-content {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 92%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.ad-dash-tag-modal {
+  max-width: 520px;
+}
+
+/* ============ MODAL HEADER ============ */
+.ad-dash-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.ad-dash-modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.ad-dash-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #9ca3af;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.ad-dash-modal-close:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+/* ============ MODAL BODY ============ */
+.ad-dash-modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #ffffff;
+}
+
+/* ============ FORM GROUPS ============ */
+.ad-dash-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ad-dash-form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  display: block;
+}
+
+.ad-dash-form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background-color: #ffffff;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  line-height: 1.5;
+}
+
+select.ad-dash-form-input {
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+  cursor: pointer;
+}
+
+.ad-dash-form-input:focus {
+  border-color: #00a699;
+  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1);
+}
+
+.ad-dash-form-input::placeholder {
+  color: #9ca3af;
+}
+
+/* ============ COLOR GRID ============ */
+.ad-dash-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ad-dash-color-option {
+  width: 44px;
+  height: 44px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 6px;
+  background-color: transparent;
+}
+
+.ad-dash-color-option:hover {
+  transform: scale(1.08);
+  border-color: #d1d5db;
+}
+
+.ad-dash-color-selected {
+  border-color: #00a699 !important;
+  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.15);
+}
+
+.ad-dash-color-circle {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+/* ============ TAG PREVIEW ============ */
+.ad-dash-tag-preview {
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ad-dash-preview-tag {
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ============ MODAL FOOTER ============ */
+.ad-dash-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 0 0 16px 16px;
+}
+
+.ad-dash-btn-secondary {
+  padding: 10px 20px;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #374151;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ad-dash-btn-secondary:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.ad-dash-btn-primary {
+  padding: 10px 24px;
+  border: none;
+  background-color: #00a699;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ad-dash-btn-primary:hover:not(:disabled) {
+  background-color: #008c80;
+}
+
+.ad-dash-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 640px) {
+  .ad-dash-modal-content {
+    width: 96%;
+    margin: 10px;
+  }
+
+  .ad-dash-modal-body {
+    padding: 16px;
+  }
+
+  .ad-dash-modal-footer {
+    padding: 12px 16px;
+    flex-direction: column;
+  }
+
+  .ad-dash-btn-primary,
+  .ad-dash-btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
+}

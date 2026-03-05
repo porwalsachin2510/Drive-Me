@@ -1,0 +1,461 @@
+.employee-trip-booking {
+  padding: 24px;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.employee-trip-booking-header {
+  margin-bottom: 32px;
+}
+
+.employee-trip-booking-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.employee-trip-booking-tab-navigation {
+  display: flex;
+  gap: 4px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 4px;
+}
+
+.employee-trip-booking-tab-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.employee-trip-booking-tab-btn:hover {
+  color: #1f2937;
+  background-color: #f9fafb;
+}
+
+.employee-trip-booking-tab-btn.active {
+  background-color: #16a085;
+  color: white;
+}
+
+.employee-trip-booking-loading {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.employee-trip-booking-no-data {
+  text-align: center;
+  padding: 60px 20px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.employee-trip-booking-no-data p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+.employee-trip-booking-tab-content {
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+}
+
+.employee-trip-booking-trips-grid,
+.employee-trip-booking-bookings-grid,
+.employee-trip-booking-passes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.employee-trip-booking-trip-card,
+.employee-trip-booking-booking-card,
+.employee-trip-booking-pass-card {
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  transition: box-shadow 0.2s;
+}
+
+.employee-trip-booking-trip-card:hover,
+.employee-trip-booking-booking-card:hover,
+.employee-trip-booking-pass-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.employee-trip-booking-trip-route,
+.employee-trip-booking-booking-route,
+.employee-trip-booking-pass-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.employee-trip-booking-trip-route h3,
+.employee-trip-booking-booking-route h3,
+.employee-trip-booking-pass-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.employee-trip-booking-trip-status,
+.employee-trip-booking-booking-status,
+.employee-trip-booking-pass-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.employee-trip-booking-trip-info,
+.employee-trip-booking-booking-details,
+.employee-trip-booking-pass-details {
+  margin-bottom: 16px;
+}
+
+.employee-trip-booking-trip-info p,
+.employee-trip-booking-booking-details p,
+.employee-trip-booking-pass-details p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.employee-trip-booking-trip-info strong,
+.employee-trip-booking-booking-details strong,
+.employee-trip-booking-pass-details strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.employee-trip-booking-trip-seats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.employee-trip-booking-seats-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.employee-trip-booking-available-seats {
+  font-size: 18px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.employee-trip-booking-total-seats {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.employee-trip-booking-seats-progress {
+  flex: 1;
+  height: 8px;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.employee-trip-booking-seats-progress-bar {
+  height: 100%;
+  background-color: #10b981;
+  transition: width 0.3s ease;
+}
+
+.employee-trip-booking-trip-route-stops {
+  margin-bottom: 16px;
+}
+
+.employee-trip-booking-trip-route-stops h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.employee-trip-booking-stops-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.employee-trip-booking-stop-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background-color: #f9fafb;
+  border-radius: 4px;
+}
+
+.employee-trip-booking-stop-location {
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.employee-trip-booking-stop-time {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.employee-trip-booking-more-stops {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+  padding: 4px;
+}
+
+.employee-trip-booking-book-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background-color: #16a085;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.employee-trip-booking-book-btn:hover:not(:disabled) {
+  background-color: #138d75;
+}
+
+.employee-trip-booking-book-btn:disabled {
+  background-color: #6b7280;
+  cursor: not-allowed;
+}
+
+.employee-trip-booking-booking-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.employee-trip-booking-cancel-btn {
+  padding: 8px 16px;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  background-color: white;
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.employee-trip-booking-cancel-btn:hover {
+  background-color: #ef4444;
+  color: white;
+}
+
+/* Modal Styles */
+.employee-trip-booking-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.employee-trip-booking-modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.employee-trip-booking-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.employee-trip-booking-modal-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.employee-trip-booking-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.employee-trip-booking-close-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.employee-trip-booking-modal-form {
+  padding: 20px;
+}
+
+.employee-trip-booking-trip-summary {
+  background-color: #f9fafb;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.employee-trip-booking-trip-summary p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.employee-trip-booking-trip-summary strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.employee-trip-booking-form-group {
+  margin-bottom: 16px;
+}
+
+.employee-trip-booking-form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.employee-trip-booking-form-group input,
+.employee-trip-booking-form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1f2937;
+  background-color: white;
+}
+
+.employee-trip-booking-form-group input:focus,
+.employee-trip-booking-form-group select:focus {
+  outline: none;
+  border-color: #16a085;
+  box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
+}
+
+.employee-trip-booking-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.employee-trip-booking-modal-actions .employee-trip-booking-cancel-btn {
+  border-color: #d1d5db;
+  color: #6b7280;
+}
+
+.employee-trip-booking-modal-actions .employee-trip-booking-cancel-btn:hover {
+  background-color: #f9fafb;
+  color: #6b7280;
+}
+
+.employee-trip-booking-submit-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #16a085;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.employee-trip-booking-submit-btn:hover:not(:disabled) {
+  background-color: #138d75;
+}
+
+.employee-trip-booking-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Driver tracking pulse animation */
+@keyframes driverPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .employee-trip-booking {
+    padding: 16px;
+  }
+
+  .employee-trip-booking-tab-navigation {
+    flex-direction: column;
+  }
+
+  .employee-trip-booking-trips-grid,
+  .employee-trip-booking-bookings-grid,
+  .employee-trip-booking-passes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-trip-booking-modal {
+    width: 95%;
+    margin: 16px;
+  }
+}

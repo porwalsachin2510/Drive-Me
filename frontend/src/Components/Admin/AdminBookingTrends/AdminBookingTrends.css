@@ -1,0 +1,37 @@
+.ad-dash-booking-trends {
+  width: 100%;
+}
+
+.ad-dash-booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.ad-dash-period-select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+}
+
+.ad-dash-period-select:hover {
+  border-color: #9ca3af;
+}
+
+@media (max-width: 768px) {
+  .ad-dash-booking-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .ad-dash-period-select {
+    width: 100%;
+  }
+}

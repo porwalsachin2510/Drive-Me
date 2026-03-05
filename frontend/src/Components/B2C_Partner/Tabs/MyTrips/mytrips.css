@@ -1,0 +1,76 @@
+.my-trips {
+  width: 100%;
+}
+
+.trips-sub-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.sub-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sub-tab-btn:hover {
+  color: #1f2937;
+  border-color: #d1d5db;
+}
+
+.sub-tab-btn.active {
+  background-color: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+}
+
+.sub-tab-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.trips-content {
+  width: 100%;
+}
+
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+  .trips-sub-tabs {
+    gap: 8px;
+  }
+
+  .sub-tab-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+  .trips-sub-tabs {
+    gap: 8px;
+  }
+
+  .sub-tab-btn {
+    padding: 8px 12px;
+    font-size: 11px;
+    flex: 1;
+    min-width: 100px;
+    justify-content: center;
+  }
+
+  .sub-tab-btn span:last-child {
+    display: none;
+  }
+}

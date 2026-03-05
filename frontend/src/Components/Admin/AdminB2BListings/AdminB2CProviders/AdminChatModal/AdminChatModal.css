@@ -1,0 +1,179 @@
+.admin-chat-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.admin-chat-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.admin-chat-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-chat-modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
+}
+
+.admin-chat-modal-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.admin-chat-modal-subtitle strong {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.admin-chat-modal-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #6b7280;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.admin-chat-modal-close svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
+}
+
+.admin-chat-modal-close:hover {
+  color: #1a1a1a;
+}
+
+.admin-chat-modal-body {
+  padding: 24px;
+}
+
+.admin-chat-modal-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.admin-chat-modal-textarea-wrapper {
+  position: relative;
+}
+
+.admin-chat-modal-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.admin-chat-modal-textarea:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.admin-chat-modal-emoji-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.admin-chat-modal-emoji-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.admin-chat-modal-emoji-btn:hover {
+  color: #10b981;
+}
+
+.admin-chat-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.admin-chat-modal-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.admin-chat-modal-btn-cancel {
+  background: #f9fafb;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.admin-chat-modal-btn-cancel:hover {
+  background: #f3f4f6;
+}
+
+.admin-chat-modal-btn-send {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.admin-chat-modal-btn-send:hover {
+  background: #b91c1c;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .admin-chat-modal-header {
+    padding: 20px;
+  }
+
+  .admin-chat-modal-body {
+    padding: 20px;
+  }
+
+  .admin-chat-modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .admin-chat-modal-btn {
+    width: 100%;
+  }
+}

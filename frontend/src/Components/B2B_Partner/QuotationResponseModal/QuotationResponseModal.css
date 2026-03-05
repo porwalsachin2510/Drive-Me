@@ -1,0 +1,406 @@
+.response-modal {
+  max-width: 900px;
+}
+
+.response-type-selector {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 15px 20px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #718096;
+}
+
+.type-btn .btn-icon {
+  font-size: 1.5rem;
+}
+
+.type-btn.approve:hover {
+  border-color: #10b981;
+  color: #10b981;
+  background: #f0fdf4;
+}
+
+.type-btn.approve.active {
+  border-color: #10b981;
+  background: #10b981;
+  color: white;
+}
+
+.type-btn.reject:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.type-btn.reject.active {
+  border-color: #ef4444;
+  background: #ef4444;
+  color: white;
+}
+
+.quotation-summary {
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  border: 1px solid #e2e8f0;
+}
+
+.quotation-summary h3 {
+  color: #2d3748;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+}
+
+.summary-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.summary-info p {
+  background: white;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: #718096;
+  margin: 0;
+}
+
+.summary-info strong {
+  color: #2d3748;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.vehicles-pricing-section {
+  margin-bottom: 25px;
+}
+
+.vehicles-pricing-section h3 {
+  color: #2d3748;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+}
+
+.vehicle-pricing-card {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 2px solid #e2e8f0;
+}
+
+.vehicle-pricing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.vehicle-pricing-header h4 {
+  color: #2d3748;
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+/* Added vehicle-meta styling for quantity and days badges */
+.vehicle-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.quantity-badge,
+.days-badge {
+  background: #667eea;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.days-badge {
+  background: #764ba2;
+}
+
+/* Added vehicle-requirements section styling */
+.vehicle-requirements {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.req-badge {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 2px solid;
+  transition: all 0.3s ease;
+}
+
+.req-badge.active {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
+.req-badge.inactive {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+
+.pricing-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pricing-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-group label {
+  font-size: 0.95rem;
+  color: #2d3748;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: #10b981;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.input-with-currency {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currency {
+  position: absolute;
+  left: 12px;
+  color: #718096;
+  font-weight: 600;
+  font-size: 0.95rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.input-with-currency input {
+  width: 100%;
+  padding: 12px 12px 12px 58px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+  transition: all 0.3s ease;
+}
+
+.input-with-currency input::placeholder {
+  color: #cbd5e0;
+  font-weight: 400;
+}
+
+.input-with-currency input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+}
+
+/* Added calculation-hint styling to show formula breakdown */
+.calculation-hint {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 4px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 4px;
+  border-left: 3px solid #667eea;
+}
+
+.calculation-hint strong {
+  color: #667eea;
+  font-weight: 700;
+}
+
+/* Enhanced vehicle-total section with breakdown */
+.vehicle-total {
+  padding: 15px;
+  background: white;
+  border-radius: 6px;
+  border: 2px solid #10b981;
+  margin-top: 10px;
+}
+
+.total-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.breakdown-item span:first-child {
+  font-weight: 500;
+}
+
+.breakdown-item span:last-child {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.total-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-line span:first-child {
+  font-size: 1rem;
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.total-value {
+  font-size: 1.5rem;
+  color: #10b981;
+  font-weight: 700;
+}
+
+.grand-total-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 25px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.grand-total-section h3 {
+  color: white;
+  margin-bottom: 10px;
+  font-size: 1.3rem;
+}
+
+.grand-total {
+  font-size: 2.5rem;
+  color: white;
+  font-weight: 700;
+  margin: 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 1rem;
+  color: #2d3748;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  transition: all 0.3s ease;
+}
+
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+}
+
+.rejection-section {
+  padding: 20px;
+  background: #fef2f2;
+  border-radius: 8px;
+  border: 2px solid #ef4444;
+}
+
+@media (max-width: 768px) {
+  .response-type-selector {
+    flex-direction: column;
+  }
+
+  .pricing-row {
+    grid-template-columns: 1fr;
+  }
+
+  .grand-total {
+    font-size: 2rem;
+  }
+
+  .vehicle-total {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  /* Added responsive styles for vehicle meta and requirements */
+  .vehicle-pricing-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .vehicle-meta {
+    width: 100%;
+  }
+}

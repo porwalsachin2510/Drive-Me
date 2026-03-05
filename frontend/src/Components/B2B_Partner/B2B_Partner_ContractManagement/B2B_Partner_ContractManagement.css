@@ -1,0 +1,283 @@
+.b2b-contracts-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0px 40px;
+}
+
+.b2b-contracts-header {
+  margin-bottom: 32px;
+}
+
+.b2b-contracts-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.b2b-contracts-header p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+.b2b-contracts-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.b2b-contracts-stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.b2b-contracts-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.b2b-contracts-stat-icon {
+  font-size: 40px;
+}
+
+.b2b-contracts-stat-content {
+  flex: 1;
+}
+
+.b2b-contracts-stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.b2b-contracts-stat-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.b2b-contracts-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.b2b-contracts-tab {
+  padding: 12px 24px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+.b2b-contracts-tab:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.b2b-contracts-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+}
+
+.b2b-contracts-error {
+  background: #fee2e2;
+  border: 2px solid #fca5a5;
+  border-radius: 8px;
+  padding: 16px;
+  color: #991b1b;
+  margin-bottom: 24px;
+}
+
+.b2b-contracts-empty {
+  background: white;
+  border-radius: 12px;
+  padding: 60px 24px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.b2b-contracts-empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.b2b-contracts-empty h3 {
+  font-size: 24px;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.b2b-contracts-empty p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+.b2b-contracts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+.b2b-contracts-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.b2b-contracts-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.b2b-contracts-card-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.b2b-contracts-card-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+}
+
+.b2b-contracts-status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-uploaded {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-signed {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.status-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.b2b-contracts-card-body {
+  padding: 20px;
+}
+
+.b2b-contracts-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.b2b-contracts-info-row:last-child {
+  border-bottom: none;
+}
+
+.b2b-contracts-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.b2b-contracts-value {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 600;
+}
+
+.b2b-contracts-value.contract-amount {
+  color: #059669;
+  font-size: 16px;
+}
+
+.b2b-contracts-card-footer {
+  padding: 16px 20px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.b2b-contracts-view-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.b2b-contracts-view-btn:hover {
+  transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+  .b2b-contracts-container {
+    padding: 16px;
+  }
+
+  .b2b-contracts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .b2b-contracts-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .b2b-contracts-tabs {
+    flex-direction: column;
+  }
+
+  .b2b-contracts-tab {
+    width: 100%;
+  }
+}

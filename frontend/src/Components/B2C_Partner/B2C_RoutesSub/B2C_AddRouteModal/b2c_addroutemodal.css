@@ -1,0 +1,429 @@
+/* Reusing modal styles with route-specific additions */
+.b2c-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.b2c-modal-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.b2c-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 0 24px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 16px;
+}
+
+.b2c-modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.b2c-modal-close {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.b2c-modal-close:hover {
+  background: #f3f4f6;
+}
+
+.b2c-modal-form {
+  padding: 24px;
+}
+
+.b2c-form-section {
+  margin-bottom: 32px;
+}
+
+.b2c-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.b2c-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.b2c-form-row.full {
+  grid-template-columns: 1fr;
+}
+
+.b2c-form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.b2c-form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.b2c-form-input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.b2c-form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Styling for readOnly/auto-calculated inputs */
+.b2c-form-input[readonly] {
+  background: #f8fafc;
+  border-color: #e5e7eb;
+  color: #059669;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+.b2c-form-input[readonly]:hover {
+  border-color: #d1d5db;
+  background: #f1f5f9;
+}
+
+.b2c-days-selector {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.b2c-day-btn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.b2c-day-btn:hover {
+  background: #e5e7eb;
+}
+
+.b2c-day-btn.selected {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.b2c-stop-points-section {
+  margin-top: 16px;
+}
+
+.b2c-no-stop-points {
+  font-size: 14px;
+  color: #6b7280;
+  font-style: italic;
+  margin-bottom: 12px;
+}
+
+.b2c-stop-points-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.b2c-stop-point-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.b2c-stop-point-number {
+  width: 28px;
+  height: 28px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.b2c-stop-input {
+  flex: 1;
+}
+
+.b2c-remove-stop-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  transition: background-color 0.2s;
+}
+
+.b2c-remove-stop-btn:hover {
+  background: #dc2626;
+}
+
+.b2c-add-stop-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.b2c-add-stop-btn:hover {
+  background: #2563eb;
+}
+
+.b2c-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.b2c-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.b2c-btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.b2c-btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+.b2c-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.b2c-btn-submit {
+  background: #3b82f6;
+  color: white;
+}
+
+.b2c-btn-submit:hover {
+  background: #2563eb;
+}
+
+.b2c-pricing-preview {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.b2c-preview-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.b2c-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.b2c-preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.b2c-preview-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.b2c-preview-value {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.b2c-pass-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.b2c-pass-text {
+  font-size: 12px;
+  color: #1e40af;
+  font-weight: 500;
+  margin: 0 0 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.b2c-pass-text:last-child {
+  margin-bottom: 0;
+}
+
+.b2c-form-help {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+  display: block;
+  font-style: italic;
+}
+
+/* Calculation Details Styles */
+.b2c-calculation-details {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.b2c-calc-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #92400e;
+  margin: 0 0 12px 0;
+}
+
+.b2c-calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.b2c-calc-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #fbbf24;
+}
+
+.b2c-calc-item.b2c-calc-total {
+  grid-column: 1 / -1;
+  background: #fbbf24;
+  font-weight: 700;
+  border-color: #f59e0b;
+}
+
+.b2c-calc-label {
+  font-size: 12px;
+  color: #78350f;
+  font-weight: 500;
+}
+
+.b2c-calc-value {
+  font-size: 12px;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.b2c-calc-item.b2c-calc-total .b2c-calc-label,
+.b2c-calc-item.b2c-calc-total .b2c-calc-value {
+  color: #78350f;
+}
+
+/* Calculation Sections */
+.b2c-calc-section {
+  margin-bottom: 16px;
+}
+
+.b2c-calc-section:last-child {
+  margin-bottom: 0;
+}
+
+.b2c-calc-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400e;
+  margin: 0 0 8px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #fcd34d;
+}
+
+@media (max-width: 640px) {
+  .b2c-form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .b2c-days-selector {
+    justify-content: center;
+  }
+}

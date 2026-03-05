@@ -1,0 +1,90 @@
+/* eslint-disable react-hooks/static-components */
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import "./b2b_linechart.css";
+
+function B2B_LineChart({ data }) {
+  const [chartData, setChartData] = useState([]);
+  const [isAnimating, setIsAnimating] = useState(true);
+
+  useEffect(() => {
+    // Safety check inside useEffect
+    if (!data || !data.labels || !Array.isArray(data.labels)) {
+      return;
+    }
+    
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsAnimating(false);
+    setChartData([]);
+
+    const timer = setTimeout(() => {
+      const formattedData = data.labels.map((label, index) => ({
+        name: label,
+        Profit: data.profit?.[index] || 0,
+      }));
+      setChartData(formattedData);
+      setIsAnimating(true);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [data]);
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="custom-tooltip line-tooltip">
+          <p className="tooltip-label">{label}</p>
+          {payload.map((entry, index) => (
+            <p key={index} style={{ color: entry.color }}>
+              {entry.name}: {entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="line-chart">
+      <ResponsiveContainer width="100%" height={300}>
+        <RechartsLineChart
+          data={chartData}
+          margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+          className={isAnimating ? "animate-in" : ""}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#e8e8e8" />
+          <XAxis dataKey="name" stroke="#999" />
+          <YAxis stroke="#999" />
+          
+          
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+          <Line
+            type="monotone"
+            dataKey="Profit"
+            stroke="#1677b8"
+            dot={{ fill: "#1677b8", r: 5 }}
+            activeDot={{ r: 7 }}
+            strokeWidth={3}
+            isAnimationActive={true}
+            animationDuration={1000}
+          />
+        </RechartsLineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export default B2B_LineChart;

@@ -1,0 +1,693 @@
+* {
+  box-sizing: border-box;
+}
+
+.available-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
+  background: #ffffff;
+}
+
+/* Header Label */
+.section-header {
+  text-align: center;
+  padding: 32px 0 24px;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 32px;
+}
+
+.all-listings-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #a8a8a8;
+  text-transform: uppercase;
+}
+
+/* Title Section */
+.title-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.title-and-count {
+  flex: 1;
+  min-width: 280px;
+}
+
+.section-title {
+  margin: 0 0 6px 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.2;
+}
+
+.routes-count {
+  margin: 0;
+  font-size: 13px;
+  color: #888;
+  font-weight: 400;
+}
+
+/* Tab Buttons */
+.available-section-tab-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.available-section-tab-btn {
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #ddd;
+  background: #ffffff;
+  color: #666;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.available-section-tab-btn:hover {
+  border-color: #17a2b8;
+  color: #17a2b8;
+}
+
+.available-section-tab-btn.available-section-active {
+  background: #17a2b8;
+  color: white;
+  border-color: #17a2b8;
+}
+
+/* Filter Section */
+.filter-section {
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.filter-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.filter-tags {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-tag {
+  padding: 6px 14px;
+  font-size: 13px;
+  border: 1px solid #ddd;
+  background: #ffffff;
+  color: #555;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.filter-tag:hover {
+  border-color: #17a2b8;
+  color: #17a2b8;
+}
+
+.filter-tag.available-section-active {
+  background: #1a1a1a;
+  color: white;
+  border-color: #1a1a1a;
+}
+
+/* Routes List */
+.routes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+/* Route Item: Changed to flex column with 2 distinct rows */
+.route-item {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-left: 5px solid #fdb913;
+  border-radius: 8px;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: box-shadow 0.3s ease;
+}
+
+.route-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Row 1: Route info on left, price on right */
+.route-row-1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex: 1;
+  width: 100%;
+  gap: 24px;
+}
+
+/* Row 2: Details on left, button on right */
+.route-row-2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+  width: 100%;
+  gap: 24px;
+}
+
+/* Route info section - left */
+.available-section-route-info {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.route-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.3;
+  flex-wrap: wrap;
+}
+
+.star-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.company-badge {
+  background: #f0f0f0;
+  color: #777;
+  padding: 4px 10px;
+  border-radius: 30px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+/* Route details - 4 columns inline */
+.my-route-details {
+  display: flex;
+  flex-direction: row;
+  gap: 40px;
+  align-items: center;
+  flex: 1;
+}
+
+.detail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.detail-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #a8a8a8;
+  letter-spacing: 0.5px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.availablesection-detail-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #242424;
+  letter-spacing: 0.5px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.detail-value {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #2c2c2c;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.detail-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* Price section - row 1, right side */
+.available-section-price-section {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.price-label {
+  margin: 0;
+  font-size: 10px;
+  color: #a8a8a8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.price-value {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #17a2b8;
+  line-height: 1.1;
+}
+
+/* Join button - row 2, right side */
+.available-section-join-btn {
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  height: fit-content;
+}
+
+.available-section-join-btn:hover {
+  background: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.available-section-join-btn:active {
+  transform: scale(0.98);
+}
+
+.join-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 80px 24px;
+  color: #999;
+  font-size: 16px;
+}
+
+
+.availablesection-featured-detail-group{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0px;
+}
+
+.my-available-days {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.my-day-pill {
+  min-width: 36px;
+  height: 24px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  font-size: 8px;
+  font-weight: 600;
+  color: #374151;
+  user-select: none;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.day-pill.weekend {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+/* Responsive: Tablet layout */
+@media (max-width: 768px) {
+  .available-section {
+    padding: 0 16px;
+  }
+
+  .section-header {
+    padding: 24px 0 16px;
+    margin-bottom: 24px;
+  }
+
+  .title-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .available-section-tab-buttons {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .available-section-route-item {
+    padding: 18px;
+    gap: 16px;
+  }
+
+  .route-row-1 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .route-row-2 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .route-details {
+    flex-wrap: wrap;
+    gap: 24px;
+    width: 100%;
+  }
+
+  .available-section-price-section {
+    align-items: flex-start;
+  }
+
+  .available-section-join-btn {
+    width: 100%;
+  }
+
+  .section-title {
+    font-size: 24px;
+  }
+
+  .route-title {
+    font-size: 16px;
+  }
+
+  .price-value {
+    font-size: 24px;
+  }
+}
+
+/* Responsive: Mobile layout */
+@media (max-width: 600px) {
+  .available-section {
+    padding: 0 14px;
+  }
+
+  .section-title {
+    font-size: 22px;
+  }
+
+  .section-header {
+    padding: 18px 0 14px;
+    margin-bottom: 20px;
+  }
+
+  .title-and-count {
+    min-width: auto;
+  }
+
+  .routes-count {
+    font-size: 13px;
+  }
+
+  .available-section-route-item {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+    border-left-width: 4px;
+  }
+
+  .route-row-1 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .route-row-2 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .route-details {
+    gap: 16px;
+    width: 100%;
+  }
+
+  .route-title {
+    font-size: 15px;
+  }
+
+  .detail-value {
+    font-size: 14px;
+  }
+
+  .price-value {
+    font-size: 24px;
+  }
+
+  .available-section-join-btn {
+    padding: 9px 20px;
+    font-size: 13px;
+    width: 100%;
+  }
+
+  .filter-section {
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .filter-tags {
+    gap: 8px;
+  }
+
+  .filter-tag {
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+
+  .routes-list {
+    gap: 12px;
+  }
+
+  .tab-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .available-section {
+    padding: 0 10px;
+  }
+
+  .section-header {
+    padding: 16px 0 12px;
+    margin-bottom: 16px;
+  }
+
+  .all-listings-label {
+    font-size: 11px;
+    letter-spacing: 1.2px;
+  }
+
+  .title-section {
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-direction: column;
+  }
+
+  .section-title {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .routes-count {
+    font-size: 12px;
+  }
+
+  .tab-btn {
+    padding: 7px 14px;
+    font-size: 12px;
+  }
+
+  .tab-buttons {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .filter-label {
+    font-size: 13px;
+  }
+
+  .filter-tags {
+    gap: 6px;
+  }
+
+  .filter-tag {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  .routes-list {
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+
+  .available-section-route-item {
+    padding: 10px;
+    gap: 12px;
+  }
+
+  .route-title {
+    font-size: 14px;
+    gap: 6px;
+  }
+
+  .star-icon {
+    font-size: 14px;
+  }
+
+  .company-badge {
+    font-size: 9px;
+    padding: 3px 8px;
+  }
+
+  .price-label {
+    font-size: 9px;
+  }
+
+  .price-value {
+    font-size: 20px;
+  }
+
+  .route-details {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .detail-label {
+    font-size: 9px;
+  }
+
+  .detail-value {
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .detail-icon {
+    font-size: 14px;
+  }
+
+  .available-section-join-btn {
+    width: 100%;
+    padding: 8px 14px;
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .join-icon {
+    font-size: 14px;
+  }
+
+  .empty-state {
+    padding: 60px 10px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .available-section {
+    padding: 0 8px;
+  }
+
+  .section-title {
+    font-size: 18px;
+  }
+
+  .route-title {
+    font-size: 13px;
+  }
+
+  .price-value {
+    font-size: 18px;
+  }
+
+  .route-details {
+    gap: 8px;
+  }
+
+  .available-section-join-btn {
+    padding: 7px 12px;
+    font-size: 11px;
+  }
+
+  .tab-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .detail-value {
+    font-size: 12px;
+  }
+}

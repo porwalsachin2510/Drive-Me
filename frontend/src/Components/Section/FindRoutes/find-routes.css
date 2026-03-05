@@ -1,0 +1,381 @@
+/* FindRoutes - Prefixed with fr- */
+.fr-find-routes-section {
+  background-color: white;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+}
+
+.fr-find-routes-section h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.fr-routes-count {
+  font-size: 14px;
+  color: #00b074;
+  font-weight: 600;
+  margin-bottom: 30px;
+}
+
+/* Search & Filter Controls */
+.fr-routes-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.fr-search-box {
+  flex: 1;
+  min-width: 200px;
+}
+
+.fr-search-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  color: #1a202c;
+  outline: none;
+  line-height: 1.5;
+}
+
+.fr-search-input:focus {
+  outline: none;
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+}
+
+.fr-search-input::placeholder {
+  color: #a0aec0;
+}
+
+.fr-filter-box .fr-filter-select {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+  line-height: 1.5;
+  outline: none;
+}
+
+.fr-filter-box .fr-filter-select:focus {
+  outline: none;
+  border-color: #3182ce;
+}
+
+/* Routes List */
+.fr-routes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+/* Route Card */
+.fr-route-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  transition: all 0.2s;
+}
+
+.fr-route-card:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.fr-route-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.fr-route-info h3 {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.fr-route-status {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.fr-route-status.fr-active {
+  background: #c6f6d5;
+  color: #276749;
+}
+
+.fr-route-status.fr-available {
+  background: #bee3f8;
+  color: #2a4365;
+}
+
+.fr-route-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2b6cb0;
+}
+
+.fr-route-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fr-route-path {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background-color: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.fr-route-path .fr-route-point {
+  font-size: 14px;
+  color: #2d3748;
+}
+
+.fr-route-path .fr-route-point strong {
+  color: #718096;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.fr-route-path .fr-route-arrow {
+  color: #a0aec0;
+  flex-shrink: 0;
+}
+
+.fr-route-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.fr-route-meta .fr-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background-color: #f7fafc;
+  border-radius: 6px;
+  border: 1px solid #edf2f7;
+}
+
+.fr-route-meta .fr-meta-label {
+  font-size: 11px;
+  color: #a0aec0;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.fr-route-meta .fr-meta-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.fr-route-schedule {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.fr-schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fr-schedule-label {
+  font-size: 12px;
+  color: #718096;
+  font-weight: 500;
+}
+
+.fr-schedule-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* Operating Days */
+.fr-route-days {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fr-days-label {
+  font-size: 12px;
+  color: #718096;
+  font-weight: 500;
+}
+
+.fr-days-list {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.fr-day-badge {
+  padding: 2px 8px;
+  background-color: #edf2f7;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+/* Seats Info */
+.fr-route-seats-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fr-seats-label {
+  font-size: 12px;
+  color: #718096;
+  font-weight: 500;
+}
+
+.fr-seats-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* Route Actions */
+.fr-route-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #edf2f7;
+}
+
+.fr-join-btn {
+  padding: 8px 20px;
+  background: #48bb78;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fr-join-btn:hover {
+  background: #38a169;
+}
+
+.fr-join-btn:disabled {
+  background: #a0aec0;
+  cursor: not-allowed;
+}
+
+.fr-leave-btn {
+  padding: 8px 20px;
+  background: #fc8181;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fr-leave-btn:hover {
+  background: #f56565;
+}
+
+.fr-loading {
+  text-align: center;
+  padding: 40px;
+  color: #a0aec0;
+}
+
+.fr-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.fr-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.fr-empty-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Tablet */
+@media (max-width: 1199px) {
+  .fr-find-routes-section {
+    padding: 30px;
+  }
+
+  .fr-find-routes-section h2 {
+    font-size: 20px;
+  }
+
+  .fr-empty-title {
+    font-size: 15px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+  .fr-find-routes-section {
+    padding: 20px;
+  }
+
+  .fr-find-routes-section h2 {
+    font-size: 18px;
+  }
+
+  .fr-routes-count {
+    font-size: 12px;
+  }
+
+  .fr-empty-title {
+    font-size: 14px;
+  }
+
+  .fr-empty-subtitle {
+    font-size: 12px;
+  }
+}

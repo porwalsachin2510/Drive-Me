@@ -1,0 +1,327 @@
+.ad-dash-user-suggested-routes {
+  padding: 24px;
+}
+
+.ad-dash-user-suggested-routes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ad-dash-user-suggested-routes-icon-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ad-dash-user-suggested-routes-icon-wrapper svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
+}
+
+.suggested-routes-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.suggested-routes-filters select {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  background: #ffffff;
+  cursor: pointer;
+  outline: none;
+}
+
+.suggested-routes-filters select:focus {
+  border-color: #0891b2;
+}
+
+.suggested-routes-filters input {
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  min-width: 200px;
+  outline: none;
+}
+
+.suggested-routes-filters input:focus {
+  border-color: #0891b2;
+}
+
+.suggested-routes-table {
+  overflow-x: auto;
+}
+
+.suggested-routes-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.suggested-routes-table thead {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.suggested-routes-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.suggested-routes-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.15s;
+}
+
+.suggested-routes-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.suggested-routes-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.route-info,
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.route-name,
+.user-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.route-time,
+.user-id {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.votes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vote-count {
+  font-weight: 600;
+  color: #0891b2;
+}
+
+.vote-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: capitalize;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.view-btn {
+  padding: 6px 14px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.view-btn:hover {
+  background: #e2e8f0;
+}
+
+.approve-btn {
+  padding: 6px 14px;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.approve-btn:hover {
+  background: #059669;
+}
+
+.reject-btn {
+  padding: 6px 14px;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reject-btn:hover {
+  background: #dc2626;
+}
+
+.no-routes {
+  padding: 48px 20px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+/* Rejection Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-content .form-group {
+  margin-bottom: 20px;
+}
+
+.modal-content .form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.modal-content .form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+}
+
+.modal-content .form-group textarea:focus {
+  border-color: #0891b2;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #e2e8f0;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  font-size: 15px;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .ad-dash-user-suggested-routes {
+    padding: 16px;
+  }
+
+  .suggested-routes-table table {
+    min-width: 900px;
+  }
+}

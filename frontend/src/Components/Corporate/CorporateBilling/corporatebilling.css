@@ -1,0 +1,173 @@
+.corp-billing {
+  padding: 20px;
+}
+
+.corp-billing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.corp-billing-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.corp-billing-select {
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+  cursor: pointer;
+}
+
+.corp-billing-loading,
+.corp-billing-error,
+.corp-billing-empty {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+  font-size: 15px;
+}
+
+.corp-billing-error {
+  color: #dc3545;
+}
+
+/* Summary Cards */
+.corp-billing-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.corp-billing-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.corp-billing-card-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.corp-billing-card-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.corp-billing-green {
+  color: #28a745;
+}
+
+.corp-billing-orange {
+  color: #f59e0b;
+}
+
+/* Section */
+.corp-billing-section {
+  margin-bottom: 32px;
+}
+
+.corp-billing-section-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 16px;
+}
+
+/* Table */
+.corp-billing-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+}
+
+.corp-billing-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.corp-billing-table th {
+  background: #f8f9fa;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 1px solid #e8e8e8;
+  white-space: nowrap;
+}
+
+.corp-billing-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.corp-billing-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+.corp-billing-contract-num {
+  font-family: monospace;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.corp-billing-amount {
+  font-weight: 600;
+}
+
+/* Status badges */
+.corp-billing-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.corp-billing-status-paid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.corp-billing-status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.corp-billing-status-overdue {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.corp-billing-status-partial {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+@media (max-width: 768px) {
+  .corp-billing-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .corp-billing-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

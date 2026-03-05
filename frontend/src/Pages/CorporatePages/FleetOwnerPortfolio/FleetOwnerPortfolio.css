@@ -1,0 +1,197 @@
+.portfolio-container {
+  min-height: 100vh;
+  background: #f5f7fa;
+  padding: 80px 20px 40px;
+}
+
+.portfolio-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.portfolio-header {
+  background: white;
+  border-radius: 15px;
+  padding: 40px;
+  margin-bottom: 30px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.owner-profile {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 30px;
+  align-items: flex-start;
+}
+
+.profile-image {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 5px solid #3498db;
+}
+
+.profile-info h1 {
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.company-name {
+  font-size: 1.3rem;
+  color: #7f8c8d;
+  margin-bottom: 25px;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 30px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #3498db;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+.owner-description {
+  margin-bottom: 30px;
+  padding: 25px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.owner-description h3 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.owner-description p {
+  line-height: 1.8;
+  color: #555;
+}
+
+.owner-contact h3 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.contact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact-label {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  font-weight: 600;
+}
+
+.contact-value {
+  font-size: 1rem;
+  color: #2c3e50;
+}
+
+.portfolio-tabs {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.portfolio-tabs button {
+  background: white;
+  border: 2px solid #e0e0e0;
+  padding: 15px 30px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #7f8c8d;
+}
+
+.portfolio-tabs button:hover {
+  border-color: #3498db;
+  color: #3498db;
+}
+
+.portfolio-tabs button.active {
+  background: #3498db;
+  border-color: #3498db;
+  color: white;
+}
+
+.vehicles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 25px;
+}
+
+.no-vehicles {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 15px;
+  font-size: 1.2rem;
+  color: #7f8c8d;
+}
+
+.error-page {
+  text-align: center;
+  padding: 100px 20px;
+  font-size: 1.5rem;
+  color: #c33;
+}
+
+@media (max-width: 1024px) {
+  .owner-profile {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .vehicles-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-tabs {
+    flex-direction: column;
+  }
+
+  .portfolio-tabs button {
+    width: 100%;
+  }
+}

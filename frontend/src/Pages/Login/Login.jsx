@@ -1,0 +1,189 @@
+"use client";
+
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import {
+  loginSuccess,
+  authStart,
+  authError,
+  clearError,
+} from "../../Redux/slices/authSlice";
+import {
+  selectLoading,
+  selectError,
+} from "../../Redux/selectors/authSelectors";
+import api from "../../utils/api";
+import Navbar from "../../Components/Navbar/Navbar";
+import "./login.css";
+import Footer from "../../Components/Footer/Footer";
+
+const Login = () => {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  // const [error, setError] = useState("");
+  // const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem("activeTab") || "commuters";
+  });
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = location.state?.returnTo;
+  const loginMessage = location.state?.message;
+
+  const dispatch = useDispatch();
+
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+
+  const roleRedirectMap = {
+    COMMUTER: "/",
+    CORPORATE: "/",
+    B2C_PARTNER: "/",
+    B2B_PARTNER: "/",
+    CORPORATE_DRIVER: "/",
+    B2B_PARTNER_DRIVER: "/",
+    B2C_PARTNER_DRIVER: "/",
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    dispatch(clearError());
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (
+      formData.email === "admin@driveme.com" &&
+      formData.password === "Sachin123@"
+    ) {
+      navigate("/admin-login");
+      return;
+    }
+
+    dispatch(authStart());
+
+    try {
+      const response = await api.post(
+        "/auth/login",
+        formData,
+        {
+          withCredentials: true,
+        },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      if (response.data.success) {
+        dispatch(
+          loginSuccess({
+            user: response.data.user,
+            token: response.data.token,
+          })
+        );
+
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+
+        const userRole = response.data.user?.role;
+        // If user came from a booking attempt, redirect back there
+        const redirectPath = returnTo || roleRedirectMap[userRole] || "/";
+        navigate(redirectPath);
+      }
+    } catch (err) {
+      console.log(err.response?.data);
+      dispatch(
+        authError(
+          err.response?.data?.message || "Login failed. Please try again."
+        )
+      );
+    }
+  };
+
+  return (
+    <div>
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      <div className="login-container">
+        <div className="login-card">
+          <div className="login-header">
+            <div className="login-icon">🚗</div>
+            <h1 className="login-title">Welcome Back</h1>
+            <p className="login-subtitle">Sign in to your account</p>
+          </div>
+
+          {loginMessage && (
+            <div className="login-info-message" style={{
+              padding: "12px 16px",
+              marginBottom: "16px",
+              borderRadius: "8px",
+              backgroundColor: "#e0f2fe",
+              color: "#0369a1",
+              fontSize: "14px",
+              fontWeight: "500",
+              border: "1px solid #bae6fd",
+            }}>
+              {loginMessage}
+            </div>
+          )}
+          {error && <div className="login-error-message">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            <div className="login-form-group">
+              <label className="login-form-label">Email address</label>
+              <input
+                type="email"
+                className="login-form-input"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+
+            <div className="login-form-group">
+              <label className="login-form-label">Password</label>
+              <input
+                type="password"
+                className="login-form-input"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+
+            <div className="login-forgot-password">
+              <Link to="/forgot-password">Forgot password?</Link>
+            </div>
+
+            <button
+              type="submit"
+              className={`login-submit-btn ${loading ? "login-loading" : ""}`}
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
+
+          <div className="login-signup-link">
+            Don't have an account? <Link to="/register">Sign up</Link>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default Login;

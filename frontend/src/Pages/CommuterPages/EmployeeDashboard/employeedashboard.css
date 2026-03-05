@@ -1,0 +1,332 @@
+.employee-dashboard-corporate-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 40px 20px;
+    font-family: 'Inter', sans-serif;
+}
+
+.employee-dashboard-corporate-header {
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+}
+
+.employee-dashboard-corporate-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.employee-dashboard-corporate-subtitle {
+    font-size: 16px;
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+.employee-dashboard-corporate-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.employee-dashboard-corporate-tab-btn {
+    padding: 12px 24px;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+.employee-dashboard-corporate-tab-btn:hover {
+    border-color: white;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.employee-dashboard-corporate-tab-btn.employee-dashboard-corporate-active {
+    background: white;
+    color: #667eea;
+    border-color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.employee-dashboard-corporate-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.employee-dashboard-corporate-tab-content h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 30px;
+}
+
+.employee-dashboard-corporate-loading,
+.employee-dashboard-corporate-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+    font-size: 16px;
+}
+
+/* Trip Info Cards */
+.employee-dashboard-corporate-trip-info-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.employee-dashboard-corporate-info-card {
+    background: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.employee-dashboard-corporate-info-card label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #9ca3af;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.employee-dashboard-corporate-info-card p {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.employee-dashboard-corporate-info-card small {
+    font-size: 13px;
+    color: #6b7280;
+    display: block;
+    margin-top: 5px;
+}
+
+/* Bookings List */
+.employee-dashboard-corporate-bookings-list {
+    display: grid;
+    gap: 15px;
+}
+
+.employee-dashboard-corporate-booking-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.employee-dashboard-corporate-booking-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+}
+
+.employee-dashboard-corporate-booking-info h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 8px 0;
+}
+
+.employee-dashboard-corporate-booking-info .employee-dashboard-corporate-date {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.employee-dashboard-corporate-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.employee-dashboard-corporate-status-confirmed {
+    background: #d1fae5;
+    color: #047857;
+}
+
+.employee-dashboard-corporate-status-pending {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.employee-dashboard-corporate-status-completed {
+    background: #dbeafe;
+    color: #0369a1;
+}
+
+.employee-dashboard-corporate-status-cancelled {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.employee-dashboard-corporate-booking-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.employee-dashboard-corporate-cancel-btn {
+    padding: 8px 16px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.employee-dashboard-corporate-cancel-btn:hover {
+    background: #dc2626;
+}
+
+/* History List */
+.employee-dashboard-corporate-history-list {
+    display: grid;
+    gap: 10px;
+}
+
+.employee-dashboard-corporate-history-item {
+    display: grid;
+    grid-template-columns: 100px 1fr 100px;
+    gap: 20px;
+    align-items: center;
+    padding: 15px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.employee-dashboard-corporate-history-date {
+    font-weight: 600;
+    color: #667eea;
+    font-size: 14px;
+}
+
+.employee-dashboard-corporate-history-route {
+    font-size: 15px;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.employee-dashboard-corporate-history-status {
+    font-size: 13px;
+    padding: 6px 12px;
+    background: #d1fae5;
+    color: #047857;
+    border-radius: 20px;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* Notifications List */
+.employee-dashboard-corporate-notifications-list {
+    display: grid;
+    gap: 15px;
+}
+
+.employee-dashboard-corporate-notification-item {
+    padding: 20px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s;
+}
+
+.employee-dashboard-corporate-notification-item.employee-dashboard-corporate-unread {
+    background: #eff6ff;
+    border-left-color: #0ea5e9;
+}
+
+.employee-dashboard-corporate-notif-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.employee-dashboard-corporate-notif-message {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+
+.employee-dashboard-corporate-notif-time {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.employee-dashboard-corporate-rating-form {
+    margin-top: 8px;
+    padding: 12px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.employee-dashboard-corporate-tab-content {
+    background: white;
+    padding: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .employee-dashboard-corporate-container {
+        padding: 20px 10px;
+    }
+
+    .employee-dashboard-corporate-header h1 {
+        font-size: 24px;
+    }
+
+    .employee-dashboard-corporate-content {
+        padding: 20px;
+    }
+
+    .employee-dashboard-corporate-booking-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .employee-dashboard-corporate-booking-actions {
+        width: 100%;
+        margin-top: 15px;
+    }
+
+    .employee-dashboard-corporate-cancel-btn {
+        flex: 1;
+    }
+
+    .employee-dashboard-corporate-history-item {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .employee-dashboard-corporate-trip-info-cards {
+        grid-template-columns: 1fr;
+    }
+}

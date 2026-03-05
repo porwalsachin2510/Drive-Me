@@ -1,0 +1,154 @@
+.b2c-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 40px;
+  background-color: #ffffff;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.b2c-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.b2c-header-right{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 36px;
+}
+
+.b2c-header-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.b2c-header-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.b2c-header-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.b2c-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border-right: 1px solid #d1d5db;
+}
+
+.b2c-stat-item:last-child {
+  border-right: none;
+}
+
+.b2c-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.b2c-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.b2c-star-icon {
+  color: #fbbf24;
+  font-size: 16px;
+}
+
+.b2c-acceptance-value {
+  color: #10b981;
+}
+
+.b2c-header-notification-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+}
+
+.b2c-header-notification-btn:hover {
+  opacity: 0.7;
+}
+
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+  .b2c-header {
+    flex-direction: column;
+    padding: 24px 20px;
+    align-items: flex-start;
+  }
+
+  .b2c-header-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .b2c-header-title {
+    font-size: 24px;
+  }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+  .b2c-header {
+    padding: 16px 12px;
+  }
+
+  .b2c-header-title {
+    font-size: 20px;
+  }
+
+  .b2c-header-subtitle {
+    font-size: 12px;
+  }
+
+  .b2c-header-stats {
+    width: 100%;
+    padding: 12px 16px;
+    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .b2c-stat-item {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+
+  .b2c-stat-item:not(:last-child) {
+    border-right: none;
+    border-bottom: 1px solid #d1d5db;
+  }
+}

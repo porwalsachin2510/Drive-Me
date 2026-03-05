@@ -1,0 +1,94 @@
+.wallet-payment-callback-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.wallet-payment-callback-card {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+}
+
+.wallet-payment-callback-card h2 {
+  color: #1f2937;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 20px 0 10px 0;
+}
+
+.wallet-payment-callback-card p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 10px 0;
+}
+
+.redirect-message {
+  font-size: 14px;
+  color: #9ca3af;
+  margin-top: 20px;
+}
+
+.success-icon {
+  width: 60px;
+  height: 60px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0 auto 20px auto;
+}
+
+.error-icon {
+  width: 60px;
+  height: 60px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0 auto 20px auto;
+}
+
+.warning-icon {
+  width: 60px;
+  height: 60px;
+  background: #f59e0b;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0 auto 20px auto;
+}
+
+@media (max-width: 640px) {
+  .wallet-payment-callback-card {
+    padding: 30px 20px;
+    margin: 20px;
+  }
+  
+  .wallet-payment-callback-card h2 {
+    font-size: 20px;
+  }
+  
+  .wallet-payment-callback-card p {
+    font-size: 14px;
+  }
+}

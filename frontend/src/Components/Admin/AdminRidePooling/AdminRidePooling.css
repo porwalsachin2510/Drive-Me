@@ -1,0 +1,122 @@
+.admin-ride-pooling {
+  width: 100%;
+  padding: 24px;
+}
+
+.ride-pooling-header {
+  margin-bottom: 28px;
+}
+
+.ride-pooling-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 20px 0;
+}
+
+.ride-pooling-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.ride-pooling-stats .stat-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+
+.ride-pooling-stats .stat-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.ride-pooling-stats .stat-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0891b2;
+  line-height: 1.2;
+}
+
+.ride-pooling-stats .stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 6px;
+}
+
+.ride-pooling-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.ride-pooling-tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+}
+
+.ride-pooling-tab:hover {
+  color: #334155;
+}
+
+.ride-pooling-tab.active {
+  color: #0891b2;
+  border-bottom-color: #0891b2;
+}
+
+.ride-pooling-content {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  font-size: 15px;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .admin-ride-pooling {
+    padding: 16px;
+  }
+
+  .ride-pooling-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ride-pooling-tabs {
+    overflow-x: auto;
+  }
+
+  .ride-pooling-tab {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .ride-pooling-stats {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,31 @@
+.ad-dash-revenue-chart {
+  width: 100%;
+}
+
+.ad-dash-chart-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 20px;
+}
+
+.ad-dash-custom-tooltip {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.ad-dash-tooltip-month {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.ad-dash-custom-tooltip p {
+  margin: 4px 0;
+  font-size: 12px;
+  font-weight: 500;
+}

@@ -1,0 +1,633 @@
+/* B2C Partner Bookings Page - Professional Clean Layout */
+.B2C_Partner-bookings-page-container {
+  min-height: 100vh;
+  background: #f0f2f5;
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+/* Header */
+.B2C_Partner-bookings-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: white;
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.B2C_Partner-bookings-page-header h2 {
+  color: #1a202c;
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.B2C_Partner-bookings-page-wallet-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.B2C_Partner-bookings-page-wallet-balance {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2b6cb0;
+  background: #ebf8ff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #bee3f8;
+}
+
+.B2C_Partner-bookings-page-filter-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.B2C_Partner-bookings-page-status-filter {
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #4a5568;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+  line-height: 1.5;
+}
+
+.B2C_Partner-bookings-page-status-filter:hover,
+.B2C_Partner-bookings-page-status-filter:focus {
+  border-color: #3182ce;
+  outline: none;
+}
+
+/* Stats Cards */
+.B2C_Partner-bookings-page-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.B2C_Partner-bookings-page-stat-card {
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.B2C_Partner-bookings-page-stat-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.B2C_Partner-bookings-page-stat-number {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #3182ce;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.B2C_Partner-bookings-page-stat-label {
+  color: #718096;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Bookings List */
+.B2C_Partner-bookings-page-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Booking Card */
+.B2C_Partner-bookings-page-booking-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s;
+}
+
+.B2C_Partner-bookings-page-booking-card:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.B2C_Partner-bookings-page-booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.B2C_Partner-bookings-page-booking-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.B2C_Partner-bookings-page-booking-info h4 {
+  color: #1a202c;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.B2C_Partner-bookings-page-status-badge {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.B2C_Partner-bookings-page-booking-type-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: white;
+}
+
+.B2C_Partner-bookings-page-booking-date {
+  color: #718096;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: #f7fafc;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* Booking Details */
+.B2C_Partner-bookings-page-booking-details {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.B2C_Partner-bookings-page-route-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #edf2f7;
+}
+
+.B2C_Partner-bookings-page-route-point {
+  color: #2d3748;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.B2C_Partner-bookings-page-route-point strong {
+  color: #a0aec0;
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.B2C_Partner-bookings-page-route-arrow {
+  color: #a0aec0;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+/* Info Grid */
+.B2C_Partner-bookings-page-driver-info,
+.B2C_Partner-bookings-page-booking-info-details,
+.B2C_Partner-bookings-page-commission-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.B2C_Partner-bookings-page-driver-info p,
+.B2C_Partner-bookings-page-booking-info-details p,
+.B2C_Partner-bookings-page-commission-info p {
+  margin: 0;
+  padding: 8px 12px;
+  background: #f7fafc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #4a5568;
+  line-height: 1.4;
+}
+
+.B2C_Partner-bookings-page-driver-info p strong,
+.B2C_Partner-bookings-page-booking-info-details p strong,
+.B2C_Partner-bookings-page-commission-info p strong {
+  display: block;
+  font-size: 0.7rem;
+  color: #a0aec0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+/* Action Buttons */
+.B2C_Partner-bookings-page-booking-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #edf2f7;
+}
+
+.B2C_Partner-bookings-page-accept-btn {
+  background: #48bb78;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.B2C_Partner-bookings-page-accept-btn:hover {
+  background: #38a169;
+  box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3);
+}
+
+.B2C_Partner-bookings-page-reject-btn {
+  background: #fc8181;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.B2C_Partner-bookings-page-reject-btn:hover {
+  background: #f56565;
+  box-shadow: 0 2px 8px rgba(252, 129, 129, 0.3);
+}
+
+.B2C_Partner-bookings-page-start-trip-btn {
+  background: #4299e1;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.B2C_Partner-bookings-page-start-trip-btn:hover {
+  background: #3182ce;
+  box-shadow: 0 2px 8px rgba(66, 153, 225, 0.3);
+}
+
+.B2C_Partner-bookings-page-complete-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.B2C_Partner-bookings-page-complete-btn:hover {
+  background: #5a67d8;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* No Bookings */
+.B2C_Partner-bookings-page-no-bookings {
+  text-align: center;
+  padding: 48px 20px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.B2C_Partner-bookings-page-no-bookings-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.B2C_Partner-bookings-page-no-bookings h3 {
+  color: #4a5568;
+  margin: 0 0 6px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.B2C_Partner-bookings-page-no-bookings p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #a0aec0;
+}
+
+/* Modal Overlay */
+.B2C_Partner-bookings-page-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.B2C_Partner-bookings-page-wallet-warning-modal,
+.B2C_Partner-bookings-page-reject-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 480px;
+  width: 92%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.B2C_Partner-bookings-page-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.B2C_Partner-bookings-page-modal-header h3 {
+  margin: 0;
+  color: #1a202c;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.B2C_Partner-bookings-page-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: #a0aec0;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.B2C_Partner-bookings-page-close-btn:hover {
+  color: #e53e3e;
+  background: #fff5f5;
+}
+
+.B2C_Partner-bookings-page-modal-body {
+  padding: 24px;
+}
+
+.B2C_Partner-bookings-page-modal-body p {
+  margin: 0 0 16px 0;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+.B2C_Partner-bookings-page-balance-info {
+  background: #f7fafc;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 12px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.B2C_Partner-bookings-page-balance-info p {
+  margin: 6px 0;
+  font-size: 0.9rem;
+}
+
+.B2C_Partner-bookings-page-balance-info strong {
+  color: #2d3748;
+}
+
+.B2C_Partner-bookings-page-form-group {
+  margin-bottom: 16px;
+}
+
+.B2C_Partner-bookings-page-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.9rem;
+}
+
+.B2C_Partner-bookings-page-form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.B2C_Partner-bookings-page-form-group textarea:focus {
+  outline: none;
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+}
+
+.B2C_Partner-bookings-page-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 16px 24px;
+  border-top: 1px solid #edf2f7;
+}
+
+.B2C_Partner-bookings-page-cancel-btn {
+  background: #edf2f7;
+  color: #4a5568;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.B2C_Partner-bookings-page-cancel-btn:hover {
+  background: #e2e8f0;
+}
+
+.B2C_Partner-bookings-page-add-funds-btn {
+  background: #4299e1;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.B2C_Partner-bookings-page-add-funds-btn:hover {
+  background: #3182ce;
+}
+
+.B2C_Partner-bookings-page-confirm-reject-btn {
+  background: #e53e3e;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.B2C_Partner-bookings-page-confirm-reject-btn:hover:not(:disabled) {
+  background: #c53030;
+}
+
+.B2C_Partner-bookings-page-confirm-reject-btn:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+}
+
+.B2C_Partner-bookings-page-loading {
+  text-align: center;
+  padding: 48px;
+  color: #a0aec0;
+  font-size: 1rem;
+  background: white;
+  border-radius: 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .B2C_Partner-bookings-page-container {
+    padding: 12px;
+  }
+
+  .B2C_Partner-bookings-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+
+  .B2C_Partner-bookings-page-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .B2C_Partner-bookings-page-booking-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .B2C_Partner-bookings-page-route-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .B2C_Partner-bookings-page-route-arrow {
+    transform: rotate(90deg);
+    align-self: center;
+  }
+
+  .B2C_Partner-bookings-page-driver-info,
+  .B2C_Partner-bookings-page-booking-info-details,
+  .B2C_Partner-bookings-page-commission-info {
+    grid-template-columns: 1fr;
+  }
+
+  .B2C_Partner-bookings-page-booking-actions {
+    flex-direction: column;
+  }
+
+  .B2C_Partner-bookings-page-accept-btn,
+  .B2C_Partner-bookings-page-reject-btn,
+  .B2C_Partner-bookings-page-start-trip-btn,
+  .B2C_Partner-bookings-page-complete-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .B2C_Partner-bookings-page-modal-actions {
+    flex-direction: column;
+  }
+
+  .B2C_Partner-bookings-page-cancel-btn,
+  .B2C_Partner-bookings-page-add-funds-btn,
+  .B2C_Partner-bookings-page-confirm-reject-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .B2C_Partner-bookings-page-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .B2C_Partner-bookings-page-stat-card {
+    padding: 12px;
+  }
+
+  .B2C_Partner-bookings-page-stat-number {
+    font-size: 1.3rem;
+  }
+
+  .B2C_Partner-bookings-page-booking-card {
+    padding: 16px;
+  }
+}

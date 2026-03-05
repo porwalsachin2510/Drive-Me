@@ -1,0 +1,35 @@
+.b2c-vehicles-tab {
+  padding: 20px 0;
+}
+
+.b2c-empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  border: 2px dashed #e5e7eb;
+}
+
+.b2c-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.b2c-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px 0;
+}
+
+.b2c-empty-description {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.b2c-vehicles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}

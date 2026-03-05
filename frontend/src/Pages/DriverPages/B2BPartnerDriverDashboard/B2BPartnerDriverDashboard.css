@@ -1,0 +1,420 @@
+.b2b-partner-driver-dashboard {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Arial', sans-serif;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-driver-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-driver-info span {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-location-status {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 10px;
+  border: 1px solid #ddd;
+  background: #f8f9fa;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-location-status.active {
+  background: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+  border-color: rgba(40, 167, 69, 0.3);
+  animation: b2b-pulse 2s infinite;
+}
+
+@keyframes b2b-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+.B2BPartner-driver-dashboard-with-tabs-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-tab {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-tab:hover {
+  background: #f8f9fa;
+  color: #333;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
+  background: #f8f9fa;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid #e9ecef;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-tab:hover {
+  background: white;
+  color: #495057;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-bookings-section {
+  width: 100%;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-card h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f8f9fa;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-item {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 20px;
+  border-left: 4px solid #ddd;
+  transition: all 0.3s ease;
+  animation: b2b-slideIn 0.3s ease-out;
+  margin-bottom: 15px;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-item.confirmed {
+  border-left-color: #28a745;
+  background: linear-gradient(135deg, #f8fff9 0%, #f0fff4 100%);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-item.in-progress {
+  border-left-color: #ffc107;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-item.completed {
+  border-left-color: #6c757d;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+@keyframes b2b-slideIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-details p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-details strong {
+  color: #333;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-passenger-list {
+  margin-top: 8px;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-booking-actions {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-start-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-start-btn:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-complete-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-complete-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 10px;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-status-badge.in-progress {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-status-badge.completed {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-no-bookings {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-notifications-section {
+  width: 100%;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-notifications-section h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-notification-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-notification-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-left: 4px solid #007bff;
+  transition: all 0.3s ease;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-notification-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.B2BPartner-driver-dashboard-with-tabs-notification-item.unread {
+  background: #e3f2fd;
+  border-left-color: #2196f3;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-notification-item h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-notification-item p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-notification-item .B2BPartner-driver-dashboard-with-tabs-time {
+  font-size: 12px;
+  color: #999;
+  margin-top: 5px;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-no-notifications {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-location-section h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-location-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-location-info p {
+  margin: 10px 0;
+  font-size: 16px;
+  color: #555;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-location-info strong {
+  color: #333;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-location-map {
+  margin-top: 20px;
+  height: 400px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+  position: relative;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-live-map {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+}
+
+.B2BPartner-driver-dashboard-with-tabs-no-location {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+}
+
+.b2b-logout-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  z-index: 10;
+}
+
+.b2b-logout-btn:hover {
+  background: #c82333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .b2b-partner-driver-dashboard { padding: 10px; }
+  .B2BPartner-driver-dashboard-with-tabs-header { flex-direction: column; gap: 15px; text-align: center; }
+  .B2BPartner-driver-dashboard-with-tabs-header h1 { font-size: 24px; }
+  .B2BPartner-driver-dashboard-with-tabs-tabs { flex-direction: column; gap: 8px; }
+  .B2BPartner-driver-dashboard-with-tabs-booking-cards { grid-template-columns: 1fr; }
+  .B2BPartner-driver-dashboard-with-tabs-booking-tabs { flex-direction: column; gap: 8px; }
+  .B2BPartner-driver-dashboard-with-tabs-booking-actions { flex-direction: column; }
+  .B2BPartner-driver-dashboard-with-tabs-driver-info { flex-direction: column; gap: 10px; }
+  .B2BPartner-driver-dashboard-with-tabs-location-map { height: 300px; }
+}

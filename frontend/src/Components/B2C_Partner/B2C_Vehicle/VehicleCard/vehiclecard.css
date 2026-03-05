@@ -1,0 +1,186 @@
+.vehicle-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.vehicle-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.vehicle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: #d1fae5;
+  color: #059669;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge.active {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.status-badge.maintenance {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.vehicle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vehicle-model {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.vehicle-details {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.vehicle-service {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+  margin-top: 4px;
+}
+
+.vehicle-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 10px 12px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background-color: #f9fafb;
+}
+
+.action-btn.primary {
+  background-color: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+}
+
+.action-btn.primary:hover {
+  background-color: #15803d;
+}
+
+.action-btn.secondary {
+  background-color: #ffffff;
+  color: #1f2937;
+  border-color: #d1d5db;
+}
+
+.action-btn.secondary:hover {
+  background-color: #f9fafb;
+}
+
+.settings-btn {
+  padding: 10px;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-btn:hover {
+  background-color: #e5e7eb;
+  color: #1f2937;
+}
+
+.settings-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+  .vehicle-card {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .vehicle-model {
+    font-size: 14px;
+  }
+
+  .action-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+  .vehicle-card {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .action-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .vehicle-model {
+    font-size: 13px;
+  }
+
+  .vehicle-details,
+  .vehicle-service {
+    font-size: 12px;
+  }
+}

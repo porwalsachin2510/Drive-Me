@@ -1,0 +1,741 @@
+.b2bpartner-RequirementsTab-requirements-view {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.b2bpartner-RequirementsTab-view-header {
+  margin-bottom: 30px;
+}
+
+.b2bpartner-RequirementsTab-view-header h2 {
+  color: #333;
+  margin-bottom: 10px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.b2bpartner-RequirementsTab-view-header p {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+/* Filters Section */
+.b2bpartner-RequirementsTab-filters-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.b2bpartner-RequirementsTab-filter-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.b2bpartner-RequirementsTab-search-input {
+  flex: 1;
+  min-width: 250px;
+  padding: 10px 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.b2bpartner-RequirementsTab-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.b2bpartner-RequirementsTab-filter-select,
+.b2bpartner-RequirementsTab-filter-input {
+  padding: 10px 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  min-width: 150px;
+}
+
+/* Requirements List */
+.b2bpartner-RequirementsTab-requirements-list {
+  margin-bottom: 30px;
+}
+
+.b2bpartner-RequirementsTab-no-requirements {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.b2bpartner-RequirementsTab-no-requirements-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.b2bpartner-RequirementsTab-no-requirements h3 {
+  color: #374151;
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+.b2bpartner-RequirementsTab-no-requirements p {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.b2bpartner-RequirementsTab-requirements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+.b2bpartner-RequirementsTab-requirement-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.b2bpartner-RequirementsTab-requirement-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.b2bpartner-RequirementsTab-card-header {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.b2bpartner-RequirementsTab-requirement-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.b2bpartner-RequirementsTab-requirement-title h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  flex: 1;
+  margin-right: 10px;
+}
+
+.b2bpartner-RequirementsTab-priority-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+}
+
+.b2bpartner-RequirementsTab-corporate-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.b2bpartner-RequirementsTab-company-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+.b2bpartner-RequirementsTab-company-name {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.b2bpartner-RequirementsTab-card-body {
+  padding: 20px;
+}
+
+.b2bpartner-RequirementsTab-description {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.b2bpartner-RequirementsTab-route-info,
+.b2bpartner-RequirementsTab-vehicle-requirements,
+.b2bpartner-RequirementsTab-budget-info,
+.b2bpartner-RequirementsTab-schedule-info {
+  margin-bottom: 20px;
+}
+
+.b2bpartner-RequirementsTab-route-info h4,
+.b2bpartner-RequirementsTab-vehicle-requirements h4,
+.b2bpartner-RequirementsTab-budget-info h4,
+.b2bpartner-RequirementsTab-schedule-info h4 {
+  margin: 0 0 10px 0;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.b2bpartner-RequirementsTab-route-item,
+.b2bpartner-RequirementsTab-budget-item,
+.b2bpartner-RequirementsTab-schedule-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.b2bpartner-RequirementsTab-route-item .b2bpartner-RequirementsTab-label,
+.b2bpartner-RequirementsTab-budget-item .b2bpartner-RequirementsTab-label,
+.b2bpartner-RequirementsTab-schedule-item .b2bpartner-RequirementsTab-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.b2bpartner-RequirementsTab-route-item .b2bpartner-RequirementsTab-value,
+.b2bpartner-RequirementsTab-budget-item .b2bpartner-RequirementsTab-value,
+.b2bpartner-RequirementsTab-schedule-item .b2bpartner-RequirementsTab-value {
+  color: #374151;
+  font-weight: 500;
+}
+
+.b2bpartner-RequirementsTab-budget-item .b2bpartner-RequirementsTab-value.b2bpartner-RequirementsTab-budget {
+  color: #059669;
+  font-weight: 600;
+}
+
+.b2bpartner-RequirementsTab-vehicle-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.b2bpartner-RequirementsTab-vehicle-type {
+  color: #374151;
+  font-weight: 500;
+}
+
+.b2bpartner-RequirementsTab-vehicle-capacity {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.b2bpartner-RequirementsTab-features {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.b2bpartner-RequirementsTab-feature-tag {
+  background: #e5e7eb;
+  color: #374151;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.b2bpartner-RequirementsTab-feature-more {
+  background: #d1d5db;
+  color: #6b7280;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.b2bpartner-RequirementsTab-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 15px;
+}
+
+.b2bpartner-RequirementsTab-tag {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.b2bpartner-RequirementsTab-card-footer {
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.b2bpartner-RequirementsTab-deadline-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.b2bpartner-RequirementsTab-deadline-label {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.b2bpartner-RequirementsTab-deadline-value {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.b2bpartner-RequirementsTab-action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.b2bpartner-RequirementsTab-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.b2bpartner-RequirementsTab-btn-outline {
+  background: white;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.b2bpartner-RequirementsTab-btn-outline:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.b2bpartner-RequirementsTab-btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.b2bpartner-RequirementsTab-btn-primary:hover {
+  background: #2563eb;
+}
+
+.b2bpartner-RequirementsTab-btn-secondary {
+  background: #6b7280;
+  color: white;
+}
+
+.b2bpartner-RequirementsTab-btn-secondary:hover {
+  background: #4b5563;
+}
+
+.b2bpartner-RequirementsTab-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Pagination */
+.b2bpartner-RequirementsTab-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.b2bpartner-RequirementsTab-pagination button {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.b2bpartner-RequirementsTab-pagination button:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.b2bpartner-RequirementsTab-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Modal Styles */
+.b2bpartner-RequirementsTab-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.b2bpartner-RequirementsTab-modal {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.b2bpartner-RequirementsTab-large-modal {
+  max-width: 900px;
+}
+
+.b2bpartner-RequirementsTab-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 20px;
+}
+
+.b2bpartner-RequirementsTab-modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.b2bpartner-RequirementsTab-requirement-summary {
+  flex: 1;
+  background: #f9fafb;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.b2bpartner-RequirementsTab-requirement-summary h4 {
+  margin: 0 0 8px 0;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.b2bpartner-RequirementsTab-requirement-summary p {
+  margin: 4px 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.b2bpartner-RequirementsTab-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.b2bpartner-RequirementsTab-close-btn:hover {
+  color: #374151;
+}
+
+.b2bpartner-RequirementsTab-modal-form {
+  padding: 20px;
+}
+
+.b2bpartner-RequirementsTab-modal-content {
+  padding: 20px;
+}
+
+.b2bpartner-RequirementsTab-form-section {
+  margin-bottom: 30px;
+}
+
+.b2bpartner-RequirementsTab-form-section h4 {
+  margin: 0 0 15px 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.b2bpartner-RequirementsTab-detail-section {
+  margin-bottom: 30px;
+}
+
+.b2bpartner-RequirementsTab-detail-section h4 {
+  margin: 0 0 15px 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.b2bpartner-RequirementsTab-form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.b2bpartner-RequirementsTab-form-row input,
+.b2bpartner-RequirementsTab-form-row select,
+.b2bpartner-RequirementsTab-form-row textarea {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.b2bpartner-RequirementsTab-form-row input:focus,
+.b2bpartner-RequirementsTab-form-row select:focus,
+.b2bpartner-RequirementsTab-form-row textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.b2bpartner-RequirementsTab-form-group {
+  margin-bottom: 20px;
+}
+
+.b2bpartner-RequirementsTab-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #374151;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.b2bpartner-RequirementsTab-form-group textarea {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.b2bpartner-RequirementsTab-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.b2bpartner-RequirementsTab-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.b2bpartner-RequirementsTab-features-selection,
+.b2bpartner-RequirementsTab-languages-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.b2bpartner-RequirementsTab-feature-checkbox,
+.b2bpartner-RequirementsTab-language-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.b2bpartner-RequirementsTab-feature-checkbox:hover,
+.b2bpartner-RequirementsTab-language-checkbox:hover {
+  background: #f3f4f6;
+}
+
+.b2bpartner-RequirementsTab-feature-checkbox input[type="checkbox"],
+.b2bpartner-RequirementsTab-language-checkbox input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+}
+
+.b2bpartner-RequirementsTab-feature-checkbox span,
+.b2bpartner-RequirementsTab-language-checkbox span {
+  font-size: 13px;
+  color: #374151;
+}
+
+.b2bpartner-RequirementsTab-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.b2bpartner-RequirementsTab-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.b2bpartner-RequirementsTab-detail-item .b2bpartner-RequirementsTab-label {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.b2bpartner-RequirementsTab-detail-item .b2bpartner-RequirementsTab-value {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.b2bpartner-RequirementsTab-status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+}
+
+.b2bpartner-RequirementsTab-vehicle-detail-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.b2bpartner-RequirementsTab-features-list,
+.b2bpartner-RequirementsTab-languages-list {
+  margin-top: 10px;
+}
+
+.b2bpartner-RequirementsTab-features-list .b2bpartner-RequirementsTab-label,
+.b2bpartner-RequirementsTab-languages-list .b2bpartner-RequirementsTab-label {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.b2bpartner-RequirementsTab-features-tags,
+.b2bpartner-RequirementsTab-languages-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.b2bpartner-RequirementsTab-feature-tag,
+.b2bpartner-RequirementsTab-language-tag {
+  background: #e5e7eb;
+  color: #374151;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.b2bpartner-RequirementsTab-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.b2bpartner-RequirementsTab-loading {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .b2bpartner-RequirementsTab-requirements-view {
+    padding: 15px;
+  }
+  
+  .b2bpartner-RequirementsTab-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .b2bpartner-RequirementsTab-search-input {
+    min-width: auto;
+  }
+  
+  .b2bpartner-RequirementsTab-requirements-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .b2bpartner-RequirementsTab-card-footer {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .b2bpartner-RequirementsTab-action-buttons {
+    justify-content: stretch;
+  }
+  
+  .b2bpartner-RequirementsTab-form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .b2bpartner-RequirementsTab-form-row input,
+  .b2bpartner-RequirementsTab-form-row select,
+  .b2bpartner-RequirementsTab-form-row textarea {
+    min-width: auto;
+  }
+  
+  .b2bpartner-RequirementsTab-modal {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .b2bpartner-RequirementsTab-modal-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  
+  .b2bpartner-RequirementsTab-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

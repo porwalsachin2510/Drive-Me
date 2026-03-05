@@ -1,0 +1,389 @@
+.travel-history-container {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.travel-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.travel-history-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+}
+
+.filters select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+}
+
+.error-message {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.travel-history-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.no-history {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+}
+
+.travel-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.travel-history-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 120px 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.travel-history-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.trip-date {
+  text-align: center;
+}
+
+.trip-date .date {
+  font-weight: 600;
+  color: #111827;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.trip-date .time {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.trip-route {
+  flex: 1;
+}
+
+.route-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.pickup {
+  color: #059669;
+}
+
+.dropoff {
+  color: #dc2626;
+}
+
+.arrow {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.trip-details {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.trip-status {
+  text-align: center;
+}
+
+.status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status.completed {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+
+.status.cancelled {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.status.no_show {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.rating {
+  margin-top: 4px;
+  color: #fbbf24;
+  font-size: 14px;
+}
+
+.trip-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rate-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rate-btn:hover {
+  background-color: #2563eb;
+}
+
+.no-show-badge {
+  background-color: #fbbf24;
+  color: #92400e;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: default;
+}
+
+.rating-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.rating-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.rating-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rating-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.rating-form {
+  padding: 20px;
+}
+
+.trip-summary {
+  background-color: #f9fafb;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.trip-summary p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.star-rating {
+  display: flex;
+  gap: 4px;
+}
+
+.star-rating .star {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #d1d5db;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.star-rating .star:hover,
+.star-rating .star.active {
+  color: #fbbf24;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.cancel-btn,
+.submit-btn {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.cancel-btn {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.cancel-btn:hover {
+  background-color: #e5e7eb;
+}
+
+.submit-btn {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.submit-btn:hover {
+  background-color: #2563eb;
+}
+
+@media (max-width: 768px) {
+  .travel-history-item {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .trip-date {
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .trip-actions {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+  
+  .rating-modal {
+    width: 95%;
+    margin: 20px;
+  }
+}

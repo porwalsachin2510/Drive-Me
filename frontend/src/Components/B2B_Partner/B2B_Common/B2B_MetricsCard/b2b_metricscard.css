@@ -1,0 +1,59 @@
+.metrics-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.metrics-icon {
+  font-size: 32px;
+  width: 48px;
+}
+
+.metrics-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metrics-label {
+  font-size: 11px;
+  color: #999999;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin: 0;
+}
+
+.metrics-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .metrics-card {
+    padding: 16px;
+  }
+
+  .metrics-label {
+    font-size: 10px;
+  }
+
+  .metrics-value {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-card {
+    padding: 12px;
+  }
+
+  .metrics-value {
+    font-size: 18px;
+  }
+}

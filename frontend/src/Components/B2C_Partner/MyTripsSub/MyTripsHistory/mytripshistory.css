@@ -1,0 +1,83 @@
+.history {
+  width: 100%;
+}
+
+.trips-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.header-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background-color: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-btn:hover {
+  background-color: #15803d;
+}
+
+.header-btn.active {
+  background-color: #16a34a;
+}
+
+.header-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.trips-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+/* Laptop/Desktop (1024px and above) */
+@media (max-width: 1200px) {
+  .trips-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+  .trips-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header-btn {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+  .trips-header {
+    gap: 8px;
+  }
+
+  .header-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .trips-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

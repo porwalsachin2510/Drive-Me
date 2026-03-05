@@ -1,0 +1,228 @@
+.account-settings {
+  width: 100%;
+}
+
+.security-section {
+  max-width: 600px;
+}
+
+.security-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.security-description {
+  font-size: 15px;
+  color: #6b7280;
+  margin-bottom: 32px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.setting-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.setting-btn:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.btn-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.settings-icon {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.delete-account-btn {
+  border-color: #fee2e2;
+}
+
+.delete-account-btn:hover {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.delete-account-btn .btn-text {
+  color: #ef4444;
+}
+
+.delete-icon {
+  color: #ef4444;
+}
+
+.settings-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  animation: settingsSlideIn 0.3s ease;
+}
+
+@keyframes settingsSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-message.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.settings-message.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.password-form {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 28px;
+}
+
+.password-form-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 24px;
+}
+
+.password-form-group {
+  margin-bottom: 20px;
+}
+
+.password-form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.password-form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #1f2937;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.password-form-group input:focus {
+  outline: none;
+  border-color: #4169e1;
+}
+
+.password-form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.cancel-btn {
+  padding: 10px 24px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.submit-password-btn {
+  padding: 10px 24px;
+  background: #4169e1;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.submit-password-btn:hover {
+  background: #3457c9;
+}
+
+.submit-password-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .security-section {
+    max-width: 100%;
+  }
+
+  .security-title {
+    font-size: 22px;
+  }
+
+  .security-description {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .setting-btn {
+    padding: 14px 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .security-title {
+    font-size: 20px;
+  }
+
+  .setting-btn {
+    padding: 12px 16px;
+  }
+
+  .btn-text {
+    font-size: 14px;
+  }
+
+  .settings-icon {
+    width: 18px;
+    height: 18px;
+  }
+}

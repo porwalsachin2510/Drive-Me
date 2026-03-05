@@ -1,0 +1,215 @@
+.b2b-settings {
+  display: flex;
+  flex-direction: column;
+}
+
+.b2b-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.b2b-settings-section {
+  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.b2b-notifications-section {
+  gap: 16px;
+}
+
+.b2b-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.b2b-section-icon {
+  font-size: 24px;
+}
+
+.b2b-section-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+}
+
+.b2b-section-divider {
+  height: 1px;
+  background-color: #f0f0f0;
+  margin: 12px 0;
+}
+
+.b2b-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.b2b-form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333333;
+}
+
+.b2b-form-group input {
+  padding: 12px 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #333333;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.b2b-form-group input:focus,
+.b2b-form-group textarea:focus {
+  outline: none;
+  border-color: #16a085;
+}
+
+.b2b-form-group textarea {
+  padding: 12px 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #333333;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.b2b-notification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.b2b-notification-item:last-of-type {
+  border-bottom: none;
+}
+
+.b2b-notification-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+}
+
+.b2b-toggle {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 28px;
+}
+
+.b2b-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.b2b-b2b-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: all 0.3s;
+  border-radius: 28px;
+}
+
+.b2b-b2b-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: all 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .b2b-b2b-toggle-slider {
+  background-color: #e74c3c;
+}
+
+input:checked + .b2b-b2b-toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.b2b-save-btn {
+  margin-top: 16px;
+  padding: 12px 24px;
+  background-color: #16a085;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: inherit;
+}
+
+.b2b-save-btn:hover {
+  background-color: #138d7b;
+}
+
+@media (max-width: 1024px) {
+  .b2b-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .b2b-settings-section {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .b2b-form-group input {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+
+  .b2b-notification-item {
+    padding: 12px 0;
+  }
+
+  .b2b-save-btn {
+    font-size: 13px;
+    padding: 10px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .b2b-settings-section {
+    padding: 12px;
+  }
+
+  .b2b-section-header h2 {
+    font-size: 14px;
+  }
+
+  .b2b-form-group label {
+    font-size: 12px;
+  }
+
+  .b2b-notification-label {
+    font-size: 12px;
+  }
+}

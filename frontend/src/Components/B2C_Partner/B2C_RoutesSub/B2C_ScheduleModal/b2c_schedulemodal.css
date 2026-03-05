@@ -1,0 +1,211 @@
+.b2c-schedule-modal {
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.b2c-section-description {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* Trip Times Container */
+.b2c-trip-times-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.b2c-trip-time-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f9fafb;
+  position: relative;
+}
+
+.b2c-trip-time-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.b2c-trip-time-number {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.b2c-remove-trip-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.b2c-remove-trip-btn:hover {
+  background: #dc2626;
+}
+
+.b2c-add-trip-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  align-self: flex-start;
+}
+
+.b2c-add-trip-btn:hover {
+  background: #2563eb;
+}
+
+/* Schedule Preview */
+.b2c-schedule-preview {
+  background: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.b2c-preview-title {
+  color: #0c4a6e;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.b2c-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.b2c-preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e0f2fe;
+}
+
+.b2c-preview-label {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.b2c-preview-value {
+  font-weight: 600;
+  color: #0c4a6e;
+  font-size: 13px;
+}
+
+.b2c-preview-subtitle {
+  color: #0c4a6e;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.b2c-trip-times-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.b2c-trip-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e0f2fe;
+}
+
+.b2c-trip-time {
+  font-weight: 500;
+  color: #374151;
+  font-size: 13px;
+}
+
+.b2c-trip-type {
+  background: #3b82f6;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Days Selector */
+.b2c-days-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.b2c-day-btn {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.2s;
+}
+
+.b2c-day-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.b2c-day-btn.selected {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .b2c-schedule-modal {
+    max-width: 95vw;
+    margin: 20px;
+  }
+  
+  .b2c-preview-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .b2c-trip-time-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .b2c-form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

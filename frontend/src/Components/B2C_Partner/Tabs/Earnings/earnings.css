@@ -1,0 +1,299 @@
+.earnings {
+  width: 100%;
+}
+
+.earnings-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.earnings-card {
+  padding: 20px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.earnings-card.total {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #ffffff;
+}
+
+.earnings-card.week {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.earnings-card.today {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.card-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+
+.earnings-card.total .card-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.earnings-card.week .card-label,
+.earnings-card.today .card-label {
+  color: #6b7280;
+}
+
+.card-amount {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.earnings-card.total .card-amount {
+  color: #ffffff;
+}
+
+.earnings-card.week .card-amount,
+.earnings-card.today .card-amount {
+  color: #1f2937;
+}
+
+.card-subtitle {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.earnings-card.total .card-subtitle {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.card-change {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.card-change.positive {
+  color: #10b981;
+}
+
+.request-payout {
+  padding: 10px 16px;
+  background-color: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.request-payout:hover {
+  background-color: #15803d;
+}
+
+.transaction-section {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-btn:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.transactions-list {
+  min-height: max-content;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 10px 0px;
+  overflow: hidden;
+}
+
+.transaction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s ease;
+}
+
+.transaction-item:last-child {
+  border-bottom: none;
+}
+
+.transaction-item:hover {
+  background-color: #f9fafb;
+}
+
+.tx-date-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tx-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.tx-trips {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.tx-amount-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.tx-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.tx-status {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Laptop (1200px and above) */
+@media (max-width: 1200px) {
+  .earnings-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+  .earnings-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .earnings-card {
+    padding: 16px;
+  }
+
+  .card-amount {
+    font-size: 24px;
+  }
+
+  .transaction-item {
+    padding: 12px 16px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .export-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+  .earnings-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .earnings-card {
+    padding: 12px;
+    gap: 6px;
+  }
+
+  .card-label {
+    font-size: 11px;
+  }
+
+  .card-amount {
+    font-size: 20px;
+  }
+
+  .card-subtitle,
+  .card-change {
+    font-size: 12px;
+  }
+
+  .request-payout {
+    padding: 8px 12px;
+    font-size: 12px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .transaction-item {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .tx-amount-status {
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
+  }
+
+  .tx-date,
+  .tx-amount {
+    font-size: 13px;
+  }
+
+  .tx-trips,
+  .tx-status {
+    font-size: 11px;
+  }
+}

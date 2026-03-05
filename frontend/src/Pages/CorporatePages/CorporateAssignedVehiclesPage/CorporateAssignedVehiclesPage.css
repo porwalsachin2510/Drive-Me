@@ -1,0 +1,1268 @@
+.corporate-assigned-vehicles-container {
+  padding: 30px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: #f8f9fa;
+  min-height: calc(100vh - 200px);
+}
+
+.corporate-assigned-vehicles-back-btn {
+  background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+}
+
+.corporate-assigned-vehicles-back-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 102, 255, 0.3);
+}
+
+.corporate-assigned-vehicles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.corporate-assigned-vehicles-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+}
+
+.contract-info {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+}
+
+.corporate-assigned-vehicles-tabs {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  padding: 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #999;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tab-button.active {
+  color: #0066ff;
+  border-bottom-color: #0066ff;
+}
+
+.tab-button:hover:not(.active) {
+  color: #666;
+}
+
+.corporate-assigned-vehicles-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #999;
+}
+
+.empty-state p {
+  font-size: 18px;
+  margin: 0;
+}
+
+/* New grid layout for vehicle cards instead of list */
+.vehicles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+.routes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 24px;
+}
+
+/* Premium vehicle card design with better spacing and visual hierarchy */
+.vehicle-card-premium {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f0;
+}
+
+.vehicle-card-premium:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.vehicle-card-header-premium {
+  background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+  padding: 20px;
+  color: white;
+}
+
+.vehicle-name-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.vehicle-name-badge h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.vehicle-category-badge {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.vehicle-category-badge.status-assigned {
+  background: rgba(255, 193, 7, 0.4);
+}
+
+.vehicle-category-badge.status-inactive {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+.vehicle-reg-premium {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: monospace;
+}
+
+/* Assignment Cards */
+.assignment-card {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.assignment-card:last-of-type {
+  border-bottom: none;
+}
+
+.assignment-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.assignment-label {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #666;
+  letter-spacing: 0.5px;
+}
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.assigned {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.assignment-details {
+  margin-bottom: 12px;
+}
+
+.driver-name,
+.fuel-card-number,
+.route-text {
+  margin: 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.driver-meta,
+.assigned-by-meta,
+.route-text {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.assigned-by-meta {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0066ff;
+}
+
+.not-assigned {
+  font-size: 13px;
+  color: #999;
+  margin: 0 0 12px 0;
+  font-style: italic;
+}
+
+.assign-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.assign-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+}
+
+.assign-btn:active {
+  transform: translateY(0);
+}
+
+/* Small Trip Type Selector for Individual Schedules */
+.trip-type-selector-small {
+  display: flex;
+  gap: 8px;
+}
+
+.trip-type-btn-small {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: white;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.trip-type-btn-small:hover {
+  border-color: #16a085;
+  color: #16a085;
+}
+
+.trip-type-btn-small.selected {
+  background-color: #16a085;
+  border-color: #16a085;
+  color: white;
+}
+
+/* Trip Info Display */
+.trip-info-display {
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.trip-info-one-way,
+.trip-info-round-trip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trip-icon {
+  font-size: 16px;
+}
+
+.trip-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.trip-info-round-trip .trip-text {
+  color: #16a085;
+}
+
+/* Trip Type Selector */
+.trip-type-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.trip-type-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: white;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.trip-type-btn:hover {
+  border-color: #16a085;
+  color: #16a085;
+}
+
+.trip-type-btn.selected {
+  background-color: #16a085;
+  border-color: #16a085;
+  color: white;
+}
+
+/* Trip Schedules */
+.corporate-assigned-vehicles-modal-trip-schedules,
+.trip-schedules {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.corporate-assigned-vehicles-modal-schedule-item,
+.schedule-item {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.corporate-assigned-vehicles-modal-schedule-header,
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.corporate-assigned-vehicles-modal-schedule-number,
+.schedule-number {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.corporate-assigned-vehicles-modal-remove-schedule-btn,
+.remove-schedule-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 16px;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.corporate-assigned-vehicles-modal-remove-schedule-btn:hover,
+.remove-schedule-btn:hover {
+  background-color: #fee2e2;
+}
+
+.corporate-assigned-vehicles-modal-schedule-fields,
+.schedule-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.corporate-assigned-vehicles-modal-schedule-fields .corporate-assigned-vehicles-modal-form-row,
+.schedule-fields .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.corporate-assigned-vehicles-modal-schedule-fields .corporate-assigned-vehicles-form-group,
+.schedule-fields .form-group {
+  margin: 0;
+}
+
+.corporate-assigned-vehicles-modal-schedule-fields label,
+.schedule-fields label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.corporate-assigned-vehicles-modal-schedule-fields input,
+.corporate-assigned-vehicles-modal-schedule-fields select,
+.schedule-fields input,
+.schedule-fields select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1f2937;
+  background-color: white;
+}
+
+.corporate-assigned-vehicles-modal-schedule-fields input:focus,
+.corporate-assigned-vehicles-modal-schedule-fields select:focus,
+.schedule-fields input:focus,
+.schedule-fields select:focus {
+  outline: none;
+  border-color: #16a085;
+  box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
+}
+
+.add-schedule-btn {
+  padding: 12px 16px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background-color: white;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.add-schedule-btn:hover {
+  border-color: #16a085;
+  color: #16a085;
+  background-color: #f0fdf4;
+}
+
+/* Trip Type Selector for Modal */
+.corporate-assigned-vehicles-modal-trip-type-selector-small {
+  display: flex;
+  gap: 8px;
+}
+
+.corporate-assigned-vehicles-modal-trip-type-btn-small {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: white;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.corporate-assigned-vehicles-modal-trip-type-btn-small:hover {
+  border-color: #16a085;
+  color: #16a085;
+}
+
+.corporate-assigned-vehicles-modal-trip-type-btn-small.corporate-assigned-vehicles-modal-selected {
+  background-color: #16a085;
+  border-color: #16a085;
+  color: white;
+}
+
+/* Trip Info Display for Modal */
+.corporate-assigned-vehicles-modal-trip-info-display {
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.corporate-assigned-vehicles-modal-trip-info-one-way,
+.corporate-assigned-vehicles-modal-trip-info-round-trip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.corporate-assigned-vehicles-modal-trip-icon {
+  font-size: 16px;
+}
+
+.corporate-assigned-vehicles-modal-trip-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.corporate-assigned-vehicles-modal-trip-info-round-trip .corporate-assigned-vehicles-modal-trip-text {
+  color: #16a085;
+}
+
+/* Form Group for Modal */
+.corporate-assigned-vehicles-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.corporate-assigned-vehicles-form-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #333;
+}
+
+.corporate-assigned-vehicles-modal-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Responsive Design for Trip Schedules */
+@media (max-width: 768px) {
+  .trip-type-selector {
+    flex-direction: column;
+  }
+
+  .schedule-fields .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* Routes Tab - Corporate Assigned Vehicles */
+.corporate-assigned-vehicles-routes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 24px;
+}
+
+.corporate-assigned-vehicles-empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #999;
+}
+
+.corporate-assigned-vehicles-empty-state p {
+  font-size: 18px;
+  margin: 0;
+}
+
+/* Route Card Premium */
+.corporate-assigned-vehicles-route-card-premium,
+.route-card-premium {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.route-card-premium:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.corporate-assigned-vehicles-route-card-header-premium,
+.route-card-header-premium {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  padding: 20px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.corporate-assigned-vehicles-route-card-header-premium h3,
+.route-card-header-premium h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.corporate-assigned-vehicles-route-status-badge,
+.route-status-badge {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.corporate-assigned-vehicles-route-card-body,
+.route-card-body {
+  padding: 20px;
+}
+
+.corporate-assigned-vehicles-route-info,
+.route-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.corporate-assigned-vehicles-route-detail,
+.route-detail {
+  margin: 0;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.corporate-assigned-vehicles-route-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 13px;
+}
+
+.corporate-assigned-vehicles-route-info-item:last-of-type {
+  border-bottom: none;
+}
+
+.corporate-assigned-vehicles-route-info-label {
+  font-weight: 700;
+  color: #666;
+}
+
+.corporate-assigned-vehicles-route-info-item span:last-child {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.corporate-assigned-vehicles-route-notes,
+.route-notes {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid #f5f5f5;
+}
+
+.corporate-assigned-vehicles-route-notes strong,
+.route-notes strong {
+  color: #666;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.corporate-assigned-vehicles-route-notes p,
+.route-notes p {
+  margin: 8px 0 0 0;
+  color: #333;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.corporate-assigned-vehicles-route-stops,
+.route-stops {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid #f5f5f5;
+}
+
+.corporate-assigned-vehicles-route-stops strong,
+.route-stops strong {
+  color: #666;
+  font-size: 12px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.corporate-assigned-vehicles-route-stops p,
+.route-stops p {
+  margin: 6px 0;
+  color: #333;
+  font-size: 13px;
+  padding-left: 8px;
+}
+
+.corporate-assigned-vehicles-route-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+}
+
+.corporate-assigned-vehicles-create-trips-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+.corporate-assigned-vehicles-create-trips-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+}
+
+.corporate-assigned-vehicles-stop-points-display {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid #f5f5f5;
+}
+
+.corporate-assigned-vehicles-stop-points-display strong {
+  color: #666;
+  font-size: 12px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.corporate-assigned-vehicles-stop-points-list-display {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.corporate-assigned-vehicles-stop-point-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 4px;
+}
+
+.corporate-assigned-vehicles-stop-location {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.corporate-assigned-vehicles-stop-time {
+  font-size: 12px;
+  color: #666;
+  font-weight: 600;
+}
+
+/* Modal Styles */
+.corporate-assigned-vehicles-modal-overlay,
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.corporate-assigned-vehicles-modal-premium,
+.modal-premium {
+  background: white;
+  border-radius: 12px;
+  padding: 28px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+.modal-premium.modal-large {
+  max-width: 600px;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.corporate-assigned-vehicles-modal-header-premium,
+.modal-header-premium {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.corporate-assigned-vehicles-modal-header-premium h2,
+.modal-header-premium h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.corporate-assigned-vehicles-modal-close,
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.corporate-assigned-vehicles-modal-close:hover,
+.modal-close:hover {
+  color: #333;
+}
+
+.corporate-assigned-vehicles-modal-form,
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #0066ff;
+  box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-row .form-group:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* Adding CSS for stop points section */
+.stop-points-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.stop-points-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stop-points-input-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.stop-points-input-group .form-group {
+  margin: 0;
+}
+
+.stop-points-input-group .form-group label {
+  font-size: 12px;
+}
+
+.stop-points-input-group .form-group input {
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.btn-add-stop {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.btn-add-stop:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-add-stop:active {
+  transform: translateY(0);
+}
+
+.stop-points-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stop-point-item {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.stop-point-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: #d0d0d0;
+}
+
+.stop-point-info {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+}
+
+.stop-location {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.stop-time {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+  font-weight: 600;
+}
+
+.btn-remove-stop {
+  background: #fee;
+  color: #dc3545;
+  border: 1px solid #fcc;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.btn-remove-stop:hover {
+  background: #fcc;
+  border-color: #f88;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
+}
+
+.btn-remove-stop:active {
+  transform: scale(0.98);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.btn-cancel,
+.btn-submit {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-cancel {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.btn-cancel:hover {
+  background: #e0e0e0;
+}
+
+.btn-submit {
+  background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+  color: white;
+}
+
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 102, 255, 0.3);
+}
+
+.btn-submit:active {
+  transform: translateY(0);
+}
+
+.corporate-assigned-vehicles-loading,
+.corporate-assigned-vehicles-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+}
+
+.corporate-assigned-vehicles-error .error-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.corporate-assigned-vehicles-error h3 {
+  font-size: 24px;
+  color: #333;
+  margin: 0 0 12px 0;
+}
+
+.corporate-assigned-vehicles-error p {
+  color: #666;
+  margin: 0 0 24px 0;
+}
+
+.corporate-assigned-vehicles-error button {
+  background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.corporate-assigned-vehicles-error button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 102, 255, 0.3);
+}
+
+/* Common Button Base */
+.corporate-assigned-vehicles-modal-add-schedule-btn,
+.corporate-assigned-vehicles-modal-btn-secondary,
+.corporate-assigned-vehicles-modal-btn-primary {
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Primary Button */
+.corporate-assigned-vehicles-modal-btn-primary {
+  background-color: #2563eb; /* Corporate Blue */
+  color: #ffffff;
+}
+
+.corporate-assigned-vehicles-modal-btn-primary:hover {
+  background-color: #1e4ed8;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+}
+
+/* Secondary Button */
+.corporate-assigned-vehicles-modal-btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.corporate-assigned-vehicles-modal-btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+/* Add Schedule Button (Highlight CTA) */
+.corporate-assigned-vehicles-modal-add-schedule-btn {
+  background-color: #10b981; /* Success Green */
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.corporate-assigned-vehicles-modal-add-schedule-btn:hover {
+  background-color: #059669;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+}
+
+/* Disabled State */
+.corporate-assigned-vehicles-modal-btn-primary:disabled,
+.corporate-assigned-vehicles-modal-btn-secondary:disabled,
+.corporate-assigned-vehicles-modal-add-schedule-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+@media (max-width: 768px) {
+  .corporate-assigned-vehicles-container {
+    padding: 16px;
+  }
+
+  .vehicles-grid,
+  .routes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row .form-group:nth-child(3) {
+    grid-column: 1;
+  }
+
+  .modal-premium {
+    width: 95%;
+    padding: 20px;
+  }
+
+  .route-card-header-premium {
+    flex-direction: column;
+  }
+
+  .vehicle-name-badge {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stop-points-input-group {
+    grid-template-columns: 1fr; /* Stack inputs and button on small screens */
+  }
+
+  .btn-add-stop {
+    width: 100%; /* Make button full width on small screens */
+  }
+
+  .stop-point-item {
+    flex-direction: column; /* Stack info and button */
+    align-items: flex-start;
+  }
+}

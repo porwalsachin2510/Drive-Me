@@ -1,0 +1,437 @@
+.admin-ads {
+  width: 100%;
+  padding: 24px;
+}
+
+.ads-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 28px;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.ads-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: #fff;
+}
+
+.ads-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ads-stats .stat-item {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 110px;
+}
+
+.ads-stats .stat-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.ads-stats .stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.create-btn {
+  padding: 12px 24px;
+  background: #fbbf24;
+  color: #1e3a8a;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.create-btn:hover {
+  background: #f59e0b;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+
+/* Campaigns Grid */
+.campaigns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.campaign-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.campaign-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.campaign-preview {
+  position: relative;
+}
+
+.campaign-preview img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+}
+
+.campaign-status {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: capitalize;
+}
+
+.campaign-info {
+  padding: 16px;
+}
+
+.campaign-info h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.campaign-info .provider {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 12px 0;
+}
+
+.campaign-details {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.campaign-details .placement,
+.campaign-details .size {
+  padding: 3px 10px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.campaign-metrics {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.campaign-metrics .metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.campaign-metrics .label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.campaign-metrics .value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.campaign-dates {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.campaign-actions {
+  display: flex;
+  gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.edit-btn {
+  padding: 6px 14px;
+  background: #0891b2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-btn:hover {
+  background: #0e7490;
+}
+
+.status-btn {
+  padding: 6px 14px;
+  background: #f59e0b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.status-btn:hover {
+  background: #d97706;
+}
+
+.status-btn.active {
+  background: #f59e0b;
+}
+
+.status-btn.paused {
+  background: #10b981;
+}
+
+.delete-btn {
+  padding: 6px 14px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-btn:hover {
+  background: #dc2626;
+}
+
+/* No Campaigns */
+.no-campaigns {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.no-campaigns p {
+  font-size: 16px;
+  color: #64748b;
+  margin: 0 0 16px 0;
+}
+
+.no-campaigns button {
+  padding: 10px 20px;
+  background: #0891b2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.no-campaigns button:hover {
+  background: #0e7490;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+  padding: 24px 24px 0;
+}
+
+.modal .form {
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal .form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.modal .form-group textarea {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.modal .form-group textarea:focus {
+  outline: none;
+  border-color: #0891b2;
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+}
+
+.modal .form-group input,
+.modal .form-group select {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  transition: border-color 0.2s;
+}
+
+.modal .form-group input:focus,
+.modal .form-group select:focus {
+  outline: none;
+  border-color: #0891b2;
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #e2e8f0;
+}
+
+.save-btn {
+  padding: 10px 20px;
+  background: #0891b2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-btn:hover {
+  background: #0e7490;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  font-size: 15px;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .admin-ads {
+    padding: 16px;
+  }
+
+  .ads-header {
+    padding: 24px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .campaigns-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal {
+    max-width: 100%;
+  }
+}

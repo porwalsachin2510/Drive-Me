@@ -1,0 +1,233 @@
+/* Reusing modal styles with trip-specific additions */
+.route-create-trip-b2c-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.route-create-trip-b2c-modal-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 700px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.route-create-trip-b2c-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 0 24px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 16px;
+}
+
+.route-create-trip-b2c-modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.route-create-trip-b2c-modal-close {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.route-create-trip-b2c-modal-close:hover {
+  background: #f3f4f6;
+}
+
+.route-create-trip-b2c-route-summary {
+  padding: 20px 24px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.route-create-trip-b2c-route-summary h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 12px 0;
+}
+
+.route-create-trip-b2c-summary-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.route-create-trip-b2c-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.route-create-trip-b2c-summary-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.route-create-trip-b2c-summary-value {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.route-create-trip-b2c-modal-form {
+  padding: 24px;
+}
+
+.route-create-trip-b2c-form-section {
+  margin-bottom: 32px;
+}
+
+.route-create-trip-b2c-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.route-create-trip-b2c-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.route-create-trip-b2c-form-row.full {
+  grid-template-columns: 1fr;
+}
+
+.route-create-trip-b2c-form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.route-create-trip-b2c-form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.route-create-trip-b2c-form-input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.route-create-trip-b2c-form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.route-create-trip-b2c-notification-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.route-create-trip-b2c-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+}
+
+.route-create-trip-b2c-checkbox {
+  display: none;
+}
+
+.route-create-trip-b2c-checkmark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  margin-right: 8px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.route-create-trip-b2c-checkbox:checked + .route-create-trip-b2c-checkmark {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.route-create-trip-b2c-checkbox:checked + .route-create-trip-b2c-checkmark::after {
+  content: '✓';
+  color: white;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+}
+
+.route-create-trip-b2c-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.route-create-trip-b2c-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.route-create-trip-b2c-btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.route-create-trip-b2c-btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+.route-create-trip-b2c-btn-submit {
+  background: #3b82f6;
+  color: white;
+}
+
+.route-create-trip-b2c-btn-submit:hover {
+  background: #2563eb;
+}
+
+@media (max-width: 640px) {
+  .route-create-trip-b2c-form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .route-create-trip-b2c-summary-content {
+    grid-template-columns: 1fr;
+  }
+}

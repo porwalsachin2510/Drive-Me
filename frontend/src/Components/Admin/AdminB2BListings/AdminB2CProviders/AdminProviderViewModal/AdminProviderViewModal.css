@@ -1,0 +1,350 @@
+.ad-dash-provider-view-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.ad-dash-provider-view-modal {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.ad-dash-provider-view-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ad-dash-provider-view-modal-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ad-dash-provider-view-modal-title-wrapper svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
+  color: #0891b2;
+}
+
+.ad-dash-provider-view-modal-title-wrapper h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.ad-dash-provider-view-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #64748b;
+  transition: color 0.2s;
+}
+
+.ad-dash-provider-view-modal-close:hover {
+  color: #334155;
+}
+
+.ad-dash-provider-view-modal-close svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.ad-dash-provider-view-modal-body {
+  padding: 24px;
+}
+
+.ad-dash-provider-view-modal-description {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 0 24px;
+}
+
+.ad-dash-provider-view-modal-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.ad-dash-provider-view-modal-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ad-dash-provider-view-modal-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ad-dash-provider-view-modal-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.ad-dash-provider-view-modal-status {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.ad-dash-provider-view-modal-status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ad-dash-provider-view-modal-status-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.ad-dash-provider-view-modal-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+.ad-dash-provider-view-modal-rating svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ad-dash-provider-view-modal-routes {
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ad-dash-provider-view-modal-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 16px;
+}
+
+.ad-dash-provider-view-modal-section-header svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.ad-dash-provider-view-modal-route-card {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.ad-dash-provider-view-modal-route-card:last-child {
+  margin-bottom: 0;
+}
+
+.ad-dash-provider-view-modal-route-header {
+  margin-bottom: 12px;
+}
+
+.ad-dash-provider-view-modal-route-path {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0891b2;
+}
+
+.ad-dash-provider-view-modal-route-details {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.ad-dash-provider-view-modal-route-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.ad-dash-provider-view-modal-route-detail svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+
+.ad-dash-provider-view-modal-driver-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+}
+
+.ad-dash-provider-view-modal-driver-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 8px;
+}
+
+.ad-dash-provider-view-modal-driver-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.ad-dash-provider-view-modal-driver-details {
+  flex: 1;
+}
+
+.ad-dash-provider-view-modal-driver-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ad-dash-provider-view-modal-driver-meta {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.ad-dash-provider-view-modal-driver-license {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.ad-dash-provider-view-modal-seats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.ad-dash-provider-view-modal-seats svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.ad-dash-provider-view-modal-seats-bar {
+  width: 60px;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ad-dash-provider-view-modal-seats-fill {
+  height: 100%;
+  background: #10b981;
+  transition: width 0.3s;
+}
+
+.ad-dash-provider-view-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ad-dash-provider-view-modal-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ad-dash-provider-view-modal-approve-btn {
+  background: #10b981;
+  color: white;
+}
+
+.ad-dash-provider-view-modal-approve-btn:hover {
+  background: #059669;
+}
+
+.ad-dash-provider-view-modal-reject-btn {
+  background: #dc2626;
+  color: white;
+}
+
+.ad-dash-provider-view-modal-reject-btn:hover {
+  background: #b91c1c;
+}
+
+.ad-dash-provider-view-modal-info-btn {
+  background: white;
+  color: #0891b2;
+  border: 1px solid #0891b2;
+}
+
+.ad-dash-provider-view-modal-info-btn:hover {
+  background: #f0fdfa;
+}
+
+@media (max-width: 768px) {
+  .ad-dash-provider-view-modal {
+    max-width: 100%;
+  }
+
+  .ad-dash-provider-view-modal-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ad-dash-provider-view-modal-route-details {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ad-dash-provider-view-modal-driver-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ad-dash-provider-view-modal-footer {
+    flex-direction: column;
+  }
+}

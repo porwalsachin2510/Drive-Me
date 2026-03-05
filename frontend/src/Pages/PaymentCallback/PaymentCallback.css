@@ -1,0 +1,135 @@
+.payment-callback-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.payment-callback-card {
+  background: white;
+  border-radius: 20px;
+  padding: 60px 40px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.payment-callback-card h2 {
+  font-size: 32px;
+  margin: 20px 0 16px 0;
+  color: #333;
+}
+
+.payment-callback-card p {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+}
+
+.redirect-message {
+  font-size: 14px;
+  color: #999;
+  margin-top: 24px;
+  font-style: italic;
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: white;
+  animation: successPop 0.6s ease;
+}
+
+.error-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: white;
+  animation: errorShake 0.6s ease;
+}
+
+.warning-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #ff9800 0%, #ffc107 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: white;
+  animation: warningPulse 0.6s ease;
+}
+
+@keyframes successPop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes errorShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-10px);
+  }
+  75% {
+    transform: translateX(10px);
+  }
+}
+
+@keyframes warningPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@media (max-width: 768px) {
+  .payment-callback-card {
+    padding: 40px 24px;
+  }
+
+  .payment-callback-card h2 {
+    font-size: 24px;
+  }
+
+  .success-icon,
+  .error-icon,
+  .warning-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 36px;
+  }
+}

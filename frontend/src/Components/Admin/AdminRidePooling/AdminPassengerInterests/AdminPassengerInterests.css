@@ -1,0 +1,316 @@
+.admin-passenger-interests {
+  padding: 24px;
+}
+
+.interests-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.interests-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.interests-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.interests-filters select {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  background: #ffffff;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.interests-filters select:focus {
+  border-color: #0891b2;
+}
+
+.interests-filters input {
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  min-width: 220px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.interests-filters input:focus {
+  border-color: #0891b2;
+}
+
+.interests-table {
+  overflow-x: auto;
+}
+
+.interests-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.interests-table thead {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.interests-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.interests-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.15s;
+}
+
+.interests-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.interests-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.passenger-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.passenger-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.passenger-id {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: capitalize;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.view-btn {
+  padding: 6px 14px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.view-btn:hover {
+  background: #e2e8f0;
+}
+
+.approve-btn {
+  padding: 6px 14px;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.approve-btn:hover {
+  background: #059669;
+}
+
+.reject-btn {
+  padding: 6px 14px;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reject-btn:hover {
+  background: #dc2626;
+}
+
+.deactivate-btn {
+  padding: 6px 14px;
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.deactivate-btn:hover {
+  background: #d97706;
+}
+
+.no-interests {
+  padding: 48px 20px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  font-size: 15px;
+  color: #64748b;
+}
+
+/* Detail Modal */
+.interest-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.interest-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.interest-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.interest-modal-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.interest-modal-close {
+  background: #f1f5f9;
+  border: none;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.interest-modal-close:hover {
+  background: #e2e8f0;
+}
+
+.interest-modal-body {
+  padding: 24px;
+}
+
+.interest-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.interest-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.detail-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.detail-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+@media (max-width: 768px) {
+  .admin-passenger-interests {
+    padding: 16px;
+  }
+
+  .interests-table table {
+    min-width: 900px;
+  }
+
+  .interests-filters {
+    width: 100%;
+  }
+
+  .interests-filters input {
+    min-width: unset;
+    flex: 1;
+  }
+}

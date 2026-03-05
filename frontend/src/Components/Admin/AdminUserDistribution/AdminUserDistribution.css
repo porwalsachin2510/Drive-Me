@@ -1,0 +1,66 @@
+.ad-dash-user-distribution {
+  width: 100%;
+}
+
+.ad-dash-donut-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.ad-dash-donut-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.ad-dash-donut-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
+}
+
+.ad-dash-donut-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.ad-dash-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ad-dash-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ad-dash-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.ad-dash-legend-info {
+  display: flex;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.ad-dash-legend-name {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.ad-dash-legend-value {
+  font-size: 14px;
+  color: #6b7280;
+}

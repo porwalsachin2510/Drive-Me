@@ -1,0 +1,59 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
+.driver-dashboard-container{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  padding: 0 30px;
+  min-height: 100vh;
+  margin: 80px 0px;
+}
+
+.driver-dashboard {
+  width: 90%;
+  min-height: 100vh;
+  
+}
+
+.dashboard-container {
+  width: 100%;
+  background-color: #ffffff;
+}
+
+.dashboard-content {
+  width: 100%;
+  padding: 40px 24px;
+  background-color: #ffffff;
+}
+
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+  .dashboard-content {
+    padding: 24px 16px;
+  }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+  .dashboard-content {
+    padding: 16px 12px;
+  }
+}

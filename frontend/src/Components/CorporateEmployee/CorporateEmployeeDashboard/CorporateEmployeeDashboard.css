@@ -1,0 +1,282 @@
+.corporate-employee-dashboard {
+  background: #f8fafc;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.dashboard-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dashboard-header p {
+  margin: 0;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.dashboard-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.info-card,
+.route-card,
+.vehicle-card,
+.trips-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.info-card h3,
+.route-card h3,
+.vehicle-card h3,
+.trips-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-card h3::before,
+.route-card h3::before,
+.vehicle-card h3::before,
+.trips-card h3::before {
+  content: "👤";
+  font-size: 20px;
+}
+
+.route-card h3::before {
+  content: "🗺️";
+}
+
+.vehicle-card h3::before {
+  content: "🚌";
+}
+
+.trips-card h3::before {
+  content: "📅";
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-item label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.info-item span {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.route-info,
+.vehicle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.route-details p,
+.vehicle-details p,
+.driver-info p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.route-details strong,
+.vehicle-details strong,
+.driver-info strong {
+  color: #111827;
+}
+
+.schedule-info h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.schedule-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.schedule-item .day {
+  font-weight: 500;
+  color: #374151;
+}
+
+.schedule-item .time {
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.driver-info {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.trips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trip-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.trip-time {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trip-time .time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.trip-time .route {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.trip-status .status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.trip-status .status.scheduled {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.trip-status .status.completed {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.trip-status .status.cancelled {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.trip-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trip-date .date {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.trip-date .time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.trip-route {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .trip-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

@@ -1,0 +1,203 @@
+.ad-dash-b2c-providers {
+  padding: 24px;
+}
+
+.ad-dash-b2c-providers-table-container {
+  overflow-x: auto;
+}
+
+.ad-dash-b2c-providers-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ad-dash-b2c-providers-table thead {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ad-dash-b2c-providers-table th {
+  padding: 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ad-dash-b2c-providers-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.2s;
+}
+
+.ad-dash-b2c-providers-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.ad-dash-b2c-providers-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.ad-dash-b2c-providers-table td {
+  padding: 16px;
+  font-size: 14px;
+  color: #334155;
+}
+
+.ad-dash-b2c-providers-provider-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ad-dash-b2c-providers-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.ad-dash-b2c-providers-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.ad-dash-b2c-providers-routes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #0891b2;
+  font-weight: 500;
+}
+
+.ad-dash-b2c-providers-routes svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.ad-dash-b2c-providers-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ad-dash-b2c-providers-phone {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.ad-dash-b2c-providers-status {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ad-dash-b2c-providers-status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ad-dash-b2c-providers-status-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.ad-dash-b2c-providers-status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ad-dash-b2c-providers-status-more-details-requested {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.ad-dash-b2c-providers-status-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.ad-dash-b2c-providers-status-suspended {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ad-dash-b2c-providers-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ad-dash-b2c-providers-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ad-dash-b2c-providers-action-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.ad-dash-b2c-providers-view-btn {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.ad-dash-b2c-providers-view-btn:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.ad-dash-b2c-providers-approve-btn {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.ad-dash-b2c-providers-approve-btn:hover {
+  background: #a7f3d0;
+}
+
+.ad-dash-b2c-providers-reject-btn {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ad-dash-b2c-providers-reject-btn:hover {
+  background: #fecaca;
+}
+
+.ad-dash-b2c-providers-details-btn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ad-dash-b2c-providers-details-btn:hover {
+  background: #fde68a;
+}
+
+@media (max-width: 768px) {
+  .ad-dash-b2c-providers {
+    padding: 16px;
+  }
+
+  .ad-dash-b2c-providers-table {
+    min-width: 900px;
+  }
+}

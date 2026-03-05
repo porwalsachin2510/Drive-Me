@@ -1,0 +1,177 @@
+.drivers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.no-drivers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 2px dashed #d1d5db;
+}
+
+.no-drivers-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.no-drivers h3 {
+  margin: 0 0 8px 0;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.no-drivers p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.driver-card {
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+
+.driver-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.driver-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #e8f4f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #16a085;
+}
+
+.driver-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+}
+
+.driver-id {
+  font-size: 12px;
+  color: #999999;
+  margin: 0;
+}
+
+.driver-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.driver-status.on-trip {
+  background-color: #e8f5e9;
+  color: #4caf50;
+}
+
+.driver-status.available {
+  background-color: #e8f5e9;
+  color: #4caf50;
+}
+
+.driver-status.off-duty {
+  background-color: #f3e5f5;
+  color: #9c27b0;
+}
+
+.driver-details {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 0;
+}
+
+.rating-row,
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.label {
+  color: #999999;
+}
+
+.value {
+  color: #000000;
+  font-weight: 600;
+}
+
+.view-profile-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-profile-btn:hover {
+  background-color: #f5f5f5;
+}
+
+@media (max-width: 1200px) {
+  .drivers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .drivers-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .driver-card {
+    gap: 10px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .driver-name {
+    font-size: 13px;
+  }
+
+  .driver-id {
+    font-size: 11px;
+  }
+
+  .view-profile-btn {
+    font-size: 11px;
+    padding: 8px;
+  }
+}

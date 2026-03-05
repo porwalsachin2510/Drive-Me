@@ -1,0 +1,101 @@
+.ad-dash-header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 16px 40px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.ad-dash-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.ad-dash-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.ad-dash-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ad-dash-logo h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #00a699;
+  margin: 0;
+}
+
+.ad-dash-header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.ad-dash-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ad-dash-user-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ad-dash-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.ad-dash-user-login {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Added notification wrapper for positioning dropdown */
+.notification-wrapper {
+  position: relative;
+}
+
+.ad-dash-notification-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: #6b7280;
+  transition: color 0.2s;
+  border-radius: 8px;
+}
+
+.ad-dash-notification-btn:hover {
+  color: #1f2937;
+  background: #f3f4f6;
+}
+
+@media (max-width: 768px) {
+  .ad-dash-header {
+    padding: 12px 20px;
+  }
+
+  .ad-dash-logo h1 {
+    font-size: 16px;
+  }
+
+  .ad-dash-user-name {
+    font-size: 12px;
+  }
+
+  .ad-dash-user-login {
+    display: none;
+  }
+}
