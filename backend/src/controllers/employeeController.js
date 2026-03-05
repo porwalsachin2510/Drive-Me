@@ -3,7 +3,7 @@ import CorporateEmployee from "../models/CorporateEmployee.js";
 import Route from "../models/Route.js";
 import MonthlyPass from "../models/MonthlyPass.js";
 import { generateOTP, sendVerificationOTP } from "../Services/emailService.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 // @desc    Get all employees for a corporate
 // @route   GET /api/employees/corporate/:corporateId
