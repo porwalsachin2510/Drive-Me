@@ -1,7 +1,6 @@
 import User from "../models/User.js"
 import OTP from "../models/OTP.js"
 import jwt from "jsonwebtoken"
-import bcrypt from "bcryptjs"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
 import { generateOTP, sendVerificationOTP } from "../Services/emailService.js"
 
