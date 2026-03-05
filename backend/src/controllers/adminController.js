@@ -4089,7 +4089,7 @@ export const changeCommuterPassword = async (req, res) => {
         }
 
         // Hash new password
-        const bcrypt = require('bcryptjs');
+        const bcrypt = require('bcrypt');
         const saltRounds = 12;
         const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
 
