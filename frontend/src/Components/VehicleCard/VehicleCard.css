@@ -46,12 +46,12 @@
 }
 
 .availability-badge.available {
-  background: #10b981;
+  background: #22C55E;
   color: #ffffff;
 }
 
 .availability-badge.unavailable {
-  background: #ef4444;
+  background: #EF4444;
   color: #ffffff;
 }
 
@@ -75,7 +75,7 @@
 
 .view-details-btn {
   padding: 12px 30px;
-  background: #00d4ff;
+  background: #2DD4BF;
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -86,7 +86,7 @@
 }
 
 .view-details-btn:hover {
-  background: #00b8e6;
+  background: #14B8A6;
   transform: scale(1.05);
 }
 
@@ -135,7 +135,7 @@
 }
 
 .spec-item i {
-  color: #00d4ff;
+  color: #2DD4BF;
   font-size: 16px;
 }
 
@@ -258,8 +258,8 @@
 .view-portfolio-btn {
   padding: 8px 16px;
   background: transparent;
-  color: #00d4ff;
-  border: 1px solid #00d4ff;
+  color: #2DD4BF;
+  border: 1px solid #2DD4BF;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
@@ -268,7 +268,7 @@
 }
 
 .view-portfolio-btn:hover {
-  background: #00d4ff;
+  background: #2DD4BF;
   color: #ffffff;
 }
 

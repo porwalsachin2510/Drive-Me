@@ -1,10 +1,26 @@
 import "./PaymentBreakdown.css";
 
-const PaymentBreakdown = ({ contract }) => {
-  const financials = contract?.financials || {};
-  const quotation = contract?.quotationId || {};
-  const totalAmount = financials.totalAmount || quotation.totalAmount || 0;
-  const currency = financials.currency || quotation.currency || "AED";
+const PaymentBreakdown = ({ contract, payment }) => {
+  // Handle both contract and payment props
+  // If payment is provided (Admin view), use payment data
+  // If contract is provided (Corporate view), use contract data
+  
+  let totalAmount = 0;
+  let currency = "AED";
+  
+  if (payment) {
+    // Use payment object directly (from Admin Payment Verification)
+    totalAmount = payment.contractId?.financials?.totalAmount || 
+                  payment.contractId?.quotationId?.quotedPrice?.totalAmount ||
+                  payment.amount || 0;
+    currency = payment.currency || payment.contractId?.financials?.currency || "AED";
+  } else if (contract) {
+    // Use contract object (from Corporate Contract Details)
+    const financials = contract?.financials || {};
+    const quotation = contract?.quotationId || {};
+    totalAmount = financials.totalAmount || quotation.totalAmount || quotation?.quotedPrice?.totalAmount || 0;
+    currency = financials.currency || quotation.currency || "AED";
+  }
 
   const advanceAmount = (totalAmount * 50) / 100;
   const remainingAmount = (totalAmount * 50) / 100;

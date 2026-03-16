@@ -1,6 +1,6 @@
 .fleet-quotations-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
   padding: 80px 20px 40px;
 }
 
@@ -57,7 +57,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
   flex-shrink: 0;
 }
 
@@ -80,7 +80,7 @@
 }
 
 .stat-card.total {
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #E85D5D;
 }
 
 .stat-card.pending {

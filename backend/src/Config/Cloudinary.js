@@ -55,11 +55,15 @@ export const uploadToCloudinary = (file, folder = "driveme", fieldName = "") => 
         console.log("[v0] Folder:", folder)
         console.log("[v0] Public ID with extension:", publicIdName)
 
+        // Determine resource type based on mimetype
+        const isImage = file.mimetype.startsWith("image/")
+        const resourceType = isImage ? "image" : "raw"
+
         const uploadOptions = {
-            resource_type: "raw",
+            resource_type: resourceType,
             folder: folder,
             public_id: publicIdName.replace(`.${fileExtension}`, ""), // Remove extension for public_id as format will be added
-            format: fileExtension,
+            format: isImage ? undefined : fileExtension, // Let Cloudinary handle image format
             use_filename: false,
             unique_filename: false,
             overwrite: false,

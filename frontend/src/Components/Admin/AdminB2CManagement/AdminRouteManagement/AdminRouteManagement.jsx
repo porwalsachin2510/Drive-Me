@@ -134,7 +134,9 @@ function AdminRouteManagement() {
 
   const handleToggleStatus = async (routeId, currentStatus) => {
     try {
-      const newStatus = currentStatus === "active" ? "inactive" : "active"
+      // Normalize status comparison (handle both cases)
+      const isActive = currentStatus?.toLowerCase() === "active"
+      const newStatus = isActive ? "Inactive" : "Active"
       setNotification({ type: 'info', message: `Updating route status to ${newStatus}...` })
       const response = await api.put(`/admin/b2c/routes/${routeId}`, { status: newStatus })
       
@@ -344,7 +346,7 @@ function AdminRouteManagement() {
                     <span className="route-management-detail-icon">💰</span>
                     <div className="route-management-detail-content">
                       <span className="route-management-detail-label">Price</span>
-                      <span className="route-management-detail-value">AED {route.price.toFixed(2)}</span>
+                      <span className="route-management-detail-value">{route.pricing?.currency || route.currency || 'KWD'} {route.price?.toFixed(route.pricing?.currency === 'KWD' || route.pricing?.currency === 'BHD' || route.pricing?.currency === 'OMR' ? 3 : 2)}</span>
                     </div>
                   </div>
                   
@@ -369,7 +371,7 @@ function AdminRouteManagement() {
                   className="route-management-action-btn route-management-status-btn"
                   onClick={() => handleToggleStatus(route._id, route.status)}
                 >
-                  {route.status === 'active' ? '⏸️ Deactivate' : '✅ Activate'}
+                  {route.status?.toLowerCase() === 'active' ? '⏸️ Deactivate' : '✅ Activate'}
                 </button>
                 <button 
                   className="route-management-action-btn route-management-featured-btn"

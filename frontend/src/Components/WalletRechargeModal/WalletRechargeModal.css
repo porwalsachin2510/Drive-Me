@@ -98,7 +98,7 @@
 }
 
 .amount-input-container:focus-within {
-  border-color: #007bff;
+  border-color: #E85D5D;
 }
 
 .currency-symbol {
@@ -149,9 +149,9 @@
 }
 
 .quick-amount-btn:hover {
-  border-color: #007bff;
-  color: #007bff;
-  background: #f8f9ff;
+  border-color: #E85D5D;
+  color: #E85D5D;
+  background: rgba(232, 93, 93, 0.05);
 }
 
 /* Payment Method Section */
@@ -177,13 +177,13 @@
 }
 
 .payment-method-option:hover {
-  border-color: #007bff;
-  background: #f8f9ff;
+  border-color: #E85D5D;
+  background: rgba(232, 93, 93, 0.05);
 }
 
 .payment-method-option.selected {
-  border-color: #007bff;
-  background: #f8f9ff;
+  border-color: #E85D5D;
+  background: rgba(232, 93, 93, 0.05);
 }
 
 .payment-icon {
@@ -217,7 +217,7 @@
 }
 
 .payment-method-option.selected .radio-custom {
-  border-color: #007bff;
+  border-color: #E85D5D;
 }
 
 .payment-method-option.selected .radio-custom::after {
@@ -228,7 +228,7 @@
   transform: translate(-50%, -50%);
   width: 10px;
   height: 10px;
-  background: #007bff;
+  background: #E85D5D;
   border-radius: 50%;
 }
 
@@ -291,14 +291,14 @@
 }
 
 .recharge-btn {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
   color: white;
 }
 
 .recharge-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(45, 212, 191, 0.3);
 }
 
 .cancel-btn:disabled, .recharge-btn:disabled {

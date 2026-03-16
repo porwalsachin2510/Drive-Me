@@ -1,6 +1,8 @@
+/* Premium Admin Users - Inter Font */
 .admin-users {
   width: 100%;
   padding: 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .admin-users-header {
@@ -39,7 +41,7 @@
 .admin-users-stats .stat-number {
   font-size: 28px;
   font-weight: 700;
-  color: #0891b2;
+  color: #2DD4BF;
   line-height: 1.2;
 }
 
@@ -82,13 +84,13 @@
 }
 
 .tab-button.active {
-  color: #0891b2;
-  border-bottom-color: #0891b2;
+  color: #2DD4BF;
+  border-bottom-color: #2DD4BF;
 }
 
 .tab-count {
-  background: #e0f2fe;
-  color: #0891b2;
+  background: rgba(45, 212, 191, 0.1);
+  color: #2DD4BF;
   font-size: 11px;
   font-weight: 600;
   padding: 1px 7px;
@@ -111,8 +113,8 @@
 }
 
 .search-input:focus {
-  border-color: #0891b2;
-  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+  border-color: #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 .users-grid {
@@ -246,21 +248,21 @@
 }
 
 .view-btn {
-  background: #0891b2;
+  background: #2DD4BF;
   color: #ffffff;
 }
 
 .view-btn:hover {
-  background: #0e7490;
+  background: #14B8A6;
 }
 
 .activate-btn {
-  background: #10b981;
+  background: #22C55E;
   color: #ffffff;
 }
 
 .activate-btn:hover {
-  background: #059669;
+  background: #16A34A;
 }
 
 .suspend-btn {

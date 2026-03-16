@@ -249,6 +249,253 @@ export const SocketProvider = ({ children }) => {
         }
       });
 
+      // B2B Partner specific events
+      instance.on("quotation-received", (data) => {
+        console.log("New quotation received:", data);
+        const notification = {
+          _id: `quotation-${Date.now()}`,
+          userId: user._id,
+          type: "NEW_QUOTATION",
+          title: "New Quotation Request",
+          message: data.message || "You have received a new quotation request",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification("New Quotation Request", {
+            body: data.message || "You have received a new quotation request",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      instance.on("contract-update", (data) => {
+        console.log("Contract update:", data);
+        const notification = {
+          _id: `contract-${Date.now()}`,
+          userId: user._id,
+          type: "CONTRACT_UPDATE",
+          title: data.title || "Contract Update",
+          message: data.message || "Your contract has been updated",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Contract Update", {
+            body: data.message || "Your contract has been updated",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // B2C Partner specific events
+      instance.on("new-booking-request", (data) => {
+        console.log("New booking request:", data);
+        const notification = {
+          _id: `booking-request-${Date.now()}`,
+          userId: user._id,
+          type: "NEW_BOOKING_REQUEST",
+          title: "New Booking Request",
+          message: data.message || "You have a new booking request",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification("New Booking Request", {
+            body: data.message || "You have a new booking request",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      instance.on("route-request", (data) => {
+        console.log("Route request:", data);
+        const notification = {
+          _id: `route-request-${Date.now()}`,
+          userId: user._id,
+          type: "NEW_ROUTE_REQUEST",
+          title: "New Route Request",
+          message: data.message || "You have a new route request",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification("New Route Request", {
+            body: data.message || "You have a new route request",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // Driver specific events
+      instance.on("new-trip-available", (data) => {
+        console.log("New trip available:", data);
+        const notification = {
+          _id: `trip-available-${Date.now()}`,
+          userId: user._id,
+          type: "NEW_TRIP_AVAILABLE",
+          title: "New Trip Available",
+          message: data.message || `New trip available: ${data.pickup || ''} to ${data.dropoff || ''}`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification("New Trip Available", {
+            body: data.message || `New trip available: ${data.pickup || ''} to ${data.dropoff || ''}`,
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      instance.on("earnings-updated", (data) => {
+        console.log("Earnings updated:", data);
+        const notification = {
+          _id: `earnings-${Date.now()}`,
+          userId: user._id,
+          type: "EARNINGS_UPDATED",
+          title: "Earnings Updated",
+          message: data.message || `Your earnings have been updated: ${data.amount || ''}`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification("Earnings Updated", {
+            body: data.message || `Your earnings have been updated`,
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // Admin specific events
+      instance.on("admin-alert", (data) => {
+        console.log("Admin alert:", data);
+        const notification = {
+          _id: `admin-alert-${Date.now()}`,
+          userId: user._id,
+          type: "ADMIN_ALERT",
+          title: data.title || "Admin Alert",
+          message: data.message || "New admin notification",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Admin Alert", {
+            body: data.message || "New admin notification",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      instance.on("payout-request", (data) => {
+        console.log("Payout request:", data);
+        const notification = {
+          _id: `payout-${Date.now()}`,
+          userId: user._id,
+          type: "PAYOUT_REQUEST",
+          title: "New Payout Request",
+          message: data.message || "A new payout request has been submitted",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification("New Payout Request", {
+            body: data.message || "A new payout request has been submitted",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      instance.on("user-verification", (data) => {
+        console.log("User verification:", data);
+        const notification = {
+          _id: `verification-${Date.now()}`,
+          userId: user._id,
+          type: "USER_VERIFICATION",
+          title: data.title || "Verification Update",
+          message: data.message || "User verification status has been updated",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Verification Update", {
+            body: data.message || "User verification status has been updated",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // Corporate Employee specific events
+      instance.on("employee-booking-approved", (data) => {
+        console.log("Employee booking approved:", data);
+        const notification = {
+          _id: `employee-booking-approved-${Date.now()}`,
+          userId: user._id,
+          type: "EMPLOYEE_BOOKING_APPROVED",
+          title: "Booking Approved",
+          message: data.message || "Your booking has been approved by your company",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification("Booking Approved", {
+            body: data.message || "Your booking has been approved by your company",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      instance.on("schedule-reminder", (data) => {
+        console.log("Schedule reminder:", data);
+        const notification = {
+          _id: `reminder-${Date.now()}`,
+          userId: user._id,
+          type: "SCHEDULE_REMINDER",
+          title: "Trip Reminder",
+          message: data.message || "You have an upcoming trip",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          data: data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification("Trip Reminder", {
+            body: data.message || "You have an upcoming trip",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
       // Set socket state asynchronously to avoid cascading renders
       setTimeout(() => {
         setSocket(instance);

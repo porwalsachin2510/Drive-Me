@@ -1,3 +1,4 @@
+/* Premium B2C Navigation - Inter Font */
 .b2c-navigation {
   display: flex;
   gap: 40px;
@@ -7,6 +8,7 @@
   overflow-y: hidden;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .nav-item {
@@ -30,7 +32,7 @@
 }
 
 .nav-item.active {
-  color: #16a34a;
+  color: #2DD4BF;
 }
 
 .nav-item.active::after {
@@ -40,7 +42,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background-color: #16a34a;
+  background-color: #2DD4BF;
 }
 
 .nav-icon {

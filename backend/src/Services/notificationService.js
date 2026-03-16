@@ -32,6 +32,26 @@ export const createNotification = async (notificationData) => {
             createdAt: notification.createdAt,
         });
 
+        // Also broadcast to all Admin users so they can monitor activities
+        // Skip if this is already an admin notification to avoid loops
+        if (!notificationData.skipAdminBroadcast) {
+            try {
+                await sendAdminNotificationForMonitoring(
+                    `[Monitor] ${sanitizedData.title}`,
+                    sanitizedData.message,
+                    `ADMIN_MONITOR_${sanitizedData.type}`,
+                    {
+                        ...sanitizedData.data,
+                        originalUserId: sanitizedData.userId,
+                        originalNotificationId: notification._id,
+                    }
+                );
+            } catch (adminErr) {
+                // Don't fail if admin notification fails
+                console.error("[v0] Failed to send admin monitor notification:", adminErr.message);
+            }
+        }
+
         console.log(`[v0] Notification created and sent: ${notification._id}`);
         return notification;
     } catch (error) {
@@ -726,12 +746,43 @@ export const sendAdminNotification = async (title, message, type = "ADMIN_ALERT"
                 type,
                 title,
                 message,
-                data
+                data,
+                skipAdminBroadcast: true // Prevent infinite loop
             });
         }
         console.log(`[v0] Admin notification sent to ${admins.length} admins: ${title}`);
     } catch (error) {
         console.error("[v0] Error sending admin notification:", error);
+    }
+};
+
+// Send admin notification for monitoring user activities (prevents infinite loops)
+const sendAdminNotificationForMonitoring = async (title, message, type = "ADMIN_MONITOR", data = {}) => {
+    try {
+        const admins = await User.find({ role: "ADMIN" }).select('_id');
+        for (const admin of admins) {
+            // Create notification directly to prevent recursive broadcast
+            const notification = new Notification({
+                userId: admin._id,
+                type,
+                title,
+                message,
+                data,
+            });
+            await notification.save();
+            
+            // Send real-time notification
+            await sendRealTimeNotification(admin._id, {
+                type,
+                title,
+                message,
+                data,
+                notificationId: notification._id,
+                createdAt: notification.createdAt,
+            });
+        }
+    } catch (error) {
+        console.error("[v0] Error sending admin monitoring notification:", error);
     }
 };
 

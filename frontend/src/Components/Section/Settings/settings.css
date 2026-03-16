@@ -79,8 +79,8 @@
 .form-group select:focus,
 .form-group input:focus {
   outline: none;
-  border-color: #00b074;
-  box-shadow: 0 0 0 3px rgba(0, 176, 116, 0.1);
+  border-color: #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 .form-group select {
@@ -160,11 +160,11 @@
 }
 
 .toggle-switch input:checked {
-  background-color: #00b074;
+  background-color: #E85D5D;
 }
 
 .toggle-switch:has(input:checked) {
-  background-color: #00b074;
+  background-color: #E85D5D;
 }
 
 .save-btn {

@@ -1,13 +1,8 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
+/* Premium Homepage Styles - Inter Font */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-secondary, #f8f9fa);
+  color: var(--text-primary, #202124);
 }
 
 .homepage {
@@ -54,7 +49,7 @@ body {
 }
 
 .page-title h1 .highlight {
-  color: #00a699;
+  color: #E85D5D;
 }
 
 .page-title p {
@@ -80,7 +75,7 @@ body {
 
 .service-selection > p {
   font-size: 14px;
-  color: #00a699;
+  color: #2DD4BF;
   margin-bottom: 30px;
 }
 
@@ -101,8 +96,8 @@ body {
 }
 
 .service-card:hover {
-  border-color: #00a699;
-  box-shadow: 0 8px 24px rgba(0, 166, 153, 0.15);
+  border-color: #2DD4BF;
+  box-shadow: 0 8px 24px rgba(45, 212, 191, 0.15);
   transform: translateY(-4px);
 }
 
@@ -173,7 +168,7 @@ body {
 }
 
 .progress-dots .dot.active {
-  background-color: #00a699;
+  background-color: #2DD4BF;
 }
 
 /* ============ FORM GRIDS ============ */
@@ -225,8 +220,8 @@ body {
 .form-group input[type="date"]:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #00a699;
-  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1);
+  border-color: #2DD4BF;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
 }
 
 .form-group input.input-error,
@@ -269,12 +264,12 @@ body {
   height: 18px;
   margin-right: 10px;
   cursor: pointer;
-  accent-color: #00a699;
+  accent-color: #2DD4BF;
 }
 
 .radio-option:hover {
-  border-color: #00a699;
-  background-color: rgba(0, 166, 153, 0.05);
+  border-color: #2DD4BF;
+  background-color: rgba(45, 212, 191, 0.05);
 }
 
 .radio-option input[type="radio"]:checked + .radio-label {
@@ -312,12 +307,12 @@ body {
   height: 18px;
   margin-right: 10px;
   cursor: pointer;
-  accent-color: #00a699;
+  accent-color: #2DD4BF;
 }
 
 .checkbox-option:hover {
-  border-color: #00a699;
-  background-color: rgba(0, 166, 153, 0.05);
+  border-color: #2DD4BF;
+  background-color: rgba(45, 212, 191, 0.05);
 }
 
 .checkbox-option input[type="checkbox"]:checked + .checkbox-label {
@@ -366,15 +361,15 @@ body {
 }
 
 .btn-search {
-  background-color: #00a699;
+  background-color: #2DD4BF;
   color: white;
   padding: 12px 32px;
   margin-left: auto;
 }
 
 .btn-search:hover {
-  background-color: #008b7a;
-  box-shadow: 0 4px 12px rgba(0, 166, 153, 0.3);
+  background-color: #14B8A6;
+  box-shadow: 0 4px 12px rgba(45, 212, 191, 0.3);
   transform: translateY(-2px);
 }
 
@@ -397,7 +392,7 @@ body {
 .footer-col h4 {
   font-size: 16px;
   margin-bottom: 12px;
-  color: #00a699;
+  color: #E85D5D;
 }
 
 .footer-col p {
@@ -423,7 +418,7 @@ body {
 }
 
 .footer-col ul li a:hover {
-  color: #00a699;
+  color: #E85D5D;
 }
 
 .footer-bottom {

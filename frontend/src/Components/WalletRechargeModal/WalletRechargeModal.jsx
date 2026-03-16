@@ -6,8 +6,8 @@ const WalletRechargeModal = ({
   isOpen, 
   onClose, 
   onRechargeSuccess, 
-  country = 'UAE',
-  currency = 'AED'
+  country = 'Kuwait',
+  currency = 'KWD'
 }) => {
   const [amount, setAmount] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('card');

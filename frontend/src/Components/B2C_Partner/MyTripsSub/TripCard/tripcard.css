@@ -25,8 +25,8 @@
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background-color: #dbeafe;
-  color: #0ea5e9;
+  background-color: rgba(45, 212, 191, 0.1);
+  color: #2DD4BF;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
@@ -35,18 +35,18 @@
 }
 
 .trip-status-badge.available {
-  background-color: #dbeafe;
-  color: #0ea5e9;
+  background-color: rgba(45, 212, 191, 0.1);
+  color: #2DD4BF;
 }
 
 .trip-status-badge.completed {
-  background-color: #d1fae5;
-  color: #059669;
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #22C55E;
 }
 
 .trip-status-badge.cancelled {
-  background-color: #fee2e2;
-  color: #dc2626;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
 }
 
 .trip-meta {
@@ -104,11 +104,11 @@
 }
 
 .location-dot.pickup {
-  background-color: #10b981;
+  background-color: #22C55E;
 }
 
 .location-dot.dropoff {
-  background-color: #ef4444;
+  background-color: #EF4444;
 }
 
 .location-label {
@@ -127,7 +127,7 @@
 
 .trip-action-btn {
   padding: 12px 16px;
-  background-color: #16a34a;
+  background-color: #2DD4BF;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -138,11 +138,12 @@
 }
 
 .trip-action-btn:hover {
-  background-color: #15803d;
+  background-color: #14B8A6;
+  box-shadow: 0 4px 14px rgba(45, 212, 191, 0.3);
 }
 
 .trip-action-btn.primary {
-  background-color: #16a34a;
+  background-color: #2DD4BF;
 }
 
 .trip-action-btn.secondary {

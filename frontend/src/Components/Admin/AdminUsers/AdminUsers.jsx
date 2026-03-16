@@ -51,11 +51,21 @@ function AdminUsers() {
 
   const handleUserAction = async (userId, action) => {
     try {
-      await api.put(`/admin/users/${userId}/${action}`)
+      if (action === 'delete') {
+        // Delete uses DELETE method, not PUT
+        if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+          await api.delete(`/admin/users/${userId}`)
+        } else {
+          return
+        }
+      } else {
+        await api.put(`/admin/users/${userId}/${action}`)
+      }
       fetchUsers()
       fetchUserStats()
     } catch (error) {
       console.error(`Error ${action} user:`, error)
+      alert(`Failed to ${action} user. Please try again.`)
     }
   }
 

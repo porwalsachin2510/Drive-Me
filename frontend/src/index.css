@@ -1,14 +1,169 @@
+/* DriveMe Premium Design System - Brand Color Scheme */
+:root {
+  /* ============================================
+     DRIVEME BRAND COLORS (Logo Based)
+     ============================================ */
+  
+  /* Primary Brand - Coral/Pink (Logo Color) */
+  --primary-color: #E85D5D;
+  --primary-hover: #D94545;
+  --primary-dark: #C93A3A;
+  --primary-light: rgba(232, 93, 93, 0.08);
+  --primary-lighter: rgba(232, 93, 93, 0.05);
+  
+  /* Secondary Brand - Teal/Green (Action Color) */
+  --secondary-color: #2DD4BF;
+  --secondary-hover: #26B8A5;
+  --secondary-dark: #14B8A6;
+  --secondary-light: rgba(45, 212, 191, 0.08);
+  
+  /* Accent Teal - For Links and Active States */
+  --accent-color: #2DD4BF;
+  --accent-hover: #26B8A5;
+  --accent-light: rgba(45, 212, 191, 0.1);
+  
+  /* ============================================
+     STATUS COLORS
+     ============================================ */
+  
+  /* Success Green - Approve, Completed, Positive */
+  --success-color: #22C55E;
+  --success-hover: #16A34A;
+  --success-light: rgba(34, 197, 94, 0.1);
+  --success-bg: rgba(34, 197, 94, 0.08);
+  
+  /* Warning Amber - Pending, Maintenance */
+  --warning-color: #F59E0B;
+  --warning-hover: #D97706;
+  --warning-light: rgba(245, 158, 11, 0.1);
+  --warning-bg: rgba(245, 158, 11, 0.08);
+  
+  /* Danger Red - Reject, Cancel, Delete */
+  --danger-color: #EF4444;
+  --danger-hover: #DC2626;
+  --danger-light: rgba(239, 68, 68, 0.1);
+  --danger-bg: rgba(239, 68, 68, 0.08);
+  
+  /* Info Blue - Ongoing, Information */
+  --info-color: #3B82F6;
+  --info-hover: #2563EB;
+  --info-light: rgba(59, 130, 246, 0.1);
+  --info-bg: rgba(59, 130, 246, 0.08);
+  
+  /* ============================================
+     TEXT COLORS
+     ============================================ */
+  --text-primary: #1F2937;
+  --text-secondary: #4B5563;
+  --text-muted: #6B7280;
+  --text-light: #9CA3AF;
+  --text-color: #1F2937;
+  --text-white: #FFFFFF;
+  
+  /* ============================================
+     BACKGROUND COLORS
+     ============================================ */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8FAFC;
+  --bg-tertiary: #F1F5F9;
+  --bg-dark: #1E293B;
+  --bg-darker: #0F172A;
+  --light-gray: #F8FAFC;
+  --white: #FFFFFF;
+  
+  /* Footer Background */
+  --footer-bg: #1E293B;
+  --footer-text: #94A3B8;
+  --footer-text-muted: #64748B;
+  
+  /* ============================================
+     BORDER & SHADOWS
+     ============================================ */
+  --border-color: #E2E8F0;
+  --border-light: #F1F5F9;
+  --border-dark: #CBD5E1;
+  --border-radius: 8px;
+  --border-radius-sm: 4px;
+  --border-radius-lg: 12px;
+  --border-radius-xl: 16px;
+  --border-radius-full: 9999px;
+  
+  /* Premium Shadows - Subtle and Clean */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+  --box-shadow: var(--shadow-md);
+  
+  /* Colored Shadows */
+  --shadow-primary: 0 4px 14px rgba(232, 93, 93, 0.25);
+  --shadow-success: 0 4px 14px rgba(34, 197, 94, 0.25);
+  --shadow-teal: 0 4px 14px rgba(45, 212, 191, 0.25);
+  
+  /* ============================================
+     TRANSITIONS
+     ============================================ */
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* ============================================
+     TYPOGRAPHY - Inter (Premium Google-like Font)
+     ============================================ */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  --font-size-5xl: 3rem;
+  
+  /* Font Weights */
+  --font-light: 300;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* ============================================
+     SPACING
+     ============================================ */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
-  line-height: 1.6;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-regular);
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  letter-spacing: -0.01em;
 }
 
 html,
@@ -18,37 +173,596 @@ body,
   width: 100%;
 }
 
+/* Premium Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+h1 { font-size: var(--font-size-4xl); font-weight: var(--font-bold); }
+h2 { font-size: var(--font-size-3xl); }
+h3 { font-size: var(--font-size-2xl); }
+h4 { font-size: var(--font-size-xl); font-weight: var(--font-medium); }
+h5 { font-size: var(--font-size-lg); font-weight: var(--font-medium); }
+h6 { font-size: var(--font-size-base); font-weight: var(--font-medium); }
+
+p {
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+small {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
 a {
   text-decoration: none;
   color: inherit;
+  transition: var(--transition-fast);
+}
+
+a:hover {
+  color: var(--primary-color);
 }
 
 button {
   cursor: pointer;
   border: none;
-  font-family: inherit;
+  font-family: var(--font-family);
+  font-weight: var(--font-medium);
+  transition: var(--transition);
 }
 
 input,
 textarea,
 select {
-  font-family: inherit;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
 }
 
-/* Scrollbar styling */
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Premium Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: var(--border-color);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--text-muted);
+}
+
+/* ============================================
+   DRIVEME BUTTON STYLES
+   ============================================ */
+
+/* Primary Button - Coral/Pink (Main CTA) */
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 10px 24px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.01em;
+  transition: var(--transition);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  box-shadow: var(--shadow-primary);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  background-color: var(--primary-dark);
+  transform: translateY(0);
+}
+
+/* Secondary Button - Teal/Green (Actions) */
+.btn-secondary,
+.btn-teal {
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.btn-secondary:hover,
+.btn-teal:hover {
+  background-color: var(--secondary-hover);
+  box-shadow: var(--shadow-teal);
+  transform: translateY(-1px);
+}
+
+/* Success Button - Green (Approve) */
+.btn-success {
+  background-color: var(--success-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.btn-success:hover {
+  background-color: var(--success-hover);
+  box-shadow: var(--shadow-success);
+}
+
+/* Danger Button - Red (Reject, Delete) */
+.btn-danger {
+  background-color: transparent;
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background-color: var(--danger-light);
+  border-color: var(--danger-hover);
+}
+
+.btn-danger-filled {
+  background-color: var(--danger-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.btn-danger-filled:hover {
+  background-color: var(--danger-hover);
+}
+
+/* Warning Button - Amber */
+.btn-warning {
+  background-color: var(--warning-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.btn-warning:hover {
+  background-color: var(--warning-hover);
+}
+
+/* Outline Buttons */
+.btn-outline {
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 10px 24px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.btn-outline:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-dark);
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 10px 24px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary-light);
+}
+
+.btn-outline-teal {
+  background-color: transparent;
+  color: var(--secondary-color);
+  border: 1px solid var(--secondary-color);
+  padding: 10px 24px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.btn-outline-teal:hover {
+  background-color: var(--secondary-light);
+}
+
+/* Dark Button - Footer/Dark Sections */
+.btn-dark {
+  background-color: var(--bg-dark);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: var(--border-radius);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.btn-dark:hover {
+  background-color: var(--bg-darker);
+}
+
+/* Card Styles */
+.card {
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Form Input Styles */
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-base);
+  transition: var(--transition-fast);
+  background: var(--white);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.form-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+/* ============================================
+   DRIVEME STATUS BADGES
+   ============================================ */
+
+/* Base Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--border-radius-full);
+  font-size: 11px;
+  font-weight: var(--font-medium);
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+}
+
+/* Success/Completed/Active Badge - Green */
+.badge-success,
+.badge-completed,
+.badge-active {
+  background-color: var(--success-bg);
+  color: var(--success-color);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* Warning/Pending/Maintenance Badge - Amber */
+.badge-warning,
+.badge-pending,
+.badge-maintenance {
+  background-color: var(--warning-bg);
+  color: var(--warning-color);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* Danger/Cancelled/Rejected Badge - Red */
+.badge-danger,
+.badge-cancelled,
+.badge-rejected,
+.badge-suspended {
+  background-color: var(--danger-bg);
+  color: var(--danger-color);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Info/Ongoing/Upcoming Badge - Blue */
+.badge-info,
+.badge-ongoing,
+.badge-upcoming {
+  background-color: var(--info-bg);
+  color: var(--info-color);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Primary Badge - Coral */
+.badge-primary {
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  border: 1px solid rgba(232, 93, 93, 0.2);
+}
+
+/* Teal Badge */
+.badge-teal,
+.badge-available {
+  background-color: var(--secondary-light);
+  color: var(--secondary-color);
+  border: 1px solid rgba(45, 212, 191, 0.2);
+}
+
+/* B2B/B2C Type Badges */
+.badge-b2b {
+  background-color: var(--info-bg);
+  color: var(--info-color);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  padding: 2px 8px;
+}
+
+.badge-b2c {
+  background-color: var(--secondary-light);
+  color: var(--secondary-color);
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  padding: 2px 8px;
+}
+
+/* ============================================
+   DRIVEME STAT CARDS
+   ============================================ */
+
+/* Primary Stat Card - Coral Background */
+.stat-card-primary {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+  color: white;
+  border-radius: var(--border-radius-lg);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-primary);
+}
+
+.stat-card-primary .stat-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  margin-bottom: 8px;
+}
+
+.stat-card-primary .stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-bold);
+  margin-bottom: 4px;
+}
+
+.stat-card-primary .stat-subtitle {
+  font-size: var(--font-size-xs);
+  opacity: 0.8;
+}
+
+/* White Stat Card */
+.stat-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 20px 24px;
+  transition: var(--transition);
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.stat-card .stat-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.stat-card .stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.stat-card .stat-value.success {
+  color: var(--success-color);
+}
+
+.stat-card .stat-value.danger {
+  color: var(--danger-color);
+}
+
+.stat-card .stat-value.warning {
+  color: var(--warning-color);
+}
+
+.stat-card .stat-subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* ============================================
+   DRIVEME TEXT UTILITIES
+   ============================================ */
+
+.text-primary { color: var(--primary-color) !important; }
+.text-teal { color: var(--secondary-color) !important; }
+.text-success { color: var(--success-color) !important; }
+.text-warning { color: var(--warning-color) !important; }
+.text-danger { color: var(--danger-color) !important; }
+.text-info { color: var(--info-color) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-dark { color: var(--text-primary) !important; }
+.text-white { color: white !important; }
+
+/* ============================================
+   DRIVEME BACKGROUND UTILITIES
+   ============================================ */
+
+.bg-primary { background-color: var(--primary-color) !important; }
+.bg-primary-light { background-color: var(--primary-light) !important; }
+.bg-teal { background-color: var(--secondary-color) !important; }
+.bg-teal-light { background-color: var(--secondary-light) !important; }
+.bg-success { background-color: var(--success-color) !important; }
+.bg-success-light { background-color: var(--success-light) !important; }
+.bg-warning { background-color: var(--warning-color) !important; }
+.bg-warning-light { background-color: var(--warning-light) !important; }
+.bg-danger { background-color: var(--danger-color) !important; }
+.bg-danger-light { background-color: var(--danger-light) !important; }
+.bg-dark { background-color: var(--bg-dark) !important; }
+.bg-white { background-color: white !important; }
+.bg-gray { background-color: var(--bg-secondary) !important; }
+
+/* ============================================
+   DRIVEME LINK STYLES
+   ============================================ */
+
+.link-primary {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.link-primary:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.link-teal {
+  color: var(--secondary-color);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.link-teal:hover {
+  color: var(--secondary-hover);
+  text-decoration: underline;
+}
+
+/* ============================================
+   DRIVEME AMOUNT STYLES
+   ============================================ */
+
+.amount-positive {
+  color: var(--success-color);
+  font-weight: var(--font-semibold);
+}
+
+.amount-negative {
+  color: var(--danger-color);
+  font-weight: var(--font-medium);
+}
+
+.amount-primary {
+  color: var(--primary-color);
+  font-weight: var(--font-semibold);
+}
+
+/* ============================================
+   DRIVEME TAB STYLES
+   ============================================ */
+
+.tab-primary.active {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+.tab-teal.active {
+  background-color: var(--secondary-color) !important;
+  color: white !important;
+}
+
+/* ============================================
+   DRIVEME TOGGLE SWITCH
+   ============================================ */
+
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: var(--border-color);
+  border-radius: var(--border-radius-full);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.toggle-switch.active {
+  background-color: var(--primary-color);
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.toggle-switch.active::after {
+  left: 22px;
 }

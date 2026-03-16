@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import Navbar from "../../../Components/Navbar/Navbar";
+import Footer from "../../../Components/Footer/Footer";
 import { searchVehicles } from "../../../Redux/slices/vehicleSlice";
 import PriceComparison from "../../../Components/Corporate/PriceComparison/PriceComparison";
 import "./corporate.css";
@@ -13,6 +15,8 @@ const Corporate = () => {
   const dispatch = useDispatch();
   const serviceType = location.state?.serviceType || "passenger";
 
+  const [activeTab, setActiveTab] = useState("commuters");
+  
   const [filters, setFilters] = useState({
     serviceType: serviceType,
     vehicleType: "",
@@ -33,21 +37,22 @@ const Corporate = () => {
 
   const vehicleTypeOptions = {
     passenger: [
-      { value: "sedan", label: "Sedan", icon: "🚗" },
-      { value: "suv", label: "SUV", icon: "🚙" },
-      { value: "luxury", label: "Luxury", icon: "🏎️" },
-      { value: "van", label: "Van/Minibus", icon: "🚐" },
+      { value: "SEDAN", label: "Sedan", icon: "🚗" },
+      { value: "SUV", label: "SUV", icon: "🚙" },
+      { value: "LUXURY_COACH", label: "Luxury Coach", icon: "🏎️" },
+      { value: "MINIVAN", label: "Minivan", icon: "🚐" },
       { value: "COASTER_BUS", label: "Coaster Bus", icon: "🚐" },
     ],
     goods: [
-      { value: "pickup", label: "Pickup Truck", icon: "🛻" },
-      { value: "cargo-van", label: "Cargo Van", icon: "🚚" },
-      { value: "mini-truck", label: "Mini Truck (1-3 ton)", icon: "🚛" },
-      { value: "refrigerated", label: "Refrigerated Vehicle", icon: "❄️" },
+      { value: "PICKUP_1TON", label: "Pickup 1 Ton", icon: "🛻" },
+      { value: "PICKUP_3TON", label: "Pickup 3 Ton", icon: "🛻" },
+      { value: "TRUCK_7TON", label: "Truck 7 Ton", icon: "🚛" },
+      { value: "REEFER_TRUCK", label: "Reefer Truck", icon: "❄️" },
+      { value: "FLATBED_TRAILER", label: "Flatbed Trailer", icon: "🚚" },
     ],
     managed: [
-      { value: "shuttle bus", label: "Shuttle Bus", icon: "🚐" },
-      { value: "executive van", label: "Executive Van", icon: "🚐" },
+      { value: "SHUTTLE_BUS", label: "Shuttle Bus", icon: "🚐" },
+      { value: "EXECUTIVE_VAN", label: "Executive Van", icon: "🚐" },
     ],
   };
 
@@ -214,54 +219,56 @@ const Corporate = () => {
   };
 
   return (
-    <div className="customize-requirements-container">
-      <div className="customize-content">
-        <div className="customize-header">
-          <h1>Customize Your Requirements</h1>
-          <p>Filter and find the perfect vehicles for your business needs</p>
-        </div>
-
-        <div className="filter-form">
-          {/* Vehicle Type Selection */}
-          <div className="filter-section">
-            <h3>Select Vehicle Type</h3>
-            <div className="vehicle-type-grid">
-              {vehicleTypeOptions[serviceType].map((type) => (
-                <div
-                  key={type.value}
-                  className={`vehicle-type-option ${
-                    filters.vehicleType === type.value ? "selected" : ""
-                  }`}
-                  onClick={() => handleInputChange("vehicleType", type.value)}
-                >
-                  <span className="vehicle-icon">{type.icon}</span>
-                  <span className="vehicle-label">{type.label}</span>
-                </div>
-              ))}
-            </div>
+    <>
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className="customize-requirements-container">
+        <div className="customize-content">
+          <div className="customize-header">
+            <h1>Customize Your Requirements</h1>
+            <p>Filter and find the perfect vehicles for your business needs</p>
           </div>
 
-          {MinimumSeatsRequiredOptions[serviceType].map((type) => (
-            <div className="filter-section" key={type.value}>
-              <h3>{type.label}</h3>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                placeholder={type.placeholder}
-                value={filters.minseatsrequired}
-                onChange={(e) =>
-                  handleInputChange(
-                    "minseatsrequired",
-                    Number.parseInt(e.target.value)
-                  )
-                }
-                className="input-field"
-              />
+          <div className="filter-form">
+            {/* Vehicle Type Selection */}
+            <div className="filter-section">
+              <h3>Select Vehicle Type</h3>
+              <div className="vehicle-type-grid">
+                {vehicleTypeOptions[serviceType].map((type) => (
+                  <div
+                    key={type.value}
+                    className={`vehicle-type-option ${
+                      filters.vehicleType === type.value ? "selected" : ""
+                    }`}
+                    onClick={() => handleInputChange("vehicleType", type.value)}
+                  >
+                    <span className="vehicle-icon">{type.icon}</span>
+                    <span className="vehicle-label">{type.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-          {/* Number of Vehicles */}
-          {/* <div className="filter-section">
+
+            {MinimumSeatsRequiredOptions[serviceType].map((type) => (
+              <div className="filter-section" key={type.value}>
+                <h3>{type.label}</h3>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  placeholder={type.placeholder}
+                  value={filters.minseatsrequired}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "minseatsrequired",
+                      Number.parseInt(e.target.value),
+                    )
+                  }
+                  className="input-field"
+                />
+              </div>
+            ))}
+            {/* Number of Vehicles */}
+            {/* <div className="filter-section">
             <h3>Number of Vehicles</h3>
             <input
               type="number"
@@ -277,54 +284,54 @@ const Corporate = () => {
               className="input-field"
             />
           </div> */}
-          {/* Rental Duration */}
-          <div className="filter-section">
-            <h3>Rental Duration</h3>
-            <div className="duration-options">
-              {rentalDurationOptions.map((option) => (
-                <div
-                  key={option.value}
-                  className={`duration-option ${
-                    filters.rentalDuration === option.value ? "selected" : ""
-                  }`}
-                  onClick={() =>
-                    handleInputChange("rentalDuration", option.value)
-                  }
-                >
-                  <div className="duration-label">{option.label}</div>
-                  <div className="duration-description">
-                    {option.description}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {filters.rentalDuration && (
+            {/* Rental Duration */}
             <div className="filter-section">
-              <h3>Enter Duration in {getCurrentDurationOption()?.unit}</h3>
-              <div className="duration-input-container">
-                <input
-                  type="number"
-                  min="1"
-                  placeholder={getCurrentDurationOption()?.placeholder}
-                  value={filters.durationValue}
-                  onChange={(e) =>
-                    handleInputChange("durationValue", e.target.value)
-                  }
-                  className="input-field"
-                />
-                {filters.durationValue && (
-                  <p className="duration-preview-text">
-                    Total Duration: <strong>{getDurationLabel()}</strong>
-                  </p>
-                )}
+              <h3>Rental Duration</h3>
+              <div className="duration-options">
+                {rentalDurationOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    className={`duration-option ${
+                      filters.rentalDuration === option.value ? "selected" : ""
+                    }`}
+                    onClick={() =>
+                      handleInputChange("rentalDuration", option.value)
+                    }
+                  >
+                    <div className="duration-label">{option.label}</div>
+                    <div className="duration-description">
+                      {option.description}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          )}
 
-          {/* Usage Estimate */}
-          {/* <div className="filter-section">
+            {filters.rentalDuration && (
+              <div className="filter-section">
+                <h3>Enter Duration in {getCurrentDurationOption()?.unit}</h3>
+                <div className="duration-input-container">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder={getCurrentDurationOption()?.placeholder}
+                    value={filters.durationValue}
+                    onChange={(e) =>
+                      handleInputChange("durationValue", e.target.value)
+                    }
+                    className="input-field"
+                  />
+                  {filters.durationValue && (
+                    <p className="duration-preview-text">
+                      Total Duration: <strong>{getDurationLabel()}</strong>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Usage Estimate */}
+            {/* <div className="filter-section">
             <h3>Per KM Usage Estimate</h3>
             <div className="usage-options">
               {usageEstimateOptions.map((option) => (
@@ -343,106 +350,108 @@ const Corporate = () => {
               ))}
             </div>
           </div> */}
-          {/* Budget */}
-          <div className="filter-section">
-            <h3>Budget Per Vehicle</h3>
-            <select
-              value={filters.budget}
-              onChange={(e) => handleInputChange("budget", e.target.value)}
-              className="select-field"
-            >
-              <option value="">Select Budget Range</option>
-              {budgetRanges[filters.rentalDuration].map((range) => (
-                <option key={range.value} value={range.value}>
-                  {range.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Location */}
-          <div className="filter-section">
-            <h3>Location</h3>
-            <select
-              value={filters.location}
-              onChange={(e) => handleInputChange("location", e.target.value)}
-              className="select-field"
-            >
-              <option value="">Select Location</option>
-              {locations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Start Date */}
-          <div className="filter-section">
-            <h3>Required Start Date</h3>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleInputChange("startDate", e.target.value)}
-              className="input-field"
-              min={new Date().toISOString().split("T")[0]}
+            {/* Budget */}
+            <div className="filter-section">
+              <h3>Budget Per Vehicle</h3>
+              <select
+                value={filters.budget}
+                onChange={(e) => handleInputChange("budget", e.target.value)}
+                className="select-field"
+              >
+                <option value="">Select Budget Range</option>
+                {budgetRanges[filters.rentalDuration].map((range) => (
+                  <option key={range.value} value={range.value}>
+                    {range.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Location */}
+            <div className="filter-section">
+              <h3>Location</h3>
+              <select
+                value={filters.location}
+                onChange={(e) => handleInputChange("location", e.target.value)}
+                className="select-field"
+              >
+                <option value="">Select Location</option>
+                {locations.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Start Date */}
+            <div className="filter-section">
+              <h3>Required Start Date</h3>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => handleInputChange("startDate", e.target.value)}
+                className="input-field"
+                min={new Date().toISOString().split("T")[0]}
+              />
+            </div>
+            {/* Additional Options */}
+            <div className="filter-section">
+              <h3>Additional Requirements</h3>
+              <div className="checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={filters.driverRequired}
+                    onChange={(e) =>
+                      handleInputChange("driverRequired", e.target.checked)
+                    }
+                  />
+                  <span>Driver Required</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={filters.fuelIncluded}
+                    onChange={(e) =>
+                      handleInputChange("fuelIncluded", e.target.checked)
+                    }
+                  />
+                  <span>Fuel Included</span>
+                </label>
+              </div>
+            </div>
+            {/* Features */}
+            <div className="filter-section">
+              <h3>Preferred Features</h3>
+              <div className="features-grid">
+                {featureOptions.map((feature) => (
+                  <div
+                    key={feature}
+                    className={`feature-chip ${
+                      filters.features.includes(feature) ? "selected" : ""
+                    }`}
+                    onClick={() => handleFeatureToggle(feature)}
+                  >
+                    {feature}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Price Comparison */}
+            <PriceComparison
+              rentalDuration={filters.rentalDuration}
+              numberOfVehicles={filters.numberOfVehicles}
             />
-          </div>
-          {/* Additional Options */}
-          <div className="filter-section">
-            <h3>Additional Requirements</h3>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={filters.driverRequired}
-                  onChange={(e) =>
-                    handleInputChange("driverRequired", e.target.checked)
-                  }
-                />
-                <span>Driver Required</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={filters.fuelIncluded}
-                  onChange={(e) =>
-                    handleInputChange("fuelIncluded", e.target.checked)
-                  }
-                />
-                <span>Fuel Included</span>
-              </label>
+            {/* Search Button */}
+            <div className="btn-filter-actions">
+              <button className="search-btn" onClick={handleSearch}>
+                Search Vehicles
+              </button>
             </div>
-          </div>
-          {/* Features */}
-          <div className="filter-section">
-            <h3>Preferred Features</h3>
-            <div className="features-grid">
-              {featureOptions.map((feature) => (
-                <div
-                  key={feature}
-                  className={`feature-chip ${
-                    filters.features.includes(feature) ? "selected" : ""
-                  }`}
-                  onClick={() => handleFeatureToggle(feature)}
-                >
-                  {feature}
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Price Comparison */}
-          <PriceComparison
-            rentalDuration={filters.rentalDuration}
-            numberOfVehicles={filters.numberOfVehicles}
-          />
-          {/* Search Button */}
-          <div className="btn-filter-actions">
-            <button className="search-btn" onClick={handleSearch}>
-              Search Vehicles
-            </button>
           </div>
         </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 };
 

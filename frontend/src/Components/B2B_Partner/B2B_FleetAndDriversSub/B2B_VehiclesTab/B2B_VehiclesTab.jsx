@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import api from "../../../../utils/api";
 import "./b2b_vehiclestab.css";
 
 function B2B_VehiclesTab({ vehicles, onRefresh }) {
   const [loading, setLoading] = useState({});
   const [showActions, setShowActions] = useState({});
+  const [expandedCards, setExpandedCards] = useState({});
 
   const getVehicleIcon = (category) => {
     switch (category?.toLowerCase()) {
@@ -65,6 +67,13 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
     }));
   };
 
+  const toggleExpand = (vehicleId) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [vehicleId]: !prev[vehicleId]
+    }));
+  };
+
   if (!vehicles || vehicles.length === 0) {
     return (
       <div className="no-vehicles">
@@ -77,8 +86,11 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
 
   return (
     <div className="vehicles-grid">
-      {vehicles.map((vehicle) => (
-        <div key={vehicle._id} className="vehicle-card">
+      {vehicles.map((vehicle) => {
+        const isExpanded = expandedCards[vehicle._id];
+        
+        return (
+        <div key={vehicle._id} className={`vehicle-card ${isExpanded ? 'expanded' : ''}`}>
           <div className="vehicle-header">
             <div className="vehicle-icon">{getVehicleIcon(vehicle.vehicleCategory)}</div>
             <span className={`status-badge ${getStatusColor(vehicle.status)}`}>
@@ -90,7 +102,20 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
             {vehicle.registrationNumber || 'N/A'} • {vehicle.manufacturingYear || 'N/A'}
           </p>
 
-          <div className="vehicle-details">
+          {/* Expand/Collapse Toggle */}
+          <button 
+            className="expand-toggle-btn"
+            onClick={() => toggleExpand(vehicle._id)}
+          >
+            {isExpanded ? (
+              <>Hide Details <FiChevronUp /></>
+            ) : (
+              <>View Details <FiChevronDown /></>
+            )}
+          </button>
+
+          {/* Expandable Details Section */}
+          <div className={`vehicle-details ${isExpanded ? 'expanded' : 'collapsed'}`}>
             <div className="detail-row">
               <span className="detail-label">Category</span>
               <span className="detail-value">{vehicle.vehicleCategory?.replace(/_/g, ' ') || 'N/A'}</span>
@@ -181,7 +206,8 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
             </div>
           </div>
         </div>
-      ))}
+      );
+      })}
     </div>
   );
 }

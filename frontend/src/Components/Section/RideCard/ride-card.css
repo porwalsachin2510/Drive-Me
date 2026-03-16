@@ -1,6 +1,6 @@
 .ride-card {
   background-color: white;
-  border-left: 5px solid #4b9eff;
+  border-left: 5px solid #2DD4BF;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -102,7 +102,7 @@
 
 .view-ticket-btn,
 .rate-btn {
-  background-color: #1a1a1a;
+  background-color: #1E293B;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -115,7 +115,7 @@
 
 .view-ticket-btn:hover,
 .rate-btn:hover {
-  background-color: #2d2d2d;
+  background-color: #0F172A;
   transform: translateY(-2px);
 }
 

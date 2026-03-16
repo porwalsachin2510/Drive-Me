@@ -33,9 +33,11 @@ const PaymentModal = ({ contract, onClose, onSubmit }) => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-AE", {
+    // Use contract currency or default to KWD
+    const contractCurrency = contract?.financials?.currency || "KWD";
+    return new Intl.NumberFormat("en-KW", {
       style: "currency",
-      currency: "AED",
+      currency: contractCurrency,
     }).format(amount);
   };
 

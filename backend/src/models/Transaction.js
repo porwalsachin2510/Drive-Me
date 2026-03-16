@@ -21,6 +21,11 @@ const transactionSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
+        currency: {
+            type: String,
+            default: "KWD",
+            enum: ["AED", "KWD", "SAR", "BHD", "OMR", "QAR"],
+        },
         category: {
             type: String,
             required: true,

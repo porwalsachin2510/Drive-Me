@@ -1,4 +1,5 @@
 import User from "../models/User.js"
+import { uploadToCloudinary } from "../Config/Cloudinary.js"
 
 export const getAllUsers = async (req, res) => {
     try {
@@ -86,6 +87,60 @@ export const updateUserProfile = async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message,
+        })
+    }
+}
+
+export const updateUserProfileLogo = async (req, res) => {
+    try {
+        const userId = req.userId
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: "No logo file provided",
+            })
+        }
+
+        console.log("[v0] Uploading company logo for user:", userId)
+
+        // Upload to Cloudinary
+        const uploadResult = await uploadToCloudinary(
+            req.file, 
+            `driveme/company-logos/${userId}`, 
+            'companyLogo'
+        )
+
+        const logoUrl = uploadResult.secure_url
+
+        // Update user with new logo URL
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $set: { companyLogo: logoUrl } },
+            { new: true }
+        ).select("-password")
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            })
+        }
+
+        console.log("[v0] Company logo uploaded successfully:", logoUrl)
+
+        res.status(200).json({
+            success: true,
+            message: "Logo uploaded successfully",
+            logoUrl,
+            user,
+        })
+    } catch (error) {
+        console.error("[v0] Upload logo error:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to upload logo",
+            error: error.message,
         })
     }
 }

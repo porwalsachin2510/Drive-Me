@@ -530,6 +530,7 @@ export const tapWebhook = async (req, res) => {
 // Process payment to wallets (existing function)
 const processPaymentToWallets = async (payment) => {
     console.log("[v0] Processing payment to wallets:", payment._id)
+    console.log("[v0] Payment currency:", payment.currency)
 
     // Get or create admin wallet
     const adminUserId = process.env.ADMIN_USER_ID
@@ -538,21 +539,27 @@ const processPaymentToWallets = async (payment) => {
     if (!adminWallet) {
         adminWallet = await Wallet.create({
             userId: adminUserId,
+            role: "ADMIN",
             balance: 0,
-            currency: payment.currency,
+            currency: payment.currency || "KWD",
         })
     }
 
-    // Get or create fleet owner wallet
+    // Get or create fleet owner wallet with B2B_PARTNER role
     let fleetWallet = await Wallet.findOne({ userId: payment.fleetOwnerId })
 
     if (!fleetWallet) {
         fleetWallet = await Wallet.create({
             userId: payment.fleetOwnerId,
+            role: "B2B_PARTNER",
             balance: 0,
-            currency: payment.currency,
+            currency: payment.currency || "KWD",
         })
     }
+    
+    // Log currency info for debugging
+    console.log("[v0] Fleet Wallet currency:", fleetWallet.currency)
+    console.log("[v0] Payment currency:", payment.currency)
 
     console.log("[v0] Admin Wallet:", adminWallet._id)
     console.log("[v0] Fleet Wallet:", fleetWallet._id)
@@ -568,6 +575,7 @@ const processPaymentToWallets = async (payment) => {
         userId: adminUserId,
         type: "CREDIT",
         amount: payment.adminCommission,
+        currency: payment.currency || "KWD",
         category: "COMMISSION_EARNED",
         description: `Commission from ${payment.paymentType} payment - Contract ${payment.contractId}`,
         referenceId: payment._id,
@@ -589,6 +597,7 @@ const processPaymentToWallets = async (payment) => {
         userId: payment.fleetOwnerId,
         type: "CREDIT",
         amount: payment.fleetOwnerAmount,
+        currency: payment.currency || "KWD",
         category: "PAYMENT_RECEIVED",
         description: `${payment.paymentType} payment received for contract ${payment.contractId}`,
         referenceId: payment._id,

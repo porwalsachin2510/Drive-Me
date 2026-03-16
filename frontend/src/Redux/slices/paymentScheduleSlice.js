@@ -21,6 +21,10 @@ export const getPaymentScheduleByContract = createAsyncThunk(
     "paymentSchedule/getByContract",
     async ({ contractId, silent = false }, { rejectWithValue }) => {
         try {
+            // Guard against undefined/null contractId to prevent API errors
+            if (!contractId || contractId === "undefined" || contractId === "null") {
+                return { schedules: [], silent }
+            }
             const response = await api.get(`/payment-schedules/contracts/${contractId}/schedules`)
             return { schedules: response.data.schedules || [], silent }
         } catch (error) {

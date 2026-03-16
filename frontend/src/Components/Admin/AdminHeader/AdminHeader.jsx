@@ -1,11 +1,62 @@
 "use client"
 
 import { useState } from "react"
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { logout } from "../../../Redux/slices/authSlice";
 import Notifications from "./Notifications/Notifications"
+import api from "../../../utils/api";
 import "./AdminHeader.css"
 
 function AdminHeader() {
+
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
   const [showNotifications, setShowNotifications] = useState(false)
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.log("No token found, redirecting to login");
+        navigate("/login");
+        return;
+      }
+
+      dispatch(logout());
+
+      // Call backend logout endpoint to clear cookies and session
+      await api.post(
+        "/auth/logout",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        },
+      );
+
+      // Clear frontend storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      console.log("User logged out successfully");
+
+      // Redirect to login page
+      navigate("/admin-login");
+    } catch (err) {
+      console.error("Logout error:", err);
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      // Redirect to login regardless of error
+      navigate("/admin-login");
+    }
+  };
 
   return (
     <header className="ad-dash-header">
@@ -25,25 +76,41 @@ function AdminHeader() {
           <div className="ad-dash-user-info">
             <div className="ad-dash-user-details">
               <span className="ad-dash-user-name">Super Admin</span>
-              <span className="ad-dash-user-login">Last login: Today, 09:41 AM</span>
+              <span className="ad-dash-user-login">
+                Last login: Today, 09:41 AM
+              </span>
             </div>
             <div className="notification-wrapper">
-              <button className="ad-dash-notification-btn" onClick={() => setShowNotifications(!showNotifications)}>
+              <button
+                className="ad-dash-notification-btn"
+                onClick={() => setShowNotifications(!showNotifications)}
+              >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path
                     d="M10 2C6.68629 2 4 4.68629 4 8V11.5858L2.70711 12.8787C2.07714 13.5087 2.52331 14.6 3.41421 14.6H16.5858C17.4767 14.6 17.9229 13.5087 17.2929 12.8787L16 11.5858V8C16 4.68629 13.3137 2 10 2Z"
                     fill="currentColor"
                   />
-                  <path d="M10 18C11.1046 18 12 17.1046 12 16H8C8 17.1046 8.89543 18 10 18Z" fill="currentColor" />
+                  <path
+                    d="M10 18C11.1046 18 12 17.1046 12 16H8C8 17.1046 8.89543 18 10 18Z"
+                    fill="currentColor"
+                  />
                 </svg>
               </button>
-              <Notifications isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+              <Notifications
+                isOpen={showNotifications}
+                onClose={() => setShowNotifications(false)}
+              />
             </div>
+          </div>
+          <div className="ad-dash-logout-btn-header-right">
+            <button className="ad-dash-logout-btn" onClick={handleLogout}>
+              Log Out
+            </button>
           </div>
         </div>
       </div>
     </header>
-  )
+  );
 }
 
 export default AdminHeader

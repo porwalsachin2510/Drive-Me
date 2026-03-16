@@ -223,7 +223,7 @@ const B2C_PartnerBookingsPage = () => {
         <h2>Booking Management</h2>
         <div className="B2C_Partner-bookings-page-wallet-info">
           <span className="B2C_Partner-bookings-page-wallet-balance">
-            Wallet Balance: ₹{walletBalance}
+            Wallet Balance: {walletBalance} KWD
           </span>
         </div>
         <div className="B2C_Partner-bookings-page-filter-controls">
@@ -436,9 +436,9 @@ const B2C_PartnerBookingsPage = () => {
             <div className="B2C_Partner-bookings-page-modal-body">
               <p>You cannot accept this CASH booking because your wallet balance is insufficient.</p>
               <div className="B2C_Partner-bookings-page-balance-info">
-                <p><strong>Required Amount:</strong> ₹{selectedBooking?.adminCommissionAmount || 0}</p>
-                <p><strong>Current Balance:</strong> ₹{walletBalance}</p>
-                <p><strong>Shortfall:</strong> ₹{Math.max(0, (selectedBooking?.adminCommissionAmount || 0) - walletBalance)}</p>
+                <p><strong>Required Amount:</strong> {selectedBooking?.adminCommissionAmount || 0} KWD</p>
+                <p><strong>Current Balance:</strong> {walletBalance} KWD</p>
+                <p><strong>Shortfall:</strong> {Math.max(0, (selectedBooking?.adminCommissionAmount || 0) - walletBalance)} KWD</p>
               </div>
               <p>Please add funds to your wallet to accept this booking.</p>
             </div>
@@ -522,8 +522,8 @@ const B2C_PartnerBookingsPage = () => {
           setShowRechargeModal(false);
           fetchWalletBalance(); // Refresh wallet balance after successful recharge
         }}
-        country="UAE" // You can make this dynamic based on user's location
-        currency="AED" // You can make this dynamic based on user's location
+        country="KW" // You can make this dynamic based on user's location
+        currency="KWD" // You can make this dynamic based on user's location
       />
     </div>
   );

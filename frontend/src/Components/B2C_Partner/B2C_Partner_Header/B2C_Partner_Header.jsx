@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../../Redux/slices/authSlice";
 import api from "../../../utils/api";
 import "./b2c_partner_header.css";
@@ -7,6 +8,29 @@ import "./b2c_partner_header.css";
 function B2C_Partner_Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const auth = useSelector((state) => state.auth);
+  const [profileData, setProfileData] = useState({
+    fullName: auth?.user?.fullName || "Driver",
+    profileImage: null
+  });
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await api.get('/b2c-partner/profile');
+      if (response.data.success) {
+        setProfileData({
+          fullName: response.data.profile.fullName,
+          profileImage: response.data.profile.profileImage
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -53,8 +77,20 @@ function B2C_Partner_Header() {
   return (
     <header className="b2c-header">
       <div className="b2c-header-left">
-        <h1 className="b2c-header-title">Driver Dashboard</h1>
-        <p className="b2c-header-subtitle">Welcome back, Test Driver</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {profileData.profileImage && (
+            <img
+              src={profileData.profileImage}
+              alt="Profile"
+              style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e74c3c' }}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          )}
+          <div>
+            <h1 className="b2c-header-title">Driver Dashboard</h1>
+            <p className="b2c-header-subtitle">Welcome back, {profileData.fullName}</p>
+          </div>
+        </div>
       </div>
 
       <div className="b2c-header-right">

@@ -142,9 +142,9 @@ const ContractManagement = () => {
       </div>
 
       {/* Contracts List */}
-      {error && (
+      {error && contracts.length === 0 && (
         <div className="corporate-contracts-error">
-          <div className="error-icon">⚠️</div>
+          <div className="error-icon">!</div>
           <h3>Error Loading Contracts</h3>
           <p>{error}</p>
         </div>

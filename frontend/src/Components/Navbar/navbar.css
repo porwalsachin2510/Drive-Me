@@ -1,48 +1,58 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
+/* DriveMe Premium Navbar - Brand Colors */
 .navbar {
   background: #ffffff;
-  border-bottom: 3px solid #ef3b47;
+  border-bottom: 1px solid var(--border-color, #E2E8F0);
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.navbar.scrolled {
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.1), 0 1px 2px rgba(60, 64, 67, 0.06);
 }
 
 .navbar-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 70px;
-  gap: 20px;
+  height: 64px;
+  gap: 24px;
 }
 
 /* Logo */
 .navbar-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
   flex-shrink: 0;
   cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.navbar-logo:hover {
+  opacity: 0.8;
+}
+
+.driveme-navbar-logo-image {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .logo-box {
-  background: #ef3b47;
-  color: #1a1a1a;
-  padding: 12px 18px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 16px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  letter-spacing: 0.5px;
-  min-width: fit-content;
+  background: var(--primary-color, #E85D5D);
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 /* Mobile Menu Toggle */
@@ -52,58 +62,63 @@
   background: none;
   border: none;
   cursor: pointer;
-  gap: 6px;
+  gap: 5px;
   padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.mobile-menu-toggle:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .mobile-menu-toggle span {
-  width: 24px;
+  width: 20px;
   height: 2px;
-  background: #1a1a1a;
-  transition: all 0.3s ease;
-}
-
-.mobile-menu-toggle:hover span {
-  background: #ef3b47;
+  background: var(--text-primary, #202124);
+  border-radius: 1px;
+  transition: all 0.2s ease;
 }
 
 /* Nav Items */
 .navbar-items {
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: 8px;
   flex: 1;
   justify-content: flex-end;
 }
 
 .nav-tabs {
   display: flex;
-  gap: 12px;
+  gap: 4px;
   align-items: center;
 }
 
 .navbar-tab {
   background: none;
   border: none;
-  padding: 10px 16px;
-  font-size: 15px;
+  padding: 8px 16px;
+  font-size: 14px;
   font-weight: 500;
-  color: #333333;
+  color: var(--text-secondary, #5f6368);
   cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  border-radius: 100px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .navbar-tab:hover {
-  background: #f5f5f5;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-primary, #202124);
 }
 
 .navbar-tab.active {
-  background: #ef3b47;
+  background: var(--primary-color, #E85D5D);
   color: #ffffff;
 }
 
@@ -111,95 +126,106 @@
   font-size: 14px;
 }
 
-/* Login Button */
+/* Login Button - DriveMe Brand Style */
 .nav-login {
-  background: none;
+  background: var(--primary-color, #E85D5D);
   border: none;
-  padding: 10px 16px;
-  font-size: 15px;
+  padding: 10px 20px;
+  font-size: 14px;
   font-weight: 500;
-  color: #333333;
+  color: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: all 0.3s ease;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  border-radius: 100px;
+  letter-spacing: -0.01em;
 }
 
 .nav-login:hover {
-  color: #3b82f6;
+  background: var(--primary-hover, #D94545);
+  box-shadow: 0 4px 14px rgba(232, 93, 93, 0.3);
 }
 
 .login-arrow {
-  font-size: 16px;
+  font-size: 14px;
+  transition: transform 0.2s ease;
+}
+
+.nav-login:hover .login-arrow {
+  transform: translateX(2px);
 }
 
 /* User Section (After Login) */
 .nav-user-section {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
 }
 
 .user-avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #ef3b47;
   color: #ffffff;
   border: none;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .user-avatar:hover {
-  background: #d63740;
-  transform: scale(1.05);
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.2), 0 4px 8px rgba(60, 64, 67, 0.15);
+  transform: scale(1.02);
 }
 
 /* Tablet & iPad (768px - 1024px) */
 @media (max-width: 1024px) {
   .navbar-container {
     padding: 0 16px;
-    height: 65px;
+    height: 60px;
   }
 
-  .logo-box {
-    padding: 10px 14px;
-    font-size: 15px;
+  .driveme-navbar-logo-image {
+    height: 36px;
   }
 
   .navbar-items {
-    gap: 24px;
-  }
-
-  .nav-tabs {
     gap: 8px;
   }
 
-  .nav-tab {
+  .nav-tabs {
+    gap: 4px;
+  }
+
+  .navbar-tab {
     padding: 8px 12px;
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .nav-login {
-    padding: 8px 12px;
-    font-size: 14px;
+    padding: 8px 16px;
+    font-size: 13px;
   }
 }
 
-/* Mobile (640px - 768px) */
+/* Mobile (768px and below) */
 @media (max-width: 768px) {
   .navbar-container {
-    height: 60px;
-    padding: 0 12px;
+    height: 56px;
+    padding: 0 16px;
+  }
+
+  .driveme-navbar-logo-image {
+    height: 32px;
   }
 
   .mobile-menu-toggle {
@@ -208,21 +234,22 @@
 
   .navbar-items {
     position: absolute;
-    top: 60px;
+    top: 56px;
     left: 0;
     right: 0;
     background: #ffffff;
     flex-direction: column;
     gap: 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-light, #e8eaed);
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(60, 64, 67, 0.1);
   }
 
   .navbar-items.active {
-    max-height: 200px;
+    max-height: 300px;
+    padding: 8px 0;
   }
 
   .nav-tabs {
@@ -231,99 +258,72 @@
     gap: 0;
   }
 
-  .nav-tab {
+  .navbar-tab {
     width: 100%;
-    padding: 12px 16px;
+    padding: 12px 20px;
     border-radius: 0;
     justify-content: flex-start;
-    border-bottom: 1px solid #f0f0f0;
     font-size: 14px;
   }
 
-  .nav-tab.active {
-    background: #eff6ff;
-    color: #3b82f6;
+  .navbar-tab.active {
+    background: var(--primary-light, rgba(239, 59, 71, 0.08));
+    color: #ef3b47;
   }
 
   .nav-login {
-    width: 100%;
-    padding: 12px 16px;
-    border-radius: 0;
-    justify-content: flex-start;
-    font-size: 14px;
-    color: #333333;
+    margin: 8px 16px;
+    width: calc(100% - 32px);
+    justify-content: center;
+    border-radius: 100px;
   }
 
-  .logo-box {
-    padding: 8px 12px;
-    font-size: 14px;
+  .nav-user-section {
+    padding: 8px 16px;
+    width: 100%;
+    justify-content: flex-end;
+    gap: 8px;
   }
 }
 
-/* Small Mobile (480px - 640px) */
+/* Small Mobile (640px and below) */
 @media (max-width: 640px) {
   .navbar-container {
-    height: 56px;
-    gap: 12px;
+    height: 52px;
+    padding: 0 12px;
   }
 
-  .logo-box {
-    padding: 7px 10px;
-    font-size: 13px;
+  .driveme-navbar-logo-image {
+    height: 28px;
   }
 
-  .mobile-menu-toggle span {
-    width: 20px;
-    height: 2px;
+  .navbar-items {
+    top: 52px;
   }
 
-  .nav-tab {
-    padding: 10px 12px;
-    font-size: 13px;
-  }
-
-  .nav-login {
-    padding: 10px 12px;
+  .user-avatar {
+    width: 32px;
+    height: 32px;
     font-size: 13px;
   }
 }
 
-/* Extra Small Mobile (<480px) */
+/* Extra Small Mobile (480px and below) */
 @media (max-width: 480px) {
   .navbar-container {
-    height: 52px;
-    padding: 0 8px;
+    height: 48px;
+    padding: 0 12px;
   }
 
-  .logo-box {
-    padding: 6px 8px;
-    font-size: 12px;
+  .driveme-navbar-logo-image {
+    height: 26px;
   }
 
-  .mobile-menu-toggle {
-    gap: 4px;
+  .navbar-items {
+    top: 48px;
   }
 
   .mobile-menu-toggle span {
     width: 18px;
-    height: 1.5px;
-  }
-
-  .nav-tab {
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-
-  .nav-login {
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-
-  .building-icon {
-    font-size: 12px;
-  }
-
-  .login-arrow {
-    font-size: 14px;
   }
 }

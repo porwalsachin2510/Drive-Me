@@ -1,7 +1,9 @@
+/* Premium B2B Navigation - Inter Font */
 .b2b-navigation {
   background-color: #ffffff;
   border-bottom: 1px solid #e8e8e8;
   padding: 0 40px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .b2b-nav-container {
@@ -33,8 +35,8 @@
 }
 
 .b2b-nav-tab.b2b-active {
-  color: #16a085;
-  border-bottom-color: #16a085;
+  color: #2DD4BF;
+  border-bottom-color: #2DD4BF;
 }
 
 .b2b-nav-icon {

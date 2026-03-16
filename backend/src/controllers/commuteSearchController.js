@@ -391,21 +391,22 @@ export const searchCommuteRoutes = async (req, res) => {
         /* ======================================================
                NORMAL / B2C COMMUTER ROUTES
             ====================================================== */
-        console.log("Searching for B2C Partner routes...")
+
         
         // Get B2C Partner Routes directly from B2CPartnerRoute collection
+        // Relaxed query to match publicSearchRoutes behavior
         const b2cRoutes = await B2CPartnerRoute.find({
-            status: "Active"
-        }).populate('b2cPartnerId', 'fullName companyLogo')
-            .populate('assignedVehicle')   // 👈 ADD THIS
+            status: "Active",
+            $or: [
+                { isActive: true },
+                { isActive: { $exists: false } },
+                { isActive: null }
+            ]
+        }).populate('b2cPartnerId', 'fullName companyLogo profileImage')
+            .populate('assignedVehicle')
             .populate('assignedDriver')
 
-        console.log("Found B2C routes:", b2cRoutes.length)
-
         for (const route of b2cRoutes) {
-            if (!route.availableSeats || route.availableSeats <= 0) continue
-
-            console.log("Processing route:", route._id, "by partner:", route.b2cPartnerId?.fullName)
 
             // Get schedule for this route
             console.log("Finding schedule for route:", route._id)
@@ -483,7 +484,7 @@ export const searchCommuteRoutes = async (req, res) => {
                 routeId: route._id,
                 operator: route.b2cPartnerId?.fullName || "Unknown Operator",
                 operatorId: route.b2cPartnerId?._id,
-                companyLogo: route.b2cPartnerId?.companyLogo || null,
+                companyLogo: route.b2cPartnerId?.companyLogo || route.b2cPartnerId?.profileImage || null,
 
                 fromLocation: travelData.fromLocation,
                 toLocation: travelData.toLocation,
@@ -547,6 +548,8 @@ export const publicSearchRoutes = async (req, res) => {
             selectedDays,
         } = req.query
 
+
+
         let parsedSelectedDays = []
         if (selectedDays) {
             try {
@@ -558,14 +561,20 @@ export const publicSearchRoutes = async (req, res) => {
 
         const routes = []
 
-        // Get all active B2C Partner Routes
+        // Get all active B2C Partner Routes - relaxed query to include routes with Active status
+        // isActive field may not be set on older routes, so we don't require it
         const b2cRoutes = await B2CPartnerRoute.find({
             status: "Active",
-            isActive: true,
+            $or: [
+                { isActive: true },
+                { isActive: { $exists: false } },
+                { isActive: null }
+            ]
         }).populate('b2cPartnerId', 'fullName companyLogo profileImage')
+          .populate('assignedVehicle')
+          .populate('assignedDriver')
 
         for (const route of b2cRoutes) {
-            if (!route.availableSeats || route.availableSeats <= 0) continue
 
             // Get schedule for this route (optional - route might not have a schedule yet)
             const schedule = await B2CPartnerSchedule.findOne({

@@ -1,5 +1,7 @@
 import Quotation from "../models/Quotation.js"
 import Notification from "../models/Notification.js"
+import { createNotification as createNotificationService, sendAdminNotification } from "../Services/notificationService.js"
+import User from "../models/User.js"
 
 const createNotification = async (userId, type, title, message, relatedEntityId, relatedEntityType) => {
     try {
@@ -13,6 +15,16 @@ const createNotification = async (userId, type, title, message, relatedEntityId,
         })
     } catch (error) {
         console.error("Notification creation error:", error)
+    }
+}
+
+// Helper to get user name
+const getUserName = async (userId) => {
+    try {
+        const user = await User.findById(userId).select('fullName companyName');
+        return user?.companyName || user?.fullName || 'User';
+    } catch {
+        return 'User';
     }
 }
 
@@ -61,7 +73,7 @@ export const requestQuotation = async (req, res) => {
         // 🔹 total quantity calculate karo
         const totalQty = vehicles.reduce((sum, v) => sum + v.quantity, 0);
 
-        // Create notification for fleet owner
+        // Create notification for fleet owner (B2B_PARTNER)
         await createNotification(
             fleetOwnerId,
             "QUOTATION_REQUEST",
@@ -69,6 +81,18 @@ export const requestQuotation = async (req, res) => {
             `You have received a new quotation request for ${totalQty} vehicle(s)`,
             quotation._id,
             "QUOTATION",
+        )
+
+        // Get user names for admin notification
+        const corporateName = await getUserName(req.userId);
+        const fleetName = await getUserName(fleetOwnerId);
+
+        // Send notification to ADMIN
+        await sendAdminNotification(
+            "New Quotation Request",
+            `${corporateName} (CORPORATE) requested quotation for ${totalQty} vehicle(s) from ${fleetName} (B2B_PARTNER)`,
+            "QUOTATION_REQUEST",
+            { quotationId: quotation._id, corporateId: req.userId, fleetOwnerId, vehicleCount: totalQty }
         )
 
         // Populate the quotation with related data
@@ -445,6 +469,47 @@ export const corporateDecisionOnQuotation = async (req, res) => {
 
         await quotation.save()
 
+        // Get names for notifications
+        const corporateName = await getUserName(corporateOwnerId);
+        const fleetName = quotation.fleetOwnerId?.fullName || quotation.fleetOwnerId?.companyName || 'Fleet Owner';
+        
+        // Notify B2B_PARTNER about corporate's decision
+        if (decision === "accept") {
+            await createNotification(
+                quotation.fleetOwnerId._id,
+                "QUOTATION_ACCEPTED",
+                "Quotation Accepted!",
+                `${corporateName} has accepted your quotation for ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'}`,
+                quotation._id,
+                "QUOTATION"
+            );
+            
+            // Notify ADMIN
+            await sendAdminNotification(
+                "Quotation Accepted",
+                `${corporateName} (CORPORATE) accepted quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'} from ${fleetName} (B2B_PARTNER)`,
+                "QUOTATION_ACCEPTED",
+                { quotationId: quotation._id, corporateId: corporateOwnerId, fleetOwnerId: quotation.fleetOwnerId._id }
+            );
+        } else {
+            await createNotification(
+                quotation.fleetOwnerId._id,
+                "QUOTATION_REJECTED",
+                "Quotation Rejected",
+                `${corporateName} has rejected your quotation. Reason: ${message || 'No reason provided'}`,
+                quotation._id,
+                "QUOTATION"
+            );
+            
+            // Notify ADMIN
+            await sendAdminNotification(
+                "Quotation Rejected by Corporate",
+                `${corporateName} (CORPORATE) rejected quotation from ${fleetName} (B2B_PARTNER). Reason: ${message || 'No reason provided'}`,
+                "QUOTATION_REJECTED",
+                { quotationId: quotation._id, corporateId: corporateOwnerId, fleetOwnerId: quotation.fleetOwnerId._id }
+            );
+        }
+
         res.status(200).json({
             success: true,
             message: `Quotation ${decision}ed successfully`,
@@ -677,6 +742,46 @@ export const respondToQuotation = async (req, res) => {
             },
         ])
 
+        // Send notification to CORPORATE user about quotation response
+        const fleetName = await getUserName(fleetOwnerId);
+        const corporateName = quotation.corporateOwnerId?.companyName || quotation.corporateOwnerId?.fullName || 'Corporate';
+        
+        if (status === "approved") {
+            await createNotification(
+                quotation.corporateOwnerId._id,
+                "QUOTATION_RESPONSE",
+                "Quotation Received",
+                `${fleetName} has sent you a quotation for ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'}`,
+                quotation._id,
+                "QUOTATION"
+            );
+            
+            // Send to ADMIN
+            await sendAdminNotification(
+                "Quotation Sent",
+                `${fleetName} (B2B_PARTNER) sent quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'} to ${corporateName} (CORPORATE)`,
+                "QUOTATION_RESPONSE",
+                { quotationId: quotation._id, fleetOwnerId, corporateId: quotation.corporateOwnerId._id, amount: quotation.quotedPrice?.totalAmount }
+            );
+        } else {
+            await createNotification(
+                quotation.corporateOwnerId._id,
+                "QUOTATION_REJECTED",
+                "Quotation Request Rejected",
+                `${fleetName} has declined your quotation request. Reason: ${message}`,
+                quotation._id,
+                "QUOTATION"
+            );
+            
+            // Send to ADMIN
+            await sendAdminNotification(
+                "Quotation Rejected by Fleet Owner",
+                `${fleetName} (B2B_PARTNER) rejected quotation request from ${corporateName} (CORPORATE). Reason: ${message}`,
+                "QUOTATION_REJECTED",
+                { quotationId: quotation._id, fleetOwnerId, corporateId: quotation.corporateOwnerId._id }
+            );
+        }
+
         res.status(200).json({
             success: true,
             message: `Quotation ${status === "approved" ? "approved" : "rejected"} successfully`,
@@ -758,7 +863,7 @@ export const negotiateQuotation = async (req, res) => {
 
         await quotation.save()
 
-        // Create notification for fleet owner
+        // Create notification for fleet owner (B2B_PARTNER)
         await createNotification(
             quotation.fleetOwnerId,
             "QUOTATION_NEGOTIATION",
@@ -767,6 +872,18 @@ export const negotiateQuotation = async (req, res) => {
             quotation._id,
             "QUOTATION",
         )
+
+        // Get names for admin notification
+        const corporateName = await getUserName(corporateOwnerId);
+        const fleetName = await getUserName(quotation.fleetOwnerId);
+
+        // Notify ADMIN about negotiation
+        await sendAdminNotification(
+            "Quotation Counter Offer",
+            `${corporateName} (CORPORATE) submitted counter offer of ${counterOffer.totalAmount} to ${fleetName} (B2B_PARTNER) for quotation ${quotation.quotationNumber}`,
+            "QUOTATION_NEGOTIATION",
+            { quotationId: quotation._id, corporateId: corporateOwnerId, fleetOwnerId: quotation.fleetOwnerId, counterOffer: counterOffer.totalAmount }
+        );
 
         const populatedQuotation = await Quotation.findById(quotation._id)
             .populate("corporateOwnerId", "fullName companyName email whatsappNumber")

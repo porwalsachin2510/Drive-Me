@@ -85,23 +85,24 @@ const CompanyProfile = () => {
     try {
       setUploading(true);
       const uploadFormData = new FormData();
-      uploadFormData.append("file", file);
-      uploadFormData.append("upload_preset", "driveme_uploads");
+      uploadFormData.append("companyLogo", file);
 
-      const cloudinaryRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "driveme"}/image/upload`,
-        { method: "POST", body: uploadFormData }
-      );
-      const cloudinaryData = await cloudinaryRes.json();
+      // Upload via backend API which handles Cloudinary
+      const response = await api.put("/users/profile/logo", uploadFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
 
-      if (cloudinaryData.secure_url) {
-        await api.put("/users/profile", { companyLogo: cloudinaryData.secure_url });
-        setLogoPreview(cloudinaryData.secure_url);
+      if (response.data.success && response.data.logoUrl) {
+        setLogoPreview(response.data.logoUrl);
         setMessage({ type: "success", text: "Logo updated successfully" });
+      } else {
+        setMessage({ type: "error", text: response.data.message || "Failed to upload logo" });
       }
     } catch (error) {
       console.error("Error uploading logo:", error);
-      setMessage({ type: "error", text: "Failed to upload logo" });
+      setMessage({ type: "error", text: error.response?.data?.message || "Failed to upload logo" });
     } finally {
       setUploading(false);
     }

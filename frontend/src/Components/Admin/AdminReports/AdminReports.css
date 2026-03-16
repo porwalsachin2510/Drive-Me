@@ -1,6 +1,8 @@
+/* Premium Admin Reports - Inter Font */
 .admin-reports {
   width: 100%;
   padding: 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .reports-header {

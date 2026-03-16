@@ -16,6 +16,7 @@ router.post(
     upload.fields([
         { name: "tradeLicense", maxCount: 1 },
         { name: "companyLogo", maxCount: 1 },
+        { name: "profileImage", maxCount: 1 },
         // B2B Partner vehicle images - up to 10 vehicles
         { name: "fleetImages_0", maxCount: 5 },
         { name: "fleetImages_1", maxCount: 5 },

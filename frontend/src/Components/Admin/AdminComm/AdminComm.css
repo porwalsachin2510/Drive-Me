@@ -1,6 +1,8 @@
+/* Premium Admin Communication - Inter Font */
 .admin-comm {
   width: 100%;
   padding: 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .comm-tabs {
@@ -29,8 +31,8 @@
 }
 
 .comm-tab.active {
-  color: #0891b2;
-  border-bottom-color: #0891b2;
+  color: #2DD4BF;
+  border-bottom-color: #2DD4BF;
 }
 
 .comm-content {
@@ -71,7 +73,7 @@
 .comm-stats .stat-number {
   font-size: 24px;
   font-weight: 700;
-  color: #0891b2;
+  color: #2DD4BF;
 }
 
 .comm-stats .stat-label {
@@ -127,8 +129,8 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #0891b2;
-  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+  border-color: #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 .form-group textarea {
@@ -173,7 +175,7 @@
 
 .send-btn {
   padding: 10px 24px;
-  background: #0891b2;
+  background: #2DD4BF;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -184,7 +186,7 @@
 }
 
 .send-btn:hover {
-  background: #0e7490;
+  background: #14B8A6;
 }
 
 /* Recent Messages */
@@ -289,7 +291,7 @@
 
 .save-btn {
   padding: 10px 24px;
-  background: #0891b2;
+  background: #2DD4BF;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -302,7 +304,7 @@
 }
 
 .save-btn:hover {
-  background: #0e7490;
+  background: #14B8A6;
 }
 
 .loading {

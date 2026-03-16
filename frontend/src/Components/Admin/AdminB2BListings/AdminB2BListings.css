@@ -45,7 +45,7 @@
 .b2b-stats .stat-number {
   font-size: 28px;
   font-weight: 700;
-  color: #0891b2;
+  color: #E85D5D;
   line-height: 1.2;
 }
 
@@ -83,8 +83,8 @@
 }
 
 .b2b-tab.active {
-  color: #0891b2;
-  border-bottom-color: #0891b2;
+  color: #2DD4BF;
+  border-bottom-color: #2DD4BF;
 }
 
 .b2b-content {

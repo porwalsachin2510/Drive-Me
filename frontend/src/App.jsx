@@ -60,11 +60,7 @@ function App() {
         <Routes>
           <Route
             path="/"
-            element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            }
+            element={<HomePage />}
           />
           <Route
             path="/commuter-profile"
@@ -90,7 +86,6 @@ function App() {
                   "COMMUTER",
                   "B2C_PARTNER",
                   "B2B_PARTNER",
-                  "CORPORATE_EMPLOYEE",
                 ]}
               >
                 <WalletPage />
@@ -105,7 +100,6 @@ function App() {
                   "COMMUTER",
                   "B2C_PARTNER",
                   "B2B_PARTNER",
-                  "CORPORATE_EMPLOYEE",
                 ]}
               >
                 <WalletPage />
@@ -120,7 +114,6 @@ function App() {
                   "COMMUTER",
                   "B2C_PARTNER",
                   "B2B_PARTNER",
-                  "CORPORATE_EMPLOYEE",
                 ]}
               >
                 <WalletPage />
@@ -135,7 +128,6 @@ function App() {
                   "COMMUTER",
                   "B2C_PARTNER",
                   "B2B_PARTNER",
-                  "CORPORATE_EMPLOYEE",
                 ]}
               >
                 <WalletPage />
@@ -150,7 +142,6 @@ function App() {
                   "COMMUTER",
                   "B2C_PARTNER",
                   "B2B_PARTNER",
-                  "CORPORATE_EMPLOYEE",
                 ]}
               >
                 <WalletPaymentCallback />

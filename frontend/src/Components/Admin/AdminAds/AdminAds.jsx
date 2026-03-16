@@ -23,7 +23,6 @@ function AdminAds() {
     provider: "",
     placement: "top",
     size: "728x90",
-    imageUrl: "",
     startDate: "",
     endDate: "",
     status: "active",
@@ -33,6 +32,9 @@ function AdminAds() {
     dailyBudget: 0
   }
   const [formData, setFormData] = useState(defaultFormData)
+  const [campaignImage, setCampaignImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     fetchCampaigns()
@@ -60,28 +62,91 @@ function AdminAds() {
     }
   }
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setCampaignImage(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const resetImageState = () => {
+    setCampaignImage(null)
+    setImagePreview(null)
+  }
+
   const handleCreateCampaign = async () => {
     try {
-      await api.post('/admin/ads/campaigns', formData)
+      setUploading(true)
+      const submitData = new FormData()
+      
+      // Append all form fields
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== undefined && formData[key] !== null) {
+          submitData.append(key, formData[key])
+        }
+      })
+      
+      // Append image file if selected
+      if (campaignImage) {
+        submitData.append('campaignImage', campaignImage)
+      }
+
+      await api.post('/admin/ads/campaigns', submitData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
       setShowCreateModal(false)
       setFormData(defaultFormData)
+      resetImageState()
       fetchCampaigns()
       fetchStats()
     } catch (error) {
       console.error("Error creating campaign:", error)
+      alert(error.response?.data?.message || "Error creating campaign")
+    } finally {
+      setUploading(false)
     }
   }
 
   const handleUpdateCampaign = async () => {
     try {
-      await api.put(`/admin/ads/campaigns/${selectedCampaign._id}`, formData)
+      setUploading(true)
+      const submitData = new FormData()
+      
+      // Append all form fields
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== undefined && formData[key] !== null && key !== 'imageUrl' && key !== '_id' && key !== '__v') {
+          submitData.append(key, formData[key])
+        }
+      })
+      
+      // Append image file if a new one is selected
+      if (campaignImage) {
+        submitData.append('campaignImage', campaignImage)
+      }
+
+      await api.put(`/admin/ads/campaigns/${selectedCampaign._id}`, submitData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
       setShowEditModal(false)
       setSelectedCampaign(null)
       setFormData(defaultFormData)
+      resetImageState()
       fetchCampaigns()
       fetchStats()
     } catch (error) {
       console.error("Error updating campaign:", error)
+      alert(error.response?.data?.message || "Error updating campaign")
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -286,100 +351,116 @@ function AdminAds() {
                   <option value="728x90">728x90</option>
                   <option value="300x250">300x250</option>
                   <option value="120x60">120x60</option>
-                  <option value="468x60">468x60</option>
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label>Image URL</label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Target URL</label>
-                <input
-                  type="url"
-                  value={formData.targetUrl}
-                  onChange={(e) => setFormData({...formData, targetUrl: e.target.value})}
-                  placeholder="https://example.com"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={formData.description || ""}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="Campaign description"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Budget (KWD)</label>
-                  <input
-                    type="number"
-                    value={formData.budget}
-                    onChange={(e) => setFormData({...formData, budget: Number(e.target.value)})}
-                    placeholder="Budget amount"
-                    min="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Daily Budget (KWD)</label>
-                  <input
-                    type="number"
-                    value={formData.dailyBudget || 0}
-                    onChange={(e) => setFormData({...formData, dailyBudget: Number(e.target.value)})}
-                    placeholder="Daily budget"
-                    min="0"
-                  />
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label>Start Date</label>
-                <input
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>End Date</label>
-                <input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value})}
-                >
-                  <option value="active">Active</option>
-                  <option value="paused">Paused</option>
-                </select>
-              </div>
-              
-              <div className="modal-actions">
-                <button className="cancel-btn" onClick={() => setShowCreateModal(false)}>
-                  Cancel
-                </button>
-                <button className="save-btn" onClick={handleCreateCampaign}>
-                  Create Campaign
-                </button>
-              </div>
+<option value="468x60">468x60</option>
+</select>
+</div>
+
+<div className="form-group">
+<label>Campaign Image *</label>
+<input
+type="file"
+accept="image/*"
+onChange={handleImageChange}
+style={{ marginBottom: '10px' }}
+/>
+{imagePreview && (
+<div className="image-preview" style={{ marginTop: '10px' }}>
+<img 
+  src={imagePreview} 
+  alt="Preview" 
+  style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '4px' }}
+/>
+<button 
+  type="button" 
+  onClick={() => { setCampaignImage(null); setImagePreview(null); }}
+  style={{ marginLeft: '10px', padding: '5px 10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+>
+  Remove
+</button>
+</div>
+)}
+</div>
+
+<div className="form-group">
+<label>Target URL</label>
+<input
+type="url"
+value={formData.targetUrl}
+onChange={(e) => setFormData({...formData, targetUrl: e.target.value})}
+placeholder="https://example.com"
+/>
+</div>
+
+<div className="form-group">
+<label>Description</label>
+<textarea
+value={formData.description || ""}
+onChange={(e) => setFormData({...formData, description: e.target.value})}
+placeholder="Campaign description"
+rows={3}
+/>
+</div>
+
+<div className="form-row">
+<div className="form-group">
+<label>Budget (KWD)</label>
+<input
+type="number"
+value={formData.budget}
+onChange={(e) => setFormData({...formData, budget: Number(e.target.value)})}
+placeholder="Budget amount"
+min="0"
+/>
+</div>
+<div className="form-group">
+<label>Daily Budget (KWD)</label>
+<input
+type="number"
+value={formData.dailyBudget || 0}
+onChange={(e) => setFormData({...formData, dailyBudget: Number(e.target.value)})}
+placeholder="Daily budget"
+min="0"
+/>
+</div>
+</div>
+
+<div className="form-group">
+<label>Start Date</label>
+<input
+type="date"
+value={formData.startDate}
+onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+/>
+</div>
+
+<div className="form-group">
+<label>End Date</label>
+<input
+type="date"
+value={formData.endDate}
+onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+/>
+</div>
+
+<div className="form-group">
+<label>Status</label>
+<select
+value={formData.status}
+onChange={(e) => setFormData({...formData, status: e.target.value})}
+>
+<option value="active">Active</option>
+<option value="paused">Paused</option>
+</select>
+</div>
+
+<div className="modal-actions">
+<button className="cancel-btn" onClick={() => { setShowCreateModal(false); resetImageState(); }}>
+Cancel
+</button>
+<button className="save-btn" onClick={handleCreateCampaign} disabled={uploading}>
+{uploading ? 'Uploading...' : 'Create Campaign'}
+</button>
+</div>
             </div>
           </div>
         </div>
@@ -434,67 +515,94 @@ function AdminAds() {
                     <option value="728x90">728x90</option>
                     <option value="300x250">300x250</option>
                     <option value="120x60">120x60</option>
-                    <option value="468x60">468x60</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label>Image URL</label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Target URL</label>
-                <input
-                  type="url"
-                  value={formData.targetUrl}
-                  onChange={(e) => setFormData({...formData, targetUrl: e.target.value})}
-                  placeholder="https://example.com"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={formData.description || ""}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="Campaign description"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Budget (KWD)</label>
-                  <input
-                    type="number"
-                    value={formData.budget}
-                    onChange={(e) => setFormData({...formData, budget: Number(e.target.value)})}
-                    placeholder="Budget amount"
-                    min="0"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Daily Budget (KWD)</label>
-                  <input
-                    type="number"
-                    value={formData.dailyBudget || 0}
-                    onChange={(e) => setFormData({...formData, dailyBudget: Number(e.target.value)})}
-                    placeholder="Daily budget"
-                    min="0"
-                  />
-                </div>
-              </div>
-              
-              <div className="form-row">
-                <div className="form-group">
+<option value="468x60">468x60</option>
+</select>
+</div>
+</div>
+
+<div className="form-group">
+<label>Campaign Image</label>
+{formData.imageUrl && !imagePreview && (
+<div style={{ marginBottom: '10px' }}>
+<p style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>Current image:</p>
+<img 
+  src={formData.imageUrl} 
+  alt="Current" 
+  style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '4px' }}
+/>
+</div>
+)}
+<input
+type="file"
+accept="image/*"
+onChange={handleImageChange}
+style={{ marginBottom: '10px' }}
+/>
+{imagePreview && (
+<div className="image-preview" style={{ marginTop: '10px' }}>
+<p style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>New image preview:</p>
+<img 
+  src={imagePreview} 
+  alt="Preview" 
+  style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '4px' }}
+/>
+<button 
+  type="button" 
+  onClick={() => { setCampaignImage(null); setImagePreview(null); }}
+  style={{ marginLeft: '10px', padding: '5px 10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+>
+  Remove
+</button>
+</div>
+)}
+</div>
+
+<div className="form-group">
+<label>Target URL</label>
+<input
+type="url"
+value={formData.targetUrl}
+onChange={(e) => setFormData({...formData, targetUrl: e.target.value})}
+placeholder="https://example.com"
+/>
+</div>
+
+<div className="form-group">
+<label>Description</label>
+<textarea
+value={formData.description || ""}
+onChange={(e) => setFormData({...formData, description: e.target.value})}
+placeholder="Campaign description"
+rows={3}
+/>
+</div>
+
+<div className="form-row">
+<div className="form-group">
+<label>Budget (KWD)</label>
+<input
+type="number"
+value={formData.budget}
+onChange={(e) => setFormData({...formData, budget: Number(e.target.value)})}
+placeholder="Budget amount"
+min="0"
+/>
+</div>
+
+<div className="form-group">
+<label>Daily Budget (KWD)</label>
+<input
+type="number"
+value={formData.dailyBudget || 0}
+onChange={(e) => setFormData({...formData, dailyBudget: Number(e.target.value)})}
+placeholder="Daily budget"
+min="0"
+/>
+</div>
+</div>
+
+<div className="form-row">
+<div className="form-group">
                   <label>Start Date</label>
                   <input
                     type="date"
@@ -526,14 +634,14 @@ function AdminAds() {
                 </select>
               </div>
               
-              <div className="modal-actions">
-                <button className="cancel-btn" onClick={() => { setShowEditModal(false); setSelectedCampaign(null); }}>
-                  Cancel
-                </button>
-                <button className="save-btn" onClick={handleUpdateCampaign}>
-                  Update Campaign
-                </button>
-              </div>
+<div className="modal-actions">
+<button className="cancel-btn" onClick={() => { setShowEditModal(false); setSelectedCampaign(null); resetImageState(); }}>
+Cancel
+</button>
+<button className="save-btn" onClick={handleUpdateCampaign} disabled={uploading}>
+{uploading ? 'Uploading...' : 'Update Campaign'}
+</button>
+</div>
             </div>
           </div>
         </div>

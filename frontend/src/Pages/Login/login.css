@@ -1,20 +1,22 @@
+/* DriveMe Premium Login Page - Brand Colors */
 .login-container {
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+  background: #F8FAFC;
   padding: 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .login-card {
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   padding: 40px;
   width: 100%;
-  max-width: 500px;
-  border-top: 4px solid #009688;
+  max-width: 440px;
+  border-top: 3px solid #E85D5D;
 }
 
 .login-header {
@@ -25,13 +27,14 @@
 .login-icon {
   width: 60px;
   height: 60px;
-  background: #e0f2f1;
+  background: #E0F7F5;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   margin: 0 auto 20px;
   font-size: 28px;
+  color: #2DD4BF;
 }
 
 .login-title {
@@ -70,12 +73,12 @@
 
 .login-form-input:focus {
   outline: none;
-  border: 2px solid #e7435e;
-  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.1);
+  border: 2px solid #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 .login-form-input::placeholder {
-  color: #999;
+  color: #9CA3AF;
 }
 
 .login-forgot-password {
@@ -84,30 +87,32 @@
 }
 
 .login-forgot-password a {
-  color: #009688;
+  color: #2DD4BF;
   font-size: 12px;
   font-weight: 500;
   transition: color 0.3s;
 }
 
 .login-forgot-password a:hover {
-  color: #00796b;
+  color: #14B8A6;
 }
 
 .login-submit-btn {
   width: 100%;
   padding: 12px 14px;
-  background-color: #009688;
+  background-color: #2DD4BF;
   color: white;
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
-  transition: background-color 0.3s;
+  transition: all 0.3s;
   margin-top: 10px;
+  border: none;
 }
 
 .login-submit-btn:hover {
-  background-color: #00796b;
+  background-color: #14B8A6;
+  box-shadow: 0 4px 14px rgba(45, 212, 191, 0.3);
 }
 
 .login-submit-btn:disabled {
@@ -119,17 +124,17 @@
   text-align: center;
   margin-top: 20px;
   font-size: 14px;
-  color: #666;
+  color: #6B7280;
 }
 
 .login-signup-link a {
-  color: #e63c6d;
+  color: #E85D5D;
   font-weight: 600;
   transition: color 0.3s;
 }
 
 .login-signup-link a:hover {
-  color: #d4365f;
+  color: #D94545;
 }
 
 .login-error-message {

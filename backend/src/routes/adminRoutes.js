@@ -1,5 +1,6 @@
 import express from "express"
 const router = express.Router()
+import { upload, handleMulterError } from "../Config/multerConfig.js"
 import {
     getPendingPayments,
     getPaymentDetails,
@@ -40,6 +41,8 @@ import {
     updateAdCampaign,
     deleteAdCampaign,
     toggleAdCampaignStatus,
+    getPublicActiveCampaigns,
+    trackCampaignClick,
     getPaymentStats,
     getRidePoolingStats,
     getPassengerInterests,
@@ -148,11 +151,15 @@ router.post("/comm/whatsapp/send", verifyToken, checkAdminRole, sendWhatsAppMess
 router.post("/comm/email/send", verifyToken, checkAdminRole, sendEmail)
 router.put("/comm/config/:type", verifyToken, checkAdminRole, updateCommConfig)
 
+// Public Advertisement Routes (no auth required)
+router.get("/ads/public/campaigns", getPublicActiveCampaigns)
+router.post("/ads/public/campaigns/:campaignId/click", trackCampaignClick)
+
 // Advertisement Management
 router.get("/ads/campaigns", verifyToken, checkAdminRole, getAdCampaigns)
 router.get("/ads/stats", verifyToken, checkAdminRole, getAdStats)
-router.post("/ads/campaigns", verifyToken, checkAdminRole, createAdCampaign)
-router.put("/ads/campaigns/:campaignId", verifyToken, checkAdminRole, updateAdCampaign)
+router.post("/ads/campaigns", verifyToken, checkAdminRole, upload.single('campaignImage'), handleMulterError, createAdCampaign)
+router.put("/ads/campaigns/:campaignId", verifyToken, checkAdminRole, upload.single('campaignImage'), handleMulterError, updateAdCampaign)
 router.delete("/ads/campaigns/:campaignId", verifyToken, checkAdminRole, deleteAdCampaign)
 router.put("/ads/campaigns/:campaignId/status", verifyToken, checkAdminRole, toggleAdCampaignStatus)
 

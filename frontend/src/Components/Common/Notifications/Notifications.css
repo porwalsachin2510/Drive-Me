@@ -37,7 +37,7 @@
 }
 
 .mark-all-read-btn {
-  background: #3b82f6;
+  background: #2DD4BF;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -48,7 +48,7 @@
 }
 
 .mark-all-read-btn:hover {
-  background: #2563eb;
+  background: #14B8A6;
 }
 
 .close-notifications-btn {
@@ -85,7 +85,7 @@
   width: 24px;
   height: 24px;
   border: 2px solid #e5e7eb;
-  border-top: 2px solid #3b82f6;
+  border-top: 2px solid #E85D5D;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 10px;
@@ -103,7 +103,7 @@
 }
 
 .notifications-error button {
-  background: #3b82f6;
+  background: #2DD4BF;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -160,8 +160,8 @@
 }
 
 .notification-item.unread {
-  background: #eff6ff;
-  border-left: 4px solid #3b82f6;
+  background: rgba(232, 93, 93, 0.05);
+  border-left: 4px solid #E85D5D;
 }
 
 .notification-item.read {
@@ -284,7 +284,7 @@
   position: absolute;
   top: 2px;
   right: 2px;
-  background: #dc2626;
+  background: #E85D5D;
   color: white;
   font-size: 10px;
   font-weight: 600;

@@ -14,8 +14,12 @@ function WalletIcon() {
   const { user } = useSelector((state) => state.auth);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Roles that should have wallet access
-  const walletAllowedRoles = ['COMMUTER', 'B2C_PARTNER', 'B2B_PARTNER', 'CORPORATE_EMPLOYEE'];
+  // Roles that should have wallet access:
+  // - COMMUTER: Adds funds to wallet, pays for bookings
+  // - B2C_PARTNER: Receives earnings from bookings, pays commissions, withdraws funds
+  // - B2B_PARTNER: Receives earnings from corporate contract payments, withdraws funds
+  // Other roles (ADMIN, CORPORATE, drivers, employees) don't use personal wallet
+  const walletAllowedRoles = ['COMMUTER', 'B2C_PARTNER', 'B2B_PARTNER'];
   const isAllowed = user && walletAllowedRoles.includes(user.role);
 
   useEffect(() => {

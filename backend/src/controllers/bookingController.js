@@ -2238,56 +2238,67 @@ export const completeB2B_PartnerDriverBooking = async (req, res) => {
     }
 }
 
-  // Get corporate driver bookings from Trip model
-  export const getCorporateDriverBookings = async (req, res) => {
-    try {
-    const paramDriverId = req.params.driverId || req.userId
-    const { status } = req.query
-
-    // Resolve the actual driver model ID from user's driverId field
-    let actualDriverId = paramDriverId
-    const driverUser = await User.findById(paramDriverId)
-    if (driverUser && driverUser.driverId) {
-      actualDriverId = driverUser.driverId.toString()
-    }
-
-    console.log("[v0] Fetching corporate driver trips for userId:", paramDriverId, "actualDriverId:", actualDriverId)
-
-    // Query Trip model where driver is assigned - check both user ID and driver model ID
-    const driverIdFilter = actualDriverId !== paramDriverId 
-      ? { $or: [{ driverId: actualDriverId }, { driverId: paramDriverId }] }
-      : { driverId: paramDriverId }
-    
-    const query = { ...driverIdFilter }
-    if (status) {
-      query.status = status
-    }
-
-    // Only show today's trips for daily driver view
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
-    const todayEnd = new Date(todayStart)
-    todayEnd.setDate(todayEnd.getDate() + 1)
-    
-    const dateFilter = {
-      $or: [
-        { tripDate: { $gte: todayStart, $lt: todayEnd } },
-        { status: 'IN_PROGRESS' }
-      ]
-    }
-    const finalQuery = { $and: [driverIdFilter, dateFilter] }
-    if (status) {
-      finalQuery.$and.push({ status })
-    }
-
-    // Get today's trips assigned to this driver
-    const trips = await Trip.find(finalQuery)
-      .populate("routeId")
-      .populate("vehicleId")
-      .populate("corporateId", "companyName fullName")
-      .populate("b2bPartnerId", "companyName fullName")
-      .populate("passengers.employeeId", "fullName email whatsappNumber")
-      .sort({ tripDate: 1 })
+// Get corporate driver bookings from Trip model
+export const getCorporateDriverBookings = async (req, res) => {
+  try {
+  const paramDriverId = req.params.driverId || req.userId
+  const { status } = req.query
+  
+  // Resolve the actual driver model ID from user's driverId field
+  const driverUser = await User.findById(paramDriverId)
+  const actualDriverModelId = driverUser?.driverId?.toString()
+  const corporateOwnerId = driverUser?.employedBy?.toString()
+  
+  console.log("[v0] Fetching corporate driver trips for userId:", paramDriverId, 
+    "driverModelId:", actualDriverModelId, 
+    "corporateOwnerId:", corporateOwnerId)
+  
+  // Build driver ID filter - Trip.driverId can be User._id or CorporateDriver._id
+  const driverIdConditions = [{ driverId: paramDriverId }]
+  if (actualDriverModelId) {
+    driverIdConditions.push({ driverId: actualDriverModelId })
+  }
+  
+  // Also add corporateId filter to ensure driver only sees trips from their corporate
+  const baseFilter = { 
+    $or: driverIdConditions,
+  }
+  
+  // Add corporate filter if we know the employer
+  if (corporateOwnerId) {
+    baseFilter.corporateId = corporateOwnerId
+  }
+  
+  const query = { ...baseFilter }
+  if (status) {
+    query.status = status
+  }
+  
+  // Only show today's trips for daily driver view
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const todayEnd = new Date(todayStart)
+  todayEnd.setDate(todayEnd.getDate() + 1)
+  
+  const dateFilter = {
+    $or: [
+      { tripDate: { $gte: todayStart, $lt: todayEnd } },
+      { status: 'IN_PROGRESS' }
+    ]
+  }
+  const finalQuery = { $and: [baseFilter, dateFilter] }
+  if (status) {
+    finalQuery.$and.push({ status })
+  }
+  
+  // Get today's trips assigned to this driver for their corporate employer
+  const trips = await Trip.find(finalQuery)
+  .populate("routeId")
+  .populate("vehicleId")
+  .populate("corporateId", "companyName fullName")
+  .populate("b2bPartnerId", "companyName fullName")
+  .populate("passengers.employeeId", "fullName email whatsappNumber")
+  .sort({ tripDate: 1 })
 
     console.log("[v0] Found corporate driver trips for today:", trips.length)
 

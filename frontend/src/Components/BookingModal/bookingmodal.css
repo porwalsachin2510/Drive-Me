@@ -1,3 +1,4 @@
+/* Premium Booking Modal - Inter Font */
 .booking-modal-overlay {
   position: fixed;
   top: 0;
@@ -9,6 +10,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .booking-modal-content {
@@ -303,8 +305,8 @@
 .days-count {
   font-size: 13px;
   font-weight: 600;
-  color: #0891b2;
-  background: #ecfeff;
+  color: #E85D5D;
+  background: rgba(232, 93, 93, 0.1);
   padding: 4px 10px;
   border-radius: 12px;
 }
@@ -331,13 +333,13 @@
 }
 
 .day-chip:hover:not(.disabled) {
-  border-color: #0891b2;
-  color: #0891b2;
+  border-color: #E85D5D;
+  color: #E85D5D;
 }
 
 .day-chip.selected {
-  background: #0891b2;
-  border-color: #0891b2;
+  background: #E85D5D;
+  border-color: #E85D5D;
   color: #ffffff;
 }
 
@@ -368,9 +370,9 @@
 }
 
 .preset-btn:hover {
-  background: #f0fdf4;
-  border-color: #0891b2;
-  color: #0891b2;
+  background: rgba(232, 93, 93, 0.05);
+  border-color: #E85D5D;
+  color: #E85D5D;
 }
 
 /* Pass Type Selection Styles */
@@ -537,8 +539,8 @@
 
 .point-select:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  border-color: #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 .route-summary-body {
@@ -646,8 +648,8 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  border-color: #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 /* Add seats selector styles */
@@ -842,13 +844,13 @@
 }
 
 .btn-primary {
-  background: #007bff;
+  background: #2DD4BF;
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #0056b3;
-  box-shadow: 0 2px 8px rgba(0, 86, 179, 0.3);
+  background: #14B8A6;
+  box-shadow: 0 2px 8px rgba(45, 212, 191, 0.3);
 }
 
 .btn-secondary {
@@ -893,13 +895,13 @@
 }
 
 .modal-actions .btn-primary {
-  background: #17a2b8;
+  background: #2DD4BF;
   color: white;
 }
 
 .modal-actions .btn-primary:hover:not(:disabled) {
-  background: #138496;
-  box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+  background: #14B8A6;
+  box-shadow: 0 4px 12px rgba(45, 212, 191, 0.3);
 }
 
 .modal-actions button:disabled {

@@ -15,7 +15,7 @@
 
 .fr-routes-count {
   font-size: 14px;
-  color: #00b074;
+  color: #E85D5D;
   font-weight: 600;
   margin-bottom: 30px;
 }
@@ -49,8 +49,8 @@
 
 .fr-search-input:focus {
   outline: none;
-  border-color: #3182ce;
-  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+  border-color: #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 .fr-search-input::placeholder {
@@ -74,7 +74,7 @@
 
 .fr-filter-box .fr-filter-select:focus {
   outline: none;
-  border-color: #3182ce;
+  border-color: #E85D5D;
 }
 
 /* Routes List */
@@ -281,7 +281,7 @@
 
 .fr-join-btn {
   padding: 8px 20px;
-  background: #48bb78;
+  background: #2DD4BF;
   color: white;
   border: none;
   border-radius: 6px;
@@ -292,7 +292,7 @@
 }
 
 .fr-join-btn:hover {
-  background: #38a169;
+  background: #14B8A6;
 }
 
 .fr-join-btn:disabled {
@@ -302,7 +302,7 @@
 
 .fr-leave-btn {
   padding: 8px 20px;
-  background: #fc8181;
+  background: #EF4444;
   color: white;
   border: none;
   border-radius: 6px;
@@ -313,7 +313,7 @@
 }
 
 .fr-leave-btn:hover {
-  background: #f56565;
+  background: #DC2626;
 }
 
 .fr-loading {

@@ -730,24 +730,30 @@ export const getB2CPartnerDrivers = async (req, res) => {
         // Create drivers array
         let drivers = [...assignedDrivers];
         
-        // Add B2C Partner as a driver option if they can drive
-        if (b2cPartner && (b2cPartner.canDrive || b2cPartner.hasDrivingLicense || b2cPartner.role === 'B2C_PARTNER')) {
-            // Add B2C Partner as a driver option
-            const partnerAsDriver = {
-                _id: b2cPartner._id,
-                name: b2cPartner.name || b2cPartner.businessName || 'Self',
-                email: b2cPartner.email,
-                phone: b2cPartner.phone,
-                isSelf: true, // Flag to identify this is the partner themselves
-                assignedVehicles: [],
-                assignedRoutes: [],
-                b2cPartnerId: req.userId,
-                createdAt: b2cPartner.createdAt,
-                // Add driver-like fields for compatibility
-                licenseNumber: b2cPartner.licenseNumber || 'Self-Employed',
-                experience: b2cPartner.experience || 'Owner-Operator',
-                status: 'Available'
-            };
+  // Add B2C Partner as a driver option if they can drive
+  if (b2cPartner && (b2cPartner.canDrive || b2cPartner.hasDrivingLicense || b2cPartner.role === 'B2C_PARTNER')) {
+  // Add B2C Partner as a driver option with profile image
+  const partnerAsDriver = {
+  _id: b2cPartner._id,
+  name: 'Self',
+  fullName: b2cPartner.fullName || b2cPartner.businessName || 'Self',
+  email: b2cPartner.email,
+  phone: b2cPartner.phone,
+  phoneNumber: b2cPartner.phone,
+  isSelf: true, // Flag to identify this is the partner themselves
+  assignedVehicles: [],
+  assignedRoutes: [],
+  b2cPartnerId: req.userId,
+  createdAt: b2cPartner.createdAt,
+  // Add driver-like fields for compatibility
+  licenseNumber: b2cPartner.licenseNumber || 'Self-Employed',
+  experience: b2cPartner.experience || 'Owner-Operator',
+  status: 'AVAILABLE',
+  nationality: b2cPartner.nationality || 'N/A',
+  // Add profile image for display
+  driverImage: b2cPartner.profilePicture ? { url: b2cPartner.profilePicture } : null,
+  profilePicture: b2cPartner.profilePicture,
+  };
             
             drivers.unshift(partnerAsDriver); // Add at the beginning
         }

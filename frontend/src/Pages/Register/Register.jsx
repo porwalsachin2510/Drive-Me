@@ -65,6 +65,7 @@ const Register = () => {
     companyAddress: "",
     companyLogo: null,
     tradeLicense: null,
+    profileImage: null,
     serviceType: "",
     yearsOfExperience: "",
     serviceDescription: "",
@@ -522,6 +523,11 @@ const Register = () => {
         submitData.append("yearsOfExperience", formData.yearsOfExperience);
         submitData.append("serviceDescription", formData.serviceDescription);
 
+        // Add profile image for B2C Partner
+        if (formData.profileImage?.file) {
+          submitData.append("profileImage", formData.profileImage.file);
+        }
+
         submitData.append(
           "acceptedPaymentMethods",
           JSON.stringify(formData.acceptedPaymentMethods)
@@ -829,6 +835,59 @@ const Register = () => {
                         value={formData.yearsOfExperience || ""}
                         onChange={handleInputChange}
                       />
+                    </div>
+                  </div>
+
+                  <div className="register-form-row">
+                    <div className="register-form-group">
+                      <label className="register-form-label">
+                        Profile Image / Logo
+                      </label>
+                      <div className="register-file-input-wrapper">
+                        <input
+                          type="file"
+                          id="profileImage"
+                          name="profileImage"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                profileImage: {
+                                  file: file,
+                                  preview: URL.createObjectURL(file),
+                                  fileName: file.name,
+                                },
+                              }));
+                            }
+                          }}
+                          accept="image/*"
+                        />
+                        <label
+                          htmlFor="profileImage"
+                          className="register-file-input-label"
+                        >
+                          {formData.profileImage
+                            ? `${formData.profileImage.fileName} ✓`
+                            : "Choose Profile Image"}
+                        </label>
+                      </div>
+                      {formData.profileImage?.preview && (
+                        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <img
+                            src={formData.profileImage.preview}
+                            alt="Profile Preview"
+                            style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '50%', border: '2px solid #ddd' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData((prev) => ({ ...prev, profileImage: null }))}
+                            style={{ padding: '5px 10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 

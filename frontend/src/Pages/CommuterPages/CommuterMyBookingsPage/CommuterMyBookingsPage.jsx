@@ -731,7 +731,7 @@ const CommuterMyBookingsPage = () => {
                         <div className="cmbp-detail-item">
                           <span className="cmbp-detail-label">Amount</span>
                           <span className="cmbp-detail-value">
-                            AED {booking.paymentAmount?.toFixed(2) || "N/A"}
+                            {booking.paymentAmount?.toFixed(2) || "N/A"} KWD
                           </span>
                         </div>
                         <div className="cmbp-detail-item">
@@ -815,7 +815,7 @@ const CommuterMyBookingsPage = () => {
                         <div className="cmbp-detail-item">
                           <span className="cmbp-detail-label">Cost</span>
                           <span className="cmbp-detail-value">
-                            ₹{booking.price || "N/A"}
+                            {booking.price || "N/A"} KWD
                           </span>
                         </div>
                       </>

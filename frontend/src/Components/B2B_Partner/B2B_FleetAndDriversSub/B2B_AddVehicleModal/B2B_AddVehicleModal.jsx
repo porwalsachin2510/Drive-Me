@@ -240,14 +240,12 @@ const B2B_AddVehicleModal = ({ onClose }) => {
 
     const result = await dispatch(addVehicle(submitData));
 
-    if (addVehicle.fulfilled.match(result)) {
-      console.log("Vehicle added successfully!");
-      alert("Vehicle added successfully!");
-      navigate("/fleet/vehicles");
-    } else {
-      console.error("Vehicle addition failed:", result.payload);
-      alert(result.payload || "Failed to add vehicle");
-    }
+  if (addVehicle.fulfilled.match(result)) {
+  console.log("Vehicle added successfully!");
+  alert("Vehicle added successfully!");
+  // Close modal instead of navigating away - stay on current tab
+  onClose();
+  }
   };
 
   if (loading) return <LoadingSpinner />;
@@ -283,7 +281,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   <input
                     type="radio"
                     name="serviceType"
-                    value="passenger"
+                    value="PASSENGER"
                     checked={formData.serviceType === "PASSENGER"}
                     onChange={handleInputChange}
                   />
@@ -618,7 +616,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
 
             {/* Pricing */}
             <div className="form-section">
-              <h2>Pricing Details ({formData.currency})</h2>
+              <h2>Pricing Details ({formData.pricing.currency})</h2>
               <div className="form-grid">
                 <div className="form-group">
                   <label>Daily Rate *</label>

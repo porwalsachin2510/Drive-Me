@@ -5,6 +5,7 @@ import CommuteSearchForm from "../../../Components/CommutersSearchForm/Commute-s
 import FeaturedRoutes from "../../../Components/FeaturedRoutes/FeaturedRoutes";
 import AvailableSection from "../../../Components/AvailableSection/AvailableSection";
 import RouteRequest from "../../../Components/RouteRequest/RouteRequest";
+import CampaignBanner from "../../../Components/CampaignBanner/CampaignBanner";
 import { useNavigate } from "react-router-dom";
 import {
   isServiceAvailable,
@@ -403,6 +404,9 @@ export default function CommuterHomePage() {
         </div>
 
         <CommuteSearchForm onSearch={handleSearch} onRequestRoute={() => setShowRouteRequest(true)} />
+
+        {/* Campaign Banner - Active advertisements */}
+        <CampaignBanner placement="banner" />
 
         <FeaturedRoutes routes={featuredRoutes} loading={loading} />
 

@@ -98,6 +98,12 @@ const b2CMonthlyPassSchema = new mongoose.Schema({
         required: true,
     },
     
+    currency: {
+        type: String,
+        default: "KWD",
+        enum: ["AED", "KWD", "SAR", "BHD", "OMR", "QAR"],
+    },
+    
     paymentMethod: {
         type: String,
         enum: ["STRIPE", "TAP", "CARD", "CASH"],

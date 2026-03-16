@@ -202,9 +202,11 @@ export default function Settings() {
                 className="form-select"
               >
                 <option value="KWD">Kuwaiti Dinar (KWD)</option>
-                <option value="USD">US Dollar (USD)</option>
-                <option value="EUR">Euro (EUR)</option>
-                <option value="GBP">British Pound (GBP)</option>
+                <option value="AED">UAE Dirham (AED)</option>
+                <option value="SAR">Saudi Riyal (SAR)</option>
+                <option value="BHD">Bahraini Dinar (BHD)</option>
+                <option value="OMR">Omani Rial (OMR)</option>
+                <option value="QAR">Qatari Riyal (QAR)</option>
               </select>
             </div>
           </div>

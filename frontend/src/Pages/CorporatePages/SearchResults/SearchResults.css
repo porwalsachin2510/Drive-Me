@@ -1,11 +1,11 @@
-/* ==================== Base Container ==================== */
+/* ==================== Base Container - Premium Inter Font ==================== */
 .fleet-search-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
-  background-color: #f8fafc;
+  background-color: var(--bg-secondary, #f8f9fa);
   min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* ==================== Header Section ==================== */

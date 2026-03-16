@@ -1,3 +1,4 @@
+/* Premium Commuter Sidebar - Inter Font */
 .commuter-sidebar {
   width: 300px;
   border-right: 1px solid #e5e7eb;
@@ -6,6 +7,7 @@
   overflow-y: hidden;
   display: flex;
   flex-direction: column;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .sidebar-profile {
@@ -69,8 +71,8 @@
 
 .premium-badge {
   display: inline-block;
-  background-color: #c7d2fe;
-  color: #6366f1;
+  background-color: rgba(232, 93, 93, 0.1);
+  color: #E85D5D;
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 12px;
@@ -105,11 +107,11 @@
 }
 
 .stat-value.green {
-  color: #00b074;
+  color: #22C55E;
 }
 
 .wallet-card {
-  background: linear-gradient(135deg, #00b074 0%, #00d489 100%);
+  background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
   border-radius: 12px;
   padding: 20px;
   color: white;

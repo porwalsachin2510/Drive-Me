@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
+import Navbar from "../../../Components/Navbar/Navbar";
+import Footer from "../../../Components/Footer/Footer";
 import { requestQuotation } from "../../../Redux/slices/quotationSlice";
 import "./SingleVehicleOwnerDetails.css";
 
@@ -19,6 +21,7 @@ const SingleVehicleOwnerDetails = () => {
 
   const [selectedVehicles, setSelectedVehicles] = useState({});
   const [filterType, setFilterType] = useState("ALL");
+  const [activeTab, setActiveTab] = useState("commuters");
 
   console.log("selectedVehicles:-", selectedVehicles);
   // Handle card click to select/deselect vehicle
@@ -124,7 +127,9 @@ const SingleVehicleOwnerDetails = () => {
     if (filterType === "PASSENGER")
       return ownerData.vehicles.filter((v) => v.serviceType === "PASSENGER");
     if (filterType === "GOODS")
-      return ownerData.vehicles.filter((v) => v.serviceType === "GOODS");
+      return ownerData.vehicles.filter((v) => v.serviceType === "GOODS_CARRIER");
+    if (filterType === "MANAGED")
+      return ownerData.vehicles.filter((v) => v.serviceType === "MANAGED_SERVICES");
     if (filterType === "WITH_DRIVER")
       return ownerData.vehicles.filter((v) => v.driverAvailability?.withDriver);
     if (filterType === "FUEL_INCLUDED")
@@ -271,307 +276,317 @@ const SingleVehicleOwnerDetails = () => {
   const filteredVehicles = getFilteredVehicles();
 
   return (
-    <div className="single-owner-vehicle-container">
-      <div className="single-owner-vehicle-header">
-        <button
-          className="single-owner-vehicle-back-btn"
-          onClick={() => window.history.back()}
-        >
-          ← Back to Results
-        </button>
-      </div>
-
-      <div className="single-owner-vehicle-owner-card">
-        <div className="single-owner-vehicle-owner-header">
-          <div className="single-owner-vehicle-owner-info">
-            <div className="single-owner-vehicle-owner-title">
-              <span className="single-owner-vehicle-icon">🚌</span>
-              <h1>{ownerData.fullName}</h1>
-              {ownerData.companyName && (
-                <span className="single-owner-vehicle-company-badge">
-                  {ownerData.companyName}
-                </span>
-              )}
-            </div>
-            <div className="single-owner-vehicle-rating">
-              <span className="single-owner-vehicle-star">⭐</span>
-              <span className="single-owner-vehicle-rating-value">
-                {ownerData.rating} ({ownerData.totalReviews})
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="single-owner-vehicle-owner-details">
-          <div className="single-owner-vehicle-detail-item">
-            <span className="single-owner-vehicle-detail-icon">📧</span>
-            <span>{ownerData.email}</span>
-          </div>
-          <div className="single-owner-vehicle-detail-item">
-            <span className="single-owner-vehicle-detail-icon">📞</span>
-            <span>{ownerData.whatsappNumber}</span>
-          </div>
-          <div className="single-owner-vehicle-detail-item">
-            <span className="single-owner-vehicle-detail-icon">🚗</span>
-            <span>{ownerData.totalVehicles} Vehicles Available</span>
-          </div>
-        </div>
-
-        <div className="single-owner-vehicle-payment-methods">
-          <span className="single-owner-vehicle-payment-label">
-            Accepted Payments:
-          </span>
-          {ownerData.acceptedPaymentMethods?.map((method, index) => (
-            <span key={index} className="single-owner-vehicle-payment-badge">
-              {method}
-            </span>
-          ))}
-        </div>
-
-        <div className="single-owner-vehicle-actions-top">
+    <>
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className="single-owner-vehicle-container">
+        <div className="single-owner-vehicle-header">
           <button
-            className="single-owner-vehicle-btn-select-all"
-            onClick={handleSelectAll}
+            className="single-owner-vehicle-back-btn"
+            onClick={() => window.history.back()}
           >
-            {filteredVehicles.every(
-              (v) => selectedVehicles[v._id]?.quantity > 0
-            )
-              ? "Deselect All"
-              : "Select All"}
+            ← Back to Results
           </button>
         </div>
-      </div>
 
-      <div className="single-owner-vehicle-vehicles-section">
-        <div className="single-owner-vehicle-section-header">
-          <h2>Available Vehicles ({filteredVehicles.length})</h2>
-          <div className="single-owner-vehicle-filters">
+        <div className="single-owner-vehicle-owner-card">
+          <div className="single-owner-vehicle-owner-header">
+            <div className="single-owner-vehicle-owner-info">
+              <div className="single-owner-vehicle-owner-title">
+                <span className="single-owner-vehicle-icon">🚌</span>
+                <h1>{ownerData.fullName}</h1>
+                {ownerData.companyName && (
+                  <span className="single-owner-vehicle-company-badge">
+                    {ownerData.companyName}
+                  </span>
+                )}
+              </div>
+              <div className="single-owner-vehicle-rating">
+                <span className="single-owner-vehicle-star">⭐</span>
+                <span className="single-owner-vehicle-rating-value">
+                  {ownerData.rating} ({ownerData.totalReviews})
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="single-owner-vehicle-owner-details">
+            <div className="single-owner-vehicle-detail-item">
+              <span className="single-owner-vehicle-detail-icon">📧</span>
+              <span>{ownerData.email}</span>
+            </div>
+            <div className="single-owner-vehicle-detail-item">
+              <span className="single-owner-vehicle-detail-icon">📞</span>
+              <span>{ownerData.whatsappNumber}</span>
+            </div>
+            <div className="single-owner-vehicle-detail-item">
+              <span className="single-owner-vehicle-detail-icon">🚗</span>
+              <span>{ownerData.totalVehicles} Vehicles Available</span>
+            </div>
+          </div>
+
+          <div className="single-owner-vehicle-payment-methods">
+            <span className="single-owner-vehicle-payment-label">
+              Accepted Payments:
+            </span>
+            {ownerData.acceptedPaymentMethods?.map((method, index) => (
+              <span key={index} className="single-owner-vehicle-payment-badge">
+                {method}
+              </span>
+            ))}
+          </div>
+
+          <div className="single-owner-vehicle-actions-top">
             <button
-              className={`single-owner-vehicle-filter-btn ${
-                filterType === "ALL" ? "active" : ""
-              }`}
-              onClick={() => setFilterType("ALL")}
+              className="single-owner-vehicle-btn-select-all"
+              onClick={handleSelectAll}
             >
-              All
-            </button>
-            <button
-              className={`single-owner-vehicle-filter-btn ${
-                filterType === "PASSENGER" ? "active" : ""
-              }`}
-              onClick={() => setFilterType("PASSENGER")}
-            >
-              Passenger
-            </button>
-            <button
-              className={`single-owner-vehicle-filter-btn ${
-                filterType === "GOODS" ? "active" : ""
-              }`}
-              onClick={() => setFilterType("GOODS")}
-            >
-              Goods
-            </button>
-            <button
-              className={`single-owner-vehicle-filter-btn ${
-                filterType === "WITH_DRIVER" ? "active" : ""
-              }`}
-              onClick={() => setFilterType("WITH_DRIVER")}
-            >
-              With Driver
-            </button>
-            <button
-              className={`single-owner-vehicle-filter-btn ${
-                filterType === "FUEL_INCLUDED" ? "active" : ""
-              }`}
-              onClick={() => setFilterType("FUEL_INCLUDED")}
-            >
-              Fuel Included
+              {filteredVehicles.every(
+                (v) => selectedVehicles[v._id]?.quantity > 0,
+              )
+                ? "Deselect All"
+                : "Select All"}
             </button>
           </div>
         </div>
 
-        <div className="single-owner-vehicle-vehicles-grid">
-          {filteredVehicles.map((vehicle, index) => (
-            <div
-              key={vehicle._id}
-              className="single-owner-vehicle-card"
-              onClick={() =>
-                handleCardClick(vehicle, corporateuserrequirements)
-              }
-              style={{
-                borderColor: isVehicleSelected(vehicle._id)
-                  ? "#667eea"
-                  : "#e2e8f0",
-                borderWidth: isVehicleSelected(vehicle._id) ? "3px" : "2px",
-                cursor: "pointer",
-              }}
-            >
-              <div className="single-owner-vehicle-card-header">
-                <h3>
-                  #{index + 1} {vehicle.vehicleName} -{" "}
-                  {getCategoryLabel(vehicle.vehicleCategory)}
-                </h3>
-                <div className="single-owner-vehicle-quantity-controls">
-                  <button
-                    className="single-owner-vehicle-qty-btn"
-                    onClick={(e) =>
-                      handleQuantityChange(vehicle._id, "decrement", e)
-                    }
-                    disabled={!selectedVehicles[vehicle._id]?.quantity}
-                  >
-                    −
-                  </button>
-                  <span className="single-owner-vehicle-qty-value">
-                    {selectedVehicles[vehicle._id]?.quantity || 0}
-                  </span>
-                  <button
-                    className="single-owner-vehicle-qty-btn"
-                    onClick={(e) =>
-                      handleQuantityChange(vehicle._id, "increment", e)
-                    }
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+        <div className="single-owner-vehicle-vehicles-section">
+          <div className="single-owner-vehicle-section-header">
+            <h2>Available Vehicles ({filteredVehicles.length})</h2>
+            <div className="single-owner-vehicle-filters">
+              <button
+                className={`single-owner-vehicle-filter-btn ${
+                  filterType === "ALL" ? "active" : ""
+                }`}
+                onClick={() => setFilterType("ALL")}
+              >
+                All
+              </button>
+              <button
+                className={`single-owner-vehicle-filter-btn ${
+                  filterType === "PASSENGER" ? "active" : ""
+                }`}
+                onClick={() => setFilterType("PASSENGER")}
+              >
+                Passenger
+              </button>
+              <button
+                className={`single-owner-vehicle-filter-btn ${
+                  filterType === "GOODS" ? "active" : ""
+                }`}
+                onClick={() => setFilterType("GOODS")}
+              >
+                Goods
+              </button>
+              <button
+                className={`single-owner-vehicle-filter-btn ${
+                  filterType === "WITH_DRIVER" ? "active" : ""
+                }`}
+                onClick={() => setFilterType("WITH_DRIVER")}
+              >
+                With Driver
+              </button>
+              <button
+                className={`single-owner-vehicle-filter-btn ${
+                  filterType === "FUEL_INCLUDED" ? "active" : ""
+                }`}
+                onClick={() => setFilterType("FUEL_INCLUDED")}
+              >
+                Fuel Included
+              </button>
+            </div>
+          </div>
 
-              {vehicle.photos && vehicle.photos.length > 0 && (
-                <div className="single-owner-vehicle-image-gallery">
-                  <img
-                    src={vehicle.photos[0].url}
-                    alt={vehicle.vehicleName}
-                    className="single-owner-vehicle-main-image"
-                  />
-                  <div className="single-owner-vehicle-gallery-count">
-                    📷 {vehicle.photos.length} photos
-                  </div>
-                </div>
-              )}
-
-              <div className="single-owner-vehicle-details-section">
-                <div className="single-owner-vehicle-detail-row">
-                  <span className="single-owner-vehicle-label">Category:</span>
-                  <span className="single-owner-vehicle-value">
+          <div className="single-owner-vehicle-vehicles-grid">
+            {filteredVehicles.map((vehicle, index) => (
+              <div
+                key={vehicle._id}
+                className="single-owner-vehicle-card"
+                onClick={() =>
+                  handleCardClick(vehicle, corporateuserrequirements)
+                }
+                style={{
+                  borderColor: isVehicleSelected(vehicle._id)
+                    ? "#667eea"
+                    : "#e2e8f0",
+                  borderWidth: isVehicleSelected(vehicle._id) ? "3px" : "2px",
+                  cursor: "pointer",
+                }}
+              >
+                <div className="single-owner-vehicle-card-header">
+                  <h3>
+                    #{index + 1} {vehicle.vehicleName} -{" "}
                     {getCategoryLabel(vehicle.vehicleCategory)}
-                  </span>
-                </div>
-                <div className="single-owner-vehicle-detail-row">
-                  <span className="single-owner-vehicle-label">
-                    Service Type:
-                  </span>
-                  <span className="single-owner-vehicle-value">
-                    <span
-                      className={`single-owner-vehicle-badge ${vehicle.serviceType.toLowerCase()}`}
+                  </h3>
+                  <div className="single-owner-vehicle-quantity-controls">
+                    <button
+                      className="single-owner-vehicle-qty-btn"
+                      onClick={(e) =>
+                        handleQuantityChange(vehicle._id, "decrement", e)
+                      }
+                      disabled={!selectedVehicles[vehicle._id]?.quantity}
                     >
-                      {vehicle.serviceType}
+                      −
+                    </button>
+                    <span className="single-owner-vehicle-qty-value">
+                      {selectedVehicles[vehicle._id]?.quantity || 0}
                     </span>
-                  </span>
+                    <button
+                      className="single-owner-vehicle-qty-btn"
+                      onClick={(e) =>
+                        handleQuantityChange(vehicle._id, "increment", e)
+                      }
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                <div className="single-owner-vehicle-detail-row">
-                  <span className="single-owner-vehicle-label">Location:</span>
-                  <span className="single-owner-vehicle-value">
-                    📍 {vehicle.location}
-                  </span>
-                </div>
-                <div className="single-owner-vehicle-detail-row">
-                  <span className="single-owner-vehicle-label">Capacity:</span>
-                  <span className="single-owner-vehicle-value">
-                    {vehicle.capacity.seatingCapacity > 0 &&
-                      `${vehicle.capacity.seatingCapacity} Seats`}
-                    {vehicle.capacity.cargoCapacity > 0 &&
-                      ` | ${vehicle.capacity.cargoCapacity} Cargo`}
-                  </span>
-                </div>
-              </div>
 
-              <div className="single-owner-vehicle-options">
-                <h4>Available With</h4>
-                <div className="single-owner-vehicle-options-grid">
-                  {corporateuserrequirements.driverRequired ? (
-                    <span className="single-owner-vehicle-option-badge">
-                      👨‍✈️ With Driver
-                    </span>
-                  ) : (
-                    <span className="single-owner-vehicle-option-badge">
-                      👨‍✈️ Without Driver
-                    </span>
-                  )}
+                {vehicle.photos && vehicle.photos.length > 0 && (
+                  <div className="single-owner-vehicle-image-gallery">
+                    <img
+                      src={vehicle.photos[0].url}
+                      alt={vehicle.vehicleName}
+                      className="single-owner-vehicle-main-image"
+                    />
+                    <div className="single-owner-vehicle-gallery-count">
+                      📷 {vehicle.photos.length} photos
+                    </div>
+                  </div>
+                )}
 
-                  {corporateuserrequirements.fuelIncluded ? (
-                    <span className="single-owner-vehicle-option-badge">
-                      ⛽ Fuel Included
+                <div className="single-owner-vehicle-details-section">
+                  <div className="single-owner-vehicle-detail-row">
+                    <span className="single-owner-vehicle-label">
+                      Category:
                     </span>
-                  ) : (
-                    <span className="single-owner-vehicle-option-badge">
-                      ⛽ Without Fuel
+                    <span className="single-owner-vehicle-value">
+                      {getCategoryLabel(vehicle.vehicleCategory)}
                     </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="single-owner-vehicle-facilities">
-                <h4>Facilities</h4>
-                <div className="single-owner-vehicle-facilities-grid">
-                  {corporateuserrequirements?.features?.map(
-                    (feature, index) => (
-                      <div
-                        key={index}
-                        className="single-owner-vehicle-facility"
+                  </div>
+                  <div className="single-owner-vehicle-detail-row">
+                    <span className="single-owner-vehicle-label">
+                      Service Type:
+                    </span>
+                    <span className="single-owner-vehicle-value">
+                      <span
+                        className={`single-owner-vehicle-badge ${vehicle.serviceType.toLowerCase()}`}
                       >
-                        {feature}
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-
-              <div className="single-owner-vehicle-pricing">
-                <div className="single-owner-vehicle-pricing-grid">
-                  <div className="single-owner-vehicle-price-item">
-                    <span className="single-owner-vehicle-price-label">
-                      Start Date
-                    </span>
-                    <span className="single-owner-vehicle-price-value">
-                      {corporateuserrequirements.startDate}
+                        {vehicle.serviceType}
+                      </span>
                     </span>
                   </div>
-                  <div className="single-owner-vehicle-price-item">
-                    <span className="single-owner-vehicle-price-label">
-                      Rental Duration
+                  <div className="single-owner-vehicle-detail-row">
+                    <span className="single-owner-vehicle-label">
+                      Location:
                     </span>
-                    <span className="single-owner-vehicle-price-value">
-                      {corporateuserrequirements.rentalDuration}
+                    <span className="single-owner-vehicle-value">
+                      📍 {vehicle.location}
+                    </span>
+                  </div>
+                  <div className="single-owner-vehicle-detail-row">
+                    <span className="single-owner-vehicle-label">
+                      Capacity:
+                    </span>
+                    <span className="single-owner-vehicle-value">
+                      {vehicle.capacity.seatingCapacity > 0 &&
+                        `${vehicle.capacity.seatingCapacity} Seats`}
+                      {vehicle.capacity.cargoCapacity > 0 &&
+                        ` | ${vehicle.capacity.cargoCapacity} Cargo`}
                     </span>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {getTotalSelectedCount() > 0 && (
-        <div className="single-owner-vehicle-footer">
-          <div className="single-owner-vehicle-footer-content">
-            <div className="single-owner-vehicle-footer-summary">
-              <div className="single-owner-vehicle-summary-item">
-                <span className="single-owner-vehicle-summary-label">
-                  Selected:
-                </span>
-                <span className="single-owner-vehicle-summary-value">
-                  {getTotalSelectedCount()} vehicles
-                </span>
+                <div className="single-owner-vehicle-options">
+                  <h4>Available With</h4>
+                  <div className="single-owner-vehicle-options-grid">
+                    {corporateuserrequirements.driverRequired ? (
+                      <span className="single-owner-vehicle-option-badge">
+                        👨‍✈️ With Driver
+                      </span>
+                    ) : (
+                      <span className="single-owner-vehicle-option-badge">
+                        👨‍✈️ Without Driver
+                      </span>
+                    )}
+
+                    {corporateuserrequirements.fuelIncluded ? (
+                      <span className="single-owner-vehicle-option-badge">
+                        ⛽ Fuel Included
+                      </span>
+                    ) : (
+                      <span className="single-owner-vehicle-option-badge">
+                        ⛽ Without Fuel
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="single-owner-vehicle-facilities">
+                  <h4>Facilities</h4>
+                  <div className="single-owner-vehicle-facilities-grid">
+                    {corporateuserrequirements?.features?.map(
+                      (feature, index) => (
+                        <div
+                          key={index}
+                          className="single-owner-vehicle-facility"
+                        >
+                          {feature}
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+
+                <div className="single-owner-vehicle-pricing">
+                  <div className="single-owner-vehicle-pricing-grid">
+                    <div className="single-owner-vehicle-price-item">
+                      <span className="single-owner-vehicle-price-label">
+                        Start Date
+                      </span>
+                      <span className="single-owner-vehicle-price-value">
+                        {corporateuserrequirements.startDate}
+                      </span>
+                    </div>
+                    <div className="single-owner-vehicle-price-item">
+                      <span className="single-owner-vehicle-price-label">
+                        Rental Duration
+                      </span>
+                      <span className="single-owner-vehicle-price-value">
+                        {corporateuserrequirements.rentalDuration}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <button
-              className="single-owner-vehicle-btn-quotation"
-              onClick={handleRequestQuotation}
-            >
-              Request Quotation for Selected ({getTotalSelectedCount()})
-            </button>
+            ))}
           </div>
         </div>
-      )}
-    </div>
+
+        {getTotalSelectedCount() > 0 && (
+          <div className="single-owner-vehicle-footer">
+            <div className="single-owner-vehicle-footer-content">
+              <div className="single-owner-vehicle-footer-summary">
+                <div className="single-owner-vehicle-summary-item">
+                  <span className="single-owner-vehicle-summary-label">
+                    Selected:
+                  </span>
+                  <span className="single-owner-vehicle-summary-value">
+                    {getTotalSelectedCount()} vehicles
+                  </span>
+                </div>
+              </div>
+              <button
+                className="single-owner-vehicle-btn-quotation"
+                onClick={handleRequestQuotation}
+              >
+                Request Quotation for Selected ({getTotalSelectedCount()})
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      <Footer />
+    </>
   );
 };
 

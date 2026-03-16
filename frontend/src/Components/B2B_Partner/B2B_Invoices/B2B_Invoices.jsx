@@ -115,7 +115,7 @@ export default function B2B_Invoices() {
           <div className="b2b-inv-summary-item">
             <span className="b2b-inv-summary-label">Total Invoiced</span>
             <span className="b2b-inv-summary-value">
-              {invoices.reduce((s, i) => s + (i.amount || 0), 0).toLocaleString()} KWD
+              {invoices.reduce((s, i) => s + (i.amount || 0), 0).toLocaleString()} {invoices[0]?.currency || "KWD"}
             </span>
           </div>
           <div className="b2b-inv-summary-item">
@@ -125,7 +125,7 @@ export default function B2B_Invoices() {
                 .filter((i) => i.status?.toLowerCase() === "paid")
                 .reduce((s, i) => s + (i.amount || 0), 0)
                 .toLocaleString()}{" "}
-              KWD
+              {invoices[0]?.currency || "KWD"}
             </span>
           </div>
           <div className="b2b-inv-summary-item">
@@ -135,7 +135,7 @@ export default function B2B_Invoices() {
                 .filter((i) => i.status?.toLowerCase() !== "paid")
                 .reduce((s, i) => s + (i.amount || 0), 0)
                 .toLocaleString()}{" "}
-              KWD
+              {invoices[0]?.currency || "KWD"}
             </span>
           </div>
         </div>

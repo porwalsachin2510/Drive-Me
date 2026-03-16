@@ -1,5 +1,6 @@
 import User from "../models/User.js"
 import Notification from "../models/Notification.js"
+import { sendRealTimeNotification } from "../Services/socketService.js"
 
 // Create notification helper function
 export const createNotification = async (notificationData) => {
@@ -37,6 +38,14 @@ export const createNotification = async (notificationData) => {
 
         if (notificationData.recipientId) {
             await notification.populate("recipientId", "fullName email phone")
+        }
+
+        // Send real-time notification via Socket.io to the user
+        // This ensures all user types (ADMIN, CORPORATE, B2B_PARTNER, etc.) receive notifications in real-time
+        const targetUserId = notificationData.userId || notificationData.recipientId
+        if (targetUserId) {
+            sendRealTimeNotification(targetUserId.toString(), notification)
+            console.log(`[v0] Real-time notification sent to user: ${targetUserId}`)
         }
 
         return notification

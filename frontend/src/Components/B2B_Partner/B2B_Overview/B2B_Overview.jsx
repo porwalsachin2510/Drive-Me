@@ -55,7 +55,7 @@ function B2B_Overview() {
     { label: "FLEET HEALTH", value: overview.vehicles?.utilization || "0%", icon: "✓" },
   ]
 
-  // Use real chart data from backend, fallback to dummy if no data - v2
+  // Use real chart data from backend, fallback to empty data if none available
   const chartData = overview.revenue?.chartData || {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
     revenue: [0, 0, 0, 0, 0, 0],

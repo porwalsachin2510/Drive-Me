@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import BookingModal from "../BookingModal/BookingModal";
 import { normalizeTime } from "../../utils/helperutility";
 import "./featuredroutes.css";
@@ -15,6 +16,7 @@ const FeaturedRoutes = ({ routes, loading }) => {
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   const auth = useSelector((state) => state.auth);
+  const navigate = useNavigate();
 
   const isCorporate = auth.user?.role === "COMMUTER" && auth.user?.companyId;
 
@@ -72,6 +74,29 @@ const FeaturedRoutes = ({ routes, loading }) => {
   };
   // END: CALCULATE DAYS OF WEEK FREQUENCY
 
+  // START: CALCULATE MONTHLY PRICE FROM ONE-WAY PRICE
+  const calculateMonthlyPrice = (route) => {
+    // If route already has monthlyPrice, use it
+    if (route.monthlyPrice && route.monthlyPrice !== "N/A") {
+      return typeof route.monthlyPrice === 'number' 
+        ? `${route.monthlyPrice.toFixed(2)} KWD` 
+        : route.monthlyPrice;
+    }
+    
+    // Calculate from one-way price
+    const oneWayPrice = route.pricing?.oneWayPrice || route.oneWayPrice || route.price;
+    if (!oneWayPrice) return "Contact for price";
+    
+    // Calculate travel days per month based on available days
+    const daysPerWeek = route.availableDays?.length || route.daysOfWeek?.length || 5;
+    const travelDaysPerMonth = Math.round(daysPerWeek * 4.33); // ~4.33 weeks per month
+    
+    // Monthly price = one-way price * travel days per month
+    const monthlyPrice = parseFloat(oneWayPrice) * travelDaysPerMonth;
+    return `${monthlyPrice.toFixed(2)} KWD`;
+  };
+  // END: CALCULATE MONTHLY PRICE FROM ONE-WAY PRICE
+
   
   const isRouteAvailableForBooking = (route) => {
     const today = new Date();
@@ -98,7 +123,8 @@ const FeaturedRoutes = ({ routes, loading }) => {
 
   const handleBookRoute = (route) => {
     if (!auth.user) {
-      alert("Please login to book a route");
+      // Redirect unauthenticated users to login, then back to homepage
+      navigate("/login", { state: { returnTo: "/", message: "Please login to book a route" } });
       return;
     }
 
@@ -220,12 +246,15 @@ const FeaturedRoutes = ({ routes, loading }) => {
                     <div className="company-header">
                       <img
                         src={
+                          route.profileImage ||
+                          route.operatorImage ||
                           route.companyLogo ||
                           route.driverImage ||
                           "/placeholder.svg"
                         }
                         alt={route.operator || "Provider"}
                         className="company-logo"
+                        style={{ borderRadius: '50%', width: '50px', height: '50px', objectFit: 'cover' }}
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = "/placeholder.svg";
@@ -301,7 +330,7 @@ const FeaturedRoutes = ({ routes, loading }) => {
                     <div className="pricing-row">
                       <span className="pricing-title">Monthly Pass</span>
                       <span className="pricing-value">
-                        {route.monthlyPrice}
+                        {calculateMonthlyPrice(route)}
                       </span>
                     </div>
                   </div>

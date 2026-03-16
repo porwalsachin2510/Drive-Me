@@ -158,6 +158,52 @@ export const corporateRejectContract = createAsyncThunk(
     },
 )
 
+// Due Date Extension Request - Corporate
+export const requestDueDateExtension = createAsyncThunk(
+    "contract/requestDueDateExtension",
+    async ({ contractId, newProposedDate, reason }, { rejectWithValue }) => {
+        try {
+            const response = await api.post(`/contracts/${contractId}/request-due-date-extension`, {
+                newProposedDate,
+                reason,
+            })
+            return response.data
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to request due date extension")
+        }
+    },
+)
+
+// Due Date Extension Response - B2B Partner
+export const respondToDueDateExtension = createAsyncThunk(
+    "contract/respondToDueDateExtension",
+    async ({ contractId, action, responseNotes, counterOfferedDate }, { rejectWithValue }) => {
+        try {
+            const response = await api.post(`/contracts/${contractId}/respond-due-date-extension`, {
+                action,
+                responseNotes,
+                counterOfferedDate,
+            })
+            return response.data
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to respond to due date extension")
+        }
+    },
+)
+
+// Get Due Date Extension Requests for B2B Partner
+export const getDueDateExtensionRequests = createAsyncThunk(
+    "contract/getDueDateExtensionRequests",
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await api.get("/contracts/fleet/due-date-requests")
+            return response.data
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to fetch due date extension requests")
+        }
+    },
+)
+
 export const approveContract = createAsyncThunk(
     "contract/approve",
     async ({ contractId, approvalNotes }, { rejectWithValue }) => {
@@ -205,10 +251,13 @@ const contractSlice = createSlice({
                 state.loading = false
                 state.currentContract = action.payload.data
             })
-            .addCase(getContractById.rejected, (state, action) => {
-                state.loading = false
-                state.error = action.payload
-            })
+.addCase(getContractById.rejected, (state, action) => {
+      state.loading = false
+      // Only set error if not a silent poll to prevent error flash during background updates
+      if (!action.meta.arg?.silent) {
+        state.error = action.payload
+      }
+    })
             .addCase(uploadContractDocument.pending, (state) => {
                 state.loading = true
                 state.error = null
@@ -330,6 +379,49 @@ const contractSlice = createSlice({
                 }
             })
             .addCase(corporateRejectContract.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.payload
+            })
+            // Request Due Date Extension
+            .addCase(requestDueDateExtension.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(requestDueDateExtension.fulfilled, (state, action) => {
+                state.loading = false
+                if (action.payload?.data?.contract) {
+                    state.currentContract = { data: action.payload.data }
+                }
+            })
+            .addCase(requestDueDateExtension.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.payload
+            })
+            // Respond to Due Date Extension
+            .addCase(respondToDueDateExtension.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(respondToDueDateExtension.fulfilled, (state, action) => {
+                state.loading = false
+                if (action.payload?.data?.contract) {
+                    state.currentContract = { data: action.payload.data }
+                }
+            })
+            .addCase(respondToDueDateExtension.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.payload
+            })
+            // Get Due Date Extension Requests
+            .addCase(getDueDateExtensionRequests.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(getDueDateExtensionRequests.fulfilled, (state, action) => {
+                state.loading = false
+                state.dueDateRequests = action.payload?.data?.requests || []
+            })
+            .addCase(getDueDateExtensionRequests.rejected, (state, action) => {
                 state.loading = false
                 state.error = action.payload
             })

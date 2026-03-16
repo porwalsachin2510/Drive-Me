@@ -2,6 +2,18 @@ import Contract from "../models/Contract.js"
 import Quotation from "../models/Quotation.js"
 import Route from "../models/Route.js"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
+import { createNotification, sendAdminNotification } from "../Services/notificationService.js"
+import User from "../models/User.js"
+
+// Helper to get user name
+const getUserName = async (userId) => {
+    try {
+        const user = await User.findById(userId).select('fullName companyName');
+        return user?.companyName || user?.fullName || 'User';
+    } catch {
+        return 'User';
+    }
+}
 
 // @desc    Create contract request from accepted quotation
 // @route   POST /api/contracts/create-from-quotation
@@ -111,6 +123,27 @@ export const createContractFromQuotation = async (req, res) => {
             },
         ])
 
+        // Get names for notifications
+        const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
+        const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
+
+        // Notify B2B_PARTNER about new contract
+        await createNotification({
+            userId: contract.fleetOwnerId._id,
+            type: "CONTRACT_CREATED",
+            title: "New Contract Created",
+            message: `${corporateName} has created a new contract based on your accepted quotation. Total: ${totalAmount} ${contractCurrency}`,
+            data: { contractId: contract._id, quotationId: quotation._id, totalAmount, currency: contractCurrency }
+        });
+
+        // Notify ADMIN
+        await sendAdminNotification(
+            "New Contract Created",
+            `${corporateName} (CORPORATE) created contract with ${fleetName} (B2B_PARTNER). Total: ${totalAmount} ${contractCurrency}`,
+            "CONTRACT_CREATED",
+            { contractId: contract._id, corporateId: corporateOwnerId, fleetOwnerId: quotation.fleetOwnerId, totalAmount }
+        );
+
         res.status(201).json({
             success: true,
             message: "Contract created successfully",
@@ -165,6 +198,57 @@ export const getCorporateContracts = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to fetch contracts",
+            error: error.message,
+        })
+    }
+}
+
+// @desc    Get contract by quotation ID
+// @route   GET /api/contracts/by-quotation/:quotationId
+// @access  Private (CORPORATE or B2B_PARTNER)
+export const getContractByQuotation = async (req, res) => {
+    try {
+        const { quotationId } = req.params
+        const userId = req.userId
+
+        const contract = await Contract.findOne({ quotationId })
+            .populate({
+                path: "quotationId",
+                select: "quotationNumber requirements quotedPrice",
+            })
+            .populate({
+                path: "corporateOwnerId",
+                select: "fullName email companyName",
+            })
+            .populate({
+                path: "fleetOwnerId",
+                select: "fullName email companyName",
+            })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "No contract found for this quotation",
+            })
+        }
+
+        // Check if user has access to this contract
+        if (contract.corporateOwnerId._id.toString() !== userId && contract.fleetOwnerId._id.toString() !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied",
+            })
+        }
+
+        res.status(200).json({
+            success: true,
+            contract,
+        })
+    } catch (error) {
+        console.error("Error fetching contract by quotation:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch contract",
             error: error.message,
         })
     }
@@ -296,6 +380,27 @@ export const uploadContractDocument = async (req, res) => {
                 select: "fullName email companyName",
             },
         ])
+
+        // Get names for notifications
+        const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
+        const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
+
+        // Notify CORPORATE about document upload
+        await createNotification({
+            userId: contract.corporateOwnerId._id,
+            type: "CONTRACT_DOCUMENT_UPLOADED",
+            title: "Contract Document Uploaded",
+            message: `${fleetName} has uploaded the contract document. Please review and sign.`,
+            data: { contractId: contract._id, documentUrl: uploadResult.secure_url }
+        });
+
+        // Notify ADMIN
+        await sendAdminNotification(
+            "Contract Document Uploaded",
+            `${fleetName} (B2B_PARTNER) uploaded contract document for ${corporateName} (CORPORATE). Contract #${contract._id}`,
+            "CONTRACT_DOCUMENT_UPLOADED",
+            { contractId: contract._id, fleetOwnerId, corporateId: contract.corporateOwnerId._id }
+        );
 
         res.status(200).json({
             success: true,
@@ -523,6 +628,47 @@ export const signContract = async (req, res) => {
 
         await contract.save()
 
+        // Get names for notifications
+        const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
+        const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
+
+        // Send notifications based on who signed
+        if (userRole === "CORPORATE") {
+            // Notify B2B_PARTNER that corporate signed
+            await createNotification({
+                userId: contract.fleetOwnerId._id,
+                type: "CONTRACT_SIGNED",
+                title: "Contract Signed by Corporate",
+                message: `${corporateName} has signed the contract. Please review and sign to finalize.`,
+                data: { contractId: contract._id }
+            });
+
+            // Notify ADMIN
+            await sendAdminNotification(
+                "Contract Signed by Corporate",
+                `${corporateName} (CORPORATE) signed contract with ${fleetName} (B2B_PARTNER). Awaiting fleet owner signature.`,
+                "CONTRACT_SIGNED",
+                { contractId: contract._id, signedBy: "CORPORATE", corporateId: contract.corporateOwnerId._id, fleetOwnerId: contract.fleetOwnerId._id }
+            );
+        } else if (userRole === "B2B_PARTNER") {
+            // Notify CORPORATE that fleet owner signed - contract is now ready for payment
+            await createNotification({
+                userId: contract.corporateOwnerId._id,
+                type: "CONTRACT_FULLY_SIGNED",
+                title: "Contract Fully Signed!",
+                message: `${fleetName} has signed the contract. The contract is now active. Please proceed with advance payment.`,
+                data: { contractId: contract._id }
+            });
+
+            // Notify ADMIN
+            await sendAdminNotification(
+                "Contract Fully Signed",
+                `${fleetName} (B2B_PARTNER) signed contract. Contract between ${corporateName} and ${fleetName} is now fully signed. Awaiting payment.`,
+                "CONTRACT_FULLY_SIGNED",
+                { contractId: contract._id, signedBy: "B2B_PARTNER", corporateId: contract.corporateOwnerId._id, fleetOwnerId: contract.fleetOwnerId._id }
+            );
+        }
+
         return res.status(200).json({
             success: true,
             message: "Contract signed successfully",
@@ -586,6 +732,45 @@ export const processContractPayment = async (req, res) => {
         }
 
         await contract.save()
+
+        // Get names for notifications
+        const corporateName = await getUserName(corporateOwnerId);
+        const fleetName = await getUserName(contract.fleetOwnerId);
+
+        // Notify B2B_PARTNER about payment
+        if (paymentType === "advance") {
+            await createNotification({
+                userId: contract.fleetOwnerId,
+                type: "PAYMENT_RECEIVED",
+                title: "Advance Payment Received",
+                message: `${corporateName} has made the advance payment. Contract is now active. Please assign vehicles.`,
+                data: { contractId: contract._id, paymentType: "advance", amount: contract.financials.advancePayment.amount }
+            });
+
+            // Notify ADMIN
+            await sendAdminNotification(
+                "Advance Payment Received",
+                `${corporateName} (CORPORATE) paid advance payment for contract with ${fleetName} (B2B_PARTNER). Contract is now ACTIVE.`,
+                "PAYMENT_RECEIVED",
+                { contractId: contract._id, paymentType: "advance", corporateId: corporateOwnerId, fleetOwnerId: contract.fleetOwnerId }
+            );
+        } else if (paymentType === "final") {
+            await createNotification({
+                userId: contract.fleetOwnerId,
+                type: "PAYMENT_RECEIVED",
+                title: "Final Payment Received",
+                message: `${corporateName} has made the final payment. Contract is now completed.`,
+                data: { contractId: contract._id, paymentType: "final", amount }
+            });
+
+            // Notify ADMIN
+            await sendAdminNotification(
+                "Final Payment Received - Contract Completed",
+                `${corporateName} (CORPORATE) paid final payment. Contract with ${fleetName} (B2B_PARTNER) is now COMPLETED.`,
+                "CONTRACT_COMPLETED",
+                { contractId: contract._id, paymentType: "final", corporateId: corporateOwnerId, fleetOwnerId: contract.fleetOwnerId }
+            );
+        }
 
         res.status(200).json({
             success: true,
@@ -879,6 +1064,27 @@ export const corporateRejectContract = async (req, res) => {
 
         await contract.save()
 
+        // Get names for notifications
+        const corporateName = await getUserName(corporateOwnerId);
+        const fleetName = await getUserName(contract.fleetOwnerId);
+
+        // Notify B2B_PARTNER about contract rejection
+        await createNotification({
+            userId: contract.fleetOwnerId,
+            type: "CONTRACT_REJECTED",
+            title: "Contract Rejected",
+            message: `${corporateName} has rejected the contract. Reason: ${rejectionReason}`,
+            data: { contractId: contract._id, reason: rejectionReason }
+        });
+
+        // Notify ADMIN
+        await sendAdminNotification(
+            "Contract Rejected",
+            `${corporateName} (CORPORATE) rejected contract with ${fleetName} (B2B_PARTNER). Reason: ${rejectionReason}`,
+            "CONTRACT_REJECTED",
+            { contractId: contract._id, corporateId: corporateOwnerId, fleetOwnerId: contract.fleetOwnerId, reason: rejectionReason }
+        );
+
         res.status(200).json({
             success: true,
             message: "Contract rejected successfully",
@@ -1007,6 +1213,28 @@ export const assignVehicles = async (req, res) => {
                 select: "name licenseNumber phone email",
             },
         ])
+
+        // Get names for notifications
+        const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || await getUserName(contract.corporateOwnerId);
+        const fleetName = await getUserName(userId);
+        const vehicleCount = vehicleAssignments.length;
+
+        // Notify CORPORATE about vehicle assignment
+        await createNotification({
+            userId: contract.corporateOwnerId._id || contract.corporateOwnerId,
+            type: "VEHICLE_ASSIGNED",
+            title: "Vehicles Assigned to Contract",
+            message: `${fleetName} has assigned ${vehicleCount} vehicle(s) to your contract. Service is ready to begin.`,
+            data: { contractId: contract._id, vehicleCount, assignedBy: userRole }
+        });
+
+        // Notify ADMIN
+        await sendAdminNotification(
+            "Vehicles Assigned to Contract",
+            `${fleetName} (B2B_PARTNER) assigned ${vehicleCount} vehicle(s) to contract with ${corporateName} (CORPORATE). Contract #${contract._id}`,
+            "VEHICLE_ASSIGNED",
+            { contractId: contract._id, vehicleCount, fleetOwnerId: userId, corporateId: contract.corporateOwnerId._id || contract.corporateOwnerId }
+        );
 
         res.status(200).json({
             success: true,
@@ -1487,7 +1715,248 @@ export const getContractRoutes = async (req, res) => {
 //     }
 // }
 
+// @desc    Corporate requests due date extension for final payment
+// @route   POST /api/contracts/:contractId/request-due-date-extension
+// @access  Private (CORPORATE only)
+export const requestDueDateExtension = async (req, res) => {
+    try {
+        const { contractId } = req.params
+        const corporateOwnerId = req.userId
+        const { newProposedDate, reason } = req.body
 
+        if (!newProposedDate || !reason) {
+            return res.status(400).json({
+                success: false,
+                message: "New proposed date and reason are required",
+            })
+        }
 
+        const contract = await Contract.findOne({
+            _id: contractId,
+            corporateOwnerId,
+            status: "ACTIVE",
+        })
 
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Active contract not found or you don't have access",
+            })
+        }
+
+        // Check if there's already a pending request
+        if (contract.dueDateExtensionRequest?.isRequested && 
+            contract.dueDateExtensionRequest?.status === "PENDING") {
+            return res.status(400).json({
+                success: false,
+                message: "There's already a pending due date extension request",
+            })
+        }
+
+        // Validate new date is after current due date
+        const currentDueDate = contract.financials?.finalPayment?.dueDate
+        if (currentDueDate && new Date(newProposedDate) <= new Date(currentDueDate)) {
+            return res.status(400).json({
+                success: false,
+                message: "New proposed date must be after the current due date",
+            })
+        }
+
+        // Initialize history array if not exists
+        const historyEntry = {
+            action: "REQUESTED",
+            date: new Date(),
+            by: corporateOwnerId,
+            notes: reason,
+            proposedDate: new Date(newProposedDate),
+        }
+
+        contract.dueDateExtensionRequest = {
+            isRequested: true,
+            requestedBy: corporateOwnerId,
+            requestedDate: new Date(),
+            newProposedDate: new Date(newProposedDate),
+            reason,
+            status: "PENDING",
+            history: contract.dueDateExtensionRequest?.history 
+                ? [...contract.dueDateExtensionRequest.history, historyEntry]
+                : [historyEntry],
+        }
+
+        contract.markModified("dueDateExtensionRequest")
+        await contract.save()
+
+        await contract.populate([
+            { path: "corporateOwnerId", select: "fullName email companyName" },
+            { path: "fleetOwnerId", select: "fullName email companyName" },
+        ])
+
+        res.status(200).json({
+            success: true,
+            message: "Due date extension request submitted successfully",
+            data: { contract },
+        })
+    } catch (error) {
+        console.error("Error requesting due date extension:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to submit due date extension request",
+            error: error.message,
+        })
+    }
+}
+
+// @desc    B2B Partner responds to due date extension request
+// @route   POST /api/contracts/:contractId/respond-due-date-extension
+// @access  Private (B2B_PARTNER only)
+export const respondToDueDateExtension = async (req, res) => {
+    try {
+        const { contractId } = req.params
+        const fleetOwnerId = req.userId
+        const { action, responseNotes, counterOfferedDate } = req.body
+
+        if (!action || !["APPROVED", "REJECTED", "COUNTER_OFFERED"].includes(action)) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid action is required: APPROVED, REJECTED, or COUNTER_OFFERED",
+            })
+        }
+
+        if (action === "COUNTER_OFFERED" && !counterOfferedDate) {
+            return res.status(400).json({
+                success: false,
+                message: "Counter offered date is required when counter offering",
+            })
+        }
+
+        const contract = await Contract.findOne({
+            _id: contractId,
+            fleetOwnerId,
+            status: "ACTIVE",
+        })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Active contract not found or you don't have access",
+            })
+        }
+
+        if (!contract.dueDateExtensionRequest?.isRequested || 
+            contract.dueDateExtensionRequest?.status !== "PENDING") {
+            return res.status(400).json({
+                success: false,
+                message: "No pending due date extension request found",
+            })
+        }
+
+        const historyEntry = {
+            action,
+            date: new Date(),
+            by: fleetOwnerId,
+            notes: responseNotes || "",
+            proposedDate: action === "COUNTER_OFFERED" 
+                ? new Date(counterOfferedDate) 
+                : contract.dueDateExtensionRequest.newProposedDate,
+        }
+
+        contract.dueDateExtensionRequest.status = action
+        contract.dueDateExtensionRequest.respondedBy = fleetOwnerId
+        contract.dueDateExtensionRequest.respondedDate = new Date()
+        contract.dueDateExtensionRequest.responseNotes = responseNotes || ""
+        
+        if (action === "COUNTER_OFFERED") {
+            contract.dueDateExtensionRequest.counterOfferedDate = new Date(counterOfferedDate)
+        }
+
+        contract.dueDateExtensionRequest.history.push(historyEntry)
+
+        // If approved, update the actual final payment due date
+        if (action === "APPROVED") {
+            const newDueDate = contract.dueDateExtensionRequest.newProposedDate
+            contract.financials.finalPayment.dueDate = newDueDate
+            contract.dueDateExtensionRequest.isRequested = false
+            
+            // Also update PaymentSchedule table
+            const PaymentSchedule = (await import("../models/PaymentSchedule.js")).default;
+            await PaymentSchedule.updateMany(
+                { contractId: contract._id, scheduleType: "FINAL" },
+                { $set: { dueDate: newDueDate } }
+            );
+            console.log("[v0] Updated PaymentSchedule dueDate for contract:", contract._id);
+        } else if (action === "COUNTER_OFFERED") {
+            // Update to counter offered date
+            const newDueDate = new Date(counterOfferedDate)
+            contract.financials.finalPayment.dueDate = newDueDate
+            contract.dueDateExtensionRequest.isRequested = false
+            
+            // Also update PaymentSchedule table
+            const PaymentSchedule = (await import("../models/PaymentSchedule.js")).default;
+            await PaymentSchedule.updateMany(
+                { contractId: contract._id, scheduleType: "FINAL" },
+                { $set: { dueDate: newDueDate } }
+            );
+            console.log("[v0] Updated PaymentSchedule dueDate (counter) for contract:", contract._id);
+        } else {
+            // Rejected - don't change due date
+            contract.dueDateExtensionRequest.isRequested = false
+        }
+
+        contract.markModified("dueDateExtensionRequest")
+        contract.markModified("financials")
+        await contract.save()
+
+        await contract.populate([
+            { path: "corporateOwnerId", select: "fullName email companyName" },
+            { path: "fleetOwnerId", select: "fullName email companyName" },
+        ])
+
+        res.status(200).json({
+            success: true,
+            message: `Due date extension request ${action.toLowerCase()} successfully`,
+            data: { contract },
+        })
+    } catch (error) {
+        console.error("Error responding to due date extension:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to respond to due date extension request",
+            error: error.message,
+        })
+    }
+}
+
+// @desc    Get contracts with pending due date extension requests for B2B Partner
+// @route   GET /api/contracts/fleet/due-date-requests
+// @access  Private (B2B_PARTNER only)
+export const getDueDateExtensionRequests = async (req, res) => {
+    try {
+        const fleetOwnerId = req.userId
+
+        const contracts = await Contract.find({
+            fleetOwnerId,
+            status: "ACTIVE",
+            "dueDateExtensionRequest.isRequested": true,
+            "dueDateExtensionRequest.status": "PENDING",
+        })
+            .populate("corporateOwnerId", "fullName email companyName")
+            .populate("quotationId", "quotationNumber")
+            .sort({ "dueDateExtensionRequest.requestedDate": -1 })
+
+        res.status(200).json({
+            success: true,
+            data: { 
+                requests: contracts,
+                count: contracts.length 
+            },
+        })
+    } catch (error) {
+        console.error("Error fetching due date extension requests:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch due date extension requests",
+            error: error.message,
+        })
+    }
+}
 

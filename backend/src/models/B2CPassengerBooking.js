@@ -122,6 +122,11 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
+        currency: {
+            type: String,
+            default: "KWD",
+            enum: ["AED", "KWD", "SAR", "BHD", "OMR", "QAR"],
+        },
         paymentMethod: {
             type: String,
             enum: ["STRIPE", "TAP", "CARD", "CASH"],

@@ -10,6 +10,9 @@ export default function Wallet() {
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [addAmount, setAddAmount] = useState("");
 
+  // Get currency from wallet data or default to KWD
+  const walletCurrency = walletData?.currency || "KWD";
+
   useEffect(() => {
     fetchWalletData();
   }, []);
@@ -40,7 +43,7 @@ export default function Wallet() {
       const response = await api.post('/wallet/create-payment-session', {
         amount: parseFloat(addAmount),
         paymentMethod: 'card',
-        currency: 'KWD',
+        currency: walletCurrency,
       });
 
       const data = response.data;
@@ -110,7 +113,7 @@ export default function Wallet() {
         <div className="balance-header">
           <h3>Current Balance</h3>
           <div className="balance-amount">
-            KWD {walletData.balance?.toFixed(3) || "0.000"}
+            {walletCurrency} {walletData.balance?.toFixed(3) || "0.000"}
           </div>
         </div>
         
@@ -118,13 +121,13 @@ export default function Wallet() {
           <div className="stat-item">
             <span className="stat-label">Last 30 Days</span>
             <span className="stat-value">
-              KWD {walletData.last30DaysSpent?.toFixed(3) || "0.000"}
+              {walletCurrency} {walletData.last30DaysSpent?.toFixed(3) || "0.000"}
             </span>
           </div>
           <div className="stat-item">
             <span className="stat-label">Total Spent</span>
             <span className="stat-value">
-              KWD {walletData.totalSpent?.toFixed(3) || "0.000"}
+              {walletCurrency} {walletData.totalSpent?.toFixed(3) || "0.000"}
             </span>
           </div>
         </div>
@@ -155,7 +158,7 @@ export default function Wallet() {
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>Amount (KWD)</label>
+                <label>Amount ({walletCurrency})</label>
                 <input
                   type="number"
                   step="0.001"
@@ -172,25 +175,25 @@ export default function Wallet() {
                   onClick={() => setAddAmount("5")}
                   className="quick-amount-btn"
                 >
-                  KWD 5
+                  {walletCurrency} 5
                 </button>
                 <button
                   onClick={() => setAddAmount("10")}
                   className="quick-amount-btn"
                 >
-                  KWD 10
+                  {walletCurrency} 10
                 </button>
                 <button
                   onClick={() => setAddAmount("25")}
                   className="quick-amount-btn"
                 >
-                  KWD 25
+                  {walletCurrency} 25
                 </button>
                 <button
                   onClick={() => setAddAmount("50")}
                   className="quick-amount-btn"
                 >
-                  KWD 50
+                  {walletCurrency} 50
                 </button>
               </div>
             </div>

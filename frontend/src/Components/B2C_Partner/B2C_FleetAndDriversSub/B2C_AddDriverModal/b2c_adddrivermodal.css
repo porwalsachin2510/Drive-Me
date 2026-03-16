@@ -102,8 +102,8 @@
 
 .b2c-form-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 .b2c-image-upload {
@@ -121,8 +121,8 @@
 }
 
 .b2c-image-upload-box:hover {
-  border-color: #3b82f6;
-  background: #f0f9ff;
+  border-color: #E85D5D;
+  background: rgba(232, 93, 93, 0.05);
 }
 
 .b2c-upload-content {
@@ -206,12 +206,12 @@
 }
 
 .b2c-btn-submit {
-  background: #3b82f6;
+  background: #2DD4BF;
   color: white;
 }
 
 .b2c-btn-submit:hover {
-  background: #2563eb;
+  background: #14B8A6;
 }
 
 @media (max-width: 640px) {

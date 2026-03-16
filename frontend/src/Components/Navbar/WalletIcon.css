@@ -1,6 +1,8 @@
+/* Premium Wallet Icon - Inter Font */
 .wallet-icon-container {
   position: relative;
   display: inline-block;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .wallet-button {
@@ -10,15 +12,15 @@
   padding: 8px;
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   position: relative;
 }
 
 .wallet-button:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .purse-icon-wrapper {
@@ -30,24 +32,24 @@
 
 .purse-icon {
   transition: all 0.2s ease;
-  color: #000000;
+  color: var(--text-primary, #202124);
 }
 
 .wallet-button:hover .purse-icon {
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
 .amount-badge {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #1f2937;
+  top: -4px;
+  right: -4px;
+  background: var(--primary-color, #ef3b47);
   border: 2px solid #ffffff;
   border-radius: 10px;
   padding: 2px 5px;
   min-width: 38px;
   text-align: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.2);
   animation: fadeIn 0.3s ease;
 }
 
@@ -73,15 +75,15 @@
 
 .wallet-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 8px);
   right: 0;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-light, #e8eaed);
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(60, 64, 67, 0.15), 0 2px 4px rgba(60, 64, 67, 0.1);
   min-width: 280px;
   z-index: 99999;
-  animation: slideDown 0.2s ease;
+  animation: slideDown 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideDown {
@@ -97,7 +99,7 @@
 
 .dropdown-header {
   padding: 16px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-light, #e8eaed);
 }
 
 .dropdown-title {
@@ -110,8 +112,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary, #f8f9fa);
+  border: 1px solid var(--border-light, #e8eaed);
   border-radius: 12px;
   padding: 12px;
 }
@@ -124,8 +126,8 @@
 }
 
 .wallet-label {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 11px;
+  color: var(--text-muted, #80868b);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -133,7 +135,8 @@
 
 .wallet-total {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--text-primary, #202124);
   transition: color 0.2s ease;
 }
 
@@ -151,14 +154,14 @@
   border: none;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  font-family: inherit;
-  font-size: 14px;
-  color: #374151;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary, #202124);
   text-align: left;
 }
 
 .dropdown-item:hover {
-  background: #f8f9fa;
+  background: var(--bg-secondary, #f8f9fa);
 }
 
 .item-icon {
@@ -174,7 +177,7 @@
 
 .dropdown-divider {
   height: 1px;
-  background: #f3f4f6;
+  background: var(--border-light, #e8eaed);
   margin: 8px 0;
 }
 

@@ -230,12 +230,14 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   };
 
   const availableSeats = route.availableSeats ?? route.totalSeats ?? 10;
+  const currency = route.pricing?.currency || route.currency || "KWD";
+  const currencyDecimals = currency === "KWD" || currency === "BHD" || currency === "OMR" ? 3 : 2;
   const perDayPrice = getPerDayPrice();
   const travelDaysPerMonth = getTravelDaysPerMonth();
   const pricePerMonth = perDayPrice * travelDaysPerMonth;
-  const totalAmount = (pricePerMonth * numberOfSeats * passDuration).toFixed(2);
-  const adminCommission = (totalAmount * 0.2).toFixed(2);
-  const driverEarnings = (totalAmount * 0.8).toFixed(2);
+  const totalAmount = (pricePerMonth * numberOfSeats * passDuration).toFixed(currencyDecimals);
+  const adminCommission = (totalAmount * 0.2).toFixed(currencyDecimals);
+  const driverEarnings = (totalAmount * 0.8).toFixed(currencyDecimals);
 
   // Get available trips from schedule data
   const availableTrips = route.upcomingTrips || [];
@@ -732,7 +734,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       />
                       <div className="pass-type-content">
                         <div className="pass-type-title">One Way Monthly Pass</div>
-                        <div className="pass-type-price">AED {(route.pricing?.monthlyOneWayPrice || route.monthlyPrice || 3000).toFixed(2)}/month</div>
+                        <div className="pass-type-price">{currency} {(route.pricing?.monthlyOneWayPrice || route.monthlyPrice || 3000).toFixed(currencyDecimals)}/month</div>
                         <div className="pass-type-description">
                           Travel in one direction only (e.g., morning to work)
                         </div>
@@ -758,7 +760,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       />
                       <div className="pass-type-content">
                         <div className="pass-type-title">Round Trip Monthly Pass</div>
-                        <div className="pass-type-price">AED {(route.pricing?.monthlyRoundTripPrice || 6000).toFixed(2)}/month</div>
+                        <div className="pass-type-price">{currency} {(route.pricing?.monthlyRoundTripPrice || 6000).toFixed(currencyDecimals)}/month</div>
                         <div className="pass-type-description">
                           Travel both directions (e.g., morning to work + evening back home)
                         </div>
@@ -949,7 +951,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 </div>
                 <div className="price-row">
                   <span>Per Day Rate</span>
-                  <span>AED {perDayPrice.toFixed(2)}/day</span>
+                  <span>{currency} {perDayPrice.toFixed(currencyDecimals)}/day</span>
                 </div>
                 <div className="price-row">
                   <span>Travel Days/Month</span>
@@ -957,7 +959,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 </div>
                 <div className="price-row">
                   <span>Monthly Price (per seat)</span>
-                  <span>AED {pricePerMonth.toFixed(2)}</span>
+                  <span>{currency} {pricePerMonth.toFixed(currencyDecimals)}</span>
                 </div>
                 <div className="price-row">
                   <span>Number of seats</span>
@@ -971,17 +973,17 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   <>
                     <div className="price-row sub">
                       <span>Admin Commission (20%)</span>
-                      <span>AED {adminCommission}</span>
+                      <span>{currency} {adminCommission}</span>
                     </div>
                     <div className="price-row sub">
                       <span>Driver Earnings (80%)</span>
-                      <span>AED {driverEarnings}</span>
+                      <span>{currency} {driverEarnings}</span>
                     </div>
                   </>
                 )}
                 <div className="price-row total">
                   <span>Total Amount ({passDuration} month{passDuration > 1 ? 's' : ''})</span>
-                  <span>AED {totalAmount}</span>
+                  <span>{currency} {totalAmount}</span>
                 </div>
                 <div className="savings-info">
                   {passDuration > 1 && (
@@ -1031,17 +1033,17 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
             <div className="step-content step-payment">
               <div className="payment-amount-display">
                 <span className="amount-label">Amount to Pay</span>
-                <span className="amount-value">AED {totalAmount}</span>
+                <span className="amount-value">{currency} {totalAmount}</span>
               </div>
 
               <div className="commission-info">
                 <div className="commission-row">
                   <span>Admin Commission (20%)</span>
-                  <span>AED {adminCommission}</span>
+                  <span>{currency} {adminCommission}</span>
                 </div>
                 <div className="commission-row highlight">
                   <span>Driver Earnings (80%)</span>
-                  <span>AED {driverEarnings}</span>
+                  <span>{currency} {driverEarnings}</span>
                 </div>
               </div>
 
@@ -1157,7 +1159,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Total Amount</span>
-                  <span className="detail-value">AED {totalAmount}</span>
+                  <span className="detail-value">{currency} {totalAmount}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Payment Method</span>

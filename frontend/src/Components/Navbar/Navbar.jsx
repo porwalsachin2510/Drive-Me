@@ -6,6 +6,7 @@ import "./navbar.css";
 import { useNavigate } from "react-router-dom";
 import WalletIcon from "./WalletIcon";
 import NotificationIcon from "./NotificationIcon";
+import Logo from "../../assets/Logo.png";
 import {
   selectIsAuthenticated,
   selectLoading,
@@ -98,7 +99,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
       <div className="navbar-container">
         {/* Logo */}
         <div className="navbar-logo" onClick={() => navigate("/")}>
-          <div className="logo-box">driveMe</div>
+          <img src={Logo} alt="DriveMe" className="driveme-navbar-logo-image" />
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -120,8 +121,13 @@ export default function Navbar({ activeTab, setActiveTab }) {
           {isAuthenticated ? (
             // After Login: Show user avatar with dropdown and notifications
             <div className="nav-user-section">
-              {/* Wallet Icon */}
-              <WalletIcon />
+              {/* Wallet Icon - Show for users who use wallet:
+                  - COMMUTER: Pays for bookings via wallet
+                  - B2C_PARTNER: Receives booking earnings, withdraws money
+                  - B2B_PARTNER: Receives contract payment earnings from CORPORATE, withdraws money */}
+              {user?.role && ['COMMUTER', 'B2C_PARTNER', 'B2B_PARTNER'].includes(user.role) && (
+                <WalletIcon />
+              )}
 
               {/* Notification Icon */}
               <NotificationIcon />

@@ -768,8 +768,11 @@ function RequirementsView() {
                     }
                   >
                     <option value="KWD">KWD</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
+                    <option value="AED">AED</option>
+                    <option value="SAR">SAR</option>
+                    <option value="BHD">BHD</option>
+                    <option value="OMR">OMR</option>
+                    <option value="QAR">QAR</option>
                   </select>
                 </div>
                 <div className="b2bpartner-RequirementsTab-form-row">

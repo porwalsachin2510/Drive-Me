@@ -1,3 +1,4 @@
+/* Premium Admin Header - Inter Font */
 .ad-dash-header {
   background: white;
   border-bottom: 1px solid #e5e7eb;
@@ -5,6 +6,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .ad-dash-header-content {
@@ -29,7 +31,7 @@
 .ad-dash-logo h1 {
   font-size: 20px;
   font-weight: 600;
-  color: #00a699;
+  color: #E85D5D;
   margin: 0;
 }
 
@@ -82,6 +84,32 @@
   background: #f3f4f6;
 }
 
+.ad-dash-logout-btn {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.ad-dash-logout-btn:hover {
+  color: #c0392b;
+}
+
+@media (max-width: 480px) {
+  .ad-dash-logout-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .ad-dash-logout-btn-header-right {
+    align-self: flex-end;
+  }
+}
+
 @media (max-width: 768px) {
   .ad-dash-header {
     padding: 12px 20px;
@@ -99,3 +127,5 @@
     display: none;
   }
 }
+
+

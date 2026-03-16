@@ -279,11 +279,23 @@ export const searchVehicles = async (req, res) => {
             fleetOwnerId: { $in: fleetOwnerIds },
             status: "AVAILABLE",
             isActive: true,
+            approvalStatus: "APPROVED", // Only show approved vehicles
         };
 
-        // Service Type Filter
+        // Service Type Filter - Map frontend values to backend enum
+        // Frontend sends: "passenger", "goods", "managed", "cargo"
+        // Backend expects: "PASSENGER", "GOODS_CARRIER", "MANAGED_SERVICES"
         if (serviceType) {
-            vehicleQuery.serviceType = serviceType.toUpperCase();
+            const serviceTypeMap = {
+                "passenger": "PASSENGER",
+                "goods": "GOODS_CARRIER",
+                "cargo": "GOODS_CARRIER",
+                "goods_carrier": "GOODS_CARRIER",
+                "managed": "MANAGED_SERVICES",
+                "managed_services": "MANAGED_SERVICES",
+            };
+            const normalizedType = serviceType.toLowerCase();
+            vehicleQuery.serviceType = serviceTypeMap[normalizedType] || serviceType.toUpperCase();
         }
 
         // Vehicle Category/Type Filter
@@ -291,11 +303,27 @@ export const searchVehicles = async (req, res) => {
             vehicleQuery.vehicleCategory = vehicleType.toUpperCase();
         }
 
-        // Minimum Seats Filter (greater than or equal)
+        // Minimum Seats/Cargo Capacity Filter (greater than or equal)
+        // For GOODS_CARRIER, use cargoCapacity; for others, use seatingCapacity
         if (minseatsrequired) {
-            vehicleQuery["capacity.seatingCapacity"] = {
-                $gte: Number.parseInt(minseatsrequired),
-            };
+            const minValue = Number.parseInt(minseatsrequired);
+            if (vehicleQuery.serviceType === "GOODS_CARRIER") {
+                // For goods carrier, filter by cargo capacity (tons)
+                vehicleQuery["capacity.cargoCapacity"] = {
+                    $gte: minValue,
+                };
+            } else if (vehicleQuery.serviceType) {
+                // For passenger/managed services, filter by seating capacity
+                vehicleQuery["capacity.seatingCapacity"] = {
+                    $gte: minValue,
+                };
+            } else {
+                // If no service type specified, check both capacity types with OR
+                vehicleQuery.$or = [
+                    { "capacity.seatingCapacity": { $gte: minValue } },
+                    { "capacity.cargoCapacity": { $gte: minValue } }
+                ];
+            }
         }
 
         // Driver Availability Filter

@@ -4,7 +4,7 @@
 }
 
 .ads-header {
-  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
   border-radius: 16px;
   padding: 32px;
   margin-bottom: 28px;
@@ -59,8 +59,8 @@
 
 .create-btn {
   padding: 12px 24px;
-  background: #fbbf24;
-  color: #1e3a8a;
+  background: #2DD4BF;
+  color: #ffffff;
   border: none;
   border-radius: 10px;
   font-size: 14px;
@@ -70,8 +70,8 @@
 }
 
 .create-btn:hover {
-  background: #f59e0b;
-  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  background: #26B8A5;
+  box-shadow: 0 4px 12px rgba(45, 212, 191, 0.4);
 }
 
 /* Campaigns Grid */
@@ -191,7 +191,7 @@
 
 .edit-btn {
   padding: 6px 14px;
-  background: #0891b2;
+  background: #2DD4BF;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -202,7 +202,7 @@
 }
 
 .edit-btn:hover {
-  background: #0e7490;
+  background: #26B8A5;
 }
 
 .status-btn {

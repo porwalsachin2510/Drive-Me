@@ -1,10 +1,12 @@
+/* Premium OTP Verification - Inter Font */
 .otp-verification-container {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
   padding: 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .otp-verification-card {
@@ -28,7 +30,7 @@
   left: 20px;
   background: none;
   border: none;
-  color: #667eea;
+  color: #E85D5D;
   font-size: 16px;
   cursor: pointer;
   padding: 8px 12px;
@@ -37,7 +39,7 @@
 }
 
 .otp-back-btn:hover {
-  background-color: #f0f4ff;
+  background-color: rgba(232, 93, 93, 0.08);
 }
 
 .otp-title {
@@ -82,14 +84,14 @@
 }
 
 .otp-input:focus {
-  border-color: #667eea;
+  border-color: #E85D5D;
   background-color: white;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 4px rgba(232, 93, 93, 0.1);
   transform: scale(1.05);
 }
 
 .otp-input:valid {
-  border-color: #28a745;
+  border-color: #22C55E;
 }
 
 .otp-timer {
@@ -104,7 +106,7 @@
 }
 
 .timer-value {
-  color: #667eea;
+  color: #E85D5D;
   font-weight: 600;
   font-family: 'Courier New', monospace;
 }
@@ -116,7 +118,7 @@
 }
 
 .otp-verify-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
   color: white;
   border: none;
   padding: 16px 32px;
@@ -131,7 +133,7 @@
 
 .otp-verify-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 8px 25px rgba(45, 212, 191, 0.3);
 }
 
 .otp-verify-btn:disabled {
@@ -158,8 +160,8 @@
 
 .otp-resend-btn {
   background: none;
-  border: 2px solid #667eea;
-  color: #667eea;
+  border: 2px solid #E85D5D;
+  color: #E85D5D;
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
@@ -169,7 +171,7 @@
 }
 
 .otp-resend-btn.enabled:hover {
-  background-color: #667eea;
+  background-color: #E85D5D;
   color: white;
   transform: translateY(-2px);
 }
@@ -252,13 +254,13 @@
 /* Animation for input focus */
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+    box-shadow: 0 0 0 0 rgba(232, 93, 93, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+    box-shadow: 0 0 0 10px rgba(232, 93, 93, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+    box-shadow: 0 0 0 0 rgba(232, 93, 93, 0);
   }
 }
 

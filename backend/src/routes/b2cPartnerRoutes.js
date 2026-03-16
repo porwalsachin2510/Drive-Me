@@ -105,6 +105,7 @@ router.put("/route-requests/:requestId/respond", verifyToken, checkB2CPartnerRol
 // B2C Partner Profile
 router.get("/profile", verifyToken, checkB2CPartnerRole, getB2CPartnerProfile)
 router.put("/profile", verifyToken, checkB2CPartnerRole, updateB2CPartnerProfile)
+router.put("/profile/image", verifyToken, checkB2CPartnerRole, upload.single('profileImage'), updateB2CPartnerProfile)
 
 // B2C Partner Subscription Renewals
 router.get("/subscription-renewals", verifyToken, checkB2CPartnerRole, getB2CPartnerSubscriptionRenewals)

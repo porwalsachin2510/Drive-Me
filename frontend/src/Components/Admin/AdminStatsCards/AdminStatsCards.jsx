@@ -36,7 +36,7 @@ function AdminStatsCards({ stats }) {
     },
     {
       title: "Total Revenue",
-      value: stats?.totalRevenue ? `AED ${stats.totalRevenue.toLocaleString()}` : "AED 0",
+      value: stats?.totalRevenue ? `${stats.currency || 'KWD'} ${stats.totalRevenue.toLocaleString()}` : "KWD 0",
       change: "+18% this month",
       positive: true,
       icon: "💰",

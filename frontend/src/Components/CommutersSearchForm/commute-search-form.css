@@ -1,10 +1,11 @@
-/* Container */
+/* Premium Commute Search - Inter Font */
 .commute-search-container {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: 32px;
   margin-bottom: 60px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .commute-search-form {
@@ -106,8 +107,8 @@
 
 .form-input:focus {
   outline: none;
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  border-color: #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 .form-input.input-error {
@@ -156,8 +157,8 @@
 
 .form-select:focus {
   outline: none;
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  border-color: #E85D5D;
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 /* Error Message */
@@ -193,8 +194,8 @@
 }
 
 .day-button.selected {
-  background: #EF4444;
-  border-color: #EF4444;
+  background: #E85D5D;
+  border-color: #E85D5D;
   color: white;
 }
 
@@ -215,7 +216,7 @@
 .search-button {
   flex: 1;
   padding: 16px 24px;
-  background: #ef4444;
+  background: #E85D5D;
   color: white;
   border: none;
   border-radius: 8px;
@@ -230,7 +231,7 @@
 }
 
 .search-button:hover {
-  background: #dc2626;
+  background: #D94545;
 }
 
 .search-button:active {

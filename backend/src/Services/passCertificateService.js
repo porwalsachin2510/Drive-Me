@@ -38,16 +38,7 @@ export const generatePassCertificate = async (monthlyPass) => {
             color: rgb(0.2, 0.3, 0.8),
         });
         
-        // Title
-        page.drawText('DRIVE ME MONTHLY PASS', {
-            x: 300,
-            y: 720,
-            size: 32,
-            font: boldFont,
-            color: rgb(1, 1, 1),
-        });
-        
-        // Center the title
+        // Title - Centered
         const titleWidth = boldFont.widthOfTextAtSize('DRIVE ME MONTHLY PASS', 32);
         page.drawText('DRIVE ME MONTHLY PASS', {
             x: (600 - titleWidth) / 2,
@@ -57,16 +48,7 @@ export const generatePassCertificate = async (monthlyPass) => {
             color: rgb(1, 1, 1),
         });
         
-        // Pass Type
-        page.drawText(passTypeText, {
-            x: 300,
-            y: 680,
-            size: 24,
-            font: boldFont,
-            color: rgb(1, 1, 1),
-        });
-        
-        // Center the pass type
+        // Pass Type - Centered
         const passTypeWidth = boldFont.widthOfTextAtSize(passTypeText, 24);
         page.drawText(passTypeText, {
             x: (600 - passTypeWidth) / 2,
@@ -185,14 +167,6 @@ export const generatePassCertificate = async (monthlyPass) => {
             borderWidth: 1,
         });
         
-        page.drawText('QR CODE', {
-            x: 470,
-            y: 260,
-            size: 10,
-            font: font,
-            color: rgb(0.5, 0.5, 0.5),
-        });
-        
         // Center the QR code text
         const qrTextWidth = font.widthOfTextAtSize('QR CODE', 10);
         page.drawText('QR CODE', {
@@ -203,16 +177,7 @@ export const generatePassCertificate = async (monthlyPass) => {
             color: rgb(0.5, 0.5, 0.5),
         });
         
-        // Footer
-        page.drawText('This is an official monthly pass certificate.', {
-            x: 300,
-            y: 100,
-            size: 12,
-            font: font,
-            color: rgb(0.5, 0.5, 0.5),
-        });
-        
-        // Center the footer text
+        // Footer - Centered (only draw once each)
         const footerTextWidth = font.widthOfTextAtSize('This is an official monthly pass certificate.', 12);
         page.drawText('This is an official monthly pass certificate.', {
             x: (600 - footerTextWidth) / 2,
@@ -222,15 +187,6 @@ export const generatePassCertificate = async (monthlyPass) => {
             color: rgb(0.5, 0.5, 0.5),
         });
         
-        page.drawText('Please present this certificate when boarding.', {
-            x: 300,
-            y: 80,
-            size: 12,
-            font: font,
-            color: rgb(0.5, 0.5, 0.5),
-        });
-        
-        // Center the second footer text
         const footerTextWidth2 = font.widthOfTextAtSize('Please present this certificate when boarding.', 12);
         page.drawText('Please present this certificate when boarding.', {
             x: (600 - footerTextWidth2) / 2,
@@ -240,15 +196,6 @@ export const generatePassCertificate = async (monthlyPass) => {
             color: rgb(0.5, 0.5, 0.5),
         });
         
-        page.drawText('For support: support@driveMe.com', {
-            x: 300,
-            y: 60,
-            size: 10,
-            font: font,
-            color: rgb(0.5, 0.5, 0.5),
-        });
-        
-        // Center the third footer text
         const footerTextWidth3 = font.widthOfTextAtSize('For support: support@driveMe.com', 10);
         page.drawText('For support: support@driveMe.com', {
             x: (600 - footerTextWidth3) / 2,
@@ -292,17 +239,8 @@ export const generatePassSummaryReport = async (monthlyPasses) => {
         
         let yPosition = 700;
         
-        // Title
+        // Title - Centered
         const page = pdfDoc.addPage([600, 800]);
-        page.drawText('MONTHLY PASSES SUMMARY REPORT', {
-            x: 300,
-            y: yPosition,
-            size: 24,
-            font: boldFont,
-            color: rgb(0.2, 0.3, 0.8),
-        });
-        
-        // Center the title
         const titleWidth = boldFont.widthOfTextAtSize('MONTHLY PASSES SUMMARY REPORT', 24);
         page.drawText('MONTHLY PASSES SUMMARY REPORT', {
             x: (600 - titleWidth) / 2,
@@ -314,18 +252,10 @@ export const generatePassSummaryReport = async (monthlyPasses) => {
         
         yPosition -= 50;
         
-        // Report Date
-        page.drawText(`Generated on: ${new Date().toLocaleDateString()}`, {
-            x: 300,
-            y: yPosition,
-            size: 12,
-            font: font,
-            color: rgb(0.3, 0.3, 0.3),
-        });
-        
-        // Center the report date
-        const dateWidth = font.widthOfTextAtSize(`Generated on: ${new Date().toLocaleDateString()}`, 12);
-        page.drawText(`Generated on: ${new Date().toLocaleDateString()}`, {
+        // Report Date - Centered
+        const dateText = `Generated on: ${new Date().toLocaleDateString()}`;
+        const dateWidth = font.widthOfTextAtSize(dateText, 12);
+        page.drawText(dateText, {
             x: (600 - dateWidth) / 2,
             y: yPosition,
             size: 12,

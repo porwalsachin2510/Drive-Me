@@ -2,6 +2,7 @@ import express from "express"
 import {
     createContractFromQuotation,
     getContractById,
+    getContractByQuotation,
     uploadContractDocument,
     signContract,
     processContractPayment,
@@ -15,7 +16,10 @@ import {
     getAssignedVehiclesForContract,
     assignRouteToVehicle,
     assignDriverOrFuelToVehicle,
-    getContractRoutes
+    getContractRoutes,
+    requestDueDateExtension,
+    respondToDueDateExtension,
+    getDueDateExtensionRequests
 } from "../controllers/contractController.js"
 import { verifyToken, checkFleetOwnerRole, checkCorporateOwnerRole, requireRole } from "../middleware/auth.js"
 import { upload, handleMulterError } from "../Config/multerConfig.js"
@@ -37,6 +41,11 @@ router.get("/corporate/all", verifyToken, checkCorporateOwnerRole, getCorporateC
 // @desc    Get all contracts for fleet owner
 // @access  Private (B2B_PARTNER only)
 router.get("/fleet/all", verifyToken, checkFleetOwnerRole, getFleetOwnerContracts)
+
+// @route   GET /api/contracts/by-quotation/:quotationId
+// @desc    Get contract by quotation ID
+// @access  Private (CORPORATE or B2B_PARTNER)
+router.get("/by-quotation/:quotationId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), getContractByQuotation)
 
 // @route   GET /api/contracts/:contractId
 // @desc    Get contract details
@@ -103,5 +112,20 @@ router.post("/assign-route/:contractId/:assignedVehicleId", verifyToken, checkCo
 
 // Get contract routes
 router.get("/routes/:contractId", verifyToken, checkCorporateOwnerRole, getContractRoutes)
+
+// @route   POST /api/contracts/:contractId/request-due-date-extension
+// @desc    Corporate requests due date extension for final payment
+// @access  Private (CORPORATE only)
+router.post("/:contractId/request-due-date-extension", verifyToken, checkCorporateOwnerRole, requestDueDateExtension)
+
+// @route   POST /api/contracts/:contractId/respond-due-date-extension
+// @desc    B2B Partner responds to due date extension request
+// @access  Private (B2B_PARTNER only)
+router.post("/:contractId/respond-due-date-extension", verifyToken, checkFleetOwnerRole, respondToDueDateExtension)
+
+// @route   GET /api/contracts/fleet/due-date-requests
+// @desc    Get contracts with pending due date extension requests for B2B Partner
+// @access  Private (B2B_PARTNER only)
+router.get("/fleet/due-date-requests", verifyToken, checkFleetOwnerRole, getDueDateExtensionRequests)
 
 export default router

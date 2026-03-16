@@ -5,11 +5,11 @@
 }
 
 .ad-dash-b2c-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
   border-radius: 16px;
   padding: 32px;
   margin-bottom: 32px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(232, 93, 93, 0.2);
   color: white;
 }
 
@@ -130,13 +130,13 @@
 
 .ad-dash-b2c-tab:hover {
   color: #334155;
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(232, 93, 93, 0.05);
 }
 
 .ad-dash-b2c-tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(232, 93, 93, 0.3);
 }
 
 .tab-count {
@@ -177,7 +177,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid #e2e8f0;
-  border-top: 4px solid #667eea;
+  border-top: 4px solid #E85D5D;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

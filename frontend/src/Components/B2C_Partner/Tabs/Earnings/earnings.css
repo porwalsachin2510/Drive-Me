@@ -18,7 +18,7 @@
 }
 
 .earnings-card.total {
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
   color: #ffffff;
 }
 
@@ -82,12 +82,12 @@
 }
 
 .card-change.positive {
-  color: #10b981;
+  color: #22C55E;
 }
 
 .request-payout {
   padding: 10px 16px;
-  background-color: #16a34a;
+  background-color: #2DD4BF;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -100,7 +100,8 @@
 }
 
 .request-payout:hover {
-  background-color: #15803d;
+  background-color: #14B8A6;
+  box-shadow: 0 4px 14px rgba(45, 212, 191, 0.3);
 }
 
 .transaction-section {
@@ -197,7 +198,7 @@
 .tx-amount {
   font-size: 14px;
   font-weight: 700;
-  color: #10b981;
+  color: #22C55E;
 }
 
 .tx-status {

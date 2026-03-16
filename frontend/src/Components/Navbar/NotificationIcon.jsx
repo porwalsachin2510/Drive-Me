@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { 
   fetchNotifications, 
   markNotificationAsRead, 
   markAllNotificationsAsRead,
-  addRealtimeNotification 
+  addRealtimeNotification,
+  getUnreadNotificationCount
 } from "../../Redux/slices/notificationSlice";
-import api from "../../utils/api";
+import { SocketContext } from "../../context/SocketContext";
+import { getSocket } from "../../utils/socket";
 import "./NotificationIcon.css";
 
 function NotificationIcon() {
@@ -19,64 +21,109 @@ function NotificationIcon() {
   const { user } = useSelector((state) => state.auth);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  
+  // Use SocketContext for real-time connection status
+  const socketContext = useContext(SocketContext);
 
+  // Fetch notifications on mount and when user changes
   useEffect(() => {
     if (user && user._id) {
       dispatch(fetchNotifications({ userId: user._id }));
+      dispatch(getUnreadNotificationCount(user._id));
     }
   }, [dispatch, user]);
 
+  // Real-time notification listener using both SocketContext and direct socket
   useEffect(() => {
-    // Setup socket connection for real-time notifications
-    const socket = api.getSocket();
+    // Get socket from context or direct socket utility
+    const socket = socketContext?.socket || getSocket();
     
     if (socket && user && user._id) {
+      // Join user's notification room
       socket.emit('join_user_room', user._id);
+      socket.emit('join-notification-room', user._id);
       
-      socket.on('new_notification', (notification) => {
+      // Listen for new notifications - real-time updates
+      const handleNewNotification = (notification) => {
         dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
         
         // Show browser notification if permission granted
         if (Notification.permission === 'granted') {
-          new Notification(notification.title, {
-            body: notification.message,
+          new Notification(notification.title || 'New Notification', {
+            body: notification.message || 'You have a new notification',
             icon: '/favicon.ico',
             tag: notification._id,
           });
         }
-      });
+      };
 
-      socket.on('wallet_update', (data) => {
-        dispatch(addRealtimeNotification({
+      const handleWalletUpdate = (data) => {
+        const notification = {
           _id: `wallet_${Date.now()}`,
           type: 'WALLET_UPDATED',
           title: 'Wallet Updated',
-          message: data.message,
+          message: data.message || `Your wallet balance has been updated`,
           isRead: false,
           createdAt: new Date().toISOString(),
-        }));
-      });
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+      };
 
-      socket.on('trip_update', (data) => {
-        dispatch(addRealtimeNotification({
+      const handleTripUpdate = (data) => {
+        const notification = {
           _id: `trip_${Date.now()}`,
           type: 'TRIP_UPDATE',
-          title: data.title,
+          title: data.title || 'Trip Update',
           message: data.message,
           isRead: false,
           createdAt: new Date().toISOString(),
-        }));
-      });
-    }
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+      };
 
-    return () => {
-      if (socket) {
-        socket.off('new_notification');
-        socket.off('wallet_update');
-        socket.off('trip_update');
-      }
-    };
-  }, [dispatch, user]);
+      const handleBookingUpdate = (data) => {
+        const notification = {
+          _id: `booking_${Date.now()}`,
+          type: data.type || 'BOOKING_UPDATE',
+          title: data.title || 'Booking Update',
+          message: data.message,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+      };
+
+      // Register all event listeners
+      socket.on('new_notification', handleNewNotification);
+      socket.on('new-notification', handleNewNotification);
+      socket.on('wallet_update', handleWalletUpdate);
+      socket.on('wallet-updated', handleWalletUpdate);
+      socket.on('trip_update', handleTripUpdate);
+      socket.on('trip-started', handleTripUpdate);
+      socket.on('trip-completed', handleTripUpdate);
+      socket.on('booking-accepted', handleBookingUpdate);
+      socket.on('booking-rejected', handleBookingUpdate);
+      socket.on('driver-assigned', handleBookingUpdate);
+
+      // Cleanup listeners on unmount
+      return () => {
+        socket.off('new_notification', handleNewNotification);
+        socket.off('new-notification', handleNewNotification);
+        socket.off('wallet_update', handleWalletUpdate);
+        socket.off('wallet-updated', handleWalletUpdate);
+        socket.off('trip_update', handleTripUpdate);
+        socket.off('trip-started', handleTripUpdate);
+        socket.off('trip-completed', handleTripUpdate);
+        socket.off('booking-accepted', handleBookingUpdate);
+        socket.off('booking-rejected', handleBookingUpdate);
+        socket.off('driver-assigned', handleBookingUpdate);
+      };
+    }
+  }, [dispatch, user, socketContext?.socket]);
 
   useEffect(() => {
     // Request notification permission

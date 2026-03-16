@@ -109,6 +109,11 @@ const userSchema = new mongoose.Schema(
         },
 
         companyLogo: String,
+        // Profile image for all users (especially B2C_PARTNER for display on featured routes)
+        profileImage: {
+            type: String,
+            default: null,
+        },
         contactPerson: {
             type: String,
             default: null,

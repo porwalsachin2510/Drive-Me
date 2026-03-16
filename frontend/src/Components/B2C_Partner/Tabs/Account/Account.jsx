@@ -10,7 +10,8 @@ function Account() {
     email: "",
     phone: "",
     company: "",
-    licenseNumber: ""
+    licenseNumber: "",
+    profileImage: null
   })
   const [preferences, setPreferences] = useState({
     newTripAlerts: true,
@@ -19,6 +20,8 @@ function Account() {
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [imagePreview, setImagePreview] = useState(null)
 
   useEffect(() => {
     fetchProfileData()
@@ -46,6 +49,46 @@ function Account() {
       ...prev,
       [field]: value
     }))
+  }
+
+  const handleProfileImageChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Show preview immediately
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+
+    // Upload to server
+    try {
+      setUploadingImage(true)
+      const formData = new FormData()
+      formData.append('profileImage', file)
+
+      const response = await api.put('/b2c-partner/profile/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+
+      if (response.data.success) {
+        setProfileData(prev => ({
+          ...prev,
+          profileImage: response.data.profileImage
+        }))
+        setImagePreview(null)
+        alert("Profile image updated successfully!")
+      }
+    } catch (error) {
+      console.error("Error uploading profile image:", error)
+      alert("Failed to upload profile image")
+      setImagePreview(null)
+    } finally {
+      setUploadingImage(false)
+    }
   }
 
   const handleToggle = (key) => {
@@ -102,6 +145,61 @@ function Account() {
               </svg>
             </div>
             <h2 className="section-title">Partner Profile</h2>
+          </div>
+
+          {/* Profile Image Section */}
+          <div className="profile-image-section" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="profile-image-container" style={{ position: 'relative' }}>
+              {uploadingImage ? (
+                <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span>Uploading...</span>
+                </div>
+              ) : (
+                <img
+                  src={imagePreview || profileData.profileImage || '/default-avatar.png'}
+                  alt="Profile"
+                  style={{ 
+                    width: '100px', 
+                    height: '100px', 
+                    borderRadius: '50%', 
+                    objectFit: 'cover', 
+                    border: '3px solid #e74c3c',
+                    background: '#f0f0f0'
+                  }}
+                  onError={(e) => {
+                    e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23e0e0e0" width="100" height="100"/><text x="50" y="55" fill="%23888" font-size="40" text-anchor="middle">?</text></svg>'
+                  }}
+                />
+              )}
+            </div>
+            <div className="profile-image-actions">
+              <label 
+                htmlFor="profileImageUpload" 
+                style={{ 
+                  padding: '8px 16px', 
+                  background: '#e74c3c', 
+                  color: 'white', 
+                  borderRadius: '6px', 
+                  cursor: uploadingImage ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  display: 'inline-block',
+                  opacity: uploadingImage ? 0.7 : 1
+                }}
+              >
+                {uploadingImage ? 'Uploading...' : 'Change Photo'}
+              </label>
+              <input
+                type="file"
+                id="profileImageUpload"
+                accept="image/*"
+                onChange={handleProfileImageChange}
+                style={{ display: 'none' }}
+                disabled={uploadingImage}
+              />
+              <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
+                Recommended: Square image, at least 200x200px
+              </p>
+            </div>
           </div>
 
           <div className="profile-grid">

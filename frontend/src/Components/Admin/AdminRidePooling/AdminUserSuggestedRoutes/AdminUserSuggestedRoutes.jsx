@@ -12,6 +12,8 @@ const AdminUserSuggestedRoutes = () => {
   const [rejectionReason, setRejectionReason] = useState("")
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [selectedRoute, setSelectedRoute] = useState(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedRouteDetails, setSelectedRouteDetails] = useState(null)
 
   const fetchSuggestedRoutes = useCallback(async () => {
     try {
@@ -43,6 +45,16 @@ const AdminUserSuggestedRoutes = () => {
   const handleReject = async (routeId) => {
     setSelectedRoute(routeId)
     setShowRejectModal(true)
+  }
+
+  const handleViewDetails = (route) => {
+    setSelectedRouteDetails(route)
+    setShowDetailsModal(true)
+  }
+
+  const closeDetailsModal = () => {
+    setShowDetailsModal(false)
+    setSelectedRouteDetails(null)
   }
 
   const confirmRejection = async () => {
@@ -167,7 +179,7 @@ const AdminUserSuggestedRoutes = () => {
                 </td>
                 <td>
                   <div className="action-buttons">
-                    <button className="view-btn">View Details</button>
+                    <button className="view-btn" onClick={() => handleViewDetails(route)}>View Details</button>
                     {(route.status === 'under-review' || route.status === 'under_review' || route.status === 'pending') && (
                       <>
                         <button 
@@ -232,6 +244,101 @@ const AdminUserSuggestedRoutes = () => {
                 >
                   Confirm Rejection
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Route Details Modal */}
+      {showDetailsModal && selectedRouteDetails && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>Route Details</h3>
+              <button className="close-btn" onClick={closeDetailsModal}>
+                ×
+              </button>
+            </div>
+            <div className="modal-content">
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                  <span style={{ color: '#6b7280', fontWeight: '500' }}>Route Name</span>
+                  <span style={{ fontWeight: '600' }}>{selectedRouteDetails.routeName}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                  <span style={{ color: '#6b7280', fontWeight: '500' }}>Suggested By</span>
+                  <span>{selectedRouteDetails.userName}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                  <span style={{ color: '#6b7280', fontWeight: '500' }}>Start Point</span>
+                  <span>{selectedRouteDetails.startPoint}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                  <span style={{ color: '#6b7280', fontWeight: '500' }}>End Point</span>
+                  <span>{selectedRouteDetails.endPoint}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                  <span style={{ color: '#6b7280', fontWeight: '500' }}>Distance</span>
+                  <span>{selectedRouteDetails.distance}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                  <span style={{ color: '#6b7280', fontWeight: '500' }}>Estimated Time</span>
+                  <span>{selectedRouteDetails.estimatedTime}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                  <span style={{ color: '#6b7280', fontWeight: '500' }}>Suggested Price</span>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>KWD {selectedRouteDetails.suggestedPrice?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                  <span style={{ color: '#6b7280', fontWeight: '500' }}>Votes</span>
+                  <span>{selectedRouteDetails.votes} votes</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                  <span style={{ color: '#6b7280', fontWeight: '500' }}>Status</span>
+                  <span 
+                    className="status-badge" 
+                    style={{ backgroundColor: getStatusColor(selectedRouteDetails.status) }}
+                  >
+                    {selectedRouteDetails.status}
+                  </span>
+                </div>
+                {selectedRouteDetails.description && (
+                  <div style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                    <span style={{ color: '#6b7280', fontWeight: '500', display: 'block', marginBottom: '8px' }}>Description</span>
+                    <p style={{ margin: 0, color: '#374151' }}>{selectedRouteDetails.description}</p>
+                  </div>
+                )}
+              </div>
+              <div className="modal-actions" style={{ marginTop: '24px' }}>
+                <button 
+                  className="cancel-btn"
+                  onClick={closeDetailsModal}
+                >
+                  Close
+                </button>
+                {(selectedRouteDetails.status === 'under-review' || selectedRouteDetails.status === 'under_review' || selectedRouteDetails.status === 'pending') && (
+                  <>
+                    <button 
+                      className="approve-btn"
+                      onClick={() => {
+                        handleApprove(selectedRouteDetails._id)
+                        closeDetailsModal()
+                      }}
+                    >
+                      Approve
+                    </button>
+                    <button 
+                      className="reject-btn"
+                      onClick={() => {
+                        closeDetailsModal()
+                        handleReject(selectedRouteDetails._id)
+                      }}
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

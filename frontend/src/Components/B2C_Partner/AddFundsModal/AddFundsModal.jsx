@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import './addfundsmodal.css'
 
-const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
+const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds, currency = "KWD" }) => {
   const [amount, setAmount] = useState('')
   const [loading, setLoading] = useState(false)
 
   const predefinedAmounts = [50, 100, 200, 500, 1000]
+  const currencyDecimals = currency === "KWD" || currency === "BHD" || currency === "OMR" ? 3 : 2
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -38,12 +39,12 @@ const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
         </div>
         
         <div className="current-balance">
-          <p>Current Balance: <strong>AED {currentBalance || 0}</strong></p>
+          <p>Current Balance: <strong>{currency} {(currentBalance || 0).toFixed(currencyDecimals)}</strong></p>
         </div>
 
         <form onSubmit={handleSubmit} className="add-funds-form">
           <div className="amount-input-group">
-            <label>Enter Amount (AED)</label>
+            <label>Enter Amount ({currency})</label>
             <input
               type="number"
               value={amount}
@@ -65,7 +66,7 @@ const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
                   className="amount-btn"
                   onClick={() => setAmount(presetAmount)}
                 >
-                  AED {presetAmount}
+                  {currency} {presetAmount}
                 </button>
               ))}
             </div>
@@ -90,7 +91,7 @@ const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
               Cancel
             </button>
             <button type="submit" className="add-funds-btn" disabled={loading}>
-              {loading ? 'Processing...' : `Add AED ${amount || '0'}`}
+              {loading ? 'Processing...' : `Add ${currency} ${amount || '0'}`}
             </button>
           </div>
         </form>

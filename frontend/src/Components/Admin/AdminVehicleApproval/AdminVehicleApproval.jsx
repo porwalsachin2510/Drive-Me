@@ -117,7 +117,6 @@ function AdminVehicleApproval() {
             <div
               key={vehicle._id}
               className="vehicle-card"
-              onClick={() => setSelectedVehicle(vehicle)}
             >
               <div className="vehicle-header">
                 <h3>{vehicle.vehicleName}</h3>
@@ -156,14 +155,20 @@ function AdminVehicleApproval() {
               <div className="vehicle-actions">
                 <button
                   className="btn-approve"
-                  onClick={() => approveVehicle(vehicle._id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    approveVehicle(vehicle._id);
+                  }}
                   disabled={actionLoading}
                 >
                   Approve
                 </button>
                 <button
                   className="btn-reject"
-                  onClick={() => setSelectedVehicle(vehicle)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedVehicle(vehicle);
+                  }}
                   disabled={actionLoading}
                 >
                   Reject

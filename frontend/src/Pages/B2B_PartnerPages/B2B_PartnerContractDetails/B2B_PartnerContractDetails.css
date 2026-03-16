@@ -1,7 +1,9 @@
+/* Premium B2B Contract Details - Inter Font */
 .b2b-contract-details-container {
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .b2b-contract-back-btn {
@@ -692,9 +694,70 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Due Date Extension Request Styles */
+.b2b-extension-request-info {
+  padding: 8px;
+}
+
+.b2b-extension-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.b2b-extension-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.b2b-extension-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.b2b-extension-badge.approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.b2b-extension-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.b2b-extension-date {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.b2b-extension-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 768px) {
   .b2b-contract-details-container {
-    padding: 16px;
+  padding: 16px;
+  }
+
+  .b2b-extension-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .b2b-extension-actions {
+    flex-direction: column;
+  }
+  
+  .b2b-extension-actions button {
+    width: 100%;
   }
 
   .b2b-contract-header {

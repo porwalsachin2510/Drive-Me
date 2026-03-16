@@ -13,6 +13,7 @@ import ContractRequestModal from "../../../Components/Corporate/ContractRequest/
 import LoadingSpinner from "../../../Components/LoadingSpinner/LoadingSpinner";
 import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
+import api from "../../../utils/api";
 import "./QuotationDetails.css";
 
 const QuotationDetails = () => {
@@ -41,6 +42,25 @@ const QuotationDetails = () => {
   const [showNegotiateModal, setShowNegotiateModal] = useState(false);
   const [negotiateAmount, setNegotiateAmount] = useState("");
   const [negotiateMessage, setNegotiateMessage] = useState("");
+  const [existingContract, setExistingContract] = useState(null);
+
+  // Check if contract already exists for this quotation
+  useEffect(() => {
+    const checkExistingContract = async () => {
+      if (id && id !== "undefined" && id !== "null") {
+        try {
+          const response = await api.get(`/contracts/by-quotation/${id}`);
+          if (response.data.success && response.data.contract) {
+            setExistingContract(response.data.contract);
+          }
+        } catch (error) {
+          // Contract doesn't exist yet - that's fine
+          setExistingContract(null);
+        }
+      }
+    };
+    checkExistingContract();
+  }, [id]);
 
   const quotation = currentQuotation?.quotation || currentQuotation;
 
@@ -540,6 +560,7 @@ const QuotationDetails = () => {
                   >
                     Accept Quotation
                   </button>
+                  {/* NEGOTIATE PRICE button commented out as per requirement
                   <button
                     className="single-quotation-btn single-quotation-btn-negotiate"
                     onClick={() => setShowNegotiateModal(true)}
@@ -547,6 +568,7 @@ const QuotationDetails = () => {
                   >
                     Negotiate Price
                   </button>
+                  */}
                   <button
                     className="single-quotation-btn single-quotation-btn-reject"
                     onClick={() => setShowRejectModal(true)}
@@ -617,15 +639,30 @@ const QuotationDetails = () => {
                   </div>
                 </div>
 
-                {/* Create Contract Button */}
-                <div className="single-quotation-action-buttons">
-                  <button
-                    className="single-quotation-btn single-quotation-btn-contract"
-                    onClick={handleCreateContractRequest}
-                  >
-                    Create Contract Request
-                  </button>
-                </div>
+                {/* Create Contract Button - Only show if no contract exists yet */}
+                {existingContract ? (
+                  <div className="single-quotation-contract-exists-message">
+                    <p>
+                      Contract has already been created.{" "}
+                      <a
+                        href={`/corporate/contracts/${existingContract._id}`}
+                        className="view-contract-link"
+                        style={{ color: "#007bff", textDecoration: "underline" }}
+                      >
+                        View Contract Details
+                      </a>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="single-quotation-action-buttons">
+                    <button
+                      className="single-quotation-btn single-quotation-btn-contract"
+                      onClick={handleCreateContractRequest}
+                    >
+                      Create Contract Request
+                    </button>
+                  </div>
+                )}
               </>
             )}
 

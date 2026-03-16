@@ -15,6 +15,7 @@ import Tag from "../models/Tag.js";
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
+import { uploadToCloudinary } from "../Config/Cloudinary.js";
 // Get all users for admin
 export const getAllUsers = async (req, res) => {
     try {
@@ -1630,13 +1631,70 @@ async function updateWhatsAppConfig(config) {
 }
 
 // Get ad campaigns for admin
+// Get public active campaigns for homepage (no auth required)
+export const getPublicActiveCampaigns = async (req, res) => {
+  try {
+    const { placement } = req.query;
+    const now = new Date();
+    
+    const query = {
+      status: 'active',
+      startDate: { $lte: now },
+      endDate: { $gte: now }
+    };
+    
+    if (placement) query.placement = placement;
+    
+    const campaigns = await Campaign.find(query)
+      .select('title provider placement size imageUrl targetUrl description startDate endDate')
+      .sort({ createdAt: -1 })
+      .limit(10);
+    
+    // Increment view count for each campaign
+    if (campaigns.length > 0) {
+      const campaignIds = campaigns.map(c => c._id);
+      await Campaign.updateMany(
+        { _id: { $in: campaignIds } },
+        { $inc: { views: 1 } }
+      );
+    }
+    
+    res.status(200).json({
+      success: true,
+      campaigns
+    });
+  } catch (error) {
+    console.error("Error fetching public campaigns:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching campaigns",
+      error: error.message
+    });
+  }
+};
+
+// Track campaign click
+export const trackCampaignClick = async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+    
+    await Campaign.findByIdAndUpdate(campaignId, {
+      $inc: { clicks: 1 }
+    });
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getAdCampaigns = async (req, res) => {
-    try {
-        const { status, page = 1, limit = 20, provider, placement } = req.query;
-        const query = {};
-        if (status && status !== 'all') query.status = status;
-        if (provider) query.provider = provider;
-        if (placement) query.placement = placement;
+  try {
+  const { status, page = 1, limit = 20, provider, placement } = req.query;
+  const query = {};
+  if (status && status !== 'all') query.status = status;
+  if (provider) query.provider = provider;
+  if (placement) query.placement = placement;
 
         const skip = (Number.parseInt(page) - 1) * Number.parseInt(limit);
         const [campaigns, totalCampaigns] = await Promise.all([
@@ -1710,82 +1768,115 @@ export const getAdStats = async (req, res) => {
 
 // Create ad campaign
 export const createAdCampaign = async (req, res) => {
-    try {
-        const { title, provider, placement, size, imageUrl, targetUrl, description, budget, dailyBudget, costPerClick, costPerView, startDate, endDate, status, targetAudience } = req.body;
+try {
+const { title, provider, placement, size, targetUrl, description, budget, dailyBudget, costPerClick, costPerView, startDate, endDate, status, targetAudience } = req.body;
 
-        if (!title || !startDate || !endDate) {
-            return res.status(400).json({ success: false, message: "Title, start date and end date are required" });
-        }
+if (!title || !startDate || !endDate) {
+return res.status(400).json({ success: false, message: "Title, start date and end date are required" });
+}
 
-        const campaign = new Campaign({
-            title,
-            provider: provider || '',
-            placement: placement || 'banner',
-            size: size || '728x90',
-            imageUrl: imageUrl || '',
-            targetUrl: targetUrl || '',
-            description: description || '',
-            budget: budget || 0,
-            dailyBudget: dailyBudget || 0,
-            costPerClick: costPerClick || 0,
-            costPerView: costPerView || 0,
-            startDate,
-            endDate,
-            status: status || 'draft',
-            targetAudience: targetAudience || 'all',
-            createdBy: req.user._id || req.user.id,
-            views: 0,
-            clicks: 0,
-            revenue: 0,
-        });
+// Handle image upload to Cloudinary
+let imageUrl = '';
+if (req.file) {
+  try {
+    const uploadResult = await uploadToCloudinary(req.file, 'driveme/campaigns', 'campaign');
+    imageUrl = uploadResult.secure_url;
+    console.log("[v0] Campaign image uploaded to Cloudinary:", imageUrl);
+  } catch (uploadError) {
+    console.error("[v0] Error uploading campaign image:", uploadError);
+    return res.status(400).json({
+      success: false,
+      message: "Error uploading campaign image",
+      error: uploadError.message
+    });
+  }
+}
 
-        await campaign.save();
+const campaign = new Campaign({
+title,
+provider: provider || '',
+placement: placement || 'banner',
+size: size || '728x90',
+imageUrl: imageUrl,
+targetUrl: targetUrl || '',
+description: description || '',
+budget: budget || 0,
+dailyBudget: dailyBudget || 0,
+costPerClick: costPerClick || 0,
+costPerView: costPerView || 0,
+startDate,
+endDate,
+status: status || 'draft',
+targetAudience: targetAudience || 'all',
+createdBy: req.userId || req.user?._id || req.user?.id,
+views: 0,
+clicks: 0,
+revenue: 0,
+});
 
-        res.status(201).json({
-            success: true,
-            message: "Campaign created successfully",
-            campaign
-        });
-    } catch (error) {
-        console.error("Error creating campaign:", error);
-        res.status(500).json({
-            success: false,
-            message: "Error creating campaign",
-            error: error.message,
-        });
-    }
+await campaign.save();
+
+res.status(201).json({
+success: true,
+message: "Campaign created successfully",
+campaign
+});
+} catch (error) {
+console.error("Error creating campaign:", error);
+res.status(500).json({
+success: false,
+message: "Error creating campaign",
+error: error.message,
+});
+}
 };
 
 // Update ad campaign
 export const updateAdCampaign = async (req, res) => {
-    try {
-        const { campaignId } = req.params;
-        const allowedFields = ['title', 'provider', 'placement', 'size', 'imageUrl', 'targetUrl', 'description', 'budget', 'dailyBudget', 'costPerClick', 'costPerView', 'startDate', 'endDate', 'status', 'targetAudience'];
-        const updateData = {};
-        for (const field of allowedFields) {
-            if (req.body[field] !== undefined) {
-                updateData[field] = req.body[field];
-            }
-        }
+try {
+const { campaignId } = req.params;
+const allowedFields = ['title', 'provider', 'placement', 'size', 'targetUrl', 'description', 'budget', 'dailyBudget', 'costPerClick', 'costPerView', 'startDate', 'endDate', 'status', 'targetAudience'];
+const updateData = {};
+for (const field of allowedFields) {
+if (req.body[field] !== undefined) {
+updateData[field] = req.body[field];
+}
+}
 
-        const campaign = await Campaign.findByIdAndUpdate(campaignId, updateData, { new: true, runValidators: true });
-        if (!campaign) {
-            return res.status(404).json({ success: false, message: "Campaign not found" });
-        }
+// Handle image upload to Cloudinary if new image is provided
+if (req.file) {
+  try {
+    const uploadResult = await uploadToCloudinary(req.file, 'driveme/campaigns', 'campaign');
+    updateData.imageUrl = uploadResult.secure_url;
+    console.log("[v0] Campaign image updated in Cloudinary:", updateData.imageUrl);
+  } catch (uploadError) {
+    console.error("[v0] Error uploading campaign image:", uploadError);
+    return res.status(400).json({
+      success: false,
+      message: "Error uploading campaign image",
+      error: uploadError.message
+    });
+  }
+}
 
-        res.status(200).json({
-            success: true,
-            message: "Campaign updated successfully",
-            campaign
-        });
-    } catch (error) {
-        console.error("Error updating campaign:", error);
-        res.status(500).json({
-            success: false,
-            message: "Error updating campaign",
-            error: error.message,
-        });
-    }
+const campaign = await Campaign.findByIdAndUpdate(campaignId, updateData, { new: true, runValidators: true });
+if (!campaign) {
+return res.status(404).json({ success: false, message: "Campaign not found" });
+}
+
+res.status(200).json({
+success: true,
+message: "Campaign updated successfully",
+campaign
+});
+} catch (error) {
+console.error("Error updating campaign:", error);
+res.status(500).json({
+success: false,
+message: "Error updating campaign",
+error: error.message,
+});
+}
 };
 
 // Delete ad campaign
@@ -2423,7 +2514,18 @@ export const getB2CRoutes = async (req, res) => {
         const { status, page = 1, limit = 20 } = req.query;
         const query = {};
 
-        if (status) query.status = status;
+        // Normalize status to match enum (capitalize first letter)
+        if (status) {
+            const statusMap = {
+                'active': 'Active',
+                'inactive': 'Inactive',
+                'scheduled': 'Scheduled',
+                'Active': 'Active',
+                'Inactive': 'Inactive',
+                'Scheduled': 'Scheduled'
+            };
+            query.status = statusMap[status] || status;
+        }
 
         // Fetch real B2C routes from database
         const routes = await B2CPartnerRoute.find(query)
@@ -2446,7 +2548,7 @@ export const getB2CRoutes = async (req, res) => {
             arrivalTime: "N/A", // Can be calculated based on route duration
             capacity: route.totalSeats,
             bookedSeats: route.totalSeats - route.availableSeats,
-            status: route.status?.toLowerCase() || "active",
+            status: route.status || "Active",
             featured: false,
             price: route.pricing?.oneWayPrice || 0,
             distance: "N/A",
@@ -2532,7 +2634,7 @@ export const createB2CRoute = async (req, res) => {
             arrivalTime: "N/A", // Can be calculated based on route duration
             capacity: savedRoute.totalSeats,
             bookedSeats: savedRoute.totalSeats - savedRoute.availableSeats,
-            status: savedRoute.status?.toLowerCase() || "active",
+            status: savedRoute.status || "Active",
             featured: false,
             price: savedRoute.pricing?.oneWayPrice || 0,
             distance: "N/A",
@@ -2571,7 +2673,20 @@ export const updateB2CRoute = async (req, res) => {
         const { routeId } = req.params;
         const updateData = req.body;
         
-        // Update actual route in database
+        // Normalize status to match enum (capitalize first letter)
+        if (updateData.status) {
+            const statusMap = {
+                'active': 'Active',
+                'inactive': 'Inactive',
+                'scheduled': 'Scheduled',
+                'Active': 'Active',
+                'Inactive': 'Inactive',
+                'Scheduled': 'Scheduled'
+            };
+            updateData.status = statusMap[updateData.status] || 'Active';
+        }
+        
+        // Update actual route in database - use b2cPartnerId (correct field name)
         const updatedRoute = await B2CPartnerRoute.findByIdAndUpdate(
             routeId,
             {
@@ -2579,7 +2694,7 @@ export const updateB2CRoute = async (req, res) => {
                 updatedAt: new Date()
             },
             { new: true, runValidators: true }
-        ).populate('providerId', 'fullName companyName');
+        ).populate('b2cPartnerId', 'fullName companyName companyLogo');
         
         if (!updatedRoute) {
             return res.status(404).json({
@@ -2588,24 +2703,28 @@ export const updateB2CRoute = async (req, res) => {
             });
         }
         
-        // Format response
+        // Format response - use correct field names from B2CPartnerRoute model
         const formattedRoute = {
             _id: updatedRoute._id,
-            name: updatedRoute.name,
-            startPoint: updatedRoute.startPoint,
-            endPoint: updatedRoute.endPoint,
-            providerName: updatedRoute.providerId?.fullName || updatedRoute.providerId?.companyName || 'Unknown Provider',
-            providerId: updatedRoute.providerId?._id,
-            departureTime: updatedRoute.departureTime,
-            arrivalTime: updatedRoute.arrivalTime,
-            capacity: updatedRoute.capacity,
-            bookedSeats: updatedRoute.bookedSeats,
+            name: `${updatedRoute.fromLocation} to ${updatedRoute.toLocation}`,
+            fromLocation: updatedRoute.fromLocation,
+            toLocation: updatedRoute.toLocation,
+            startPoint: updatedRoute.fromLocation,
+            endPoint: updatedRoute.toLocation,
+            providerName: updatedRoute.b2cPartnerId?.fullName || updatedRoute.b2cPartnerId?.companyName || 'Unknown Provider',
+            providerId: updatedRoute.b2cPartnerId?._id,
+            b2cPartnerId: updatedRoute.b2cPartnerId,
+            startTime: updatedRoute.startTime,
+            totalSeats: updatedRoute.totalSeats,
+            availableSeats: updatedRoute.availableSeats,
             status: updatedRoute.status,
-            featured: updatedRoute.featured,
-            price: updatedRoute.price,
-            distance: updatedRoute.distance,
-            duration: updatedRoute.duration,
-            createdAt: updatedRoute.createdAt
+            isActive: updatedRoute.isActive,
+            pricing: updatedRoute.pricing,
+            tripType: updatedRoute.tripType,
+            availableDays: updatedRoute.availableDays,
+            stopPoints: updatedRoute.stopPoints,
+            createdAt: updatedRoute.createdAt,
+            updatedAt: updatedRoute.updatedAt
         };
         
         console.log(`Successfully updated B2C route: ${formattedRoute.name}`);
@@ -4089,7 +4208,7 @@ export const changeCommuterPassword = async (req, res) => {
         }
 
         // Hash new password
-        const bcrypt = require('bcrypt');
+        const bcrypt = require('bcryptjs');
         const saltRounds = 12;
         const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
 
@@ -4172,20 +4291,21 @@ export const getB2CPartnerProfile = async (req, res) => {
             });
         }
 
-        const profile = {
-            _id: user._id,
-            fullName: user.fullName,
-            email: user.email,
-            phone: user.whatsappNumber,
-            company: user.companyName || '',
-            licenseNumber: user.driverInfo?.licenseNumber || '',
-            serviceType: user.serviceType,
-            yearsOfExperience: user.yearsOfExperience,
-            serviceDescription: user.serviceDescription,
-            country: user.country,
-            status: user.status,
-            createdAt: user.createdAt
-        };
+const profile = {
+_id: user._id,
+fullName: user.fullName,
+email: user.email,
+phone: user.whatsappNumber,
+company: user.companyName || '',
+licenseNumber: user.driverInfo?.licenseNumber || '',
+serviceType: user.serviceType,
+yearsOfExperience: user.yearsOfExperience,
+serviceDescription: user.serviceDescription,
+country: user.country,
+status: user.status,
+createdAt: user.createdAt,
+profileImage: user.profileImage || null
+};
 
         const preferences = {
             newTripAlerts: user.notifications?.bookingAlerts ?? true,
@@ -4212,6 +4332,47 @@ export const updateB2CPartnerProfile = async (req, res) => {
     try {
         const { profile, preferences } = req.body;
         const userId = req.userId;
+        
+        // Handle profile image upload via Cloudinary
+        let profileImageUrl = null;
+        if (req.file) {
+            try {
+                const uploadResult = await uploadToCloudinary(req.file, 'driveme/profiles', 'profile');
+                profileImageUrl = uploadResult.secure_url;
+                console.log("[v0] Profile image uploaded:", profileImageUrl);
+                
+                // If only image upload (profile/image endpoint)
+                if (!profile && !preferences) {
+                    const updatedUser = await User.findByIdAndUpdate(
+                        userId,
+                        { $set: { profileImage: profileImageUrl } },
+                        { new: true }
+                    ).select('-password');
+                    
+                    return res.status(200).json({
+                        success: true,
+                        message: "Profile image updated successfully",
+                        profileImage: profileImageUrl,
+                        profile: {
+                            _id: updatedUser._id,
+                            fullName: updatedUser.fullName,
+                            email: updatedUser.email,
+                            phone: updatedUser.whatsappNumber,
+                            company: updatedUser.companyName || '',
+                            licenseNumber: updatedUser.driverInfo?.licenseNumber || '',
+                            profileImage: updatedUser.profileImage
+                        }
+                    });
+                }
+            } catch (uploadError) {
+                console.error("[v0] Error uploading profile image:", uploadError);
+                return res.status(400).json({
+                    success: false,
+                    message: "Error uploading profile image",
+                    error: uploadError.message
+                });
+            }
+        }
         
         // Validate input data
         if (!profile || !preferences) {
@@ -4266,6 +4427,7 @@ export const updateB2CPartnerProfile = async (req, res) => {
                     ...(profile.licenseNumber && { licenseNumber: profile.licenseNumber }),
                     ...(profile.officeAddress && { officeAddress: profile.officeAddress }),
                     ...(profile.website && { website: profile.website }),
+                    ...(profileImageUrl && { profileImage: profileImageUrl }),
                     // Update B2C partner specific preferences
                     ...(preferences.newTripAlerts !== undefined && { 
                         'preferences.newTripAlerts': preferences.newTripAlerts 
@@ -5058,16 +5220,19 @@ export const verifyPayment = async (req, res) => {
 
             await payment.save()
 
-            // Update Admin Wallet - Commission only
-            let adminWallet = await Wallet.findOne({ userId: req.userId, role: "ADMIN" })
-            if (!adminWallet) {
-                adminWallet = new Wallet({
-                    userId: req.userId,
-                    role: "ADMIN",
-                    balance: 0,
-                    securityDepositHeld: 0,
-                })
-            }
+            // Update Admin Wallet - Commission only (use findOneAndUpdate to avoid duplicate key errors)
+            let adminWallet = await Wallet.findOneAndUpdate(
+                { userId: req.userId, role: "ADMIN" },
+                { 
+                    $setOnInsert: { 
+                        userId: req.userId, 
+                        role: "ADMIN", 
+                        balance: 0, 
+                        securityDepositHeld: 0 
+                    } 
+                },
+                { upsert: true, new: true }
+            )
 
             // const adminBalanceBefore = adminWallet.balance
             // adminWallet.balance += adminCommissionAmount
@@ -5091,18 +5256,18 @@ export const verifyPayment = async (req, res) => {
                 securityDepositAmount,
             )
 
-            // Update Fleet Owner Wallet - Only 90% of advance
-            let fleetWallet = await Wallet.findOne({
-                userId: payment.fleetOwnerId,
-                role: "B2B_PARTNER",
-            })
-            if (!fleetWallet) {
-                fleetWallet = new Wallet({
-                    userId: payment.fleetOwnerId,
-                    role: "B2B_PARTNER",
-                    balance: 0,
-                })
-            }
+            // Update Fleet Owner Wallet - Only 90% of advance (use findOneAndUpdate to avoid duplicate key errors)
+            let fleetWallet = await Wallet.findOneAndUpdate(
+                { userId: payment.fleetOwnerId, role: "B2B_PARTNER" },
+                { 
+                    $setOnInsert: { 
+                        userId: payment.fleetOwnerId, 
+                        role: "B2B_PARTNER", 
+                        balance: 0 
+                    } 
+                },
+                { upsert: true, new: true }
+            )
 
             const fleetBalanceBefore = fleetWallet.balance
             fleetWallet.balance += fleetOwnerAmount
@@ -5672,22 +5837,26 @@ export const approveVehicle = async (req, res) => {
         }
 
         vehicle.approvalStatus = "APPROVED";
+        vehicle.status = "AVAILABLE";
         vehicle.approvedAt = new Date();
         vehicle.approvedBy = adminId;
         await vehicle.save();
 
-        // Notify fleet owner
+        // Notify fleet owner via in-app notification
         const fleetOwner = await User.findById(vehicle.fleetOwnerId);
-        if (fleetOwner && fleetOwner.email) {
-            await sendEmail({
-                to: fleetOwner.email,
-                subject: "Vehicle Approved on Drive-Me Platform",
-                html: `
-                    <h2>Vehicle Approval Confirmed</h2>
-                    <p>Your vehicle <strong>${vehicle.vehicleName}</strong> (${vehicle.registrationNumber}) has been approved!</p>
-                    <p>You can now list it on the platform and start accepting bookings.</p>
-                `
-            });
+        if (fleetOwner) {
+            try {
+                const { createNotification, sendAdminNotification } = await import("../Services/notificationService.js");
+                await createNotification({
+                    userId: fleetOwner._id,
+                    type: "VEHICLE_APPROVED",
+                    title: "Vehicle Approved",
+                    message: `Your vehicle ${vehicle.vehicleName} (${vehicle.registrationNumber}) has been approved! You can now accept bookings.`,
+                    data: { vehicleId: vehicle._id, vehicleName: vehicle.vehicleName }
+                });
+            } catch (notifError) {
+                console.error("[v0] Error sending vehicle approval notification:", notifError);
+            }
         }
 
         res.status(200).json({
@@ -5735,24 +5904,27 @@ export const rejectVehicle = async (req, res) => {
         }
 
         vehicle.approvalStatus = "REJECTED";
+        vehicle.status = "INACTIVE";
         vehicle.rejectionReason = rejectionReason;
         vehicle.approvedBy = adminId;
         vehicle.approvedAt = new Date();
         await vehicle.save();
 
-        // Notify fleet owner
+        // Notify fleet owner via in-app notification
         const fleetOwner = await User.findById(vehicle.fleetOwnerId);
-        if (fleetOwner && fleetOwner.email) {
-            await sendEmail({
-                to: fleetOwner.email,
-                subject: "Vehicle Application Rejected",
-                html: `
-                    <h2>Vehicle Application Rejected</h2>
-                    <p>Your vehicle <strong>${vehicle.vehicleName}</strong> (${vehicle.registrationNumber}) was not approved.</p>
-                    <p><strong>Reason:</strong> ${rejectionReason}</p>
-                    <p>Please update your vehicle details and resubmit.</p>
-                `
-            });
+        if (fleetOwner) {
+            try {
+                const { createNotification } = await import("../Services/notificationService.js");
+                await createNotification({
+                    userId: fleetOwner._id,
+                    type: "VEHICLE_REJECTED",
+                    title: "Vehicle Rejected",
+                    message: `Your vehicle ${vehicle.vehicleName} (${vehicle.registrationNumber}) was not approved. Reason: ${rejectionReason}`,
+                    data: { vehicleId: vehicle._id, vehicleName: vehicle.vehicleName, reason: rejectionReason }
+                });
+            } catch (notifError) {
+                console.error("[v0] Error sending vehicle rejection notification:", notifError);
+            }
         }
 
         res.status(200).json({

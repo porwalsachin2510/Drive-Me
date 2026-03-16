@@ -625,8 +625,9 @@ const CorporateContractDetails = () => {
 
           {/* Actions */}
           <div className="corporate-contract-actions">
-            {/* Accept/Reject for PENDING or DRAFT contracts */}
-            {["PENDING", "DRAFT", "PENDING_SIGNATURES"].includes(contract.status) && (
+            {/* Accept/Reject for PENDING or DRAFT contracts - Only show if document has been uploaded */}
+            {["PENDING", "DRAFT", "PENDING_SIGNATURES"].includes(contract.status) && 
+              contract.contractDocument?.url && (
               <>
                 <button
                   className="corporate-contract-btn-success"
@@ -692,12 +693,12 @@ const CorporateContractDetails = () => {
           </div>
 
           {/* Payment Schedule Section for active contracts */}
-          {/* Payment Schedule Section for active contracts */}
           {(contract.status === "ACTIVE" ||
             contract.status === "PENDING_PAYMENT") && (
             <PaymentScheduleSection
               contractId={contract._id}
               currency={contract.quotationId?.currency || "AED"}
+              contract={contract}
             />
           )}
         </div>

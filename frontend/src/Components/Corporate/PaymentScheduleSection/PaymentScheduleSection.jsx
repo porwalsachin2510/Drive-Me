@@ -1,19 +1,28 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getPaymentScheduleByContract } from "../../../Redux/slices/paymentScheduleSlice";
+import { requestDueDateExtension } from "../../../Redux/slices/contractSlice";
 import {
   FiCalendar,
   FiDollarSign,
   FiAlertCircle,
   FiCheckCircle,
   FiClock,
+  FiEdit3,
 } from "react-icons/fi";
 import "./PaymentScheduleSection.css";
 
-const PaymentScheduleSection = ({ contractId, currency = "AED" }) => {
+const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
   const dispatch = useDispatch();
+  const [showExtensionModal, setShowExtensionModal] = useState(false);
+  const [extensionData, setExtensionData] = useState({
+    newProposedDate: "",
+    reason: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+
   // eslint-disable-next-line no-unused-vars
   const { currentSchedule, loading } = useSelector(
     (state) => state.paymentSchedule
@@ -62,6 +71,38 @@ const PaymentScheduleSection = ({ contractId, currency = "AED" }) => {
   const isPaymentOverdue = (dueDate, status) => {
     return status === "PENDING" && new Date(dueDate) < new Date();
   };
+
+  const handleRequestExtension = async () => {
+    if (!extensionData.newProposedDate || !extensionData.reason) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const result = await dispatch(
+        requestDueDateExtension({
+          contractId,
+          newProposedDate: extensionData.newProposedDate,
+          reason: extensionData.reason,
+        })
+      ).unwrap();
+
+      alert("Due date extension request submitted successfully!");
+      setShowExtensionModal(false);
+      setExtensionData({ newProposedDate: "", reason: "" });
+      
+      // Refresh the schedule
+      dispatch(getPaymentScheduleByContract(contractId));
+    } catch (error) {
+      alert(error || "Failed to submit extension request");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const hasPendingExtensionRequest = contract?.dueDateExtensionRequest?.isRequested && 
+    contract?.dueDateExtensionRequest?.status === "PENDING";
 
   if (!currentSchedule || currentSchedule.length === 0) {
     return (
@@ -190,11 +231,104 @@ const PaymentScheduleSection = ({ contractId, currency = "AED" }) => {
                     </span>
                   </div>
                 )}
+
+                {/* Request Due Date Extension Button for Final Payment */}
+                {item.scheduleType === "FINAL" && item.status !== "PAID" && (
+                  <div className="extension-request-section">
+                    {hasPendingExtensionRequest ? (
+                      <div className="pending-extension-notice">
+                        <FiClock />
+                        <span>Due date extension request pending approval</span>
+                      </div>
+                    ) : contract?.dueDateExtensionRequest?.status === "APPROVED" ? (
+                      <div className="approved-extension-notice">
+                        <FiCheckCircle />
+                        <span>Due date extended successfully</span>
+                      </div>
+                    ) : contract?.dueDateExtensionRequest?.status === "COUNTER_OFFERED" ? (
+                      <div className="counter-offered-notice">
+                        <FiCheckCircle />
+                        <span>
+                          Due date adjusted to {formatDate(contract?.dueDateExtensionRequest?.counterOfferedDate)}
+                        </span>
+                      </div>
+                    ) : (
+                      <button 
+                        className="request-extension-btn"
+                        onClick={() => setShowExtensionModal(true)}
+                      >
+                        <FiEdit3 />
+                        Request Due Date Extension
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Due Date Extension Modal */}
+      {showExtensionModal && (
+        <div className="extension-modal-overlay" onClick={() => setShowExtensionModal(false)}>
+          <div className="extension-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="extension-modal-header">
+              <h3>Request Due Date Extension</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowExtensionModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="extension-modal-body">
+              <p className="modal-description">
+                If you need more time to make the final payment, you can request a due date extension. 
+                The fleet owner will review your request.
+              </p>
+              
+              <div className="form-group">
+                <label htmlFor="newProposedDate">New Proposed Due Date *</label>
+                <input
+                  type="date"
+                  id="newProposedDate"
+                  value={extensionData.newProposedDate}
+                  onChange={(e) => setExtensionData({...extensionData, newProposedDate: e.target.value})}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="reason">Reason for Extension *</label>
+                <textarea
+                  id="reason"
+                  rows="4"
+                  placeholder="Please explain why you need more time to make the payment..."
+                  value={extensionData.reason}
+                  onChange={(e) => setExtensionData({...extensionData, reason: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="extension-modal-footer">
+              <button 
+                className="cancel-btn"
+                onClick={() => setShowExtensionModal(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button 
+                className="submit-btn"
+                onClick={handleRequestExtension}
+                disabled={submitting}
+              >
+                {submitting ? "Submitting..." : "Submit Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

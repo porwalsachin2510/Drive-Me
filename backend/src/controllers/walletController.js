@@ -198,7 +198,7 @@ export const getWalletTransactions = async (req, res) => {
 export const addFundsToWallet = async (req, res) => {
     try {
         const userId = req.userId
-        const { amount, paymentMethod, paymentDetails, paymentSessionId } = req.body
+        const { amount, paymentMethod, paymentDetails, paymentSessionId, currency = "KWD" } = req.body
 
         if (!amount || amount <= 0) {
             return res.status(400).json({
@@ -242,12 +242,13 @@ export const addFundsToWallet = async (req, res) => {
             })
         }
 
-        // Find or create wallet
+        // Find or create wallet with proper currency
         let wallet = await Wallet.findOne({ userId })
         if (!wallet) {
             wallet = new Wallet({
                 userId,
                 balance: 0,
+                currency: currency,
                 transactions: []
             })
         }
@@ -268,13 +269,15 @@ export const addFundsToWallet = async (req, res) => {
         wallet.balance += amount
         await wallet.save()
 
-        // Send real-time notification
+        // Send real-time notification with wallet currency
+        const walletCurrency = wallet.currency || currency || "KWD"
         await sendRealTimeNotification(userId, {
             type: "WALLET_UPDATED",
             title: "Funds Added",
-            message: `${amount} KWD has been added to your wallet`,
+            message: `${amount} ${walletCurrency} has been added to your wallet`,
             data: {
                 newBalance: wallet.balance,
+                currency: walletCurrency,
                 transaction
             }
         })
@@ -284,9 +287,10 @@ export const addFundsToWallet = async (req, res) => {
             userId,
             type: "PAYMENT_COMPLETED",
             title: "Funds Added Successfully",
-            message: `${amount} KWD has been added to your wallet via ${paymentMethod}`,
+            message: `${amount} ${walletCurrency} has been added to your wallet via ${paymentMethod}`,
             data: {
                 amount,
+                currency: walletCurrency,
                 paymentMethod,
                 newBalance: wallet.balance
             }

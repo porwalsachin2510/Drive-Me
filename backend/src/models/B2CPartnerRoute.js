@@ -64,6 +64,11 @@ const b2cPartnerRouteSchema = new mongoose.Schema(
                 min: 0,
                 default: 0,
             },
+            currency: {
+                type: String,
+                default: "KWD",
+                enum: ["AED", "KWD", "SAR", "BHD", "OMR", "QAR"],
+            },
         },
         stopPoints: [stopPointSchema],
         tripType: {

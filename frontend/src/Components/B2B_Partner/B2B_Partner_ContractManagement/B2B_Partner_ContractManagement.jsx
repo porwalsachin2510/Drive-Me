@@ -137,8 +137,8 @@ const B2B_Partner_ContractManagement = () => {
         </button>
       </div>
 
-      {/* Contracts List */}
-      {error && (
+      {/* Contracts List - Only show error if we have no contracts loaded */}
+      {error && (!contracts || contracts.length === 0) && (
         <div className="b2b-contracts-error">
           <p>{error}</p>
         </div>

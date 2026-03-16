@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import Logo from "../../assets/Logo.png";
 import "./footer.css";
 
 const Footer = () => {
@@ -18,7 +19,7 @@ const Footer = () => {
         {/* Left Section - Logo and Description */}
         <div className="my-footer-left">
           <div className="footer-logo">
-            <div className="footer-logo-box">driveme</div>
+            <img src={Logo} alt="DriveMe" className="footer-logo-image" />
           </div>
           <p className="footer-tagline">"smart mobility, made for the GCC"</p>
           <p className="footer-description">

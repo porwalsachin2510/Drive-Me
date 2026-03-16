@@ -82,6 +82,18 @@ export const register = async (req, res) => {
             })
         }
 
+        // Handle profile image upload for B2C_PARTNER
+        let profileImageUrl = null;
+        if (req.files && req.files.profileImage && req.files.profileImage[0]) {
+            try {
+                const uploadResult = await uploadToCloudinary(req.files.profileImage[0], 'driveme/profiles', 'profile');
+                profileImageUrl = uploadResult.secure_url;
+                console.log("[v1] Profile image uploaded:", profileImageUrl);
+            } catch (uploadError) {
+                console.error("[v1] Error uploading profile image:", uploadError);
+            }
+        }
+
         // Store registration data temporarily (you could use Redis or session)
         // For now, we'll store it in the OTP document as metadata
         const registrationData = {
@@ -98,6 +110,7 @@ export const register = async (req, res) => {
             serviceType,
             yearsOfExperience,
             serviceDescription,
+            profileImage: profileImageUrl,
         }
 
         // Store registration data in OTP document (in production, use Redis)

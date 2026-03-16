@@ -184,6 +184,9 @@ export const createB2CMonthlyPass = async (req, res) => {
         // Normalize paymentMethod for B2CMonthlyPass model (STRIPE, TAP, CARD, CASH)
         const normalizedPaymentMethod = ["STRIPE", "TAP", "CARD", "CASH"].includes(paymentMethod) ? paymentMethod : "STRIPE";
 
+        // Get currency from route pricing or user country, default to KWD
+        const routeCurrency = route.pricing?.currency || currency || "KWD";
+
         // Create monthly pass
         const monthlyPass = new B2CMonthlyPass({
             passengerId,
@@ -201,6 +204,7 @@ export const createB2CMonthlyPass = async (req, res) => {
             endDate,
             durationMonths,
             totalAmount,
+            currency: routeCurrency,
             selectedDays: travelDays || [],
             paymentMethod: normalizedPaymentMethod,
             paymentStatus: normalizedPaymentMethod === "CASH" ? "PAID" : "PENDING",
@@ -291,6 +295,7 @@ export const createB2CMonthlyPass = async (req, res) => {
             travelDate: new Date(), // Required field - date of travel
             numberOfSeats: 1,
             paymentAmount: totalAmount,
+            currency: routeCurrency,
             paymentMethod: normalizedPaymentMethod,
             paymentStatus: normalizedPaymentMethod === "CASH" ? "COMPLETED" : "PENDING",
             transactionId: monthlyPass._id.toString(),

@@ -1,9 +1,11 @@
+/* Premium Payment Schedule - Inter Font */
 .payment-schedule-section {
   background: #ffffff;
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .payment-schedule-header {
@@ -273,6 +275,203 @@
   font-weight: 500;
 }
 
+/* Extension Request Section */
+.extension-request-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.request-extension-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.request-extension-btn:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.pending-extension-notice,
+.approved-extension-notice,
+.counter-offered-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pending-extension-notice {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.approved-extension-notice,
+.counter-offered-notice {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* Extension Modal */
+.extension-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.extension-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.extension-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.extension-modal-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-close-btn:hover {
+  color: #1a1a1a;
+}
+
+.extension-modal-body {
+  padding: 24px;
+}
+
+.modal-description {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.extension-modal-body .form-group {
+  margin-bottom: 20px;
+}
+
+.extension-modal-body .form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.extension-modal-body .form-group input,
+.extension-modal-body .form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.extension-modal-body .form-group input:focus,
+.extension-modal-body .form-group textarea:focus {
+  outline: none;
+  border-color: #f59e0b;
+}
+
+.extension-modal-body .form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.extension-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 0 0 16px 16px;
+}
+
+.extension-modal-footer .cancel-btn {
+  padding: 10px 20px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.extension-modal-footer .cancel-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.extension-modal-footer .submit-btn {
+  padding: 10px 24px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.extension-modal-footer .submit-btn:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.extension-modal-footer .submit-btn:disabled,
+.extension-modal-footer .cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .payment-schedule-section {
     padding: 16px;
@@ -295,5 +494,9 @@
   .item-dates {
     flex-direction: column;
     gap: 12px;
+  }
+
+  .extension-modal {
+    max-height: 85vh;
   }
 }

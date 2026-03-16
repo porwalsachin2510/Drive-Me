@@ -98,6 +98,33 @@
   margin: 0;
 }
 
+/* Expand/Collapse Toggle Button */
+.expand-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.expand-toggle-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.expand-toggle-btn svg {
+  font-size: 16px;
+  transition: transform 0.3s ease;
+}
+
 .vehicle-details {
   display: flex;
   flex-direction: column;
@@ -105,6 +132,20 @@
   border-top: 1px solid #f0f0f0;
   border-bottom: 1px solid #f0f0f0;
   padding: 12px 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.vehicle-details.collapsed {
+  max-height: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
+}
+
+.vehicle-details.expanded {
+  max-height: 500px;
+  opacity: 1;
 }
 
 .detail-row {
@@ -175,6 +216,13 @@
   color: white;
   padding: 8px 12px;
   box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  min-width: 40px;
+  transition: all 0.2s;
 }
 
 .action-btn-more:hover {
@@ -184,13 +232,13 @@
 
 .dropdown-menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 4px);
   right: 0;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 9999;
   min-width: 180px;
   overflow: hidden;
   animation: slideDown 0.2s ease-out;

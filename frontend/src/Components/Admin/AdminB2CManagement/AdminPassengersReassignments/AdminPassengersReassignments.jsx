@@ -150,7 +150,7 @@ function AdminPassengersReassignments() {
                 </td>
                 <td>{booking.seats || 1}</td>
                 <td>
-                  <span className="amount-text">AED {(booking.amount || booking.price || 0).toFixed(2)}</span>
+                  <span className="amount-text">{booking.currency || 'KWD'} {(booking.amount || booking.price || 0).toFixed(booking.currency === 'KWD' || booking.currency === 'BHD' || booking.currency === 'OMR' ? 3 : 2)}</span>
                 </td>
                 <td>
                   <span className="payment-badge">{booking.paymentMethod || 'CASH'}</span>

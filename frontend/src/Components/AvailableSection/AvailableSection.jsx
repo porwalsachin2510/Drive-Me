@@ -99,6 +99,28 @@ const AvailableSection = ({
     return d.toLocaleDateString("en-GB");
   };
 
+  // Calculate monthly price from one-way price if not available
+  const calculateMonthlyPrice = (route) => {
+    // If route already has monthlyPrice, use it
+    if (route.monthlyPrice && route.monthlyPrice !== "N/A") {
+      return typeof route.monthlyPrice === 'number' 
+        ? route.monthlyPrice.toFixed(2) 
+        : route.monthlyPrice;
+    }
+    
+    // Calculate from one-way price
+    const oneWayPrice = route.pricing?.oneWayPrice || route.oneWayPrice || route.price;
+    if (!oneWayPrice) return null;
+    
+    // Calculate travel days per month based on available days
+    const daysPerWeek = route.availableDays?.length || route.daysOfWeek?.length || 5;
+    const travelDaysPerMonth = Math.round(daysPerWeek * 4.33); // ~4.33 weeks per month
+    
+    // Monthly price = one-way price * travel days per month
+    const monthlyPrice = parseFloat(oneWayPrice) * travelDaysPerMonth;
+    return monthlyPrice.toFixed(2);
+  };
+
   const isRouteAvailableForBooking = (route) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -125,7 +147,13 @@ const AvailableSection = ({
   const handleBookRoute = (route) => {
     if (!auth.user) {
       // Redirect unauthenticated users to login, then back to homepage
-      navigate("/login", { state: { returnTo: "/", message: "Please login to book a route" } });
+      navigate("/login", { state: { returnTo: "/", message: "Please login as a Commuter to book a route" } });
+      return;
+    }
+
+    // Check if user is a COMMUTER
+    if (auth.user.role !== "COMMUTER") {
+      alert("Only Commuter users can book routes. Please login with a Commuter account.");
       return;
     }
 
@@ -216,20 +244,12 @@ const AvailableSection = ({
                   <h6>AVAILABLE SEATS: {route.availableSeats}</h6>
 
                   <div className="available-section-price-section">
-                    {route.oneWayPrice && (
-                      <div style={{ marginBottom: "4px" }}>
-                        <p className="price-label">ONE WAY</p>
-                        <p className="price-value" style={{ fontSize: "14px" }}>
-                          {route.oneWayPrice} KWD
-                        </p>
-                      </div>
-                    )}
                     <div>
                       <p className="price-label">MONTHLY</p>
                       <p className="price-value">
-                        {route.monthlyPrice
-                          ? `${route.monthlyPrice} KWD`
-                          : "N/A"}
+                        {calculateMonthlyPrice(route)
+                          ? `${calculateMonthlyPrice(route)} KWD`
+                          : "Contact for price"}
                       </p>
                     </div>
                   </div>

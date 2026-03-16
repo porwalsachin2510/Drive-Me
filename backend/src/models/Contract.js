@@ -267,6 +267,48 @@ const contractSchema = new mongoose.Schema(
             type: Date,
         },
 
+        // Due Date Extension Request for Final Payment
+        dueDateExtensionRequest: {
+            isRequested: {
+                type: Boolean,
+                default: false,
+            },
+            requestedBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+            },
+            requestedDate: Date,
+            newProposedDate: Date,
+            reason: String,
+            status: {
+                type: String,
+                enum: ["PENDING", "APPROVED", "REJECTED", "COUNTER_OFFERED"],
+                default: "PENDING",
+            },
+            respondedBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+            },
+            respondedDate: Date,
+            responseNotes: String,
+            counterOfferedDate: Date,
+            history: [
+                {
+                    action: {
+                        type: String,
+                        enum: ["REQUESTED", "APPROVED", "REJECTED", "COUNTER_OFFERED"],
+                    },
+                    date: Date,
+                    by: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "User",
+                    },
+                    notes: String,
+                    proposedDate: Date,
+                },
+            ],
+        },
+
         status: {
             type: String,
             enum: [

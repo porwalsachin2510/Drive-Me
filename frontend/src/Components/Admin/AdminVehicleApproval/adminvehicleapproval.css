@@ -1,8 +1,10 @@
+/* Premium Admin Vehicle Approval - Inter Font */
 .admin-vehicle-approval {
     background: #f8f9fa;
     border-radius: 8px;
     padding: 20px;
     min-height: 600px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .approval-header {

@@ -1,11 +1,9 @@
-* {
-  box-sizing: border-box;
-}
-
+/* Premium Featured Routes - Inter Font */
 .featured-section {
   width: 100%;
   padding: 40px 20px;
-  background-color: #f8f8f8;
+  background-color: #f8f9fa;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Header Styles */

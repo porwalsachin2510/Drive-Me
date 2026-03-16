@@ -1,6 +1,8 @@
+/* Premium Admin Finance - Inter Font */
 .admin-finance {
   width: 100%;
   padding: 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .finance-header {
@@ -35,7 +37,7 @@
 .finance-overview .overview-value {
   font-size: 20px;
   font-weight: 700;
-  color: #0891b2;
+  color: #2DD4BF;
 }
 
 .finance-tabs {
@@ -64,8 +66,8 @@
 }
 
 .finance-tab.active {
-  color: #0891b2;
-  border-bottom-color: #0891b2;
+  color: #2DD4BF;
+  border-bottom-color: #2DD4BF;
 }
 
 .finance-section .section-header {
@@ -104,7 +106,7 @@
 .finance-section .stat-card .stat-number {
   font-size: 24px;
   font-weight: 700;
-  color: #0891b2;
+  color: #2DD4BF;
 }
 
 .finance-section .stat-card .stat-label {
@@ -169,7 +171,7 @@
 
 .net-payable {
   font-weight: 600;
-  color: #10b981;
+  color: #22C55E;
 }
 
 .status-badge {
@@ -195,30 +197,31 @@
 }
 
 .approve-btn {
-  background: #10b981;
+  background: #22C55E;
   color: #fff;
 }
 
 .approve-btn:hover {
-  background: #059669;
+  background: #16A34A;
 }
 
 .reject-btn {
-  background: #ef4444;
-  color: #fff;
+  background: transparent;
+  color: #EF4444;
+  border: 1px solid #EF4444;
 }
 
 .reject-btn:hover {
-  background: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .complete-btn {
-  background: #0891b2;
+  background: #2DD4BF;
   color: #fff;
 }
 
 .complete-btn:hover {
-  background: #0e7490;
+  background: #14B8A6;
 }
 
 /* Metrics Grid */
@@ -266,15 +269,15 @@
 }
 
 .metric-change.positive {
-  color: #10b981;
+  color: #22C55E;
 }
 
 .metric-change.neutral {
-  color: #94a3b8;
+  color: #6B7280;
 }
 
 .metric-change.negative {
-  color: #ef4444;
+  color: #EF4444;
 }
 
 .loading {
