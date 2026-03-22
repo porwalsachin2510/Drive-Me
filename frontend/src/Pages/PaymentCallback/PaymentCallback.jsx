@@ -21,8 +21,6 @@ const PaymentCallback = () => {
       const sessionId = searchParams.get("session_id"); // Stripe
       const chargeId = searchParams.get("tap_id"); // Tap Payments
 
-
-
       // Determine payment provider based on query params
       let provider = "STRIPE";
       let paymentId = sessionId;
@@ -38,36 +36,51 @@ const PaymentCallback = () => {
             verifyPayment({
               sessionId: paymentId,
               provider: provider,
-            })
+            }),
           ).unwrap();
 
           setVerificationStatus("success");
-          setMessage(
-            "Payment completed successfully! Your contract is now active."
-          );
 
-          // Extract contract ID from the result or use route param
-          const finalContractId = result.data.contract?._id || contractId;
+          // Check if this is a booking payment or contract payment
+          if (result.paymentType === "booking") {
+            setMessage(
+              "Payment completed successfully! Your booking is confirmed.",
+            );
 
-          // Redirect to contract details after 3 seconds
-          setTimeout(() => {
-            if (finalContractId) {
-              navigate(`/corporate/contracts/${finalContractId}`);
-            } else {
-              navigate("/corporate/contracts");
-            }
-          }, 3000);
+            // Redirect to booking details or my bookings page
+            const redirectUrl =
+              result.data?.redirectUrl || "/commuter/my-bookings";
+            setTimeout(() => {
+              navigate(redirectUrl);
+            }, 3000);
+          } else {
+            setMessage(
+              "Payment completed successfully! Your contract is now active.",
+            );
+
+            // Extract contract ID from the result or use route param
+            const finalContractId = result.data?.contract?._id || contractId;
+
+            // Redirect to contract details after 3 seconds
+            setTimeout(() => {
+              if (finalContractId) {
+                navigate(`/corporate/contracts/${finalContractId}`);
+              } else {
+                navigate("/corporate/contracts");
+              }
+            }, 3000);
+          }
         } catch (error) {
           console.error("Payment verification failed:", error);
           setVerificationStatus("failed");
           setMessage(
-            error || "Payment verification failed. Please contact support."
+            error || "Payment verification failed. Please contact support.",
           );
         }
       } else if (status === "cancelled" || status === "canceled") {
         setVerificationStatus("cancelled");
         setMessage(
-          "Payment was cancelled. You can try again from the contract details page."
+          "Payment was cancelled. You can try again from the contract details page.",
         );
         setTimeout(() => {
           if (contractId) {
@@ -108,9 +121,7 @@ const PaymentCallback = () => {
             <div className="success-icon">✓</div>
             <h2>Payment Successful!</h2>
             <p>{message}</p>
-            <p className="redirect-message">
-              Redirecting to contract details...
-            </p>
+            <p className="redirect-message">Redirecting...</p>
           </>
         )}
 

@@ -2,6 +2,8 @@ import Payment from "../models/Payment.js"
 import Wallet from "../models/Wallet.js"
 import Transaction from "../models/Transaction.js"
 import Contract from "../models/Contract.js"
+import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
+import Notification from "../models/Notification.js"
 import paymentGatewayService, {
     calculateCommission,
     detectCountryFromCurrency,
@@ -309,7 +311,6 @@ export const createPayment = async (req, res) => {
     }
 }
 
-
 export const verifyPayment = async (req, res) => {
     try {
         console.log("[v0] Verify payment request received")
@@ -325,12 +326,72 @@ export const verifyPayment = async (req, res) => {
             })
         }
 
-        // Find payment by session ID
+        // Find payment by session ID (for contract payments)
         const payment = await Payment.findOne({
             gatewaySessionId: session_id,
         })
 
+        // If no contract payment found, check for booking payment
         if (!payment) {
+            console.log("[v0] No contract payment found, checking bookings...")
+
+            // For bookings, we need to retrieve the session from Stripe to get booking info
+            if (provider.toUpperCase() === "STRIPE") {
+                const stripeClient = stripe(process.env.STRIPE_SECRET_KEY)
+                const session = await stripeClient.checkout.sessions.retrieve(session_id)
+
+                console.log("[v0] Stripe session retrieved:", session.id)
+                console.log("[v0] Session metadata:", session.metadata)
+
+                if (session.payment_status === "paid" && session.metadata?.bookingId) {
+                    const booking = await B2CPassengerBooking.findById(session.metadata.bookingId)
+
+                    if (booking) {
+                        // Update booking payment status if not already completed
+                        if (booking.paymentStatus !== "COMPLETED") {
+                            booking.paymentStatus = "COMPLETED"
+                            booking.transactionId = session.payment_intent
+                            await booking.save()
+
+                            // Notify partner about confirmed booking
+                            await Notification.create({
+                                recipientId: booking.b2cPartnerId,
+                                userId: booking.b2cPartnerId,
+                                type: "NEW_BOOKING",
+                                title: "New Paid Booking",
+                                message: `Payment received for booking. Amount: AED ${booking.paymentAmount}`,
+                                data: {
+                                    bookingId: booking._id,
+                                    paymentAmount: booking.paymentAmount,
+                                },
+                                status: "UNREAD",
+                            })
+                        }
+
+                        return res.status(200).json({
+                            success: true,
+                            message: "Booking payment verified successfully",
+                            paymentType: "booking",
+                            data: {
+                                booking,
+                                redirectUrl: `/commuter/my-bookings/${booking._id}`
+                            },
+                        })
+                    }
+                } else if (session.payment_status === "paid") {
+                    // Payment succeeded but no bookingId in metadata - still return success
+                    return res.status(200).json({
+                        success: true,
+                        message: "Payment verified successfully",
+                        paymentType: "booking",
+                        data: {
+                            sessionId: session_id,
+                            redirectUrl: "/commuter/my-bookings"
+                        },
+                    })
+                }
+            }
+
             return res.status(404).json({
                 success: false,
                 message: "Payment not found",
