@@ -17,30 +17,35 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
   const mappedStatus = mapStatus(quotation.status);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="b2b-quotation-details-modal-overlay" onClick={onClose}>
       <div
-        className="modal-container details-modal"
+        className="b2b-quotation-details-modal-container b2b-quotation-details-details-modal"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal-header">
-          <div className="modal-title-section">
+        <div className="b2b-quotation-details-modal-header">
+          <div className="b2b-quotation-details-modal-title-section">
             <h2>Quotation Details</h2>
-            <span className="quotation-number-large">
+            <span className="b2b-quotation-details-quotation-number-large">
               #{quotation.quotationNumber}
             </span>
           </div>
-          <button className="modal-close" onClick={onClose}>
+          <button
+            className="b2b-quotation-details-modal-close"
+            onClick={onClose}
+          >
             ✕
           </button>
         </div>
 
-        <div className="modal-body">
+        <div className="b2b-quotation-details-modal-body">
           {/* Status Badge */}
-          <div className="status-section">
-            <span className={`status-badge-large ${mappedStatus}`}>
+          <div className="b2b-quotation-details-status-section">
+            <span
+              className={`b2b-quotation-details-status-badge-large ${mappedStatus}`}
+            >
               {mappedStatus}
             </span>
-            <div className="dates-info">
+            <div className="b2b-quotation-details-dates-info">
               <p>
                 <strong>Requested:</strong>{" "}
                 {new Date(quotation.requestedAt).toLocaleString()}
@@ -55,45 +60,57 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
           </div>
 
           {/* Customer Information */}
-          <div className="detail-section">
-            <h3 className="section-title">
-              <span className="section-icon">👤</span>
+          <div className="b2b-quotation-details-detail-section">
+            <h3 className="b2b-quotation-details-section-title">
+              <span className="b2b-quotation-details-section-icon">👤</span>
               Customer Information
             </h3>
-            <div className="detail-grid">
-              <div className="detail-item-full">
-                <span className="detail-label">Full Name:</span>
-                <span className="detail-value">
+            <div className="b2b-quotation-details-detail-grid">
+              <div className="b2b-quotation-details-detail-item-full">
+                <span className="b2b-quotation-details-detail-label">
+                  Full Name:
+                </span>
+                <span className="b2b-quotation-details-detail-value">
                   {quotation.corporateOwnerId?.fullName || "N/A"}
                 </span>
               </div>
-              <div className="detail-item-full">
-                <span className="detail-label">Company Name:</span>
-                <span className="detail-value">
+              <div className="b2b-quotation-details-detail-item-full">
+                <span className="b2b-quotation-details-detail-label">
+                  Company Name:
+                </span>
+                <span className="b2b-quotation-details-detail-value">
                   {quotation.corporateOwnerId?.companyName || "N/A"}
                 </span>
               </div>
-              <div className="detail-item-full">
-                <span className="detail-label">Email Address:</span>
-                <span className="detail-value email-value">
+              <div className="b2b-quotation-details-detail-item-full">
+                <span className="b2b-quotation-details-detail-label">
+                  Email Address:
+                </span>
+                <span className="b2b-quotation-details-detail-value email-value">
                   {quotation.corporateOwnerId?.email || "N/A"}
                 </span>
               </div>
-              <div className="detail-item-full">
-                <span className="detail-label">WhatsApp Number:</span>
-                <span className="detail-value">
+              <div className="b2b-quotation-details-detail-item-full">
+                <span className="b2b-quotation-details-detail-label">
+                  WhatsApp Number:
+                </span>
+                <span className="b2b-quotation-details-detail-value">
                   {quotation.corporateOwnerId?.whatsappNumber || "N/A"}
                 </span>
               </div>
-              <div className="detail-item-full">
-                <span className="detail-label">Company Address:</span>
-                <span className="detail-value">
+              <div className="b2b-quotation-details-detail-item-full">
+                <span className="b2b-quotation-details-detail-label">
+                  Company Address:
+                </span>
+                <span className="b2b-quotation-details-detail-value">
                   {quotation.corporateOwnerId?.companyAddress || "N/A"}
                 </span>
               </div>
-              <div className="detail-item-full">
-                <span className="detail-label">Nationality:</span>
-                <span className="detail-value">
+              <div className="b2b-quotation-details-detail-item-full">
+                <span className="b2b-quotation-details-detail-label">
+                  Nationality:
+                </span>
+                <span className="b2b-quotation-details-detail-value">
                   {quotation.corporateOwnerId?.nationality || "N/A"}
                 </span>
               </div>
@@ -101,47 +118,55 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
           </div>
 
           {/* Rental Period */}
-          <div className="detail-section">
-            <h3 className="section-title">
-              <span className="section-icon">📅</span>
+          <div className="b2b-quotation-details-detail-section">
+            <h3 className="b2b-quotation-details-section-title">
+              <span className="b2b-quotation-details-section-icon">📅</span>
               Rental Period
             </h3>
-            <div className="detail-grid">
-              <div className="detail-item">
-                <span className="detail-label">Duration Type:</span>
-                <span className="detail-value highlight">
+            <div className="b2b-quotation-details-detail-grid">
+              <div className="b2b-quotation-details-detail-item">
+                <span className="b2b-quotation-details-detail-label">
+                  Duration Type:
+                </span>
+                <span className="b2b-quotation-details-detail-value b2b-quotation-details-highlight">
                   {quotation.rentalPeriod?.durationType || "N/A"}
                 </span>
               </div>
-              <div className="detail-item">
-                <span className="detail-label">Duration:</span>
-                <span className="detail-value highlight">
+              <div className="b2b-quotation-details-detail-item">
+                <span className="b2b-quotation-details-detail-label">
+                  Duration:
+                </span>
+                <span className="b2b-quotation-details-detail-value b2b-quotation-details-highlight">
                   {quotation.rentalPeriod?.duration || "N/A"}{" "}
                   {quotation.rentalPeriod?.durationType === "DAILY"
                     ? "Days"
                     : quotation.rentalPeriod?.durationType === "WEEKLY"
-                    ? "Weeks"
-                    : quotation.rentalPeriod?.durationType === "MONTHLY"
-                    ? "Months"
-                    : ""}
+                      ? "Weeks"
+                      : quotation.rentalPeriod?.durationType === "MONTHLY"
+                        ? "Months"
+                        : ""}
                 </span>
               </div>
-              <div className="detail-item">
-                <span className="detail-label">Start Date:</span>
-                <span className="detail-value">
+              <div className="b2b-quotation-details-detail-item">
+                <span className="b2b-quotation-details-detail-label">
+                  Start Date:
+                </span>
+                <span className="b2b-quotation-details-detail-value">
                   {quotation.rentalPeriod?.startDate
                     ? new Date(
-                        quotation.rentalPeriod.startDate
+                        quotation.rentalPeriod.startDate,
                       ).toLocaleDateString()
                     : "N/A"}
                 </span>
               </div>
-              <div className="detail-item">
-                <span className="detail-label">End Date:</span>
-                <span className="detail-value">
+              <div className="b2b-quotation-details-detail-item">
+                <span className="b2b-quotation-details-detail-label">
+                  End Date:
+                </span>
+                <span className="b2b-quotation-details-detail-value">
                   {quotation.rentalPeriod?.endDate
                     ? new Date(
-                        quotation.rentalPeriod.endDate
+                        quotation.rentalPeriod.endDate,
                       ).toLocaleDateString()
                     : "N/A"}
                 </span>
@@ -150,27 +175,35 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
           </div>
 
           {/* Requirements */}
-          <div className="detail-section">
-            <h3 className="section-title">
-              <span className="section-icon">📋</span>
+          <div className="b2b-quotation-details-detail-section">
+            <h3 className="b2b-quotation-details-section-title">
+              <span className="b2b-quotation-details-section-icon">📋</span>
               Requirements
             </h3>
-            <div className="detail-grid">
-              <div className="detail-item">
-                <span className="detail-label">Driver Required:</span>
+            <div className="b2b-quotation-details-detail-grid">
+              <div className="b2b-quotation-details-detail-item">
+                <span className="b2b-quotation-details-detail-label">
+                  Driver Required:
+                </span>
                 <span
-                  className={`detail-value ${
-                    quotation.requirements?.withDriver ? "yes" : "no"
+                  className={`b2b-quotation-details-detail-value ${
+                    quotation.requirements?.withDriver
+                      ? "b2b-quotation-details-yes"
+                      : "b2b-quotation-details-no"
                   }`}
                 >
                   {quotation.requirements?.withDriver ? "✓ Yes" : "✗ No"}
                 </span>
               </div>
-              <div className="detail-item">
-                <span className="detail-label">Fuel Included:</span>
+              <div className="b2b-quotation-details-detail-item">
+                <span className="b2b-quotation-details-detail-label">
+                  Fuel Included:
+                </span>
                 <span
-                  className={`detail-value ${
-                    quotation.requirements?.fuelIncluded ? "yes" : "no"
+                  className={`b2b-quotation-details-detail-value ${
+                    quotation.requirements?.fuelIncluded
+                      ? "b2b-quotation-details-yes"
+                      : "b2b-quotation-details-no"
                   }`}
                 >
                   {quotation.requirements?.fuelIncluded ? "✓ Yes" : "✗ No"}
@@ -180,61 +213,76 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
           </div>
 
           {/* Vehicle Details */}
-          <div className="detail-section">
-            <h3 className="section-title">
-              <span className="section-icon">🚗</span>
+          <div className="b2b-quotation-details-detail-section">
+            <h3 className="b2b-quotation-details-section-title">
+              <span className="b2b-quotation-details-section-icon">🚗</span>
               Vehicle Details
             </h3>
-            <div className="vehicles-list">
+            <div className="b2b-quotation-details-vehicles-list">
               {quotation.vehicles.map((vehicle, index) => {
                 const vehicleData = vehicle.vehicleId;
                 return (
-                  <div key={index} className="vehicle-detail-card">
-                    <div className="vehicle-card-header">
+                  <div
+                    key={index}
+                    className="b2b-quotation-details-vehicle-detail-card"
+                  >
+                    <div className="b2b-quotation-details-vehicle-card-header">
                       <h4>
                         Vehicle {index + 1}: {vehicleData?.vehicleName || "N/A"}
                       </h4>
-                      <span className="quantity-badge">
+                      <span className="b2b-quotation-details-quantity-badge">
                         Qty: {vehicle.quantity}
                       </span>
                     </div>
 
-                    <div className="vehicle-card-body">
-                      <div className="vehicle-info-grid">
-                        <div className="vehicle-info-item">
-                          <span className="label">Category:</span>
-                          <span className="value">
+                    <div className="b2b-quotation-details-vehicle-card-body">
+                      <div className="b2b-quotation-details-vehicle-info-grid">
+                        <div className="b2b-quotation-details-vehicle-info-item">
+                          <span className="b2b-quotation-details-label">
+                            Category:
+                          </span>
+                          <span className="b2b-quotation-details-value">
                             {vehicleData?.vehicleCategory || "N/A"}
                           </span>
                         </div>
-                        <div className="vehicle-info-item">
-                          <span className="label">Registration:</span>
-                          <span className="value">
+                        <div className="b2b-quotation-details-vehicle-info-item">
+                          <span className="b2b-quotation-details-label">
+                            Registration:
+                          </span>
+                          <span className="b2b-quotation-details-value">
                             {vehicleData?.registrationNumber || "N/A"}
                           </span>
                         </div>
-                        <div className="vehicle-info-item">
-                          <span className="label">Manufacturing Year:</span>
-                          <span className="value">
+                        <div className="b2b-quotation-details-vehicle-info-item">
+                          <span className="b2b-quotation-details-label">
+                            Manufacturing Year:
+                          </span>
+                          <span className="b2b-quotation-details-value">
                             {vehicleData?.manufacturingYear || "N/A"}
                           </span>
                         </div>
-                        <div className="vehicle-info-item">
-                          <span className="label">Vehicle Name:</span>
-                          <span className="value">
+                        <div className="b2b-quotation-details-vehicle-info-item">
+                          <span className="b2b-quotation-details-label">
+                            Vehicle Name:
+                          </span>
+                          <span className="b2b-quotation-details-value">
                             {vehicleData?.vehicleName || "N/A"}
                           </span>
                         </div>
-                        <div className="vehicle-info-item">
-                          <span className="label">Seating Capacity:</span>
-                          <span className="value">
+                        <div className="b2b-quotation-details-vehicle-info-item">
+                          <span className="b2b-quotation-details-label">
+                            Seating Capacity:
+                          </span>
+                          <span className="b2b-quotation-details-value">
                             {vehicleData?.capacity?.seatingCapacity || "N/A"}{" "}
                             Seats
                           </span>
                         </div>
-                        <div className="vehicle-info-item">
-                          <span className="label">Location:</span>
-                          <span className="value">
+                        <div className="b2b-quotation-details-vehicle-info-item">
+                          <span className="b2b-quotation-details-label">
+                            Location:
+                          </span>
+                          <span className="b2b-quotation-details-value">
                             {vehicleData?.location || "N/A"}
                           </span>
                         </div>
@@ -298,19 +346,24 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
 
                       {/* Facilities */}
                       {vehicleData?.facilities && (
-                        <div className="facilities-section">
+                        <div className="b2b-quotation-details-facilities-section">
                           <h5>Facilities</h5>
-                          <div className="facilities-grid">
+                          <div className="b2b-quotation-details-facilities-grid">
                             {Object.entries(vehicleData.facilities).map(
                               ([key, value]) =>
                                 value && (
-                                  <div key={key} className="facility-item">
-                                    <span className="facility-icon">✓</span>
-                                    <span className="facility-name">
+                                  <div
+                                    key={key}
+                                    className="b2b-quotation-details-facility-item"
+                                  >
+                                    <span className="b2b-quotation-details-facility-icon">
+                                      ✓
+                                    </span>
+                                    <span className="b2b-quotation-details-facility-name">
                                       {key.replace(/([A-Z])/g, " $1").trim()}
                                     </span>
                                   </div>
-                                )
+                                ),
                             )}
                           </div>
                         </div>
@@ -318,15 +371,15 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
 
                       {/* Vehicle Photos */}
                       {vehicleData?.photos && vehicleData.photos.length > 0 && (
-                        <div className="photos-section">
+                        <div className="b2b-quotation-details-photos-section">
                           <h5>Vehicle Photos</h5>
-                          <div className="photos-grid">
+                          <div className="b2b-quotation-details-photos-grid">
                             {vehicleData.photos.map((photo, idx) => (
                               <img
                                 key={idx}
                                 src={photo.url || "/placeholder.svg"}
                                 alt={`Vehicle ${index + 1} - ${idx + 1}`}
-                                className="vehicle-photo"
+                                className="b2b-quotation-details-vehicle-photo"
                               />
                             ))}
                           </div>
@@ -343,24 +396,27 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
           {quotation.status === "QUOTED" &&
             quotation.quotedPrice?.perVehicleBreakdown &&
             quotation.quotedPrice.perVehicleBreakdown.length > 0 && (
-              <div className="detail-section quoted-section">
-                <h3 className="section-title">
-                  <span className="section-icon">💰</span>
+              <div className="b2b-quotation-details-detail-section b2b-quotation-details-quoted-section">
+                <h3 className="b2b-quotation-details-section-title">
+                  <span className="b2b-quotation-details-section-icon">💰</span>
                   Your Quotation Breakdown
                 </h3>
                 {quotation.quotedPrice.perVehicleBreakdown.map(
                   (breakdown, index) => (
-                    <div key={index} className="breakdown-card">
+                    <div
+                      key={index}
+                      className="b2b-quotation-details-breakdown-card"
+                    >
                       <h4>{breakdown.vehicleName}</h4>
-                      <div className="breakdown-details">
-                        <div className="breakdown-row">
+                      <div className="b2b-quotation-details-breakdown-details">
+                        <div className="b2b-quotation-details-breakdown-row">
                           <span>Base Rate:</span>
                           <span>
                             KWD {(breakdown.baseRental ?? 0).toFixed(2)}
                           </span>
                         </div>
                         {breakdown.driverCharges > 0 && (
-                          <div className="breakdown-row">
+                          <div className="b2b-quotation-details-breakdown-row">
                             <span>Driver Charges:</span>
                             <span>
                               KWD {(breakdown.driverCharges ?? 0).toFixed(2)}
@@ -368,18 +424,18 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                           </div>
                         )}
                         {breakdown.fuelCharges > 0 && (
-                          <div className="breakdown-row">
+                          <div className="b2b-quotation-details-breakdown-row">
                             <span>Fuel Charges:</span>
                             <span>
                               KWD {(breakdown.fuelCharges ?? 0).toFixed(2)}
                             </span>
                           </div>
                         )}
-                        <div className="breakdown-row">
+                        <div className="b2b-quotation-details-breakdown-row">
                           <span>Quantity:</span>
                           <span>{breakdown.quantity}</span>
                         </div>
-                        <div className="breakdown-row subtotal">
+                        <div className="b2b-quotation-details-breakdown-row b2b-quotation-details-subtotal">
                           <span>Subtotal:</span>
                           <span>
                             KWD {(breakdown.totalAmount ?? 0).toFixed(2)}
@@ -387,22 +443,22 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                         </div>
                       </div>
                     </div>
-                  )
+                  ),
                 )}
-                <div className="total-amount-section">
+                <div className="b2b-quotation-details-total-amount-section">
                   <h3>Total Amount</h3>
-                  <p className="total-amount">
+                  <p className="b2b-quotation-details-total-amount">
                     KWD {quotation.quotedPrice.totalAmount.toFixed(2)}
                   </p>
                 </div>
                 {quotation.responseMessage && (
-                  <div className="response-message-box">
+                  <div className="b2b-quotation-details-response-message-box">
                     <h5>Message:</h5>
                     <p>{quotation.responseMessage}</p>
                   </div>
                 )}
                 {quotation.terms && (
-                  <div className="terms-box">
+                  <div className="b2b-quotation-details-terms-box">
                     <h5>Terms & Conditions:</h5>
                     <p>{quotation.terms}</p>
                   </div>
@@ -412,18 +468,23 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
 
           {/* Rejection Message */}
           {quotation.status === "REJECTED" && quotation.responseMessage && (
-            <div className="detail-section rejection-section">
-              <h3 className="section-title">
-                <span className="section-icon">❌</span>
+            <div className="b2b-quotation-details-detail-section b2b-quotation-details-rejection-section">
+              <h3 className="b2b-quotation-details-section-title">
+                <span className="b2b-quotation-details-section-icon">❌</span>
                 Rejection Reason
               </h3>
-              <p className="rejection-message">{quotation.responseMessage}</p>
+              <p className="b2b-quotation-details-rejection-message">
+                {quotation.responseMessage}
+              </p>
             </div>
           )}
         </div>
 
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
+        <div className="b2b-quotation-details-modal-footer">
+          <button
+            className="b2b-quotation-details-btn b2b-quotation-details-btn-secondary"
+            onClick={onClose}
+          >
             Close
           </button>
         </div>

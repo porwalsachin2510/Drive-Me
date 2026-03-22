@@ -91,21 +91,23 @@ function B2B_Settings() {
 
   if (loading || !dataLoaded) {
     return (
-      <div className="b2b-settings">
-        <div className="loading">Loading settings...</div>
+      <div className="b2b-operator-dashboard-b2b-settings">
+        <div className="b2b-operator-dashboard-loading">
+          Loading settings...
+        </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="b2b-settings">
-      <div className="b2b-settings-grid">
-        <div className="b2b-settings-section">
-          <div className="b2b-section-header">
-            <div className="b2b-section-icon">🏢</div>
+    <div className="b2b-operator-dashboard-b2b-settings">
+      <div className="b2b-operator-dashboard-b2b-settings-grid">
+        <div className="b2b-operator-dashboard-b2b-settings-section">
+          <div className="b2b-operator-dashboard-b2b-section-header">
+            <div className="b2b-operator-dashboard-b2b-section-icon">🏢</div>
             <h2>Company Profile</h2>
           </div>
-          <div className="b2b-form-group">
+          <div className="b2b-operator-dashboard-b2b-form-group">
             <label>Company Name</label>
             <input
               type="text"
@@ -115,7 +117,7 @@ function B2B_Settings() {
               placeholder="Enter company name"
             />
           </div>
-          <div className="b2b-form-group">
+          <div className="b2b-operator-dashboard-b2b-form-group">
             <label>Trade License</label>
             <input
               type="text"
@@ -125,7 +127,7 @@ function B2B_Settings() {
               placeholder="Enter trade license number"
             />
           </div>
-          <div className="b2b-form-group">
+          <div className="b2b-operator-dashboard-b2b-form-group">
             <label>Office Address</label>
             <textarea
               name="officeAddress"
@@ -135,7 +137,7 @@ function B2B_Settings() {
               rows={3}
             />
           </div>
-          <div className="b2b-form-group">
+          <div className="b2b-operator-dashboard-b2b-form-group">
             <label>Email</label>
             <input
               type="email"
@@ -145,7 +147,7 @@ function B2B_Settings() {
               placeholder="Enter email address"
             />
           </div>
-          <div className="b2b-form-group">
+          <div className="b2b-operator-dashboard-b2b-form-group">
             <label>Phone</label>
             <input
               type="tel"
@@ -155,7 +157,7 @@ function B2B_Settings() {
               placeholder="Enter phone number"
             />
           </div>
-          <div className="b2b-form-group">
+          <div className="b2b-operator-dashboard-b2b-form-group">
             <label>Website</label>
             <input
               type="url"
@@ -167,63 +169,63 @@ function B2B_Settings() {
           </div>
         </div>
 
-        <div className="b2b-settings-section">
-          <div className="b2b-section-header">
-            <div className="b2b-section-icon">🔔</div>
+        <div className="b2b-operator-dashboard-b2b-settings-section">
+          <div className="b2b-operator-dashboard-b2b-section-header">
+            <div className="b2b-operator-dashboard-b2b-section-icon">🔔</div>
             <h2>Notification Preferences</h2>
           </div>
-          <div className="b2b-notification-item">
-            <label className="b2b-switch">
+          <div className="b2b-operator-dashboard-b2b-notification-item">
+            <label className="b2b-operator-dashboard-b2b-switch">
               <input
                 type="checkbox"
                 checked={notifications.contracts}
                 onChange={() => handleNotificationChange("contracts")}
               />
-              <span className="b2b-slider"></span>
+              <span className="b2b-operator-dashboard-b2b-slider"></span>
             </label>
-            <div className="b2b-notification-info">
+            <div className="b2b-operator-dashboard-b2b-notification-info">
               <h4>Contract Notifications</h4>
               <p>Get notified about new contracts and renewals</p>
             </div>
           </div>
-          <div className="b2b-notification-item">
-            <label className="b2b-switch">
+          <div className="b2b-operator-dashboard-b2b-notification-item">
+            <label className="b2b-operator-dashboard-b2b-switch">
               <input
                 type="checkbox"
                 checked={notifications.maintenance}
                 onChange={() => handleNotificationChange("maintenance")}
               />
-              <span className="b2b-slider"></span>
+              <span className="b2b-operator-dashboard-b2b-slider"></span>
             </label>
-            <div className="b2b-notification-info">
+            <div className="b2b-operator-dashboard-b2b-notification-info">
               <h4>Maintenance Alerts</h4>
               <p>Receive alerts for vehicle maintenance schedules</p>
             </div>
           </div>
-          <div className="b2b-notification-item">
-            <label className="b2b-switch">
+          <div className="b2b-operator-dashboard-b2b-notification-item">
+            <label className="b2b-operator-dashboard-b2b-switch">
               <input
                 type="checkbox"
                 checked={notifications.drivers}
                 onChange={() => handleNotificationChange("drivers")}
               />
-              <span className="b2b-slider"></span>
+              <span className="b2b-operator-dashboard-b2b-slider"></span>
             </label>
-            <div className="b2b-notification-info">
+            <div className="b2b-operator-dashboard-b2b-notification-info">
               <h4>Driver Updates</h4>
               <p>Get updates about driver availability and performance</p>
             </div>
           </div>
-          <div className="b2b-notification-item">
-            <label className="b2b-switch">
+          <div className="b2b-operator-dashboard-b2b-notification-item">
+            <label className="b2b-operator-dashboard-b2b-switch">
               <input
                 type="checkbox"
                 checked={notifications.marketing}
                 onChange={() => handleNotificationChange("marketing")}
               />
-              <span className="b2b-slider"></span>
+              <span className="b2b-operator-dashboard-b2b-slider"></span>
             </label>
-            <div className="b2b-notification-info">
+            <div className="b2b-operator-dashboard-b2b-notification-info">
               <h4>Marketing Communications</h4>
               <p>Receive promotional offers and platform updates</p>
             </div>
@@ -231,9 +233,9 @@ function B2B_Settings() {
         </div>
       </div>
 
-      <div className="b2b-settings-actions">
-        <button 
-          className="b2b-save-btn" 
+      <div className="b2b-operator-dashboard-b2b-settings-actions">
+        <button
+          className="b2b-operator-dashboard-b2b-save-btn"
           onClick={handleSave}
           disabled={saving}
         >
@@ -241,7 +243,7 @@ function B2B_Settings() {
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 export default B2B_Settings

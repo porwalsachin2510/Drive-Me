@@ -1,4 +1,4 @@
-.metrics-card {
+.drivemego-b2b-metrics-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -8,18 +8,18 @@
   border: 1px solid #e8e8e8;
 }
 
-.metrics-icon {
+.drivemego-b2b-metrics-icon {
   font-size: 32px;
   width: 48px;
 }
 
-.metrics-content {
+.drivemego-b2b-metrics-content {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.metrics-label {
+.drivemego-b2b-metrics-label {
   font-size: 11px;
   color: #999999;
   text-transform: uppercase;
@@ -27,7 +27,7 @@
   margin: 0;
 }
 
-.metrics-value {
+.drivemego-b2b-metrics-value {
   font-size: 24px;
   font-weight: 700;
   color: #000000;
@@ -35,25 +35,25 @@
 }
 
 @media (max-width: 768px) {
-  .metrics-card {
+  .drivemego-b2b-metrics-card {
     padding: 16px;
   }
 
-  .metrics-label {
+  .drivemego-b2b-metrics-label {
     font-size: 10px;
   }
 
-  .metrics-value {
+  .drivemego-b2b-metrics-value {
     font-size: 20px;
   }
 }
 
 @media (max-width: 480px) {
-  .metrics-card {
+  .drivemego-b2b-metrics-card {
     padding: 12px;
   }
 
-  .metrics-value {
+  .drivemego-b2b-metrics-value {
     font-size: 18px;
   }
 }

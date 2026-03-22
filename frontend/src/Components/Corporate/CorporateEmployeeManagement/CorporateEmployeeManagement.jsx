@@ -334,62 +334,69 @@ function CorporateEmployeeManagement() {
     switch (activeTab) {
       case "list":
         return (
-          <div className="employee-list">
-            <div className="list-header">
-              <div className="search-filters">
+          <div className="drivemego-manage-employee-list">
+            <div className="drivemego-manage-list-header">
+              <div className="drivemego-manage-search-filters">
                 <input
                   type="text"
                   placeholder="Search employees..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="search-input"
+                  className="drivemego-manage-search-input"
                 />
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="filter-select"
+                  className="drivemego-manage-filter-select"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
-              <div className="action-buttons">
+              <div className="drivemego-manage-action-buttons">
                 <button
-                  className="btn btn-primary"
+                  className="drivemego-manage-btn drivemego-manage-btn-primary"
                   onClick={() => setShowAddModal(true)}
                 >
                   + Add Employee
                 </button>
                 <button
-                  className="btn btn-secondary"
+                  className="drivemego-manage-btn drivemego-manage-btn-secondary"
                   onClick={() => setShowBulkUploadModal(true)}
                 >
                   Bulk Upload
                 </button>
                 {selectedEmployeeIds.length > 0 && (
                   <button
-                    className="btn btn-success"
+                    className="drivemego-manage-btn drivemego-manage-btn-success"
                     onClick={handleSendInvitations}
                     disabled={sendingInvitations}
                   >
-                    {sendingInvitations ? "Sending..." : `Send Invitations (${selectedEmployeeIds.length})`}
+                    {sendingInvitations
+                      ? "Sending..."
+                      : `Send Invitations (${selectedEmployeeIds.length})`}
                   </button>
                 )}
               </div>
             </div>
 
             {loading ? (
-              <div className="loading">Loading employees...</div>
+              <div className="drivemego-manage-loading">
+                Loading employees...
+              </div>
             ) : (
-              <div className="employees-table">
+              <div className="drivemego-manage-employees-table">
                 <table>
                   <thead>
                     <tr>
                       <th>
                         <input
                           type="checkbox"
-                          checked={selectedEmployeeIds.length === employees.length && employees.length > 0}
+                          checked={
+                            selectedEmployeeIds.length === employees.length &&
+                            employees.length > 0
+                          }
                           onChange={toggleSelectAll}
                         />
                       </th>
@@ -406,7 +413,14 @@ function CorporateEmployeeManagement() {
                   <tbody>
                     {employees.length === 0 ? (
                       <tr>
-                        <td colSpan="9" style={{ textAlign: "center", padding: "20px", color: "#888" }}>
+                        <td
+                          colSpan="9"
+                          style={{
+                            textAlign: "center",
+                            padding: "20px",
+                            color: "#888",
+                          }}
+                        >
                           No employees found. Add employees to get started.
                         </td>
                       </tr>
@@ -418,8 +432,12 @@ function CorporateEmployeeManagement() {
                             <td>
                               <input
                                 type="checkbox"
-                                checked={selectedEmployeeIds.includes(employee._id)}
-                                onChange={() => toggleEmployeeSelection(employee._id)}
+                                checked={selectedEmployeeIds.includes(
+                                  employee._id,
+                                )}
+                                onChange={() =>
+                                  toggleEmployeeSelection(employee._id)
+                                }
                               />
                             </td>
                             <td>{getEmployeeName(employee)}</td>
@@ -429,21 +447,25 @@ function CorporateEmployeeManagement() {
                             <td>{getEmployeeDesignation(employee)}</td>
                             <td>{getEmployeeRoute(employee)}</td>
                             <td>
-                              <span className={`status-badge ${isActive ? 'active' : 'inactive'}`}>
-                                {isActive ? 'Active' : 'Inactive'}
+                              <span
+                                className={`drivemego-manage-status-badge ${isActive ? "drivemego-manage-active" : "drivemego-manage-inactive"}`}
+                              >
+                                {isActive ? "Active" : "Inactive"}
                               </span>
                             </td>
                             <td>
-                              <div className="action-buttons">
+                              <div className="drivemego-manage-action-buttons">
                                 <button
-                                  className="btn btn-sm btn-info"
+                                  className="drivemego-manage-btn drivemego-manage-btn-sm drivemego-manage-btn-info"
                                   onClick={() => setSelectedEmployee(employee)}
                                 >
                                   View
                                 </button>
                                 <button
-                                  className="btn btn-sm btn-danger"
-                                  onClick={() => handleDeleteEmployee(employee._id)}
+                                  className="drivemego-manage-btn drivemego-manage-btn-sm drivemego-manage-btn-danger"
+                                  onClick={() =>
+                                    handleDeleteEmployee(employee._id)
+                                  }
                                 >
                                   Delete
                                 </button>
@@ -459,7 +481,7 @@ function CorporateEmployeeManagement() {
             )}
 
             {totalPages > 1 && (
-              <div className="pagination">
+              <div className="drivemego-manage-pagination">
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(currentPage - 1)}
@@ -486,12 +508,12 @@ function CorporateEmployeeManagement() {
   };
 
   return (
-    <div className="corporate-employee-management">
-      <div className="management-header">
+    <div className="drivemego-manage-corporate-employee-management">
+      <div className="drivemego-manage-management-header">
         <h2>Employee Management</h2>
-        <div className="tab-navigation">
+        <div className="drivemego-manage-tab-navigation">
           <button
-            className={`tab-btn ${activeTab === "list" ? "active" : ""}`}
+            className={`drivemego-manage-tab-btn ${activeTab === "list" ? "drivemego-manage-active" : ""}`}
             onClick={() => setActiveTab("list")}
           >
             Employee List
@@ -499,25 +521,30 @@ function CorporateEmployeeManagement() {
         </div>
       </div>
 
-      <div className="management-content">{renderContent()}</div>
+      <div className="drivemego-manage-management-content">
+        {renderContent()}
+      </div>
 
       {/* Add Employee Modal */}
       {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="drivemego-manage-modal-overlay">
+          <div className="drivemego-manage-modal">
+            <div className="drivemego-manage-modal-header">
               <h3>Add New Employee</h3>
               <button
-                className="close-btn"
+                className="drivemego-manage-close-btn"
                 onClick={() => setShowAddModal(false)}
               >
                 ×
               </button>
             </div>
-            <form onSubmit={handleAddEmployee} className="modal-form">
-              <div className="form-section">
+            <form
+              onSubmit={handleAddEmployee}
+              className="drivemego-manage-modal-form"
+            >
+              <div className="drivemego-manage-form-section">
                 <h4>Personal Information</h4>
-                <div className="form-row">
+                <div className="drivemego-manage-form-row">
                   <input
                     type="text"
                     placeholder="First Name"
@@ -549,7 +576,7 @@ function CorporateEmployeeManagement() {
                     required
                   />
                 </div>
-                <div className="form-row">
+                <div className="drivemego-manage-form-row">
                   <input
                     type="email"
                     placeholder="Email"
@@ -581,7 +608,7 @@ function CorporateEmployeeManagement() {
                     required
                   />
                 </div>
-                <div className="form-row">
+                <div className="drivemego-manage-form-row">
                   <input
                     type="text"
                     placeholder="Department"
@@ -611,7 +638,7 @@ function CorporateEmployeeManagement() {
                     }
                   />
                 </div>
-                <div className="form-row">
+                <div className="drivemego-manage-form-row">
                   <input
                     type="text"
                     placeholder="Work Location"
@@ -629,9 +656,9 @@ function CorporateEmployeeManagement() {
                 </div>
               </div>
 
-              <div className="form-section">
+              <div className="drivemego-manage-form-section">
                 <h4>Transport Details</h4>
-                <div className="form-row">
+                <div className="drivemego-manage-form-row">
                   <select
                     value={employeeForm.transportDetails.assignedRoute}
                     onChange={(e) =>
@@ -670,7 +697,7 @@ function CorporateEmployeeManagement() {
                     <option value="NIGHT">Night</option>
                   </select>
                 </div>
-                <div className="form-row">
+                <div className="drivemego-manage-form-row">
                   <input
                     type="text"
                     placeholder="Pickup Point"
@@ -702,17 +729,17 @@ function CorporateEmployeeManagement() {
                 </div>
               </div>
 
-              <div className="modal-actions">
+              <div className="drivemego-manage-modal-actions">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="drivemego-manage-btn drivemego-manage-btn-secondary"
                   onClick={() => setShowAddModal(false)}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="drivemego-manage-btn drivemego-manage-btn-primary"
                   disabled={loading}
                 >
                   {loading ? "Adding..." : "Add Employee"}
@@ -725,19 +752,19 @@ function CorporateEmployeeManagement() {
 
       {/* Bulk Upload Modal */}
       {showBulkUploadModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="drivemego-manage-modal-overlay">
+          <div className="drivemego-manage-modal">
+            <div className="drivemego-manage-modal-header">
               <h3>Bulk Upload Employees</h3>
               <button
-                className="close-btn"
+                className="drivemego-manage-close-btn"
                 onClick={() => setShowBulkUploadModal(false)}
               >
                 ×
               </button>
             </div>
-            <div className="modal-content">
-              <div className="bulk-upload-instructions">
+            <div className="drivemego-manage-modal-content">
+              <div className="drivemego-manage-bulk-upload-instructions">
                 <h4>Instructions:</h4>
                 <ol>
                   <li>Download the sample template below</li>
@@ -746,15 +773,18 @@ function CorporateEmployeeManagement() {
                 </ol>
                 <button
                   type="button"
-                  className="btn btn-info"
+                  className="drivemego-manage-btn drivemego-manage-btn-info"
                   onClick={downloadSampleTemplate}
                 >
                   📥 Download Sample Template
                 </button>
               </div>
 
-              <form onSubmit={handleBulkUpload} className="modal-form">
-                <div className="form-group">
+              <form
+                onSubmit={handleBulkUpload}
+                className="drivemego-manage-modal-form"
+              >
+                <div className="drivemego-manage-form-group">
                   <label>Upload JSON File</label>
                   <input
                     type="file"
@@ -765,22 +795,25 @@ function CorporateEmployeeManagement() {
                 </div>
 
                 {bulkUploadData.employees.length > 0 && (
-                  <div className="upload-preview">
+                  <div className="drivemego-manage-upload-preview">
                     <h4>
                       Preview ({bulkUploadData.employees.length} employees)
                     </h4>
-                    <div className="preview-list">
+                    <div className="drivemego-manage-preview-list">
                       {bulkUploadData.employees
                         .slice(0, 5)
                         .map((emp, index) => (
-                          <div key={index} className="preview-item">
+                          <div
+                            key={index}
+                            className="drivemego-manage-preview-item"
+                          >
                             {emp.fullName ||
                               `${emp.personalInfo?.firstName || ""} ${emp.personalInfo?.lastName || ""}`}{" "}
                             - {emp.email || emp.personalInfo?.email || "N/A"}
                           </div>
                         ))}
                       {bulkUploadData.employees.length > 5 && (
-                        <div className="preview-item">
+                        <div className="drivemego-manage-preview-item">
                           ... and {bulkUploadData.employees.length - 5} more
                         </div>
                       )}
@@ -788,17 +821,17 @@ function CorporateEmployeeManagement() {
                   </div>
                 )}
 
-                <div className="modal-actions">
+                <div className="drivemego-manage-modal-actions">
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="drivemego-manage-btn drivemego-manage-btn-secondary"
                     onClick={() => setShowBulkUploadModal(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary"
+                    className="drivemego-manage-btn drivemego-manage-btn-primary"
                     disabled={loading || bulkUploadData.employees.length === 0}
                   >
                     {loading ? "Uploading..." : "Upload Employees"}

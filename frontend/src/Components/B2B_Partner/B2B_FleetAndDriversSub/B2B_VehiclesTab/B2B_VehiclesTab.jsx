@@ -76,8 +76,10 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
 
   if (!vehicles || vehicles.length === 0) {
     return (
-      <div className="no-vehicles">
-        <div className="no-vehicles-icon">🚗</div>
+      <div className="b2b-operator-dashboard-vehicles-tab-no-vehicles">
+        <div className="b2b-operator-dashboard-vehicles-tab-no-vehicles-icon">
+          🚗
+        </div>
         <h3>No Vehicles Added</h3>
         <p>Start by adding your first vehicle to your fleet.</p>
       </div>
@@ -85,128 +87,170 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
   }
 
   return (
-    <div className="vehicles-grid">
+    <div className="b2b-operator-dashboard-vehicles-tab-vehicles-grid">
       {vehicles.map((vehicle) => {
         const isExpanded = expandedCards[vehicle._id];
-        
+
         return (
-        <div key={vehicle._id} className={`vehicle-card ${isExpanded ? 'expanded' : ''}`}>
-          <div className="vehicle-header">
-            <div className="vehicle-icon">{getVehicleIcon(vehicle.vehicleCategory)}</div>
-            <span className={`status-badge ${getStatusColor(vehicle.status)}`}>
-              {vehicle.status?.toLowerCase() || 'available'}
-            </span>
-          </div>
-          <h3 className="vehicle-name">{vehicle.vehicleName || 'Unknown Vehicle'}</h3>
-          <p className="vehicle-plate">
-            {vehicle.registrationNumber || 'N/A'} • {vehicle.manufacturingYear || 'N/A'}
-          </p>
-
-          {/* Expand/Collapse Toggle */}
-          <button 
-            className="expand-toggle-btn"
-            onClick={() => toggleExpand(vehicle._id)}
+          <div
+            key={vehicle._id}
+            className={`b2b-operator-dashboard-vehicles-tab-vehicle-card ${isExpanded ? "b2b-operator-dashboard-vehicles-tab-expanded" : ""}`}
           >
-            {isExpanded ? (
-              <>Hide Details <FiChevronUp /></>
-            ) : (
-              <>View Details <FiChevronDown /></>
-            )}
-          </button>
+            <div className="b2b-operator-dashboard-vehicles-tab-vehicle-header">
+              <div className="b2b-operator-dashboard-vehicles-tab-vehicle-icon">
+                {getVehicleIcon(vehicle.vehicleCategory)}
+              </div>
+              <span
+                className={`b2b-operator-dashboard-vehicles-tab-status-badge ${getStatusColor(vehicle.status)}`}
+              >
+                {vehicle.status?.toLowerCase() || "available"}
+              </span>
+            </div>
+            <h3 className="b2b-operator-dashboard-vehicles-tab-vehicle-name">
+              {vehicle.vehicleName || "Unknown Vehicle"}
+            </h3>
+            <p className="b2b-operator-dashboard-vehicles-tab-vehicle-plate">
+              {vehicle.registrationNumber || "N/A"} •{" "}
+              {vehicle.manufacturingYear || "N/A"}
+            </p>
 
-          {/* Expandable Details Section */}
-          <div className={`vehicle-details ${isExpanded ? 'expanded' : 'collapsed'}`}>
-            <div className="detail-row">
-              <span className="detail-label">Category</span>
-              <span className="detail-value">{vehicle.vehicleCategory?.replace(/_/g, ' ') || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Capacity</span>
-              <span className="detail-value">{vehicle.capacity?.seatingCapacity || 0} seats</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Service</span>
-              <span className="detail-value">{vehicle.serviceType || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Location</span>
-              <span className="detail-value">{vehicle.location || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Daily Rate</span>
-              <span className="detail-value">{vehicle.pricing?.dailyRate || 0} KWD</span>
-            </div>
-          </div>
-
-          <div className="vehicle-actions">
-            {vehicle.status === 'MAINTENANCE' ? (
-              <button 
-                className="action-btn activate" 
-                onClick={() => handleStatusUpdate(vehicle._id, 'AVAILABLE')}
-                disabled={loading[vehicle._id]}
-              >
-                {loading[vehicle._id] ? 'Activating...' : '✅ Activate'}
-              </button>
-            ) : (
-              <button 
-                className="action-btn maintenance" 
-                onClick={() => handleStatusUpdate(vehicle._id, 'MAINTENANCE')}
-                disabled={loading[vehicle._id]}
-              >
-                {loading[vehicle._id] ? 'Updating...' : '⚡ Maintenance'}
-              </button>
-            )}
-            <div className="action-dropdown">
-              <button 
-                className="action-btn-more" 
-                onClick={() => toggleActions(vehicle._id)}
-              >
-                ⋯
-              </button>
-              {showActions[vehicle._id] && (
-                <div className="dropdown-menu">
-                  <button 
-                    className="dropdown-item"
-                    onClick={() => handleStatusUpdate(vehicle._id, 'AVAILABLE')}
-                  >
-                    ✅ Set Available
-                  </button>
-                  <button 
-                    className="dropdown-item"
-                    onClick={() => handleStatusUpdate(vehicle._id, 'MAINTENANCE')}
-                  >
-                    🔧 Set Maintenance
-                  </button>
-                  <button 
-                    className="dropdown-item"
-                    onClick={() => handleStatusUpdate(vehicle._id, 'UNAVAILABLE')}
-                  >
-                    ❌ Set Unavailable
-                  </button>
-                  <button 
-                    className="dropdown-item"
-                    onClick={() => {
-                      alert('Edit vehicle functionality coming soon!');
-                      toggleActions(vehicle._id);
-                    }}
-                  >
-                    ✏️ Edit Vehicle
-                  </button>
-                  <button 
-                    className="dropdown-item"
-                    onClick={() => {
-                      alert('Delete vehicle functionality coming soon!');
-                      toggleActions(vehicle._id);
-                    }}
-                  >
-                    🗑️ Delete Vehicle
-                  </button>
-                </div>
+            {/* Expand/Collapse Toggle */}
+            <button
+              className="b2b-operator-dashboard-vehicles-tab-expand-toggle-btn"
+              onClick={() => toggleExpand(vehicle._id)}
+            >
+              {isExpanded ? (
+                <>
+                  Hide Details <FiChevronUp />
+                </>
+              ) : (
+                <>
+                  View Details <FiChevronDown />
+                </>
               )}
+            </button>
+
+            {/* Expandable Details Section */}
+            <div
+              className={`b2b-operator-dashboard-vehicles-tab-vehicle-details ${isExpanded ? "b2b-operator-dashboard-vehicles-tab-expanded" : "b2b-operator-dashboard-vehicles-tab-collapsed"}`}
+            >
+              <div className="b2b-operator-dashboard-vehicles-tab-detail-row">
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-label">
+                  Category
+                </span>
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-value">
+                  {vehicle.vehicleCategory?.replace(/_/g, " ") || "N/A"}
+                </span>
+              </div>
+              <div className="b2b-operator-dashboard-vehicles-tab-detail-row">
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-label">
+                  Capacity
+                </span>
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-value">
+                  {vehicle.capacity?.seatingCapacity || 0} seats
+                </span>
+              </div>
+              <div className="b2b-operator-dashboard-vehicles-tab-detail-row">
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-label">
+                  Service
+                </span>
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-value">
+                  {vehicle.serviceType || "N/A"}
+                </span>
+              </div>
+              <div className="b2b-operator-dashboard-vehicles-tab-detail-row">
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-label">
+                  Location
+                </span>
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-value">
+                  {vehicle.location || "N/A"}
+                </span>
+              </div>
+              <div className="b2b-operator-dashboard-vehicles-tab-detail-row">
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-label">
+                  Daily Rate
+                </span>
+                <span className="b2b-operator-dashboard-vehicles-tab-detail-value">
+                  {vehicle.pricing?.dailyRate || 0} KWD
+                </span>
+              </div>
+            </div>
+
+            <div className="b2b-operator-dashboard-vehicles-tab-vehicle-actions">
+              {vehicle.status === "MAINTENANCE" ? (
+                <button
+                  className="b2b-operator-dashboard-vehicles-tab-action-btn b2b-operator-dashboard-vehicles-tab-activate"
+                  onClick={() => handleStatusUpdate(vehicle._id, "AVAILABLE")}
+                  disabled={loading[vehicle._id]}
+                >
+                  {loading[vehicle._id] ? "Activating..." : "✅ Activate"}
+                </button>
+              ) : (
+                <button
+                  className="b2b-operator-dashboard-vehicles-tab-action-btn b2b-operator-dashboard-vehicles-tab-maintenance"
+                  onClick={() => handleStatusUpdate(vehicle._id, "MAINTENANCE")}
+                  disabled={loading[vehicle._id]}
+                >
+                  {loading[vehicle._id] ? "Updating..." : "⚡ Maintenance"}
+                </button>
+              )}
+              <div className="b2b-operator-dashboard-vehicles-tab-action-dropdown">
+                <button
+                  className="b2b-operator-dashboard-vehicles-tab-action-btn-more"
+                  onClick={() => toggleActions(vehicle._id)}
+                >
+                  ⋯
+                </button>
+                {showActions[vehicle._id] && (
+                  <div className="b2b-operator-dashboard-vehicles-tab-dropdown-menu">
+                    <button
+                      className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                      onClick={() =>
+                        handleStatusUpdate(vehicle._id, "AVAILABLE")
+                      }
+                    >
+                      ✅ Set Available
+                    </button>
+                    <button
+                      className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                      onClick={() =>
+                        handleStatusUpdate(vehicle._id, "MAINTENANCE")
+                      }
+                    >
+                      🔧 Set Maintenance
+                    </button>
+                    <button
+                      className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                      onClick={() =>
+                        handleStatusUpdate(vehicle._id, "UNAVAILABLE")
+                      }
+                    >
+                      ❌ Set Unavailable
+                    </button>
+                    <button
+                      className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                      onClick={() => {
+                        alert("Edit vehicle functionality coming soon!");
+                        toggleActions(vehicle._id);
+                      }}
+                    >
+                      ✏️ Edit Vehicle
+                    </button>
+                    <button
+                      className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                      onClick={() => {
+                        alert("Delete vehicle functionality coming soon!");
+                        toggleActions(vehicle._id);
+                      }}
+                    >
+                      🗑️ Delete Vehicle
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      );
+        );
       })}
     </div>
   );

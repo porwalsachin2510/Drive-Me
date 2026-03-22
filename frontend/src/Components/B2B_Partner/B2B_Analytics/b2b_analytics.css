@@ -1,30 +1,30 @@
-.analytics {
+.drivemego-b2b_analytics-analytics {
   display: flex;
   flex-direction: column;
   gap: 32px;
 }
 
-.financial-performance {
+.drivemego-b2b_analytics-financial-performance {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.section-title {
+.drivemego-b2b_analytics-section-title {
   font-size: 20px;
   font-weight: 700;
   color: #000000;
   margin: 0;
 }
 
-.analytics-header {
+.drivemego-b2b_analytics-analytics-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
 }
 
-.period-selector {
+.drivemego-b2b_analytics-period-selector {
   padding: 8px 12px;
   border: 1px solid #e8e8e8;
   border-radius: 6px;
@@ -32,26 +32,28 @@
   color: #333333;
   background-color: #ffffff;
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
-.period-selector:focus {
+.drivemego-b2b_analytics-period-selector:focus {
   outline: none;
   border-color: #16a085;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
 
-.period-selector:hover {
+.drivemego-b2b_analytics-period-selector:hover {
   border-color: #16a085;
 }
 
-.metric-cards {
+.drivemego-b2b_analytics-metric-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-.metric-card {
+.drivemego-b2b_analytics-metric-card {
   display: flex;
   align-items: flex-start;
   gap: 16px;
@@ -61,7 +63,7 @@
   border: 1px solid #e8e8e8;
 }
 
-.metric-icon {
+.drivemego-b2b_analytics-metric-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,91 +74,129 @@
   flex-shrink: 0;
 }
 
-.metric-content {
+.drivemego-b2b_analytics-metric-content {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.metric-label {
+.drivemego-b2b_analytics-metric-label {
   font-size: 12px;
   color: #999999;
   margin: 0;
 }
 
-.metric-value {
+.drivemego-b2b_analytics-metric-value {
   font-size: 24px;
   font-weight: 700;
   color: #000000;
   margin: 0;
 }
 
-.metric-change {
+.drivemego-b2b_analytics-metric-change {
   font-size: 12px;
   color: #4caf50;
   margin: 0;
 }
 
-.b2b-charts-section {
+.drivemego-b2b_analytics-b2b-charts-section {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 32px;
 }
 
-.b2b-chart-container {
+.drivemego-b2b_analytics-b2b-chart-container {
   padding: 20px;
   background-color: #ffffff;
   border-radius: 8px;
   border: 1px solid #e8e8e8;
 }
 
-.b2b-chart-container h3 {
+.drivemego-b2b_analytics-b2b-chart-container h3 {
   margin: 0 0 20px 0;
   font-size: 16px;
   font-weight: 600;
   color: #000000;
 }
 
+.drivemego-b2b_analytics-detailed-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drivemego-b2b_analytics-detailed-metrics h3{
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.drivemego-b2b_analytics-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.drivemego-b2b_analytics-metric-item{
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ justify-content: center;
+}
+
+.drivemego-b2b_analytics-chart-container{
+display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drivemego-b2b_analytics-chart-container h3{
+  font-size: 18px;
+  font-weight: 600;
+}
+
 @media (max-width: 1200px) {
-  .metric-cards {
+  .drivemego-b2b_analytics-metric-cards {
     grid-template-columns: 1fr;
   }
 
-  .b2b-charts-section {
+  .drivemego-b2b_analytics-b2b-charts-section {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .metric-cards {
+  .drivemego-b2b_analytics-metric-cards {
     grid-template-columns: 1fr;
   }
 
-  .b2b-charts-section {
+  .drivemego-b2b_analytics-b2b-charts-section {
     grid-template-columns: 1fr;
     gap: 20px;
   }
 
-  .metric-card {
+  .drivemego-b2b_analytics-metric-card {
     gap: 12px;
     padding: 16px;
   }
 
-  .b2b-chart-container {
+  .drivemego-b2b_analytics-b2b-chart-container {
     padding: 16px;
   }
 }
 
 @media (max-width: 480px) {
-  .section-title {
+  .drivemego-b2b_analytics-section-title {
     font-size: 18px;
   }
 
-  .metric-value {
+  .drivemego-b2b_analytics-metric-value {
     font-size: 20px;
   }
 
-  .metric-label {
+  .drivemego-b2b_analytics-metric-label {
     font-size: 11px;
   }
 }

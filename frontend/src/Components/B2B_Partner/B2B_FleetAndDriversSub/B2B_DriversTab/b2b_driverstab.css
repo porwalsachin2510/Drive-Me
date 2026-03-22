@@ -1,10 +1,10 @@
-.drivers-grid {
+.b2b-operator-dashboard-drivers-tab-drivers-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-.no-drivers {
+.b2b-operator-dashboard-drivers-tab-no-drivers {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -16,26 +16,26 @@
   border: 2px dashed #d1d5db;
 }
 
-.no-drivers-icon {
+.b2b-operator-dashboard-drivers-tab-no-drivers-icon {
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
 }
 
-.no-drivers h3 {
+.b2b-operator-dashboard-drivers-tab-no-drivers h3 {
   margin: 0 0 8px 0;
   color: #374151;
   font-size: 18px;
   font-weight: 600;
 }
 
-.no-drivers p {
+.b2b-operator-dashboard-drivers-tab-no-drivers p {
   margin: 0;
   color: #6b7280;
   font-size: 14px;
 }
 
-.driver-card {
+.b2b-operator-dashboard-drivers-tab-driver-card {
   padding: 20px;
   background-color: #ffffff;
   border-radius: 8px;
@@ -48,11 +48,11 @@
   transition: box-shadow 0.2s;
 }
 
-.driver-card:hover {
+.b2b-operator-dashboard-drivers-tab-driver-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.driver-avatar {
+.b2b-operator-dashboard-drivers-tab-driver-avatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -65,20 +65,20 @@
   color: #16a085;
 }
 
-.driver-name {
+.b2b-operator-dashboard-drivers-tab-driver-name {
   font-size: 15px;
   font-weight: 700;
   color: #000000;
   margin: 0;
 }
 
-.driver-id {
+.b2b-operator-dashboard-drivers-tab-driver-id {
   font-size: 12px;
   color: #999999;
   margin: 0;
 }
 
-.driver-status {
+.b2b-operator-dashboard-drivers-tab-driver-status {
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 11px;
@@ -86,23 +86,23 @@
   display: inline-block;
 }
 
-.driver-status.on-trip {
+.b2b-operator-dashboard-drivers-tab-driver-status.b2b-operator-dashboard-drivers-tab-on-trip {
   background-color: #e8f5e9;
   color: #4caf50;
 }
 
-.driver-status.available {
+.b2b-operator-dashboard-drivers-tab-driver-status.b2b-operator-dashboard-drivers-tab-available {
   background-color: #e8f5e9;
   color: #4caf50;
 }
 
-.driver-status.off-duty {
+.b2b-operator-dashboard-drivers-tab-driver-status.b2b-operator-dashboard-drivers-tab-off-duty {
   background-color: #f3e5f5;
   color: #9c27b0;
 }
 
 /* Expand/Collapse Toggle Button */
-.expand-toggle-btn {
+.b2b-operator-dashboard-drivers-tab-expand-toggle-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -120,17 +120,17 @@
   transition: all 0.2s ease;
 }
 
-.expand-toggle-btn:hover {
+.b2b-operator-dashboard-drivers-tab-expand-toggle-btn:hover {
   background: #e5e7eb;
   color: #374151;
 }
 
-.expand-toggle-btn svg {
+.b2b-operator-dashboard-drivers-tab-expand-toggle-btn svg {
   font-size: 16px;
   transition: transform 0.3s ease;
 }
 
-.driver-details {
+.b2b-operator-dashboard-drivers-tab-driver-details {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -142,35 +142,35 @@
   transition: all 0.3s ease;
 }
 
-.driver-details.collapsed {
+.b2b-operator-dashboard-drivers-tab-driver-details.b2b-operator-dashboard-drivers-tab-collapsed {
   max-height: 0;
   padding: 0;
   border: none;
   opacity: 0;
 }
 
-.driver-details.expanded {
+.b2b-operator-dashboard-drivers-tab-driver-details.b2b-operator-dashboard-drivers-tab-expanded {
   max-height: 500px;
   opacity: 1;
 }
 
-.rating-row,
-.detail-row {
+.b2b-operator-dashboard-drivers-tab-rating-row,
+.b2b-operator-dashboard-drivers-tab-detail-row {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
 }
 
-.label {
+.b2b-operator-dashboard-drivers-tab-label {
   color: #999999;
 }
 
-.value {
+.b2b-operator-dashboard-drivers-tab-value {
   color: #000000;
   font-weight: 600;
 }
 
-.view-profile-btn {
+.b2b-operator-dashboard-drivers-tab-view-profile-btn {
   width: 100%;
   padding: 10px;
   background-color: #ffffff;
@@ -183,44 +183,44 @@
   transition: all 0.2s;
 }
 
-.view-profile-btn:hover {
+.b2b-operator-dashboard-drivers-tab-view-profile-btn:hover {
   background-color: #f5f5f5;
 }
 
 @media (max-width: 1200px) {
-  .drivers-grid {
+  .b2b-operator-dashboard-drivers-tab-drivers-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .drivers-grid {
+  .b2b-operator-dashboard-drivers-tab-drivers-grid {
     grid-template-columns: 1fr;
   }
 
-  .driver-card {
+  .b2b-operator-dashboard-drivers-tab-driver-card {
     gap: 10px;
     padding: 16px;
   }
 }
 
 @media (max-width: 480px) {
-  .driver-name {
+  .b2b-operator-dashboard-drivers-tab-driver-name {
     font-size: 13px;
   }
 
-  .driver-id {
+  .b2b-operator-dashboard-drivers-tab-driver-id {
     font-size: 11px;
   }
 
-  .view-profile-btn {
+  .b2b-operator-dashboard-drivers-tab-view-profile-btn {
     font-size: 11px;
     padding: 8px;
   }
 }
 
 /* Driver Profile Modal */
-.driver-profile-modal-overlay {
+.b2b-operator-dashboard-drivers-tab-driver-profile-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -234,7 +234,7 @@
   padding: 20px;
 }
 
-.driver-profile-modal {
+.b2b-operator-dashboard-drivers-tab-driver-profile-modal {
   background: white;
   border-radius: 12px;
   width: 100%;
@@ -244,7 +244,7 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
-.driver-profile-modal-header {
+.b2b-operator-dashboard-drivers-tab-driver-profile-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -252,14 +252,14 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.driver-profile-modal-header h3 {
+.b2b-operator-dashboard-drivers-tab-driver-profile-modal-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: #111827;
 }
 
-.driver-profile-modal-header .close-btn {
+.b2b-operator-dashboard-drivers-tab-driver-profile-modal-header .b2b-operator-dashboard-drivers-tab-close-btn {
   background: none;
   border: none;
   font-size: 24px;
@@ -271,16 +271,16 @@
   transition: all 0.2s;
 }
 
-.driver-profile-modal-header .close-btn:hover {
+.b2b-operator-dashboard-drivers-tab-driver-profile-modal-header .b2b-operator-dashboard-drivers-tab-close-btn:hover {
   background: #f3f4f6;
   color: #111827;
 }
 
-.driver-profile-modal-body {
+.b2b-operator-dashboard-drivers-tab-driver-profile-modal-body {
   padding: 24px;
 }
 
-.driver-profile-avatar {
+.b2b-operator-dashboard-drivers-tab-driver-profile-avatar {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -289,7 +289,7 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.driver-profile-avatar .avatar-large {
+.b2b-operator-dashboard-drivers-tab-driver-profile-avatar .b2b-operator-dashboard-drivers-tab-avatar-large {
   width: 80px;
   height: 80px;
   border-radius: 50%;
@@ -303,25 +303,25 @@
   margin-bottom: 12px;
 }
 
-.driver-profile-avatar h2 {
+.b2b-operator-dashboard-drivers-tab-driver-profile-avatar h2 {
   margin: 0 0 8px 0;
   font-size: 20px;
   color: #111827;
 }
 
-.driver-profile-details {
+.b2b-operator-dashboard-drivers-tab-driver-profile-details {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.profile-section {
+.b2b-operator-dashboard-drivers-tab-profile-section {
   background: #f9fafb;
   border-radius: 8px;
   padding: 16px;
 }
 
-.profile-section h4 {
+.b2b-operator-dashboard-drivers-tab-profile-section h4 {
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
@@ -330,36 +330,36 @@
   letter-spacing: 0.5px;
 }
 
-.profile-row {
+.b2b-operator-dashboard-drivers-tab-profile-row {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.profile-row:last-child {
+.b2b-operator-dashboard-drivers-tab-profile-row:last-child {
   border-bottom: none;
 }
 
-.profile-row .label {
+.b2b-operator-dashboard-drivers-tab-profile-row .b2b-operator-dashboard-drivers-tab-label {
   color: #6b7280;
   font-size: 13px;
 }
 
-.profile-row .value {
+.b2b-operator-dashboard-drivers-tab-profile-row .b2b-operator-dashboard-drivers-tab-value {
   color: #111827;
   font-weight: 500;
   font-size: 13px;
 }
 
-.driver-profile-modal-footer {
+.b2b-operator-dashboard-drivers-tab-driver-profile-modal-footer {
   padding: 16px 24px;
   border-top: 1px solid #e5e7eb;
   display: flex;
   justify-content: flex-end;
 }
 
-.close-profile-btn {
+.b2b-operator-dashboard-drivers-tab-close-profile-btn {
   padding: 10px 24px;
   background: #111827;
   color: white;
@@ -371,6 +371,6 @@
   transition: all 0.2s;
 }
 
-.close-profile-btn:hover {
+.b2b-operator-dashboard-drivers-tab-close-profile-btn:hover {
   background: #374151;
 }

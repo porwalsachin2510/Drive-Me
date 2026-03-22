@@ -53,6 +53,7 @@ const QuotationDetails = () => {
           if (response.data.success && response.data.contract) {
             setExistingContract(response.data.contract);
           }
+        // eslint-disable-next-line no-unused-vars
         } catch (error) {
           // Contract doesn't exist yet - that's fine
           setExistingContract(null);
@@ -225,7 +226,7 @@ const QuotationDetails = () => {
         {/* Back Button */}
         <button
           className="single-quotation-back-button"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/corporate-profile?tab=my-quotations")}
         >
           ← Back to Quotations
         </button>
@@ -530,7 +531,7 @@ const QuotationDetails = () => {
                               </div>
                             </div>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
                   )}
@@ -602,7 +603,7 @@ const QuotationDetails = () => {
                     <span className="single-quotation-price-value">
                       KWD{" "}
                       {quotation.quotedPrice.breakdown?.vehicleRental?.toFixed(
-                        2
+                        2,
                       ) || "0.00"}
                     </span>
                   </div>
@@ -613,7 +614,7 @@ const QuotationDetails = () => {
                     <span className="single-quotation-price-value">
                       KWD{" "}
                       {quotation.quotedPrice.breakdown?.driverCharges?.toFixed(
-                        2
+                        2,
                       ) || "0.00"}
                     </span>
                   </div>
@@ -624,7 +625,7 @@ const QuotationDetails = () => {
                     <span className="single-quotation-price-value">
                       KWD{" "}
                       {quotation.quotedPrice.breakdown?.fuelCharges?.toFixed(
-                        2
+                        2,
                       ) || "0.00"}
                     </span>
                   </div>
@@ -647,7 +648,10 @@ const QuotationDetails = () => {
                       <a
                         href={`/corporate/contracts/${existingContract._id}`}
                         className="view-contract-link"
-                        style={{ color: "#007bff", textDecoration: "underline" }}
+                        style={{
+                          color: "#007bff",
+                          textDecoration: "underline",
+                        }}
                       >
                         View Contract Details
                       </a>
@@ -761,9 +765,18 @@ const QuotationDetails = () => {
               </div>
               <div className="single-quotation-modal-body">
                 <p>
-                  Current quoted price: <strong>KWD {quotedPrice.totalAmount?.toFixed(2) || "0.00"}</strong>
+                  Current quoted price:{" "}
+                  <strong>
+                    KWD {quotedPrice.totalAmount?.toFixed(2) || "0.00"}
+                  </strong>
                 </p>
-                <label style={{ display: "block", marginTop: "12px", fontWeight: "600" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginTop: "12px",
+                    fontWeight: "600",
+                  }}
+                >
                   Your Counter Offer (KWD):
                 </label>
                 <input
@@ -776,7 +789,13 @@ const QuotationDetails = () => {
                   value={negotiateAmount}
                   onChange={(e) => setNegotiateAmount(e.target.value)}
                 />
-                <label style={{ display: "block", marginTop: "12px", fontWeight: "600" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginTop: "12px",
+                    fontWeight: "600",
+                  }}
+                >
                   Message (optional):
                 </label>
                 <textarea

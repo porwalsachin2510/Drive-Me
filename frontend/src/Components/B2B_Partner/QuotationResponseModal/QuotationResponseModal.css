@@ -1,5 +1,31 @@
-.response-modal {
-  max-width: 900px;
+.drivemego-quotation-response-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.drivemego-quotation-response-modal-container {
+  background: white;
+  border-radius: 12px;
+  max-width: 1000px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.drivemego-quotation-response-response-modal {
+  max-width: 1000px;
 }
 
 .response-type-selector {
@@ -372,6 +398,40 @@
   background: #fef2f2;
   border-radius: 8px;
   border: 2px solid #ef4444;
+}
+
+.drivemego-quotation-response-modal-footer {
+  padding: 20px 30px;
+  border-top: 2px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f9fafb;
+}
+
+.drivemego-quotation-response-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.drivemego-quotation-response-btn-secondary {
+    background: #e0e0e0;
+    color: #2c3e50;
+}
+
+.drivemego-quotation-response-btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.drivemego-quotation-response-btn-danger {
+  background: #ef4444;
+  color: white;
 }
 
 @media (max-width: 768px) {

@@ -1,26 +1,49 @@
-.payment-verification {
+.drivemego-paymentverification-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.drivemego-paymentverification-modal {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.drivemego-paymentverification-payment-verification {
   width: 100%;
   padding: 24px;
 }
 
-.verification-header {
+.drivemego-paymentverification-verification-header {
   margin-bottom: 28px;
 }
 
-.verification-header h2 {
+.drivemego-paymentverification-verification-header h2 {
   font-size: 24px;
   font-weight: 700;
   color: #1e293b;
   margin: 0 0 20px 0;
 }
 
-.verification-stats {
+.drivemego-paymentverification-verification-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 16px;
 }
 
-.verification-stats .stat-card {
+.drivemego-paymentverification-verification-stats .drivemego-paymentverification-stat-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -32,18 +55,18 @@
   transition: box-shadow 0.2s;
 }
 
-.verification-stats .stat-card:hover {
+.drivemego-paymentverification-verification-stats .drivemego-paymentverification-stat-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
-.verification-stats .stat-number {
+.drivemego-paymentverification-verification-stats .drivemego-paymentverification-stat-number {
   font-size: 28px;
   font-weight: 700;
   color: #0891b2;
   line-height: 1.2;
 }
 
-.verification-stats .stat-label {
+.drivemego-paymentverification-verification-stats .drivemego-paymentverification-stat-label {
   font-size: 11px;
   font-weight: 600;
   color: #64748b;
@@ -53,12 +76,12 @@
 }
 
 /* Table */
-.payments-table {
+.drivemego-paymentverification-payments-table {
   overflow-x: auto;
   margin-bottom: 20px;
 }
 
-.payments-table table {
+.drivemego-paymentverification-payments-table table {
   width: 100%;
   border-collapse: collapse;
   background: #ffffff;
@@ -67,11 +90,11 @@
   border: 1px solid #e2e8f0;
 }
 
-.payments-table thead {
+.drivemego-paymentverification-payments-table thead {
   background: #f8fafc;
 }
 
-.payments-table th {
+.drivemego-paymentverification-payments-table th {
   padding: 12px 16px;
   text-align: left;
   font-size: 12px;
@@ -82,22 +105,22 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
-.payments-table td {
-  padding: 14px 16px;
+.drivemego-paymentverification-payments-table td {
+  padding: 14px 10px;
   font-size: 14px;
   color: #334155;
   border-bottom: 1px solid #f1f5f9;
 }
 
-.payments-table tbody tr:last-child td {
+.drivemego-paymentverification-payments-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.payments-table tbody tr:hover {
+.drivemego-paymentverification-payments-table tbody tr:hover {
   background: #f8fafc;
 }
 
-.status-badge {
+.drivemego-paymentverification-status-badge {
   display: inline-block;
   padding: 3px 10px;
   border-radius: 12px;
@@ -106,7 +129,7 @@
   color: #fff;
 }
 
-.view-btn {
+.drivemego-paymentverification-view-btn {
   padding: 6px 14px;
   background: #0891b2;
   color: #fff;
@@ -118,11 +141,11 @@
   transition: all 0.2s;
 }
 
-.view-btn:hover {
+.drivemego-paymentverification-view-btn:hover {
   background: #0e7490;
 }
 
-.no-payments {
+.drivemego-paymentverification-no-payments {
   text-align: center;
   padding: 60px 20px;
   background: #f8fafc;
@@ -130,14 +153,14 @@
   border-radius: 12px;
 }
 
-.no-payments p {
+.drivemego-paymentverification-no-payments p {
   font-size: 16px;
   color: #64748b;
   margin: 0;
 }
 
 /* Modal */
-.modal-overlay {
+.drivemego-paymentverification-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -151,7 +174,7 @@
   padding: 20px;
 }
 
-.modal {
+.drivemego-paymentverification-modal {
   background: #fff;
   border-radius: 16px;
   width: 100%;
@@ -161,7 +184,7 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
-.modal-header {
+.drivemego-paymentverification-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -169,14 +192,14 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
-.modal-header h3 {
+.drivemego-paymentverification-modal-header h3 {
   font-size: 18px;
   font-weight: 700;
   color: #1e293b;
   margin: 0;
 }
 
-.close-btn {
+.drivemego-paymentverification-close-btn {
   background: none;
   border: none;
   font-size: 24px;
@@ -186,56 +209,56 @@
   line-height: 1;
 }
 
-.close-btn:hover {
+.drivemego-paymentverification-close-btn:hover {
   color: #475569;
 }
 
-.modal-content {
+.drivemego-paymentverification-modal-content {
   padding: 24px;
 }
 
-.payment-info {
+.drivemego-paymentverification-payment-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 20px;
 }
 
-.info-row {
+.drivemego-paymentverification-info-row {
   display: flex;
   justify-content: space-between;
   padding: 10px 0;
   border-bottom: 1px solid #f1f5f9;
 }
 
-.info-row:last-child {
+.drivemego-paymentverification-info-row:last-child {
   border-bottom: none;
 }
 
-.info-row .label {
+.drivemego-paymentverification-info-row .drivemego-paymentverification-label {
   font-size: 13px;
   color: #64748b;
   font-weight: 500;
 }
 
-.info-row .value {
+.drivemego-paymentverification-info-row .drivemego-paymentverification-value {
   font-size: 14px;
   color: #1e293b;
   font-weight: 600;
 }
 
-.verification-actions {
+.drivemego-paymentverification-verification-actions {
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid #e2e8f0;
 }
 
-.action-buttons {
+.drivemego-paymentverification-action-buttons {
   display: flex;
   gap: 10px;
 }
 
-.approve-btn {
+.drivemego-paymentverification-approve-btn {
   padding: 10px 24px;
   background: #10b981;
   color: #fff;
@@ -247,11 +270,11 @@
   transition: all 0.2s;
 }
 
-.approve-btn:hover {
+.drivemego-paymentverification-approve-btn:hover {
   background: #059669;
 }
 
-.reject-btn {
+.drivemego-paymentverification-reject-btn {
   padding: 10px 24px;
   background: #ef4444;
   color: #fff;
@@ -263,15 +286,15 @@
   transition: all 0.2s;
 }
 
-.reject-btn:hover {
+.drivemego-paymentverification-reject-btn:hover {
   background: #dc2626;
 }
 
-.rejection-form {
+.drivemego-paymentverification-rejection-form {
   margin-top: 16px;
 }
 
-.rejection-form label {
+.drivemego-paymentverification-rejection-form label {
   display: block;
   font-size: 13px;
   font-weight: 600;
@@ -279,7 +302,7 @@
   margin-bottom: 6px;
 }
 
-.rejection-form textarea {
+.drivemego-paymentverification-rejection-form textarea {
   width: 100%;
   padding: 10px 14px;
   border: 1px solid #d1d5db;
@@ -290,19 +313,19 @@
   min-height: 80px;
 }
 
-.rejection-form textarea:focus {
+.drivemego-paymentverification-rejection-form textarea:focus {
   outline: none;
   border-color: #0891b2;
   box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
 }
 
-.rejection-actions {
+.drivemego-paymentverification-rejection-actions {
   display: flex;
   gap: 10px;
   margin-top: 12px;
 }
 
-.cancel-btn {
+.drivemego-paymentverification-cancel-btn {
   padding: 8px 18px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
@@ -313,11 +336,11 @@
   cursor: pointer;
 }
 
-.cancel-btn:hover {
+.drivemego-paymentverification-cancel-btn:hover {
   background: #e2e8f0;
 }
 
-.confirm-reject-btn {
+.drivemego-paymentverification-confirm-reject-btn {
   padding: 8px 18px;
   background: #ef4444;
   color: #fff;
@@ -328,11 +351,11 @@
   cursor: pointer;
 }
 
-.confirm-reject-btn:hover {
+.drivemego-paymentverification-confirm-reject-btn:hover {
   background: #dc2626;
 }
 
-.loading {
+.drivemego-paymentverification-loading {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -342,19 +365,19 @@
 }
 
 @media (max-width: 768px) {
-  .payment-verification {
+  .drivemego-paymentverification-payment-verification {
     padding: 16px;
   }
 
-  .verification-stats {
+  .drivemego-paymentverification-verification-stats {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .action-buttons {
+  .drivemego-paymentverification-action-buttons {
     flex-direction: column;
   }
 
-  .modal {
+  .drivemego-paymentverification-modal {
     max-width: 100%;
   }
 }

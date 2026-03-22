@@ -115,9 +115,9 @@ body {
 }
 
 .corporate-logout-btn {
-  background: white;
+  background: #dc3545;
   border: 1px solid #FCEAED;
-  color: #ef4444;
+  color: #fff;
   padding: 10px 20px;
   border-radius: 10px;
   font-size: 14px;
@@ -127,8 +127,7 @@ body {
 }
 
 .corporate-logout-btn:hover {
-  background: #FCEAED;
-  color: #1f2937;
+  color: #fff;
 }
 
 .corporate-tabs-container {

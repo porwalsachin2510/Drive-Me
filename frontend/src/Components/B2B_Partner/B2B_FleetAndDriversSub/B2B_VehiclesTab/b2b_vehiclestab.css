@@ -1,10 +1,10 @@
-.vehicles-grid {
+.b2b-operator-dashboard-vehicles-tab-vehicles-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-.no-vehicles {
+.b2b-operator-dashboard-vehicles-tab-no-vehicles {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -17,26 +17,26 @@
   grid-column: 1 / -1;
 }
 
-.no-vehicles-icon {
+.b2b-operator-dashboard-vehicles-tab-no-vehicles-icon {
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
 }
 
-.no-vehicles h3 {
+.b2b-operator-dashboard-vehicles-tab-no-vehicles h3 {
   margin: 0 0 8px 0;
   color: #374151;
   font-size: 18px;
   font-weight: 600;
 }
 
-.no-vehicles p {
+.b2b-operator-dashboard-vehicles-tab-no-vehicles p {
   margin: 0;
   color: #6b7280;
   font-size: 14px;
 }
 
-.vehicle-card {
+.b2b-operator-dashboard-vehicles-tab-vehicle-card {
   padding: 20px;
   background-color: #ffffff;
   border-radius: 8px;
@@ -47,17 +47,17 @@
   transition: box-shadow 0.2s;
 }
 
-.vehicle-card:hover {
+.b2b-operator-dashboard-vehicles-tab-vehicle-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.vehicle-header {
+.b2b-operator-dashboard-vehicles-tab-vehicle-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.vehicle-icon {
+.b2b-operator-dashboard-vehicles-tab-vehicle-icon {
   font-size: 32px;
   width: 48px;
   height: 48px;
@@ -68,38 +68,38 @@
   border-radius: 8px;
 }
 
-.status-badge {
+.b2b-operator-dashboard-vehicles-tab-status-badge {
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
 }
 
-.status-badge.success {
+.b2b-operator-dashboard-vehicles-tab-status-badge.b2b-operator-dashboard-vehicles-tab-success {
   background-color: #e8f5e9;
   color: #4caf50;
 }
 
-.status-badge.warning {
+.b2b-operator-dashboard-vehicles-tab-status-badge.b2b-operator-dashboard-vehicles-tab-warning {
   background-color: #fff3e0;
   color: #ff9800;
 }
 
-.vehicle-name {
+.b2b-operator-dashboard-vehicles-tab-vehicle-name {
   font-size: 16px;
   font-weight: 700;
   color: #000000;
   margin: 0;
 }
 
-.vehicle-plate {
+.b2b-operator-dashboard-vehicles-tab-vehicle-plate {
   font-size: 13px;
   color: #999999;
   margin: 0;
 }
 
 /* Expand/Collapse Toggle Button */
-.expand-toggle-btn {
+.b2b-operator-dashboard-vehicles-tab-expand-toggle-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -115,17 +115,17 @@
   transition: all 0.2s ease;
 }
 
-.expand-toggle-btn:hover {
+.b2b-operator-dashboard-vehicles-tab-expand-toggle-btn:hover {
   background: #e5e7eb;
   color: #374151;
 }
 
-.expand-toggle-btn svg {
+.b2b-operator-dashboard-vehicles-tab-expand-toggle-btn svg {
   font-size: 16px;
   transition: transform 0.3s ease;
 }
 
-.vehicle-details {
+.b2b-operator-dashboard-vehicles-tab-vehicle-details {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -136,39 +136,39 @@
   transition: all 0.3s ease;
 }
 
-.vehicle-details.collapsed {
+.b2b-operator-dashboard-vehicles-tab-vehicle-details.b2b-operator-dashboard-vehicles-tab-collapsed {
   max-height: 0;
   padding: 0;
   border: none;
   opacity: 0;
 }
 
-.vehicle-details.expanded {
+.b2b-operator-dashboard-vehicles-tab-vehicle-details.b2b-operator-dashboard-vehicles-tab-expanded {
   max-height: 500px;
   opacity: 1;
 }
 
-.detail-row {
+.b2b-operator-dashboard-vehicles-tab-detail-row {
   display: flex;
   justify-content: space-between;
   font-size: 13px;
 }
 
-.detail-label {
+.b2b-operator-dashboard-vehicles-tab-detail-label {
   color: #999999;
 }
 
-.detail-value {
+.b2b-operator-dashboard-vehicles-tab-detail-value {
   color: #000000;
   font-weight: 500;
 }
 
-.vehicle-actions {
+.b2b-operator-dashboard-vehicles-tab-vehicle-actions {
   display: flex;
   gap: 8px;
 }
 
-.action-btn {
+.b2b-operator-dashboard-vehicles-tab-action-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
@@ -179,39 +179,39 @@
   min-width: 100px;
 }
 
-.action-btn:disabled {
+.b2b-operator-dashboard-vehicles-tab-action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.action-btn.activate {
+.b2b-operator-dashboard-vehicles-tab-action-btn.b2b-operator-dashboard-vehicles-tab-activate {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
   box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
-.action-btn.activate:hover:not(:disabled) {
+.b2b-operator-dashboard-vehicles-tab-action-btn.b2b-operator-dashboard-vehicles-tab-activate:hover:not(:disabled) {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
   transform: translateY(-1px);
 }
 
-.action-btn.maintenance {
+.b2b-operator-dashboard-vehicles-tab-action-btn.b2b-operator-dashboard-vehicles-tab-maintenance {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
   box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
 }
 
-.action-btn.maintenance:hover:not(:disabled) {
+.b2b-operator-dashboard-vehicles-tab-action-btn.b2b-operator-dashboard-vehicles-tab-maintenance:hover:not(:disabled) {
   background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
   transform: translateY(-1px);
 }
 
-.action-dropdown {
+.b2b-operator-dashboard-vehicles-tab-action-dropdown {
   position: relative;
   display: inline-block;
 }
 
-.action-btn-more {
+.b2b-operator-dashboard-vehicles-tab-action-btn-more {
   background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
   color: white;
   padding: 8px 12px;
@@ -225,12 +225,12 @@
   transition: all 0.2s;
 }
 
-.action-btn-more:hover {
+.b2b-operator-dashboard-vehicles-tab-action-btn-more:hover {
   background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
   transform: translateY(-1px);
 }
 
-.dropdown-menu {
+.b2b-operator-dashboard-vehicles-tab-dropdown-menu {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
@@ -255,7 +255,7 @@
   }
 }
 
-.dropdown-item {
+.b2b-operator-dashboard-vehicles-tab-dropdown-item {
   width: 100%;
   padding: 12px 16px;
   border: none;
@@ -269,54 +269,54 @@
   border-bottom: 1px solid #f3f4f6;
 }
 
-.dropdown-item:last-child {
+.b2b-operator-dashboard-vehicles-tab-dropdown-item:last-child {
   border-bottom: none;
 }
 
-.dropdown-item:hover {
+.b2b-operator-dashboard-vehicles-tab-dropdown-item:hover {
   background: #f8fafc;
   color: #1f2937;
 }
 
-.dropdown-item:first-child:hover {
+.b2b-operator-dashboard-vehicles-tab-dropdown-item:first-child:hover {
   border-radius: 8px 8px 0 0;
 }
 
-.dropdown-item:last-child:hover {
+.b2b-operator-dashboard-vehicles-tab-dropdown-item:last-child:hover {
   border-radius: 0 0 8px 8px;
 }
 
 @media (max-width: 1200px) {
-  .vehicles-grid {
+  .b2b-operator-dashboard-vehicles-tab-vehicles-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .vehicles-grid {
+  .b2b-operator-dashboard-vehicles-tab-vehicles-grid {
     grid-template-columns: 1fr;
   }
 
-  .vehicle-card {
+  .b2b-operator-dashboard-vehicles-tab-vehicle-card {
     gap: 12px;
     padding: 16px;
   }
 }
 
 @media (max-width: 480px) {
-  .vehicle-name {
+  .b2b-operator-dashboard-vehicles-tab-vehicle-name {
     font-size: 14px;
   }
 
-  .vehicle-plate {
+  .b2b-operator-dashboard-vehicles-tab-vehicle-plate {
     font-size: 11px;
   }
 
-  .detail-row {
+  .b2b-operator-dashboard-vehicles-tab-detail-row {
     font-size: 12px;
   }
 
-  .action-btn {
+  .b2b-operator-dashboard-vehicles-tab-action-btn {
     font-size: 11px;
     padding: 8px;
   }

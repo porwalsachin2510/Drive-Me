@@ -15,11 +15,10 @@ import AdminAds from "../../../Components/Admin/AdminAds/AdminAds";
 import PaymentVerification from "../AdminPaymentVerification/PaymentVerification";
 import AdminVehicleApproval from "../../../Components/Admin/AdminVehicleApproval/AdminVehicleApproval";
 import AdminSettlement from "../../../Components/Admin/AdminSettlement/AdminSettlement";
+import AdminContent from "../../../Components/Admin/AdminContent/AdminContent";
 import "./admindashboardpage.css";
 
 function AdminDashboardPage() {
-
-
   
   // const [activeTab, setActiveTab] = useState("corporate");
   const [dashboardactiveTab, setDashboardActiveTab] = useState("overview");
@@ -51,6 +50,8 @@ const renderContent = () => {
       return <AdminVehicleApproval />;
     case "settlement":
       return <AdminSettlement />;
+    case "content":
+      return <AdminContent />;
     default:
       return <AdminOverview />;
   }

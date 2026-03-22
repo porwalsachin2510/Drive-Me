@@ -1,5 +1,5 @@
 /* DriveMe Premium Navbar - Brand Colors */
-.navbar {
+.drivemego-topbar-navbar {
   background: #ffffff;
   border-bottom: 1px solid var(--border-color, #E2E8F0);
   position: sticky;
@@ -9,11 +9,11 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.navbar.scrolled {
+.drivemego-topbar-navbar.drivemego-topbar-scrolled {
   box-shadow: 0 1px 3px rgba(60, 64, 67, 0.1), 0 1px 2px rgba(60, 64, 67, 0.06);
 }
 
-.navbar-container {
+.drivemego-topbar-navbar-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
@@ -25,7 +25,7 @@
 }
 
 /* Logo */
-.navbar-logo {
+.drivemego-topbar-navbar-logo {
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -33,18 +33,18 @@
   transition: opacity 0.2s ease;
 }
 
-.navbar-logo:hover {
+.drivemego-topbar-navbar-logo:hover {
   opacity: 0.8;
 }
 
-.driveme-navbar-logo-image {
+.drivemego-topbar-navbar-logo-image {
   height: 40px;
   width: auto;
   object-fit: contain;
   border-radius: 8px;
 }
 
-.logo-box {
+.drivemego-topbar-logo-box {
   background: var(--primary-color, #E85D5D);
   color: #ffffff;
   padding: 10px 16px;
@@ -56,7 +56,7 @@
 }
 
 /* Mobile Menu Toggle */
-.mobile-menu-toggle {
+.drivemego-topbar-mobile-menu-toggle {
   display: none;
   flex-direction: column;
   background: none;
@@ -68,11 +68,11 @@
   transition: background 0.2s ease;
 }
 
-.mobile-menu-toggle:hover {
+.drivemego-topbar-mobile-menu-toggle:hover {
   background: rgba(0, 0, 0, 0.04);
 }
 
-.mobile-menu-toggle span {
+.drivemego-topbar-mobile-menu-toggle span {
   width: 20px;
   height: 2px;
   background: var(--text-primary, #202124);
@@ -81,7 +81,7 @@
 }
 
 /* Nav Items */
-.navbar-items {
+.drivemego-topbar-navbar-items {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -89,13 +89,13 @@
   justify-content: flex-end;
 }
 
-.nav-tabs {
+.drivemego-topbar-nav-tabs {
   display: flex;
   gap: 4px;
   align-items: center;
 }
 
-.navbar-tab {
+.drivemego-topbar-navbar-tab {
   background: none;
   border: none;
   padding: 8px 16px;
@@ -112,22 +112,22 @@
   letter-spacing: -0.01em;
 }
 
-.navbar-tab:hover {
+.drivemego-topbar-navbar-tab:hover {
   background: rgba(0, 0, 0, 0.04);
   color: var(--text-primary, #202124);
 }
 
-.navbar-tab.active {
+.drivemego-topbar-navbar-tab.drivemego-topbar-active {
   background: var(--primary-color, #E85D5D);
   color: #ffffff;
 }
 
-.building-icon {
+.drivemego-topbar-building-icon {
   font-size: 14px;
 }
 
 /* Login Button - DriveMe Brand Style */
-.nav-login {
+.drivemego-topbar-nav-login {
   background: var(--primary-color, #E85D5D);
   border: none;
   padding: 10px 20px;
@@ -144,28 +144,28 @@
   letter-spacing: -0.01em;
 }
 
-.nav-login:hover {
+.drivemego-topbar-nav-login:hover {
   background: var(--primary-hover, #D94545);
   box-shadow: 0 4px 14px rgba(232, 93, 93, 0.3);
 }
 
-.login-arrow {
+.drivemego-topbar-login-arrow {
   font-size: 14px;
   transition: transform 0.2s ease;
 }
 
-.nav-login:hover .login-arrow {
+.drivemego-topbar-nav-login:hover .drivemego-topbar-login-arrow {
   transform: translateX(2px);
 }
 
 /* User Section (After Login) */
-.nav-user-section {
+.drivemego-topbar-nav-user-section {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.user-avatar {
+.drivemego-topbar-user-avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -182,36 +182,36 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.user-avatar:hover {
+.drivemego-topbar-user-avatar:hover {
   box-shadow: 0 1px 3px rgba(60, 64, 67, 0.2), 0 4px 8px rgba(60, 64, 67, 0.15);
   transform: scale(1.02);
 }
 
 /* Tablet & iPad (768px - 1024px) */
 @media (max-width: 1024px) {
-  .navbar-container {
+  .drivemego-topbar-navbar-container {
     padding: 0 16px;
     height: 60px;
   }
 
-  .driveme-navbar-logo-image {
+  .drivemego-topbar-navbar-logo-image {
     height: 36px;
   }
 
-  .navbar-items {
+  .drivemego-topbar-navbar-items {
     gap: 8px;
   }
 
-  .nav-tabs {
+  .drivemego-topbar-nav-tabs {
     gap: 4px;
   }
 
-  .navbar-tab {
+  .drivemego-topbar-navbar-tab {
     padding: 8px 12px;
     font-size: 13px;
   }
 
-  .nav-login {
+  .drivemego-topbar-nav-login {
     padding: 8px 16px;
     font-size: 13px;
   }
@@ -219,20 +219,20 @@
 
 /* Mobile (768px and below) */
 @media (max-width: 768px) {
-  .navbar-container {
+  .drivemego-topbar-navbar-container {
     height: 56px;
     padding: 0 16px;
   }
 
-  .driveme-navbar-logo-image {
+  .drivemego-topbar-navbar-logo-image {
     height: 32px;
   }
 
-  .mobile-menu-toggle {
+  .drivemego-topbar-mobile-menu-toggle {
     display: flex;
   }
 
-  .navbar-items {
+  .drivemego-topbar-navbar-items {
     position: absolute;
     top: 56px;
     left: 0;
@@ -247,18 +247,18 @@
     box-shadow: 0 4px 12px rgba(60, 64, 67, 0.1);
   }
 
-  .navbar-items.active {
+  .drivemego-topbar-navbar-items.drivemego-topbar-active {
     max-height: 300px;
     padding: 8px 0;
   }
 
-  .nav-tabs {
+  .drivemego-topbar-nav-tabs {
     flex-direction: column;
     width: 100%;
     gap: 0;
   }
 
-  .navbar-tab {
+  .drivemego-topbar-navbar-tab {
     width: 100%;
     padding: 12px 20px;
     border-radius: 0;
@@ -266,19 +266,19 @@
     font-size: 14px;
   }
 
-  .navbar-tab.active {
+  .drivemego-topbar-navbar-tab.drivemego-topbar-active {
     background: var(--primary-light, rgba(239, 59, 71, 0.08));
     color: #ef3b47;
   }
 
-  .nav-login {
+  .drivemego-topbar-nav-login {
     margin: 8px 16px;
     width: calc(100% - 32px);
     justify-content: center;
     border-radius: 100px;
   }
 
-  .nav-user-section {
+  .drivemego-topbar-nav-user-section {
     padding: 8px 16px;
     width: 100%;
     justify-content: flex-end;
@@ -288,20 +288,20 @@
 
 /* Small Mobile (640px and below) */
 @media (max-width: 640px) {
-  .navbar-container {
+  .drivemego-topbar-navbar-container {
     height: 52px;
     padding: 0 12px;
   }
 
-  .driveme-navbar-logo-image {
+  .drivemego-topbar-navbar-logo-image {
     height: 28px;
   }
 
-  .navbar-items {
+  .drivemego-topbar-navbar-items {
     top: 52px;
   }
 
-  .user-avatar {
+  .drivemego-topbar-user-avatar {
     width: 32px;
     height: 32px;
     font-size: 13px;
@@ -310,20 +310,20 @@
 
 /* Extra Small Mobile (480px and below) */
 @media (max-width: 480px) {
-  .navbar-container {
+  .drivemego-topbar-navbar-container {
     height: 48px;
     padding: 0 12px;
   }
 
-  .driveme-navbar-logo-image {
+  .drivemego-topbar-navbar-logo-image {
     height: 26px;
   }
 
-  .navbar-items {
+  .drivemego-topbar-navbar-items {
     top: 48px;
   }
 
-  .mobile-menu-toggle span {
+  .drivemego-topbar-mobile-menu-toggle span {
     width: 18px;
   }
 }

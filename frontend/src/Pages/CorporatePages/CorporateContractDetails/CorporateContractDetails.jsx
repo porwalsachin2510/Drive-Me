@@ -310,7 +310,7 @@ const CorporateContractDetails = () => {
       <div className="corporate-contract-details-container">
         <button
           className="corporate-contract-back-btn"
-          onClick={() => navigate("/corporate/contracts")}
+          onClick={() => navigate("/corporate-profile?tab=contracts")}
         >
           ← Back to Contracts
         </button>
@@ -397,7 +397,7 @@ const CorporateContractDetails = () => {
                 <p className="uploaded-info">
                   Uploaded on{" "}
                   {new Date(
-                    contract.contractDocument.uploadedAt
+                    contract.contractDocument.uploadedAt,
                   ).toLocaleDateString()}
                 </p>
               </div>
@@ -617,7 +617,7 @@ const CorporateContractDetails = () => {
                           </span>
                         </div>
                       );
-                    }
+                    },
                   )}
                 </div>
               </div>
@@ -626,25 +626,27 @@ const CorporateContractDetails = () => {
           {/* Actions */}
           <div className="corporate-contract-actions">
             {/* Accept/Reject for PENDING or DRAFT contracts - Only show if document has been uploaded */}
-            {["PENDING", "DRAFT", "PENDING_SIGNATURES"].includes(contract.status) && 
+            {["PENDING", "DRAFT", "PENDING_SIGNATURES"].includes(
+              contract.status,
+            ) &&
               contract.contractDocument?.url && (
-              <>
-                <button
-                  className="corporate-contract-btn-success"
-                  onClick={handleAcceptContract}
-                  style={{ backgroundColor: "#4CAF50", color: "#fff" }}
-                >
-                  Accept Contract
-                </button>
-                <button
-                  className="corporate-contract-btn-secondary"
-                  onClick={() => setShowRejectContractModal(true)}
-                  style={{ backgroundColor: "#F44336", color: "#fff" }}
-                >
-                  Reject Contract
-                </button>
-              </>
-            )}
+                <>
+                  <button
+                    className="corporate-contract-btn-success"
+                    onClick={handleAcceptContract}
+                    style={{ backgroundColor: "#4CAF50", color: "#fff" }}
+                  >
+                    Accept Contract
+                  </button>
+                  <button
+                    className="corporate-contract-btn-secondary"
+                    onClick={() => setShowRejectContractModal(true)}
+                    style={{ backgroundColor: "#F44336", color: "#fff" }}
+                  >
+                    Reject Contract
+                  </button>
+                </>
+              )}
 
             {contract.status === "PENDING_CORPORATE_SIGNATURE" &&
               !contract.digitalSignatures?.corporateOwner?.signed && (
@@ -677,7 +679,7 @@ const CorporateContractDetails = () => {
                   </p>
                 </div>
               )}
-            
+
             {hasAssignedVehicles && (
               <button
                 className="corporate-contract-btn-info"
@@ -772,9 +774,9 @@ const CorporateContractDetails = () => {
 
         {showPaymentMethodModal && (
           <PaymentMethodSelector
-            acceptedMethods={
-              (contract.fleetOwnerId?.acceptedPaymentMethods || []).map(normalizeMethod)
-            }
+            acceptedMethods={(
+              contract.fleetOwnerId?.acceptedPaymentMethods || []
+            ).map(normalizeMethod)}
             onSelectMethod={handleSelectPaymentMethod}
             onClose={() => setShowPaymentMethodModal(false)}
             contract={contract}

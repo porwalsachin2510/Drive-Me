@@ -84,23 +84,23 @@
   background: #f3f4f6;
 }
 
-.ad-dash-logout-btn {
+.drivemego-admin-ad-dash-logout-btn {
   padding: 8px 16px;
-  background: none;
+  background: #dc3545;
   border: none;
-  color: #e74c3c;
+  color: #fff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: color 0.2s;
 }
 
-.ad-dash-logout-btn:hover {
-  color: #c0392b;
+.drivemego-admin-ad-dash-logout-btn:hover {
+  color: #fff;
 }
 
 @media (max-width: 480px) {
-  .ad-dash-logout-btn {
+  .drivemego-admin-ad-dash-logout-btn {
     font-size: 12px;
     padding: 6px 12px;
   }

@@ -353,10 +353,6 @@ function B2BPartnerDriverDashboard() {
 
   return (
     <div className="b2b-partner-driver-dashboard">
-      <button className="b2b-logout-btn" onClick={handleLogout}>
-        Log Out
-      </button>
-      
       <div className="B2BPartner-driver-dashboard-with-tabs-header">
         <h1>B2B Partner Driver Dashboard</h1>
         <div className="B2BPartner-driver-dashboard-with-tabs-driver-info">
@@ -367,6 +363,10 @@ function B2BPartnerDriverDashboard() {
             📍 {isSharingLocation ? "Sharing Live" : "Not Sharing"}
           </div>
         </div>
+
+        <button className="b2b-logout-btn" onClick={handleLogout}>
+          Log Out
+        </button>
       </div>
 
       <div className="B2BPartner-driver-dashboard-with-tabs-tabs">
@@ -427,7 +427,9 @@ function B2BPartnerDriverDashboard() {
                         >
                           <div className="B2BPartner-driver-dashboard-with-tabs-booking-details">
                             <p>
-                              <strong>Route:</strong> {getPickupLocation(booking)} → {getDropoffLocation(booking)}
+                              <strong>Route:</strong>{" "}
+                              {getPickupLocation(booking)} →{" "}
+                              {getDropoffLocation(booking)}
                             </p>
                             <p>
                               <strong>Date:</strong>{" "}
@@ -437,20 +439,23 @@ function B2BPartnerDriverDashboard() {
                               <strong>Time:</strong> {getTravelTime(booking)}
                             </p>
                             <p>
-                              <strong>Passengers:</strong> {getPassengerCount(booking)}
+                              <strong>Passengers:</strong>{" "}
+                              {getPassengerCount(booking)}
                             </p>
-                            {booking.passengers && booking.passengers.length > 0 && (
-                              <div className="B2BPartner-driver-dashboard-with-tabs-passenger-list">
-                                <strong>Booked Employees:</strong>
-                                <ul>
-                                  {booking.passengers.map((p, idx) => (
-                                    <li key={idx}>
-                                      {p.employeeId?.fullName || "Employee"} - Seat {p.seatNumber}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+                            {booking.passengers &&
+                              booking.passengers.length > 0 && (
+                                <div className="B2BPartner-driver-dashboard-with-tabs-passenger-list">
+                                  <strong>Booked Employees:</strong>
+                                  <ul>
+                                    {booking.passengers.map((p, idx) => (
+                                      <li key={idx}>
+                                        {p.employeeId?.fullName || "Employee"} -
+                                        Seat {p.seatNumber}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
                           </div>
                           <div className="B2BPartner-driver-dashboard-with-tabs-booking-actions">
                             <button
@@ -483,7 +488,9 @@ function B2BPartnerDriverDashboard() {
                         >
                           <div className="B2BPartner-driver-dashboard-with-tabs-booking-details">
                             <p>
-                              <strong>Route:</strong> {getPickupLocation(booking)} → {getDropoffLocation(booking)}
+                              <strong>Route:</strong>{" "}
+                              {getPickupLocation(booking)} →{" "}
+                              {getDropoffLocation(booking)}
                             </p>
                             <p>
                               <strong>Date:</strong>{" "}
@@ -493,7 +500,8 @@ function B2BPartnerDriverDashboard() {
                               <strong>Time:</strong> {getTravelTime(booking)}
                             </p>
                             <p>
-                              <strong>Passengers:</strong> {getPassengerCount(booking)}
+                              <strong>Passengers:</strong>{" "}
+                              {getPassengerCount(booking)}
                             </p>
                             <div className="B2BPartner-driver-dashboard-with-tabs-status-badge in-progress">
                               In Progress
@@ -530,7 +538,9 @@ function B2BPartnerDriverDashboard() {
                         >
                           <div className="B2BPartner-driver-dashboard-with-tabs-booking-details">
                             <p>
-                              <strong>Route:</strong> {getPickupLocation(booking)} → {getDropoffLocation(booking)}
+                              <strong>Route:</strong>{" "}
+                              {getPickupLocation(booking)} →{" "}
+                              {getDropoffLocation(booking)}
                             </p>
                             <p>
                               <strong>Date:</strong>{" "}
@@ -540,7 +550,8 @@ function B2BPartnerDriverDashboard() {
                               <strong>Time:</strong> {getTravelTime(booking)}
                             </p>
                             <p>
-                              <strong>Passengers:</strong> {getPassengerCount(booking)}
+                              <strong>Passengers:</strong>{" "}
+                              {getPassengerCount(booking)}
                             </p>
                             <div className="B2BPartner-driver-dashboard-with-tabs-status-badge completed">
                               Completed
@@ -566,7 +577,10 @@ function B2BPartnerDriverDashboard() {
             <div className="B2BPartner-driver-dashboard-with-tabs-notification-list">
               {notifications.length > 0 ? (
                 notifications.map((notification) => (
-                  <div key={notification._id} className={`B2BPartner-driver-dashboard-with-tabs-notification-item ${!notification.isRead ? 'unread' : ''}`}>
+                  <div
+                    key={notification._id}
+                    className={`B2BPartner-driver-dashboard-with-tabs-notification-item ${!notification.isRead ? "unread" : ""}`}
+                  >
                     <h4>{notification.title}</h4>
                     <p>{notification.message}</p>
                     <div className="B2BPartner-driver-dashboard-with-tabs-time">

@@ -1,28 +1,28 @@
-.my-quotations-container {
+.drivemego-corporate-my-quotations-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 40px 20px;
   min-height: 100vh;
 }
 
-.quotations-header {
+.drivemego-corporate-quotations-header {
   margin-bottom: 30px;
 }
 
-.quotations-header h1 {
+.drivemego-corporate-quotations-header h1 {
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 20px;
   color: #1a1a1a;
 }
 
-.filter-tabs {
+.drivemego-corporate-filter-tabs {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.filter-tabs button {
+.drivemego-corporate-filter-tabs button {
   padding: 12px 24px;
   border: 2px solid #e0e0e0;
   background: white;
@@ -34,27 +34,27 @@
   transition: all 0.3s ease;
 }
 
-.filter-tabs button:hover {
+.drivemego-corporate-filter-tabs button:hover {
   border-color: #0066cc;
   color: #0066cc;
   transform: translateY(-2px);
 }
 
-.filter-tabs button.active {
+.drivemego-corporate-filter-tabs button.drivemego-corporate-active {
   background: #0066cc;
   border-color: #0066cc;
   color: white;
 }
 
 /* Summary Section */
-.quotations-summary {
+.drivemego-corporate-quotations-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
 }
 
-.summary-card {
+.drivemego-corporate-summary-card {
   display: flex;
   align-items: center;
   gap: 15px;
@@ -65,40 +65,40 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-.summary-card:nth-child(2) {
+.drivemego-corporate-summary-card:nth-child(2) {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
 }
 
-.summary-card:nth-child(3) {
+.drivemego-corporate-summary-card:nth-child(3) {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
 }
 
-.summary-card i {
+.drivemego-corporate-summary-card i {
   font-size: 32px;
   opacity: 0.9;
 }
 
-.summary-content {
+.drivemego-corporate-summary-content {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.summary-label {
+.drivemego-corporate-summary-label {
   font-size: 13px;
   opacity: 0.9;
   font-weight: 500;
 }
 
-.summary-value {
+.drivemego-corporate-summary-value {
   font-size: 28px;
   font-weight: 700;
 }
 
 /* Quotations Grid */
-.quotations-grid {
+.drivemego-corporate-quotations-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 24px;
@@ -106,7 +106,7 @@
 }
 
 /* No Quotations State */
-.no-quotations {
+.drivemego-corporate-no-quotations {
   grid-column: 1 / -1;
   text-align: center;
   padding: 80px 20px;
@@ -115,20 +115,20 @@
   margin: 20px 0;
 }
 
-.no-quotations i {
+.drivemego-corporate-no-quotations i {
   font-size: 64px;
   color: #9ca3af;
   margin-bottom: 20px;
 }
 
-.no-quotations h3 {
+.drivemego-corporate-no-quotations h3 {
   font-size: 24px;
   font-weight: 600;
   color: #333;
   margin-bottom: 10px;
 }
 
-.no-quotations p {
+.drivemego-corporate-no-quotations p {
   font-size: 16px;
   color: #666;
   max-width: 400px;
@@ -136,7 +136,7 @@
 }
 
 /* Loading State */
-.quotations-loading {
+.drivemego-corporate-quotations-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -145,7 +145,7 @@
   gap: 20px;
 }
 
-.loading-spinner {
+.drivemego-corporate-loading-spinner {
   width: 50px;
   height: 50px;
   border: 4px solid #f3f4f6;
@@ -163,14 +163,14 @@
   }
 }
 
-.loading-text {
+.drivemego-corporate-loading-text {
   font-size: 16px;
   color: #666;
   font-weight: 500;
 }
 
 /* Error State */
-.quotations-error {
+.drivemego-corporate-quotations-error {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -183,26 +183,26 @@
   border: 2px solid #fecaca;
 }
 
-.quotations-error i {
+.drivemego-corporate-quotations-error i {
   font-size: 64px;
   color: #ef4444;
   margin-bottom: 20px;
 }
 
-.quotations-error h3 {
+.drivemego-corporate-quotations-error h3 {
   font-size: 24px;
   font-weight: 600;
   color: #991b1b;
   margin-bottom: 10px;
 }
 
-.quotations-error p {
+.drivemego-corporate-quotations-error p {
   font-size: 16px;
   color: #dc2626;
   margin-bottom: 20px;
 }
 
-.retry-btn {
+.drivemego-corporate-retry-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -217,13 +217,13 @@
   transition: all 0.3s ease;
 }
 
-.retry-btn:hover {
+.drivemego-corporate-retry-btn:hover {
   background: #dc2626;
   transform: translateY(-2px);
 }
 
 /* Pagination */
-.pagination {
+.drivemego-corporate-pagination {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -232,7 +232,7 @@
   padding: 20px;
 }
 
-.pagination-btn {
+.drivemego-corporate-pagination-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -247,20 +247,20 @@
   transition: all 0.3s ease;
 }
 
-.pagination-btn:hover:not(:disabled) {
+.drivemego-corporate-pagination-btn:hover:not(:disabled) {
   background: #0066cc;
   color: white;
   transform: translateY(-2px);
 }
 
-.pagination-btn:disabled {
+.drivemego-corporate-pagination-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   border-color: #e0e0e0;
   color: #999;
 }
 
-.pagination-info {
+.drivemego-corporate-pagination-info {
   font-size: 14px;
   font-weight: 600;
   color: #666;
@@ -271,70 +271,70 @@
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .quotations-grid {
+  .drivemego-corporate-quotations-grid {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .my-quotations-container {
+  .drivemego-corporate-my-quotations-container {
     padding: 20px 15px;
   }
 
-  .quotations-header h1 {
+  .drivemego-corporate-quotations-header h1 {
     font-size: 24px;
   }
 
-  .quotations-grid {
+  .drivemego-corporate-quotations-grid {
     grid-template-columns: 1fr;
   }
 
-  .filter-tabs {
+  .drivemego-corporate-filter-tabs {
     flex-direction: column;
   }
 
-  .filter-tabs button {
+  .drivemego-corporate-filter-tabs button {
     width: 100%;
   }
 
-  .quotations-summary {
+  .drivemego-corporate-quotations-summary {
     grid-template-columns: 1fr;
   }
 
-  .pagination {
+  .drivemego-corporate-pagination {
     flex-wrap: wrap;
     gap: 10px;
   }
 
-  .pagination-btn {
+  .drivemego-corporate-pagination-btn {
     padding: 8px 16px;
     font-size: 13px;
   }
 }
 
 @media (max-width: 480px) {
-  .quotations-header h1 {
+  .drivemego-corporate-quotations-header h1 {
     font-size: 20px;
   }
 
-  .filter-tabs button {
+  .drivemego-corporate-filter-tabs button {
     padding: 10px 16px;
     font-size: 13px;
   }
 
-  .no-quotations {
+  .drivemego-corporate-no-quotations {
     padding: 60px 15px;
   }
 
-  .no-quotations i {
+  .drivemego-corporate-no-quotations i {
     font-size: 48px;
   }
 
-  .no-quotations h3 {
+  .drivemego-corporate-no-quotations h3 {
     font-size: 20px;
   }
 
-  .summary-value {
+  .drivemego-corporate-summary-value {
     font-size: 24px;
   }
 }

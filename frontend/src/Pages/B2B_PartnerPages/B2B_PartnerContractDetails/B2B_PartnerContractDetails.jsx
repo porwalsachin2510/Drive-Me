@@ -346,7 +346,10 @@ const B2B_PartnerContractDetails = () => {
       {/* ✅ Navbar MUST be rendered */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="b2b-contract-details-container">
-        <button className="b2b-contract-back-btn" onClick={() => navigate(-1)}>
+        <button
+          className="b2b-contract-back-btn"
+          onClick={() => navigate("/?tab=contracts")}
+        >
           ← Back to Contracts
         </button>
         <div className="b2b-contract-header">
@@ -514,7 +517,7 @@ const B2B_PartnerContractDetails = () => {
                     <span className="b2b-contract-value">
                       KWD{" "}
                       {quotation.quotedPrice.breakdown?.vehicleRental?.toFixed(
-                        2
+                        2,
                       ) || "0.00"}
                     </span>
                   </div>
@@ -523,7 +526,7 @@ const B2B_PartnerContractDetails = () => {
                     <span className="b2b-contract-value">
                       KWD{" "}
                       {quotation.quotedPrice.breakdown?.driverCharges?.toFixed(
-                        2
+                        2,
                       ) || "0.00"}
                     </span>
                   </div>
@@ -532,7 +535,7 @@ const B2B_PartnerContractDetails = () => {
                     <span className="b2b-contract-value">
                       KWD{" "}
                       {quotation.quotedPrice.breakdown?.fuelCharges?.toFixed(
-                        2
+                        2,
                       ) || "0.00"}
                     </span>
                   </div>
@@ -718,83 +721,130 @@ const B2B_PartnerContractDetails = () => {
         )}
 
         {/* Due Date Extension Request Section */}
-        {contract.dueDateExtensionRequest?.isRequested && 
+        {contract.dueDateExtensionRequest?.isRequested &&
           contract.dueDateExtensionRequest?.status === "PENDING" && (
-          <div className="b2b-contract-section">
-            <h2>Due Date Extension Request</h2>
-            <div className="b2b-contract-card" style={{ borderLeft: "4px solid #f59e0b" }}>
-              <div className="b2b-extension-request-info">
-                <div className="b2b-extension-header">
-                  <span className="b2b-extension-badge pending">Pending Review</span>
-                  <span className="b2b-extension-date">
-                    Requested on: {formatDate(contract.dueDateExtensionRequest.requestedDate)}
-                  </span>
-                </div>
-                
-                <div className="b2b-contract-info-grid" style={{ marginTop: "16px" }}>
-                  <div className="b2b-contract-info-item">
-                    <span className="b2b-contract-label">Requested By:</span>
-                    <span className="b2b-contract-value">
-                      {corporateOwner.companyName || corporateOwner.fullName || "Corporate Client"}
+            <div className="b2b-contract-section">
+              <h2>Due Date Extension Request</h2>
+              <div
+                className="b2b-contract-card"
+                style={{ borderLeft: "4px solid #f59e0b" }}
+              >
+                <div className="b2b-extension-request-info">
+                  <div className="b2b-extension-header">
+                    <span className="b2b-extension-badge pending">
+                      Pending Review
+                    </span>
+                    <span className="b2b-extension-date">
+                      Requested on:{" "}
+                      {formatDate(
+                        contract.dueDateExtensionRequest.requestedDate,
+                      )}
                     </span>
                   </div>
-                  <div className="b2b-contract-info-item">
-                    <span className="b2b-contract-label">Current Due Date:</span>
-                    <span className="b2b-contract-value">
-                      {formatDate(financials.finalPayment?.dueDate)}
-                    </span>
-                  </div>
-                  <div className="b2b-contract-info-item">
-                    <span className="b2b-contract-label">Requested New Date:</span>
-                    <span className="b2b-contract-value" style={{ color: "#f59e0b", fontWeight: "600" }}>
-                      {formatDate(contract.dueDateExtensionRequest.newProposedDate)}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="b2b-extension-reason" style={{ marginTop: "16px", padding: "16px", background: "#fffbeb", borderRadius: "8px" }}>
-                  <span className="b2b-contract-label">Reason for Extension:</span>
-                  <p style={{ margin: "8px 0 0 0", color: "#1a1a1a" }}>
-                    {contract.dueDateExtensionRequest.reason}
-                  </p>
-                </div>
+                  <div
+                    className="b2b-contract-info-grid"
+                    style={{ marginTop: "16px" }}
+                  >
+                    <div className="b2b-contract-info-item">
+                      <span className="b2b-contract-label">Requested By:</span>
+                      <span className="b2b-contract-value">
+                        {corporateOwner.companyName ||
+                          corporateOwner.fullName ||
+                          "Corporate Client"}
+                      </span>
+                    </div>
+                    <div className="b2b-contract-info-item">
+                      <span className="b2b-contract-label">
+                        Current Due Date:
+                      </span>
+                      <span className="b2b-contract-value">
+                        {formatDate(financials.finalPayment?.dueDate)}
+                      </span>
+                    </div>
+                    <div className="b2b-contract-info-item">
+                      <span className="b2b-contract-label">
+                        Requested New Date:
+                      </span>
+                      <span
+                        className="b2b-contract-value"
+                        style={{ color: "#f59e0b", fontWeight: "600" }}
+                      >
+                        {formatDate(
+                          contract.dueDateExtensionRequest.newProposedDate,
+                        )}
+                      </span>
+                    </div>
+                  </div>
 
-                <div className="b2b-extension-actions" style={{ marginTop: "20px", display: "flex", gap: "12px" }}>
-                  <button
-                    className="b2b-contract-btn-primary"
-                    onClick={() => {
-                      setExtensionResponse({ action: "APPROVED", responseNotes: "", counterOfferedDate: "" });
-                      setShowExtensionResponseModal(true);
+                  <div
+                    className="b2b-extension-reason"
+                    style={{
+                      marginTop: "16px",
+                      padding: "16px",
+                      background: "#fffbeb",
+                      borderRadius: "8px",
                     }}
-                    style={{ backgroundColor: "#10b981" }}
                   >
-                    Approve Extension
-                  </button>
-                  <button
-                    className="b2b-contract-btn-primary"
-                    onClick={() => {
-                      setExtensionResponse({ action: "COUNTER_OFFERED", responseNotes: "", counterOfferedDate: "" });
-                      setShowExtensionResponseModal(true);
-                    }}
-                    style={{ backgroundColor: "#f59e0b" }}
+                    <span className="b2b-contract-label">
+                      Reason for Extension:
+                    </span>
+                    <p style={{ margin: "8px 0 0 0", color: "#1a1a1a" }}>
+                      {contract.dueDateExtensionRequest.reason}
+                    </p>
+                  </div>
+
+                  <div
+                    className="b2b-extension-actions"
+                    style={{ marginTop: "20px", display: "flex", gap: "12px" }}
                   >
-                    Counter Offer
-                  </button>
-                  <button
-                    className="b2b-contract-btn-secondary"
-                    onClick={() => {
-                      setExtensionResponse({ action: "REJECTED", responseNotes: "", counterOfferedDate: "" });
-                      setShowExtensionResponseModal(true);
-                    }}
-                    style={{ backgroundColor: "#ef4444", color: "#fff" }}
-                  >
-                    Reject Request
-                  </button>
+                    <button
+                      className="b2b-contract-btn-primary"
+                      onClick={() => {
+                        setExtensionResponse({
+                          action: "APPROVED",
+                          responseNotes: "",
+                          counterOfferedDate: "",
+                        });
+                        setShowExtensionResponseModal(true);
+                      }}
+                      style={{ backgroundColor: "#10b981" }}
+                    >
+                      Approve Extension
+                    </button>
+                    <button
+                      className="b2b-contract-btn-primary"
+                      onClick={() => {
+                        setExtensionResponse({
+                          action: "COUNTER_OFFERED",
+                          responseNotes: "",
+                          counterOfferedDate: "",
+                        });
+                        setShowExtensionResponseModal(true);
+                      }}
+                      style={{ backgroundColor: "#f59e0b" }}
+                    >
+                      Counter Offer
+                    </button>
+                    <button
+                      className="b2b-contract-btn-secondary"
+                      onClick={() => {
+                        setExtensionResponse({
+                          action: "REJECTED",
+                          responseNotes: "",
+                          counterOfferedDate: "",
+                        });
+                        setShowExtensionResponseModal(true);
+                      }}
+                      style={{ backgroundColor: "#ef4444", color: "#fff" }}
+                    >
+                      Reject Request
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Digital Signature Required Section */}
         {status === "PENDING_FLEET_SIGNATURE" &&
@@ -1062,54 +1112,83 @@ const B2B_PartnerContractDetails = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <h2>
-                {extensionResponse.action === "APPROVED" && "Approve Due Date Extension"}
-                {extensionResponse.action === "REJECTED" && "Reject Due Date Extension"}
-                {extensionResponse.action === "COUNTER_OFFERED" && "Counter Offer Due Date"}
+                {extensionResponse.action === "APPROVED" &&
+                  "Approve Due Date Extension"}
+                {extensionResponse.action === "REJECTED" &&
+                  "Reject Due Date Extension"}
+                {extensionResponse.action === "COUNTER_OFFERED" &&
+                  "Counter Offer Due Date"}
               </h2>
 
               {extensionResponse.action === "APPROVED" && (
                 <p style={{ marginBottom: "16px" }}>
                   By approving, the final payment due date will be changed to{" "}
-                  <strong>{formatDate(contract.dueDateExtensionRequest?.newProposedDate)}</strong>.
+                  <strong>
+                    {formatDate(
+                      contract.dueDateExtensionRequest?.newProposedDate,
+                    )}
+                  </strong>
+                  .
                 </p>
               )}
 
               {extensionResponse.action === "REJECTED" && (
                 <p style={{ marginBottom: "16px", color: "#ef4444" }}>
-                  The corporate client will be notified that their request has been rejected. 
-                  The original due date will remain unchanged.
+                  The corporate client will be notified that their request has
+                  been rejected. The original due date will remain unchanged.
                 </p>
               )}
 
               {extensionResponse.action === "COUNTER_OFFERED" && (
                 <>
                   <p style={{ marginBottom: "16px" }}>
-                    You can offer a different date than what the corporate client requested.
+                    You can offer a different date than what the corporate
+                    client requested.
                   </p>
                   <div className="b2b-contract-form-group">
                     <label>Counter Offer Date *</label>
                     <input
                       type="date"
                       value={extensionResponse.counterOfferedDate}
-                      onChange={(e) => setExtensionResponse({...extensionResponse, counterOfferedDate: e.target.value})}
-                      min={new Date().toISOString().split('T')[0]}
-                      style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "2px solid #e5e7eb" }}
+                      onChange={(e) =>
+                        setExtensionResponse({
+                          ...extensionResponse,
+                          counterOfferedDate: e.target.value,
+                        })
+                      }
+                      min={new Date().toISOString().split("T")[0]}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "2px solid #e5e7eb",
+                      }}
                     />
                   </div>
                 </>
               )}
 
               <div className="b2b-contract-form-group">
-                <label>Response Notes {extensionResponse.action === "REJECTED" ? "(Required)" : "(Optional)"}</label>
+                <label>
+                  Response Notes{" "}
+                  {extensionResponse.action === "REJECTED"
+                    ? "(Required)"
+                    : "(Optional)"}
+                </label>
                 <textarea
                   value={extensionResponse.responseNotes}
-                  onChange={(e) => setExtensionResponse({...extensionResponse, responseNotes: e.target.value})}
+                  onChange={(e) =>
+                    setExtensionResponse({
+                      ...extensionResponse,
+                      responseNotes: e.target.value,
+                    })
+                  }
                   placeholder={
-                    extensionResponse.action === "APPROVED" 
-                      ? "Add any notes for the corporate client..." 
+                    extensionResponse.action === "APPROVED"
+                      ? "Add any notes for the corporate client..."
                       : extensionResponse.action === "REJECTED"
-                      ? "Please explain why you're rejecting the request..."
-                      : "Explain the counter offer..."
+                        ? "Please explain why you're rejecting the request..."
+                        : "Explain the counter offer..."
                   }
                   rows={4}
                 />
@@ -1120,7 +1199,11 @@ const B2B_PartnerContractDetails = () => {
                   className="b2b-contract-btn-secondary"
                   onClick={() => {
                     setShowExtensionResponseModal(false);
-                    setExtensionResponse({ action: "", responseNotes: "", counterOfferedDate: "" });
+                    setExtensionResponse({
+                      action: "",
+                      responseNotes: "",
+                      counterOfferedDate: "",
+                    });
                   }}
                   disabled={processingExtension}
                 >
@@ -1131,15 +1214,21 @@ const B2B_PartnerContractDetails = () => {
                   onClick={handleExtensionResponse}
                   disabled={processingExtension}
                   style={{
-                    backgroundColor: 
-                      extensionResponse.action === "APPROVED" ? "#10b981" :
-                      extensionResponse.action === "REJECTED" ? "#ef4444" : "#f59e0b"
+                    backgroundColor:
+                      extensionResponse.action === "APPROVED"
+                        ? "#10b981"
+                        : extensionResponse.action === "REJECTED"
+                          ? "#ef4444"
+                          : "#f59e0b",
                   }}
                 >
-                  {processingExtension ? "Processing..." : 
-                    extensionResponse.action === "APPROVED" ? "Confirm Approval" :
-                    extensionResponse.action === "REJECTED" ? "Confirm Rejection" : "Send Counter Offer"
-                  }
+                  {processingExtension
+                    ? "Processing..."
+                    : extensionResponse.action === "APPROVED"
+                      ? "Confirm Approval"
+                      : extensionResponse.action === "REJECTED"
+                        ? "Confirm Rejection"
+                        : "Send Counter Offer"}
                 </button>
               </div>
             </div>

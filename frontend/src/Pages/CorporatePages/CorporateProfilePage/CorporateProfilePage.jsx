@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation  } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { logout } from "../../../Redux/slices/authSlice";
 import api from "../../../utils/api";
@@ -18,13 +18,39 @@ import "./corporateprofilepage.css";
 
 
 export default function CorporateProfilePage() {
-  
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  
-  const [activeTab, setActiveTab] = useState("corporate");
-  
-  const [corporateactiveTab, setCorporateActiveTab] = useState("company-profile");
+const navigate = useNavigate();
+const location = useLocation();
+const dispatch = useDispatch();
+
+const [activeTab, setActiveTab] = useState("corporate");
+
+// Get initial tab from URL query params on mount
+const getInitialTab = () => {
+  const searchParams = new URLSearchParams(location.search);
+  return searchParams.get("tab") || "company-profile";
+};
+
+const [corporateactiveTab, setCorporateActiveTab] = useState(getInitialTab);
+
+// When URL changes (e.g., back navigation), update the tab
+useEffect(() => {
+  const searchParams = new URLSearchParams(location.search);
+  const tabFromUrl = searchParams.get("tab");
+  if (tabFromUrl && tabFromUrl !== corporateactiveTab) {
+    setCorporateActiveTab(tabFromUrl);
+    // Clear the URL param after reading it
+    navigate("/corporate-profile", { replace: true });
+  }
+}, [location.search]);
+
+// Custom handler to clear URL when user manually clicks a tab
+const handleTabChange = (tab) => {
+  setCorporateActiveTab(tab);
+  // Clear any tab param from URL when manually switching tabs
+  if (location.search.includes("tab=")) {
+    navigate("/corporate-profile", { replace: true });
+  }
+};
   
   // Add state for real corporate stats
   const [corporateStats, setCorporateStats] = useState({
@@ -38,13 +64,13 @@ export default function CorporateProfilePage() {
   const [feedbackSummary, setFeedbackSummary] = useState(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
-  
+
   // Fetch corporate stats from backend
   useEffect(() => {
     const fetchCorporateStats = async () => {
       try {
         setStatsLoading(true);
-        const response = await api.get('/corporate/stats');
+        const response = await api.get("/corporate/stats");
         if (response.data.success) {
           setCorporateStats({
             activeContracts: response.data.data?.activeContracts || 0,
@@ -59,10 +85,10 @@ export default function CorporateProfilePage() {
         setStatsLoading(false);
       }
     };
-    
+
     fetchCorporateStats();
   }, []);
-  
+
   const fetchFeedbackSummary = async () => {
     try {
       setFeedbackLoading(true);
@@ -88,9 +114,15 @@ export default function CorporateProfilePage() {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
-        <span key={i} style={{ color: i <= Math.round(rating) ? "#f59e0b" : "#d1d5db", fontSize: "16px" }}>
+        <span
+          key={i}
+          style={{
+            color: i <= Math.round(rating) ? "#f59e0b" : "#d1d5db",
+            fontSize: "16px",
+          }}
+        >
           {"\u2605"}
-        </span>
+        </span>,
       );
     }
     return stars;
@@ -140,7 +172,7 @@ export default function CorporateProfilePage() {
             Authorization: `Bearer ${token}`,
           },
           withCredentials: true,
-        }
+        },
       );
 
       // Clear frontend storage
@@ -188,7 +220,9 @@ export default function CorporateProfilePage() {
             </div>
             <div className="corporate-stat-content">
               <div className="corporate-stat-label">Active Contracts</div>
-              <div className="corporate-stat-value">{corporateStats.activeContracts}</div>
+              <div className="corporate-stat-value">
+                {corporateStats.activeContracts}
+              </div>
             </div>
           </div>
 
@@ -210,7 +244,9 @@ export default function CorporateProfilePage() {
             </div>
             <div className="corporate-stat-content">
               <div className="corporate-stat-label">Total Employees</div>
-              <div className="corporate-stat-value">{corporateStats.totalEmployees}</div>
+              <div className="corporate-stat-value">
+                {corporateStats.totalEmployees}
+              </div>
             </div>
           </div>
 
@@ -231,7 +267,9 @@ export default function CorporateProfilePage() {
             </div>
             <div className="corporate-stat-content">
               <div className="corporate-stat-label">Active Routes</div>
-              <div className="corporate-stat-value">{corporateStats.activeRoutes}</div>
+              <div className="corporate-stat-value">
+                {corporateStats.activeRoutes}
+              </div>
             </div>
           </div>
         </div>
@@ -241,7 +279,9 @@ export default function CorporateProfilePage() {
           <button
             onClick={handleToggleFeedback}
             style={{
-              background: showFeedback ? "#e8eaf6" : "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
+              background: showFeedback
+                ? "#e8eaf6"
+                : "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
               color: showFeedback ? "#1a237e" : "#fff",
               border: showFeedback ? "1px solid #c5cae9" : "none",
               padding: "10px 24px",
@@ -257,11 +297,21 @@ export default function CorporateProfilePage() {
             }}
           >
             <span>Employee Feedback Summary</span>
-            <span style={{ fontSize: "12px" }}>{showFeedback ? "Hide" : "View"}</span>
+            <span style={{ fontSize: "12px" }}>
+              {showFeedback ? "Hide" : "View"}
+            </span>
           </button>
 
           {showFeedback && (
-            <div style={{ background: "#fff", borderRadius: "0 0 8px 8px", border: "1px solid #e0e0e0", borderTop: "none", padding: "20px" }}>
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "0 0 8px 8px",
+                border: "1px solid #e0e0e0",
+                borderTop: "none",
+                padding: "20px",
+              }}
+            >
               {feedbackLoading ? (
                 <div style={{ textAlign: "center", padding: "20px" }}>
                   <p>Loading feedback data...</p>
@@ -269,44 +319,177 @@ export default function CorporateProfilePage() {
               ) : feedbackSummary ? (
                 <>
                   {/* Summary Stats */}
-                  <div style={{ display: "flex", gap: "16px", marginBottom: "20px", flexWrap: "wrap" }}>
-                    <div style={{ flex: "1", minWidth: "120px", background: "#e8f5e9", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
-                      <div style={{ fontSize: "28px", fontWeight: "700", color: "#2e7d32" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "16px",
+                      marginBottom: "20px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        background: "#e8f5e9",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "28px",
+                          fontWeight: "700",
+                          color: "#2e7d32",
+                        }}
+                      >
                         {feedbackSummary.averageRating || 0}
                       </div>
-                      <div style={{ fontSize: "12px", color: "#388e3c", fontWeight: "500" }}>Avg Rating</div>
-                      <div>{renderStars(feedbackSummary.averageRating || 0)}</div>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "#388e3c",
+                          fontWeight: "500",
+                        }}
+                      >
+                        Avg Rating
+                      </div>
+                      <div>
+                        {renderStars(feedbackSummary.averageRating || 0)}
+                      </div>
                     </div>
-                    <div style={{ flex: "1", minWidth: "120px", background: "#e3f2fd", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
-                      <div style={{ fontSize: "28px", fontWeight: "700", color: "#1565c0" }}>
+                    <div
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        background: "#e3f2fd",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "28px",
+                          fontWeight: "700",
+                          color: "#1565c0",
+                        }}
+                      >
                         {feedbackSummary.totalFeedbacks || 0}
                       </div>
-                      <div style={{ fontSize: "12px", color: "#1976d2", fontWeight: "500" }}>Total Feedbacks</div>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "#1976d2",
+                          fontWeight: "500",
+                        }}
+                      >
+                        Total Feedbacks
+                      </div>
                     </div>
-                    <div style={{ flex: "1", minWidth: "120px", background: "#f3e5f5", borderRadius: "8px", padding: "16px", textAlign: "center" }}>
-                      <div style={{ fontSize: "28px", fontWeight: "700", color: "#6a1b9a" }}>
+                    <div
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        background: "#f3e5f5",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "28px",
+                          fontWeight: "700",
+                          color: "#6a1b9a",
+                        }}
+                      >
                         {feedbackSummary.totalEmployees || 0}
                       </div>
-                      <div style={{ fontSize: "12px", color: "#7b1fa2", fontWeight: "500" }}>Total Employees</div>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "#7b1fa2",
+                          fontWeight: "500",
+                        }}
+                      >
+                        Total Employees
+                      </div>
                     </div>
                   </div>
 
                   {/* Rating Distribution */}
                   {feedbackSummary.ratingDistribution && (
                     <div style={{ marginBottom: "20px" }}>
-                      <h4 style={{ margin: "0 0 12px 0", fontSize: "14px", color: "#333" }}>Rating Distribution</h4>
+                      <h4
+                        style={{
+                          margin: "0 0 12px 0",
+                          fontSize: "14px",
+                          color: "#333",
+                        }}
+                      >
+                        Rating Distribution
+                      </h4>
                       {[5, 4, 3, 2, 1].map((star) => {
-                        const count = feedbackSummary.ratingDistribution[star] || 0;
+                        const count =
+                          feedbackSummary.ratingDistribution[star] || 0;
                         const total = feedbackSummary.totalFeedbacks || 1;
                         const pct = Math.round((count / total) * 100);
                         return (
-                          <div key={star} style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                            <span style={{ width: "20px", fontSize: "13px", fontWeight: "600", color: "#555" }}>{star}</span>
-                            <span style={{ color: "#f59e0b", fontSize: "14px" }}>{"\u2605"}</span>
-                            <div style={{ flex: 1, background: "#f0f0f0", borderRadius: "4px", height: "8px", overflow: "hidden" }}>
-                              <div style={{ width: `${pct}%`, background: "#f59e0b", height: "100%", borderRadius: "4px", transition: "width 0.3s ease" }} />
+                          <div
+                            key={star}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: "20px",
+                                fontSize: "13px",
+                                fontWeight: "600",
+                                color: "#555",
+                              }}
+                            >
+                              {star}
+                            </span>
+                            <span
+                              style={{ color: "#f59e0b", fontSize: "14px" }}
+                            >
+                              {"\u2605"}
+                            </span>
+                            <div
+                              style={{
+                                flex: 1,
+                                background: "#f0f0f0",
+                                borderRadius: "4px",
+                                height: "8px",
+                                overflow: "hidden",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: `${pct}%`,
+                                  background: "#f59e0b",
+                                  height: "100%",
+                                  borderRadius: "4px",
+                                  transition: "width 0.3s ease",
+                                }}
+                              />
                             </div>
-                            <span style={{ width: "40px", fontSize: "12px", color: "#888", textAlign: "right" }}>{count}</span>
+                            <span
+                              style={{
+                                width: "40px",
+                                fontSize: "12px",
+                                color: "#888",
+                                textAlign: "right",
+                              }}
+                            >
+                              {count}
+                            </span>
                           </div>
                         );
                       })}
@@ -314,28 +497,91 @@ export default function CorporateProfilePage() {
                   )}
 
                   {/* Recent Feedbacks */}
-                  {feedbackSummary.recentFeedbacks && feedbackSummary.recentFeedbacks.length > 0 && (
-                    <div>
-                      <h4 style={{ margin: "0 0 12px 0", fontSize: "14px", color: "#333" }}>Recent Employee Feedback</h4>
-                      {feedbackSummary.recentFeedbacks.map((fb, i) => (
-                        <div key={i} style={{ background: "#fafafa", borderRadius: "6px", padding: "12px", marginBottom: "8px", borderLeft: "3px solid #1a237e" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                            <span style={{ fontWeight: "600", fontSize: "13px", color: "#333" }}>{fb.employeeName}</span>
-                            <span style={{ fontSize: "11px", color: "#999" }}>{fb.date ? new Date(fb.date).toLocaleDateString() : ""}</span>
+                  {feedbackSummary.recentFeedbacks &&
+                    feedbackSummary.recentFeedbacks.length > 0 && (
+                      <div>
+                        <h4
+                          style={{
+                            margin: "0 0 12px 0",
+                            fontSize: "14px",
+                            color: "#333",
+                          }}
+                        >
+                          Recent Employee Feedback
+                        </h4>
+                        {feedbackSummary.recentFeedbacks.map((fb, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              background: "#fafafa",
+                              borderRadius: "6px",
+                              padding: "12px",
+                              marginBottom: "8px",
+                              borderLeft: "3px solid #1a237e",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontWeight: "600",
+                                  fontSize: "13px",
+                                  color: "#333",
+                                }}
+                              >
+                                {fb.employeeName}
+                              </span>
+                              <span style={{ fontSize: "11px", color: "#999" }}>
+                                {fb.date
+                                  ? new Date(fb.date).toLocaleDateString()
+                                  : ""}
+                              </span>
+                            </div>
+                            {fb.rating && <div>{renderStars(fb.rating)}</div>}
+                            {fb.feedback && (
+                              <p
+                                style={{
+                                  margin: "4px 0 0 0",
+                                  fontSize: "13px",
+                                  color: "#555",
+                                  lineHeight: "1.4",
+                                }}
+                              >
+                                {fb.feedback}
+                              </p>
+                            )}
                           </div>
-                          {fb.rating && <div>{renderStars(fb.rating)}</div>}
-                          {fb.feedback && <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#555", lineHeight: "1.4" }}>{fb.feedback}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
 
                   {feedbackSummary.totalFeedbacks === 0 && (
-                    <p style={{ textAlign: "center", color: "#9e9e9e", padding: "20px" }}>No employee feedback yet.</p>
+                    <p
+                      style={{
+                        textAlign: "center",
+                        color: "#9e9e9e",
+                        padding: "20px",
+                      }}
+                    >
+                      No employee feedback yet.
+                    </p>
                   )}
                 </>
               ) : (
-                <p style={{ textAlign: "center", color: "#9e9e9e", padding: "20px" }}>Unable to load feedback data.</p>
+                <p
+                  style={{
+                    textAlign: "center",
+                    color: "#9e9e9e",
+                    padding: "20px",
+                  }}
+                >
+                  Unable to load feedback data.
+                </p>
               )}
             </div>
           )}
@@ -352,7 +598,9 @@ export default function CorporateProfilePage() {
                 Verified Business
               </span>
             </div>
-            <button className="corporate-logout-btn" onClick={handleLogout}>Log Out</button>
+            <button className="corporate-logout-btn" onClick={handleLogout}>
+              Log Out
+            </button>
           </div>
 
           {/* Tabs */}
@@ -363,27 +611,23 @@ export default function CorporateProfilePage() {
                   ? "corporate-active"
                   : ""
               }`}
-              onClick={() => setCorporateActiveTab("company-profile")}
+              onClick={() => handleTabChange("company-profile")}
             >
               Company Profile
             </button>
             <button
               className={`corporate-tab ${
-                corporateactiveTab === "my-quotations"
-                  ? "corporate-active"
-                  : ""
+                corporateactiveTab === "my-quotations" ? "corporate-active" : ""
               }`}
-              onClick={() => setCorporateActiveTab("my-quotations")}
+              onClick={() => handleTabChange("my-quotations")}
             >
               My Quotations
             </button>
             <button
               className={`corporate-tab ${
-                corporateactiveTab === "contracts"
-                  ? "corporate-active"
-                  : ""
+                corporateactiveTab === "contracts" ? "corporate-active" : ""
               }`}
-              onClick={() => setCorporateActiveTab("contracts")}
+              onClick={() => handleTabChange("contracts")}
             >
               Contracts
             </button>
@@ -393,7 +637,7 @@ export default function CorporateProfilePage() {
                   ? "corporate-active"
                   : ""
               }`}
-              onClick={() => setCorporateActiveTab("employee-management")}
+              onClick={() => handleTabChange("employee-management")}
             >
               Employee Management
             </button>
@@ -403,7 +647,7 @@ export default function CorporateProfilePage() {
                   ? "corporate-active"
                   : ""
               }`}
-              onClick={() => setCorporateActiveTab("employee-bookings")}
+              onClick={() => handleTabChange("employee-bookings")}
             >
               Employee Bookings
             </button>
@@ -413,17 +657,15 @@ export default function CorporateProfilePage() {
                   ? "corporate-active"
                   : ""
               }`}
-              onClick={() => setCorporateActiveTab("requirement-management")}
+              onClick={() => handleTabChange("requirement-management")}
             >
               Requirements
             </button>
             <button
               className={`corporate-tab ${
-                corporateactiveTab === "billing"
-                  ? "corporate-active"
-                  : ""
+                corporateactiveTab === "billing" ? "corporate-active" : ""
               }`}
-              onClick={() => setCorporateActiveTab("billing")}
+              onClick={() => handleTabChange("billing")}
             >
               Billing
             </button>
@@ -433,16 +675,14 @@ export default function CorporateProfilePage() {
                   ? "corporate-active"
                   : ""
               }`}
-              onClick={() => setCorporateActiveTab("account-settings")}
+              onClick={() => handleTabChange("account-settings")}
             >
               Account Settings
             </button>
           </div>
 
           {/* Tab Content */}
-          <div className="corporate-tab-content">
-            {renderContent()}
-          </div>
+          <div className="corporate-tab-content">{renderContent()}</div>
         </div>
       </div>
       <Footer />

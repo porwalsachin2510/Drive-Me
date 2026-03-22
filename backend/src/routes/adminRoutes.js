@@ -43,6 +43,7 @@ import {
     toggleAdCampaignStatus,
     getPublicActiveCampaigns,
     trackCampaignClick,
+    trackCampaignView,
     getPaymentStats,
     getRidePoolingStats,
     getPassengerInterests,
@@ -154,6 +155,7 @@ router.put("/comm/config/:type", verifyToken, checkAdminRole, updateCommConfig)
 // Public Advertisement Routes (no auth required)
 router.get("/ads/public/campaigns", getPublicActiveCampaigns)
 router.post("/ads/public/campaigns/:campaignId/click", trackCampaignClick)
+router.post("/ads/public/campaigns/:campaignId/view", trackCampaignView)
 
 // Advertisement Management
 router.get("/ads/campaigns", verifyToken, checkAdminRole, getAdCampaigns)

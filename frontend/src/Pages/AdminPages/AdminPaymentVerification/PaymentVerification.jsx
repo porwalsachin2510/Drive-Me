@@ -96,37 +96,55 @@ const PaymentVerification = () => {
 
   if (loading) {
     return (
-      <div className="payment-verification">
-        <div className="loading">Loading payments...</div>
+      <div className="drivemego-paymentverification-payment-verification">
+        <div className="drivemego-paymentverification-loading">
+          Loading payments...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="payment-verification">
-      <div className="verification-header">
+    <div className="drivemego-paymentverification-payment-verification">
+      <div className="drivemego-paymentverification-verification-header">
         <h2>Payment Verification</h2>
-        <div className="verification-stats">
-          <div className="stat-card">
-            <span className="stat-number">{stats.totalPending}</span>
-            <span className="stat-label">Pending</span>
+        <div className="drivemego-paymentverification-verification-stats">
+          <div className="drivemego-paymentverification-stat-card">
+            <span className="drivemego-paymentverification-stat-number">
+              {stats.totalPending}
+            </span>
+            <span className="drivemego-paymentverification-stat-label">
+              Pending
+            </span>
           </div>
-          <div className="stat-card">
-            <span className="stat-number">{stats.totalVerified}</span>
-            <span className="stat-label">Verified</span>
+          <div className="drivemego-paymentverification-stat-card">
+            <span className="drivemego-paymentverification-stat-number">
+              {stats.totalVerified}
+            </span>
+            <span className="drivemego-paymentverification-stat-label">
+              Verified
+            </span>
           </div>
-          <div className="stat-card">
-            <span className="stat-number">{stats.totalRejected}</span>
-            <span className="stat-label">Rejected</span>
+          <div className="drivemego-paymentverification-stat-card">
+            <span className="drivemego-paymentverification-stat-number">
+              {stats.totalRejected}
+            </span>
+            <span className="drivemego-paymentverification-stat-label">
+              Rejected
+            </span>
           </div>
-          <div className="stat-card">
-            <span className="stat-number">{formatCurrency(stats.totalAmount)}</span>
-            <span className="stat-label">Total Amount</span>
+          <div className="drivemego-paymentverification-stat-card">
+            <span className="drivemego-paymentverification-stat-number">
+              {formatCurrency(stats.totalAmount)}
+            </span>
+            <span className="drivemego-paymentverification-stat-label">
+              Total Amount
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="payments-table">
+      <div className="drivemego-paymentverification-payments-table">
         <table>
           <thead>
             <tr>
@@ -145,23 +163,27 @@ const PaymentVerification = () => {
             {pendingPayments.map((payment) => (
               <tr key={payment._id}>
                 <td>{payment._id}</td>
-                <td>{payment.contractId?.contractNumber || 'N/A'}</td>
-                <td>{payment.corporateOwnerId?.fullName || 'N/A'}</td>
-                <td>{payment.fleetOwnerId?.fullName || 'N/A'}</td>
+                <td>{payment.contractId?.contractNumber || "N/A"}</td>
+                <td>{payment.corporateOwnerId?.fullName || "N/A"}</td>
+                <td>{payment.fleetOwnerId?.fullName || "N/A"}</td>
                 <td>{formatCurrency(payment.amount)}</td>
                 <td>{payment.paymentType}</td>
                 <td>
-                  <span 
-                    className="status-badge" 
-                    style={{ backgroundColor: getStatusColor(payment.verificationStatus) }}
+                  <span
+                    className="drivemego-paymentverification-status-badge"
+                    style={{
+                      backgroundColor: getStatusColor(
+                        payment.verificationStatus,
+                      ),
+                    }}
                   >
                     {payment.verificationStatus}
                   </span>
                 </td>
                 <td>{new Date(payment.createdAt).toLocaleDateString()}</td>
                 <td>
-                  <button 
-                    className="view-btn"
+                  <button
+                    className="drivemego-paymentverification-view-btn"
                     onClick={() => handleViewDetails(payment._id)}
                   >
                     View Details
@@ -174,64 +196,99 @@ const PaymentVerification = () => {
       </div>
 
       {pendingPayments.length === 0 && (
-        <div className="no-payments">
+        <div className="drivemego-paymentverification-no-payments">
           <p>No pending payments found</p>
         </div>
       )}
 
       {/* Payment Details Modal */}
       {showModal && selectedPayment && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="drivemego-paymentverification-modal-overlay">
+          <div className="drivemego-paymentverification-modal">
+            <div className="drivemego-paymentverification-modal-header">
               <h3>Payment Details</h3>
-              <button className="close-btn" onClick={() => setShowModal(false)}>
+              <button
+                className="drivemego-paymentverification-close-btn"
+                onClick={() => setShowModal(false)}
+              >
                 ×
               </button>
             </div>
-            
-            <div className="modal-content">
-              <div className="payment-info">
-                <div className="info-row">
-                  <span className="label">Payment ID:</span>
-                  <span className="value">{selectedPayment._id}</span>
+
+            <div className="drivemego-paymentverification-modal-content">
+              <div className="drivemego-paymentverification-payment-info">
+                <div className="drivemego-paymentverification-info-row">
+                  <span className="drivemego-paymentverification-label">
+                    Payment ID:
+                  </span>
+                  <span className="drivemego-paymentverification-value">
+                    {selectedPayment._id}
+                  </span>
                 </div>
-                <div className="info-row">
-                  <span className="label">Contract:</span>
-                  <span className="value">{selectedPayment.contractId?.contractNumber}</span>
+                <div className="drivemego-paymentverification-info-row">
+                  <span className="drivemego-paymentverification-label">
+                    Contract:
+                  </span>
+                  <span className="drivemego-paymentverification-value">
+                    {selectedPayment.contractId?.contractNumber}
+                  </span>
                 </div>
-                <div className="info-row">
-                  <span className="label">Corporate Owner:</span>
-                  <span className="value">{selectedPayment.corporateOwnerId?.fullName}</span>
+                <div className="drivemego-paymentverification-info-row">
+                  <span className="drivemego-paymentverification-label">
+                    Corporate Owner:
+                  </span>
+                  <span className="drivemego-paymentverification-value">
+                    {selectedPayment.corporateOwnerId?.fullName}
+                  </span>
                 </div>
-                <div className="info-row">
-                  <span className="label">Fleet Owner:</span>
-                  <span className="value">{selectedPayment.fleetOwnerId?.fullName}</span>
+                <div className="drivemego-paymentverification-info-row">
+                  <span className="drivemego-paymentverification-label">
+                    Fleet Owner:
+                  </span>
+                  <span className="drivemego-paymentverification-value">
+                    {selectedPayment.fleetOwnerId?.fullName}
+                  </span>
                 </div>
-                <div className="info-row">
-                  <span className="label">Amount:</span>
-                  <span className="value">{formatCurrency(selectedPayment.amount)}</span>
+                <div className="drivemego-paymentverification-info-row">
+                  <span className="drivemego-paymentverification-label">
+                    Amount:
+                  </span>
+                  <span className="drivemego-paymentverification-value">
+                    {formatCurrency(selectedPayment.amount)}
+                  </span>
                 </div>
-                <div className="info-row">
-                  <span className="label">Type:</span>
-                  <span className="value">{selectedPayment.paymentType}</span>
+                <div className="drivemego-paymentverification-info-row">
+                  <span className="drivemego-paymentverification-label">
+                    Type:
+                  </span>
+                  <span className="drivemego-paymentverification-value">
+                    {selectedPayment.paymentType}
+                  </span>
                 </div>
-                <div className="info-row">
-                  <span className="label">Status:</span>
-                  <span className="value">{selectedPayment.verificationStatus}</span>
+                <div className="drivemego-paymentverification-info-row">
+                  <span className="drivemego-paymentverification-label">
+                    Status:
+                  </span>
+                  <span className="drivemego-paymentverification-value">
+                    {selectedPayment.verificationStatus}
+                  </span>
                 </div>
-                <div className="info-row">
-                  <span className="label">Created:</span>
-                  <span className="value">{new Date(selectedPayment.createdAt).toLocaleString()}</span>
+                <div className="drivemego-paymentverification-info-row">
+                  <span className="drivemego-paymentverification-label">
+                    Created:
+                  </span>
+                  <span className="drivemego-paymentverification-value">
+                    {new Date(selectedPayment.createdAt).toLocaleString()}
+                  </span>
                 </div>
               </div>
 
               <PaymentBreakdown payment={selectedPayment} />
 
-              <div className="verification-actions">
-                <div className="action-buttons">
-                  <button 
-                    className="approve-btn"
+              <div className="drivemego-paymentverification-verification-actions">
+                <div className="drivemego-paymentverification-action-buttons">
+                  <button
+                    className="drivemego-paymentverification-approve-btn"
                     onClick={() => {
                       setVerificationAction("APPROVE");
                       handleVerification("APPROVE");
@@ -239,9 +296,9 @@ const PaymentVerification = () => {
                   >
                     Approve Payment
                   </button>
-                  
-                  <button 
-                    className="reject-btn"
+
+                  <button
+                    className="drivemego-paymentverification-reject-btn"
                     onClick={() => setVerificationAction("REJECT")}
                   >
                     Reject Payment
@@ -249,7 +306,7 @@ const PaymentVerification = () => {
                 </div>
 
                 {verificationAction === "REJECT" && (
-                  <div className="rejection-form">
+                  <div className="drivemego-paymentverification-rejection-form">
                     <label>Rejection Reason:</label>
                     <textarea
                       value={rejectionReason}
@@ -257,15 +314,15 @@ const PaymentVerification = () => {
                       placeholder="Enter reason for rejection..."
                       rows={4}
                     />
-                    <div className="rejection-actions">
-                      <button 
-                        className="cancel-btn"
+                    <div className="drivemego-paymentverification-rejection-actions">
+                      <button
+                        className="drivemego-paymentverification-cancel-btn"
                         onClick={() => setVerificationAction("")}
                       >
                         Cancel
                       </button>
-                      <button 
-                        className="confirm-reject-btn"
+                      <button
+                        className="drivemego-paymentverification-confirm-reject-btn"
                         onClick={() => handleVerification("REJECT")}
                       >
                         Confirm Rejection

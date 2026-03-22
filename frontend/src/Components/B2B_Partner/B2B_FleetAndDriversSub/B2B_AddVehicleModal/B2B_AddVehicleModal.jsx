@@ -257,25 +257,37 @@ const B2B_AddVehicleModal = ({ onClose }) => {
 
   return (
     <>
-      <div className="modal-overlay">
-        <div className="modal-content">
-          <div className="modal-header">
+      <div className="b2b-operator-dashboard-add-vehicle-modal-overlay">
+        <div className="b2b-operator-dashboard-add-vehicle-modal-content">
+          <div className="b2b-operator-dashboard-add-vehicle-modal-header">
             <h2>Add New Vehicle</h2>
-            <button className="modal-close" onClick={onClose}>
+            <button
+              className="b2b-operator-dashboard-add-vehicle-modal-close"
+              onClick={onClose}
+            >
               ✕
             </button>
           </div>
 
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="b2b-operator-dashboard-add-vehicle-error-message">
+              {error}
+            </div>
+          )}
 
-          <form onSubmit={handleSubmit} className="add-vehicle-form">
+          <form
+            onSubmit={handleSubmit}
+            className="b2b-operator-dashboard-add-vehicle-add-vehicle-form"
+          >
             {/* Service Type */}
-            <div className="form-section">
+            <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Service Type</h2>
-              <div className="service-type-grid">
+              <div className="b2b-operator-dashboard-add-vehicle-service-type-grid">
                 <label
-                  className={`service-type-card ${
-                    formData.serviceType === "PASSENGER" ? "active" : ""
+                  className={`b2b-operator-dashboard-add-vehicle-service-type-card ${
+                    formData.serviceType === "PASSENGER"
+                      ? "b2b-operator-dashboard-add-vehicle-active"
+                      : ""
                   }`}
                 >
                   <input
@@ -285,14 +297,18 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                     checked={formData.serviceType === "PASSENGER"}
                     onChange={handleInputChange}
                   />
-                  <div className="service-icon">🚗</div>
+                  <div className="b2b-operator-dashboard-add-vehicle-service-icon">
+                    🚗
+                  </div>
                   <h3>Passenger Vehicle</h3>
                   <p>Cars, SUVs, Vans, Buses</p>
                 </label>
 
                 <label
-                  className={`service-type-card ${
-                    formData.serviceType === "GOODS_CARRIER" ? "active" : ""
+                  className={`b2b-operator-dashboard-add-vehicle-service-type-card ${
+                    formData.serviceType === "GOODS_CARRIER"
+                      ? "b2b-operator-dashboard-add-vehicle-active"
+                      : ""
                   }`}
                 >
                   <input
@@ -302,14 +318,18 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                     checked={formData.serviceType === "GOODS_CARRIER"}
                     onChange={handleInputChange}
                   />
-                  <div className="service-icon">🚚</div>
+                  <div className="b2b-operator-dashboard-add-vehicle-service-icon">
+                    🚚
+                  </div>
                   <h3>Goods Carrier</h3>
                   <p>Trucks, Pickups for cargo</p>
                 </label>
 
                 <label
-                  className={`service-type-card ${
-                    formData.serviceType === "MANAGED_SERVICES" ? "active" : ""
+                  className={`b2b-operator-dashboard-add-vehicle-service-type-card ${
+                    formData.serviceType === "MANAGED_SERVICES"
+                      ? "b2b-operator-dashboard-add-vehicle-active"
+                      : ""
                   }`}
                 >
                   <input
@@ -319,7 +339,9 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                     checked={formData.serviceType === "MANAGED_SERVICES"}
                     onChange={handleInputChange}
                   />
-                  <div className="service-icon">🏢</div>
+                  <div className="b2b-operator-dashboard-add-vehicle-service-icon">
+                    🏢
+                  </div>
                   <h3>Managed Services</h3>
                   <p>Full fleet management</p>
                 </label>
@@ -327,10 +349,10 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* Basic Information */}
-            <div className="form-section">
+            <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Basic Information</h2>
-              <div className="form-grid">
-                <div className="form-group">
+              <div className="b2b-operator-dashboard-add-vehicle-form-grid">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Vehicle Name *</label>
                   <input
                     type="text"
@@ -342,7 +364,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Vehicle Category *</label>
                   <select
                     name="vehicleCategory"
@@ -355,12 +377,12 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                         <option key={cat.value} value={cat.value}>
                           {cat.label}
                         </option>
-                      )
+                      ),
                     )}
                   </select>
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Registration Number *</label>
                   <input
                     type="text"
@@ -372,7 +394,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Manufacturing Year *</label>
                   <input
                     type="number"
@@ -386,7 +408,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                 </div>
 
                 {formData.serviceType === "PASSENGER" && (
-                  <div className="form-group">
+                  <div className="b2b-operator-dashboard-add-vehicle-form-group">
                     <label>Seating Capacity *</label>
                     <input
                       type="number"
@@ -395,7 +417,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                         handleNestedChange(
                           "capacity",
                           "seatingCapacity",
-                          Number.parseInt(e.target.value)
+                          Number.parseInt(e.target.value),
                         )
                       }
                       min="2"
@@ -406,7 +428,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                 )}
 
                 {formData.serviceType === "GOODS_CARRIER" && (
-                  <div className="form-group">
+                  <div className="b2b-operator-dashboard-add-vehicle-form-group">
                     <label>Cargo Capacity (tons) *</label>
                     <input
                       type="number"
@@ -415,7 +437,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                         handleNestedChange(
                           "capacity",
                           "cargoCapacity",
-                          Number.parseFloat(e.target.value)
+                          Number.parseFloat(e.target.value),
                         )
                       }
                       min="0"
@@ -426,13 +448,13 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                 )}
 
                 {/* Location */}
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <h3>Location</h3>
                   <select
                     name="location"
                     value={formData.location}
                     onChange={handleInputChange}
-                    className="select-field"
+                    className="b2b-operator-dashboard-add-vehicle-select-field"
                   >
                     <option value="">Select Location</option>
                     {locations.map((loc) => (
@@ -446,10 +468,10 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* Currency & Pricing */}
-            <div className="form-section">
+            <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Currency & Pricing</h2>
-              <div className="form-grid">
-                <div className="form-group">
+              <div className="b2b-operator-dashboard-add-vehicle-form-grid">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Currency *</label>
                   <select
                     value={formData.pricing.currency}
@@ -476,10 +498,10 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* Driver & Fuel Options */}
-            <div className="form-section">
+            <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Driver & Fuel Options</h2>
-              <div className="form-grid">
-                <div className="form-group checkbox-group">
+              <div className="b2b-operator-dashboard-add-vehicle-form-grid">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group b2b-operator-dashboard-add-vehicle-checkbox-group">
                   <label>
                     <input
                       type="checkbox"
@@ -488,7 +510,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                         handleNestedChange(
                           "driverAvailability",
                           "withDriver",
-                          e.target.checked
+                          e.target.checked,
                         )
                       }
                     />
@@ -496,7 +518,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   </label>
                 </div>
 
-                <div className="form-group checkbox-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group b2b-operator-dashboard-add-vehicle-checkbox-group">
                   <label>
                     <input
                       type="checkbox"
@@ -505,7 +527,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                         handleNestedChange(
                           "driverAvailability",
                           "withoutDriver",
-                          e.target.checked
+                          e.target.checked,
                         )
                       }
                     />
@@ -513,7 +535,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   </label>
                 </div>
 
-                <div className="form-group checkbox-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group b2b-operator-dashboard-add-vehicle-checkbox-group">
                   <label>
                     <input
                       type="checkbox"
@@ -522,7 +544,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                         handleNestedChange(
                           "fuelOptions",
                           "fuelIncluded",
-                          e.target.checked
+                          e.target.checked,
                         )
                       }
                     />
@@ -530,7 +552,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   </label>
                 </div>
 
-                <div className="form-group checkbox-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group b2b-operator-dashboard-add-vehicle-checkbox-group">
                   <label>
                     <input
                       type="checkbox"
@@ -539,7 +561,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                         handleNestedChange(
                           "fuelOptions",
                           "withoutFuel",
-                          e.target.checked
+                          e.target.checked,
                         )
                       }
                     />
@@ -550,10 +572,10 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* Facilities */}
-            <div className="form-section">
+            <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Facilities & Amenities</h2>
-              <div className="features-grid">
-                <label className="feature-checkbox">
+              <div className="b2b-operator-dashboard-add-vehicle-features-grid">
+                <label className="b2b-operator-dashboard-add-vehicle-feature-checkbox">
                   <input
                     type="checkbox"
                     checked={formData.facilities.airConditioning}
@@ -561,7 +583,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                   <span>Air Conditioning</span>
                 </label>
-                <label className="feature-checkbox">
+                <label className="b2b-operator-dashboard-add-vehicle-feature-checkbox">
                   <input
                     type="checkbox"
                     checked={formData.facilities.wifiOnboard}
@@ -569,7 +591,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                   <span>WiFi Onboard</span>
                 </label>
-                <label className="feature-checkbox">
+                <label className="b2b-operator-dashboard-add-vehicle-feature-checkbox">
                   <input
                     type="checkbox"
                     checked={formData.facilities.wheelchairAccess}
@@ -577,7 +599,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                   <span>Wheelchair Access</span>
                 </label>
-                <label className="feature-checkbox">
+                <label className="b2b-operator-dashboard-add-vehicle-feature-checkbox">
                   <input
                     type="checkbox"
                     checked={formData.facilities.gpsTracking}
@@ -585,7 +607,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                   <span>GPS Tracking</span>
                 </label>
-                <label className="feature-checkbox">
+                <label className="b2b-operator-dashboard-add-vehicle-feature-checkbox">
                   <input
                     type="checkbox"
                     checked={formData.facilities.musicSystem}
@@ -593,7 +615,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                   <span>Music System</span>
                 </label>
-                <label className="feature-checkbox">
+                <label className="b2b-operator-dashboard-add-vehicle-feature-checkbox">
                   <input
                     type="checkbox"
                     checked={formData.facilities.entertainmentScreen}
@@ -602,7 +624,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   <span>Entertainment Screen</span>
                 </label>
                 {formData.serviceType === "GOODS_CARRIER" && (
-                  <label className="feature-checkbox">
+                  <label className="b2b-operator-dashboard-add-vehicle-feature-checkbox">
                     <input
                       type="checkbox"
                       checked={formData.facilities.refrigeration}
@@ -615,10 +637,10 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* Pricing */}
-            <div className="form-section">
+            <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Pricing Details ({formData.pricing.currency})</h2>
-              <div className="form-grid">
-                <div className="form-group">
+              <div className="b2b-operator-dashboard-add-vehicle-form-grid">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Daily Rate *</label>
                   <input
                     type="number"
@@ -638,7 +660,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Weekly Rate *</label>
                   <input
                     type="number"
@@ -658,7 +680,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Monthly Rate *</label>
                   <input
                     type="number"
@@ -678,7 +700,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Per KM Charge</label>
                   <input
                     type="number"
@@ -697,7 +719,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Driver Charges (per day)</label>
                   <input
                     type="number"
@@ -716,7 +738,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Fuel Charges (per day)</label>
                   <input
                     type="number"
@@ -735,7 +757,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Overtime Rate (per hour)</label>
                   <input
                     type="number"
@@ -757,7 +779,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Waiting Time Charge (per hour)</label>
                   <input
                     type="number"
@@ -782,10 +804,10 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* KM Limits */}
-            <div className="form-section">
+            <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>KM Limits</h2>
-              <div className="form-grid">
-                <div className="form-group">
+              <div className="b2b-operator-dashboard-add-vehicle-form-grid">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Daily KM Limit</label>
                   <input
                     type="number"
@@ -794,14 +816,14 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                       handleNestedChange(
                         "kmLimits",
                         "dailyLimit",
-                        Number.parseInt(e.target.value)
+                        Number.parseInt(e.target.value),
                       )
                     }
                     min="0"
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Weekly KM Limit</label>
                   <input
                     type="number"
@@ -810,14 +832,14 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                       handleNestedChange(
                         "kmLimits",
                         "weeklyLimit",
-                        Number.parseInt(e.target.value)
+                        Number.parseInt(e.target.value),
                       )
                     }
                     min="0"
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Monthly KM Limit</label>
                   <input
                     type="number"
@@ -826,7 +848,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                       handleNestedChange(
                         "kmLimits",
                         "monthlyLimit",
-                        Number.parseInt(e.target.value)
+                        Number.parseInt(e.target.value),
                       )
                     }
                     min="0"
@@ -836,10 +858,13 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* Images */}
-            <div className="form-section">
+            <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Vehicle Images (Max 10) *</h2>
-              <div className="image-upload-section">
-                <label htmlFor="images" className="upload-button">
+              <div className="b2b-operator-dashboard-add-vehicle-image-upload-section">
+                <label
+                  htmlFor="images"
+                  className="b2b-operator-dashboard-add-vehicle-upload-button"
+                >
                   <span>📷 Upload Images</span>
                   <input
                     id="images"
@@ -852,16 +877,19 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                 </label>
 
                 {imagePreviews.length > 0 && (
-                  <div className="image-previews">
+                  <div className="b2b-operator-dashboard-add-vehicle-image-previews">
                     {imagePreviews.map((preview, index) => (
-                      <div key={index} className="image-preview">
+                      <div
+                        key={index}
+                        className="b2b-operator-dashboard-add-vehicle-image-preview"
+                      >
                         <img
                           src={preview || "/placeholder.svg"}
                           alt={`Preview ${index + 1}`}
                         />
                         <button
                           type="button"
-                          className="remove-image"
+                          className="b2b-operator-dashboard-add-vehicle-remove-image"
                           onClick={() => removeImage(index)}
                         >
                           ×
@@ -874,10 +902,10 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* Documents */}
-            <div className="form-section">
+            <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Documents</h2>
-              <div className="documents-grid">
-                <div className="form-group">
+              <div className="b2b-operator-dashboard-add-vehicle-documents-grid">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Registration Certificate</label>
                   <input
                     type="file"
@@ -891,7 +919,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   )}
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Insurance Certificate</label>
                   <input
                     type="file"
@@ -905,7 +933,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   )}
                 </div>
 
-                <div className="form-group">
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Inspection Certificate</label>
                   <input
                     type="file"
@@ -922,15 +950,19 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* Submit Button */}
-            <div className="form-actions">
+            <div className="b2b-operator-dashboard-add-vehicle-form-actions">
               <button
                 type="button"
-                className="btn-secondary"
+                className="b2b-operator-dashboard-add-vehicle-btn-secondary"
                 onClick={handleCancel}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-primary" disabled={loading}>
+              <button
+                type="submit"
+                className="b2b-operator-dashboard-add-vehicle-btn-primary"
+                disabled={loading}
+              >
                 {loading ? "Adding Vehicle..." : "Add Vehicle"}
               </button>
             </div>

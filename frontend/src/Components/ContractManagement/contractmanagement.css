@@ -1,6 +1,4 @@
-/* Corporate Contracts List Styles - Premium Inter Font */
-
-.corporate-contracts-container {
+.drivemego-contractmanagement-corporate-contracts-container {
   max-width: 1400px;
   margin: 0px 40px;
   padding: 40px 20px;
@@ -10,32 +8,32 @@
 }
 
 /* Header */
-.corporate-contracts-header {
+.drivemego-contractmanagement-corporate-contracts-header {
   margin-bottom: 32px;
 }
 
-.corporate-contracts-header h1 {
+.drivemego-contractmanagement-corporate-contracts-header h1 {
   font-size: 32px;
   font-weight: 800;
   color: #1a1a1a;
   margin: 0 0 8px 0;
 }
 
-.corporate-contracts-header p {
+.drivemego-contractmanagement-corporate-contracts-header p {
   font-size: 16px;
   color: #666;
   margin: 0;
 }
 
 /* Statistics Cards */
-.corporate-contracts-stats {
+.drivemego-contractmanagement-corporate-contracts-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 32px;
 }
 
-.corporate-stat-card {
+.drivemego-contractmanagement-corporate-stat-card {
   background: white;
   padding: 24px;
   border-radius: 16px;
@@ -46,12 +44,12 @@
   transition: all 0.3s ease;
 }
 
-.corporate-stat-card:hover {
+.drivemego-contractmanagement-corporate-stat-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
-.stat-icon {
+.drivemego-contractmanagement-stat-icon {
   font-size: 40px;
   width: 64px;
   height: 64px;
@@ -62,48 +60,48 @@
   background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
 }
 
-.stat-total .stat-icon {
+.drivemego-contractmanagement-stat-total .drivemego-contractmanagement-stat-icon {
   background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
 }
 
-.stat-pending .stat-icon {
+.drivemego-contractmanagement-stat-pending .drivemego-contractmanagement-stat-icon {
   background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
 }
 
-.stat-signed .stat-icon {
+.stat-signed .drivemego-contractmanagement-stat-icon {
   background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
 }
 
-.stat-approved .stat-icon {
+.drivemego-contractmanagement-stat-approved .drivemego-contractmanagement-stat-icon {
   background: linear-gradient(135deg, #d4edda 0%, #a8e6a3 100%);
 }
 
-.stat-content {
+.drivemego-contractmanagement-stat-content {
   flex: 1;
 }
 
-.stat-value {
+.drivemego-contractmanagement-stat-value {
   font-size: 32px;
   font-weight: 800;
   color: #1a1a1a;
   margin-bottom: 4px;
 }
 
-.stat-label {
+.drivemego-contractmanagement-stat-label {
   font-size: 14px;
   color: #666;
   font-weight: 600;
 }
 
 /* Filter Tabs */
-.corporate-contracts-filters {
+.drivemego-contractmanagement-corporate-contracts-filters {
   display: flex;
   gap: 12px;
   margin-bottom: 32px;
   flex-wrap: wrap;
 }
 
-.filter-tab {
+.drivemego-contractmanagement-filter-tab {
   padding: 12px 24px;
   border: 2px solid #e0e0e0;
   background: white;
@@ -117,12 +115,12 @@
   letter-spacing: 0.5px;
 }
 
-.filter-tab:hover {
+.drivemego-contractmanagement-filter-tab:hover {
   border-color: #2196f3;
   background: #f5f5f5;
 }
 
-.filter-tab.active {
+.drivemego-contractmanagement-filter-tab.drivemego-contractmanagement-active {
   background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
   color: white;
   border-color: #2196f3;
@@ -130,13 +128,13 @@
 }
 
 /* Contracts Grid */
-.corporate-contracts-grid {
+.drivemego-contractmanagement-corporate-contracts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 24px;
 }
 
-.corporate-contract-card {
+.drivemego-contractmanagement-corporate-contract-card {
   background: white;
   border-radius: 16px;
   padding: 24px;
@@ -145,12 +143,12 @@
   cursor: pointer;
 }
 
-.corporate-contract-card:hover {
+.drivemego-contractmanagement-corporate-contract-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
-.contract-card-header {
+.drivemego-contractmanagement-contract-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -159,13 +157,13 @@
   border-bottom: 2px solid #f0f0f0;
 }
 
-.contract-card-number {
+.drivemego-contractmanagement-contract-card-number {
   font-size: 18px;
   font-weight: 700;
   color: #1a1a1a;
 }
 
-.contract-status-badge {
+.drivemego-contractmanagement-contract-status-badge {
   padding: 6px 14px;
   border-radius: 16px;
   font-size: 10px;
@@ -174,73 +172,73 @@
   letter-spacing: 0.8px;
 }
 
-.contract-status-badge.status-pending {
+.drivemego-contractmanagement-contract-status-badge.drivemego-contractmanagement-status-pending {
   background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
   color: #856404;
 }
 
-.contract-status-badge.status-uploaded {
+.drivemego-contractmanagement-contract-status-badge.drivemego-contractmanagement-status-uploaded {
   background: linear-gradient(135deg, #d1ecf1 0%, #a8daff 100%);
   color: #0c5460;
 }
 
-.contract-status-badge.status-awaiting {
+.drivemego-contractmanagement-contract-status-badge.status-awaiting {
   background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
   color: #6a1b9a;
 }
 
-.contract-status-badge.status-signed {
+.drivemego-contractmanagement-contract-status-badge.drivemego-contractmanagement-status-signed {
   background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
   color: #00695c;
 }
 
-.contract-status-badge.status-approved {
+.drivemego-contractmanagement-contract-status-badge.drivemego-contractmanagement-status-approved {
   background: linear-gradient(135deg, #d4edda 0%, #a8e6a3 100%);
   color: #155724;
 }
 
-.contract-status-badge.status-rejected {
+.drivemego-contractmanagement-contract-status-badge.drivemego-contractmanagement-status-rejected {
   background: linear-gradient(135deg, #f8d7da 0%, #ffb3b3 100%);
   color: #721c24;
 }
 
-.contract-status-badge.status-completed {
+.drivemego-contractmanagement-contract-status-badge.drivemego-contractmanagement-status-completed {
   background: linear-gradient(135deg, #d4edda 0%, #a8e6a3 100%);
   color: #155724;
 }
 
-.contract-card-body {
+.drivemego-contractmanagement-contract-card-body {
   display: flex;
   flex-direction: column;
   gap: 14px;
   margin-bottom: 20px;
 }
 
-.contract-card-info {
+.drivemego-contractmanagement-contract-card-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.info-label {
+.drivemego-contractmanagement-info-label {
   font-size: 13px;
   color: #666;
   font-weight: 600;
 }
 
-.info-value {
+.drivemego-contractmanagement-info-value {
   font-size: 14px;
   color: #1a1a1a;
   font-weight: 700;
   text-align: right;
 }
 
-.contract-amount {
+.drivemego-contractmanagement-contract-amount {
   color: #2196f3;
   font-size: 16px;
 }
 
-.contract-card-document {
+.drivemego-contractmanagement-contract-card-document {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -252,11 +250,11 @@
   color: #1976d2;
 }
 
-.document-icon {
+.drivemego-contractmanagement-document-icon {
   font-size: 18px;
 }
 
-.contract-card-footer {
+.drivemego-contractmanagement-contract-card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -264,13 +262,13 @@
   border-top: 2px solid #f0f0f0;
 }
 
-.contract-date {
+.drivemego-contractmanagement-contract-date {
   font-size: 12px;
   color: #999;
   font-weight: 600;
 }
 
-.view-details-btn {
+.drivemego-contractmanagement-view-details-btn {
   padding: 8px 16px;
   background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
   color: white;
@@ -282,13 +280,13 @@
   transition: all 0.3s ease;
 }
 
-.view-details-btn:hover {
+.drivemego-contractmanagement-view-details-btn:hover {
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
   transform: translateX(4px);
 }
 
 /* Empty State */
-.corporate-contracts-empty {
+.drivemego-contractmanagement-corporate-contracts-empty {
   padding: 80px 40px;
   text-align: center;
   background: white;
@@ -296,19 +294,19 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
-.empty-icon {
+.drivemego-contractmanagement-empty-icon {
   font-size: 64px;
   margin-bottom: 20px;
 }
 
-.corporate-contracts-empty h3 {
+.drivemego-contractmanagement-corporate-contracts-empty h3 {
   font-size: 22px;
   font-weight: 700;
   color: #1a1a1a;
   margin: 0 0 12px 0;
 }
 
-.corporate-contracts-empty p {
+.drivemego-contractmanagement-corporate-contracts-empty p {
   font-size: 15px;
   color: #666;
   margin: 0;
@@ -316,7 +314,7 @@
 }
 
 /* Error State */
-.corporate-contracts-error {
+.drivemego-contractmanagement-corporate-contracts-error {
   padding: 60px 40px;
   text-align: center;
   background: linear-gradient(135deg, #f8d7da 0%, #ffb3b3 100%);
@@ -324,19 +322,19 @@
   border: 2px solid #dc3545;
 }
 
-.error-icon {
+.drivemego-contractmanagement-error-icon {
   font-size: 64px;
   margin-bottom: 20px;
 }
 
-.corporate-contracts-error h3 {
+.drivemego-contractmanagement-corporate-contracts-error h3 {
   font-size: 22px;
   font-weight: 700;
   color: #721c24;
   margin: 0 0 12px 0;
 }
 
-.corporate-contracts-error p {
+.drivemego-contractmanagement-corporate-contracts-error p {
   font-size: 15px;
   color: #721c24;
   margin: 0 0 20px 0;
@@ -344,7 +342,7 @@
 }
 
 /* Added retry button style for error state */
-.retry-btn {
+.drivemego-contractmanagement-retry-btn {
   padding: 12px 32px;
   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   color: white;
@@ -358,7 +356,7 @@
   letter-spacing: 0.5px;
 }
 
-.retry-btn:hover {
+.drivemego-contractmanagement-retry-btn:hover {
   background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
@@ -366,29 +364,29 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .corporate-contracts-container {
+  .drivemego-contractmanagement-corporate-contracts-container {
     padding: 20px 16px;
   }
 
-  .corporate-contracts-header h1 {
+  .drivemego-contractmanagement-corporate-contracts-header h1 {
     font-size: 24px;
   }
 
-  .corporate-contracts-stats {
+  .drivemego-contractmanagement-corporate-contracts-stats {
     grid-template-columns: 1fr;
   }
 
-  .corporate-contracts-grid {
+  .drivemego-contractmanagement-corporate-contracts-grid {
     grid-template-columns: 1fr;
   }
 
-  .contract-card-footer {
+  .drivemego-contractmanagement-contract-card-footer {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
   }
 
-  .view-details-btn {
+  .drivemego-contractmanagement-view-details-btn {
     width: 100%;
   }
 }

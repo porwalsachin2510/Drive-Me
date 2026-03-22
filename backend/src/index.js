@@ -46,6 +46,7 @@ import settlementRoutes from "./routes/settlementRoutes.js"
 import corporateOperationsRoutes from "./routes/corporateOperationsRoutes.js"
 import driverLocationRoutes from "./routes/driverLocationRoutes.js"
 import corporateRoutes from "./routes/corporateRoutes.js"
+import pageRoutes from "./routes/pageRoutes.js"
 import { dailyTripGeneration, frequentTripGeneration, hourlyTripGeneration, runImmediateGeneration, corporateTripGeneration } from "./cron/tripGenerationCron.js"
 import { processDailyRenewals, sendDailyRenewalReminders } from "./cron/subscriptionCron.js"
 
@@ -435,9 +436,10 @@ app.use("/api/no-show", noShowRoutes)
 app.use("/api/subscription-settings", subscriptionSettingsRoutes)
 app.use("/api/travel-history", travelHistoryRoutes)
 app.use("/api/settlement", settlementRoutes)
-    app.use("/api/corporate-operations", corporateOperationsRoutes)
-    app.use("/api/corporate", corporateRoutes)
-    app.use("/api/driver", driverLocationRoutes)
+app.use("/api/corporate-operations", corporateOperationsRoutes)
+app.use("/api/corporate", corporateRoutes)
+app.use("/api/driver", driverLocationRoutes)
+app.use("/api/pages", pageRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

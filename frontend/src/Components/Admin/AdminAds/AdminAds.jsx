@@ -35,6 +35,8 @@ function AdminAds() {
   const [campaignImage, setCampaignImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [imageSizeWarning, setImageSizeWarning] = useState("")
+  const [imageValid, setImageValid] = useState(false)
 
   useEffect(() => {
     fetchCampaigns()
@@ -62,25 +64,73 @@ function AdminAds() {
     }
   }
 
-  const handleImageChange = (e) => {
+  const validateImageSize = (file, requiredSize) => {
+    return new Promise((resolve) => {
+      const img = new window.Image()
+      img.crossOrigin = "anonymous"
+      img.onload = () => {
+        const [reqWidth, reqHeight] = requiredSize.split('x').map(Number)
+        const actualWidth = img.width
+        const actualHeight = img.height
+        
+        if (actualWidth === reqWidth && actualHeight === reqHeight) {
+          resolve({ valid: true, width: actualWidth, height: actualHeight })
+        } else {
+          resolve({ valid: false, width: actualWidth, height: actualHeight, reqWidth, reqHeight })
+        }
+      }
+      img.onerror = () => {
+        resolve({ valid: false, width: 0, height: 0 })
+      }
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  const handleImageChange = async (e) => {
     const file = e.target.files[0]
     if (file) {
+      const selectedSize = formData.size
+      const result = await validateImageSize(file, selectedSize)
+      
       setCampaignImage(file)
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreview(reader.result)
       }
       reader.readAsDataURL(file)
+
+      if (!result.valid) {
+        setImageSizeWarning(
+          `Image size mismatch! Selected size is ${selectedSize} but uploaded image is ${result.width}x${result.height}. Please upload an image of exactly ${selectedSize} pixels.`
+        )
+        setImageValid(false)
+      } else {
+        setImageSizeWarning("")
+        setImageValid(true)
+      }
     }
   }
 
   const resetImageState = () => {
     setCampaignImage(null)
     setImagePreview(null)
+    setImageSizeWarning("")
+    setImageValid(false)
   }
 
   const handleCreateCampaign = async () => {
     try {
+      // Validate image size before submission
+      if (campaignImage && !imageValid) {
+        alert(`Please upload an image with the correct size (${formData.size}). The current image does not match the required dimensions.`)
+        return
+      }
+      
+      if (!campaignImage) {
+        alert("Please select a campaign image.")
+        return
+      }
+
       setUploading(true)
       const submitData = new FormData()
       
@@ -282,17 +332,12 @@ function AdminAds() {
             <span className="stat-label">Total Clicks</span>
           </div>
         </div>
-        <button 
-          className="create-btn"
-          onClick={() => setShowCreateModal(true)}
-        >
+        <button className="create-btn" onClick={() => setShowCreateModal(true)}>
           Create Campaign
         </button>
       </div>
 
-      <div className="campaigns-grid">
-        {campaigns.map(renderCampaignCard)}
-      </div>
+      <div className="campaigns-grid">{campaigns.map(renderCampaignCard)}</div>
 
       {campaigns.length === 0 && (
         <div className="no-campaigns">
@@ -314,26 +359,32 @@ function AdminAds() {
                 <input
                   type="text"
                   value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
                   placeholder="Campaign title"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label>Provider</label>
                 <input
                   type="text"
                   value={formData.provider}
-                  onChange={(e) => setFormData({...formData, provider: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, provider: e.target.value })
+                  }
                   placeholder="Provider name"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label>Placement</label>
                 <select
                   value={formData.placement}
-                  onChange={(e) => setFormData({...formData, placement: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, placement: e.target.value })
+                  }
                 >
                   <option value="top">Top Banner</option>
                   <option value="sidebar">Sidebar</option>
@@ -341,126 +392,205 @@ function AdminAds() {
                   <option value="popup">Popup</option>
                 </select>
               </div>
-              
+
               <div className="form-group">
                 <label>Size</label>
                 <select
                   value={formData.size}
-                  onChange={(e) => setFormData({...formData, size: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, size: e.target.value })
+                  }
                 >
                   <option value="728x90">728x90</option>
                   <option value="300x250">300x250</option>
                   <option value="120x60">120x60</option>
-<option value="468x60">468x60</option>
-</select>
-</div>
+                  <option value="468x60">468x60</option>
+                  <option value="420x605">420x605</option>
+                </select>
+              </div>
 
-<div className="form-group">
-<label>Campaign Image *</label>
-<input
-type="file"
-accept="image/*"
-onChange={handleImageChange}
-style={{ marginBottom: '10px' }}
-/>
-{imagePreview && (
-<div className="image-preview" style={{ marginTop: '10px' }}>
-<img 
-  src={imagePreview} 
-  alt="Preview" 
-  style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '4px' }}
-/>
-<button 
-  type="button" 
-  onClick={() => { setCampaignImage(null); setImagePreview(null); }}
-  style={{ marginLeft: '10px', padding: '5px 10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
->
-  Remove
-</button>
-</div>
-)}
-</div>
+              <div className="form-group">
+                <label>Campaign Image *</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  style={{ marginBottom: "10px" }}
+                />
+                {imagePreview && (
+                  <div className="image-preview" style={{ marginTop: "10px" }}>
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      style={{
+                        maxWidth: "200px",
+                        maxHeight: "150px",
+                        objectFit: "contain",
+                        border: "1px solid #ddd",
+                        borderRadius: "4px",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={resetImageState}
+                      style={{
+                        marginLeft: "10px",
+                        padding: "5px 10px",
+                        background: "#dc3545",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+                {imageSizeWarning && (
+                  <div
+                    className="image-size-warning"
+                    style={{
+                      marginTop: "10px",
+                      padding: "10px",
+                      backgroundColor: "#fff3cd",
+                      border: "1px solid #ffc107",
+                      borderRadius: "4px",
+                      color: "#856404",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {imageSizeWarning}
+                  </div>
+                )}
+                {imageValid && (
+                  <div
+                    className="image-size-valid"
+                    style={{
+                      marginTop: "10px",
+                      padding: "10px",
+                      backgroundColor: "#d4edda",
+                      border: "1px solid #28a745",
+                      borderRadius: "4px",
+                      color: "#155724",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Image size is valid ({formData.size})
+                  </div>
+                )}
+              </div>
 
-<div className="form-group">
-<label>Target URL</label>
-<input
-type="url"
-value={formData.targetUrl}
-onChange={(e) => setFormData({...formData, targetUrl: e.target.value})}
-placeholder="https://example.com"
-/>
-</div>
+              <div className="form-group">
+                <label>Target URL</label>
+                <input
+                  type="url"
+                  value={formData.targetUrl}
+                  onChange={(e) =>
+                    setFormData({ ...formData, targetUrl: e.target.value })
+                  }
+                  placeholder="https://example.com"
+                />
+              </div>
 
-<div className="form-group">
-<label>Description</label>
-<textarea
-value={formData.description || ""}
-onChange={(e) => setFormData({...formData, description: e.target.value})}
-placeholder="Campaign description"
-rows={3}
-/>
-</div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  value={formData.description || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder="Campaign description"
+                  rows={3}
+                />
+              </div>
 
-<div className="form-row">
-<div className="form-group">
-<label>Budget (KWD)</label>
-<input
-type="number"
-value={formData.budget}
-onChange={(e) => setFormData({...formData, budget: Number(e.target.value)})}
-placeholder="Budget amount"
-min="0"
-/>
-</div>
-<div className="form-group">
-<label>Daily Budget (KWD)</label>
-<input
-type="number"
-value={formData.dailyBudget || 0}
-onChange={(e) => setFormData({...formData, dailyBudget: Number(e.target.value)})}
-placeholder="Daily budget"
-min="0"
-/>
-</div>
-</div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Budget (KWD)</label>
+                  <input
+                    type="number"
+                    value={formData.budget}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        budget: Number(e.target.value),
+                      })
+                    }
+                    placeholder="Budget amount"
+                    min="0"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Daily Budget (KWD)</label>
+                  <input
+                    type="number"
+                    value={formData.dailyBudget || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        dailyBudget: Number(e.target.value),
+                      })
+                    }
+                    placeholder="Daily budget"
+                    min="0"
+                  />
+                </div>
+              </div>
 
-<div className="form-group">
-<label>Start Date</label>
-<input
-type="date"
-value={formData.startDate}
-onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-/>
-</div>
+              <div className="form-group">
+                <label>Start Date</label>
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
+                />
+              </div>
 
-<div className="form-group">
-<label>End Date</label>
-<input
-type="date"
-value={formData.endDate}
-onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-/>
-</div>
+              <div className="form-group">
+                <label>End Date</label>
+                <input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endDate: e.target.value })
+                  }
+                />
+              </div>
 
-<div className="form-group">
-<label>Status</label>
-<select
-value={formData.status}
-onChange={(e) => setFormData({...formData, status: e.target.value})}
->
-<option value="active">Active</option>
-<option value="paused">Paused</option>
-</select>
-</div>
+              <div className="form-group">
+                <label>Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value })
+                  }
+                >
+                  <option value="active">Active</option>
+                  <option value="paused">Paused</option>
+                </select>
+              </div>
 
-<div className="modal-actions">
-<button className="cancel-btn" onClick={() => { setShowCreateModal(false); resetImageState(); }}>
-Cancel
-</button>
-<button className="save-btn" onClick={handleCreateCampaign} disabled={uploading}>
-{uploading ? 'Uploading...' : 'Create Campaign'}
-</button>
-</div>
+              <div className="modal-actions">
+                <button
+                  className="cancel-btn"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    resetImageState();
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="save-btn"
+                  onClick={handleCreateCampaign}
+                  disabled={uploading}
+                >
+                  {uploading ? "Uploading..." : "Create Campaign"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -477,17 +607,21 @@ Cancel
                 <input
                   type="text"
                   value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
                   placeholder="Campaign title"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label>Provider</label>
                 <input
                   type="text"
                   value={formData.provider}
-                  onChange={(e) => setFormData({...formData, provider: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, provider: e.target.value })
+                  }
                   placeholder="Provider name"
                 />
               </div>
@@ -497,7 +631,9 @@ Cancel
                   <label>Placement</label>
                   <select
                     value={formData.placement}
-                    onChange={(e) => setFormData({...formData, placement: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, placement: e.target.value })
+                    }
                   >
                     <option value="top">Top Banner</option>
                     <option value="sidebar">Sidebar</option>
@@ -505,127 +641,194 @@ Cancel
                     <option value="popup">Popup</option>
                   </select>
                 </div>
-                
+
                 <div className="form-group">
                   <label>Size</label>
                   <select
                     value={formData.size}
-                    onChange={(e) => setFormData({...formData, size: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, size: e.target.value })
+                    }
                   >
                     <option value="728x90">728x90</option>
                     <option value="300x250">300x250</option>
                     <option value="120x60">120x60</option>
-<option value="468x60">468x60</option>
-</select>
-</div>
-</div>
+                    <option value="468x60">468x60</option>
+                  </select>
+                </div>
+              </div>
 
-<div className="form-group">
-<label>Campaign Image</label>
-{formData.imageUrl && !imagePreview && (
-<div style={{ marginBottom: '10px' }}>
-<p style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>Current image:</p>
-<img 
-  src={formData.imageUrl} 
-  alt="Current" 
-  style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '4px' }}
-/>
-</div>
-)}
-<input
-type="file"
-accept="image/*"
-onChange={handleImageChange}
-style={{ marginBottom: '10px' }}
-/>
-{imagePreview && (
-<div className="image-preview" style={{ marginTop: '10px' }}>
-<p style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>New image preview:</p>
-<img 
-  src={imagePreview} 
-  alt="Preview" 
-  style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '4px' }}
-/>
-<button 
-  type="button" 
-  onClick={() => { setCampaignImage(null); setImagePreview(null); }}
-  style={{ marginLeft: '10px', padding: '5px 10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
->
-  Remove
-</button>
-</div>
-)}
-</div>
+              <div className="form-group">
+                <label>Campaign Image</label>
+                {formData.imageUrl && !imagePreview && (
+                  <div style={{ marginBottom: "10px" }}>
+                    <p
+                      style={{
+                        fontSize: "12px",
+                        color: "#666",
+                        marginBottom: "5px",
+                      }}
+                    >
+                      Current image:
+                    </p>
+                    <img
+                      src={formData.imageUrl}
+                      alt="Current"
+                      style={{
+                        maxWidth: "200px",
+                        maxHeight: "150px",
+                        objectFit: "contain",
+                        border: "1px solid #ddd",
+                        borderRadius: "4px",
+                      }}
+                    />
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  style={{ marginBottom: "10px" }}
+                />
+                {imagePreview && (
+                  <div className="image-preview" style={{ marginTop: "10px" }}>
+                    <p
+                      style={{
+                        fontSize: "12px",
+                        color: "#666",
+                        marginBottom: "5px",
+                      }}
+                    >
+                      New image preview:
+                    </p>
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      style={{
+                        maxWidth: "200px",
+                        maxHeight: "150px",
+                        objectFit: "contain",
+                        border: "1px solid #ddd",
+                        borderRadius: "4px",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCampaignImage(null);
+                        setImagePreview(null);
+                      }}
+                      style={{
+                        marginLeft: "10px",
+                        padding: "5px 10px",
+                        background: "#dc3545",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
 
-<div className="form-group">
-<label>Target URL</label>
-<input
-type="url"
-value={formData.targetUrl}
-onChange={(e) => setFormData({...formData, targetUrl: e.target.value})}
-placeholder="https://example.com"
-/>
-</div>
+              <div className="form-group">
+                <label>Target URL</label>
+                <input
+                  type="url"
+                  value={formData.targetUrl}
+                  onChange={(e) =>
+                    setFormData({ ...formData, targetUrl: e.target.value })
+                  }
+                  placeholder="https://example.com"
+                />
+              </div>
 
-<div className="form-group">
-<label>Description</label>
-<textarea
-value={formData.description || ""}
-onChange={(e) => setFormData({...formData, description: e.target.value})}
-placeholder="Campaign description"
-rows={3}
-/>
-</div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  value={formData.description || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder="Campaign description"
+                  rows={3}
+                />
+              </div>
 
-<div className="form-row">
-<div className="form-group">
-<label>Budget (KWD)</label>
-<input
-type="number"
-value={formData.budget}
-onChange={(e) => setFormData({...formData, budget: Number(e.target.value)})}
-placeholder="Budget amount"
-min="0"
-/>
-</div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Budget (KWD)</label>
+                  <input
+                    type="number"
+                    value={formData.budget}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        budget: Number(e.target.value),
+                      })
+                    }
+                    placeholder="Budget amount"
+                    min="0"
+                  />
+                </div>
 
-<div className="form-group">
-<label>Daily Budget (KWD)</label>
-<input
-type="number"
-value={formData.dailyBudget || 0}
-onChange={(e) => setFormData({...formData, dailyBudget: Number(e.target.value)})}
-placeholder="Daily budget"
-min="0"
-/>
-</div>
-</div>
+                <div className="form-group">
+                  <label>Daily Budget (KWD)</label>
+                  <input
+                    type="number"
+                    value={formData.dailyBudget || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        dailyBudget: Number(e.target.value),
+                      })
+                    }
+                    placeholder="Daily budget"
+                    min="0"
+                  />
+                </div>
+              </div>
 
-<div className="form-row">
-<div className="form-group">
+              <div className="form-row">
+                <div className="form-group">
                   <label>Start Date</label>
                   <input
                     type="date"
-                    value={formData.startDate ? formData.startDate.substring(0, 10) : ""}
-                    onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                    value={
+                      formData.startDate
+                        ? formData.startDate.substring(0, 10)
+                        : ""
+                    }
+                    onChange={(e) =>
+                      setFormData({ ...formData, startDate: e.target.value })
+                    }
                   />
                 </div>
-                
+
                 <div className="form-group">
                   <label>End Date</label>
                   <input
                     type="date"
-                    value={formData.endDate ? formData.endDate.substring(0, 10) : ""}
-                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                    value={
+                      formData.endDate ? formData.endDate.substring(0, 10) : ""
+                    }
+                    onChange={(e) =>
+                      setFormData({ ...formData, endDate: e.target.value })
+                    }
                   />
                 </div>
               </div>
-              
+
               <div className="form-group">
                 <label>Status</label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value })
+                  }
                 >
                   <option value="active">Active</option>
                   <option value="paused">Paused</option>
@@ -633,21 +836,32 @@ min="0"
                   <option value="completed">Completed</option>
                 </select>
               </div>
-              
-<div className="modal-actions">
-<button className="cancel-btn" onClick={() => { setShowEditModal(false); setSelectedCampaign(null); resetImageState(); }}>
-Cancel
-</button>
-<button className="save-btn" onClick={handleUpdateCampaign} disabled={uploading}>
-{uploading ? 'Uploading...' : 'Update Campaign'}
-</button>
-</div>
+
+              <div className="modal-actions">
+                <button
+                  className="cancel-btn"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedCampaign(null);
+                    resetImageState();
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="save-btn"
+                  onClick={handleUpdateCampaign}
+                  disabled={uploading}
+                >
+                  {uploading ? "Uploading..." : "Update Campaign"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export default AdminAds

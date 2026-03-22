@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -969,7 +970,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   <span>Duration</span>
                   <span>{passDuration} month{passDuration > 1 ? 's' : ''}</span>
                 </div>
-                {!isCorporate && (
+                {/* {!isCorporate && (
                   <>
                     <div className="price-row sub">
                       <span>Admin Commission (20%)</span>
@@ -980,7 +981,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       <span>{currency} {driverEarnings}</span>
                     </div>
                   </>
-                )}
+                )} */}
                 <div className="price-row total">
                   <span>Total Amount ({passDuration} month{passDuration > 1 ? 's' : ''})</span>
                   <span>{currency} {totalAmount}</span>
@@ -1036,7 +1037,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 <span className="amount-value">{currency} {totalAmount}</span>
               </div>
 
-              <div className="commission-info">
+              {/* <div className="commission-info">
                 <div className="commission-row">
                   <span>Admin Commission (20%)</span>
                   <span>{currency} {adminCommission}</span>
@@ -1045,7 +1046,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   <span>Driver Earnings (80%)</span>
                   <span>{currency} {driverEarnings}</span>
                 </div>
-              </div>
+              </div> */}
 
               <div className="payment-methods">
                 <h3>Choose Payment Method</h3>

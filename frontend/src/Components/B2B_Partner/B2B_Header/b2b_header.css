@@ -54,9 +54,9 @@
 
 .b2b-logout-btn {
   padding: 8px 16px;
-  background: none;
+  background: #dc3545;
   border: none;
-  color: #e74c3c;
+  color: #fff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -64,7 +64,7 @@
 }
 
 .b2b-logout-btn:hover {
-  color: #c0392b;
+  color: #fff;
 }
 
 @media (max-width: 768px) {

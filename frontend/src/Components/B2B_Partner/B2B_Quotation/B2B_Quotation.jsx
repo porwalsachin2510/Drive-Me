@@ -172,69 +172,79 @@ const B2B_Quotation = () => {
   if (loading && !quotations) return <LoadingSpinner />;
 
   return (
-    <div className="fleet-quotations-page">
-      <div className="fleet-quotations-container">
-        <div className="page-header">
+    <div className="b2b-quotation-request-fleet-quotations-page">
+      <div className="b2b-quotation-request-fleet-quotations-container">
+        <div className="b2b-quotation-request-page-header">
           <h1>Quotation Requests</h1>
-          <p className="page-subtitle">
+          <p className="b2b-quotation-request-page-subtitle">
             Manage and respond to customer quotation requests
           </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="stats-grid">
-          <div className="stat-card total">
-            <div className="stat-icon">📊</div>
-            <div className="stat-content">
+        <div className="b2b-quotation-request-stats-grid">
+          <div className="b2b-quotation-request-stat-card b2b-quotation-request-total">
+            <div className="b2b-quotation-request-stat-icon">📊</div>
+            <div className="b2b-quotation-request-stat-content">
               <h3>Total Requests</h3>
-              <p className="stat-value">{stats.total}</p>
+              <p className="b2b-quotation-request-stat-value">{stats.total}</p>
             </div>
           </div>
-          <div className="stat-card pending">
-            <div className="stat-icon">⏳</div>
-            <div className="stat-content">
+          <div className="b2b-quotation-request-stat-card b2b-quotation-request-pending">
+            <div className="b2b-quotation-request-stat-icon">⏳</div>
+            <div className="b2b-quotation-request-stat-content">
               <h3>Pending</h3>
-              <p className="stat-value">{stats.pending}</p>
+              <p className="b2b-quotation-request-stat-value">
+                {stats.pending}
+              </p>
             </div>
           </div>
-          <div className="stat-card quoted">
-            <div className="stat-icon">✅</div>
-            <div className="stat-content">
+          <div className="b2b-quotation-request-stat-card b2b-quotation-request-quoted">
+            <div className="b2b-quotation-request-stat-icon">✅</div>
+            <div className="b2b-quotation-request-stat-content">
               <h3>Quoted</h3>
-              <p className="stat-value">{stats.quoted}</p>
+              <p className="b2b-quotation-request-stat-value">{stats.quoted}</p>
             </div>
           </div>
-          <div className="stat-card rejected">
-            <div className="stat-icon">❌</div>
-            <div className="stat-content">
+          <div className="b2b-quotation-request-stat-card b2b-quotation-request-rejected">
+            <div className="b2b-quotation-request-stat-icon">❌</div>
+            <div className="b2b-quotation-request-stat-content">
               <h3>Rejected</h3>
-              <p className="stat-value">{stats.rejected}</p>
+              <p className="b2b-quotation-request-stat-value">
+                {stats.rejected}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Filter Tabs */}
-        <div className="filter-tabs">
+        <div className="b2b-quotation-request-filter-tabs">
           <button
-            className={filter === "all" ? "active" : ""}
+            className={filter === "all" ? "b2b-quotation-request-active" : ""}
             onClick={() => setFilter("all")}
           >
             All Requests
           </button>
           <button
-            className={filter === "pending" ? "active" : ""}
+            className={
+              filter === "pending" ? "b2b-quotation-request-active" : ""
+            }
             onClick={() => setFilter("pending")}
           >
             Pending
           </button>
           <button
-            className={filter === "quoted" ? "active" : ""}
+            className={
+              filter === "quoted" ? "b2b-quotation-request-active" : ""
+            }
             onClick={() => setFilter("quoted")}
           >
             Quoted
           </button>
           <button
-            className={filter === "rejected" ? "active" : ""}
+            className={
+              filter === "rejected" ? "b2b-quotation-request-active" : ""
+            }
             onClick={() => setFilter("rejected")}
           >
             Rejected
@@ -243,8 +253,8 @@ const B2B_Quotation = () => {
 
         {/* Quotations List */}
         {filteredQuotations.length === 0 ? (
-          <div className="no-quotations">
-            <div className="no-quotations-icon">📋</div>
+          <div className="b2b-quotation-request-no-quotations">
+            <div className="b2b-quotation-request-no-quotations-icon">📋</div>
             <h2>No Quotation Requests</h2>
             <p>
               {filter === "all"
@@ -253,27 +263,32 @@ const B2B_Quotation = () => {
             </p>
           </div>
         ) : (
-          <div className="quotations-list">
+          <div className="b2b-quotation-request-quotations-list">
             {filteredQuotations.map((quotation) => {
               const mappedStatus = mapStatus(quotation.status);
               const totalVehicles = quotation.vehicles.reduce(
                 (sum, v) => sum + v.quantity,
-                0
+                0,
               );
 
               return (
-                <div key={quotation._id} className="quotation-card">
-                  <div className="quotation-card-header">
-                    <div className="quotation-header-left">
-                      <h3 className="quotation-number">
+                <div
+                  key={quotation._id}
+                  className="b2b-quotation-request-quotation-card"
+                >
+                  <div className="b2b-quotation-request-quotation-card-header">
+                    <div className="b2b-quotation-request-quotation-header-left">
+                      <h3 className="b2b-quotation-request-quotation-number">
                         #{quotation.quotationNumber}
                       </h3>
-                      <span className={`status-badge ${mappedStatus}`}>
+                      <span
+                        className={`b2b-quotation-request-status-badge ${mappedStatus}`}
+                      >
                         {mappedStatus}
                       </span>
                     </div>
-                    <div className="quotation-header-right">
-                      <p className="quotation-date">
+                    <div className="b2b-quotation-request-quotation-header-right">
+                      <p className="b2b-quotation-request-quotation-date">
                         Requested on{" "}
                         {new Date(quotation.requestedAt).toLocaleDateString(
                           "en-US",
@@ -281,41 +296,51 @@ const B2B_Quotation = () => {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
-                          }
+                          },
                         )}
                       </p>
                     </div>
                   </div>
 
-                  <div className="quotation-card-body">
-                    <div className="info-row">
-                      <div className="info-section customer-info">
-                        <div className="info-header">
-                          <span className="info-icon">👤</span>
+                  <div className="b2b-quotation-request-quotation-card-body">
+                    <div className="b2b-quotation-request-info-row">
+                      <div className="b2b-quotation-request-info-section b2b-quotation-request-customer-info">
+                        <div className="b2b-quotation-request-info-header">
+                          <span className="b2b-quotation-request-info-icon">
+                            👤
+                          </span>
                           <h4>Customer Details</h4>
                         </div>
-                        <div className="info-content">
-                          <div className="info-item">
-                            <span className="label">Name:</span>
-                            <span className="value">
+                        <div className="b2b-quotation-request-info-content">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              Name:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.corporateOwnerId?.fullName || "N/A"}
                             </span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">Company:</span>
-                            <span className="value">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              Company:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.corporateOwnerId?.companyName || "N/A"}
                             </span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">Email:</span>
-                            <span className="value email">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              Email:
+                            </span>
+                            <span className="b2b-quotation-request-value b2b-quotation-request-email">
                               {quotation.corporateOwnerId?.email || "N/A"}
                             </span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">WhatsApp:</span>
-                            <span className="value">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              WhatsApp:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.corporateOwnerId?.whatsappNumber ||
                                 "N/A"}
                             </span>
@@ -323,49 +348,59 @@ const B2B_Quotation = () => {
                         </div>
                       </div>
 
-                      <div className="info-section rental-info">
-                        <div className="info-header">
-                          <span className="info-icon">📅</span>
+                      <div className="b2b-quotation-request-info-section b2b-quotation-request-rental-info">
+                        <div className="b2b-quotation-request-info-header">
+                          <span className="b2b-quotation-request-info-icon">
+                            📅
+                          </span>
                           <h4>Rental Period</h4>
                         </div>
-                        <div className="info-content">
-                          <div className="info-item">
-                            <span className="label">Duration Type:</span>
-                            <span className="value">
+                        <div className="b2b-quotation-request-info-content">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              Duration Type:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.rentalPeriod?.durationType || "N/A"}
                             </span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">Duration:</span>
-                            <span className="value">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              Duration:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.rentalPeriod?.duration || "N/A"}{" "}
                               {quotation.rentalPeriod?.durationType === "DAILY"
                                 ? "Days"
                                 : quotation.rentalPeriod?.durationType ===
-                                  "WEEKLY"
-                                ? "Weeks"
-                                : quotation.rentalPeriod?.durationType ===
-                                  "MONTHLY"
-                                ? "Months"
-                                : ""}
+                                    "WEEKLY"
+                                  ? "Weeks"
+                                  : quotation.rentalPeriod?.durationType ===
+                                      "MONTHLY"
+                                    ? "Months"
+                                    : ""}
                             </span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">Start Date:</span>
-                            <span className="value">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              Start Date:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.rentalPeriod?.startDate
                                 ? new Date(
-                                    quotation.rentalPeriod.startDate
+                                    quotation.rentalPeriod.startDate,
                                   ).toLocaleDateString()
                                 : "N/A"}
                             </span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">End Date:</span>
-                            <span className="value">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              End Date:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.rentalPeriod?.endDate
                                 ? new Date(
-                                    quotation.rentalPeriod.endDate
+                                    quotation.rentalPeriod.endDate,
                                   ).toLocaleDateString()
                                 : "N/A"}
                             </span>
@@ -373,35 +408,45 @@ const B2B_Quotation = () => {
                         </div>
                       </div>
 
-                      <div className="info-section requirements-info">
-                        <div className="info-header">
-                          <span className="info-icon">🚗</span>
+                      <div className="b2b-quotation-request-info-section b2b-quotation-request-requirements-info">
+                        <div className="b2b-quotation-request-info-header">
+                          <span className="b2b-quotation-request-info-icon">
+                            🚗
+                          </span>
                           <h4>Vehicle Requirements</h4>
                         </div>
-                        <div className="info-content">
-                          <div className="info-item">
-                            <span className="label">Total Vehicles:</span>
-                            <span className="value highlight">
+                        <div className="b2b-quotation-request-info-content">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              Total Vehicles:
+                            </span>
+                            <span className="b2b-quotation-request-value highlight">
                               {totalVehicles}
                             </span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">Vehicle Types:</span>
-                            <span className="value">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              Vehicle Types:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.vehicles.length}
                             </span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">With Driver:</span>
-                            <span className="value">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              With Driver:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.requirements?.withDriver
                                 ? "✓ Yes"
                                 : "✗ No"}
                             </span>
                           </div>
-                          <div className="info-item">
-                            <span className="label">Fuel Included:</span>
-                            <span className="value">
+                          <div className="b2b-quotation-request-info-item">
+                            <span className="b2b-quotation-request-label">
+                              Fuel Included:
+                            </span>
+                            <span className="b2b-quotation-request-value">
                               {quotation.requirements?.fuelIncluded
                                 ? "✓ Yes"
                                 : "✗ No"}
@@ -413,27 +458,27 @@ const B2B_Quotation = () => {
 
                     {quotation.status === "QUOTED" &&
                       quotation.quotedPrice?.totalAmount && (
-                        <div className="quoted-price-section">
-                          <div className="price-summary">
+                        <div className="b2b-quotation-request-quoted-price-section">
+                          <div className="b2b-quotation-request-price-summary">
                             <h4>Your Quotation</h4>
-                            <div className="total-price">
+                            <div className="b2b-quotation-request-total-price">
                               <span>Total Amount:</span>
-                              <span className="amount">
+                              <span className="b2b-quotation-request-amount">
                                 KWD{" "}
                                 {quotation.quotedPrice.totalAmount.toFixed(2)}
                               </span>
                             </div>
                           </div>
                           {quotation.responseMessage && (
-                            <div className="response-note">
+                            <div className="b2b-quotation-request-response-note">
                               <strong>Note:</strong> {quotation.responseMessage}
                             </div>
                           )}
                           {quotation.validUntil && (
-                            <div className="validity-note">
+                            <div className="b2b-quotation-request-validity-note">
                               <strong>Valid Until:</strong>{" "}
                               {new Date(
-                                quotation.validUntil
+                                quotation.validUntil,
                               ).toLocaleDateString()}
                             </div>
                           )}
@@ -441,20 +486,22 @@ const B2B_Quotation = () => {
                       )}
                   </div>
 
-                  <div className="quotation-card-footer">
+                  <div className="b2b-quotation-request-quotation-card-footer">
                     <button
-                      className="btn btn-primary"
+                      className="b2b-quotation-request-btn b2b-quotation-request-btn-primary"
                       onClick={() => handleViewDetails(quotation)}
                     >
-                      <span className="btn-icon">👁️</span>
+                      <span className="b2b-quotation-request-btn-icon">👁️</span>
                       View Full Details
                     </button>
                     {quotation.status === "REQUESTED" && (
                       <button
-                        className="btn btn-success"
+                        className="b2b-quotation-request-btn b2b-quotation-request-btn-success"
                         onClick={() => handleRespondClick(quotation)}
                       >
-                        <span className="btn-icon">💼</span>
+                        <span className="b2b-quotation-request-btn-icon">
+                          💼
+                        </span>
                         Provide Quotation
                       </button>
                     )}

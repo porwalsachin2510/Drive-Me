@@ -10,10 +10,11 @@ body {
   color: var(--text-primary, #202124);
 }
 
-.homepage {
+.commuterhomepage-homepage {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  padding-top: 35px;
 }
 
 /* ============ HERO BANNER ============ */
@@ -31,7 +32,7 @@ body {
 }
 
 /* ============ CONTAINERS ============ */
-.commuters-container,
+.commuterhomepage-commuters-container,
 .corporate-container {
   flex: 1;
   max-width: 1200px;
@@ -40,24 +41,50 @@ body {
   width: 100%;
 }
 
+/* Available Section Wrapper with Sidebar Support */
+.commuterhomepage-available-section-wrapper {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.commuterhomepage-available-section-wrapper > .campaign-banner-container.sidebar {
+  order: 2;
+}
+
+.commuterhomepage-available-section-wrapper > *:not(.campaign-banner-container.sidebar) {
+  flex: 1;
+}
+
+@media (max-width: 1024px) {
+  .commuterhomepage-available-section-wrapper {
+    flex-direction: column;
+  }
+  
+  .commuterhomepage-available-section-wrapper > .campaign-banner-container.sidebar {
+    width: 100%;
+    order: -1;
+  }
+}
+
 /* ============ PAGE TITLE ============ */
-.page-title {
+.commuterhomepage-page-title {
   text-align: center;
   margin-bottom: 50px;
 }
 
-.page-title h1 {
+.commuterhomepage-page-title h1 {
   font-size: 36px;
   font-weight: 700;
   color: #1a3a52;
   margin-bottom: 12px;
 }
 
-.page-title h1 .highlight {
+.commuterhomepage-page-title h1 .highlight {
   color: #00a699;
 }
 
-.page-title p {
+.commuterhomepage-page-title p {
   font-size: 16px;
   color: #666;
   line-height: 1.6;

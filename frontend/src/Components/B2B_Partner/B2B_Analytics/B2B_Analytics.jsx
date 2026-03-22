@@ -31,18 +31,22 @@ function B2B_Analytics() {
 
   if (loading) {
     return (
-      <div className="analytics">
-        <div className="loading">Loading analytics...</div>
+      <div className="drivemego-b2b_analytics-analytics">
+        <div className="drivemego-b2b_analytics-loading">
+          Loading analytics...
+        </div>
       </div>
-    )
+    );
   }
 
   if (!analytics) {
     return (
-      <div className="analytics">
-        <div className="error">Failed to load analytics data</div>
+      <div className="drivemego-b2b_analytics-analytics">
+        <div className="drivemego-b2b_analytics-error">
+          Failed to load analytics data
+        </div>
       </div>
-    )
+    );
   }
 
   // Use real chart data from backend analytics
@@ -58,13 +62,15 @@ function B2B_Analytics() {
   }
 
   return (
-    <div className="analytics">
-      <div className="analytics-header">
-        <h2 className="section-title">Financial Performance</h2>
-        <select 
-          value={period} 
+    <div className="drivemego-b2b_analytics-analytics">
+      <div className="drivemego-b2b_analytics-analytics-header">
+        <h2 className="drivemego-b2b_analytics-section-title">
+          Financial Performance
+        </h2>
+        <select
+          value={period}
           onChange={(e) => setPeriod(e.target.value)}
-          className="period-selector"
+          className="drivemego-b2b_analytics-period-selector"
         >
           <option value="monthly">Monthly</option>
           <option value="quarterly">Quarterly</option>
@@ -72,81 +78,116 @@ function B2B_Analytics() {
         </select>
       </div>
 
-      <div className="metric-cards">
-        <div className="metric-card">
-          <div className="metric-icon" style={{ backgroundColor: "#e8f5e9" }}>
+      <div className="drivemego-b2b_analytics-metric-cards">
+        <div className="drivemego-b2b_analytics-metric-card">
+          <div
+            className="drivemego-b2b_analytics-metric-icon"
+            style={{ backgroundColor: "#e8f5e9" }}
+          >
             $
           </div>
-          <div className="metric-content">
-            <p className="metric-label">Total Revenue</p>
-            <p className="metric-value">{analytics.revenue?.total?.toLocaleString() || 0} KWD</p>
-            <p className="metric-change">{analytics.revenue?.growth || '+0%'}</p>
+          <div className="drivemego-b2b_analytics-metric-content">
+            <p className="drivemego-b2b_analytics-metric-label">
+              Total Revenue
+            </p>
+            <p className="drivemego-b2b_analytics-metric-value">
+              {analytics.revenue?.total?.toLocaleString() || 0} KWD
+            </p>
+            <p className="drivemego-b2b_analytics-metric-change">
+              {analytics.revenue?.growth || "+0%"}
+            </p>
           </div>
         </div>
-        <div className="metric-card">
-          <div className="metric-icon" style={{ backgroundColor: "#e3f2fd" }}>
+        <div className="drivemego-b2b_analytics-metric-card">
+          <div
+            className="drivemego-b2b_analytics-metric-icon"
+            style={{ backgroundColor: "#e3f2fd" }}
+          >
             📈
           </div>
-          <div className="metric-content">
-            <p className="metric-label">Active Contracts</p>
-            <p className="metric-value">{analytics.contracts?.active || 0}</p>
-            <p className="metric-change">Total: {analytics.contracts?.total || 0}</p>
+          <div className="drivemego-b2b_analytics-metric-content">
+            <p className="drivemego-b2b_analytics-metric-label">
+              Active Contracts
+            </p>
+            <p className="drivemego-b2b_analytics-metric-value">
+              {analytics.contracts?.active || 0}
+            </p>
+            <p className="drivemego-b2b_analytics-metric-change">
+              Total: {analytics.contracts?.total || 0}
+            </p>
           </div>
         </div>
-        <div className="metric-card">
-          <div className="metric-icon" style={{ backgroundColor: "#f3e5f5" }}>
+        <div className="drivemego-b2b_analytics-metric-card">
+          <div
+            className="drivemego-b2b_analytics-metric-icon"
+            style={{ backgroundColor: "#f3e5f5" }}
+          >
             🚌
           </div>
-          <div className="metric-content">
-            <p className="metric-label">Fleet Utilization</p>
-            <p className="metric-value">{analytics.fleet?.utilization || '0%'}</p>
-            <p className="metric-change">Active: {analytics.fleet?.activeVehicles || 0}</p>
+          <div className="drivemego-b2b_analytics-metric-content">
+            <p className="drivemego-b2b_analytics-metric-label">
+              Fleet Utilization
+            </p>
+            <p className="drivemego-b2b_analytics-metric-value">
+              {analytics.fleet?.utilization || "0%"}
+            </p>
+            <p className="drivemego-b2b_analytics-metric-change">
+              Active: {analytics.fleet?.activeVehicles || 0}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="charts-section">
-        <div className="chart-container">
+      <div className="drivemego-b2b_analytics-charts-section">
+        <div className="drivemego-b2b_analytics-chart-container">
           <h3>Revenue & Profit Trend</h3>
           <B2B_BarChart data={revenueChartData} />
         </div>
-        <div className="chart-container">
+        <div className="drivemego-b2b_analytics-chart-container">
           <h3>Contracts Trend</h3>
           <B2B_LineChart data={contractsChartData} />
         </div>
       </div>
 
-      <div className="detailed-metrics">
+      <div className="drivemego-b2b_analytics-detailed-metrics">
         <h3>Performance Metrics</h3>
-        <div className="metrics-grid">
-          <div className="metric-item">
-            <span className="metric-label">Total Vehicles</span>
-            <span className="metric-value">
+        <div className="drivemego-b2b_analytics-metrics-grid">
+          <div className="drivemego-b2b_analytics-metric-item">
+            <span className="drivemego-b2b_analytics-metric-label">
+              Total Vehicles
+            </span>
+            <span className="drivemego-b2b_analytics-metric-value">
               {analytics.fleet?.totalVehicles || 0}
             </span>
           </div>
-          <div className="metric-item">
-            <span className="metric-label">Active Vehicles</span>
-            <span className="metric-value">
+          <div className="drivemego-b2b_analytics-metric-item">
+            <span className="drivemego-b2b_analytics-metric-label">
+              Active Vehicles
+            </span>
+            <span className="drivemego-b2b_analytics-metric-value">
               {analytics.fleet?.activeVehicles || 0}
             </span>
           </div>
-          <div className="metric-item">
-            <span className="metric-label">Completed Contracts</span>
-            <span className="metric-value">
+          <div className="drivemego-b2b_analytics-metric-item">
+            <span className="drivemego-b2b_analytics-metric-label">
+              Completed Contracts
+            </span>
+            <span className="drivemego-b2b_analytics-metric-value">
               {analytics.contracts?.completed || 0}
             </span>
           </div>
-          <div className="metric-item">
-            <span className="metric-label">Pending Contracts</span>
-            <span className="metric-value">
+          <div className="drivemego-b2b_analytics-metric-item">
+            <span className="drivemego-b2b_analytics-metric-label">
+              Pending Contracts
+            </span>
+            <span className="drivemego-b2b_analytics-metric-value">
               {analytics.contracts?.pending || 0}
             </span>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default B2B_Analytics

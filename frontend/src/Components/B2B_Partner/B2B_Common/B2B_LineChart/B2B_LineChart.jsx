@@ -23,7 +23,7 @@ function B2B_LineChart({ data }) {
     if (!data || !data.labels || !Array.isArray(data.labels)) {
       return;
     }
-    
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsAnimating(false);
     setChartData([]);
@@ -31,7 +31,8 @@ function B2B_LineChart({ data }) {
     const timer = setTimeout(() => {
       const formattedData = data.labels.map((label, index) => ({
         name: label,
-        Profit: data.profit?.[index] || 0,
+        // Support both profit data and generic data field (for contracts trend)
+        Profit: data.profit?.[index] || data.data?.[index] || 0,
       }));
       setChartData(formattedData);
       setIsAnimating(true);
@@ -43,8 +44,8 @@ function B2B_LineChart({ data }) {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="custom-tooltip line-tooltip">
-          <p className="tooltip-label">{label}</p>
+        <div className="drivemego-b2b_linechart-custom-tooltip drivemego-b2b_linechart-line-tooltip">
+          <p className="drivemego-b2b_linechart-tooltip-label">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }}>
               {entry.name}: {entry.value}
@@ -57,18 +58,17 @@ function B2B_LineChart({ data }) {
   };
 
   return (
-    <div className="line-chart">
+    <div className="drivemego-b2b_linechart-line-chart">
       <ResponsiveContainer width="100%" height={300}>
         <RechartsLineChart
           data={chartData}
           margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
-          className={isAnimating ? "animate-in" : ""}
+          className={isAnimating ? "drivemego-b2b_linechart-animate-in" : ""}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e8e8e8" />
           <XAxis dataKey="name" stroke="#999" />
           <YAxis stroke="#999" />
-          
-          
+
           <Tooltip content={<CustomTooltip />} />
           <Legend />
           <Line

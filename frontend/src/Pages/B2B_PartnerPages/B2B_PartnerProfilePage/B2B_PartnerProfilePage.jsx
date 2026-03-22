@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import "./b2b_partnerprofilepage.css";
@@ -20,9 +20,36 @@ import B2B_Invoices from "../../../Components/B2B_Partner/B2B_Invoices/B2B_Invoi
 
 
 function B2B_PartnerProfilePage() {
-  
-  const [b2bactiveTab, setB2BActiveTab] = useState("overview");
-  // const [activeTab, setActiveTab] = useState("corporate");
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // Get initial tab from URL query params on mount
+    const getInitialTab = () => {
+      const searchParams = new URLSearchParams(location.search);
+      return searchParams.get("tab") || "overview";
+    };
+
+    const [b2bactiveTab, setB2BActiveTab] = useState(getInitialTab);
+
+    // When URL changes (e.g., back navigation), update the tab
+    useEffect(() => {
+      const searchParams = new URLSearchParams(location.search);
+      const tabFromUrl = searchParams.get("tab");
+      if (tabFromUrl && tabFromUrl !== b2bactiveTab) {
+        setB2BActiveTab(tabFromUrl);
+        // Clear the URL param after reading it
+        navigate("/b2b-partner/profile", { replace: true });
+      }
+    }, [location.search]);
+
+    // Custom handler to clear URL when user manually clicks a tab
+    const handleTabChange = (tab) => {
+      setB2BActiveTab(tab);
+      // Clear any tab param from URL when manually switching tabs
+      if (location.search.includes("tab=")) {
+        navigate("/", { replace: true });
+      }
+    };
 
   const renderContent = () => {
     switch (b2bactiveTab) {
@@ -31,7 +58,6 @@ function B2B_PartnerProfilePage() {
       case "fleet":
         return <B2B_FleetAndDrivers />;
       case "contracts":
-        // return <B2B_Contracts />;
         return <B2B_PartnerContractPage />;
       case "My Quotation":
         return <B2B_Quotation />;
@@ -59,13 +85,12 @@ function B2B_PartnerProfilePage() {
           <B2B_Header />
           <B2B_Navigation
             b2bactiveTab={b2bactiveTab}
-            setB2BActiveTab={setB2BActiveTab}
+            setB2BActiveTab={handleTabChange}
           />
 
           <main className="b2b-dashboard-content">{renderContent()}</main>
         </div>
       </div>
-
     </div>
   );
 }

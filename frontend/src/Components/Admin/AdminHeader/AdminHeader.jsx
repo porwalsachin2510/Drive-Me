@@ -102,8 +102,11 @@ function AdminHeader() {
               />
             </div>
           </div>
-          <div className="ad-dash-logout-btn-header-right">
-            <button className="ad-dash-logout-btn" onClick={handleLogout}>
+          <div className="drivemego-admin-ad-dash-logout-btn-header-right">
+            <button
+              className="drivemego-admin-ad-dash-logout-btn"
+              onClick={handleLogout}
+            >
               Log Out
             </button>
           </div>

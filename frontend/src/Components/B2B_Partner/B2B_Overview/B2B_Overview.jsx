@@ -30,18 +30,22 @@ function B2B_Overview() {
 
   if (loading) {
     return (
-      <div className="b2b-overview">
-        <div className="loading">Loading overview...</div>
+      <div className="drivemego-b2b_overview-b2b-overview">
+        <div className="drivemego-b2b_overview-loading">
+          Loading overview...
+        </div>
       </div>
-    )
+    );
   }
 
   if (!overview) {
     return (
-      <div className="b2b-overview">
-        <div className="error">Failed to load overview data</div>
+      <div className="drivemego-b2b_overview-b2b-overview">
+        <div className="drivemego-b2b_overview-error">
+          Failed to load overview data
+        </div>
       </div>
-    )
+    );
   }
 
   const metrics = [
@@ -63,8 +67,8 @@ function B2B_Overview() {
   }
 
   return (
-    <div className="b2b-overview">
-      <div className="metrics-grid">
+    <div className="drivemego-b2b_overview-b2b-overview">
+      <div className="drivemego-b2b_overview-metrics-grid">
         {metrics.map((metric, index) => (
           <B2B_MetricsCard
             key={index}
@@ -75,30 +79,27 @@ function B2B_Overview() {
         ))}
       </div>
 
-      <div className="charts-section">
-        <div className="chart-container">
+      <div className="drivemego-b2b_overview-charts-section">
+        <div className="drivemego-b2b_overview-chart-container">
           <h3>Monthly Revenue</h3>
           <B2B_BarChart data={chartData} />
         </div>
-        <div className="chart-container">
+        <div className="drivemego-b2b_overview-chart-container">
           <h3>Profit Trend</h3>
           <B2B_LineChart data={chartData} />
         </div>
       </div>
 
-      <div className="contracts-section">
+      <div className="drivemego-b2b_overview-contracts-section">
         <h3>Recent Contracts</h3>
-        <div className="contracts-grid">
+        <div className="drivemego-b2b_overview-contracts-grid">
           {overview.contracts?.recent?.map((contract) => (
-            <B2B_ContractCard
-              key={contract._id}
-              contract={contract}
-            />
+            <B2B_ContractCard key={contract._id} contract={contract} />
           ))}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default B2B_Overview

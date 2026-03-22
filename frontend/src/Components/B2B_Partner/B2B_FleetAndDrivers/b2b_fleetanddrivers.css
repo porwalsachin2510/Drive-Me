@@ -1,23 +1,23 @@
-.fleet-and-drivers {
+.b2b-operator-dashboard-fleet-and-drivers {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.fleet-header {
+.b2b-operator-dashboard-fleet-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.fleet-title {
+.b2b-operator-dashboard-fleet-title {
   font-size: 24px;
   font-weight: 700;
   color: #000000;
   margin: 0;
 }
 
-.add-btn {
+.b2b-operator-dashboard-add-btn {
   padding: 10px 20px;
   background-color: #16a085;
   color: #ffffff;
@@ -29,11 +29,11 @@
   transition: background-color 0.2s;
 }
 
-.add-btn:hover {
+.b2b-operator-dashboard-add-btn:hover {
   background-color: #138d7b;
 }
 
-.fleet-tabs {
+.b2b-operator-dashboard-fleet-tabs {
   display: flex;
   gap: 0;
   border-bottom: 1px solid #e8e8e8;
@@ -43,7 +43,7 @@
   padding: 0 20px;
 }
 
-.fleet-tab {
+.b2b-operator-dashboard-fleet-tab {
   padding: 16px 20px;
   background: none;
   border: none;
@@ -56,56 +56,56 @@
   white-space: nowrap;
 }
 
-.fleet-tab:hover {
+.b2b-operator-dashboard-fleet-tab:hover {
   color: #666666;
 }
 
-.fleet-tab.active {
+.b2b-operator-dashboard-fleet-tab.b2b-operator-dashboard-active {
   color: #16a085;
   border-bottom-color: #16a085;
 }
 
-.fleet-content {
+.b2b-operator-dashboard-fleet-content {
   display: flex;
   flex-direction: column;
 }
 
 @media (max-width: 768px) {
-  .fleet-header {
+  .b2b-operator-dashboard-fleet-header {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
   }
 
-  .add-btn {
+  .b2b-operator-dashboard-add-btn {
     align-self: flex-end;
     padding: 8px 16px;
     font-size: 12px;
   }
 
-  .fleet-tabs {
+  .b2b-operator-dashboard-fleet-tabs {
     margin: -16px -16px 0 -16px;
     padding: 0 16px;
   }
 
-  .fleet-tab {
+  .b2b-operator-dashboard-fleet-tab {
     padding: 12px 16px;
     font-size: 12px;
   }
 }
 
 @media (max-width: 480px) {
-  .fleet-tabs {
+  .b2b-operator-dashboard-fleet-tabs {
     margin: -12px -12px 0 -12px;
     padding: 0 12px;
   }
 
-  .fleet-tab {
+  .b2b-operator-dashboard-fleet-tab {
     padding: 10px 12px;
     font-size: 11px;
   }
 
-  .add-btn {
+  .b2b-operator-dashboard-add-btn {
     font-size: 11px;
     padding: 6px 12px;
   }

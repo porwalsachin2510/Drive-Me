@@ -375,15 +375,15 @@ const filteredBookings = bookings.filter((booking) => {
   
   return (
     <div className="corporate-driver-dashboard">
-      <button className="corp-logout-btn" onClick={handleLogout}>
-        Log Out
-      </button>
       <div className="corp-driver-dashboard-header">
         <h1>Corporate Driver Dashboard</h1>
         <div className="corp-driver-driver-info">
           <span>Welcome, {user?.fullName}</span>
           {corporateInfo && (
-            <span className="corp-driver-company-name" style={{ fontSize: "14px", color: "#666", marginLeft: "8px" }}>
+            <span
+              className="corp-driver-company-name"
+              style={{ fontSize: "14px", color: "#666", marginLeft: "8px" }}
+            >
               | {corporateInfo.companyName || corporateInfo.fullName}
             </span>
           )}
@@ -393,6 +393,9 @@ const filteredBookings = bookings.filter((booking) => {
             📍 {isSharingLocation ? "Sharing Live" : "Not Sharing"}
           </div>
         </div>
+        <button className="corp-logout-btn" onClick={handleLogout}>
+          Log Out
+        </button>
       </div>
 
       <div className="corp-driver-dashboard-tabs">
@@ -454,30 +457,36 @@ const filteredBookings = bookings.filter((booking) => {
                           <div className="corp-driver-booking-details">
                             <p>
                               <strong>Route:</strong>{" "}
-                              {getPickupLocation(booking)} → {getDropoffLocation(booking)}
+                              {getPickupLocation(booking)} →{" "}
+                              {getDropoffLocation(booking)}
                             </p>
                             <p>
                               <strong>Date:</strong>{" "}
-                              {formatTripDate(booking.tripDate || booking.travelDate)}
+                              {formatTripDate(
+                                booking.tripDate || booking.travelDate,
+                              )}
                             </p>
                             <p>
                               <strong>Time:</strong> {getTravelTime(booking)}
                             </p>
                             <p>
-                              <strong>Passengers:</strong> {getPassengerCount(booking)}
+                              <strong>Passengers:</strong>{" "}
+                              {getPassengerCount(booking)}
                             </p>
-                            {booking.passengers && booking.passengers.length > 0 && (
-                              <div className="corp-driver-passenger-list">
-                                <strong>Employees:</strong>
-                                <ul>
-                                  {booking.passengers.map((p, idx) => (
-                                    <li key={idx}>
-                                      {p.employeeId?.fullName || "Employee"} - Seat {p.seatNumber}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+                            {booking.passengers &&
+                              booking.passengers.length > 0 && (
+                                <div className="corp-driver-passenger-list">
+                                  <strong>Employees:</strong>
+                                  <ul>
+                                    {booking.passengers.map((p, idx) => (
+                                      <li key={idx}>
+                                        {p.employeeId?.fullName || "Employee"} -
+                                        Seat {p.seatNumber}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
                           </div>
                           <div className="corp-driver-booking-actions">
                             <button
@@ -511,14 +520,18 @@ const filteredBookings = bookings.filter((booking) => {
                           <div className="corp-driver-booking-details">
                             <p>
                               <strong>Route:</strong>{" "}
-                              {getPickupLocation(booking)} → {getDropoffLocation(booking)}
+                              {getPickupLocation(booking)} →{" "}
+                              {getDropoffLocation(booking)}
                             </p>
                             <p>
                               <strong>Date:</strong>{" "}
-                              {formatTripDate(booking.tripDate || booking.travelDate)}
+                              {formatTripDate(
+                                booking.tripDate || booking.travelDate,
+                              )}
                             </p>
                             <p>
-                              <strong>Passengers:</strong> {getPassengerCount(booking)}
+                              <strong>Passengers:</strong>{" "}
+                              {getPassengerCount(booking)}
                             </p>
                             <div className="corp-driver-status-badge in-progress">
                               In Progress
@@ -556,14 +569,18 @@ const filteredBookings = bookings.filter((booking) => {
                           <div className="corp-driver-booking-details">
                             <p>
                               <strong>Route:</strong>{" "}
-                              {getPickupLocation(booking)} → {getDropoffLocation(booking)}
+                              {getPickupLocation(booking)} →{" "}
+                              {getDropoffLocation(booking)}
                             </p>
                             <p>
                               <strong>Date:</strong>{" "}
-                              {formatTripDate(booking.tripDate || booking.travelDate)}
+                              {formatTripDate(
+                                booking.tripDate || booking.travelDate,
+                              )}
                             </p>
                             <p>
-                              <strong>Passengers:</strong> {getPassengerCount(booking)}
+                              <strong>Passengers:</strong>{" "}
+                              {getPassengerCount(booking)}
                             </p>
                             <div className="corp-driver-status-badge completed">
                               Completed
@@ -589,7 +606,10 @@ const filteredBookings = bookings.filter((booking) => {
             <div className="corp-driver-notification-list">
               {notifications.length > 0 ? (
                 notifications.map((notification) => (
-                  <div key={notification._id} className={`corp-driver-notification-item ${!notification.isRead ? 'unread' : ''}`}>
+                  <div
+                    key={notification._id}
+                    className={`corp-driver-notification-item ${!notification.isRead ? "unread" : ""}`}
+                  >
                     <h4>{notification.title}</h4>
                     <p>{notification.message}</p>
                     <div className="corp-driver-time">

@@ -66,34 +66,38 @@ function B2B_FleetAndDrivers() {
 
   if (loading) {
     return (
-      <div className="fleet-and-drivers">
-        <div className="loading">Loading fleet data...</div>
+      <div className="b2b-operator-dashboard-fleet-and-drivers">
+        <div className="b2b-operator-dashboard-loading">
+          Loading fleet data...
+        </div>
       </div>
-    )
+    );
   }
 
   if (!fleetData) {
     return (
-      <div className="fleet-and-drivers">
-        <div className="error">Failed to load fleet data</div>
+      <div className="b2b-operator-dashboard-fleet-and-drivers">
+        <div className="b2b-operator-dashboard-error">
+          Failed to load fleet data
+        </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="fleet-and-drivers">
-      <div className="fleet-header">
-        <h2 className="fleet-title">Fleet Management</h2>
+    <div className="b2b-operator-dashboard-fleet-and-drivers">
+      <div className="b2b-operator-dashboard-fleet-header">
+        <h2 className="b2b-operator-dashboard-fleet-title">Fleet Management</h2>
         {activeSubTab === "drivers" ? (
           <button
-            className="add-btn"
+            className="b2b-operator-dashboard-add-btn"
             onClick={() => setShowAddDriverModal(true)}
           >
             + Add Driver
           </button>
         ) : (
           <button
-            className="add-btn"
+            className="b2b-operator-dashboard-add-btn"
             onClick={() => setShowAddVehicleModal(true)}
           >
             + Add Vehicle
@@ -101,30 +105,30 @@ function B2B_FleetAndDrivers() {
         )}
       </div>
 
-      <div className="fleet-tabs">
+      <div className="b2b-operator-dashboard-fleet-tabs">
         <button
-          className={`fleet-tab ${activeSubTab === "vehicles" ? "active" : ""}`}
+          className={`b2b-operator-dashboard-fleet-tab ${activeSubTab === "vehicles" ? "b2b-operator-dashboard-active" : ""}`}
           onClick={() => setActiveSubTab("vehicles")}
         >
           🚗 Vehicles ({fleetData.vehicles?.length || 0})
         </button>
         <button
-          className={`fleet-tab ${activeSubTab === "drivers" ? "active" : ""}`}
+          className={`b2b-operator-dashboard-fleet-tab ${activeSubTab === "drivers" ? "b2b-operator-dashboard-active" : ""}`}
           onClick={() => setActiveSubTab("drivers")}
         >
           👤 Drivers ({fleetData.drivers?.length || 0})
         </button>
       </div>
 
-      <div className="fleet-content">
+      <div className="b2b-operator-dashboard-fleet-content">
         {activeSubTab === "vehicles" ? (
-          <B2B_VehiclesTab 
-            vehicles={fleetData.vehicles || []} 
+          <B2B_VehiclesTab
+            vehicles={fleetData.vehicles || []}
             onRefresh={fetchFleetData}
           />
         ) : (
-          <B2B_DriversTab 
-            drivers={fleetData.drivers || []} 
+          <B2B_DriversTab
+            drivers={fleetData.drivers || []}
             onRefresh={fetchFleetData}
           />
         )}
@@ -146,7 +150,7 @@ function B2B_FleetAndDrivers() {
         />
       )}
     </div>
-  )
+  );
 }
 
 export default B2B_FleetAndDrivers

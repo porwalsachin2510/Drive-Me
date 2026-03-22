@@ -254,12 +254,18 @@ function B2B_AddDriverModal({ onClose }) {
   }, []);
 
   return (
-    <div className="modal-overlay" onClick={handleModalClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+    <div
+      className="b2b-operator-dashboard-add-driver-modal-overlay"
+      onClick={handleModalClose}
+    >
+      <div
+        className="b2b-operator-dashboard-add-driver-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="b2b-operator-dashboard-add-driver-modal-header">
           <h2>Add New Driver</h2>
           <button
-            className="modal-close"
+            className="b2b-operator-dashboard-add-driver-modal-close"
             onClick={handleModalClose}
             disabled={loading}
           >
@@ -268,22 +274,28 @@ function B2B_AddDriverModal({ onClose }) {
         </div>
 
         {successMessage && (
-          <div className="success-message">
+          <div className="b2b-operator-dashboard-add-driver-success-message">
             <span>✓</span> {successMessage}
           </div>
         )}
 
         {error && (
-          <div className="error-message">
+          <div className="b2b-operator-dashboard-add-driver-error-message">
             <span>✕</span> {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="modal-form" noValidate>
-          <div className="section-title">Basic Information</div>
+        <form
+          onSubmit={handleSubmit}
+          className="b2b-operator-dashboard-add-driver-modal-form"
+          noValidate
+        >
+          <div className="b2b-operator-dashboard-add-driver-section-title">
+            Basic Information
+          </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-row">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="name">Full Name *</label>
               <input
                 type="text"
@@ -292,15 +304,21 @@ function B2B_AddDriverModal({ onClose }) {
                 placeholder="e.g. Mohammed Ali"
                 value={formData.name}
                 onChange={handleChange}
-                className={validationErrors.name ? "error" : ""}
+                className={
+                  validationErrors.name
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.name && (
-                <span className="error-text">{validationErrors.name}</span>
+                <span className="b2b-operator-dashboard-add-driver-error-text">
+                  {validationErrors.name}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="dateOfBirth">Date of Birth *</label>
               <input
                 type="date"
@@ -308,7 +326,11 @@ function B2B_AddDriverModal({ onClose }) {
                 name="dateOfBirth"
                 value={formData.dateOfBirth}
                 onChange={handleChange}
-                className={validationErrors.dateOfBirth ? "error" : ""}
+                className={
+                  validationErrors.dateOfBirth
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.dateOfBirth && (
@@ -319,8 +341,8 @@ function B2B_AddDriverModal({ onClose }) {
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-row">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="email">Email Address *</label>
               <input
                 type="email"
@@ -329,15 +351,21 @@ function B2B_AddDriverModal({ onClose }) {
                 placeholder="driver@example.com"
                 value={formData.email}
                 onChange={handleChange}
-                className={validationErrors.email ? "error" : ""}
+                className={
+                  validationErrors.email
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.email && (
-                <span className="error-text">{validationErrors.email}</span>
+                <span className="b2b-operator-dashboard-add-driver-error-text">
+                  {validationErrors.email}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="phone">Phone Number *</label>
               <input
                 type="tel"
@@ -346,17 +374,23 @@ function B2B_AddDriverModal({ onClose }) {
                 placeholder="+965 XXXX XXXX"
                 value={formData.phone}
                 onChange={handleChange}
-                className={validationErrors.phone ? "error" : ""}
+                className={
+                  validationErrors.phone
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.phone && (
-                <span className="error-text">{validationErrors.phone}</span>
+                <span className="b2b-operator-dashboard-add-driver-error-text">
+                  {validationErrors.phone}
+                </span>
               )}
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-row">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="nationality">Nationality *</label>
               <input
                 type="text"
@@ -365,21 +399,27 @@ function B2B_AddDriverModal({ onClose }) {
                 placeholder="e.g. Indian"
                 value={formData.nationality}
                 onChange={handleChange}
-                className={validationErrors.nationality ? "error" : ""}
+                className={
+                  validationErrors.nationality
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.nationality && (
-                <span className="error-text">
+                <span className="b2b-operator-dashboard-add-driver-error-text">
                   {validationErrors.nationality}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="section-title">License Information</div>
+          <div className="b2b-operator-dashboard-add-driver-section-title">
+            License Information
+          </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-row">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="licenseNumber">License Number *</label>
               <input
                 type="text"
@@ -388,17 +428,21 @@ function B2B_AddDriverModal({ onClose }) {
                 placeholder="License number"
                 value={formData.licenseNumber}
                 onChange={handleChange}
-                className={validationErrors.licenseNumber ? "error" : ""}
+                className={
+                  validationErrors.licenseNumber
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.licenseNumber && (
-                <span className="error-text">
+                <span className="b2b-operator-dashboard-add-driver-error-text">
                   {validationErrors.licenseNumber}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="licenseExpiry">License Expiry *</label>
               <input
                 type="date"
@@ -406,18 +450,22 @@ function B2B_AddDriverModal({ onClose }) {
                 name="licenseExpiry"
                 value={formData.licenseExpiry}
                 onChange={handleChange}
-                className={validationErrors.licenseExpiry ? "error" : ""}
+                className={
+                  validationErrors.licenseExpiry
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.licenseExpiry && (
-                <span className="error-text">
+                <span className="b2b-operator-dashboard-add-driver-error-text">
                   {validationErrors.licenseExpiry}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-group">
             <label htmlFor="licenseType">License Type *</label>
             <select
               id="licenseType"
@@ -433,9 +481,11 @@ function B2B_AddDriverModal({ onClose }) {
             </select>
           </div>
 
-          <div className="section-title">Address</div>
+          <div className="b2b-operator-dashboard-add-driver-section-title">
+            Address
+          </div>
 
-          <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-group">
             <label htmlFor="addressStreet">Street Address *</label>
             <input
               type="text"
@@ -444,18 +494,22 @@ function B2B_AddDriverModal({ onClose }) {
               placeholder="Street address"
               value={formData.addressStreet}
               onChange={handleChange}
-              className={validationErrors.addressStreet ? "error" : ""}
+              className={
+                validationErrors.addressStreet
+                  ? "b2b-operator-dashboard-add-driver-error"
+                  : ""
+              }
               disabled={loading}
             />
             {validationErrors.addressStreet && (
-              <span className="error-text">
+              <span className="b2b-operator-dashboard-add-driver-error-text">
                 {validationErrors.addressStreet}
               </span>
             )}
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-row">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="addressCity">City *</label>
               <input
                 type="text"
@@ -464,17 +518,21 @@ function B2B_AddDriverModal({ onClose }) {
                 placeholder="City"
                 value={formData.addressCity}
                 onChange={handleChange}
-                className={validationErrors.addressCity ? "error" : ""}
+                className={
+                  validationErrors.addressCity
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.addressCity && (
-                <span className="error-text">
+                <span className="b2b-operator-dashboard-add-driver-error-text">
                   {validationErrors.addressCity}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="addressCountry">Country *</label>
               <input
                 type="text"
@@ -483,21 +541,27 @@ function B2B_AddDriverModal({ onClose }) {
                 placeholder="Country"
                 value={formData.addressCountry}
                 onChange={handleChange}
-                className={validationErrors.addressCountry ? "error" : ""}
+                className={
+                  validationErrors.addressCountry
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.addressCountry && (
-                <span className="error-text">
+                <span className="b2b-operator-dashboard-add-driver-error-text">
                   {validationErrors.addressCountry}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="section-title">Experience</div>
+          <div className="b2b-operator-dashboard-add-driver-section-title">
+            Experience
+          </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-row">
+            <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="experienceYears">Years of Experience *</label>
               <input
                 type="number"
@@ -507,18 +571,22 @@ function B2B_AddDriverModal({ onClose }) {
                 min="0"
                 value={formData.experienceYears}
                 onChange={handleChange}
-                className={validationErrors.experienceYears ? "error" : ""}
+                className={
+                  validationErrors.experienceYears
+                    ? "b2b-operator-dashboard-add-driver-error"
+                    : ""
+                }
                 disabled={loading}
               />
               {validationErrors.experienceYears && (
-                <span className="error-text">
+                <span className="b2b-operator-dashboard-add-driver-error-text">
                   {validationErrors.experienceYears}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-group">
             <label htmlFor="experienceDescription">
               Description (Optional)
             </label>
@@ -533,22 +601,24 @@ function B2B_AddDriverModal({ onClose }) {
             />
           </div>
 
-          <div className="section-title">Documents</div>
+          <div className="b2b-operator-dashboard-add-driver-section-title">
+            Documents
+          </div>
 
-          <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-group">
             <label>License Document * (Required)</label>
-            <div className="file-input-wrapper">
+            <div className="b2b-operator-dashboard-add-driver-file-input-wrapper">
               <input
                 type="file"
                 ref={licenseInputRef}
                 onChange={(e) => handleFileChange(e, "license")}
                 accept="image/*,.pdf"
                 disabled={loading}
-                className="file-input"
+                className="b2b-operator-dashboard-add-driver-file-input"
               />
               <button
                 type="button"
-                className="file-button"
+                className="b2b-operator-dashboard-add-driver-file-button"
                 onClick={handleLicenseClick}
                 disabled={loading}
               >
@@ -556,24 +626,26 @@ function B2B_AddDriverModal({ onClose }) {
               </button>
             </div>
             {validationErrors.license && (
-              <span className="error-text">{validationErrors.license}</span>
+              <span className="b2b-operator-dashboard-add-driver-error-text">
+                {validationErrors.license}
+              </span>
             )}
           </div>
 
-          <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-group">
             <label>Passport (Optional)</label>
-            <div className="file-input-wrapper">
+            <div className="b2b-operator-dashboard-add-driver-file-input-wrapper">
               <input
                 type="file"
                 ref={passportInputRef}
                 onChange={(e) => handleFileChange(e, "passport")}
                 accept="image/*,.pdf"
                 disabled={loading}
-                className="file-input"
+                className="b2b-operator-dashboard-add-driver-file-input"
               />
               <button
                 type="button"
-                className="file-button"
+                className="b2b-operator-dashboard-add-driver-file-button"
                 onClick={handlePassportClick}
                 disabled={loading}
               >
@@ -581,24 +653,26 @@ function B2B_AddDriverModal({ onClose }) {
               </button>
             </div>
             {validationErrors.passport && (
-              <span className="error-text">{validationErrors.passport}</span>
+              <span className="b2b-operator-dashboard-add-driver-error-text">
+                {validationErrors.passport}
+              </span>
             )}
           </div>
 
-          <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-group">
             <label>Visa (Optional)</label>
-            <div className="file-input-wrapper">
+            <div className="b2b-operator-dashboard-add-driver-file-input-wrapper">
               <input
                 type="file"
                 ref={visaInputRef}
                 onChange={(e) => handleFileChange(e, "visa")}
                 accept="image/*,.pdf"
                 disabled={loading}
-                className="file-input"
+                className="b2b-operator-dashboard-add-driver-file-input"
               />
               <button
                 type="button"
-                className="file-button"
+                className="b2b-operator-dashboard-add-driver-file-button"
                 onClick={handleVisaClick}
                 disabled={loading}
               >
@@ -606,24 +680,26 @@ function B2B_AddDriverModal({ onClose }) {
               </button>
             </div>
             {validationErrors.visa && (
-              <span className="error-text">{validationErrors.visa}</span>
+              <span className="b2b-operator-dashboard-add-driver-error-text">
+                {validationErrors.visa}
+              </span>
             )}
           </div>
 
-          <div className="form-group">
+          <div className="b2b-operator-dashboard-add-driver-form-group">
             <label>Medical Certificate (Optional)</label>
-            <div className="file-input-wrapper">
+            <div className="b2b-operator-dashboard-add-driver-file-input-wrapper">
               <input
                 type="file"
                 ref={medicalCertificateInputRef}
                 onChange={(e) => handleFileChange(e, "medicalCertificate")}
                 accept="image/*,.pdf"
                 disabled={loading}
-                className="file-input"
+                className="b2b-operator-dashboard-add-driver-file-input"
               />
               <button
                 type="button"
-                className="file-button"
+                className="b2b-operator-dashboard-add-driver-file-button"
                 onClick={handleMedicalCertificateClick}
                 disabled={loading}
               >
@@ -633,22 +709,26 @@ function B2B_AddDriverModal({ onClose }) {
               </button>
             </div>
             {validationErrors.medicalCertificate && (
-              <span className="error-text">
+              <span className="b2b-operator-dashboard-add-driver-error-text">
                 {validationErrors.medicalCertificate}
               </span>
             )}
           </div>
 
-          <div className="modal-actions">
+          <div className="b2b-operator-dashboard-add-driver-modal-actions">
             <button
               type="button"
-              className="btn-cancel"
+              className="b2b-operator-dashboard-add-driver-btn-cancel"
               onClick={handleModalClose}
               disabled={loading}
             >
               Cancel
             </button>
-            <button type="submit" className="btn-register" disabled={loading}>
+            <button
+              type="submit"
+              className="b2b-operator-dashboard-add-driver-btn-register"
+              disabled={loading}
+            >
               {loading ? "Registering..." : "Register Driver"}
             </button>
           </div>

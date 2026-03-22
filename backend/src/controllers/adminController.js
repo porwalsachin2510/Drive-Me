@@ -1650,14 +1650,8 @@ export const getPublicActiveCampaigns = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(10);
     
-    // Increment view count for each campaign
-    if (campaigns.length > 0) {
-      const campaignIds = campaigns.map(c => c._id);
-      await Campaign.updateMany(
-        { _id: { $in: campaignIds } },
-        { $inc: { views: 1 } }
-      );
-    }
+    // Views are now tracked separately via trackCampaignView endpoint
+    // This provides more accurate per-impression tracking
     
     res.status(200).json({
       success: true,
@@ -1680,6 +1674,21 @@ export const trackCampaignClick = async (req, res) => {
     
     await Campaign.findByIdAndUpdate(campaignId, {
       $inc: { clicks: 1 }
+    });
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Track campaign view/impression (separate from fetch)
+export const trackCampaignView = async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+    
+    await Campaign.findByIdAndUpdate(campaignId, {
+      $inc: { views: 1 }
     });
     
     res.status(200).json({ success: true });
@@ -5220,19 +5229,17 @@ export const verifyPayment = async (req, res) => {
 
             await payment.save()
 
-            // Update Admin Wallet - Commission only (use findOneAndUpdate to avoid duplicate key errors)
-            let adminWallet = await Wallet.findOneAndUpdate(
-                { userId: req.userId, role: "ADMIN" },
-                { 
-                    $setOnInsert: { 
-                        userId: req.userId, 
-                        role: "ADMIN", 
-                        balance: 0, 
-                        securityDepositHeld: 0 
-                    } 
-                },
-                { upsert: true, new: true }
-            )
+            // Update Admin Wallet - Commission only
+            // First find by userId only (since userId is unique in the schema)
+            let adminWallet = await Wallet.findOne({ userId: req.userId })
+            if (!adminWallet) {
+                adminWallet = await Wallet.create({
+                    userId: req.userId,
+                    role: "ADMIN",
+                    balance: 0,
+                    securityDepositHeld: 0
+                })
+            }
 
             // const adminBalanceBefore = adminWallet.balance
             // adminWallet.balance += adminCommissionAmount
@@ -5256,18 +5263,16 @@ export const verifyPayment = async (req, res) => {
                 securityDepositAmount,
             )
 
-            // Update Fleet Owner Wallet - Only 90% of advance (use findOneAndUpdate to avoid duplicate key errors)
-            let fleetWallet = await Wallet.findOneAndUpdate(
-                { userId: payment.fleetOwnerId, role: "B2B_PARTNER" },
-                { 
-                    $setOnInsert: { 
-                        userId: payment.fleetOwnerId, 
-                        role: "B2B_PARTNER", 
-                        balance: 0 
-                    } 
-                },
-                { upsert: true, new: true }
-            )
+            // Update Fleet Owner Wallet - Only 90% of advance
+            // First find by userId only (since userId is unique in the schema)
+            let fleetWallet = await Wallet.findOne({ userId: payment.fleetOwnerId })
+            if (!fleetWallet) {
+                fleetWallet = await Wallet.create({
+                    userId: payment.fleetOwnerId,
+                    role: "B2B_PARTNER",
+                    balance: 0
+                })
+            }
 
             const fleetBalanceBefore = fleetWallet.balance
             fleetWallet.balance += fleetOwnerAmount

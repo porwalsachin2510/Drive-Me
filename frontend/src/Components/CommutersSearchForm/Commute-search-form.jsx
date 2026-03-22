@@ -89,14 +89,17 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
   };
 
   return (
-    <div className="commute-search-container">
-      <form className="commute-search-form" onSubmit={handleSearchCommute}>
+    <div className="commute-search-form-container">
+      <form
+        className="drivemego-commute-search-form"
+        onSubmit={handleSearchCommute}
+      >
         {/* Location Fields */}
-        <div className="location-grid">
-          <div className="form-group">
-            <label className="form-label location-label">
+        <div className="commute-search-form-location-grid">
+          <div className="commute-search-form-form-group">
+            <label className="commute-search-form-form-label commute-search-form-location-label">
               <svg
-                className="label-icon teal"
+                className="commute-search-form-label-icon commute-search-form-teal"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -108,38 +111,29 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               </svg>
               PICKUP LOCATION
             </label>
-            <div className="input-wrapper">
-              <svg
-                className="input-icon gray"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <path
-                  d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z"
-                  strokeWidth="2"
-                />
-              </svg>
+            <div className="commute-search-form-input-wrapper">
               <input
                 type="text"
                 name="pickupLocation"
                 placeholder="Enter home location (Google Places)"
                 value={formData.pickupLocation}
                 onChange={handleInputChange}
-                className={`form-input ${
-                  errors.pickupLocation ? "input-error" : ""
+                className={`commute-search-form-form-input ${
+                  errors.pickupLocation ? "commute-search-form-input-error" : ""
                 }`}
               />
             </div>
             {errors.pickupLocation && (
-              <span className="error-message">{errors.pickupLocation}</span>
+              <span className="commute-search-form-error-message">
+                {errors.pickupLocation}
+              </span>
             )}
           </div>
 
-          <div className="form-group">
-            <label className="form-label location-label">
+          <div className="commute-search-form-form-group">
+            <label className="commute-search-form-form-label commute-search-form-location-label">
               <svg
-                className="label-icon teal"
+                className="commute-search-form-label-icon commute-search-form-teal"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -151,42 +145,35 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               </svg>
               DROP-OFF LOCATION
             </label>
-            <div className="input-wrapper">
-              <svg
-                className="input-icon gray"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <path
-                  d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z"
-                  strokeWidth="2"
-                />
-              </svg>
+            <div className="commute-search-form-input-wrapper">
               <input
                 type="text"
                 name="dropoffLocation"
                 placeholder="Enter work location (Google Places)"
                 value={formData.dropoffLocation}
                 onChange={handleInputChange}
-                className={`form-input ${
-                  errors.dropoffLocation ? "input-error" : ""
+                className={`commute-search-form-form-input ${
+                  errors.dropoffLocation
+                    ? "commute-search-form-input-error"
+                    : ""
                 }`}
               />
             </div>
             {errors.dropoffLocation && (
-              <span className="error-message">{errors.dropoffLocation}</span>
+              <span className="commute-search-form-error-message">
+                {errors.dropoffLocation}
+              </span>
             )}
           </div>
         </div>
 
         {/* Form Fields Grid */}
-        <div className="form-fields-grid">
+        <div className="commute-search-form-form-fields-grid">
           {/* Work Category */}
-          <div className="form-group">
-            <label className="form-label">
+          <div className="commute-search-form-form-group">
+            <label className="commute-search-form-form-label">
               <svg
-                className="label-icon red"
+                className="commute-search-form-label-icon commute-search-form-red"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -198,7 +185,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               name="workCategory"
               value={formData.workCategory}
               onChange={handleSelectChange}
-              className="form-select"
+              className="commute-search-form-form-select"
             >
               <option value="">Select Category</option>
               <option value="Office Staff">Office Staff</option>
@@ -210,10 +197,10 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
           </div>
 
           {/* Pickup Time */}
-          <div className="form-group">
-            <label className="form-label">
+          <div className="commute-search-form-form-group">
+            <label className="commute-search-form-form-label">
               <svg
-                className="label-icon red"
+                className="commute-search-form-label-icon commute-search-form-red"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -227,41 +214,30 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               </svg>
               Pickup Time
             </label>
-            <div className="input-wrapper">
+            <div className="commute-search-form-input-wrapper">
               <input
                 type="time"
                 name="pickupTime"
                 placeholder="--:--"
                 value={formData.pickupTime}
                 onChange={handleInputChange}
-                className={`form-input time-input ${
-                  errors.pickupTime ? "input-error" : ""
+                className={`commute-search-form-form-input commute-search-form-time-input ${
+                  errors.pickupTime ? "commute-search-form-input-error" : ""
                 }`}
               />
-              <svg
-                className="input-icon gray"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                <polyline
-                  points="12 6 12 12 16 14"
-                  strokeWidth="2"
-                  fill="none"
-                />
-              </svg>
             </div>
             {errors.pickupTime && (
-              <span className="error-message">{errors.pickupTime}</span>
+              <span className="commute-search-form-error-message">
+                {errors.pickupTime}
+              </span>
             )}
           </div>
 
           {/* Shift Type */}
-          <div className="form-group">
-            <label className="form-label">
+          <div className="commute-search-form-form-group">
+            <label className="commute-search-form-form-label">
               <svg
-                className="label-icon blue"
+                className="commute-search-form-label-icon commute-search-form-blue"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -280,7 +256,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               name="shiftType"
               value={formData.shiftType}
               onChange={handleSelectChange}
-              className="form-select"
+              className="commute-search-form-form-select"
             >
               <option value="Full Day">Full Day</option>
               <option value="Morning Shift">Morning Shift</option>
@@ -291,12 +267,12 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
         </div>
 
         {/* Second Row */}
-        <div className="form-fields-grid">
+        <div className="commute-search-form-form-fields-grid">
           {/* Trip Type */}
-          <div className="form-group">
+          <div className="commute-search-form-form-group">
             <label className="form-label">
               <svg
-                className="label-icon red"
+                className="commute-search-form-label-icon commute-search-form-red"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -312,7 +288,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               name="tripType"
               value={formData.tripType}
               onChange={handleSelectChange}
-              className="form-select"
+              className="commute-search-form-form-select"
             >
               <option value="Round Trip">Round Trip</option>
               <option value="One Way">One Way</option>
@@ -320,10 +296,10 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
           </div>
 
           {/* Start Date */}
-          <div className="form-group">
-            <label className="form-label">
+          <div className="commute-search-form-form-group">
+            <label className="commute-search-form-form-label">
               <svg
-                className="label-icon red"
+                className="commute-search-form-label-icon commute-search-form-red"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -345,50 +321,31 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               </svg>
               Start Date
             </label>
-            <div className="input-wrapper">
+            <div className="commute-search-form-input-wrapper">
               <input
                 type="date"
                 name="startDate"
                 value={formData.startDate}
                 onChange={handleInputChange}
                 placeholder="dd-mm-yyyy"
-                className={`form-input date-input ${
-                  errors.startDate ? "input-error" : ""
+                className={`commute-search-form-form-input commute-search-form-date-input ${
+                  errors.startDate ? "commute-search-form-input-error" : ""
                 }`}
               />
-              <svg
-                className="input-icon gray"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <rect
-                  x="3"
-                  y="4"
-                  width="18"
-                  height="18"
-                  rx="2"
-                  strokeWidth="2"
-                />
-                <polyline
-                  points="16 2 16 6 8 6 8 2"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                <line x1="3" y1="10" x2="21" y2="10" strokeWidth="2" />
-              </svg>
             </div>
             {errors.startDate && (
-              <span className="error-message">{errors.startDate}</span>
+              <span className="commute-search-form-error-message">
+                {errors.startDate}
+              </span>
             )}
           </div>
         </div>
 
         {/* Days Needed */}
-        <div className="form-group">
-          <label className="form-label">
+        <div className="commute-search-form-form-group">
+          <label className="commute-search-form-form-label">
             <svg
-              className="label-icon red"
+              className="commute-search-form-label-icon commute-search-form-red"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -403,13 +360,15 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
             </svg>
             Days Needed (On/Off)
           </label>
-          <div className="days-container">
+          <div className="commute-search-form-days-container">
             {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
               <button
                 key={day}
                 type="button"
-                className={`day-button ${
-                  selectedDays.includes(day) ? "selected" : ""
+                className={`commute-search-form-day-button ${
+                  selectedDays.includes(day)
+                    ? "commute-search-form-selected"
+                    : ""
                 }`}
                 onClick={() => toggleDay(day)}
               >
@@ -418,17 +377,23 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
             ))}
           </div>
           {errors.selectedDays && (
-            <span className="error-message">{errors.selectedDays}</span>
+            <span className="commute-search-form-error-message">
+              {errors.selectedDays}
+            </span>
           )}
         </div>
 
         {/* Button Section */}
-        <div className="button-section">
-          <button type="submit" className="search-button">
-            <span className="search-icon">🔍</span>
+        <div className="commute-search-form-button-section">
+          <button type="submit" className="commute-search-form-search-button">
+            <span className="commute-search-form-search-icon">🔍</span>
             Search Commutes
           </button>
-          <button type="button" className="request-button" onClick={onRequestRoute}>
+          <button
+            type="button"
+            className="commute-search-form-request-button"
+            onClick={onRequestRoute}
+          >
             {"Can't find a route? Request one"}
           </button>
         </div>

@@ -50,8 +50,10 @@ function B2B_DriversTab({ drivers }) {
 
   if (!drivers || drivers.length === 0) {
     return (
-      <div className="no-drivers">
-        <div className="no-drivers-icon">👥</div>
+      <div className="b2b-operator-dashboard-drivers-tab-no-drivers">
+        <div className="b2b-operator-dashboard-drivers-tab-no-drivers-icon">
+          👥
+        </div>
         <h3>No Drivers Added</h3>
         <p>Start by adding your first driver to your fleet.</p>
       </div>
@@ -60,145 +62,240 @@ function B2B_DriversTab({ drivers }) {
 
   return (
     <>
-      <div className="drivers-grid">
+      <div className="b2b-operator-dashboard-drivers-tab-drivers-grid">
         {drivers.map((driver) => {
           const isExpanded = expandedCards[driver._id];
-          
+
           return (
-          <div key={driver._id} className={`driver-card ${isExpanded ? 'expanded' : ''}`}>
-            <div className="driver-avatar">{formatDriverName(driver.name)}</div>
-            <h3 className="driver-name">{driver.name || "Unknown Driver"}</h3>
-            <p className="driver-id">ID: {driver.licenseNumber || "N/A"}</p>
-            <span className={`driver-status ${getStatusColor(driver.status)}`}>
-              {formatStatus(driver.status)}
-            </span>
-
-            {/* Expand/Collapse Toggle */}
-            <button 
-              className="expand-toggle-btn"
-              onClick={() => toggleExpand(driver._id)}
+            <div
+              key={driver._id}
+              className={`b2b-operator-dashboard-drivers-tab-driver-card ${isExpanded ? "b2b-operator-dashboard-drivers-tab-expanded" : ""}`}
             >
-              {isExpanded ? (
-                <>Hide Details <FiChevronUp /></>
-              ) : (
-                <>View Details <FiChevronDown /></>
-              )}
-            </button>
+              <div className="b2b-operator-dashboard-drivers-tab-driver-avatar">
+                {formatDriverName(driver.name)}
+              </div>
+              <h3 className="b2b-operator-dashboard-drivers-tab-driver-name">
+                {driver.name || "Unknown Driver"}
+              </h3>
+              <p className="b2b-operator-dashboard-drivers-tab-driver-id">
+                ID: {driver.licenseNumber || "N/A"}
+              </p>
+              <span
+                className={`b2b-operator-dashboard-drivers-tab-driver-status ${getStatusColor(driver.status)}`}
+              >
+                {formatStatus(driver.status)}
+              </span>
 
-            {/* Expandable Details Section */}
-            <div className={`driver-details ${isExpanded ? 'expanded' : 'collapsed'}`}>
-              <div className="rating-row">
-                <span className="label">Rating</span>
-                <span className="value">{driver.ratings?.average || 0} *</span>
+              {/* Expand/Collapse Toggle */}
+              <button
+                className="b2b-operator-dashboard-drivers-tab-expand-toggle-btn"
+                onClick={() => toggleExpand(driver._id)}
+              >
+                {isExpanded ? (
+                  <>
+                    Hide Details <FiChevronUp />
+                  </>
+                ) : (
+                  <>
+                    View Details <FiChevronDown />
+                  </>
+                )}
+              </button>
+
+              {/* Expandable Details Section */}
+              <div
+                className={`b2b-operator-dashboard-drivers-tab-driver-details ${isExpanded ? "b2b-operator-dashboard-drivers-tab-expanded" : "b2b-operator-dashboard-drivers-tab-collapsed"}`}
+              >
+                <div className="b2b-operator-dashboard-drivers-tab-rating-row">
+                  <span className="b2b-operator-dashboard-drivers-tab-label">
+                    Rating
+                  </span>
+                  <span className="b2b-operator-dashboard-drivers-tab-value">
+                    {driver.ratings?.average || 0} *
+                  </span>
+                </div>
+                <div className="b2b-operator-dashboard-drivers-tab-detail-row">
+                  <span className="b2b-operator-dashboard-drivers-tab-label">
+                    Phone
+                  </span>
+                  <span className="b2b-operator-dashboard-drivers-tab-value">
+                    {driver.phone || "N/A"}
+                  </span>
+                </div>
+                <div className="b2b-operator-dashboard-drivers-tab-detail-row">
+                  <span className="b2b-operator-dashboard-drivers-tab-label">
+                    Experience
+                  </span>
+                  <span className="b2b-operator-dashboard-drivers-tab-value">
+                    {driver.experience?.years || 0} years
+                  </span>
+                </div>
+                <div className="b2b-operator-dashboard-drivers-tab-detail-row">
+                  <span className="b2b-operator-dashboard-drivers-tab-label">
+                    License Type
+                  </span>
+                  <span className="b2b-operator-dashboard-drivers-tab-value">
+                    {driver.licenseType || "N/A"}
+                  </span>
+                </div>
               </div>
-              <div className="detail-row">
-                <span className="label">Phone</span>
-                <span className="value">{driver.phone || "N/A"}</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">Experience</span>
-                <span className="value">{driver.experience?.years || 0} years</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">License Type</span>
-                <span className="value">{driver.licenseType || "N/A"}</span>
-              </div>
+
+              <button
+                className="b2b-operator-dashboard-drivers-tab-view-profile-btn"
+                onClick={() => handleViewProfile(driver)}
+              >
+                View Profile & Logs
+              </button>
             </div>
-
-            <button 
-              className="view-profile-btn" 
-              onClick={() => handleViewProfile(driver)}
-            >
-              View Profile & Logs
-            </button>
-          </div>
           );
         })}
       </div>
 
       {/* Driver Profile Modal */}
       {showProfileModal && selectedDriver && (
-        <div className="driver-profile-modal-overlay" onClick={closeProfileModal}>
-          <div className="driver-profile-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="driver-profile-modal-header">
+        <div
+          className="b2b-operator-dashboard-drivers-tab-driver-profile-modal-overlay"
+          onClick={closeProfileModal}
+        >
+          <div
+            className="b2b-operator-dashboard-drivers-tab-driver-profile-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="b2b-operator-dashboard-drivers-tab-driver-profile-modal-header">
               <h3>Driver Profile</h3>
-              <button className="close-btn" onClick={closeProfileModal}>
+              <button
+                className="b2b-operator-dashboard-drivers-tab-close-btn"
+                onClick={closeProfileModal}
+              >
                 x
               </button>
             </div>
-            <div className="driver-profile-modal-body">
-              <div className="driver-profile-avatar">
-                <div className="avatar-large">{formatDriverName(selectedDriver.name)}</div>
+            <div className="b2b-operator-dashboard-drivers-tab-driver-profile-modal-body">
+              <div className="b2b-operator-dashboard-drivers-tab-driver-profile-avatar">
+                <div className="b2b-operator-dashboard-drivers-tab-avatar-large">
+                  {formatDriverName(selectedDriver.name)}
+                </div>
                 <h2>{selectedDriver.name || "Unknown Driver"}</h2>
-                <span className={`driver-status ${getStatusColor(selectedDriver.status)}`}>
+                <span
+                  className={`b2b-operator-dashboard-drivers-tab-driver-status ${getStatusColor(selectedDriver.status)}`}
+                >
                   {formatStatus(selectedDriver.status)}
                 </span>
               </div>
-              
-              <div className="driver-profile-details">
-                <div className="profile-section">
+
+              <div className="b2b-operator-dashboard-drivers-tab-driver-profile-details">
+                <div className="b2b-operator-dashboard-drivers-tab-profile-section">
                   <h4>Contact Information</h4>
-                  <div className="profile-row">
-                    <span className="label">Phone</span>
-                    <span className="value">{selectedDriver.phone || "N/A"}</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      Phone
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {selectedDriver.phone || "N/A"}
+                    </span>
                   </div>
-                  <div className="profile-row">
-                    <span className="label">Email</span>
-                    <span className="value">{selectedDriver.email || "N/A"}</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      Email
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {selectedDriver.email || "N/A"}
+                    </span>
                   </div>
                 </div>
-                
-                <div className="profile-section">
+
+                <div className="b2b-operator-dashboard-drivers-tab-profile-section">
                   <h4>License Information</h4>
-                  <div className="profile-row">
-                    <span className="label">License Number</span>
-                    <span className="value">{selectedDriver.licenseNumber || "N/A"}</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      License Number
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {selectedDriver.licenseNumber || "N/A"}
+                    </span>
                   </div>
-                  <div className="profile-row">
-                    <span className="label">License Type</span>
-                    <span className="value">{selectedDriver.licenseType || "N/A"}</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      License Type
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {selectedDriver.licenseType || "N/A"}
+                    </span>
                   </div>
-                  <div className="profile-row">
-                    <span className="label">Expiry Date</span>
-                    <span className="value">{formatDate(selectedDriver.licenseExpiry)}</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      Expiry Date
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {formatDate(selectedDriver.licenseExpiry)}
+                    </span>
                   </div>
                 </div>
-                
-                <div className="profile-section">
+
+                <div className="b2b-operator-dashboard-drivers-tab-profile-section">
                   <h4>Experience & Performance</h4>
-                  <div className="profile-row">
-                    <span className="label">Experience</span>
-                    <span className="value">{selectedDriver.experience?.years || 0} years</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      Experience
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {selectedDriver.experience?.years || 0} years
+                    </span>
                   </div>
-                  <div className="profile-row">
-                    <span className="label">Rating</span>
-                    <span className="value">{selectedDriver.ratings?.average || 0} / 5</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      Rating
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {selectedDriver.ratings?.average || 0} / 5
+                    </span>
                   </div>
-                  <div className="profile-row">
-                    <span className="label">Total Reviews</span>
-                    <span className="value">{selectedDriver.ratings?.count || 0}</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      Total Reviews
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {selectedDriver.ratings?.count || 0}
+                    </span>
                   </div>
-                  <div className="profile-row">
-                    <span className="label">Total Trips</span>
-                    <span className="value">{selectedDriver.totalTrips || 0}</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      Total Trips
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {selectedDriver.totalTrips || 0}
+                    </span>
                   </div>
                 </div>
-                
-                <div className="profile-section">
+
+                <div className="b2b-operator-dashboard-drivers-tab-profile-section">
                   <h4>Account Information</h4>
-                  <div className="profile-row">
-                    <span className="label">Driver ID</span>
-                    <span className="value">{selectedDriver._id || "N/A"}</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      Driver ID
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {selectedDriver._id || "N/A"}
+                    </span>
                   </div>
-                  <div className="profile-row">
-                    <span className="label">Joined</span>
-                    <span className="value">{formatDate(selectedDriver.createdAt)}</span>
+                  <div className="b2b-operator-dashboard-drivers-tab-profile-row">
+                    <span className="b2b-operator-dashboard-drivers-tab-label">
+                      Joined
+                    </span>
+                    <span className="b2b-operator-dashboard-drivers-tab-value">
+                      {formatDate(selectedDriver.createdAt)}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="driver-profile-modal-footer">
-              <button className="close-profile-btn" onClick={closeProfileModal}>Close</button>
+            <div className="b2b-operator-dashboard-drivers-tab-driver-profile-modal-footer">
+              <button
+                className="b2b-operator-dashboard-drivers-tab-close-profile-btn"
+                onClick={closeProfileModal}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

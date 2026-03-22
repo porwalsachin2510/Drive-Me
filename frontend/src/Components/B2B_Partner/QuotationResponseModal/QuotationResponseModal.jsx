@@ -160,9 +160,12 @@ const QuotationResponseModal = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="drivemego-quotation-response-modal-overlay"
+      onClick={onClose}
+    >
       <div
-        className="modal-container response-modal"
+        className="drivemego-quotation-response-modal-container drivemego-quotation-response-response-modal"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
@@ -273,7 +276,7 @@ const QuotationResponseModal = ({
                                 handleVehicleDataChange(
                                   index,
                                   "customBaseRatePerDay",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               placeholder="0.00"
@@ -316,7 +319,7 @@ const QuotationResponseModal = ({
                                   handleVehicleDataChange(
                                     index,
                                     "customDriverChargesPerDay",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                                 placeholder="0.00"
@@ -360,7 +363,7 @@ const QuotationResponseModal = ({
                                   handleVehicleDataChange(
                                     index,
                                     "customFuelChargesPerDay",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                                 placeholder="0.00"
@@ -486,13 +489,18 @@ const QuotationResponseModal = ({
           )}
         </div>
 
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
+        <div className="drivemego-quotation-response-modal-footer">
+          <button
+            className="drivemego-quotation-response-btn drivemego-quotation-response-btn-secondary"
+            onClick={onClose}
+          >
             Cancel
           </button>
           <button
-            className={`btn ${
-              responseType === "approve" ? "btn-success" : "btn-danger"
+            className={`drivemego-quotation-response-btn ${
+              responseType === "approve"
+                ? "drivemego-quotation-response-btn-success"
+                : "drivemego-quotation-response-btn-danger"
             }`}
             onClick={handleSubmit}
             disabled={loading}
@@ -500,8 +508,8 @@ const QuotationResponseModal = ({
             {loading
               ? "Processing..."
               : responseType === "approve"
-              ? "Submit Quotation"
-              : "Reject Request"}
+                ? "Submit Quotation"
+                : "Reject Request"}
           </button>
         </div>
       </div>

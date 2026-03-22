@@ -184,6 +184,19 @@
   color: #ffffff;
 }
 
+.contact-page-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #94A3B8;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.contact-page-link:hover {
+  color: #ffffff;
+}
+
 /* Divider */
 .footer-divider {
   height: 1px;

@@ -15,6 +15,7 @@ function AdminNavigation({ dashboardactiveTab, setDashboardActiveTab }) {
     { id: "comm", label: "Comm.", icon: "💬" },
     { id: "ads", label: "Ads", icon: "📢" },
     { id: "Payment Verification", label: "Payment Verification", icon: "💰" },
+    { id: "content", label: "Content", icon: "📄" },
   ];
 
   return (

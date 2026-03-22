@@ -174,29 +174,35 @@ const AvailableSection = ({
   const isCorporate = auth.user?.role === "COMMUTER" && auth.user?.companyId;
 
   return (
-    <div className="available-section">
-      <div className="section-header">
-        <p className="all-listings-label">ALL LISTINGS</p>
+    <div className="drivemego-availablesection-available-section">
+      <div className="drivemego-availablesection-section-header">
+        <p className="drivemego-availablesection-all-listings-label">
+          ALL LISTINGS
+        </p>
       </div>
 
-      <div className="title-section">
-        <div className="title-and-count">
-          <h2 className="section-title">Available B2C Routes</h2>
-          <p className="routes-count">
+      <div className="drivemego-availablesection-title-section">
+        <div className="drivemego-availablesection-title-and-count">
+          <h2 className="drivemego-availablesection-section-title">
+            Available B2C Routes
+          </h2>
+          <p className="drivemego-availablesection-routes-count">
             Showing {showNoSearchMessage ? 0 : routes.length} routes
           </p>
         </div>
 
-        <div className="available-section-tab-buttons">
+        <div className="drivemego-availablesection-available-section-tab-buttons">
           <button
-            className={`available-section-tab-btn ${currentFilterType === "all" ? "available-section-active" : ""}`}
+            className={`drivemego-availablesection-available-section-tab-btn ${currentFilterType === "all" ? "drivemego-availablesection-available-section-active" : ""}`}
             onClick={() => handleTabChange("all")}
           >
             All Routes
           </button>
           <button
-            className={`available-section-tab-btn ${
-              currentFilterType === "matched" ? "available-section-active" : ""
+            className={`drivemego-availablesection-available-section-tab-btn ${
+              currentFilterType === "matched"
+                ? "drivemego-availablesection-available-section-active"
+                : ""
             }`}
             onClick={() => handleTabChange("matched")}
           >
@@ -205,14 +211,18 @@ const AvailableSection = ({
         </div>
       </div>
 
-      <div className="filter-section">
-        <label className="filter-label">Filter by:</label>
-        <div className="filter-tags">
+      <div className="drivemego-availablesection-filter-section">
+        <label className="drivemego-availablesection-filter-label">
+          Filter by:
+        </label>
+        <div className="drivemego-availablesection-filter-tags">
           {filterOptions.map((filter) => (
             <button
               key={filter}
-              className={`filter-tag ${
-                selectedFilter === filter ? "available-section-active" : ""
+              className={`drivemego-availablesection-filter-tag ${
+                selectedFilter === filter
+                  ? "drivemego-availablesection-available-section-active"
+                  : ""
               }`}
               onClick={() => handleFilterChange(filter)}
             >
@@ -223,30 +233,40 @@ const AvailableSection = ({
       </div>
 
       {!loading && !showNoSearchMessage && routes.length > 0 && (
-        <div className="routes-list">
+        <div className="drivemego-availablesection-routes-list">
           {routes.map((route, idx) => {
             const isAvailable = isRouteAvailableForBooking(route);
             return (
               <div
                 key={route.routeId || idx}
-                className="available-section-route-item"
+                className="drivemego-availablesection-available-section-route-item"
                 style={{ borderLeftColor: getBorderColor(idx) }}
               >
-                <div className="route-row-1">
-                  <div className="available-section-route-info">
-                    <h3 className="route-title">
+                <div className="drivemego-availablesection-route-row-1">
+                  <div className="drivemego-availablesection-available-section-route-info">
+                    <h3 className="drivemego-availablesection-route-title">
                       {route.company || route.operator}
-                      {route.rating && <span className="star-icon">⭐</span>}
+                      {route.rating && (
+                        <span className="drivemego-availablesection-star-icon">
+                          ⭐
+                        </span>
+                      )}
                     </h3>
-                    <span className="company-badge">{route.vehicleModel}</span>
+                    <span className="drivemego-availablesection-company-badge">
+                      {route.vehicleModel}
+                    </span>
                   </div>
 
-                  <h6>AVAILABLE SEATS: {route.availableSeats}</h6>
+                  <h6 className="drivemego-availablesection-availableseats">
+                    AVAILABLE SEATS: {route.availableSeats}
+                  </h6>
 
-                  <div className="available-section-price-section">
+                  <div className="drivemego-availablesection-available-section-price-section">
                     <div>
-                      <p className="price-label">MONTHLY</p>
-                      <p className="price-value">
+                      <p className="drivemego-availablesection-price-label">
+                        MONTHLY
+                      </p>
+                      <p className="drivemego-availablesection-price-value">
                         {calculateMonthlyPrice(route)
                           ? `${calculateMonthlyPrice(route)} KWD`
                           : "Contact for price"}
@@ -255,39 +275,51 @@ const AvailableSection = ({
                   </div>
                 </div>
 
-                <div className="route-row-2">
-                  <div className="my-route-details">
-                    <div className="detail-group">
-                      <label className="detail-label">FROM</label>
-                      <p className="detail-value">
-                        <span className="detail-icon">📍</span>
+                <div className="drivemego-availablesection-route-row-2">
+                  <div className="drivemego-availablesection-my-route-details">
+                    <div className="drivemego-availablesection-detail-group">
+                      <label className="drivemego-availablesection-detail-label">
+                        FROM
+                      </label>
+                      <p className="drivemego-availablesection-detail-value">
+                        <span className="drivemego-availablesection-detail-icon">
+                          📍
+                        </span>
                         {typeof route.fromLocation === "string"
                           ? route.fromLocation
                           : route.fromLocation?.location}
                       </p>
                     </div>
 
-                    <div className="detail-group">
-                      <label className="detail-label">TO</label>
-                      <p className="detail-value">
-                        <span className="detail-icon">📍</span>
+                    <div className="drivemego-availablesection-detail-group">
+                      <label className="drivemego-availablesection-detail-label">
+                        TO
+                      </label>
+                      <p className="drivemego-availablesection-detail-value">
+                        <span className="drivemego-availablesection-detail-icon">
+                          📍
+                        </span>
                         {typeof route.toLocation === "string"
                           ? route.toLocation
                           : route.toLocation?.location}
                       </p>
                     </div>
 
-                    <div className="detail-group">
-                      <label className="detail-label">START DATE</label>
-                      <p className="detail-value">
-                        <span className="detail-icon">📅</span>
+                    <div className="drivemego-availablesection-detail-group">
+                      <label className="drivemego-availablesection-detail-label">
+                        START DATE
+                      </label>
+                      <p className="drivemego-availablesection-detail-value">
+                        <span className="drivemego-availablesection-detail-icon">
+                          📅
+                        </span>
                         {formatDate(route.startDate)}
                       </p>
                     </div>
                   </div>
 
                   <button
-                    className="available-section-join-btn"
+                    className="drivemego-availablesection-available-section-join-btn"
                     disabled={!isAvailable}
                     onClick={() => handleBookRoute(route)}
                     title={
@@ -296,7 +328,7 @@ const AvailableSection = ({
                         : "Click to book this route"
                     }
                   >
-                    <span className="book-icon">
+                    <span className="drivemego-availablesection-book-icon">
                       {isAvailable ? "📌" : "🔒"}
                     </span>
                     {isAvailable ? "Book This Route" : "Not Available"}
@@ -304,11 +336,11 @@ const AvailableSection = ({
                 </div>
 
                 {/* Available Days */}
-                <div className="availablesection-featured-detail-group">
-                  <label className="availablesection-detail-label">
+                <div className="drivemego-availablesection-availablesection-featured-detail-group">
+                  <label className="drivemego-availablesection-availablesection-detail-label">
                     AVAILABLE DAYS
                   </label>
-                  <div className="my-available-days">
+                  <div className="drivemego-availablesection-my-available-days">
                     {(
                       route.dayMatching?.matchedDays ||
                       route.availableDays ||
@@ -316,8 +348,10 @@ const AvailableSection = ({
                     ).map((day) => (
                       <span
                         key={day}
-                        className={`my-day-pill ${
-                          ["SAT", "SUN"].includes(day) ? "weekend" : ""
+                        className={`drivemego-availablesection-my-day-pill ${
+                          ["SAT", "SUN"].includes(day)
+                            ? "drivemego-availablesection-weekend"
+                            : ""
                         }`}
                       >
                         {day}
@@ -332,15 +366,17 @@ const AvailableSection = ({
       )}
 
       {!loading && routes.length === 0 && !showNoSearchMessage && (
-        <div className="empty-state">
+        <div className="drivemego-availablesection-empty-state">
           <p>No routes available at the moment</p>
         </div>
       )}
 
       {!loading && showNoSearchMessage && (
-        <div className="empty-state">
+        <div className="drivemego-availablesection-empty-state">
           <p>No routes matches available for you</p>
-          <p className="empty-subtitle">Search Commutes</p>
+          <p className="drivemego-availablesection-empty-subtitle">
+            Search Commutes
+          </p>
         </div>
       )}
 

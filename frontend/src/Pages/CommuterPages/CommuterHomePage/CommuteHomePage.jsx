@@ -12,33 +12,17 @@ import {
   getDisplayCountry,
 } from "../../../utils/helperutility";
 import "./commuterhomepage.css";
-// import { selectUserRole } from "../../Redux/selectors/authSelectors";
-
-// import { useSelector } from "react-redux";
 
 import api from "../../../utils/api";
 
 export default function CommuterHomePage() {
-  //   const userRole = useSelector(selectUserRole);
 
-  //   if (userRole === "CORPORATE") {
-  //     navigate("/corporate");
-  //   }
-  //   const [activeTab, setActiveTab] = useState("commuters");
-  //   const [corporateStep, setCorporateStep] = useState("choose"); // "choose" or specific service
-  //   const [selectedService, setSelectedService] = useState(null); // "passenger", "goods", "managed"
-  //   const [errors, setErrors] = useState({});
-
-  // START: NEW STATE FOR ROUTES AND LOADING
   const [firstloadroutes, setFirstLoadRoutes] = useState([]);
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useState({});
-  // const [queryparam, setQueryParam] = useState();
-  // const [userType, setUserType] = useState(null);
-  // const [companyName, setCompanyName] = useState(null);
+
   const [currentFilterType, setCurrentFilterType] = useState("all");
-  // END: NEW STATE FOR ROUTES AND LOADING
 
   const [userNationality, setUserNationality] = useState(null);
   const [showRouteRequest, setShowRouteRequest] = useState(false);
@@ -50,7 +34,6 @@ export default function CommuterHomePage() {
 
   useEffect(() => {
     const detectUserLocation = async () => {
-      // Prevent duplicate execution (StrictMode safe)
       if (hasDetectedRef.current) return;
 
       try {
@@ -75,7 +58,6 @@ export default function CommuterHomePage() {
         }
       } catch (error) {
         console.error("Error detecting location:", error);
-        // Default to Kuwait if error occurs so routes still load
         setUserNationality("Kuwait");
         hasDetectedRef.current = true;
       }
@@ -83,43 +65,6 @@ export default function CommuterHomePage() {
 
     detectUserLocation();
   }, []);
-
-  //   const [formData, setFormData] = useState({
-  //     // Commuters
-  //     pickupLocation: "",
-  //     dropoffLocation: "",
-  //     workCategory: "Select Category",
-  //     tripType: "Round Trip",
-  //     startDate: "",
-  //     shiftType: "Full Day",
-  //     pickupTime: "",
-
-  //     // Corporate - Passenger Vehicles
-  //     vehicleType: "Any Type",
-  //     minSeats: "",
-  //     workingDays: "Select",
-  //     workCategory2: "Select Category",
-  //     startDate2: "",
-  //     monthlyBudget: "Flexible",
-
-  //     // Corporate - Goods Carrier
-  //     vehicleType2: "Any Type",
-  //     capacity: "",
-  //     startDate3: "",
-  //     monthlyBudget2: "Flexible",
-
-  //     // Corporate - Managed Services
-  //     vehicleType3: "Any Type",
-  //     minSeats2: "",
-  //     workingDays2: "Select",
-  //     workCategory3: "Select Category",
-  //     startDate4: "",
-  //     monthlyBudget3: "Flexible",
-
-  //     // Rental Preferences & Special Requirements
-  //     rentalPreference: "with-driver",
-  //     specialRequirements: [],
-  //   });
 
   const fetchRoutes = useCallback(
     async (params = {}) => {
@@ -130,7 +75,6 @@ export default function CommuterHomePage() {
 
         setLoading(true);
 
-        // Check if user has a valid auth token
         const token =
           localStorage.getItem("token") ||
           document.cookie
@@ -158,7 +102,6 @@ export default function CommuterHomePage() {
           queryParams.append("nationality", userNationality);
         }
 
-        // Use public search if not authenticated, otherwise use authenticated search
         const endpoint = token
           ? `/commute/search?${queryParams.toString()}`
           : `/commute/public-search?${queryParams.toString()}`;
@@ -179,7 +122,6 @@ export default function CommuterHomePage() {
         console.error("Error fetching routes:", error);
 
         if (error.response?.status === 401) {
-          // Token expired or invalid - try public search as fallback
           try {
             const queryParams = new URLSearchParams();
             if (params.pickupLocation) queryParams.append("pickupLocation", params.pickupLocation);
@@ -200,7 +142,6 @@ export default function CommuterHomePage() {
             console.error("Public search fallback also failed:", fallbackError);
           }
         } else if (error.response?.status === 403) {
-          // Try public search for non-commuter users
           try {
             const queryParams = new URLSearchParams();
             if (params.pickupLocation) queryParams.append("pickupLocation", params.pickupLocation);
@@ -254,7 +195,6 @@ export default function CommuterHomePage() {
   };
 
   const handleFilterChange = (filterData) => {
-    // If clicking "matched" without search params, just update UI state
     if (
       filterData.filterType === "matched" &&
       !searchParams.pickupLocation &&
@@ -268,13 +208,11 @@ export default function CommuterHomePage() {
 
     let params;
     if (filterData.filterType === "all") {
-      // For "all" routes: fetch without search location filters
       params = {
         filterType: "all",
         selectedFilter: filterData.selectedFilter || "All",
       };
     } else {
-      // For "matched" routes: include search params
       params = {
         ...searchParams,
         ...filterData,
@@ -293,99 +231,38 @@ export default function CommuterHomePage() {
     });
   };
 
-  //   const validateCorporateForm = () => {
-  //     const newErrors = {};
-
-  //     if (selectedService === "passenger") {
-  //       if (formData.vehicleType === "Any Type")
-  //         newErrors.vehicleType = "Please select a vehicle type";
-  //       if (!formData.minSeats) newErrors.minSeats = "Min seats is required";
-  //       if (formData.workingDays === "Select")
-  //         newErrors.workingDays = "Please select working days";
-  //       if (!formData.startDate2) newErrors.startDate2 = "Date is required";
-  //     } else if (selectedService === "goods") {
-  //       if (formData.vehicleType2 === "Any Type")
-  //         newErrors.vehicleType2 = "Please select a vehicle type";
-  //       if (!formData.capacity) newErrors.capacity = "Capacity is required";
-  //       if (!formData.startDate3) newErrors.startDate3 = "Date is required";
-  //     } else if (selectedService === "managed") {
-  //       if (formData.vehicleType3 === "Any Type")
-  //         newErrors.vehicleType3 = "Please select a vehicle type";
-  //       if (!formData.minSeats2) newErrors.minSeats2 = "Min seats is required";
-  //       if (formData.workingDays2 === "Select")
-  //         newErrors.workingDays2 = "Please select working days";
-  //       if (!formData.startDate4) newErrors.startDate4 = "Date is required";
-  //     }
-
-  //     setErrors(newErrors);
-  //     return Object.keys(newErrors).length === 0;
-  //   };
-
-  //   const handleInputChange = (e) => {
-  //     const { name, value } = e.target;
-  //     setFormData((prev) => ({ ...prev, [name]: value }));
-  //     if (errors[name]) {
-  //       setErrors((prev) => ({ ...prev, [name]: "" }));
-  //     }
-  //   };
-
-  //   const handleSelectChange = (e) => {
-  //     const { name, value } = e.target;
-  //     setFormData((prev) => ({ ...prev, [name]: value }));
-  //     if (errors[name]) {
-  //       setErrors((prev) => ({ ...prev, [name]: "" }));
-  //     }
-  //   };
-
-  //   const toggleSpecialRequirement = (req) => {
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       specialRequirements: prev.specialRequirements.includes(req)
-  //         ? prev.specialRequirements.filter((r) => r !== req)
-  //         : [...prev.specialRequirements, req],
-  //     }));
-  //   };
-
-  //   const handleSearchFleet = (e) => {
-  //     e.preventDefault();
-  //     if (validateCorporateForm()) {
-  //       const selectedServiceLabel =
-  //         selectedService === "passenger"
-  //           ? "Passenger Vehicles"
-  //           : selectedService === "goods"
-  //           ? "Goods Carrier"
-  //           : "Managed Services";
-  //       alert(`${selectedServiceLabel} form is valid! Searching fleet...`);
-  //     }
-  //   };
-
   // ============ COMMUTERS VIEW ============
 
   return (
-    <div className="homepage">
-      <div className="commuters-container">
-        <div className="page-title">
-          <h1>Smart Mobility, Made for the GCC</h1>
+    <div className="commuterhomepage-homepage">
+      <div className="commuterhomepage-commuters-container">
+        <div className="commuterhomepage-page-title">
+          <h1>We Are Drive Me Go.</h1>
           <p>
-            Connect with fellow commuters or professional transportation
-            services for <br />a stress-free journey.
+            We have the power to move the future not simply by getting from one
+            place to another, but by opening
+            <br />
+            new possibilities Drive Me Go gives you the freedom to go anywhere.
           </p>
           {userNationality && (
             <>
               {isServiceAvailable(userNationality) ? (
-                <p className="location-indicator available">
+                <p className="commuterhomepage-location-indicator commuterhomepage-available">
                   📍 Showing routes for:{" "}
                   <strong>{getDisplayCountry(userNationality)}</strong>
                 </p>
               ) : (
-                <div className="location-indicator unavailable">
+                <div className="commuterhomepage-location-indicator commuterhomepage-unavailable">
                   🚫 Our service is currently not available in{" "}
-                  <span className="country-highlight">{userNationality}</span>.
-                  <p className="expansion-text">
+                  <span className="commuterhomepage-country-highlight">
+                    {userNationality}
+                  </span>
+                  .
+                  <p className="commuterhomepage-expansion-text">
                     We are expanding soon to more countries.
                   </p>
                   <button
-                    className="notify-btn"
+                    className="commuterhomepage-notify-btn"
                     onClick={() => setShowRouteRequest(true)}
                   >
                     Request This Route
@@ -396,21 +273,29 @@ export default function CommuterHomePage() {
           )}
 
           {userNationality === null && (
-            <p className="location-indicator available">
+            <p className="commuterhomepage-location-indicator commuterhomepage-available">
               📍
               <strong>Location Not Found</strong>
             </p>
           )}
         </div>
 
-        <CommuteSearchForm onSearch={handleSearch} onRequestRoute={() => setShowRouteRequest(true)} />
+        <CommuteSearchForm
+          onSearch={handleSearch}
+          onRequestRoute={() => setShowRouteRequest(true)}
+        />
 
-        {/* Campaign Banner - Active advertisements */}
-        <CampaignBanner placement="banner" />
+        {/* Campaign Banner - Top Banner (matches Admin placement: "top") */}
+        <CampaignBanner placement="top" />
 
         <FeaturedRoutes routes={featuredRoutes} loading={loading} />
 
-        <div ref={availableSectionRef}>
+        <div
+          ref={availableSectionRef}
+          className="commuterhomepage-available-section-wrapper"
+        >
+          {/* Sidebar Campaign Banner */}
+          <CampaignBanner placement="sidebar" />
           <AvailableSection
             routes={currentFilterType === "matched" ? routes : firstloadroutes}
             loading={loading}
@@ -419,6 +304,12 @@ export default function CommuterHomePage() {
             currentFilterType={currentFilterType}
           />
         </div>
+
+        {/* Footer Campaign Banner */}
+        <CampaignBanner placement="footer" />
+
+        {/* Popup Campaign Banner */}
+        <CampaignBanner placement="popup" />
       </div>
 
       <RouteRequest
@@ -427,7 +318,7 @@ export default function CommuterHomePage() {
         searchParams={searchParams}
         onRequestSubmitted={() => {
           // Refresh routes or show success message
-          console.log('Route request submitted');
+          console.log("Route request submitted");
         }}
       />
     </div>

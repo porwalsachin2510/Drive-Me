@@ -9,18 +9,33 @@ function B2B_ContractCard({ contract }) {
     return "cancelled";
   };
 
+  // eslint-disable-next-line no-unused-vars
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-      year: "numeric"
+      year: "numeric",
     });
   };
 
   const calculateDuration = (startDate, endDate) => {
+    // First check if we have duration in rentalPeriod (preferred)
+    if (contract.rentalPeriod?.duration) {
+      const duration = contract.rentalPeriod.duration;
+      const durationType = contract.rentalPeriod.durationType;
+      if (durationType === "MONTHLY" || durationType === "months") {
+        return `${duration} month${duration > 1 ? "s" : ""}`;
+      } else if (durationType === "YEARLY" || durationType === "years") {
+        return `${duration} year${duration > 1 ? "s" : ""}`;
+      } else if (durationType === "DAILY" || durationType === "days") {
+        return `${duration} days`;
+      }
+      return `${duration} days`;
+    }
+
     if (!startDate && !endDate) {
-      // Try to get duration from rentalPeriod
+      // Try to get duration from rentalPeriod dates
       if (contract.rentalPeriod?.startDate && contract.rentalPeriod?.endDate) {
         const start = new Date(contract.rentalPeriod.startDate);
         const end = new Date(contract.rentalPeriod.endDate);
@@ -28,7 +43,10 @@ function B2B_ContractCard({ contract }) {
         return `${days} days`;
       }
       // Try to calculate from contract dates
-      if (contract.contractPeriod?.startDate && contract.contractPeriod?.endDate) {
+      if (
+        contract.contractPeriod?.startDate &&
+        contract.contractPeriod?.endDate
+      ) {
         const start = new Date(contract.contractPeriod.startDate);
         const end = new Date(contract.contractPeriod.endDate);
         const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
@@ -43,25 +61,39 @@ function B2B_ContractCard({ contract }) {
     if (days > 365) {
       const years = Math.floor(days / 365);
       const remainingMonths = Math.floor((days % 365) / 30);
-      return remainingMonths > 0 ? `${years}y ${remainingMonths}mo` : `${years} year${years > 1 ? 's' : ''}`;
+      return remainingMonths > 0
+        ? `${years}y ${remainingMonths}mo`
+        : `${years} year${years > 1 ? "s" : ""}`;
     }
     if (days > 30) {
       const months = Math.floor(days / 30);
-      return `${months} month${months > 1 ? 's' : ''}`;
+      return `${months} month${months > 1 ? "s" : ""}`;
     }
     return `${days} days`;
   };
 
   const getRequirements = () => {
     // Try different sources for requirements
-    if (contract.vehicles && Array.isArray(contract.vehicles) && contract.vehicles.length > 0) {
-      const totalVehicles = contract.vehicles.reduce((sum, v) => sum + (v.quantity || 1), 0);
-      const vehicleTypes = [...new Set(contract.vehicles.map(v => v.vehicleType || v.category || 'Vehicle'))];
-      return `${totalVehicles} x ${vehicleTypes.join(', ')}`;
+    if (
+      contract.vehicles &&
+      Array.isArray(contract.vehicles) &&
+      contract.vehicles.length > 0
+    ) {
+      const totalVehicles = contract.vehicles.reduce(
+        (sum, v) => sum + (v.quantity || 1),
+        0,
+      );
+      // Try to get vehicle type from assignedVehicles or vehicleId
+      const vehicleType =
+        contract.vehicles[0]?.vehicleId?.vehicleType ||
+        contract.vehicles[0]?.vehicleType ||
+        contract.vehicles[0]?.category ||
+        "Vehicle";
+      return `${totalVehicles}x ${vehicleType}`;
     }
     if (contract.requirements?.vehicleType) {
       const qty = contract.requirements?.quantity || 1;
-      return `${qty} x ${contract.requirements.vehicleType}`;
+      return `${qty}x ${contract.requirements.vehicleType}`;
     }
     if (contract.serviceType) {
       return contract.serviceType;
@@ -73,44 +105,77 @@ function B2B_ContractCard({ contract }) {
   };
 
   const getContractValue = () => {
-    return contract.financials?.totalAmount || 
-           contract.totalAmount || 
-           contract.quotationId?.quotedPrice || 
-           contract.amount || 
-           0;
+    return (
+      contract.financials?.totalAmount ||
+      contract.totalAmount ||
+      contract.quotationId?.quotedPrice ||
+      contract.amount ||
+      0
+    );
   };
 
   return (
-    <div className="contract-card">
-      <div className="contract-top">
+    <div className="drivemego-b2b_contractcard-contract-card">
+      <div className="drivemego-b2b_contractcard-contract-top">
         <div>
-          <h4 className="contract-title">{contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Client'}</h4>
-          <p className="contract-org">{contract.contractNumber || contract.corporateOwnerId?.email || ''}</p>
+          <h4 className="drivemego-b2b_contractcard-contract-title">
+            {contract.corporateOwnerId?.companyName ||
+              contract.corporateOwnerId?.fullName ||
+              "Client"}
+          </h4>
+          <p className="drivemego-b2b_contractcard-contract-org">
+            {contract.contractNumber || contract.corporateOwnerId?.email || ""}
+          </p>
         </div>
-        <span className={`status ${getStatusColor(contract.status)}`}>{contract.status?.toLowerCase() || 'pending'}</span>
+        <span
+          className={`drivemego-b2b_contractcard-status ${getStatusColor(contract.status)}`}
+        >
+          {contract.status?.toLowerCase() || "pending"}
+        </span>
       </div>
 
-      <div className="contract-details">
+      <div className="drivemego-b2b_contractcard-contract-details">
         <div>
-          <span className="detail-label">CONTRACT VALUE</span>
-          <span className="detail-text">{getContractValue().toLocaleString()} KWD</span>
+          <span className="drivemego-b2b_contractcard-detail-label">
+            CONTRACT VALUE
+          </span>
+          <span className="drivemego-b2b_contractcard-detail-text">
+            {getContractValue().toLocaleString()} KWD
+          </span>
         </div>
         <div>
-          <span className="detail-label">DURATION</span>
-          <span className="detail-text">{calculateDuration(contract.startDate, contract.endDate)}</span>
+          <span className="drivemego-b2b_contractcard-detail-label">
+            DURATION
+          </span>
+          <span className="drivemego-b2b_contractcard-detail-text">
+            {calculateDuration(contract.startDate, contract.endDate)}
+          </span>
         </div>
         <div>
-          <span className="detail-label">REQUIREMENTS</span>
-          <span className="detail-text">{getRequirements()}</span>
+          <span className="drivemego-b2b_contractcard-detail-label">
+            REQUIREMENTS
+          </span>
+          <span className="drivemego-b2b_contractcard-detail-text">
+            {getRequirements()}
+          </span>
         </div>
       </div>
 
-      <div className="contract-bottom">
-        <div className="payment">
-          <span className={`dot ${contract.paymentStatus === "PAID" ? "paid" : ""}`}></span>
-          <span>Payment: {contract.paymentStatus || 'Pending'}</span>
+      <div className="drivemego-b2b_contractcard-contract-bottom">
+        <div className="drivemego-b2b_contractcard-payment">
+          <span
+            className={`drivemego-b2b_contractcard-dot ${contract.financials?.advancePayment?.status === "PAID" || contract.paymentStatus === "PAID" ? "drivemego-b2b_contractcard-paid" : ""}`}
+          ></span>
+          <span>
+            Payment:{" "}
+            {contract.financials?.advancePayment?.status ||
+              contract.paymentStatus ||
+              "Pending"}
+          </span>
         </div>
-        <button className="manage-link">Manage Contract</button>
+        <button className="drivemego-b2b_contractcard-manage-link">
+          Manage Contract
+        </button>
       </div>
     </div>
   );

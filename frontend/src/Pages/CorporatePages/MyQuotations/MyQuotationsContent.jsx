@@ -96,10 +96,15 @@ const MyQuotationsContent = () => {
 
   if (initialLoading && quotations.length === 0) {
     return (
-      <div className="my-quotations-container" style={{ padding: "24px" }}>
-        <div className="quotations-loading">
-          <div className="loading-spinner"></div>
-          <div className="loading-text">Loading quotations...</div>
+      <div
+        className="drivemego-corporate-my-quotations-container"
+        style={{ padding: "24px" }}
+      >
+        <div className="drivemego-corporate-quotations-loading">
+          <div className="drivemego-corporate-loading-spinner"></div>
+          <div className="drivemego-corporate-loading-text">
+            Loading quotations...
+          </div>
         </div>
       </div>
     );
@@ -107,8 +112,11 @@ const MyQuotationsContent = () => {
 
   if (error) {
     return (
-      <div className="my-quotations-container" style={{ padding: "24px" }}>
-        <div className="quotations-error">
+      <div
+        className="drivemego-corporate-my-quotations-container"
+        style={{ padding: "24px" }}
+      >
+        <div className="drivemego-corporate-quotations-error">
           <h3>Error Loading Quotations</h3>
           <p>{error}</p>
           <button onClick={() => fetchQuotations(false)} className="retry-btn">
@@ -120,54 +128,88 @@ const MyQuotationsContent = () => {
   }
 
   return (
-    <div className="my-quotations-container" style={{ padding: "0" }}>
-      <div className="quotations-header">
+    <div
+      className="drivemego-corporate-my-quotations-container"
+      style={{ padding: "0" }}
+    >
+      <div className="drivemego-corporate-quotations-header">
         <h1>My Quotations</h1>
-        <div className="filter-tabs">
-          <button className={filter === "all" ? "active" : ""} onClick={() => handleFilterChange("all")}>
+        <div className="drivemego-corporate-filter-tabs">
+          <button
+            className={filter === "all" ? "drivemego-corporate-active" : ""}
+            onClick={() => handleFilterChange("all")}
+          >
             All ({getStatusCount("all")})
           </button>
-          <button className={filter === "pending" ? "active" : ""} onClick={() => handleFilterChange("pending")}>
+          <button
+            className={filter === "pending" ? "drivemego-corporate-active" : ""}
+            onClick={() => handleFilterChange("pending")}
+          >
             Pending ({getStatusCount("pending")})
           </button>
-          <button className={filter === "responded" ? "active" : ""} onClick={() => handleFilterChange("responded")}>
+          <button
+            className={
+              filter === "responded" ? "drivemego-corporate-active" : ""
+            }
+            onClick={() => handleFilterChange("responded")}
+          >
             Responded ({getStatusCount("responded")})
           </button>
-          <button className={filter === "accepted" ? "active" : ""} onClick={() => handleFilterChange("accepted")}>
+          <button
+            className={
+              filter === "accepted" ? "drivemego-corporate-active" : ""
+            }
+            onClick={() => handleFilterChange("accepted")}
+          >
             Accepted ({getStatusCount("accepted")})
           </button>
-          <button className={filter === "rejected" ? "active" : ""} onClick={() => handleFilterChange("rejected")}>
+          <button
+            className={
+              filter === "rejected" ? "drivemego-corporate-active" : ""
+            }
+            onClick={() => handleFilterChange("rejected")}
+          >
             Rejected ({getStatusCount("rejected")})
           </button>
         </div>
       </div>
 
       {summary && (
-        <div className="quotations-summary">
-          <div className="summary-card">
-            <div className="summary-content">
-              <span className="summary-label">Total Quotations</span>
-              <span className="summary-value">{summary.total || 0}</span>
+        <div className="drivemego-corporate-quotations-summary">
+          <div className="drivemego-corporate-summary-card">
+            <div className="drivemego-corporate-summary-content">
+              <span className="drivemego-corporate-summary-label">
+                Total Quotations
+              </span>
+              <span className="drivemego-corporate-summary-value">
+                {summary.total || 0}
+              </span>
             </div>
           </div>
-          <div className="summary-card">
-            <div className="summary-content">
-              <span className="summary-label">Pending</span>
-              <span className="summary-value">{summary.requested || 0}</span>
+          <div className="drivemego-corporate-summary-card">
+            <div className="drivemego-corporate-summary-content">
+              <span className="drivemego-corporate-summary-label">Pending</span>
+              <span className="drivemego-corporate-summary-value">
+                {summary.requested || 0}
+              </span>
             </div>
           </div>
-          <div className="summary-card">
-            <div className="summary-content">
-              <span className="summary-label">Accepted</span>
-              <span className="summary-value">{summary.accepted || 0}</span>
+          <div className="drivemego-corporate-summary-card">
+            <div className="drivemego-corporate-summary-content">
+              <span className="drivemego-corporate-summary-label">
+                Accepted
+              </span>
+              <span className="drivemego-corporate-summary-value">
+                {summary.accepted || 0}
+              </span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="quotations-grid">
+      <div className="drivemego-corporate-quotations-grid">
         {quotations.length === 0 ? (
-          <div className="no-quotations">
+          <div className="drivemego-corporate-no-quotations">
             <h3>No quotations found</h3>
             <p>
               {filter === "all"
@@ -183,19 +225,19 @@ const MyQuotationsContent = () => {
       </div>
 
       {pagination && pagination.totalPages > 1 && (
-        <div className="pagination">
+        <div className="drivemego-corporate-pagination">
           <button
-            className="pagination-btn"
+            className="drivemego-corporate-pagination-btn"
             onClick={() => handlePageChange(filters.page - 1)}
             disabled={filters.page === 1}
           >
             Previous
           </button>
-          <div className="pagination-info">
+          <div className="drivemego-corporate-pagination-info">
             Page {pagination.currentPage} of {pagination.totalPages}
           </div>
           <button
-            className="pagination-btn"
+            className="drivemego-corporate-pagination-btn"
             onClick={() => handlePageChange(filters.page + 1)}
             disabled={filters.page === pagination.totalPages}
           >

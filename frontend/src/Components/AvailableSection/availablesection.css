@@ -2,7 +2,7 @@
   box-sizing: border-box;
 }
 
-.available-section {
+.drivemego-availablesection-available-section {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 24px;
@@ -11,14 +11,14 @@
 }
 
 /* Header Label */
-.section-header {
+.drivemego-availablesection-section-header {
   text-align: center;
   padding: 32px 0 24px;
   border-bottom: 1px solid #e0e0e0;
   margin-bottom: 32px;
 }
 
-.all-listings-label {
+.drivemego-availablesection-all-listings-label {
   margin: 0;
   font-size: 12px;
   font-weight: 600;
@@ -28,7 +28,7 @@
 }
 
 /* Title Section */
-.title-section {
+.drivemego-availablesection-title-section {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -37,12 +37,12 @@
   gap: 24px;
 }
 
-.title-and-count {
+.drivemego-availablesection-title-and-count {
   flex: 1;
   min-width: 280px;
 }
 
-.section-title {
+.drivemego-availablesection-section-title {
   margin: 0 0 6px 0;
   font-size: 26px;
   font-weight: 700;
@@ -50,7 +50,7 @@
   line-height: 1.2;
 }
 
-.routes-count {
+.drivemego-availablesection-routes-count {
   margin: 0;
   font-size: 13px;
   color: #888;
@@ -58,13 +58,13 @@
 }
 
 /* Tab Buttons */
-.available-section-tab-buttons {
+.drivemego-availablesection-available-section-tab-buttons {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.available-section-tab-btn {
+.drivemego-availablesection-available-section-tab-btn {
   padding: 8px 18px;
   font-size: 14px;
   font-weight: 500;
@@ -77,19 +77,19 @@
   white-space: nowrap;
 }
 
-.available-section-tab-btn:hover {
+.drivemego-availablesection-available-section-tab-btn:hover {
   border-color: #17a2b8;
   color: #17a2b8;
 }
 
-.available-section-tab-btn.available-section-active {
+.drivemego-availablesection-available-section-tab-btn.drivemego-availablesection-available-section-active {
   background: #17a2b8;
   color: white;
   border-color: #17a2b8;
 }
 
 /* Filter Section */
-.filter-section {
+.drivemego-availablesection-filter-section {
   margin-bottom: 32px;
   display: flex;
   align-items: center;
@@ -97,7 +97,7 @@
   gap: 14px;
 }
 
-.filter-label {
+.drivemego-availablesection-filter-label {
   font-size: 14px;
   font-weight: 500;
   color: #333;
@@ -105,13 +105,13 @@
   white-space: nowrap;
 }
 
-.filter-tags {
+.drivemego-availablesection-filter-tags {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.filter-tag {
+.drivemego-availablesection-filter-tag {
   padding: 6px 14px;
   font-size: 13px;
   border: 1px solid #ddd;
@@ -124,19 +124,19 @@
   font-weight: 500;
 }
 
-.filter-tag:hover {
+.drivemego-availablesection-filter-tag:hover {
   border-color: #17a2b8;
   color: #17a2b8;
 }
 
-.filter-tag.available-section-active {
+.drivemego-availablesection-filter-tag.drivemego-availablesection-available-section-active {
   background: #1a1a1a;
   color: white;
   border-color: #1a1a1a;
 }
 
 /* Routes List */
-.routes-list {
+.drivemego-availablesection-routes-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -144,7 +144,7 @@
 }
 
 /* Route Item: Changed to flex column with 2 distinct rows */
-.route-item {
+.drivemego-availablesection-route-item {
   background: #ffffff;
   border: 1px solid #e8e8e8;
   border-left: 5px solid #fdb913;
@@ -156,12 +156,12 @@
   transition: box-shadow 0.3s ease;
 }
 
-.route-item:hover {
+.drivemego-availablesection-route-item:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 /* Row 1: Route info on left, price on right */
-.route-row-1 {
+.drivemego-availablesection-route-row-1 {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -171,7 +171,7 @@
 }
 
 /* Row 2: Details on left, button on right */
-.route-row-2 {
+.drivemego-availablesection-route-row-2 {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -181,13 +181,13 @@
 }
 
 /* Route info section - left */
-.available-section-route-info {
+.drivemego-availablesection-available-section-route-info {
   display: flex;
   gap: 8px;
   min-width: 0;
 }
 
-.route-title {
+.drivemego-availablesection-route-title {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
@@ -199,13 +199,19 @@
   flex-wrap: wrap;
 }
 
-.star-icon {
+.drivemego-availablesection-availableseats{
+  font-size: 12px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.drivemego-availablesection-star-icon {
   font-size: 16px;
   line-height: 1;
   flex-shrink: 0;
 }
 
-.company-badge {
+.drivemego-availablesection-company-badge {
   background: #f0f0f0;
   color: #777;
   padding: 4px 10px;
@@ -218,7 +224,7 @@
 }
 
 /* Route details - 4 columns inline */
-.my-route-details {
+.drivemego-availablesection-my-route-details {
   display: flex;
   flex-direction: row;
   gap: 40px;
@@ -226,7 +232,7 @@
   flex: 1;
 }
 
-.detail-group {
+.drivemego-availablesection-detail-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -234,7 +240,7 @@
   white-space: nowrap;
 }
 
-.detail-label {
+.drivemego-availablesection-detail-label {
   display: block;
   font-size: 10px;
   font-weight: 700;
@@ -244,7 +250,7 @@
   text-transform: uppercase;
 }
 
-.availablesection-detail-label {
+.drivemego-availablesection-availablesection-detail-label {
   display: block;
   font-size: 10px;
   font-weight: 700;
@@ -254,7 +260,7 @@
   text-transform: uppercase;
 }
 
-.detail-value {
+.drivemego-availablesection-detail-value {
   margin: 0;
   font-size: 15px;
   font-weight: 500;
@@ -265,13 +271,13 @@
   line-height: 1.4;
 }
 
-.detail-icon {
+.drivemego-availablesection-detail-icon {
   font-size: 14px;
   flex-shrink: 0;
 }
 
 /* Price section - row 1, right side */
-.available-section-price-section {
+.drivemego-availablesection-available-section-price-section {
   display: flex;
   flex-direction: row;
   gap: 8px;
@@ -280,7 +286,7 @@
   white-space: nowrap;
 }
 
-.price-label {
+.drivemego-availablesection-price-label {
   margin: 0;
   font-size: 10px;
   color: #a8a8a8;
@@ -289,7 +295,7 @@
   text-transform: uppercase;
 }
 
-.price-value {
+.drivemego-availablesection-price-value {
   margin: 0;
   font-size: 26px;
   font-weight: 700;
@@ -298,7 +304,7 @@
 }
 
 /* Join button - row 2, right side */
-.available-section-join-btn {
+.drivemego-availablesection-available-section-join-btn {
   background: #1a1a1a;
   color: white;
   border: none;
@@ -317,22 +323,22 @@
   height: fit-content;
 }
 
-.available-section-join-btn:hover {
+.drivemego-availablesection-available-section-join-btn:hover {
   background: #333;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.available-section-join-btn:active {
+.drivemego-availablesection-available-section-join-btn:active {
   transform: scale(0.98);
 }
 
-.join-icon {
+.drivemego-availablesection-join-icon {
   font-size: 16px;
   line-height: 1;
 }
 
 /* Empty state */
-.empty-state {
+.drivemego-availablesection-empty-state {
   text-align: center;
   padding: 80px 24px;
   color: #999;
@@ -340,7 +346,7 @@
 }
 
 
-.availablesection-featured-detail-group{
+.drivemego-availablesection-availablesection-featured-detail-group{
   display: flex;
   align-items: center;
   gap: 12px;
@@ -349,13 +355,13 @@
   margin: 10px 0px;
 }
 
-.my-available-days {
+.drivemego-availablesection-my-available-days {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.my-day-pill {
+.drivemego-availablesection-my-day-pill {
   min-width: 36px;
   height: 24px;
   padding: 0 8px;
@@ -373,7 +379,7 @@
   letter-spacing: 0.3px;
 }
 
-.day-pill.weekend {
+.drivemego-availablesection-day-pill.drivemego-availablesection-weekend {
   background: #fee2e2;
   border-color: #ef4444;
   color: #b91c1c;
@@ -381,91 +387,91 @@
 
 /* Responsive: Tablet layout */
 @media (max-width: 768px) {
-  .available-section {
+  .drivemego-availablesection-available-section {
     padding: 0 16px;
   }
 
-  .section-header {
+  .drivemego-availablesection-section-header {
     padding: 24px 0 16px;
     margin-bottom: 24px;
   }
 
-  .title-section {
+  .drivemego-availablesection-title-section {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
     margin-bottom: 24px;
   }
 
-  .available-section-tab-buttons {
+  .drivemego-availablesection-available-section-tab-buttons {
     width: 100%;
     justify-content: flex-start;
   }
 
-  .available-section-route-item {
+  .drivemego-availablesection-available-section-route-item {
     padding: 18px;
     gap: 16px;
   }
 
-  .route-row-1 {
+  .drivemego-availablesection-route-row-1 {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
 
-  .route-row-2 {
+  .drivemego-availablesection-route-row-2 {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
 
-  .route-details {
+  .drivemego-availablesection-route-details {
     flex-wrap: wrap;
     gap: 24px;
     width: 100%;
   }
 
-  .available-section-price-section {
+  .drivemego-availablesection-available-section-price-section {
     align-items: flex-start;
   }
 
-  .available-section-join-btn {
+  .drivemego-availablesection-available-section-join-btn {
     width: 100%;
   }
 
-  .section-title {
+  .drivemego-availablesection-section-title {
     font-size: 24px;
   }
 
-  .route-title {
+  .drivemego-availablesection-route-title {
     font-size: 16px;
   }
 
-  .price-value {
+  .drivemego-availablesection-price-value {
     font-size: 24px;
   }
 }
 
 /* Responsive: Mobile layout */
 @media (max-width: 600px) {
-  .available-section {
+  .drivemego-availablesection-available-section {
     padding: 0 14px;
   }
 
-  .section-title {
+  .drivemego-availablesection-section-title {
     font-size: 22px;
   }
 
-  .section-header {
+  .drivemego-availablesection-section-header {
     padding: 18px 0 14px;
     margin-bottom: 20px;
   }
 
-  .title-and-count {
+  .drivemego-availablesection-title-and-count {
     min-width: auto;
   }
 
-  .routes-count {
+  .drivemego-availablesection-routes-count {
     font-size: 13px;
   }
 
@@ -476,217 +482,217 @@
     border-left-width: 4px;
   }
 
-  .route-row-1 {
+  .drivemego-availablesection-route-row-1 {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
 
-  .route-row-2 {
+  .drivemego-availablesection-route-row-2 {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
 
-  .route-details {
+  .drivemego-availablesection-route-details {
     gap: 16px;
     width: 100%;
   }
 
-  .route-title {
+  .drivemego-availablesection-route-title {
     font-size: 15px;
   }
 
-  .detail-value {
+  .drivemego-availablesection-detail-value {
     font-size: 14px;
   }
 
-  .price-value {
+  .drivemego-availablesection-price-value {
     font-size: 24px;
   }
 
-  .available-section-join-btn {
+  .drivemego-availablesection-available-section-join-btn {
     padding: 9px 20px;
     font-size: 13px;
     width: 100%;
   }
 
-  .filter-section {
+  .drivemego-availablesection-filter-section {
     gap: 12px;
     margin-bottom: 24px;
   }
 
-  .filter-tags {
+  .drivemego-availablesection-filter-tags {
     gap: 8px;
   }
 
-  .filter-tag {
+  .drivemego-availablesection-filter-tag {
     padding: 5px 12px;
     font-size: 12px;
   }
 
-  .routes-list {
+  .drivemego-availablesection-routes-list {
     gap: 12px;
   }
 
-  .tab-btn {
+  .drivemego-availablesection-tab-btn {
     padding: 7px 14px;
     font-size: 13px;
   }
 }
 
 @media (max-width: 480px) {
-  .available-section {
+  .drivemego-availablesection-available-section {
     padding: 0 10px;
   }
 
-  .section-header {
+  .drivemego-availablesection-section-header {
     padding: 16px 0 12px;
     margin-bottom: 16px;
   }
 
-  .all-listings-label {
+  .drivemego-availablesection-all-listings-label {
     font-size: 11px;
     letter-spacing: 1.2px;
   }
 
-  .title-section {
+  .drivemego-availablesection-title-section {
     gap: 12px;
     margin-bottom: 16px;
     flex-direction: column;
   }
 
-  .section-title {
+  .drivemego-availablesection-section-title {
     font-size: 20px;
     margin-bottom: 4px;
   }
 
-  .routes-count {
+  .drivemego-availablesection-routes-count {
     font-size: 12px;
   }
 
-  .tab-btn {
+  .drivemego-availablesection-tab-btn {
     padding: 7px 14px;
     font-size: 12px;
   }
 
-  .tab-buttons {
+  .drivemego-availablesection-tab-buttons {
     width: 100%;
     gap: 8px;
   }
 
-  .filter-label {
+  .drivemego-availablesection-filter-label {
     font-size: 13px;
   }
 
-  .filter-tags {
+  .drivemego-availablesection-filter-tags {
     gap: 6px;
   }
 
-  .filter-tag {
+  .drivemego-availablesection-filter-tag {
     padding: 5px 10px;
     font-size: 11px;
   }
 
-  .routes-list {
+  .drivemego-availablesection-routes-list {
     gap: 10px;
     margin-bottom: 32px;
   }
 
-  .available-section-route-item {
+  .drivemego-availablesection-available-section-route-item {
     padding: 10px;
     gap: 12px;
   }
 
-  .route-title {
+  .drivemego-availablesection-route-title {
     font-size: 14px;
     gap: 6px;
   }
 
-  .star-icon {
+  .drivemego-availablesection-star-icon {
     font-size: 14px;
   }
 
-  .company-badge {
+  .drivemego-availablesection-company-badge {
     font-size: 9px;
     padding: 3px 8px;
   }
 
-  .price-label {
+  .drivemego-availablesection-price-label {
     font-size: 9px;
   }
 
-  .price-value {
+  .drivemego-availablesection-price-value {
     font-size: 20px;
   }
 
-  .route-details {
+  .drivemego-availablesection-route-details {
     gap: 10px;
     flex-wrap: wrap;
   }
 
-  .detail-label {
+  .drivemego-availablesection-detail-label {
     font-size: 9px;
   }
 
-  .detail-value {
+  .drivemego-availablesection-detail-value {
     font-size: 13px;
     gap: 6px;
   }
 
-  .detail-icon {
+  .drivemego-availablesection-detail-icon {
     font-size: 14px;
   }
 
-  .available-section-join-btn {
+  .drivemego-availablesection-available-section-join-btn {
     width: 100%;
     padding: 8px 14px;
     font-size: 12px;
     gap: 6px;
   }
 
-  .join-icon {
+  .drivemego-availablesection-join-icon {
     font-size: 14px;
   }
 
-  .empty-state {
+  .drivemego-availablesection-empty-state {
     padding: 60px 10px;
     font-size: 14px;
   }
 }
 
 @media (max-width: 360px) {
-  .available-section {
+  .drivemego-availablesection-available-section {
     padding: 0 8px;
   }
 
-  .section-title {
+  .drivemego-availablesection-section-title {
     font-size: 18px;
   }
 
-  .route-title {
+  .drivemego-availablesection-route-title {
     font-size: 13px;
   }
 
-  .price-value {
+  .drivemego-availablesection-price-value {
     font-size: 18px;
   }
 
-  .route-details {
+  .drivemego-availablesection-route-details {
     gap: 8px;
   }
 
-  .available-section-join-btn {
+  .drivemego-availablesection-available-section-join-btn {
     padding: 7px 12px;
     font-size: 11px;
   }
 
-  .tab-btn {
+  .drivemego-availablesection-tab-btn {
     padding: 6px 12px;
     font-size: 11px;
   }
 
-  .detail-value {
+  .drivemego-availablesection-detail-value {
     font-size: 12px;
   }
 }

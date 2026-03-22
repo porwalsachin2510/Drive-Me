@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,6 +13,7 @@ import {
   selectLoading,
 } from "../../Redux/selectors/authSelectors";
 
+// eslint-disable-next-line no-unused-vars
 export default function Navbar({ activeTab, setActiveTab }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -95,16 +97,25 @@ export default function Navbar({ activeTab, setActiveTab }) {
   }
 
   return (
-    <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
-      <div className="navbar-container">
+    <nav
+      className={`drivemego-topbar-navbar ${scrolled ? "drivemego-topbar-scrolled" : ""}`}
+    >
+      <div className="drivemego-topbar-navbar-container">
         {/* Logo */}
-        <div className="navbar-logo" onClick={() => navigate("/")}>
-          <img src={Logo} alt="DriveMe" className="driveme-navbar-logo-image" />
+        <div
+          className="drivemego-topbar-navbar-logo"
+          onClick={() => navigate("/")}
+        >
+          <img
+            src={Logo}
+            alt="DriveMe"
+            className="drivemego-topbar-navbar-logo-image"
+          />
         </div>
 
         {/* Mobile Menu Toggle */}
         <button
-          className="mobile-menu-toggle"
+          className="drivemego-topbar-mobile-menu-toggle"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle menu"
         >
@@ -114,27 +125,25 @@ export default function Navbar({ activeTab, setActiveTab }) {
         </button>
 
         {/* Nav Items */}
-        <div className={`navbar-items ${mobileMenuOpen ? "active" : ""}`}>
-          <div className="nav-tabs">
-          </div>
+        <div
+          className={`drivemego-topbar-navbar-items ${mobileMenuOpen ? "drivemego-topbar-active" : ""}`}
+        >
+          <div className="drivemego-topbar-nav-tabs"></div>
 
           {isAuthenticated ? (
             // After Login: Show user avatar with dropdown and notifications
-            <div className="nav-user-section">
-              {/* Wallet Icon - Show for users who use wallet:
-                  - COMMUTER: Pays for bookings via wallet
-                  - B2C_PARTNER: Receives booking earnings, withdraws money
-                  - B2B_PARTNER: Receives contract payment earnings from CORPORATE, withdraws money */}
-              {user?.role && ['COMMUTER', 'B2C_PARTNER', 'B2B_PARTNER'].includes(user.role) && (
-                <WalletIcon />
-              )}
+            <div className="drivemego-topbar-nav-user-section">
+              {user?.role &&
+                ["B2C_PARTNER", "B2B_PARTNER"].includes(
+                  user.role,
+                ) && <WalletIcon />}
 
               {/* Notification Icon */}
               <NotificationIcon />
 
               {/* User Avatar */}
               <button
-                className="user-avatar"
+                className="drivemego-topbar-user-avatar"
                 onClick={handleMyProfile}
                 title="Click to go to profile"
                 aria-label="User profile"
@@ -144,8 +153,11 @@ export default function Navbar({ activeTab, setActiveTab }) {
             </div>
           ) : (
             // Before Login: Show login button
-            <button className="nav-login" onClick={handleLogin}>
-              <span className="login-arrow">→</span> Login
+            <button
+              className="drivemego-topbar-nav-login"
+              onClick={handleLogin}
+            >
+              <span className="drivemego-topbar-login-arrow">→</span> Login
             </button>
           )}
         </div>

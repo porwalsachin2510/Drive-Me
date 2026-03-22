@@ -52,16 +52,14 @@ import DriverLocationTracking from "./Pages/DriverPages/DriverLocationTracking/D
 import Navbar from "./Components/Navbar/Navbar";
 import Footer from "./Components/Footer/Footer";
 import SetPassword from "./Pages/SetPassword/SetPassword";
+import DynamicPage from "./Pages/DynamicPage/DynamicPage";
 
 function App() {
   return (
     <Provider store={store}>
       <SocketProvider>
         <Routes>
-          <Route
-            path="/"
-            element={<HomePage />}
-          />
+          <Route path="/" element={<HomePage />} />
           <Route
             path="/commuter-profile"
             element={
@@ -82,11 +80,7 @@ function App() {
             path="/wallet"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={[
-                  "COMMUTER",
-                  "B2C_PARTNER",
-                  "B2B_PARTNER",
-                ]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
               >
                 <WalletPage />
               </ProtectedRoleBasedRoute>
@@ -96,11 +90,7 @@ function App() {
             path="/wallet/add-funds"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={[
-                  "COMMUTER",
-                  "B2C_PARTNER",
-                  "B2B_PARTNER",
-                ]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
               >
                 <WalletPage />
               </ProtectedRoleBasedRoute>
@@ -110,11 +100,7 @@ function App() {
             path="/wallet/withdraw"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={[
-                  "COMMUTER",
-                  "B2C_PARTNER",
-                  "B2B_PARTNER",
-                ]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
               >
                 <WalletPage />
               </ProtectedRoleBasedRoute>
@@ -124,11 +110,7 @@ function App() {
             path="/wallet/transactions"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={[
-                  "COMMUTER",
-                  "B2C_PARTNER",
-                  "B2B_PARTNER",
-                ]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
               >
                 <WalletPage />
               </ProtectedRoleBasedRoute>
@@ -138,11 +120,7 @@ function App() {
             path="/wallet/payment/verify"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={[
-                  "COMMUTER",
-                  "B2C_PARTNER",
-                  "B2B_PARTNER",
-                ]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
               >
                 <WalletPaymentCallback />
               </ProtectedRoleBasedRoute>
@@ -199,14 +177,14 @@ function App() {
               </ProtectedRoleBasedRoute>
             }
           />
-          <Route
+          {/* <Route
             path="/my-quotations"
             element={
               <ProtectedRoute allowedRoles={["CORPORATE"]}>
                 <MyQuotations />
               </ProtectedRoute>
             }
-          />
+          /> */}
           <Route
             path="/quotation/:id"
             element={
@@ -437,12 +415,27 @@ function App() {
           <Route
             path="/driver/location-tracking"
             element={
-              <ProtectedRoleBasedRoute allowedRoles={["B2C_PARTNER_DRIVER", "B2B_PARTNER_DRIVER", "CORPORATE_DRIVER"]}>
+              <ProtectedRoleBasedRoute
+                allowedRoles={[
+                  "B2C_PARTNER_DRIVER",
+                  "B2B_PARTNER_DRIVER",
+                  "CORPORATE_DRIVER",
+                ]}
+              >
                 <DriverLocationTracking />
               </ProtectedRoleBasedRoute>
             }
           />
           <Route path="/payment/callback" element={<PaymentCallback />} />
+          <Route path="/payment-success" element={<PaymentCallback />} />
+          <Route path="/payment-cancel" element={<PaymentCallback />} />
+
+          {/* Dynamic Pages - Terms, Privacy, Refund, Contact etc */}
+          <Route path="/page/:slug" element={<DynamicPage />} />
+          <Route path="/terms-and-conditions" element={<DynamicPage />} />
+          <Route path="/privacy-policy" element={<DynamicPage />} />
+          <Route path="/refund-policy" element={<DynamicPage />} />
+          <Route path="/contact-us" element={<DynamicPage />} />
         </Routes>
       </SocketProvider>
     </Provider>

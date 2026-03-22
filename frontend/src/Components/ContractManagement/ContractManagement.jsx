@@ -63,77 +63,99 @@ const ContractManagement = () => {
   }
 
   return (
-    <div className="corporate-contracts-container">
-      <div className="corporate-contracts-header">
+    <div className="drivemego-contractmanagement-corporate-contracts-container">
+      <div className="drivemego-contractmanagement-corporate-contracts-header">
         <h1>My Contracts</h1>
         <p>Manage your vehicle rental contracts</p>
       </div>
 
       {/* Statistics Cards */}
-      <div className="corporate-contracts-stats">
-        <div className="corporate-stat-card stat-total">
-          <div className="stat-icon">📄</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.total}</div>
-            <div className="stat-label">Total Contracts</div>
+      <div className="drivemego-contractmanagement-corporate-contracts-stats">
+        <div className="drivemego-contractmanagement-corporate-stat-card stat-total">
+          <div className="drivemego-contractmanagement-stat-icon">📄</div>
+          <div className="drivemego-contractmanagement-stat-content">
+            <div className="drivemego-contractmanagement-stat-value">
+              {stats.total}
+            </div>
+            <div className="drivemego-contractmanagement-stat-label">
+              Total Contracts
+            </div>
           </div>
         </div>
-        <div className="corporate-stat-card stat-pending">
-          <div className="stat-icon">⏳</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.pending}</div>
-            <div className="stat-label">Pending</div>
+        <div className="drivemego-contractmanagement-corporate-stat-card stat-pending">
+          <div className="drivemego-contractmanagement-stat-icon">⏳</div>
+          <div className="drivemego-contractmanagement-stat-content">
+            <div className="drivemego-contractmanagement-stat-value">
+              {stats.pending}
+            </div>
+            <div className="drivemego-contractmanagement-stat-label">
+              Pending
+            </div>
           </div>
         </div>
-        <div className="corporate-stat-card stat-signed">
-          <div className="stat-icon">✍️</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.signed}</div>
-            <div className="stat-label">Signed</div>
+        <div className="drivemego-contractmanagement-corporate-stat-card drivemego-contractmanagement-stat-signed">
+          <div className="drivemego-contractmanagement-stat-icon">✍️</div>
+          <div className="drivemego-contractmanagement-stat-content">
+            <div className="drivemego-contractmanagement-stat-value">
+              {stats.signed}
+            </div>
+            <div className="drivemego-contractmanagement-stat-label">
+              Signed
+            </div>
           </div>
         </div>
-        <div className="corporate-stat-card stat-approved">
-          <div className="stat-icon">✅</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.approved}</div>
-            <div className="stat-label">Approved</div>
+        <div className="drivemego-contractmanagement-corporate-stat-card drivemego-contractmanagement-stat-approved">
+          <div className="drivemego-contractmanagement-stat-icon">✅</div>
+          <div className="drivemego-contractmanagement-stat-content">
+            <div className="drivemego-contractmanagement-stat-value">
+              {stats.approved}
+            </div>
+            <div className="drivemego-contractmanagement-stat-label">
+              Approved
+            </div>
           </div>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="corporate-contracts-filters">
+      <div className="drivemego-contractmanagement-corporate-contracts-filters">
         <button
-          className={`filter-tab ${filterStatus === "all" ? "active" : ""}`}
+          className={`drivemego-contractmanagement-filter-tab ${filterStatus === "all" ? "drivemego-contractmanagement-active" : ""}`}
           onClick={() => setFilterStatus("all")}
         >
           All Contracts
         </button>
         <button
-          className={`filter-tab ${filterStatus === "pending" ? "active" : ""}`}
+          className={`drivemego-contractmanagement-filter-tab ${filterStatus === "pending" ? "drivemego-contractmanagement-active" : ""}`}
           onClick={() => setFilterStatus("pending")}
         >
           Pending
         </button>
         <button
-          className={`filter-tab ${
-            filterStatus === "awaiting-signatures" ? "active" : ""
+          className={`drivemego-contractmanagement-filter-tab ${
+            filterStatus === "awaiting-signatures"
+              ? "drivemego-contractmanagement-active"
+              : ""
           }`}
           onClick={() => setFilterStatus("awaiting-signatures")}
         >
           Awaiting Signature
         </button>
         <button
-          className={`filter-tab ${
-            filterStatus === "approved" ? "active" : ""
+          className={`drivemego-contractmanagement-filter-tab ${
+            filterStatus === "approved"
+              ? "drivemego-contractmanagement-active"
+              : ""
           }`}
           onClick={() => setFilterStatus("approved")}
         >
           Approved
         </button>
         <button
-          className={`filter-tab ${
-            filterStatus === "completed" ? "active" : ""
+          className={`drivemego-contractmanagement-filter-tab ${
+            filterStatus === "completed"
+              ? "drivemego-contractmanagement-active"
+              : ""
           }`}
           onClick={() => setFilterStatus("completed")}
         >
@@ -143,16 +165,16 @@ const ContractManagement = () => {
 
       {/* Contracts List */}
       {error && contracts.length === 0 && (
-        <div className="corporate-contracts-error">
-          <div className="error-icon">!</div>
+        <div className="drivemego-contractmanagement-corporate-contracts-error">
+          <div className="drivemego-contractmanagement-error-icon">!</div>
           <h3>Error Loading Contracts</h3>
           <p>{error}</p>
         </div>
       )}
 
       {!error && filteredContracts.length === 0 && (
-        <div className="corporate-contracts-empty">
-          <div className="empty-icon">📭</div>
+        <div className="drivemego-contractmanagement-corporate-contracts-empty">
+          <div className="drivemego-contractmanagement-empty-icon">📭</div>
           <h3>No Contracts Found</h3>
           <p>
             You don't have any contracts yet. Accept a quotation to create your
@@ -162,70 +184,82 @@ const ContractManagement = () => {
       )}
 
       {!error && filteredContracts.length > 0 && (
-        <div className="corporate-contracts-grid">
+        <div className="drivemego-contractmanagement-corporate-contracts-grid">
           {filteredContracts.map((contract) => (
             <div
               key={contract._id}
-              className="corporate-contract-card"
+              className="drivemego-contractmanagement-corporate-contract-card"
               onClick={() => navigate(`/corporate/contracts/${contract._id}`)}
             >
-              <div className="contract-card-header">
-                <div className="contract-card-number">
+              <div className="drivemego-contractmanagement-contract-card-header">
+                <div className="drivemego-contractmanagement-contract-card-number">
                   Contract #{contract.contractNumber}
                 </div>
                 <span
-                  className={`contract-status-badge ${getStatusClass(
-                    contract.status
+                  className={`drivemego-contractmanagement-contract-status-badge ${getStatusClass(
+                    contract.status,
                   )}`}
                 >
                   {contract.status.replace("-", " ").toUpperCase()}
                 </span>
               </div>
 
-              <div className="contract-card-body">
-                <div className="contract-card-info">
-                  <div className="info-label">Fleet Owner:</div>
-                  <div className="info-value">
+              <div className="drivemego-contractmanagement-contract-card-body">
+                <div className="drivemego-contractmanagement-contract-card-info">
+                  <div className="drivemego-contractmanagement-info-label">
+                    Fleet Owner:
+                  </div>
+                  <div className="drivemego-contractmanagement-info-value">
                     {contract.fleetOwnerId?.companyName ||
                       contract.fleetOwnerId?.fullName}
                   </div>
                 </div>
 
-                <div className="contract-card-info">
-                  <div className="info-label">Total Amount:</div>
-                  <div className="info-value contract-amount">
+                <div className="drivemego-contractmanagement-contract-card-info">
+                  <div className="drivemego-contractmanagement-info-label">
+                    Total Amount:
+                  </div>
+                  <div className="drivemego-contractmanagement-info-value drivemego-contractmanagement-contract-amount">
                     KWD {contract.totalAmount?.toFixed(2)}
                   </div>
                 </div>
 
-                <div className="contract-card-info">
-                  <div className="info-label">Rental Period:</div>
-                  <div className="info-value">
+                <div className="drivemego-contractmanagement-contract-card-info">
+                  <div className="drivemego-contractmanagement-info-label">
+                    Rental Period:
+                  </div>
+                  <div className="drivemego-contractmanagement-info-value">
                     {formatDate(contract.rentalPeriod?.startDate)} -{" "}
                     {formatDate(contract.rentalPeriod?.endDate)}
                   </div>
                 </div>
 
-                <div className="contract-card-info">
-                  <div className="info-label">Vehicles:</div>
-                  <div className="info-value">
+                <div className="drivemego-contractmanagement-contract-card-info">
+                  <div className="drivemego-contractmanagement-info-label">
+                    Vehicles:
+                  </div>
+                  <div className="drivemego-contractmanagement-info-value">
                     {getTotalVehicleQuantity(contract.vehicles) || 0} vehicles
                   </div>
                 </div>
 
                 {contract.contractDocument && (
-                  <div className="contract-card-document">
-                    <span className="document-icon">📎</span>
+                  <div className="drivemego-contractmanagement-contract-card-document">
+                    <span className="drivemego-contractmanagement-document-icon">
+                      📎
+                    </span>
                     <span>Contract Document Available</span>
                   </div>
                 )}
               </div>
 
-              <div className="contract-card-footer">
-                <div className="contract-date">
+              <div className="drivemego-contractmanagement-contract-card-footer">
+                <div className="drivemego-contractmanagement-contract-date">
                   Created: {formatDate(contract.createdAt)}
                 </div>
-                <button className="view-details-btn">View Details →</button>
+                <button className="drivemego-contractmanagement-view-details-btn">
+                  View Details →
+                </button>
               </div>
             </div>
           ))}
