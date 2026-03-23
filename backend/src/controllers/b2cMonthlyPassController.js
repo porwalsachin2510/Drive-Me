@@ -564,7 +564,7 @@ export const createB2CMonthlyPass = async (req, res) => {
                         phone: passenger?.phoneNumber
                     },
                     contractId: monthlyPass._id,
-                    redirectUrl: `${process.env.FRONTEND_URL.split(",")[1]}/payment-success`,
+                    redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/payment-success`,
                     webhookUrl: `${process.env.BACKEND_URL}/api/webhook/payment`,
                     metadata: {
                         passengerId: passengerId.toString(),

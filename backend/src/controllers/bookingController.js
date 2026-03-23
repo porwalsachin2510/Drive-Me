@@ -432,7 +432,7 @@ export const createB2CBooking = async (req, res) => {
                     countryCode: "971",
                     phone: passenger.whatsappNumber || passenger.phone || "",
                 },
-                redirectUrl: `${process.env.FRONTEND_URL.split(",")[1]}/booking/success?booking_id=${booking._id}`,
+                redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/booking/success?booking_id=${booking._id}`,
                 webhookUrl: `${process.env.BACKEND_URL}/api/bookings/tap-webhook`,
                 metadata: {
                     bookingId: booking._id.toString(),

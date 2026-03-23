@@ -57,7 +57,7 @@ export const createPaymentSession = async (req, res) => {
                 phone: user.phone,
             },
             contractId: `WALLET-${userId}`,
-            redirectUrl: `${process.env.FRONTEND_URL.split(",")[1]}/wallet/payment/verify`,
+            redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/wallet/payment/verify`,
             metadata: {
                 type: "WALLET_TOPUP",
                 userId,

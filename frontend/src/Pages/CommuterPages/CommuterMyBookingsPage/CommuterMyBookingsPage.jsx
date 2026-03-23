@@ -1,7 +1,9 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { getPassengerBookings } from "../../../Redux/slices/bookingSlice";
 import { useSocket } from "../../../hooks/useSocket";
 import DailyTripsInBooking from "../../../Components/DailyTripsInBooking/DailyTripsInBooking";
@@ -11,6 +13,7 @@ import "./commutermybookingspage.css";
 
 const CommuterMyBookingsPage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { passengerBookings, loading } = useSelector((state) => state.booking);
   const auth = useSelector((state) => state.auth);
   const socket = useSocket();
@@ -19,7 +22,6 @@ const CommuterMyBookingsPage = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showTracking, setShowTracking] = useState(false);
   const [currentTime, setCurrentTime] = useState(null);
-  // eslint-disable-next-line no-unused-vars
   const [mapCenter, setMapCenter] = useState(null);
   const [mapBounds, setMapBounds] = useState(null);
   const [isTrackingActive, setIsTrackingActive] = useState(false);
@@ -168,7 +170,7 @@ const CommuterMyBookingsPage = () => {
       // Enhanced location updates with map bounds calculation
       socket.socket.on("location-update", (locationData) => {
         console.log("🚗 Real-time location update:", locationData);
-        
+
         setDriverLocations((prev) => ({
           ...prev,
           [locationData.driverId]: {
@@ -260,7 +262,7 @@ const CommuterMyBookingsPage = () => {
       // Listen for B2C driver location updates
       socket.socket.on("driver-location-update", (locationData) => {
         console.log("🚗 B2C Driver location update received:", locationData);
-        
+
         setDriverLocations((prev) => {
           const updated = {
             ...prev,
@@ -280,7 +282,10 @@ const CommuterMyBookingsPage = () => {
           selectedBooking &&
           selectedBooking._id === locationData.bookingId
         ) {
-          console.log("🗺️ Updating map bounds for booking:", locationData.bookingId);
+          console.log(
+            "🗺️ Updating map bounds for booking:",
+            locationData.bookingId,
+          );
           updateMapBounds(locationData.location.lat, locationData.location.lng);
         }
       });
@@ -312,9 +317,18 @@ const CommuterMyBookingsPage = () => {
   useEffect(() => {
     if (socket.socket && passengerBookings.length > 0) {
       passengerBookings.forEach((booking) => {
-        if ((booking.bookingStatus === "CONFIRMED" || booking.bookingStatus === "IN_PROGRESS") && booking._id) {
+        if (
+          (booking.bookingStatus === "CONFIRMED" ||
+            booking.bookingStatus === "IN_PROGRESS") &&
+          booking._id
+        ) {
           socket.joinBookingRoom(booking._id);
-          console.log("🗺️ Joined booking room:", booking._id, "Status:", booking.bookingStatus);
+          console.log(
+            "🗺️ Joined booking room:",
+            booking._id,
+            "Status:",
+            booking.bookingStatus,
+          );
         }
       });
     }
@@ -345,6 +359,11 @@ const CommuterMyBookingsPage = () => {
     setShowNoShowModal(true);
   };
 
+  // Navigate to booking details page
+  const handleViewDetails = (booking) => {
+    navigate(`/commuter/my-bookings/${booking._id}`);
+  };
+
   const handleSubmitNoShow = async () => {
     if (!noShowReason) {
       alert("Please select a reason for no-show");
@@ -359,7 +378,8 @@ const CommuterMyBookingsPage = () => {
       await commuterBookingAPI.markNoShow({
         tripId: noShowBooking.tripId || null,
         bookingId: noShowBooking._id,
-        monthlyPassId: noShowBooking.monthlyPassId || noShowBooking.monthlyPass?._id,
+        monthlyPassId:
+          noShowBooking.monthlyPassId || noShowBooking.monthlyPass?._id,
         reason: noShowReason,
         customReason: noShowReason === "OTHER" ? noShowCustomReason : null,
         date: new Date().toISOString(),
@@ -599,8 +619,8 @@ const CommuterMyBookingsPage = () => {
 
   return (
     <div className="cmbp-my-bookings-page">
-        <div className="cmbp-bookings-container">
-          <div className="cmbp-bookings-header">
+      <div className="cmbp-bookings-container">
+        <div className="cmbp-bookings-header">
           <h1>My Bookings</h1>
           <p>
             {userType === "CORPORATE_EMPLOYEE"
@@ -663,8 +683,8 @@ const CommuterMyBookingsPage = () => {
                           const titleRoute =
                             booking.type === "CORPORATE"
                               ? `${booking.routeId?.fromLocation || booking.pickupLocation} → ${booking.routeId?.toLocation || booking.dropoffLocation}`
-                              : `${booking.pickupLocation || 'N/A'} → ${booking.dropoffLocation || 'N/A'}`;
-                          
+                              : `${booking.pickupLocation || "N/A"} → ${booking.dropoffLocation || "N/A"}`;
+
                           return titleRoute;
                         })()}
                       </h3>
@@ -690,14 +710,17 @@ const CommuterMyBookingsPage = () => {
                           </span>
                         </div>
                         <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Driver Status</span>
+                          <span className="cmbp-detail-label">
+                            Driver Status
+                          </span>
                           <span className="cmbp-detail-value">
                             {(() => {
                               // For B2C bookings, use assignedDriverId as driverId
-                              const driverId = booking.assignedDriverId || 
-                                               booking.b2cPartnerId?._id || 
-                                               booking.b2cPartnerId;
-                              
+                              const driverId =
+                                booking.assignedDriverId ||
+                                booking.b2cPartnerId?._id ||
+                                booking.b2cPartnerId;
+
                               return driverId ? (
                                 isDriverOnline(driverId) ? (
                                   <span style={{ color: "#28a745" }}>
@@ -735,7 +758,9 @@ const CommuterMyBookingsPage = () => {
                           </span>
                         </div>
                         <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Payment Method</span>
+                          <span className="cmbp-detail-label">
+                            Payment Method
+                          </span>
                           <span className="cmbp-detail-value">
                             {booking.paymentMethod || "N/A"}
                           </span>
@@ -756,7 +781,9 @@ const CommuterMyBookingsPage = () => {
                           </span>
                         </div>
                         <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Driver Status</span>
+                          <span className="cmbp-detail-label">
+                            Driver Status
+                          </span>
                           <span className="cmbp-detail-value">
                             {booking.driverId ? (
                               isDriverOnline(booking.driverId) ? (
@@ -857,60 +884,75 @@ const CommuterMyBookingsPage = () => {
                           booking.b2cPartnerId?._id ||
                           booking.b2cPartnerId
                         : booking.driverId;
-                    
-                    return getDriverLocation(driverId) && (
-                      <div className="cmbp-driver-info">
-                        <p>
-                          <strong>Driver:</strong> {booking.driverName}
-                        </p>
-                        <p>
-                          <strong>Last Location:</strong> 📍
-                          {(() => {
-                            const driverLoc = getDriverLocation(driverId);
-                            const locationStr = `${driverLoc.lat?.toFixed(4)},${driverLoc.lng?.toFixed(4)}`;
-                            const formattedLoc =
-                              getFormattedLocation(locationStr);
-                            return formattedLoc || locationStr;
-                          })()}
-                        </p>
-                        <p>
-                          <strong>Status:</strong>
-                          <span
-                            className={`badge ${
-                              isDriverOnline(driverId)
-                                ? "bg-success"
-                                : "bg-secondary"
-                            }`}
-                            style={{
-                              marginLeft: "10px",
-                              padding: "4px 8px",
-                              borderRadius: "4px",
-                              color: "white",
-                              fontSize: "12px",
-                            }}
-                          >
-                            {isDriverOnline(driverId) ? "Online 🟢" : "Offline 🔴"}
-                          </span>
-                        </p>
-                      </div>
+
+                    return (
+                      getDriverLocation(driverId) && (
+                        <div className="cmbp-driver-info">
+                          <p>
+                            <strong>Driver:</strong> {booking.driverName}
+                          </p>
+                          <p>
+                            <strong>Last Location:</strong> 📍
+                            {(() => {
+                              const driverLoc = getDriverLocation(driverId);
+                              const locationStr = `${driverLoc.lat?.toFixed(4)},${driverLoc.lng?.toFixed(4)}`;
+                              const formattedLoc =
+                                getFormattedLocation(locationStr);
+                              return formattedLoc || locationStr;
+                            })()}
+                          </p>
+                          <p>
+                            <strong>Status:</strong>
+                            <span
+                              className={`badge ${
+                                isDriverOnline(driverId)
+                                  ? "bg-success"
+                                  : "bg-secondary"
+                              }`}
+                              style={{
+                                marginLeft: "10px",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                color: "white",
+                                fontSize: "12px",
+                              }}
+                            >
+                              {isDriverOnline(driverId)
+                                ? "Online 🟢"
+                                : "Offline 🔴"}
+                            </span>
+                          </p>
+                        </div>
+                      )
                     );
                   })()}
 
                   <div className="cmbp-booking-actions">
-                    {["CONFIRMED", "ACCEPTED", "ACTIVE", "IN_PROGRESS"].includes(booking.bookingStatus) && (
+                    {[
+                      "CONFIRMED",
+                      "ACCEPTED",
+                      "ACTIVE",
+                      "IN_PROGRESS",
+                    ].includes(booking.bookingStatus) && (
                       <button
                         className="cmbp-btn-track"
                         onClick={() => handleTrackingClick(booking)}
                         disabled={booking.bookingStatus === "COMPLETED"}
                       >
-                        {booking.bookingStatus === "IN_PROGRESS" ? "Live Tracking" : "Track Driver"}
+                        {booking.bookingStatus === "IN_PROGRESS"
+                          ? "Live Tracking"
+                          : "Track Driver"}
                       </button>
                     )}
                     {booking.bookingStatus === "PENDING" &&
                       booking.type === "B2C" && (
-                        <button className="cmbp-btn-cancel">Cancel Booking</button>
+                        <button className="cmbp-btn-cancel">
+                          Cancel Booking
+                        </button>
                       )}
-                    {(booking.bookingStatus === "CONFIRMED" || booking.bookingStatus === "ACTIVE" || booking.bookingStatus === "ACCEPTED") &&
+                    {(booking.bookingStatus === "CONFIRMED" ||
+                      booking.bookingStatus === "ACTIVE" ||
+                      booking.bookingStatus === "ACCEPTED") &&
                       booking.type === "B2C" && (
                         <button
                           className="cmbp-btn-noshow"
@@ -922,9 +964,12 @@ const CommuterMyBookingsPage = () => {
                     {booking.monthlyPassId && (
                       <button
                         className="cmbp-btn-download-pass"
-                        onClick={() => handleDownloadPassCertificate(booking.monthlyPassId)}
+                        onClick={() =>
+                          handleDownloadPassCertificate(booking.monthlyPassId)
+                        }
                         style={{
-                          background: "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
+                          background:
+                            "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
                           color: "#fff",
                           border: "none",
                           padding: "8px 16px",
@@ -937,18 +982,66 @@ const CommuterMyBookingsPage = () => {
                           gap: "6px",
                         }}
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
                         Download Pass
                       </button>
                     )}
+                    {/* View Details Button */}
+                    <button
+                      className="cmbp-btn-details"
+                      onClick={() => handleViewDetails(booking)}
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+                        color: "#fff",
+                        border: "none",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                      View Details
+                    </button>
                   </div>
 
                   {/* Daily Trips for this Booking */}
-                  {(booking.bookingStatus === "CONFIRMED" || 
+                  {(booking.bookingStatus === "CONFIRMED" ||
                     booking.bookingStatus === "IN_PROGRESS" ||
                     booking.bookingStatus === "ACTIVE" ||
                     booking.bookingStatus === "ACCEPTED") && (
-                    <DailyTripsInBooking 
+                    <DailyTripsInBooking
                       booking={booking}
                       userRole={userType}
                       onTripStatusChange={(status, tripId) => {
@@ -1015,7 +1108,10 @@ const CommuterMyBookingsPage = () => {
               </button>
             </div>
 
-            <div className="cmbp-tracking-info" style={{ marginBottom: "20px" }}>
+            <div
+              className="cmbp-tracking-info"
+              style={{ marginBottom: "20px" }}
+            >
               <p>
                 <strong>Route:</strong>{" "}
                 {(() => {
@@ -1560,13 +1656,30 @@ const CommuterMyBookingsPage = () => {
               width: "90%",
             }}
           >
-            <h3 style={{ marginBottom: "8px", fontSize: "18px" }}>Mark No-Show</h3>
-            <p style={{ color: "#6c757d", fontSize: "14px", marginBottom: "20px" }}>
-              {"Can't make it today? Mark no-show to release your seat for other passengers."}
+            <h3 style={{ marginBottom: "8px", fontSize: "18px" }}>
+              Mark No-Show
+            </h3>
+            <p
+              style={{
+                color: "#6c757d",
+                fontSize: "14px",
+                marginBottom: "20px",
+              }}
+            >
+              {
+                "Can't make it today? Mark no-show to release your seat for other passengers."
+              }
             </p>
 
             <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "14px" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontWeight: "600",
+                  marginBottom: "8px",
+                  fontSize: "14px",
+                }}
+              >
                 Reason
               </label>
               <select
@@ -1592,7 +1705,14 @@ const CommuterMyBookingsPage = () => {
 
             {noShowReason === "OTHER" && (
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "14px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                    fontSize: "14px",
+                  }}
+                >
                   Please specify
                 </label>
                 <textarea
@@ -1612,7 +1732,13 @@ const CommuterMyBookingsPage = () => {
               </div>
             )}
 
-            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                justifyContent: "flex-end",
+              }}
+            >
               <button
                 onClick={() => {
                   setShowNoShowModal(false);
@@ -1652,6 +1778,6 @@ const CommuterMyBookingsPage = () => {
       )}
     </div>
   );
-};
+};;
 
 export default CommuterMyBookingsPage;

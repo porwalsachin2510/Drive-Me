@@ -592,7 +592,7 @@ export const sendInvitationEmails = async (req, res) => {
                 userAccount.passwordSetupTokenExpiry = tokenExpiry;
                 await userAccount.save();
 
-                const setPasswordUrl = `${process.env.FRONTEND_URL.split(",")[1]}/set-password?token=${passwordSetupToken}`;
+                const setPasswordUrl = `${process.env.FRONTEND_URL.split(",")[0]}/set-password?token=${passwordSetupToken}`;
 
                 console.log("Sending invitation email to:", employee.userId.email);
 
@@ -849,7 +849,7 @@ const sendEmployeeInvitation = async (user, employeeData) => {
                         <p><strong>Temporary Password:</strong> tempPassword123</p>
                     </div>
                     <p>Please login and change your password immediately.</p>
-                    <a href="${process.env.FRONTEND_URL.split(",")[1] || 'http://localhost:5173'}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
+                    <a href="${process.env.FRONTEND_URL.split(",")[0] || 'http://localhost:5173'}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
                 </div>
             `
         });
@@ -871,7 +871,7 @@ const sendEmployeeApproval = async (employee) => {
                         <p>Hello <strong>${employee.fullName || user.fullName}</strong>,</p>
                         <p>Your registration for the corporate transport system has been approved.</p>
                         <p>You can now login and start using the service.</p>
-                        <a href="${process.env.FRONTEND_URL.split(",")[1] || 'http://localhost:5173'}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
+                        <a href="${process.env.FRONTEND_URL.split(",")[0] || 'http://localhost:5173'}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
                     </div>
                 `
             });

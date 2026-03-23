@@ -40,6 +40,7 @@ import CorporateAssignedVehiclesPage from "./Pages/CorporatePages/CorporateAssig
 import CorporateEmployeeBookingsPage from "./Pages/CorporatePages/CorporateEmployeeBookingsPage/CorporateEmployeeBookingsPage";
 import B2C_PartnerBookingsPage from "./Pages/B2C_PartnerPages/B2C_PartnerBookingsPage/B2C_PartnerBookingsPage";
 import CommuterMyBookingsPage from "./Pages/CommuterPages/CommuterMyBookingsPage/CommuterMyBookingsPage";
+import CommuterBookingDetailsPage from "./Pages/CommuterPages/CommuterBookingDetailsPage/CommuterBookingDetailsPage";
 import WalletPage from "./Pages/CommuterPages/WalletPage/WalletPage";
 import WalletPaymentCallback from "./Pages/CommuterPages/WalletPage/WalletPaymentCallback";
 import CorporateEmployeeDashboard from "./Pages/CommuterPages/CorporateEmployeeDashboard/CorporateEmployeeDashboard";
@@ -73,6 +74,14 @@ function App() {
             element={
               <ProtectedRoleBasedRoute allowedRoles={["COMMUTER"]}>
                 <CommuterMyBookingsPage />
+              </ProtectedRoleBasedRoute>
+            }
+          />
+          <Route
+            path="/commuter/my-bookings/:bookingId"
+            element={
+              <ProtectedRoleBasedRoute allowedRoles={["COMMUTER"]}>
+                <CommuterBookingDetailsPage />
               </ProtectedRoleBasedRoute>
             }
           />

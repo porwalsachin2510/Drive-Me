@@ -319,7 +319,7 @@ export const sendDriverCredentials = async (driverEmail, driverPassword, driverN
                             <h4 style="color: #155724; margin-top: 0;">📱 Quick Login:</h4>
                             <p style="color: #155724; margin: 5px 0;">You can now login to your driver dashboard using the credentials above.</p>
                             <p style="margin: 10px 0;">
-                                <a href="${process.env.FRONTEND_URL.split(",")[1]}/login" 
+                                <a href="${process.env.FRONTEND_URL.split(",")[0]}/login" 
                                    style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
                                     Login to Your Dashboard
                                 </a>
@@ -339,7 +339,7 @@ export const sendDriverCredentials = async (driverEmail, driverPassword, driverN
                         <p style="margin: 0; font-size: 14px;">Need help? Contact our support team</p>
                         <p style="margin: 5px 0 0 0;">
                             <a href="mailto:support@driveme.com" style="color: white; text-decoration: underline;">support@driveme.com</a> | 
-                            <a href="${process.env.FRONTEND_URL.split(",")[1]}/help" style="color: white; text-decoration: underline;">Help Center</a>
+                            <a href="${process.env.FRONTEND_URL.split(",")[0]}/help" style="color: white; text-decoration: underline;">Help Center</a>
                         </p>
                     </div>
                 </div>
@@ -390,7 +390,7 @@ export const sendBookingNotification = async (userEmail, userName, message, book
                         
                         <div style="background: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
                             <p style="margin: 0; color: #155724;">
-                                <a href="${process.env.FRONTEND_URL.split(",")[1]}/dashboard" 
+                                <a href="${process.env.FRONTEND_URL.split(",")[0]}/dashboard" 
                                    style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
                                     View Your Dashboard
                                 </a>
@@ -483,7 +483,7 @@ export const sendVerificationOTP = async (userEmail, userName, otp) => {
                         <p style="margin: 0; font-size: 14px;">Need help? Contact our support team</p>
                         <p style="margin: 5px 0 0 0;">
                             <a href="mailto:support@driveme.com" style="color: white; text-decoration: underline;">support@driveme.com</a> | 
-                            <a href="${process.env.FRONTEND_URL.split(",")[1]}/help" style="color: white; text-decoration: underline;">Help Center</a>
+                            <a href="${process.env.FRONTEND_URL.split(",")[0]}/help" style="color: white; text-decoration: underline;">Help Center</a>
                         </p>
                     </div>
                 </div>

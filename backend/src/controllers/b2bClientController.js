@@ -458,7 +458,7 @@ const sendProposalToClient = async (quotation, requirement) => {
                 proposalDetails: quotation.routePlans,
                 pricing: quotation.pricing,
                 validityPeriod: quotation.validityPeriod,
-                proposalLink: `${process.env.FRONTEND_URL.split(",")[1]}/proposals/${quotation._id}`
+                proposalLink: `${process.env.FRONTEND_URL.split(",")[0]}/proposals/${quotation._id}`
             }
         });
     } catch (error) {

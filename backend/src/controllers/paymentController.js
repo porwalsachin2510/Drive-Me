@@ -190,7 +190,7 @@ export const createPayment = async (req, res) => {
                         phone: contract.corporateOwnerId.phone,
                     },
                     contractId,
-                    redirectUrl: `${process.env.FRONTEND_URL.split(",")[1]}/payment/verify`,
+                    redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/payment/verify`,
                     metadata: {
                         paymentType,
                         advanceAmount: advancePaymentAmount,
@@ -761,7 +761,7 @@ export const createInstallmentPayment = async (req, res) => {
                 phone: contract.corporateOwnerId.phone || "",
             },
             contractId: contract._id.toString(),
-            redirectUrl: `${process.env.FRONTEND_URL.split(",")[1]}/payment/callback`,
+            redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/payment/callback`,
             webhookUrl: `${process.env.BACKEND_URL}/api/payments/webhook/${gateway.toLowerCase()}`,
             metadata: {
                 contractId: contract._id.toString(),

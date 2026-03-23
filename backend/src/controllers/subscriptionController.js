@@ -137,7 +137,7 @@ export const createSubscription = async (req, res) => {
                     name: user.fullName,
                 },
                 subscriptionId: subscription._id,
-                redirectUrl: `${process.env.FRONTEND_URL.split(",")[1]}/subscription/payment/verify`,
+                redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/subscription/payment/verify`,
                 metadata: {
                     subscriptionId: subscription._id,
                     userId,
