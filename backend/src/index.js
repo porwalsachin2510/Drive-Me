@@ -57,16 +57,51 @@ const app = express()
 // Create HTTP server
 const server = createServer(app)
 
-// Create Socket.io server
+/* ================================
+   ✅ FRONTEND ORIGINS FROM ENV
+================================ */
+const allowedOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(",").map(o => o.trim())
+    : ["http://localhost:5173"];
+
+console.log("✅ Allowed Origins:", allowedOrigins);
+
+/* ================================
+   ✅ CORS CONFIG (FIXED)
+================================ */
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true); // Postman / mobile apps
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.error("❌ CORS Blocked:", origin);
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
+/* ================================
+   ✅ SOCKET.IO (CORS FIXED)
+================================ */
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || ["http://localhost:5173"],
+        origin: allowedOrigins,
         methods: ["GET", "POST"],
         credentials: true
     },
-    transports: ['polling', 'websocket'], // Ensure both transports work
-    allowEIO3: true // Allow Engine.IO v3 clients
-})
+    transports: ["polling", "websocket"],
+    allowEIO3: true
+});
+
+export { io };
 
 // Store active drivers and their locations
 const activeDrivers = new Map()
@@ -356,9 +391,6 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
     return R * c
 }
-
-// Export io instance for use in other files
-export { io }
 
 // Initialize socket service
 initializeSocket(io)

@@ -13,9 +13,6 @@ const Footer = () => {
     twitter: "",
   });
 
-  useEffect(() => {
-    fetchSocialLinks();
-  }, []);
 
   const fetchSocialLinks = async () => {
     try {
@@ -28,6 +25,10 @@ const Footer = () => {
 
     }
   };
+
+  useEffect(() => {
+    fetchSocialLinks();
+  }, []);
 
   return (
     <footer className="my-footer">
