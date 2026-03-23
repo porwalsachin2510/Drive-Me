@@ -178,7 +178,7 @@ function App() {
             }
           />
           {/* <Route
-            path="/my-quotations"
+            path="/my-quotation"
             element={
               <ProtectedRoute allowedRoles={["CORPORATE"]}>
                 <MyQuotations />
