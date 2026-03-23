@@ -126,7 +126,7 @@ const QuotationDetails = () => {
     if (result.type === "quotation/rejectQuotation/fulfilled") {
       alert("Quotation rejected successfully!");
       setShowRejectModal(false);
-      navigate(`/my-quotations`);
+      navigate("https://drivemego.com/corporate-profile?tab=my-quotations");
     }
   };
 

@@ -247,7 +247,7 @@ const SingleVehicleOwnerDetails = () => {
 
     try {
       await dispatch(requestQuotation(quotationData)).unwrap();
-      navigate("/my-quotations");
+      navigate("/corporate-profile?tab=my-quotations");
     } catch (error) {
       console.error("Failed to create quotation:", error);
     }
