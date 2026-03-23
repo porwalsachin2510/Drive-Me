@@ -395,17 +395,6 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 // Initialize socket service
 initializeSocket(io)
 
-app.use(
-    cors({
-        origin: process.env.FRONTEND_URL || ["http://localhost:5173"],
-        credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization']
-    })
-);
-
-app.options("*", cors());
-
 // Middleware
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
