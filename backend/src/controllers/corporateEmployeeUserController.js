@@ -1323,7 +1323,7 @@ const sendWelcomeEmail = async (user, employee) => {
                     <p>Hello <strong>${employee.fullName || user.fullName}</strong>,</p>
                     <p>You have been successfully registered for the corporate transport system.</p>
                     <p>You can now login and view your assigned route, schedule, and manage your daily travel.</p>
-                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
+                    <a href="${process.env.FRONTEND_URL.split(",")[1] || 'http://localhost:5173'}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
                 </div>
             `
         });

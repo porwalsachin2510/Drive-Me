@@ -243,7 +243,7 @@ const CorporateContractDetails = () => {
         <div className="error-icon">⚠️</div>
         <h3>Error Loading Contract</h3>
         <p>{error}</p>
-        <button onClick={() => navigate("/corporate/contracts")}>
+        <button onClick={() => navigate("/corporate-profile?tab=contracts")}>
           Back to Contracts
         </button>
       </div>
@@ -255,7 +255,7 @@ const CorporateContractDetails = () => {
       <div className="corporate-contract-details-error">
         <div className="error-icon">📄</div>
         <h3>Contract Not Found</h3>
-        <button onClick={() => navigate("/corporate/contracts")}>
+        <button onClick={() => navigate("/corporate-profile?tab=contracts")}>
           Back to Contracts
         </button>
       </div>
@@ -584,7 +584,7 @@ const CorporateContractDetails = () => {
               <div className="waiting-actions">
                 <button
                   className="btn-secondary"
-                  onClick={() => navigate("/corporate/contracts")}
+                  onClick={() => navigate("/corporate-profile?tab=contracts")}
                 >
                   Back to Contracts
                 </button>

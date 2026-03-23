@@ -66,7 +66,7 @@ const PaymentCallback = () => {
               if (finalContractId) {
                 navigate(`/corporate/contracts/${finalContractId}`);
               } else {
-                navigate("/corporate/contracts");
+                navigate("/corporate-profile?tab=contracts");
               }
             }, 3000);
           }
@@ -86,7 +86,7 @@ const PaymentCallback = () => {
           if (contractId) {
             navigate(`/corporate/contracts/${contractId}`);
           } else {
-            navigate("/corporate/contracts");
+            navigate("/corporate-profile?tab=contracts");
           }
         }, 3000);
       } else {
@@ -96,7 +96,7 @@ const PaymentCallback = () => {
           if (contractId) {
             navigate(`/corporate/contracts/${contractId}`);
           } else {
-            navigate("/corporate/contracts");
+            navigate("/corporate-profile?tab=contracts");
           }
         }, 3000);
       }

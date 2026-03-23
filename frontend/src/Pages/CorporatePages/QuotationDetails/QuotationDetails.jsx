@@ -162,7 +162,7 @@ const QuotationDetails = () => {
     setShowContractModal(false);
     alert("Contract created successfully!");
     // Optionally navigate to the contract details page or contracts list
-    navigate(`/corporate/contracts`);
+    navigate(`/corporate-profile?tab=contracts`);
     // Or refresh the quotation to show updated status
     // dispatch(getQuotationById(id));
   };
