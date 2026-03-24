@@ -1798,6 +1798,6 @@ const CommuterMyBookingsPage = () => {
       )}
     </div>
   );
-};;
+};
 
 export default CommuterMyBookingsPage;

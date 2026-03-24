@@ -1,34 +1,26 @@
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import User from "../models/User.js";
-import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
+import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 
 // Get B2C Partner Bookings (for B2C_PARTNER dashboard)
 export const getB2CPartnerBookings = async (req, res) => {
     try {
         const partnerId = req.userId;
-        
-        console.log("[v0] Fetching bookings for B2C Partner:", partnerId);
 
         // Get all bookings for this partner
         const bookings = await B2CPassengerBooking.find({
             b2cPartnerId: partnerId
         })
-        .populate('passengerId', 'name email phone')
-        .populate('routeId', 'fromLocation toLocation routeName')
-        .populate('assignedDriverId', 'name email phone')
-        .sort({ bookingDate: -1 });
+            .populate('passengerId', 'name email phone')
+            .populate('routeId', 'fromLocation toLocation routeName')
+            .populate('assignedDriverId', 'name email phone')
+            .sort({ bookingDate: -1 });
 
         // Filter bookings based on driver assignment
         const selfDriverBookings = bookings.filter(booking => booking.isSelfDriver);
         const assignedDriverBookings = bookings.filter(booking => !booking.isSelfDriver);
-
-        console.log("[v0] Bookings found:", {
-            total: bookings.length,
-            selfDriver: selfDriverBookings.length,
-            assignedDriver: assignedDriverBookings.length
-        });
 
         res.status(200).json({
             success: true,
@@ -60,20 +52,20 @@ export const getB2CPartnerBookings = async (req, res) => {
 export const getB2CDriverBookings = async (req, res) => {
     try {
         const driverId = req.userId;
-        
-        console.log("[v0] Fetching bookings for B2C Driver:", driverId);
+
+
 
         // Get all bookings assigned to this driver
         const bookings = await B2CPassengerBooking.find({
             assignedDriverId: driverId,
             isSelfDriver: false // Only get bookings where they are assigned driver
         })
-        .populate('passengerId', 'name email phone')
-        .populate('routeId', 'fromLocation toLocation routeName')
-        .populate('b2cPartnerId', 'name email businessName')
-        .sort({ bookingDate: -1 });
+            .populate('passengerId', 'name email phone')
+            .populate('routeId', 'fromLocation toLocation routeName')
+            .populate('b2cPartnerId', 'name email businessName')
+            .sort({ bookingDate: -1 });
 
-        console.log("[v0] Driver bookings found:", bookings.length);
+
 
         res.status(200).json({
             success: true,
@@ -108,8 +100,8 @@ export const updateBookingStatus = async (req, res) => {
         const { bookingId } = req.params;
         const { status, notes } = req.body;
         const userId = req.userId;
-        
-        console.log("[v0] Updating booking status:", { bookingId, status, userId });
+
+
 
         const booking = await B2CPassengerBooking.findById(bookingId)
             .populate('passengerId', 'name email phone')
@@ -124,8 +116,8 @@ export const updateBookingStatus = async (req, res) => {
         }
 
         // Check if user has permission to update this booking
-        const canUpdate = booking.b2cPartnerId._id.toString() === userId || 
-                         booking.assignedDriverId?.toString() === userId;
+        const canUpdate = booking.b2cPartnerId._id.toString() === userId ||
+            booking.assignedDriverId?.toString() === userId;
 
         if (!canUpdate) {
             return res.status(403).json({
@@ -144,7 +136,7 @@ export const updateBookingStatus = async (req, res) => {
         // Send notification to passenger
         // TODO: Implement notification service
 
-        console.log("[v0] Booking status updated successfully");
+
 
         res.status(200).json({
             success: true,
@@ -166,12 +158,12 @@ export const updateBookingStatus = async (req, res) => {
 export const getB2CPartnerDriverBookings = async (req, res) => {
     try {
         const userId = req.userId;
-        
-        console.log("[v0] Fetching bookings for B2C Partner Driver User ID:", userId);
+
+
 
         // First get the B2C_PARTNER_DRIVER user to find their driverId
         const driverUser = await User.findById(userId);
-        
+
         if (!driverUser || driverUser.role !== "B2C_PARTNER_DRIVER") {
             return res.status(403).json({
                 success: false,
@@ -180,18 +172,18 @@ export const getB2CPartnerDriverBookings = async (req, res) => {
         }
 
         const driverId = driverUser.driverId;
-        console.log("[v0] Found Driver ID:", driverId);
+
 
         // Get bookings assigned to this specific driver
         const bookings = await B2CPassengerBooking.find({
             assignedDriverId: driverId
         })
-        .populate('passengerId', 'name email phone')
-        .populate('routeId', 'fromLocation toLocation routeName')
-        .populate('b2cPartnerId', 'name email phone')
-        .sort({ bookingDate: -1 });
+            .populate('passengerId', 'name email phone')
+            .populate('routeId', 'fromLocation toLocation routeName')
+            .populate('b2cPartnerId', 'name email phone')
+            .sort({ bookingDate: -1 });
 
-        console.log("[v0] Found bookings for driver:", bookings.length);
+
 
         res.status(200).json({
             success: true,
@@ -222,19 +214,11 @@ export const getB2CBookingDetails = async (req, res) => {
         const { bookingId } = req.params;
         const userId = req.userId;
 
-        const booking = await B2CPassengerBooking.findById(bookingId)
+        let booking = await B2CPassengerBooking.findById(bookingId)
             .populate('passengerId', 'name email phone fullName')
             .populate('b2cPartnerId', 'name email fullName phone profileImage')
             .populate('assignedDriverId', 'name email phone driverImage phoneNumber')
-            .populate({
-                path: 'routeId',
-                select: 'fromLocation toLocation routeName assignedVehicle assignedDriver b2cPartnerId',
-                populate: [
-                    { path: 'assignedVehicle', select: 'model licensePlate vehicleType vehicleColor seatingCapacity images' },
-                    { path: 'assignedDriver', select: 'name phoneNumber driverImage email' },
-                    { path: 'b2cPartnerId', select: 'fullName name email phone' }
-                ]
-            });
+            .populate('routeId');
 
         if (!booking) {
             return res.status(404).json({
@@ -243,7 +227,7 @@ export const getB2CBookingDetails = async (req, res) => {
             });
         }
 
-        // Check if user has permission to view this booking
+        // Check if user has permission to view this booking (before converting to object)
         const canView = booking.passengerId?._id?.toString() === userId ||
             booking.b2cPartnerId?._id?.toString() === userId ||
             booking.assignedDriverId?.toString() === userId;
@@ -254,6 +238,20 @@ export const getB2CBookingDetails = async (req, res) => {
                 message: "Unauthorized to view this booking"
             });
         }
+
+        // Manually populate assignedVehicle from route if route exists
+        let bookingObj = booking.toObject();
+        if (bookingObj.routeId?.assignedVehicle) {
+            const vehicleId = bookingObj.routeId.assignedVehicle;
+            const vehicle = await B2CPartnerVehicle.findById(vehicleId);
+            if (vehicle) {
+                // Attach vehicle to routeId as populated data
+                bookingObj.routeId.assignedVehicle = vehicle.toObject();
+            }
+        }
+
+        // Use bookingObj from here
+        booking = bookingObj;
 
         // Prepare driver information - use stored fields first, then populated data
         let driverInfo = null;
@@ -346,7 +344,7 @@ export const getB2CBookingDetails = async (req, res) => {
             success: true,
             data: {
                 booking: {
-                    ...booking.toObject(),
+                    ...booking,
                     driverInfo,
                     vehicleInfo,
                     partnerInfo

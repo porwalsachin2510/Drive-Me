@@ -2,13 +2,15 @@ import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
-import User from "../models/User.js";
 import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
+import User from "../models/User.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
 
 // Create Passenger Booking (ONE-WAY or ROUND-TRIP)
 export const createPassengerBooking = async (req, res) => {
-    try {    
+    try {
+
+
         const {
             routeId,
             scheduleId,
@@ -52,7 +54,7 @@ export const createPassengerBooking = async (req, res) => {
 
         // Ensure trip exists for travel date
         await generateTripsForSchedule(scheduleId, 1);
-        
+
         const tripDate = new Date(travelDate);
         const trip = await B2CPartnerTrip.findOne({
             routeId: routeId,
@@ -81,7 +83,7 @@ export const createPassengerBooking = async (req, res) => {
         // Calculate pricing - ONLY MONTHLY PASSES
         let totalAmount = 0;
         const isMonthly = req.body.isMonthly || true; // Default to monthly
-        
+
         if (isMonthly) {
             if (bookingType === "ONE_WAY") {
                 totalAmount = route.pricing.monthlyPrice * numberOfSeats;
@@ -132,7 +134,7 @@ export const createPassengerBooking = async (req, res) => {
         // Update trip seats
         const newBookedSeats = trip.bookedSeats + numberOfSeats;
         const newAvailableSeats = trip.totalSeats - newBookedSeats;
-        
+
         await B2CPartnerTrip.findByIdAndUpdate(trip._id, {
             bookedSeats: newBookedSeats,
             availableSeats: newAvailableSeats
@@ -151,7 +153,7 @@ export const createPassengerBooking = async (req, res) => {
             if (returnSchedule) {
                 // Ensure return trip exists
                 await generateTripsForSchedule(returnSchedule._id, 1);
-                
+
                 const returnTrip = await B2CPartnerTrip.findOne({
                     routeId: routeId,
                     scheduleId: returnSchedule._id,
@@ -190,7 +192,9 @@ export const createPassengerBooking = async (req, res) => {
                 }
             }
         }
-        
+
+
+
         res.status(201).json({
             success: true,
             message: "Monthly pass booking created successfully",
@@ -225,23 +229,31 @@ export const getPassengerBookings = async (req, res) => {
         const bookings = await B2CPassengerBooking.find({
             passengerId: req.userId
         })
-            .populate({
-                path: 'routeId',
-                select: 'fromLocation toLocation assignedVehicle assignedDriver',
-                populate: [
-                    { path: 'assignedVehicle', select: 'model licensePlate vehicleType vehicleColor' },
-                    { path: 'assignedDriver', select: 'name phoneNumber driverImage' }
-                ]
-            })
+            .populate('routeId')
             .populate('b2cPartnerId', 'fullName email name phone')
             .sort({ travelDate: -1 });
 
-        // Collect partner IDs for vehicle lookup
+        // Collect route vehicle IDs and partner IDs for lookup
+        const routeVehicleIds = bookings
+            .map(b => b.routeId?.assignedVehicle)
+            .filter(Boolean);
+
         const partnerIds = [...new Set(bookings.map(b =>
             b.b2cPartnerId?._id?.toString() || b.b2cPartnerId?.toString()
         ).filter(Boolean))];
 
-        // Fetch partner vehicles
+        // Fetch all route vehicles in one query
+        const routeVehicles = await B2CPartnerVehicle.find({
+            _id: { $in: routeVehicleIds }
+        });
+
+        // Create vehicle map by ID
+        const vehicleById = {};
+        routeVehicles.forEach(v => {
+            vehicleById[v._id.toString()] = v;
+        });
+
+        // Also fetch partner vehicles as fallback
         const partnerVehicles = await B2CPartnerVehicle.find({
             b2cPartnerId: { $in: partnerIds },
             isActive: true
@@ -260,13 +272,15 @@ export const getPassengerBookings = async (req, res) => {
         const enrichedBookings = bookings.map(booking => {
             const bookingObj = booking.toObject();
             const partnerId = bookingObj.b2cPartnerId?._id?.toString() || bookingObj.b2cPartnerId?.toString();
+            const routeVehicleId = bookingObj.routeId?.assignedVehicle?.toString();
 
-            // Get vehicle info from route first
-            if (!bookingObj.vehicleModel && bookingObj.routeId?.assignedVehicle) {
-                bookingObj.vehicleModel = bookingObj.routeId.assignedVehicle.model;
-                bookingObj.vehiclePlate = bookingObj.routeId.assignedVehicle.licensePlate;
-                bookingObj.vehicleType = bookingObj.routeId.assignedVehicle.vehicleType;
-                bookingObj.vehicleColor = bookingObj.routeId.assignedVehicle.vehicleColor;
+            // Get vehicle info from route first (using pre-fetched data)
+            if (!bookingObj.vehicleModel && routeVehicleId && vehicleById[routeVehicleId]) {
+                const vehicle = vehicleById[routeVehicleId];
+                bookingObj.vehicleModel = vehicle.model;
+                bookingObj.vehiclePlate = vehicle.licensePlate;
+                bookingObj.vehicleType = vehicle.vehicleType;
+                bookingObj.vehicleColor = vehicle.vehicleColor;
             }
             // If still no vehicle, get from partner
             else if (!bookingObj.vehicleModel && partnerId && vehicleByPartner[partnerId]) {
@@ -306,7 +320,7 @@ export const getPassengerBookings = async (req, res) => {
 export const getAvailableTrips = async (req, res) => {
     try {
         const { routeId, date } = req.query;
-        
+
         if (!routeId || !date) {
             return res.status(400).json({
                 success: false,
@@ -323,9 +337,9 @@ export const getAvailableTrips = async (req, res) => {
             },
             status: { $in: ["Scheduled", "In Progress"] }
         })
-        .populate('vehicleId', 'model licensePlate')
-        .populate('driverId', 'name phoneNumber')
-        .sort({ startTime: 1 });
+            .populate('vehicleId', 'model licensePlate')
+            .populate('driverId', 'name phoneNumber')
+            .sort({ startTime: 1 });
 
         res.status(200).json({
             success: true,

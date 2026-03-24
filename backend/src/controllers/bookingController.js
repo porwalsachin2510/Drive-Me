@@ -268,7 +268,7 @@ export const createB2CBooking = async (req, res) => {
         if (bookingType === "ONE_WAY" || bookingType === "ROUND_TRIP") {
             // Check if route has assigned driver (handle both field names)
             const routeDriverId = b2cRoute.assignedDriverId || b2cRoute.assignedDriver;
-            
+
             console.log("[v0] Driver Assignment Debug:", {
                 routeId: b2cRoute._id,
                 assignedDriverId: b2cRoute.assignedDriverId,
@@ -276,10 +276,10 @@ export const createB2CBooking = async (req, res) => {
                 routeDriverId,
                 partnerId
             });
-            
+
             if (routeDriverId) {
                 assignedDriverId = routeDriverId;
-                
+
                 // Check if assigned driver is the partner themselves (self-driver)
                 if (routeDriverId.toString() === partnerId.toString()) {
                     isSelfDriver = true;
@@ -322,7 +322,7 @@ export const createB2CBooking = async (req, res) => {
             // Check if driver is assigned to trip
             if (targetTrip.assignedDriverId) {
                 assignedDriverId = targetTrip.assignedDriverId;
-                
+
                 // Check if assigned driver is the partner themselves (self-driver)
                 if (targetTrip.assignedDriverId.toString() === partnerId.toString()) {
                     isSelfDriver = true;
@@ -432,7 +432,7 @@ export const createB2CBooking = async (req, res) => {
                     countryCode: "971",
                     phone: passenger.whatsappNumber || passenger.phone || "",
                 },
-                redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/booking/success?booking_id=${booking._id}`,
+                redirectUrl: `${process.env.FRONTEND_URL}/booking/success?booking_id=${booking._id}`,
                 webhookUrl: `${process.env.BACKEND_URL}/api/bookings/tap-webhook`,
                 metadata: {
                     bookingId: booking._id.toString(),
@@ -1055,7 +1055,7 @@ export const startB2CTrip = async (req, res) => {
 
         // Authorization check based on user role
         let isAuthorized = false
-        
+
         if (userRole === "B2C_PARTNER") {
             // Partner can start trip for their own bookings
             isAuthorized = booking.b2cPartnerId._id.toString() === userId
@@ -1183,7 +1183,7 @@ export const completeB2CTrip = async (req, res) => {
 
         // Authorization check based on user role
         let isAuthorized = false
-        
+
         if (userRole === "B2C_PARTNER") {
             // Partner can complete trip for their own bookings
             isAuthorized = booking.b2cPartnerId._id.toString() === userId
@@ -1516,126 +1516,126 @@ export const getPartnerBookings = async (req, res) => {
 
 export const getCorporateOwnerBookings = async (req, res) => {
     try {
-    const corporateOwnerId = req.userId
-    const { status, date } = req.query
-    
-    console.log("[v0] Fetching corporate owner bookings from Trip model for:", corporateOwnerId)
-    
-    // Query Trip model for corporate trips
-    const tripQuery = { corporateId: corporateOwnerId }
-    
-    if (status) {
-      tripQuery.status = status
-    }
-    
-    if (date) {
-      const dateObj = new Date(date)
-      const startOfDay = new Date(dateObj.setHours(0, 0, 0, 0))
-      const endOfDay = new Date(dateObj.setHours(23, 59, 59, 999))
-      tripQuery.tripDate = {
-        $gte: startOfDay,
-        $lt: endOfDay,
-      }
-    }
-    
-    // Get all trips for this corporate
-    const trips = await Trip.find(tripQuery)
-      .populate("driverId", "name email phone")
-      .populate("vehicleId", "model licensePlate vehicleName registrationNumber")
-      .populate("routeId", "fromLocation toLocation startTime endTime")
-      .populate("contractId", "contractNumber status")
-      .populate("passengers.employeeId", "fullName whatsappNumber email")
-      .sort({ tripDate: -1, createdAt: -1 })
-    
-    console.log("[v0] Found trips:", trips.length)
-    
-    // Transform trips to bookings format for frontend
-    const bookings = []
-    
-    for (const trip of trips) {
-      // Resolve driver name from Driver model or User model
-      let driverName = trip.driverId?.name || "Unknown"
-      let driverInfo = trip.driverId
-      
-      // If driverId populated from Driver model, also try to find the user account
-      if (trip.driverId && !trip.driverId.fullName) {
-        const driverUserAccount = await User.findOne({ 
-          driverId: trip.driverId._id,
-          role: { $in: ["B2B_PARTNER_DRIVER", "CORPORATE_DRIVER"] }
-        }).select("fullName whatsappNumber email")
-        if (driverUserAccount) {
-          driverName = driverUserAccount.fullName
-          driverInfo = {
-            _id: trip.driverId._id,
-            name: driverUserAccount.fullName,
-            email: driverUserAccount.email,
-            phone: driverUserAccount.whatsappNumber,
-          }
-        }
-      }
+        const corporateOwnerId = req.userId
+        const { status, date } = req.query
 
-      for (const passenger of trip.passengers) {
-        // Filter by status if provided
-        if (status && passenger.bookingStatus !== status) {
-          continue
+        console.log("[v0] Fetching corporate owner bookings from Trip model for:", corporateOwnerId)
+
+        // Query Trip model for corporate trips
+        const tripQuery = { corporateId: corporateOwnerId }
+
+        if (status) {
+            tripQuery.status = status
         }
-        
-        bookings.push({
-          _id: passenger._id,
-          tripId: trip._id,
-          passengerId: passenger.employeeId,
-          employee: passenger.employeeId,
-          employeeName: passenger.employeeId?.fullName || "Unknown",
-          employeeEmail: passenger.employeeId?.email,
-          employeePhone: passenger.employeeId?.whatsappNumber,
-          seatNumber: passenger.seatNumber,
-          pickupPoint: passenger.pickupPoint,
-          pickupTime: passenger.pickupTime,
-          bookingStatus: passenger.bookingStatus,
-          bookedAt: passenger.bookedAt,
-          travelDate: trip.tripDate,
-          tripDate: trip.tripDate,
-          startTime: trip.startTime,
-          endTime: trip.endTime,
-          tripType: trip.tripType,
-          direction: trip.direction,
-          fromLocation: trip.fromLocation,
-          toLocation: trip.toLocation,
-          status: trip.status,
-          tripStatus: trip.status,
-          numberOfSeats: 1,
-          route: trip.routeId,
-          routeId: trip.routeId,
-          driver: driverInfo,
-          driverId: trip.driverId,
-          driverName: driverName,
-          vehicle: trip.vehicleId,
-          vehicleId: trip.vehicleId,
-          vehicleModel: trip.vehicleId?.model || trip.vehicleId?.vehicleName,
-          vehiclePlate: trip.vehicleId?.licensePlate || trip.vehicleId?.registrationNumber,
-          contract: trip.contractId,
-          contractId: trip.contractId,
-          currentLocation: trip.currentLocation,
-          driverLocation: trip.driverLocation,
+
+        if (date) {
+            const dateObj = new Date(date)
+            const startOfDay = new Date(dateObj.setHours(0, 0, 0, 0))
+            const endOfDay = new Date(dateObj.setHours(23, 59, 59, 999))
+            tripQuery.tripDate = {
+                $gte: startOfDay,
+                $lt: endOfDay,
+            }
+        }
+
+        // Get all trips for this corporate
+        const trips = await Trip.find(tripQuery)
+            .populate("driverId", "name email phone")
+            .populate("vehicleId", "model licensePlate vehicleName registrationNumber")
+            .populate("routeId", "fromLocation toLocation startTime endTime")
+            .populate("contractId", "contractNumber status")
+            .populate("passengers.employeeId", "fullName whatsappNumber email")
+            .sort({ tripDate: -1, createdAt: -1 })
+
+        console.log("[v0] Found trips:", trips.length)
+
+        // Transform trips to bookings format for frontend
+        const bookings = []
+
+        for (const trip of trips) {
+            // Resolve driver name from Driver model or User model
+            let driverName = trip.driverId?.name || "Unknown"
+            let driverInfo = trip.driverId
+
+            // If driverId populated from Driver model, also try to find the user account
+            if (trip.driverId && !trip.driverId.fullName) {
+                const driverUserAccount = await User.findOne({
+                    driverId: trip.driverId._id,
+                    role: { $in: ["B2B_PARTNER_DRIVER", "CORPORATE_DRIVER"] }
+                }).select("fullName whatsappNumber email")
+                if (driverUserAccount) {
+                    driverName = driverUserAccount.fullName
+                    driverInfo = {
+                        _id: trip.driverId._id,
+                        name: driverUserAccount.fullName,
+                        email: driverUserAccount.email,
+                        phone: driverUserAccount.whatsappNumber,
+                    }
+                }
+            }
+
+            for (const passenger of trip.passengers) {
+                // Filter by status if provided
+                if (status && passenger.bookingStatus !== status) {
+                    continue
+                }
+
+                bookings.push({
+                    _id: passenger._id,
+                    tripId: trip._id,
+                    passengerId: passenger.employeeId,
+                    employee: passenger.employeeId,
+                    employeeName: passenger.employeeId?.fullName || "Unknown",
+                    employeeEmail: passenger.employeeId?.email,
+                    employeePhone: passenger.employeeId?.whatsappNumber,
+                    seatNumber: passenger.seatNumber,
+                    pickupPoint: passenger.pickupPoint,
+                    pickupTime: passenger.pickupTime,
+                    bookingStatus: passenger.bookingStatus,
+                    bookedAt: passenger.bookedAt,
+                    travelDate: trip.tripDate,
+                    tripDate: trip.tripDate,
+                    startTime: trip.startTime,
+                    endTime: trip.endTime,
+                    tripType: trip.tripType,
+                    direction: trip.direction,
+                    fromLocation: trip.fromLocation,
+                    toLocation: trip.toLocation,
+                    status: trip.status,
+                    tripStatus: trip.status,
+                    numberOfSeats: 1,
+                    route: trip.routeId,
+                    routeId: trip.routeId,
+                    driver: driverInfo,
+                    driverId: trip.driverId,
+                    driverName: driverName,
+                    vehicle: trip.vehicleId,
+                    vehicleId: trip.vehicleId,
+                    vehicleModel: trip.vehicleId?.model || trip.vehicleId?.vehicleName,
+                    vehiclePlate: trip.vehicleId?.licensePlate || trip.vehicleId?.registrationNumber,
+                    contract: trip.contractId,
+                    contractId: trip.contractId,
+                    currentLocation: trip.currentLocation,
+                    driverLocation: trip.driverLocation,
+                })
+            }
+        }
+
+        console.log("[v0] Found corporate owner bookings:", bookings.length)
+
+        return res.status(200).json({
+            success: true,
+            bookings,
+            totalBookings: bookings.length,
         })
-      }
-    }
-    
-    console.log("[v0] Found corporate owner bookings:", bookings.length)
-    
-    return res.status(200).json({
-      success: true,
-      bookings,
-      totalBookings: bookings.length,
-    })
     } catch (error) {
-      console.error("[v0] Error fetching corporate owner bookings:", error)
-      return res.status(500).json({
-        success: false,
-        message: "Server error",
-      })
+        console.error("[v0] Error fetching corporate owner bookings:", error)
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        })
     }
-  }
+}
 
 // Verify booking payment (Stripe)
 export const verifyBookingPayment = async (req, res) => {
@@ -1874,10 +1874,10 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
         console.log("[v0] Fetching B2B driver trips for userId:", paramDriverId, "actualDriverId:", actualDriverId)
 
         // Query Trip model where driver is assigned - check both user ID and driver model ID
-        const driverIdFilter = actualDriverId !== paramDriverId 
+        const driverIdFilter = actualDriverId !== paramDriverId
             ? { $or: [{ driverId: actualDriverId }, { driverId: paramDriverId }] }
             : { driverId: paramDriverId }
-        
+
         const query = { ...driverIdFilter }
         if (status) {
             query.status = status
@@ -1888,7 +1888,7 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
         todayStart.setHours(0, 0, 0, 0)
         const todayEnd = new Date(todayStart)
         todayEnd.setDate(todayEnd.getDate() + 1)
-        
+
         // Build the final query - today's trips + any IN_PROGRESS
         const dateFilter = {
             $or: [
@@ -1915,10 +1915,10 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
         // Transform trips into booking format for frontend compatibility
         const bookings = trips.map(trip => {
             // Get passengers with CONFIRMED status
-            const confirmedPassengers = trip.passengers.filter(p => 
+            const confirmedPassengers = trip.passengers.filter(p =>
                 status ? p.bookingStatus === status : true
             )
-            
+
             return {
                 _id: trip._id,
                 tripId: trip._id,
@@ -1951,7 +1951,7 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
         })
 
         // Filter out trips with no passengers if status filter is applied
-        const filteredBookings = status 
+        const filteredBookings = status
             ? bookings.filter(b => b.passengerCount > 0)
             : bookings
 
@@ -2240,125 +2240,125 @@ export const completeB2B_PartnerDriverBooking = async (req, res) => {
 
 // Get corporate driver bookings from Trip model
 export const getCorporateDriverBookings = async (req, res) => {
-  try {
-  const paramDriverId = req.params.driverId || req.userId
-  const { status } = req.query
-  
-  // Resolve the actual driver model ID from user's driverId field
-  const driverUser = await User.findById(paramDriverId)
-  const actualDriverModelId = driverUser?.driverId?.toString()
-  const corporateOwnerId = driverUser?.employedBy?.toString()
-  
-  console.log("[v0] Fetching corporate driver trips for userId:", paramDriverId, 
-    "driverModelId:", actualDriverModelId, 
-    "corporateOwnerId:", corporateOwnerId)
-  
-  // Build driver ID filter - Trip.driverId can be User._id or CorporateDriver._id
-  const driverIdConditions = [{ driverId: paramDriverId }]
-  if (actualDriverModelId) {
-    driverIdConditions.push({ driverId: actualDriverModelId })
-  }
-  
-  // Also add corporateId filter to ensure driver only sees trips from their corporate
-  const baseFilter = { 
-    $or: driverIdConditions,
-  }
-  
-  // Add corporate filter if we know the employer
-  if (corporateOwnerId) {
-    baseFilter.corporateId = corporateOwnerId
-  }
-  
-  const query = { ...baseFilter }
-  if (status) {
-    query.status = status
-  }
-  
-  // Only show today's trips for daily driver view
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const todayEnd = new Date(todayStart)
-  todayEnd.setDate(todayEnd.getDate() + 1)
-  
-  const dateFilter = {
-    $or: [
-      { tripDate: { $gte: todayStart, $lt: todayEnd } },
-      { status: 'IN_PROGRESS' }
-    ]
-  }
-  const finalQuery = { $and: [baseFilter, dateFilter] }
-  if (status) {
-    finalQuery.$and.push({ status })
-  }
-  
-  // Get today's trips assigned to this driver for their corporate employer
-  const trips = await Trip.find(finalQuery)
-  .populate("routeId")
-  .populate("vehicleId")
-  .populate("corporateId", "companyName fullName")
-  .populate("b2bPartnerId", "companyName fullName")
-  .populate("passengers.employeeId", "fullName email whatsappNumber")
-  .sort({ tripDate: 1 })
+    try {
+        const paramDriverId = req.params.driverId || req.userId
+        const { status } = req.query
 
-    console.log("[v0] Found corporate driver trips for today:", trips.length)
+        // Resolve the actual driver model ID from user's driverId field
+        const driverUser = await User.findById(paramDriverId)
+        const actualDriverModelId = driverUser?.driverId?.toString()
+        const corporateOwnerId = driverUser?.employedBy?.toString()
 
-    // Transform trips into booking format for frontend compatibility
-    const bookings = trips.map(trip => {
-      const confirmedPassengers = trip.passengers.filter(p => 
-        status ? p.bookingStatus === status : true
-      )
-      
-      return {
-        _id: trip._id,
-        tripId: trip._id,
-        tripDate: trip.tripDate,
-        startTime: trip.startTime,
-        endTime: trip.endTime,
-        tripType: trip.tripType,
-        direction: trip.direction,
-        fromLocation: trip.fromLocation,
-        toLocation: trip.toLocation,
-        totalDistance: trip.totalDistance,
-        estimatedDuration: trip.estimatedDuration,
-        totalSeats: trip.totalSeats,
-        availableSeats: trip.availableSeats,
-        bookedSeats: trip.bookedSeats,
-        status: trip.status,
-        bookingStatus: trip.status,
-        passengers: confirmedPassengers,
-        passengerCount: confirmedPassengers.length,
-        route: trip.routeId,
-        vehicle: trip.vehicleId,
-        corporate: trip.corporateId,
-        corporateOwnerId: trip.corporateId,
-        currentLocation: trip.currentLocation,
-        driverLocation: trip.driverLocation,
-        events: trip.events,
-        createdAt: trip.createdAt,
-        updatedAt: trip.updatedAt,
-      }
-    })
+        console.log("[v0] Fetching corporate driver trips for userId:", paramDriverId,
+            "driverModelId:", actualDriverModelId,
+            "corporateOwnerId:", corporateOwnerId)
 
-    const filteredBookings = status 
-      ? bookings.filter(b => b.passengerCount > 0)
-      : bookings
+        // Build driver ID filter - Trip.driverId can be User._id or CorporateDriver._id
+        const driverIdConditions = [{ driverId: paramDriverId }]
+        if (actualDriverModelId) {
+            driverIdConditions.push({ driverId: actualDriverModelId })
+        }
 
-    console.log("[v0] Returning corporate driver bookings:", filteredBookings.length)
+        // Also add corporateId filter to ensure driver only sees trips from their corporate
+        const baseFilter = {
+            $or: driverIdConditions,
+        }
 
-    res.status(200).json({
-      success: true,
-      bookings: filteredBookings,
-      count: filteredBookings.length,
-    })
+        // Add corporate filter if we know the employer
+        if (corporateOwnerId) {
+            baseFilter.corporateId = corporateOwnerId
+        }
+
+        const query = { ...baseFilter }
+        if (status) {
+            query.status = status
+        }
+
+        // Only show today's trips for daily driver view
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        const todayEnd = new Date(todayStart)
+        todayEnd.setDate(todayEnd.getDate() + 1)
+
+        const dateFilter = {
+            $or: [
+                { tripDate: { $gte: todayStart, $lt: todayEnd } },
+                { status: 'IN_PROGRESS' }
+            ]
+        }
+        const finalQuery = { $and: [baseFilter, dateFilter] }
+        if (status) {
+            finalQuery.$and.push({ status })
+        }
+
+        // Get today's trips assigned to this driver for their corporate employer
+        const trips = await Trip.find(finalQuery)
+            .populate("routeId")
+            .populate("vehicleId")
+            .populate("corporateId", "companyName fullName")
+            .populate("b2bPartnerId", "companyName fullName")
+            .populate("passengers.employeeId", "fullName email whatsappNumber")
+            .sort({ tripDate: 1 })
+
+        console.log("[v0] Found corporate driver trips for today:", trips.length)
+
+        // Transform trips into booking format for frontend compatibility
+        const bookings = trips.map(trip => {
+            const confirmedPassengers = trip.passengers.filter(p =>
+                status ? p.bookingStatus === status : true
+            )
+
+            return {
+                _id: trip._id,
+                tripId: trip._id,
+                tripDate: trip.tripDate,
+                startTime: trip.startTime,
+                endTime: trip.endTime,
+                tripType: trip.tripType,
+                direction: trip.direction,
+                fromLocation: trip.fromLocation,
+                toLocation: trip.toLocation,
+                totalDistance: trip.totalDistance,
+                estimatedDuration: trip.estimatedDuration,
+                totalSeats: trip.totalSeats,
+                availableSeats: trip.availableSeats,
+                bookedSeats: trip.bookedSeats,
+                status: trip.status,
+                bookingStatus: trip.status,
+                passengers: confirmedPassengers,
+                passengerCount: confirmedPassengers.length,
+                route: trip.routeId,
+                vehicle: trip.vehicleId,
+                corporate: trip.corporateId,
+                corporateOwnerId: trip.corporateId,
+                currentLocation: trip.currentLocation,
+                driverLocation: trip.driverLocation,
+                events: trip.events,
+                createdAt: trip.createdAt,
+                updatedAt: trip.updatedAt,
+            }
+        })
+
+        const filteredBookings = status
+            ? bookings.filter(b => b.passengerCount > 0)
+            : bookings
+
+        console.log("[v0] Returning corporate driver bookings:", filteredBookings.length)
+
+        res.status(200).json({
+            success: true,
+            bookings: filteredBookings,
+            count: filteredBookings.length,
+        })
     } catch (error) {
-      console.error("[v0] Error fetching corporate driver bookings:", error)
-      res.status(500).json({
-        success: false,
-        message: "Error fetching bookings",
-        error: error.message,
-      })
+        console.error("[v0] Error fetching corporate driver bookings:", error)
+        res.status(500).json({
+            success: false,
+            message: "Error fetching bookings",
+            error: error.message,
+        })
     }
-  }
+}
 
 // Start Corporate Trip - Works with Trip model
 export const startCorporateTrip = async (req, res) => {
@@ -2629,7 +2629,7 @@ export const getDailyTripsForBooking = async (req, res) => {
 
         // Find the booking
         const booking = await B2CPassengerBooking.findById(bookingId).lean()
-        
+
         if (!booking) {
             return res.status(404).json({
                 success: false,
@@ -2677,16 +2677,16 @@ export const getDailyTripsForBooking = async (req, res) => {
 
         // Get trips using the booking's monthlyTrips array (primary source)
         let dailyTrips = []
-        
+
         if (booking.monthlyTrips && booking.monthlyTrips.length > 0) {
             // Use monthlyTrips array - these are B2CPartnerTrip IDs
             dailyTrips = await B2CPartnerTrip.find({
                 _id: { $in: booking.monthlyTrips }
             })
-            .populate('routeId', 'fromLocation toLocation')
-            .populate('driverId', 'name phoneNumber')
-            .sort({ tripDate: 1, startTime: 1 })
-            .lean()
+                .populate('routeId', 'fromLocation toLocation')
+                .populate('driverId', 'name phoneNumber')
+                .sort({ tripDate: 1, startTime: 1 })
+                .lean()
         } else if (booking.linkedTrip || booking.linkedReturnTrip) {
             // Fallback to linkedTrip references
             const tripIds = []
@@ -2695,10 +2695,10 @@ export const getDailyTripsForBooking = async (req, res) => {
             dailyTrips = await B2CPartnerTrip.find({
                 _id: { $in: tripIds }
             })
-            .populate('routeId', 'fromLocation toLocation')
-            .populate('driverId', 'name phoneNumber')
-            .sort({ tripDate: 1, startTime: 1 })
-            .lean()
+                .populate('routeId', 'fromLocation toLocation')
+                .populate('driverId', 'name phoneNumber')
+                .sort({ tripDate: 1, startTime: 1 })
+                .lean()
         } else if (booking.routeId) {
             // Last fallback: find trips by route within booking date range
             const tripQuery = { routeId: booking.routeId }
@@ -2872,4 +2872,3 @@ export const cancelBooking = async (req, res) => {
         })
     }
 }
-
