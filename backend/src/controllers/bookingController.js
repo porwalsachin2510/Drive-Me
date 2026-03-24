@@ -2784,22 +2784,30 @@ export const cancelBooking = async (req, res) => {
             })
         }
 
-        if (["CANCELLED", "COMPLETED"].includes(booking.status)) {
+        // Check booking status - B2C uses bookingStatus, Corporate uses status
+        const currentStatus = booking.bookingStatus || booking.status
+
+        if (["CANCELLED", "COMPLETED"].includes(currentStatus)) {
             return res.status(400).json({
                 success: false,
-                message: `Cannot cancel booking with status: ${booking.status}`,
+                message: `Cannot cancel booking with status: ${currentStatus}`,
             })
         }
 
         // Check if trip is already in progress
-        if (booking.status === "IN_PROGRESS") {
+        if (currentStatus === "IN_PROGRESS") {
             return res.status(400).json({
                 success: false,
                 message: "Cannot cancel a trip that is already in progress",
             })
         }
 
-        booking.status = "CANCELLED"
+        // Update the correct status field
+        if (bookingType === "B2C") {
+            booking.bookingStatus = "CANCELLED"
+        } else {
+            booking.status = "CANCELLED"
+        }
         booking.cancellationReason = cancellationReason || "Cancelled by user"
         booking.cancelledAt = new Date()
         booking.cancelledBy = userId
@@ -2832,14 +2840,19 @@ export const cancelBooking = async (req, res) => {
         // Notify the partner/driver
         const notifyUserId = booking.b2cPartnerId || booking.driverId
         if (notifyUserId) {
-            await createNotification(
-                notifyUserId,
-                "BOOKING_CANCELLED",
-                "Booking Cancelled",
-                `Booking #${booking.bookingNumber || bookingId} has been cancelled by the passenger.`,
-                bookingId,
-                "BOOKING"
-            )
+            try {
+                await createNotification({
+                    userId: notifyUserId,
+                    type: "BOOKING_CANCELLED",
+                    title: "Booking Cancelled",
+                    message: `Booking #${booking.bookingNumber || bookingId} has been cancelled by the passenger.`,
+                    bookingId: bookingId,
+                    category: "BOOKING"
+                })
+            } catch (notifError) {
+                console.error("Failed to create notification:", notifError.message)
+                // Don't fail the cancellation if notification fails
+            }
         }
 
         res.status(200).json({
@@ -2859,3 +2872,4 @@ export const cancelBooking = async (req, res) => {
         })
     }
 }
+

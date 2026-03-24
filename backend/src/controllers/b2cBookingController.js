@@ -223,15 +223,16 @@ export const getB2CBookingDetails = async (req, res) => {
         console.log("[v0] Fetching booking details:", { bookingId, userId });
 
         const booking = await B2CPassengerBooking.findById(bookingId)
-            .populate('passengerId', 'name email phone')
-            .populate('b2cPartnerId', 'name email businessName phone profileImage')
+            .populate('passengerId', 'name email phone fullName')
+            .populate('b2cPartnerId', 'name email fullName phone profileImage')
             .populate('assignedDriverId', 'name email phone driverImage phoneNumber')
             .populate({
                 path: 'routeId',
-                select: 'fromLocation toLocation routeName assignedVehicle assignedDriver',
+                select: 'fromLocation toLocation routeName assignedVehicle assignedDriver b2cPartnerId',
                 populate: [
                     { path: 'assignedVehicle', select: 'model licensePlate vehicleType vehicleColor seatingCapacity images' },
-                    { path: 'assignedDriver', select: 'name phoneNumber driverImage email' }
+                    { path: 'assignedDriver', select: 'name phoneNumber driverImage email' },
+                    { path: 'b2cPartnerId', select: 'fullName name email phone' }
                 ]
             });
 
@@ -284,9 +285,11 @@ export const getB2CBookingDetails = async (req, res) => {
             };
         }
 
-        // Get vehicle info from route
+        // Get vehicle info from route or partner's vehicles
         let vehicleInfo = null;
+
         if (booking.routeId?.assignedVehicle) {
+            // Get vehicle from route
             const vehicle = booking.routeId.assignedVehicle;
             vehicleInfo = {
                 model: vehicle.model,
@@ -296,14 +299,46 @@ export const getB2CBookingDetails = async (req, res) => {
                 seatingCapacity: vehicle.seatingCapacity,
                 image: vehicle.images?.[0]?.url
             };
+        } else if (booking.b2cPartnerId) {
+            // If no route vehicle, try to get partner's vehicle
+            try {
+                const partnerId = booking.b2cPartnerId._id || booking.b2cPartnerId;
+                const partnerVehicle = await B2CPartnerVehicle.findOne({
+                    b2cPartnerId: partnerId,
+                    status: "Active",
+                    isActive: true
+                }).sort({ createdAt: -1 });
+
+                if (partnerVehicle) {
+                    vehicleInfo = {
+                        model: partnerVehicle.model,
+                        licensePlate: partnerVehicle.licensePlate,
+                        vehicleType: partnerVehicle.vehicleType,
+                        vehicleColor: partnerVehicle.vehicleColor,
+                        seatingCapacity: partnerVehicle.seatingCapacity,
+                        image: partnerVehicle.images?.[0]?.url
+                    };
+                }
+            } catch (vehicleErr) {
+                console.error("[v0] Error fetching partner vehicle:", vehicleErr.message);
+            }
         }
 
-        // Get partner/service provider info
-        const partnerInfo = booking.b2cPartnerId ? {
-            name: booking.b2cPartnerId.businessName || booking.b2cPartnerId.name,
-            phone: booking.b2cPartnerId.phone,
-            email: booking.b2cPartnerId.email
-        } : null;
+        // Get partner/service provider info - use fullName from User model
+        let partnerInfo = null;
+        if (booking.b2cPartnerId) {
+            partnerInfo = {
+                name: booking.b2cPartnerId.fullName || booking.b2cPartnerId.name || "N/A",
+                phone: booking.b2cPartnerId.phone,
+                email: booking.b2cPartnerId.email
+            };
+        } else if (booking.routeId?.b2cPartnerId) {
+            partnerInfo = {
+                name: booking.routeId.b2cPartnerId.fullName || booking.routeId.b2cPartnerId.name || "N/A",
+                phone: booking.routeId.b2cPartnerId.phone,
+                email: booking.routeId.b2cPartnerId.email
+            };
+        }
 
         console.log("[v0] Booking details fetched successfully with driver:", driverInfo?.name, "vehicle:", vehicleInfo?.model);
 

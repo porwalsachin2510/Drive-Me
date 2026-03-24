@@ -236,19 +236,49 @@ export const getPassengerBookings = async (req, res) => {
                     { path: 'assignedDriver', select: 'name phoneNumber driverImage' }
                 ]
             })
-            .populate('b2cPartnerId', 'fullName email businessName name phone')
+            .populate('b2cPartnerId', 'fullName email name phone')
             .sort({ travelDate: -1 });
 
-        // Enrich bookings with vehicle and driver info from route if not already present
+        // Collect partner IDs for vehicle lookup
+        const partnerIds = [...new Set(bookings.map(b =>
+            b.b2cPartnerId?._id?.toString() || b.b2cPartnerId?.toString()
+        ).filter(Boolean))];
+
+        // Fetch partner vehicles
+        const partnerVehicles = await B2CPartnerVehicle.find({
+            b2cPartnerId: { $in: partnerIds },
+            status: "Active",
+            isActive: true
+        });
+
+        // Create vehicle map by partner
+        const vehicleByPartner = {};
+        partnerVehicles.forEach(v => {
+            const pid = v.b2cPartnerId.toString();
+            if (!vehicleByPartner[pid]) {
+                vehicleByPartner[pid] = v;
+            }
+        });
+
+        // Enrich bookings with vehicle and driver info
         const enrichedBookings = bookings.map(booking => {
             const bookingObj = booking.toObject();
+            const partnerId = bookingObj.b2cPartnerId?._id?.toString() || bookingObj.b2cPartnerId?.toString();
 
-            // Get vehicle info from route if not stored on booking
+            // Get vehicle info from route first
             if (!bookingObj.vehicleModel && bookingObj.routeId?.assignedVehicle) {
                 bookingObj.vehicleModel = bookingObj.routeId.assignedVehicle.model;
                 bookingObj.vehiclePlate = bookingObj.routeId.assignedVehicle.licensePlate;
                 bookingObj.vehicleType = bookingObj.routeId.assignedVehicle.vehicleType;
                 bookingObj.vehicleColor = bookingObj.routeId.assignedVehicle.vehicleColor;
+            }
+            // If still no vehicle, get from partner
+            else if (!bookingObj.vehicleModel && partnerId && vehicleByPartner[partnerId]) {
+                const vehicle = vehicleByPartner[partnerId];
+                bookingObj.vehicleModel = vehicle.model;
+                bookingObj.vehiclePlate = vehicle.licensePlate;
+                bookingObj.vehicleType = vehicle.vehicleType;
+                bookingObj.vehicleColor = vehicle.vehicleColor;
             }
 
             // Get driver info from route if not stored on booking

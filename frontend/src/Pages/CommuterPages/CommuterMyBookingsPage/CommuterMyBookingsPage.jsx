@@ -858,9 +858,9 @@ const CommuterMyBookingsPage = () => {
                     <div className="cmbp-partner-info">
                       <p>
                         <strong>Partner:</strong>{" "}
-                        {booking.b2cPartnerId?.businessName ||
-                          booking.b2cPartnerId?.fullName ||
-                          booking.b2cPartnerId?.name}
+                        {booking.b2cPartnerId?.fullName ||
+                          booking.b2cPartnerId?.name ||
+                          "N/A"}
                       </p>
                       <p>
                         <strong>Vehicle:</strong>{" "}
@@ -961,9 +961,7 @@ const CommuterMyBookingsPage = () => {
                         onClick={() => handleTrackingClick(booking)}
                         disabled={booking.bookingStatus === "COMPLETED"}
                       >
-                        {booking.bookingStatus === "IN_PROGRESS"
-                          ? "Live Tracking"
-                          : "Track Driver"}
+                        Track Driver
                       </button>
                     )}
                     {booking.bookingStatus === "PENDING" &&

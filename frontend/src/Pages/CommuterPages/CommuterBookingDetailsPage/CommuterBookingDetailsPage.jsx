@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import commuterBookingAPI from "../../../services/commuterBookingAPI";
+import { useSocket } from "../../../hooks/useSocket";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import "./commuterBookingDetailsPage.css";
@@ -12,9 +13,21 @@ const CommuterBookingDetailsPage = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const auth = useSelector((state) => state.auth);
+  const socket = useSocket();
+
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Tracking states
+  const [showTracking, setShowTracking] = useState(false);
+  const [driverLocation, setDriverLocation] = useState(null);
+  const [isDriverOnline, setIsDriverOnline] = useState(false);
+
+  // Cancel booking states
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -82,6 +95,95 @@ const CommuterBookingDetailsPage = () => {
 
   const handleBackClick = () => {
     navigate("/commuter-profile?tab=my-rides");
+  };
+
+  // Socket listener for driver location updates
+  useEffect(() => {
+    if (socket?.socket && booking && showTracking) {
+      // Join booking room
+      socket.joinBookingRoom(booking._id);
+
+      // Listen for driver location updates
+      const handleLocationUpdate = (locationData) => {
+        console.log("[v0] Driver location update:", locationData);
+        const driverId =
+          booking.assignedDriverId?._id ||
+          booking.b2cPartnerId?._id ||
+          booking.b2cPartnerId;
+        if (locationData.driverId === driverId) {
+          setDriverLocation({
+            lat: locationData.lat,
+            lng: locationData.lng,
+            lastUpdate: Date.now(),
+          });
+          setIsDriverOnline(true);
+        }
+      };
+
+      socket.socket.on("driver-location-update", handleLocationUpdate);
+      socket.socket.on("b2c-driver-location", handleLocationUpdate);
+      socket.socket.on("location-update", handleLocationUpdate);
+
+      return () => {
+        socket.socket.off("driver-location-update", handleLocationUpdate);
+        socket.socket.off("b2c-driver-location", handleLocationUpdate);
+        socket.socket.off("location-update", handleLocationUpdate);
+      };
+    }
+  }, [socket, booking, showTracking]);
+
+  // Handle track driver click
+  const handleTrackDriver = () => {
+    setShowTracking(true);
+    if (socket?.socket && booking) {
+      socket.joinBookingRoom(booking._id);
+      // Request current driver location
+      const driverId =
+        booking.assignedDriverId?._id ||
+        booking.b2cPartnerId?._id ||
+        booking.b2cPartnerId;
+      socket.socket.emit("request-driver-location", {
+        driverId,
+        bookingId: booking._id,
+      });
+    }
+  };
+
+  // Handle close tracking
+  const handleCloseTracking = () => {
+    setShowTracking(false);
+    setDriverLocation(null);
+  };
+
+  // Handle cancel booking
+  const handleCancelBooking = async () => {
+    if (!cancelReason.trim()) {
+      alert("Please provide a reason for cancellation");
+      return;
+    }
+
+    try {
+      setCancelLoading(true);
+      const response = await commuterBookingAPI.cancelBooking(
+        booking._id,
+        cancelReason,
+      );
+      if (response.success) {
+        alert("Booking cancelled successfully");
+        setShowCancelModal(false);
+        // Refresh booking data
+        const updatedBooking =
+          await commuterBookingAPI.getBookingDetails(bookingId);
+        if (updatedBooking.success && updatedBooking.data?.booking) {
+          setBooking(updatedBooking.data.booking);
+        }
+      }
+    } catch (err) {
+      console.error("[v0] Error cancelling booking:", err);
+      alert(err.response?.data?.message || "Failed to cancel booking");
+    } finally {
+      setCancelLoading(false);
+    }
   };
 
   if (loading) {
@@ -499,7 +601,7 @@ const CommuterBookingDetailsPage = () => {
                   <span className="cbdp-partner-label">Name</span>
                   <span className="cbdp-partner-value">
                     {partnerInfo?.name ||
-                      booking.b2cPartnerId?.businessName ||
+                      booking.b2cPartnerId?.fullName ||
                       booking.b2cPartnerId?.name ||
                       "N/A"}
                   </span>
@@ -527,8 +629,10 @@ const CommuterBookingDetailsPage = () => {
 
         {/* Action Buttons */}
         <div className="cbdp-actions">
-          {booking.bookingStatus === "CONFIRMED" && (
-            <button className="cbdp-btn-track">
+          {["CONFIRMED", "ACCEPTED", "ACTIVE", "IN_PROGRESS"].includes(
+            booking.bookingStatus,
+          ) && (
+            <button className="cbdp-btn-track" onClick={handleTrackDriver}>
               <svg
                 width="16"
                 height="16"
@@ -540,17 +644,288 @@ const CommuterBookingDetailsPage = () => {
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
-              Track Driver
+              {showTracking ? "Tracking Active..." : "Track Driver"}
             </button>
           )}
-          {(booking.bookingStatus === "PENDING" ||
-            booking.bookingStatus === "CONFIRMED") && (
-            <button className="cbdp-btn-cancel">Cancel Booking</button>
+          {["PENDING", "CONFIRMED", "ACCEPTED"].includes(
+            booking.bookingStatus,
+          ) && (
+            <button
+              className="cbdp-btn-cancel"
+              onClick={() => setShowCancelModal(true)}
+            >
+              Cancel Booking
+            </button>
           )}
           <button className="cbdp-btn-secondary" onClick={handleBackClick}>
-            Back to All Bookings
+            Back to My Rides
           </button>
         </div>
+
+        {/* Tracking Modal */}
+        {showTracking && (
+          <div className="cbdp-tracking-overlay">
+            <div className="cbdp-tracking-modal cbdp-tracking-modal-large">
+              <div className="cbdp-tracking-header">
+                <h3>Live Driver Tracking</h3>
+                <button
+                  className="cbdp-close-btn"
+                  onClick={handleCloseTracking}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+              <div className="cbdp-tracking-content">
+                <div className="cbdp-driver-status">
+                  <div
+                    className={`cbdp-status-indicator ${isDriverOnline ? "online" : "offline"}`}
+                  ></div>
+                  <span>
+                    {isDriverOnline
+                      ? "Driver is Online"
+                      : "Waiting for driver location..."}
+                  </span>
+                </div>
+
+                {/* Map Container */}
+                <div
+                  className="cbdp-map-container"
+                  style={{
+                    height: "350px",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    border: "2px solid #e0e0e0",
+                    position: "relative",
+                    background: "#f8f9fa",
+                    marginBottom: "16px",
+                  }}
+                >
+                  {driverLocation ? (
+                    <>
+                      <iframe
+                        title="Live Driver Tracking Map"
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${driverLocation.lng - 0.005},${driverLocation.lat - 0.005},${driverLocation.lng + 0.005},${driverLocation.lat + 0.005}&layer=mapnik&mlat=${driverLocation.lat}&mlon=${driverLocation.lng}&zoom=16`}
+                        style={{ border: 0 }}
+                        allowFullScreen
+                      />
+                      {/* Driver Icon Overlay */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "50%",
+                          left: "50%",
+                          transform: "translate(-50%, -50%)",
+                          zIndex: 1000,
+                          pointerEvents: "none",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            backgroundColor: "#007bff",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "0 2px 10px rgba(0, 123, 255, 0.5)",
+                            border: "3px solid white",
+                            animation: "driverPulse 2s infinite",
+                          }}
+                        >
+                          <span style={{ fontSize: "20px", color: "white" }}>
+                            🚗
+                          </span>
+                        </div>
+                      </div>
+                      {/* Status Badge */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "10px",
+                          right: "10px",
+                          backgroundColor: "rgba(40, 167, 69, 0.9)",
+                          color: "white",
+                          padding: "8px 12px",
+                          borderRadius: "20px",
+                          fontSize: "12px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        📍 Live Tracking Active
+                      </div>
+                    </>
+                  ) : (
+                    <div
+                      className="cbdp-waiting-location"
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "100%",
+                      }}
+                    >
+                      <div className="cbdp-pulse-loader"></div>
+                      <p style={{ marginTop: "16px", color: "#718096" }}>
+                        Waiting for driver to share location...
+                      </p>
+                      <p
+                        style={{
+                          fontSize: "12px",
+                          color: "#a0aec0",
+                          marginTop: "8px",
+                        }}
+                      >
+                        The map will appear once the driver starts sharing their
+                        location
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {driverLocation && (
+                  <div
+                    className="cbdp-location-info"
+                    style={{ marginBottom: "16px" }}
+                  >
+                    <p style={{ fontSize: "12px", color: "#718096" }}>
+                      Last updated:{" "}
+                      {new Date(driverLocation.lastUpdate).toLocaleTimeString()}
+                    </p>
+                  </div>
+                )}
+
+                <div className="cbdp-tracking-info">
+                  <p>
+                    <strong>Driver:</strong>{" "}
+                    {driverInfo?.name || booking.driverName || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Phone:</strong>{" "}
+                    {driverInfo?.phone || booking.driverPhoneNumber || "N/A"}
+                  </p>
+                  {(driverInfo?.profileImage || booking.driverImage) && (
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                      }}
+                    >
+                      <img
+                        src={driverInfo?.profileImage || booking.driverImage}
+                        alt="Driver"
+                        style={{
+                          width: "50px",
+                          height: "50px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                        }}
+                      />
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600 }}>
+                          {driverInfo?.name || booking.driverName}
+                        </p>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: "14px",
+                            color: "#718096",
+                          }}
+                        >
+                          {booking.isSelfDriver
+                            ? "Partner Driver"
+                            : "Assigned Driver"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cancel Booking Modal */}
+        {showCancelModal && (
+          <div className="cbdp-modal-overlay">
+            <div className="cbdp-modal">
+              <div className="cbdp-modal-header">
+                <h3>Cancel Booking</h3>
+                <button
+                  className="cbdp-close-btn"
+                  onClick={() => setShowCancelModal(false)}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+              <div className="cbdp-modal-content">
+                <p>Are you sure you want to cancel this booking?</p>
+                <p className="cbdp-warning-text">
+                  This action cannot be undone.
+                </p>
+                <div className="cbdp-form-group">
+                  <label>Reason for cancellation *</label>
+                  <select
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    className="cbdp-select"
+                  >
+                    <option value="">Select a reason</option>
+                    <option value="CHANGE_OF_PLANS">Change of plans</option>
+                    <option value="FOUND_ALTERNATIVE">
+                      Found alternative transport
+                    </option>
+                    <option value="SCHEDULE_CONFLICT">Schedule conflict</option>
+                    <option value="EMERGENCY">Emergency</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div className="cbdp-modal-actions">
+                <button
+                  className="cbdp-btn-secondary"
+                  onClick={() => setShowCancelModal(false)}
+                  disabled={cancelLoading}
+                >
+                  Keep Booking
+                </button>
+                <button
+                  className="cbdp-btn-danger"
+                  onClick={handleCancelBooking}
+                  disabled={cancelLoading || !cancelReason}
+                >
+                  {cancelLoading ? "Cancelling..." : "Confirm Cancellation"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Passenger Notes */}
         {booking.passengerNotes && (
