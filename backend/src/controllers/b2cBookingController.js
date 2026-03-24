@@ -219,14 +219,21 @@ export const getB2CBookingDetails = async (req, res) => {
     try {
         const { bookingId } = req.params;
         const userId = req.userId;
-        
+
         console.log("[v0] Fetching booking details:", { bookingId, userId });
 
         const booking = await B2CPassengerBooking.findById(bookingId)
             .populate('passengerId', 'name email phone')
-            .populate('b2cPartnerId', 'name email businessName phone')
-            .populate('assignedDriverId', 'name email phone profileImage')
-            .populate('routeId', 'fromLocation toLocation routeName');
+            .populate('b2cPartnerId', 'name email businessName phone profileImage')
+            .populate('assignedDriverId', 'name email phone driverImage phoneNumber')
+            .populate({
+                path: 'routeId',
+                select: 'fromLocation toLocation routeName assignedVehicle assignedDriver',
+                populate: [
+                    { path: 'assignedVehicle', select: 'model licensePlate vehicleType vehicleColor seatingCapacity images' },
+                    { path: 'assignedDriver', select: 'name phoneNumber driverImage email' }
+                ]
+            });
 
         if (!booking) {
             return res.status(404).json({
@@ -236,9 +243,9 @@ export const getB2CBookingDetails = async (req, res) => {
         }
 
         // Check if user has permission to view this booking
-        const canView = booking.passengerId._id.toString() === userId || 
-                      booking.b2cPartnerId._id.toString() === userId || 
-                      booking.assignedDriverId?.toString() === userId;
+        const canView = booking.passengerId?._id?.toString() === userId ||
+            booking.b2cPartnerId?._id?.toString() === userId ||
+            booking.assignedDriverId?.toString() === userId;
 
         if (!canView) {
             return res.status(403).json({
@@ -247,29 +254,67 @@ export const getB2CBookingDetails = async (req, res) => {
             });
         }
 
-        // Prepare driver information for passenger
-        const driverInfo = booking.isSelfDriver ? {
-            name: booking.b2cPartnerId.name || booking.b2cPartnerId.businessName,
+        // Prepare driver information - use stored fields first, then populated data
+        let driverInfo = null;
+
+        if (booking.driverName) {
+            // Use directly stored driver info from booking
+            driverInfo = {
+                name: booking.driverName,
+                phone: booking.driverPhoneNumber,
+                profileImage: booking.driverImage,
+                isSelfDriver: booking.isSelfDriver || false
+            };
+        } else if (booking.routeId?.assignedDriver) {
+            // Get from populated route driver
+            const routeDriver = booking.routeId.assignedDriver;
+            driverInfo = {
+                name: routeDriver.name,
+                phone: routeDriver.phoneNumber,
+                profileImage: routeDriver.driverImage?.url,
+                isSelfDriver: false
+            };
+        } else if (booking.isSelfDriver && booking.b2cPartnerId) {
+            // Partner is driving
+            driverInfo = {
+                name: booking.b2cPartnerId.businessName || booking.b2cPartnerId.name,
+                phone: booking.b2cPartnerId.phone,
+                profileImage: booking.b2cPartnerId.profileImage,
+                isSelfDriver: true
+            };
+        }
+
+        // Get vehicle info from route
+        let vehicleInfo = null;
+        if (booking.routeId?.assignedVehicle) {
+            const vehicle = booking.routeId.assignedVehicle;
+            vehicleInfo = {
+                model: vehicle.model,
+                licensePlate: vehicle.licensePlate,
+                vehicleType: vehicle.vehicleType,
+                vehicleColor: vehicle.vehicleColor,
+                seatingCapacity: vehicle.seatingCapacity,
+                image: vehicle.images?.[0]?.url
+            };
+        }
+
+        // Get partner/service provider info
+        const partnerInfo = booking.b2cPartnerId ? {
+            name: booking.b2cPartnerId.businessName || booking.b2cPartnerId.name,
             phone: booking.b2cPartnerId.phone,
-            email: booking.b2cPartnerId.email,
-            isSelfDriver: true,
-            profileImage: booking.b2cPartnerId.profileImage
-        } : booking.assignedDriverId ? {
-            name: booking.assignedDriverId.name,
-            phone: booking.assignedDriverId.phone,
-            email: booking.assignedDriverId.email,
-            isSelfDriver: false,
-            profileImage: booking.assignedDriverId.profileImage
+            email: booking.b2cPartnerId.email
         } : null;
 
-        console.log("[v0] Booking details fetched successfully");
+        console.log("[v0] Booking details fetched successfully with driver:", driverInfo?.name, "vehicle:", vehicleInfo?.model);
 
         res.status(200).json({
             success: true,
             data: {
                 booking: {
                     ...booking.toObject(),
-                    driverInfo
+                    driverInfo,
+                    vehicleInfo,
+                    partnerInfo
                 }
             }
         });

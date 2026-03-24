@@ -228,13 +228,42 @@ export const getPassengerBookings = async (req, res) => {
         const bookings = await B2CPassengerBooking.find({
             passengerId: req.userId
         })
-        .populate('routeId', 'fromLocation toLocation')
-        .populate('b2cPartnerId', 'fullName email')
-        .sort({ travelDate: -1 });
+            .populate({
+                path: 'routeId',
+                select: 'fromLocation toLocation assignedVehicle assignedDriver',
+                populate: [
+                    { path: 'assignedVehicle', select: 'model licensePlate vehicleType vehicleColor' },
+                    { path: 'assignedDriver', select: 'name phoneNumber driverImage' }
+                ]
+            })
+            .populate('b2cPartnerId', 'fullName email businessName name phone')
+            .sort({ travelDate: -1 });
+
+        // Enrich bookings with vehicle and driver info from route if not already present
+        const enrichedBookings = bookings.map(booking => {
+            const bookingObj = booking.toObject();
+
+            // Get vehicle info from route if not stored on booking
+            if (!bookingObj.vehicleModel && bookingObj.routeId?.assignedVehicle) {
+                bookingObj.vehicleModel = bookingObj.routeId.assignedVehicle.model;
+                bookingObj.vehiclePlate = bookingObj.routeId.assignedVehicle.licensePlate;
+                bookingObj.vehicleType = bookingObj.routeId.assignedVehicle.vehicleType;
+                bookingObj.vehicleColor = bookingObj.routeId.assignedVehicle.vehicleColor;
+            }
+
+            // Get driver info from route if not stored on booking
+            if (!bookingObj.driverName && bookingObj.routeId?.assignedDriver) {
+                bookingObj.driverName = bookingObj.routeId.assignedDriver.name;
+                bookingObj.driverPhoneNumber = bookingObj.routeId.assignedDriver.phoneNumber;
+                bookingObj.driverImage = bookingObj.routeId.assignedDriver.driverImage?.url;
+            }
+
+            return bookingObj;
+        });
 
         res.status(200).json({
             success: true,
-            bookings
+            bookings: enrichedBookings
         });
 
     } catch (error) {

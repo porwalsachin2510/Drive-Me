@@ -742,7 +742,12 @@ const CommuterMyBookingsPage = () => {
                         <div className="cmbp-detail-item">
                           <span className="cmbp-detail-label">Vehicle</span>
                           <span className="cmbp-detail-value">
-                            {booking.b2cPartnerId?.vehicleModel || "N/A"}
+                            {booking.vehicleModel ||
+                              booking.routeId?.assignedVehicle?.model ||
+                              "N/A"}
+                            {(booking.vehiclePlate ||
+                              booking.routeId?.assignedVehicle?.licensePlate) &&
+                              ` (${booking.vehiclePlate || booking.routeId?.assignedVehicle?.licensePlate})`}
                           </span>
                         </div>
                         <div className="cmbp-detail-item">
@@ -853,7 +858,24 @@ const CommuterMyBookingsPage = () => {
                     <div className="cmbp-partner-info">
                       <p>
                         <strong>Partner:</strong>{" "}
-                        {booking.b2cPartnerId?.fullName}
+                        {booking.b2cPartnerId?.businessName ||
+                          booking.b2cPartnerId?.fullName ||
+                          booking.b2cPartnerId?.name}
+                      </p>
+                      <p>
+                        <strong>Vehicle:</strong>{" "}
+                        {booking.vehicleModel ||
+                          booking.routeId?.assignedVehicle?.model ||
+                          "N/A"}
+                        {(booking.vehiclePlate ||
+                          booking.routeId?.assignedVehicle?.licensePlate) &&
+                          ` (${booking.vehiclePlate || booking.routeId?.assignedVehicle?.licensePlate})`}
+                      </p>
+                      <p>
+                        <strong>Driver:</strong>{" "}
+                        {booking.driverName ||
+                          booking.routeId?.assignedDriver?.name ||
+                          "Not Assigned"}
                       </p>
                     </div>
                   )}

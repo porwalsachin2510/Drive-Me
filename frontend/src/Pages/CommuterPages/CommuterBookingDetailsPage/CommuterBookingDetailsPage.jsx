@@ -120,6 +120,8 @@ const CommuterBookingDetailsPage = () => {
 
   const statusInfo = getStatusBadge(booking.bookingStatus);
   const driverInfo = booking.driverInfo;
+  const vehicleInfo = booking.vehicleInfo;
+  const partnerInfo = booking.partnerInfo;
 
   return (
     <div className="cbdp-page">
@@ -318,20 +320,26 @@ const CommuterBookingDetailsPage = () => {
               </svg>
               Driver Information
             </h2>
-            {driverInfo ? (
+            {driverInfo || booking.driverName ? (
               <div className="cbdp-driver-card">
                 <div className="cbdp-driver-avatar">
-                  {driverInfo.profileImage ? (
-                    <img src={driverInfo.profileImage} alt={driverInfo.name} />
+                  {driverInfo?.profileImage || booking.driverImage ? (
+                    <img
+                      src={driverInfo?.profileImage || booking.driverImage}
+                      alt={driverInfo?.name || booking.driverName}
+                    />
                   ) : (
                     <div className="cbdp-avatar-placeholder">
-                      {driverInfo.name?.charAt(0) || "D"}
+                      {(driverInfo?.name || booking.driverName)?.charAt(0) ||
+                        "D"}
                     </div>
                   )}
                 </div>
                 <div className="cbdp-driver-details">
-                  <h3>{driverInfo.name || "Driver Name"}</h3>
-                  {driverInfo.isSelfDriver && (
+                  <h3>
+                    {driverInfo?.name || booking.driverName || "Driver Name"}
+                  </h3>
+                  {(driverInfo?.isSelfDriver || booking.isSelfDriver) && (
                     <span className="cbdp-self-driver-badge">
                       Partner Driver
                     </span>
@@ -347,7 +355,7 @@ const CommuterBookingDetailsPage = () => {
                     >
                       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                     </svg>
-                    {driverInfo.phone || booking.driverPhoneNumber || "N/A"}
+                    {driverInfo?.phone || booking.driverPhoneNumber || "N/A"}
                   </p>
                 </div>
               </div>
@@ -356,29 +364,69 @@ const CommuterBookingDetailsPage = () => {
                 <p>Driver not assigned yet</p>
               </div>
             )}
+          </div>
 
-            {/* Vehicle Info */}
-            {(booking.vehicleModel || booking.vehiclePlate) && (
+          {/* Vehicle Information Card */}
+          <div className="cbdp-card">
+            <h2 className="cbdp-card-title">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <rect x="1" y="3" width="15" height="13" />
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+              </svg>
+              Vehicle Information
+            </h2>
+            {vehicleInfo ? (
               <div className="cbdp-vehicle-info">
-                <h3>Vehicle Details</h3>
-                <div className="cbdp-vehicle-details">
-                  {booking.vehicleModel && (
-                    <div className="cbdp-vehicle-item">
-                      <span className="cbdp-vehicle-label">Model</span>
-                      <span className="cbdp-vehicle-value">
-                        {booking.vehicleModel}
-                      </span>
-                    </div>
-                  )}
-                  {booking.vehiclePlate && (
-                    <div className="cbdp-vehicle-item">
-                      <span className="cbdp-vehicle-label">Plate Number</span>
-                      <span className="cbdp-vehicle-value">
-                        {booking.vehiclePlate}
-                      </span>
-                    </div>
-                  )}
+                {vehicleInfo.image && (
+                  <div className="cbdp-vehicle-image">
+                    <img src={vehicleInfo.image} alt={vehicleInfo.model} />
+                  </div>
+                )}
+                <div className="cbdp-vehicle-details-grid">
+                  <div className="cbdp-vehicle-item">
+                    <span className="cbdp-vehicle-label">Model</span>
+                    <span className="cbdp-vehicle-value">
+                      {vehicleInfo.model || "N/A"}
+                    </span>
+                  </div>
+                  <div className="cbdp-vehicle-item">
+                    <span className="cbdp-vehicle-label">Plate Number</span>
+                    <span className="cbdp-vehicle-value">
+                      {vehicleInfo.licensePlate || "N/A"}
+                    </span>
+                  </div>
+                  <div className="cbdp-vehicle-item">
+                    <span className="cbdp-vehicle-label">Type</span>
+                    <span className="cbdp-vehicle-value">
+                      {vehicleInfo.vehicleType || "N/A"}
+                    </span>
+                  </div>
+                  <div className="cbdp-vehicle-item">
+                    <span className="cbdp-vehicle-label">Color</span>
+                    <span className="cbdp-vehicle-value">
+                      {vehicleInfo.vehicleColor || "N/A"}
+                    </span>
+                  </div>
+                  <div className="cbdp-vehicle-item">
+                    <span className="cbdp-vehicle-label">Capacity</span>
+                    <span className="cbdp-vehicle-value">
+                      {vehicleInfo.seatingCapacity || "N/A"} seats
+                    </span>
+                  </div>
                 </div>
+              </div>
+            ) : (
+              <div className="cbdp-no-vehicle">
+                <p>Vehicle information not available</p>
               </div>
             )}
           </div>
@@ -430,7 +478,7 @@ const CommuterBookingDetailsPage = () => {
           </div>
 
           {/* Partner Information */}
-          {booking.b2cPartnerId && (
+          {(partnerInfo || booking.b2cPartnerId) && (
             <div className="cbdp-card">
               <h2 className="cbdp-card-title">
                 <svg
@@ -447,15 +495,30 @@ const CommuterBookingDetailsPage = () => {
                 Service Provider
               </h2>
               <div className="cbdp-partner-details">
-                <p>
-                  <strong>Name:</strong>{" "}
-                  {booking.b2cPartnerId.businessName ||
-                    booking.b2cPartnerId.name}
-                </p>
-                {booking.b2cPartnerId.phone && (
-                  <p>
-                    <strong>Contact:</strong> {booking.b2cPartnerId.phone}
-                  </p>
+                <div className="cbdp-partner-item">
+                  <span className="cbdp-partner-label">Name</span>
+                  <span className="cbdp-partner-value">
+                    {partnerInfo?.name ||
+                      booking.b2cPartnerId?.businessName ||
+                      booking.b2cPartnerId?.name ||
+                      "N/A"}
+                  </span>
+                </div>
+                {(partnerInfo?.phone || booking.b2cPartnerId?.phone) && (
+                  <div className="cbdp-partner-item">
+                    <span className="cbdp-partner-label">Contact</span>
+                    <span className="cbdp-partner-value">
+                      {partnerInfo?.phone || booking.b2cPartnerId?.phone}
+                    </span>
+                  </div>
+                )}
+                {(partnerInfo?.email || booking.b2cPartnerId?.email) && (
+                  <div className="cbdp-partner-item">
+                    <span className="cbdp-partner-label">Email</span>
+                    <span className="cbdp-partner-value">
+                      {partnerInfo?.email || booking.b2cPartnerId?.email}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
