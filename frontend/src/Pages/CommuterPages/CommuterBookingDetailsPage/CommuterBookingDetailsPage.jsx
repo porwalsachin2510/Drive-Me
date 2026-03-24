@@ -100,20 +100,49 @@ const CommuterBookingDetailsPage = () => {
   // Socket listener for driver location updates
   useEffect(() => {
     if (socket?.socket && booking && showTracking) {
-      // Join booking room
-      socket.joinBookingRoom(booking._id);
+      // Join booking room for this specific booking
+      socket.socket.emit("join-booking-room", booking._id);
+
+      // Also join notification room
+      if (auth?.user?.id) {
+        socket.socket.emit("join-notification-room", auth.user.id);
+      }
 
       // Listen for driver location updates
       const handleLocationUpdate = (locationData) => {
-        console.log("[v0] Driver location update:", locationData);
-        const driverId =
+        // Extract location - handle both nested and flat formats
+        const lat =
+          locationData.location?.lat ||
+          locationData.lat ||
+          locationData.latitude;
+        const lng =
+          locationData.location?.lng ||
+          locationData.lng ||
+          locationData.longitude;
+
+        if (!lat || !lng) {
+          return;
+        }
+
+        // Get the driver ID to match - could be assignedDriverId, b2cPartnerId (when isSelfDriver), or from driverInfo
+        const bookingDriverId =
           booking.assignedDriverId?._id ||
-          booking.b2cPartnerId?._id ||
-          booking.b2cPartnerId;
-        if (locationData.driverId === driverId) {
+          booking.assignedDriverId ||
+          (booking.isSelfDriver
+            ? booking.b2cPartnerId?._id || booking.b2cPartnerId
+            : null);
+
+        // Check if this location update is for our booking's driver
+        const isOurDriver =
+          locationData.driverId === bookingDriverId ||
+          locationData.driverId === booking.b2cPartnerId?._id ||
+          locationData.driverId === booking.b2cPartnerId ||
+          locationData.bookingId === booking._id;
+
+        if (isOurDriver || !locationData.driverId) {
           setDriverLocation({
-            lat: locationData.lat,
-            lng: locationData.lng,
+            lat: lat,
+            lng: lng,
             lastUpdate: Date.now(),
           });
           setIsDriverOnline(true);
@@ -130,22 +159,32 @@ const CommuterBookingDetailsPage = () => {
         socket.socket.off("location-update", handleLocationUpdate);
       };
     }
-  }, [socket, booking, showTracking]);
+  }, [socket, booking, showTracking, auth?.user?.id]);
 
   // Handle track driver click
   const handleTrackDriver = () => {
     setShowTracking(true);
     if (socket?.socket && booking) {
-      socket.joinBookingRoom(booking._id);
+      // Join the booking room to receive location updates
+      socket.socket.emit("join-booking-room", booking._id);
+
+      // Get the driver ID based on isSelfDriver flag
+      let driverId;
+      if (booking.isSelfDriver) {
+        // When isSelfDriver is true, the partner is driving, use b2cPartnerId
+        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+      } else {
+        // When isSelfDriver is false, use assignedDriverId (from b2cpartnerdrivers table)
+        driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
+      }
+
       // Request current driver location
-      const driverId =
-        booking.assignedDriverId?._id ||
-        booking.b2cPartnerId?._id ||
-        booking.b2cPartnerId;
-      socket.socket.emit("request-driver-location", {
-        driverId,
-        bookingId: booking._id,
-      });
+      if (driverId) {
+        socket.socket.emit("request-driver-location", {
+          driverId,
+          bookingId: booking._id,
+        });
+      }
     }
   };
 
@@ -179,7 +218,6 @@ const CommuterBookingDetailsPage = () => {
         }
       }
     } catch (err) {
-      console.error("[v0] Error cancelling booking:", err);
       alert(err.response?.data?.message || "Failed to cancel booking");
     } finally {
       setCancelLoading(false);

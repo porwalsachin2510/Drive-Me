@@ -7,9 +7,7 @@ import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
 
 // Create Passenger Booking (ONE-WAY or ROUND-TRIP)
 export const createPassengerBooking = async (req, res) => {
-    try {
-        console.log("[v0] Creating Passenger Booking:", JSON.stringify(req.body, null, 2));
-        
+    try {    
         const {
             routeId,
             scheduleId,
@@ -191,8 +189,6 @@ export const createPassengerBooking = async (req, res) => {
                 }
             }
         }
-
-        console.log("[v0] Monthly pass booking created successfully:", booking._id);
         
         res.status(201).json({
             success: true,
@@ -213,7 +209,7 @@ export const createPassengerBooking = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("[v0] Error creating passenger booking:", error.message);
+        console.error("Error creating passenger booking:", error.message);
         res.status(500).json({
             success: false,
             message: "Error creating booking",
@@ -247,7 +243,6 @@ export const getPassengerBookings = async (req, res) => {
         // Fetch partner vehicles
         const partnerVehicles = await B2CPartnerVehicle.find({
             b2cPartnerId: { $in: partnerIds },
-            status: "Active",
             isActive: true
         });
 
@@ -297,7 +292,7 @@ export const getPassengerBookings = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("[v0] Error fetching passenger bookings:", error.message);
+        console.error("Error fetching passenger bookings:", error.message);
         res.status(500).json({
             success: false,
             message: "Error fetching bookings",
@@ -338,7 +333,7 @@ export const getAvailableTrips = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("[v0] Error fetching available trips:", error.message);
+        console.error("Error fetching available trips:", error.message);
         res.status(500).json({
             success: false,
             message: "Error fetching trips",

@@ -220,8 +220,6 @@ export const getB2CBookingDetails = async (req, res) => {
         const { bookingId } = req.params;
         const userId = req.userId;
 
-        console.log("[v0] Fetching booking details:", { bookingId, userId });
-
         const booking = await B2CPassengerBooking.findById(bookingId)
             .populate('passengerId', 'name email phone fullName')
             .populate('b2cPartnerId', 'name email fullName phone profileImage')
@@ -299,13 +297,15 @@ export const getB2CBookingDetails = async (req, res) => {
                 seatingCapacity: vehicle.seatingCapacity,
                 image: vehicle.images?.[0]?.url
             };
-        } else if (booking.b2cPartnerId) {
-            // If no route vehicle, try to get partner's vehicle
+        }
+
+        // If still no vehicle, try to get partner's vehicle directly
+        if (!vehicleInfo && booking.b2cPartnerId) {
             try {
                 const partnerId = booking.b2cPartnerId._id || booking.b2cPartnerId;
+                // Try to find any active vehicle for this partner
                 const partnerVehicle = await B2CPartnerVehicle.findOne({
                     b2cPartnerId: partnerId,
-                    status: "Active",
                     isActive: true
                 }).sort({ createdAt: -1 });
 
@@ -320,7 +320,7 @@ export const getB2CBookingDetails = async (req, res) => {
                     };
                 }
             } catch (vehicleErr) {
-                console.error("[v0] Error fetching partner vehicle:", vehicleErr.message);
+                console.error("Error fetching partner vehicle:", vehicleErr.message);
             }
         }
 
@@ -339,8 +339,6 @@ export const getB2CBookingDetails = async (req, res) => {
                 email: booking.routeId.b2cPartnerId.email
             };
         }
-
-        console.log("[v0] Booking details fetched successfully with driver:", driverInfo?.name, "vehicle:", vehicleInfo?.model);
 
         res.status(200).json({
             success: true,
