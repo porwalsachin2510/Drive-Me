@@ -3,6 +3,7 @@ import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import User from "../models/User.js";
+import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
 
 // Create Passenger Booking (ONE-WAY or ROUND-TRIP)

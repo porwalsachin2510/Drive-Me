@@ -1,6 +1,8 @@
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import User from "../models/User.js";
+import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
+import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 
 // Get B2C Partner Bookings (for B2C_PARTNER dashboard)
 export const getB2CPartnerBookings = async (req, res) => {
