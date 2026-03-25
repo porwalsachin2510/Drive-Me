@@ -54,6 +54,7 @@ import Navbar from "./Components/Navbar/Navbar";
 import Footer from "./Components/Footer/Footer";
 import SetPassword from "./Pages/SetPassword/SetPassword";
 import DynamicPage from "./Pages/DynamicPage/DynamicPage";
+import ForgotPassword from "./Pages/ForgotPassword/ForgotPassword";
 
 function App() {
   return (
@@ -344,6 +345,14 @@ function App() {
             element={
               <PublicRoute>
                 <SetPassword />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <ForgotPassword />
               </PublicRoute>
             }
           />

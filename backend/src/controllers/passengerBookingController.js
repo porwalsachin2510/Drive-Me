@@ -230,7 +230,7 @@ export const getPassengerBookings = async (req, res) => {
             passengerId: req.userId
         })
             .populate('routeId')
-            .populate('b2cPartnerId', 'fullName email name phone')
+            .populate('b2cPartnerId', 'fullName email name phone whatsappNumber')
             .sort({ travelDate: -1 });
 
         // Collect route vehicle IDs and partner IDs for lookup

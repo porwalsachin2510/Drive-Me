@@ -201,6 +201,42 @@ textarea.register-form-input {
   font-family: inherit;
 }
 
+/* Password Toggle Styles */
+.register-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.register-password-input {
+  padding-right: 45px !important;
+}
+
+.register-password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9CA3AF;
+  transition: color 0.2s ease;
+}
+
+.register-password-toggle:hover {
+  color: #6B7280;
+}
+
+.register-password-toggle:focus {
+  outline: none;
+  color: #E85D5D;
+}
+
 .register-corp-section-header {
   display: flex;
   align-items: center;
@@ -643,6 +679,72 @@ textarea.register-form-input {
 
 .register-signin-link a:hover {
   color: #D94545;
+}
+
+/* Profile Image Upload Styles */
+.register-profile-image-group {
+  width: 100%;
+}
+
+.register-profile-image-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.register-profile-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.register-profile-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #E85D5D;
+}
+
+.register-profile-remove-btn {
+  background: #E85D5D;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.register-profile-remove-btn:hover {
+  background: #D94545;
+}
+
+.register-profile-file-wrapper {
+  width: auto;
+  height: auto;
+}
+
+.register-profile-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 30px !important;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.register-profile-icon {
+  font-size: 24px;
+}
+
+.register-optional {
+  color: #888;
+  font-weight: 400;
+  font-size: 12px;
 }
 
 .register-error-message {

@@ -82,7 +82,7 @@ export const register = async (req, res) => {
             })
         }
 
-        // Handle profile image upload for B2C_PARTNER
+        // Handle profile image upload for COMMUTER, B2C_PARTNER, and B2B_PARTNER
         let profileImageUrl = null;
         if (req.files && req.files.profileImage && req.files.profileImage[0]) {
             try {
@@ -643,6 +643,180 @@ export const logout = (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message || "Logout failed",
+        })
+    }
+}
+
+// Forgot Password - Send OTP
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required",
+            })
+        }
+
+        // Check if user exists
+        const user = await User.findOne({ email })
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "No account found with this email address",
+            })
+        }
+
+        // Generate OTP
+        const otp = generateOTP()
+
+        // Save OTP to database
+        await OTP.deleteMany({ email, purpose: "password_reset" })
+        const otpRecord = new OTP({
+            email,
+            otp,
+            purpose: "password_reset",
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+        })
+        await otpRecord.save()
+
+        // Send OTP email
+        const emailResult = await sendVerificationOTP(email, user.fullName, otp)
+        if (!emailResult.success) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to send OTP. Please try again.",
+            })
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "OTP sent to your email address",
+        })
+    } catch (error) {
+        console.error("Forgot password error:", error)
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to process request",
+        })
+    }
+}
+
+// Verify Reset OTP
+export const verifyResetOTP = async (req, res) => {
+    try {
+        const { email, otp } = req.body
+
+        if (!email || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Email and OTP are required",
+            })
+        }
+
+        // Find OTP record
+        const otpRecord = await OTP.findOne({
+            email,
+            otp,
+            purpose: "password_reset",
+            expiresAt: { $gt: new Date() }
+        })
+
+        if (!otpRecord) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired OTP",
+            })
+        }
+
+        // Generate a temporary reset token
+        const resetToken = jwt.sign(
+            { email, purpose: "password_reset" },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" }
+        )
+
+        // Mark OTP as verified but don't delete yet
+        otpRecord.isVerified = true
+        await otpRecord.save()
+
+        res.status(200).json({
+            success: true,
+            message: "OTP verified successfully",
+            resetToken,
+        })
+    } catch (error) {
+        console.error("Verify reset OTP error:", error)
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to verify OTP",
+        })
+    }
+}
+
+// Reset Password
+export const resetPassword = async (req, res) => {
+    try {
+        const { email, resetToken, newPassword } = req.body
+
+        if (!email || !resetToken || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Email, reset token, and new password are required",
+            })
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 6 characters long",
+            })
+        }
+
+        // Verify the reset token
+        let decoded
+        try {
+            decoded = jwt.verify(resetToken, process.env.JWT_SECRET)
+        } catch (tokenError) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired reset token. Please request a new OTP.",
+            })
+        }
+
+        if (decoded.email !== email || decoded.purpose !== "password_reset") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid reset token",
+            })
+        }
+
+        // Find user
+        const user = await User.findOne({ email })
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            })
+        }
+
+        // Update password
+        user.password = newPassword // Will be hashed by pre-save hook
+        await user.save()
+
+        // Delete all OTPs for this email
+        await OTP.deleteMany({ email, purpose: "password_reset" })
+
+        res.status(200).json({
+            success: true,
+            message: "Password reset successful",
+        })
+    } catch (error) {
+        console.error("Reset password error:", error)
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to reset password",
         })
     }
 }

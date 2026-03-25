@@ -3940,7 +3940,7 @@ export const getCommuterProfile = async (req, res) => {
             currency: 'KWD',
             country: user.country,
             membershipType: user.level?.toLowerCase() || 'standard',
-            avatar: user.companyLogo || null,
+            avatar: user.profileImage || user.companyLogo || null,
             status: user.status,
             createdAt: user.createdAt
         };

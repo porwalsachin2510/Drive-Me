@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import { useState } from "react";
@@ -28,7 +29,8 @@ const Register = () => {
 
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
-
+  const [showPassword, setShowPassword] = useState(false);
+  
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
 
@@ -493,6 +495,11 @@ const Register = () => {
         submitData.append("companyLogo", formData.companyLogo.file);
       }
 
+      // Add profile image for COMMUTER
+      if (selectedRole === "COMMUTER" && formData.profileImage?.file) {
+        submitData.append("profileImage", formData.profileImage.file);
+      }
+
       if (selectedRole === "CORPORATE") {
         submitData.append("companyName", formData.companyName);
         submitData.append("companyAddress", formData.companyAddress);
@@ -502,9 +509,13 @@ const Register = () => {
       }
 
       if (selectedRole === "B2B_PARTNER") {
+        // Add profile image for B2B Partner
+        if (formData.profileImage?.file) {
+          submitData.append("profileImage", formData.profileImage.file);
+        }
         submitData.append(
           "acceptedPaymentMethods",
-          JSON.stringify(formData.acceptedPaymentMethods)
+          JSON.stringify(formData.acceptedPaymentMethods),
         );
       }
 
@@ -514,7 +525,7 @@ const Register = () => {
           role: selectedRole,
           fullName: formData.fullName,
           email: formData.email,
-          companyName: formData.companyName
+          companyName: formData.companyName,
         });
       }
 
@@ -530,36 +541,34 @@ const Register = () => {
 
         submitData.append(
           "acceptedPaymentMethods",
-          JSON.stringify(formData.acceptedPaymentMethods)
+          JSON.stringify(formData.acceptedPaymentMethods),
         );
       }
 
       console.log("submitData", submitData);
 
-      const response = await api.post(
-        "/auth/register",
-        submitData,
-        {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await api.post("/auth/register", submitData, {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.data.success) {
         if (response.data.requiresVerification) {
           // Show OTP verification screen
           setPendingEmail(response.data.email);
           setShowOTPVerification(true);
-          setSuccess("Registration initiated! Please check your email for verification code.");
+          setSuccess(
+            "Registration initiated! Please check your email for verification code.",
+          );
         } else {
           // Legacy flow (shouldn't happen with new backend)
           dispatch(
             loginSuccess({
               user: response.data.user,
               token: response.data.token,
-            })
+            }),
           );
 
           localStorage.setItem("token", response.data.token);
@@ -606,7 +615,7 @@ const Register = () => {
   return (
     <div>
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-      
+
       {showOTPVerification ? (
         <OTPVerification
           email={pendingEmail}
@@ -624,7 +633,9 @@ const Register = () => {
             </div>
 
             {error && <div className="register-error-message">{error}</div>}
-            {success && <div className="register-success-message">{success}</div>}
+            {success && (
+              <div className="register-success-message">{success}</div>
+            )}
 
             <div className="register-role-selector">
               {roles.map((role) => (
@@ -637,7 +648,9 @@ const Register = () => {
                   type="button"
                 >
                   <span className="register-role-button-icon">{role.icon}</span>
-                  <span className="register-role-button-text">{role.label}</span>
+                  <span className="register-role-button-text">
+                    {role.label}
+                  </span>
                 </button>
               ))}
             </div>
@@ -649,7 +662,10 @@ const Register = () => {
               <div className="register-form-row">
                 <div className="register-form-group">
                   <label className="register-form-label">
-                    {selectedRole === "CORPORATE_EMPLOYEE" ? "Employee Name" : "Full Name"} <span className="required">*</span>
+                    {selectedRole === "CORPORATE_EMPLOYEE"
+                      ? "Employee Name"
+                      : "Full Name"}{" "}
+                    <span className="required">*</span>
                   </label>
                   <input
                     type="text"
@@ -657,7 +673,11 @@ const Register = () => {
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    placeholder={selectedRole === "CORPORATE_EMPLOYEE" ? "Enter employee name" : "Enter your name"}
+                    placeholder={
+                      selectedRole === "CORPORATE_EMPLOYEE"
+                        ? "Enter employee name"
+                        : "Enter your name"
+                    }
                     required
                   />
                 </div>
@@ -696,17 +716,112 @@ const Register = () => {
                   <label className="register-form-label">
                     Password <span className="register-required">*</span>
                   </label>
-                  <input
-                    type="password"
-                    className="register-form-input"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="••••••••"
-                    required
-                  />
+                  <div className="register-password-wrapper">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      className="register-form-input register-password-input"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="register-password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
+                    >
+                      {showPassword ? (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
+
+              {/* Profile Image for COMMUTER and B2B_PARTNER */}
+              {(selectedRole === "COMMUTER" ||
+                selectedRole === "B2B_PARTNER") && (
+                <div className="register-form-row">
+                  <div className="register-form-group register-profile-image-group">
+                    <label className="register-form-label">
+                      Profile Image{" "}
+                      <span className="register-optional">(optional)</span>
+                    </label>
+                    <div className="register-profile-image-container">
+                      {formData.profileImage?.preview ? (
+                        <div className="register-profile-preview-wrapper">
+                          <img
+                            src={formData.profileImage.preview}
+                            alt="Profile preview"
+                            className="register-profile-preview"
+                          />
+                          <button
+                            type="button"
+                            className="register-profile-remove-btn"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                profileImage: null,
+                              }))
+                            }
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="register-file-input-wrapper register-profile-file-wrapper">
+                          <input
+                            type="file"
+                            id="profileImage"
+                            name="profileImage"
+                            onChange={handleFileChange}
+                            accept="image/*"
+                          />
+                          <label
+                            htmlFor="profileImage"
+                            className="register-file-input-label register-profile-label"
+                          >
+                            <span className="register-profile-icon">📷</span>
+                            <span>Upload Photo</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Corporate Role Specific */}
               {selectedRole === "CORPORATE" && (
@@ -719,7 +834,9 @@ const Register = () => {
 
                   <div className="register-form-row">
                     <div className="register-form-group">
-                      <label className="register-form-label">Company Name</label>
+                      <label className="register-form-label">
+                        Company Name
+                      </label>
                       <input
                         type="text"
                         className="register-form-input"
@@ -782,7 +899,8 @@ const Register = () => {
                   <div className="register-form-row">
                     <div className="register-form-group">
                       <label className="register-form-label">
-                        Company Name <span className="register-required">*</span>
+                        Company Name{" "}
+                        <span className="register-required">*</span>
                       </label>
                       <input
                         type="text"
@@ -819,7 +937,9 @@ const Register = () => {
                         onChange={handleInputChange}
                       >
                         <option value="">Select service type</option>
-                        <option value="individual">Individual Vehicle Owner</option>
+                        <option value="individual">
+                          Individual Vehicle Owner
+                        </option>
                         <option value="smallfleet">Small Fleet Owner</option>
                       </select>
                     </div>
@@ -873,16 +993,42 @@ const Register = () => {
                         </label>
                       </div>
                       {formData.profileImage?.preview && (
-                        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            marginTop: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                          }}
+                        >
                           <img
                             src={formData.profileImage.preview}
                             alt="Profile Preview"
-                            style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '50%', border: '2px solid #ddd' }}
+                            style={{
+                              width: "60px",
+                              height: "60px",
+                              objectFit: "cover",
+                              borderRadius: "50%",
+                              border: "2px solid #ddd",
+                            }}
                           />
                           <button
                             type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, profileImage: null }))}
-                            style={{ padding: '5px 10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                profileImage: null,
+                              }))
+                            }
+                            style={{
+                              padding: "5px 10px",
+                              background: "#dc3545",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "12px",
+                            }}
                           >
                             Remove
                           </button>

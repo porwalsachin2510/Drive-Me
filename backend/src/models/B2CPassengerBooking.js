@@ -14,7 +14,7 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
         },
         routeId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Route",
+            ref: "B2CPartnerRoute",
             required: false, // For B2C partner routes
         },
         routeListingId: {

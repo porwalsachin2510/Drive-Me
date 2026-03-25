@@ -1,6 +1,6 @@
 import express from "express"
 import jwt from "jsonwebtoken"
-import { register, login, adminLogin, logout, verifyOTP, resendOTP, setPassword, validatePasswordToken } from "../controllers/authController.js"
+import { register, login, adminLogin, logout, verifyOTP, resendOTP, setPassword, validatePasswordToken, forgotPassword, verifyResetOTP, resetPassword } from "../controllers/authController.js"
 import { verifyToken } from "../middleware/auth.js"
 import { upload } from "../Config/multerConfig.js"
 
@@ -64,5 +64,10 @@ router.post("/logout", verifyToken, logout)
 // Password setup for invited employees
 router.get("/validate-password-token/:token", validatePasswordToken)
 router.post("/set-password", setPassword)
+
+// Forgot Password
+router.post("/forgot-password", forgotPassword)
+router.post("/verify-reset-otp", verifyResetOTP)
+router.post("/reset-password", resetPassword)
 
 export default router
