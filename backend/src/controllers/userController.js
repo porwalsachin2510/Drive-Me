@@ -54,13 +54,24 @@ export const updateUserProfile = async (req, res) => {
             "address", "city", "country", "profileImage", "companyLogo",
             "website", "tradeLicense", "nationality",
             "contactPerson", "contactEmail", "contactPhone",
-            "notifications"
+            "notifications", "driverInfo"
         ]
 
         const updateData = {}
         for (const field of allowedFields) {
             if (req.body[field] !== undefined) {
                 updateData[field] = req.body[field]
+            }
+        }
+
+        // Special handling for driverInfo - merge with existing data
+        if (updateData.driverInfo) {
+            const existingUser = await User.findById(userId)
+            if (existingUser?.driverInfo) {
+                updateData.driverInfo = {
+                    ...existingUser.driverInfo.toObject ? existingUser.driverInfo.toObject() : existingUser.driverInfo,
+                    ...updateData.driverInfo
+                }
             }
         }
 

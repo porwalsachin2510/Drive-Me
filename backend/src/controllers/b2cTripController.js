@@ -3,6 +3,7 @@ import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
+import User from "../models/User.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
 
 // Helper function to convert time to HH:MM AM/PM format
@@ -184,12 +185,13 @@ export const getB2CPartnerRoutes = async (req, res) => {
         const routes = await B2CPartnerRoute.find({ 
             b2cPartnerId: req.userId 
         })
-        .populate('assignedVehicle', 'model vehicleType seatingCapacity licensePlate year')
-        .populate('assignedDriverId', 'name phoneNumber email profileImage') // Fixed: Use assignedDriverId
-        .populate('assignedDriver', 'name phoneNumber email profileImage') // Also populate legacy field
-        .sort({ createdAt: -1 });
+        .populate('assignedVehicle', 'model vehicleType seatingCapacity licensePlate year images')
+            .sort({ createdAt: -1 });
+        
+        // Get B2C_PARTNER user info for self-driver case
+        const partnerUser = await User.findById(req.userId).select('fullName whatsappNumber profileImage');
 
-        // Add upcoming trips to each route
+        // Add upcoming trips to each route and handle driver info
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -201,11 +203,51 @@ export const getB2CPartnerRoutes = async (req, res) => {
                     status: "Scheduled"
                 }).sort({ tripDate: 1, startTime: 1 }).limit(10);
 
-                console.log(`[v0] Route ${route._id}: Found ${upcomingTrips.length} upcoming trips`);
+                // Handle driver info - check if self-driver or assigned driver
+                let driverInfo = null;
+                let isSelfDriver = false;
+
+                if (route.assignedDriver) {
+                    // Try to find driver in B2CPartnerDriver table
+                    const assignedDriver = await B2CPartnerDriver.findById(route.assignedDriver)
+                        .select('name phoneNumber licenseNumber driverImage');
+
+                    if (assignedDriver) {
+                        driverInfo = {
+                            _id: assignedDriver._id,
+                            name: assignedDriver.name,
+                            phoneNumber: assignedDriver.phoneNumber,
+                            image: assignedDriver.driverImage?.url
+                        };
+                    } else if (route.assignedDriver.toString() === req.userId.toString()) {
+                        // Self-driver case - assignedDriver is the B2C_PARTNER's user ID
+                        driverInfo = {
+                            _id: partnerUser._id,
+                            name: partnerUser.fullName || "Self",
+                            phoneNumber: partnerUser.whatsappNumber,
+                            image: partnerUser.profileImage,
+                            isSelfDriver: true
+                        };
+                        isSelfDriver = true;
+                    }
+                }
+
+                // Get schedule info for start time
+                const schedule = await B2CPartnerSchedule.findOne({ routeId: route._id })
+                    .select('tripTimes availableDays');
+
+                const routeObj = route.toObject();
 
                 return {
-                    ...route.toObject(),
-                    upcomingTrips: upcomingTrips
+                    ...routeObj,
+                    upcomingTrips: upcomingTrips,
+                    driverInfo: driverInfo,
+                    isSelfDriver: isSelfDriver,
+                    assignedDriver: driverInfo, // Override for backward compatibility
+                    startTime: routeObj.startTime || schedule?.tripTimes?.[0]?.departureTime || "",
+                    availableDays: routeObj.availableDays?.length > 0
+                        ? routeObj.availableDays
+                        : schedule?.availableDays || []
                 };
             })
         );

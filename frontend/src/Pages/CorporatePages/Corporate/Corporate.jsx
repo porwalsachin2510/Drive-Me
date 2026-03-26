@@ -129,21 +129,25 @@ const Corporate = () => {
 
   const budgetRanges = {
     daily: [
+      { value: "0-1500", label: "Less than 1,500 AED (Budget)" },
       { value: "1500-3000", label: "1,500-3,000 AED (Economy)" },
       { value: "3000-6000", label: "3,000-6,000 AED (Standard)" },
       { value: "6000+", label: "6,000+ AED (Premium)" },
     ],
     weekly: [
+      { value: "0-9000", label: "Less than 9,000 AED (Budget)" },
       { value: "9000-18000", label: "9,000-18,000 AED (Economy)" },
       { value: "18000-35000", label: "18,000-35,000 AED (Standard)" },
       { value: "35000+", label: "35,000+ AED (Premium)" },
     ],
     monthly: [
+      { value: "0-10000", label: "Less than 10,000 AED (Budget)" },
       { value: "10000-25000", label: "10,000-25,000 AED (Economy)" },
       { value: "25000-50000", label: "25,000-50,000 AED (Standard)" },
       { value: "50000+", label: "50,000+ AED (Premium)" },
     ],
     "long-term": [
+      { value: "0-8000", label: "Less than 8,000 AED/month (Budget)" },
       { value: "8000-20000", label: "8,000-20,000 AED/month (Economy)" },
       { value: "20000-40000", label: "20,000-40,000 AED/month (Standard)" },
       { value: "40000+", label: "40,000+ AED/month (Premium)" },

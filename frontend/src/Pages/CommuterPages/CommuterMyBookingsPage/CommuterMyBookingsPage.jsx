@@ -742,12 +742,14 @@ const CommuterMyBookingsPage = () => {
                         <div className="cmbp-detail-item">
                           <span className="cmbp-detail-label">Vehicle</span>
                           <span className="cmbp-detail-value">
-                            {booking.vehicleModel ||
+                            {booking.vehicleInfo?.model ||
+                              booking.vehicleModel ||
                               booking.routeId?.assignedVehicle?.model ||
                               "N/A"}
-                            {(booking.vehiclePlate ||
+                            {(booking.vehicleInfo?.licensePlate ||
+                              booking.vehiclePlate ||
                               booking.routeId?.assignedVehicle?.licensePlate) &&
-                              ` (${booking.vehiclePlate || booking.routeId?.assignedVehicle?.licensePlate})`}
+                              ` (${booking.vehicleInfo?.licensePlate || booking.vehiclePlate || booking.routeId?.assignedVehicle?.licensePlate})`}
                           </span>
                         </div>
                         <div className="cmbp-detail-item">
@@ -864,18 +866,20 @@ const CommuterMyBookingsPage = () => {
                       </p>
                       <p>
                         <strong>Vehicle:</strong>{" "}
-                        {booking.vehicleModel ||
+                        {booking.vehicleInfo?.model ||
+                          booking.vehicleModel ||
                           booking.routeId?.assignedVehicle?.model ||
                           "N/A"}
-                        {(booking.vehiclePlate ||
+                        {(booking.vehicleInfo?.licensePlate ||
+                          booking.vehiclePlate ||
                           booking.routeId?.assignedVehicle?.licensePlate) &&
-                          ` (${booking.vehiclePlate || booking.routeId?.assignedVehicle?.licensePlate})`}
+                          ` (${booking.vehicleInfo?.licensePlate || booking.vehiclePlate || booking.routeId?.assignedVehicle?.licensePlate})`}
                       </p>
                       <p>
                         <strong>Driver:</strong>{" "}
-                        {booking.driverName ||
-                          booking.routeId?.assignedDriver?.name ||
-                          "Not Assigned"}
+                        {booking.driverInfo?.name ||
+                          booking.driverName ||
+                          (booking.isSelfDriver ? "Self" : "Not Assigned")}
                       </p>
                     </div>
                   )}
@@ -1145,38 +1149,46 @@ const CommuterMyBookingsPage = () => {
               </p>
               <p>
                 <strong>Driver:</strong>{" "}
-                {selectedBooking.driverName ||
-                  (selectedBooking.type === "B2C"
-                    ? selectedBooking.b2cPartnerId?.fullName
-                    : "Assigned Driver")}
+                {selectedBooking.driverInfo?.name ||
+                  selectedBooking.driverName ||
+                  (selectedBooking.isSelfDriver
+                    ? "Self"
+                    : selectedBooking.b2cPartnerId?.fullName) ||
+                  "Assigned Driver"}
               </p>
               <p>
                 <strong>Status:</strong>{" "}
-                <span
-                  style={{
-                    color:
-                      (selectedBooking.driverId &&
-                        isDriverOnline(selectedBooking.driverId)) ||
-                      (selectedBooking.b2cPartnerId &&
-                        isDriverOnline(
-                          selectedBooking.b2cPartnerId._id ||
-                            selectedBooking.b2cPartnerId,
-                        ))
-                        ? "#28a745"
-                        : "#ffc107",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {(selectedBooking.driverId &&
-                    isDriverOnline(selectedBooking.driverId)) ||
-                  (selectedBooking.b2cPartnerId &&
-                    isDriverOnline(
-                      selectedBooking.b2cPartnerId._id ||
-                        selectedBooking.b2cPartnerId,
-                    ))
-                    ? "🟢 Driver Online"
-                    : "🟡 Driver Offline"}
-                </span>
+                {(() => {
+                  // Determine driver ID based on isSelfDriver flag
+                  let driverId;
+                  if (selectedBooking.type === "B2C") {
+                    if (selectedBooking.isSelfDriver) {
+                      driverId =
+                        selectedBooking.b2cPartnerId?._id ||
+                        selectedBooking.b2cPartnerId;
+                    } else {
+                      driverId =
+                        selectedBooking.assignedDriverId ||
+                        selectedBooking.b2cPartnerId?._id ||
+                        selectedBooking.b2cPartnerId;
+                    }
+                  } else {
+                    driverId = selectedBooking.driverId;
+                  }
+
+                  const online = driverId && isDriverOnline(driverId);
+
+                  return (
+                    <span
+                      style={{
+                        color: online ? "#28a745" : "#ffc107",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {online ? "🟢 Driver Online" : "🟡 Driver Offline"}
+                    </span>
+                  );
+                })()}
               </p>
             </div>
 
@@ -1193,13 +1205,24 @@ const CommuterMyBookingsPage = () => {
               }}
             >
               {(() => {
-                // For B2C bookings, use assignedDriverId as driverId
-                const driverId =
-                  selectedBooking.type === "B2C"
-                    ? selectedBooking.assignedDriverId ||
+                // For B2C bookings, determine driverId based on isSelfDriver flag
+                let driverId;
+                if (selectedBooking.type === "B2C") {
+                  if (selectedBooking.isSelfDriver) {
+                    // When isSelfDriver is true, the B2C_PARTNER is the driver
+                    driverId =
                       selectedBooking.b2cPartnerId?._id ||
-                      selectedBooking.b2cPartnerId
-                    : selectedBooking.driverId;
+                      selectedBooking.b2cPartnerId;
+                  } else {
+                    // When isSelfDriver is false, use assignedDriverId (B2C_PARTNER_DRIVER)
+                    driverId =
+                      selectedBooking.assignedDriverId ||
+                      selectedBooking.b2cPartnerId?._id ||
+                      selectedBooking.b2cPartnerId;
+                  }
+                } else {
+                  driverId = selectedBooking.driverId;
+                }
                 return driverId && getDriverLocation(driverId) ? (
                   <>
                     {/* Enhanced Real-Time Map with Driver Icon */}

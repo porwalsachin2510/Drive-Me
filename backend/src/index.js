@@ -119,14 +119,16 @@ io.on('connection', (socket) => {
         console.log(`Driver ${driverId} joined their room`)
     })
 
-    // Passenger joins booking room
-    socket.on('join_booking_room', (bookingId) => {
+    // Passenger joins booking room (supports both event names for compatibility)
+    const handleJoinBookingRoom = (bookingId) => {
         console.log(`🗺️ Passenger joining booking room: ${bookingId}`)
         socket.join(`booking-${bookingId}`)
         socket.bookingId = bookingId
         console.log(`✅ Passenger joined booking room: ${bookingId}`)
         console.log(`📋 Socket rooms: ${Array.from(socket.rooms)}`)
-    })
+    }
+    socket.on('join_booking_room', handleJoinBookingRoom)
+    socket.on('join-booking-room', handleJoinBookingRoom) // Alias for compatibility
 
     // Driver updates location
     socket.on('update-location', (locationData) => {
@@ -330,6 +332,54 @@ io.on('connection', (socket) => {
         })
 
         console.log(`Corporate driver ${driverId} started trip ${bookingId}`)
+    })
+
+    // Request driver location - used by passengers to get current driver location
+    socket.on('request-driver-location', (data) => {
+        const { driverId, bookingId } = data
+        console.log(`📍 Location request received for driver: ${driverId}, booking: ${bookingId}`)
+
+        // Get stored driver location
+        const driverLocation = activeDrivers.get(driverId)
+
+        if (driverLocation) {
+            console.log(`✅ Found driver ${driverId} location:`, driverLocation.lat, driverLocation.lng)
+
+            // Send location back to the requesting socket
+            socket.emit('driver-location-update', {
+                driverId,
+                location: {
+                    lat: driverLocation.lat,
+                    lng: driverLocation.lng
+                },
+                timestamp: driverLocation.lastUpdated || new Date().toISOString(),
+                bookingId,
+                isOnline: true
+            })
+
+            // Also emit to the booking room
+            if (bookingId) {
+                io.to(`booking-${bookingId}`).emit('driver-location-update', {
+                    driverId,
+                    location: {
+                        lat: driverLocation.lat,
+                        lng: driverLocation.lng
+                    },
+                    timestamp: driverLocation.lastUpdated || new Date().toISOString(),
+                    bookingId,
+                    isOnline: true
+                })
+            }
+        } else {
+            console.log(`❌ No location found for driver: ${driverId}`)
+            socket.emit('driver-location-update', {
+                driverId,
+                location: null,
+                bookingId,
+                isOnline: false,
+                message: 'Driver location not available'
+            })
+        }
     })
 
     // Get nearby drivers

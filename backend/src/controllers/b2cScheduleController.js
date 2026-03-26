@@ -3,6 +3,7 @@ import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
+import User from "../models/User.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
 
 // Helper function to convert time to HH:MM AM/PM format
@@ -235,24 +236,117 @@ export const getB2CPartnerRoutes = async (req, res) => {
         const routes = await B2CPartnerRoute.find({
             b2cPartnerId: req.userId,
         })
-        .populate('assignedVehicle', 'model licensePlate vehicleType seatingCapacity')
-        .populate('assignedDriver', 'name phoneNumber licenseNumber')
+        .populate('assignedVehicle', 'model licensePlate vehicleType seatingCapacity images')
         .sort({ createdAt: -1 });
+        
+        // Get the B2C_PARTNER user info for self-driver case
+        const partnerUser = await User.findById(req.userId).select('fullName whatsappNumber profileImage');
 
-        // Get schedules for each route
+        // Get schedules for each route and handle driver info
         const routesWithSchedules = await Promise.all(
             routes.map(async (route) => {
+                const routeObj = route.toObject();
+
+                // Get schedules for this route
                 const schedules = await B2CPartnerSchedule.find({
                     routeId: route._id,
                     b2cPartnerId: req.userId,
                 })
                 .populate('assignedVehicle', 'model licensePlate vehicleType seatingCapacity')
-                .populate('assignedDriver', 'name phoneNumber licenseNumber')
-                .sort({ createdAt: -1 });
+                    .sort({ createdAt: -1 });
+                
+                // Handle driver info - check if it's self-driver or assigned driver
+                let driverInfo = null;
+                let isSelfDriver = false;
+
+                // First, try to get assignedDriver from B2CPartnerDriver table
+                if (route.assignedDriver) {
+                    const assignedDriver = await B2CPartnerDriver.findById(route.assignedDriver)
+                        .select('name phoneNumber licenseNumber driverImage');
+
+                    if (assignedDriver) {
+                        // It's an assigned driver from b2cpartnerdrivers table
+                        driverInfo = {
+                            _id: assignedDriver._id,
+                            name: assignedDriver.name,
+                            phoneNumber: assignedDriver.phoneNumber,
+                            licenseNumber: assignedDriver.licenseNumber,
+                            image: assignedDriver.driverImage?.url
+                        };
+                        isSelfDriver = false;
+                    } else {
+                        // The ID might be a User ID (self-driver case)
+                        // Check if assignedDriver matches the partner's user ID
+                        if (route.assignedDriver.toString() === req.userId.toString()) {
+                            driverInfo = {
+                                _id: partnerUser._id,
+                                name: partnerUser.fullName || "Self",
+                                phoneNumber: partnerUser.whatsappNumber,
+                                image: partnerUser.profileImage,
+                                isSelfDriver: true
+                            };
+                            isSelfDriver = true;
+                        }
+                    }
+                }
+
+                // Get start time from schedule if route doesn't have it
+                let startTime = routeObj.startTime;
+                if (!startTime && schedules.length > 0 && schedules[0].tripTimes?.length > 0) {
+                    startTime = schedules[0].tripTimes[0].departureTime;
+                }
+
+                // Get available days from schedule if route doesn't have it
+                let availableDays = routeObj.availableDays;
+                if ((!availableDays || availableDays.length === 0) && schedules.length > 0) {
+                    availableDays = schedules[0].availableDays;
+                }
+
+                // Process schedules to include driver info
+                const processedSchedules = await Promise.all(schedules.map(async (schedule) => {
+                    const scheduleObj = schedule.toObject();
+                    let scheduleDriverInfo = null;
+                    let scheduleIsSelfDriver = false;
+
+                    if (schedule.assignedDriver) {
+                        const scheduleDriver = await B2CPartnerDriver.findById(schedule.assignedDriver)
+                            .select('name phoneNumber licenseNumber driverImage');
+
+                        if (scheduleDriver) {
+                            scheduleDriverInfo = {
+                                _id: scheduleDriver._id,
+                                name: scheduleDriver.name,
+                                phoneNumber: scheduleDriver.phoneNumber,
+                                licenseNumber: scheduleDriver.licenseNumber,
+                                image: scheduleDriver.driverImage?.url
+                            };
+                        } else if (schedule.assignedDriver.toString() === req.userId.toString()) {
+                            scheduleDriverInfo = {
+                                _id: partnerUser._id,
+                                name: partnerUser.fullName || "Self",
+                                phoneNumber: partnerUser.whatsappNumber,
+                                image: partnerUser.profileImage,
+                                isSelfDriver: true
+                            };
+                            scheduleIsSelfDriver = true;
+                        }
+                    }
+
+                    return {
+                        ...scheduleObj,
+                        driverInfo: scheduleDriverInfo,
+                        isSelfDriver: scheduleIsSelfDriver
+                    };
+                }));
 
                 return {
-                    ...route.toObject(),
-                    schedules: schedules
+                    ...routeObj,
+                    startTime: startTime || "",
+                    availableDays: availableDays || [],
+                    schedules: processedSchedules,
+                    driverInfo: driverInfo,
+                    isSelfDriver: isSelfDriver,
+                    assignedDriver: driverInfo // Override with processed info for backward compatibility
                 };
             })
         );
@@ -284,15 +378,57 @@ export const getB2CPartnerSchedules = async (req, res) => {
         })
         .populate('routeId', 'fromLocation toLocation tripType')
         .populate('assignedVehicle', 'model licensePlate vehicleType seatingCapacity')
-        .populate('assignedDriver', 'name phoneNumber licenseNumber')
         .sort({ createdAt: -1 });
 
-        console.log("[v0] Found B2C Partner Schedules:", schedules.length);
+        // Get the B2C_PARTNER user info for self-driver case
+        const partnerUser = await User.findById(req.userId).select('fullName whatsappNumber profileImage');
+
+        // Process schedules to include proper driver info
+        const processedSchedules = await Promise.all(schedules.map(async (schedule) => {
+            const scheduleObj = schedule.toObject();
+            let driverInfo = null;
+            let isSelfDriver = false;
+
+            if (schedule.assignedDriver) {
+                // Try to find driver in B2CPartnerDriver table
+                const assignedDriver = await B2CPartnerDriver.findById(schedule.assignedDriver)
+                    .select('name phoneNumber licenseNumber driverImage');
+
+                if (assignedDriver) {
+                    driverInfo = {
+                        _id: assignedDriver._id,
+                        name: assignedDriver.name,
+                        phoneNumber: assignedDriver.phoneNumber,
+                        licenseNumber: assignedDriver.licenseNumber,
+                        image: assignedDriver.driverImage?.url
+                    };
+                } else if (schedule.assignedDriver.toString() === req.userId.toString()) {
+                    // Self-driver case
+                    driverInfo = {
+                        _id: partnerUser._id,
+                        name: partnerUser.fullName || "Self",
+                        phoneNumber: partnerUser.whatsappNumber,
+                        image: partnerUser.profileImage,
+                        isSelfDriver: true
+                    };
+                    isSelfDriver = true;
+                }
+            }
+
+            return {
+                ...scheduleObj,
+                driverInfo: driverInfo,
+                isSelfDriver: isSelfDriver,
+                assignedDriver: driverInfo // Override for backward compatibility
+            };
+        }));
+
+        console.log("[v0] Found B2C Partner Schedules:", processedSchedules.length);
 
         res.status(200).json({
             success: true,
-            count: schedules.length,
-            schedules: schedules,
+            count: processedSchedules.length,
+            schedules: processedSchedules,
         });
     } catch (error) {
         console.error("[v0] Error fetching B2C partner schedules:", error);

@@ -1,34 +1,70 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import api from "../../../../utils/api";
 import B2C_DriverCard from "../B2C_DriverCard/B2C_DriverCard";
+import B2C_EditDriverModal from "../B2C_EditDriverModal/B2C_EditDriverModal";
 import "./b2c_driverstab.css";
 
 function B2C_DriversTab() {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
-  useEffect(() => {
-    fetchDrivers();
-  }, []);
-
-  const fetchDrivers = async () => {
+  const fetchDrivers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/b2c-partner/drivers');
+      const response = await api.get("/b2c-partner/drivers");
 
       if (response.data.success) {
         setDrivers(response.data.drivers || []);
-        console.log('Fetched B2C drivers:', response.data.drivers);
       } else {
-        console.error('Failed to fetch drivers:', response.data.message);
+        console.error("Failed to fetch drivers:", response.data.message);
       }
     } catch (error) {
-      console.error('Error fetching drivers:', error);
+      console.error("Error fetching drivers:", error);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchDrivers();
+  }, [fetchDrivers]);
+
+  const handleEditDriver = (driver) => {
+    setSelectedDriver(driver);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteDriver = async (driverId) => {
+    try {
+      const response = await api.delete(`/b2c-partner/drivers/${driverId}`);
+
+      if (response.data.success) {
+        // Refresh the drivers list
+        await fetchDrivers();
+        return true;
+      } else {
+        alert(response.data.message || "Failed to delete driver");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error deleting driver:", error);
+      alert(error.response?.data?.message || "Error deleting driver");
+      return false;
+    }
+  };
+
+  const handleEditModalClose = () => {
+    setShowEditModal(false);
+    setSelectedDriver(null);
+  };
+
+  const handleDriverUpdated = () => {
+    fetchDrivers();
+    handleEditModalClose();
   };
 
   if (loading) {
@@ -55,9 +91,23 @@ function B2C_DriversTab() {
       ) : (
         <div className="b2c-drivers-grid">
           {drivers.map((driver) => (
-            <B2C_DriverCard key={driver._id} driver={driver} />
+            <B2C_DriverCard
+              key={driver._id}
+              driver={driver}
+              onEdit={handleEditDriver}
+              onDelete={handleDeleteDriver}
+              onRefresh={fetchDrivers}
+            />
           ))}
         </div>
+      )}
+
+      {showEditModal && selectedDriver && (
+        <B2C_EditDriverModal
+          driver={selectedDriver}
+          onClose={handleEditModalClose}
+          onSuccess={handleDriverUpdated}
+        />
       )}
     </div>
   );

@@ -101,7 +101,7 @@ const CommuterBookingDetailsPage = () => {
   useEffect(() => {
     if (socket?.socket && booking && showTracking) {
       // Join booking room for this specific booking
-      socket.socket.emit("join-booking-room", booking._id);
+      socket.socket.emit("join_booking_room", booking._id);
 
       // Also join notification room
       if (auth?.user?.id) {
@@ -166,7 +166,7 @@ const CommuterBookingDetailsPage = () => {
     setShowTracking(true);
     if (socket?.socket && booking) {
       // Join the booking room to receive location updates
-      socket.socket.emit("join-booking-room", booking._id);
+      socket.socket.emit("join_booking_room", booking._id);
 
       // Get the driver ID based on isSelfDriver flag
       let driverId;

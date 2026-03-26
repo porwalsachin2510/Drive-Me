@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -161,7 +162,10 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
           </div>
         </div>
         <div className="b2c-badges-wrapper">
-          <span className="b2c-status-badge" style={{ backgroundColor: getStatusColor(route.status) }}>
+          <span
+            className="b2c-status-badge"
+            style={{ backgroundColor: getStatusColor(route.status) }}
+          >
             {route.status}
           </span>
         </div>
@@ -171,11 +175,19 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
         <div className="b2c-detail-row">
           <div className="b2c-detail-item">
             <span className="b2c-detail-label">Start Time:</span>
-            <span className="b2c-detail-value">{route.startTime || "N/A"}</span>
+            <span className="b2c-detail-value">
+              {route.startTime ||
+                route.schedules?.[0]?.tripTimes?.[0]?.departureTime ||
+                "N/A"}
+            </span>
           </div>
           <div className="b2c-detail-item">
             <span className="b2c-detail-label">Available Days:</span>
-            <span className="b2c-detail-value">{route.availableDays?.join(", ") || "Daily"}</span>
+            <span className="b2c-detail-value">
+              {(route.availableDays?.length > 0
+                ? route.availableDays.join(", ")
+                : route.schedules?.[0]?.availableDays?.join(", ")) || "Daily"}
+            </span>
           </div>
         </div>
         <div className="b2c-detail-row">
@@ -191,12 +203,16 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
         <div className="b2c-pricing-row">
           <div className="b2c-price-item">
             <span className="b2c-price-label">One Way:</span>
-            <span className="b2c-price-value">KWD {route.pricing?.oneWayPrice || 0}</span>
+            <span className="b2c-price-value">
+              KWD {route.pricing?.oneWayPrice || 0}
+            </span>
           </div>
           {route.pricing?.roundTripPrice > 0 && (
             <div className="b2c-price-item">
               <span className="b2c-price-label">Round Trip:</span>
-              <span className="b2c-price-value">KWD {route.pricing.roundTripPrice}</span>
+              <span className="b2c-price-value">
+                KWD {route.pricing.roundTripPrice}
+              </span>
             </div>
           )}
         </div>
@@ -204,10 +220,17 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
         {route.stopPoints && route.stopPoints.length > 0 && (
           <div className="b2c-stop-points">
             <div className="b2c-stop-header">
-              <button className="b2c-toggle-details" onClick={() => setShowDetails(!showDetails)}>
-                {showDetails ? "Hide" : "Show"} Stop Points ({route.stopPoints.length})
+              <button
+                className="b2c-toggle-details"
+                onClick={() => setShowDetails(!showDetails)}
+              >
+                {showDetails ? "Hide" : "Show"} Stop Points (
+                {route.stopPoints.length})
               </button>
-              <span className="b2c-trip-type-badge" style={{ backgroundColor: getTripTypeColor(route.tripType) }}>
+              <span
+                className="b2c-trip-type-badge"
+                style={{ backgroundColor: getTripTypeColor(route.tripType) }}
+              >
                 {route.tripType}
               </span>
             </div>
@@ -235,7 +258,9 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
           <div className="b2c-assignment-item">
             <span className="b2c-assignment-label">Driver:</span>
             <span className="b2c-assignment-value">
-              {route.assignedDriver?.name || route.assignedDriverId?.fullName || "Not Assigned"}
+              {route.driverInfo?.name ||
+                route.assignedDriver?.name ||
+                (route.isSelfDriver ? "Self" : "Not Assigned")}
             </span>
           </div>
         </div>
@@ -245,51 +270,98 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
         <button className="b2c-action-btn b2c-edit-btn" onClick={openEditModal}>
           Edit
         </button>
-        <button className="b2c-action-btn b2c-schedule-btn" onClick={() => onAddSchedule && onAddSchedule(route)}>
+        <button
+          className="b2c-action-btn b2c-schedule-btn"
+          onClick={() => onAddSchedule && onAddSchedule(route)}
+        >
           {hasSchedule ? "Manage Schedule" : "Add Schedule"}
         </button>
         {hasSchedule ? (
-          <button className="b2c-action-btn b2c-view-trips-btn" onClick={() => setShowTripModal(true)}>
+          <button
+            className="b2c-action-btn b2c-view-trips-btn"
+            onClick={() => setShowTripModal(true)}
+          >
             View Trips ({upcomingTrips.length})
           </button>
         ) : (
-          <button className="b2c-action-btn b2c-trip-btn" onClick={() => setShowCreateTripModal(true)}>
+          <button
+            className="b2c-action-btn b2c-trip-btn"
+            onClick={() => setShowCreateTripModal(true)}
+          >
             Create Trip
           </button>
         )}
-        <button className="b2c-action-btn b2c-delete-btn" onClick={handleDeleteRoute} disabled={deleting}>
+        <button
+          className="b2c-action-btn b2c-delete-btn"
+          onClick={handleDeleteRoute}
+          disabled={deleting}
+        >
           {deleting ? "Deleting..." : "Delete"}
         </button>
       </div>
 
       {/* Edit Route Modal */}
       {showEditModal && (
-        <div className="b2c-modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="b2c-modal-content b2c-edit-modal" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="b2c-modal-overlay"
+          onClick={() => setShowEditModal(false)}
+        >
+          <div
+            className="b2c-modal-content b2c-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="b2c-modal-header">
               <h3>Edit Route</h3>
-              <button className="b2c-modal-close" onClick={() => setShowEditModal(false)}>X</button>
+              <button
+                className="b2c-modal-close"
+                onClick={() => setShowEditModal(false)}
+              >
+                X
+              </button>
             </div>
             {editError && <div className="b2c-edit-error">{editError}</div>}
             <form onSubmit={handleEditSubmit} className="b2c-edit-form">
               <div className="b2c-edit-row">
                 <div className="b2c-edit-field">
                   <label>From Location</label>
-                  <input type="text" value={editForm.fromLocation} onChange={(e) => handleEditChange("fromLocation", e.target.value)} required />
+                  <input
+                    type="text"
+                    value={editForm.fromLocation}
+                    onChange={(e) =>
+                      handleEditChange("fromLocation", e.target.value)
+                    }
+                    required
+                  />
                 </div>
                 <div className="b2c-edit-field">
                   <label>To Location</label>
-                  <input type="text" value={editForm.toLocation} onChange={(e) => handleEditChange("toLocation", e.target.value)} required />
+                  <input
+                    type="text"
+                    value={editForm.toLocation}
+                    onChange={(e) =>
+                      handleEditChange("toLocation", e.target.value)
+                    }
+                    required
+                  />
                 </div>
               </div>
               <div className="b2c-edit-row">
                 <div className="b2c-edit-field">
                   <label>Start Time</label>
-                  <input type="time" value={editForm.startTime} onChange={(e) => handleEditChange("startTime", e.target.value)} />
+                  <input
+                    type="time"
+                    value={editForm.startTime}
+                    onChange={(e) =>
+                      handleEditChange("startTime", e.target.value)
+                    }
+                  />
                 </div>
                 <div className="b2c-edit-field">
                   <label>Status</label>
-                  <select value={editForm.status} onChange={(e) => handleEditChange("status", e.target.value)}>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => handleEditChange("status", e.target.value)}
+                  >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                     <option value="Scheduled">Scheduled</option>
@@ -299,36 +371,84 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
               <div className="b2c-edit-row">
                 <div className="b2c-edit-field">
                   <label>Total Seats</label>
-                  <input type="number" min="1" value={editForm.totalSeats} onChange={(e) => handleEditChange("totalSeats", e.target.value)} required />
+                  <input
+                    type="number"
+                    min="1"
+                    value={editForm.totalSeats}
+                    onChange={(e) =>
+                      handleEditChange("totalSeats", e.target.value)
+                    }
+                    required
+                  />
                 </div>
                 <div className="b2c-edit-field">
                   <label>Available Seats</label>
-                  <input type="number" min="0" value={editForm.availableSeats} onChange={(e) => handleEditChange("availableSeats", e.target.value)} required />
+                  <input
+                    type="number"
+                    min="0"
+                    value={editForm.availableSeats}
+                    onChange={(e) =>
+                      handleEditChange("availableSeats", e.target.value)
+                    }
+                    required
+                  />
                 </div>
               </div>
               <div className="b2c-edit-row">
                 <div className="b2c-edit-field">
                   <label>One Way Price (KWD)</label>
-                  <input type="number" min="0" step="0.001" value={editForm.oneWayPrice} onChange={(e) => handleEditChange("oneWayPrice", e.target.value)} required />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={editForm.oneWayPrice}
+                    onChange={(e) =>
+                      handleEditChange("oneWayPrice", e.target.value)
+                    }
+                    required
+                  />
                 </div>
                 <div className="b2c-edit-field">
                   <label>Round Trip Price (KWD)</label>
-                  <input type="number" min="0" step="0.001" value={editForm.roundTripPrice} onChange={(e) => handleEditChange("roundTripPrice", e.target.value)} />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={editForm.roundTripPrice}
+                    onChange={(e) =>
+                      handleEditChange("roundTripPrice", e.target.value)
+                    }
+                  />
                 </div>
               </div>
               <div className="b2c-edit-field b2c-days-field">
                 <label>Available Days</label>
                 <div className="b2c-days-grid">
-                  {dayOptions.map(day => (
-                    <button key={day} type="button" className={`b2c-day-btn ${editForm.availableDays.includes(day) ? "active" : ""}`} onClick={() => toggleDay(day)}>
+                  {dayOptions.map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      className={`b2c-day-btn ${editForm.availableDays.includes(day) ? "active" : ""}`}
+                      onClick={() => toggleDay(day)}
+                    >
                       {day}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="b2c-edit-actions">
-                <button type="button" className="b2c-cancel-btn" onClick={() => setShowEditModal(false)}>Cancel</button>
-                <button type="submit" className="b2c-save-btn" disabled={editLoading}>
+                <button
+                  type="button"
+                  className="b2c-cancel-btn"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="b2c-save-btn"
+                  disabled={editLoading}
+                >
                   {editLoading ? "Saving..." : "Save Changes"}
                 </button>
               </div>

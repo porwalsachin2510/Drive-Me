@@ -6,6 +6,7 @@ import Route from "../models/Route.js"
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js"
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js"
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js"
+import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js"
 import Wallet from "../models/Wallet.js"
 import Notification from "../models/Notification.js"
 import Transaction from "../models/Transaction.js"
@@ -1458,14 +1459,124 @@ export const getPassengerBookings = async (req, res) => {
             if (status) query.bookingStatus = status
 
             const b2cBookings = await B2CPassengerBooking.find(query)
-                .populate("b2cPartnerId", "fullName companyLogo whatsappNumber driverName vehicleModel vehiclePlate")
+                .populate("b2cPartnerId", "fullName companyLogo whatsappNumber driverName vehicleModel vehiclePlate profileImage")
+                .populate("routeId", "fromLocation toLocation assignedVehicle assignedDriver")
                 .sort({ createdAt: -1 })
 
-            bookings = b2cBookings.map((b) => ({
-                ...b.toObject(),
-                type: "B2C",
-                userType: "NORMAL_PASSENGER",
-            }))
+            // Collect all vehicle IDs from routes for batch lookup
+            const vehicleIds = b2cBookings
+                .map(b => b.routeId?.assignedVehicle)
+                .filter(Boolean)
+
+            // Also collect partner IDs for fallback vehicle lookup
+            const partnerIds = [...new Set(b2cBookings.map(b =>
+                b.b2cPartnerId?._id?.toString() || b.b2cPartnerId?.toString()
+            ).filter(Boolean))]
+
+            // Fetch all vehicles in batch
+            const [routeVehicles, partnerVehicles] = await Promise.all([
+                B2CPartnerVehicle.find({ _id: { $in: vehicleIds } }),
+                B2CPartnerVehicle.find({ b2cPartnerId: { $in: partnerIds }, isActive: true })
+            ])
+
+            // Create lookup maps
+            const vehicleById = {}
+            routeVehicles.forEach(v => {
+                vehicleById[v._id.toString()] = v
+            })
+
+            const vehicleByPartner = {}
+            partnerVehicles.forEach(v => {
+                const pid = v.b2cPartnerId.toString()
+                if (!vehicleByPartner[pid]) {
+                    vehicleByPartner[pid] = v
+                }
+            })
+
+            // Also fetch driver info for non-self-driver bookings
+            const driverIds = b2cBookings
+                .filter(b => !b.isSelfDriver && b.assignedDriverId)
+                .map(b => b.assignedDriverId)
+
+            const drivers = await B2CPartnerDriver.find({ _id: { $in: driverIds } })
+            const driverById = {}
+            drivers.forEach(d => {
+                driverById[d._id.toString()] = d
+            })
+
+            bookings = b2cBookings.map((b) => {
+                const bookingObj = b.toObject()
+                const partnerId = bookingObj.b2cPartnerId?._id?.toString() || bookingObj.b2cPartnerId?.toString()
+                const routeVehicleId = bookingObj.routeId?.assignedVehicle?.toString()
+
+                // Get vehicle info - first from route, then from partner
+                let vehicleInfo = null
+                if (routeVehicleId && vehicleById[routeVehicleId]) {
+                    const vehicle = vehicleById[routeVehicleId]
+                    vehicleInfo = {
+                        model: vehicle.model,
+                        licensePlate: vehicle.licensePlate,
+                        vehicleType: vehicle.vehicleType,
+                        vehicleColor: vehicle.vehicleColor,
+                        seatingCapacity: vehicle.seatingCapacity,
+                        image: vehicle.images?.[0]?.url
+                    }
+                    // Also set flat fields for backward compatibility
+                    bookingObj.vehicleModel = vehicle.model
+                    bookingObj.vehiclePlate = vehicle.licensePlate
+                    bookingObj.vehicleType = vehicle.vehicleType
+                    bookingObj.vehicleColor = vehicle.vehicleColor
+                } else if (partnerId && vehicleByPartner[partnerId]) {
+                    const vehicle = vehicleByPartner[partnerId]
+                    vehicleInfo = {
+                        model: vehicle.model,
+                        licensePlate: vehicle.licensePlate,
+                        vehicleType: vehicle.vehicleType,
+                        vehicleColor: vehicle.vehicleColor,
+                        seatingCapacity: vehicle.seatingCapacity,
+                        image: vehicle.images?.[0]?.url
+                    }
+                    bookingObj.vehicleModel = vehicle.model
+                    bookingObj.vehiclePlate = vehicle.licensePlate
+                    bookingObj.vehicleType = vehicle.vehicleType
+                    bookingObj.vehicleColor = vehicle.vehicleColor
+                }
+
+                // Get driver info - handle both self-driver and assigned driver cases
+                let driverInfo = null
+                if (bookingObj.isSelfDriver && bookingObj.b2cPartnerId) {
+                    // Partner is driving
+                    driverInfo = {
+                        name: bookingObj.driverName || bookingObj.b2cPartnerId.fullName || "Self",
+                        phone: bookingObj.driverPhoneNumber || bookingObj.b2cPartnerId.whatsappNumber,
+                        image: bookingObj.driverImage || bookingObj.b2cPartnerId.profileImage,
+                        isSelfDriver: true
+                    }
+                } else if (bookingObj.assignedDriverId) {
+                    // Assigned driver
+                    const driverId = bookingObj.assignedDriverId?.toString()
+                    const driver = driverById[driverId]
+                    if (driver) {
+                        driverInfo = {
+                            name: driver.name,
+                            phone: driver.phoneNumber,
+                            image: driver.driverImage?.url,
+                            isSelfDriver: false
+                        }
+                        bookingObj.driverName = driver.name
+                        bookingObj.driverPhoneNumber = driver.phoneNumber
+                        bookingObj.driverImage = driver.driverImage?.url
+                    }
+                }
+
+                return {
+                    ...bookingObj,
+                    vehicleInfo,
+                    driverInfo,
+                    type: "B2C",
+                    userType: "NORMAL_PASSENGER",
+                }
+            })
         }
 
         return res.status(200).json({
@@ -1482,7 +1593,6 @@ export const getPassengerBookings = async (req, res) => {
         })
     }
 }
-
 
 // Get partner bookings
 export const getPartnerBookings = async (req, res) => {

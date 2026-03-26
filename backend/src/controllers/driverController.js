@@ -730,36 +730,32 @@ export const getB2CPartnerDrivers = async (req, res) => {
         // Create drivers array
         let drivers = [...assignedDrivers];
         
-  // Add B2C Partner as a driver option if they can drive
-  if (b2cPartner && (b2cPartner.canDrive || b2cPartner.hasDrivingLicense || b2cPartner.role === 'B2C_PARTNER')) {
-  // Add B2C Partner as a driver option with profile image
-  const partnerAsDriver = {
-  _id: b2cPartner._id,
-  name: 'Self',
-  fullName: b2cPartner.fullName || b2cPartner.businessName || 'Self',
-  email: b2cPartner.email,
-  phone: b2cPartner.phone,
-  phoneNumber: b2cPartner.phone,
-  isSelf: true, // Flag to identify this is the partner themselves
-  assignedVehicles: [],
-  assignedRoutes: [],
-  b2cPartnerId: req.userId,
-  createdAt: b2cPartner.createdAt,
-  // Add driver-like fields for compatibility
-  licenseNumber: b2cPartner.licenseNumber || 'Self-Employed',
-  experience: b2cPartner.experience || 'Owner-Operator',
-  status: 'AVAILABLE',
-  nationality: b2cPartner.nationality || 'N/A',
-  // Add profile image for display
-  driverImage: b2cPartner.profilePicture ? { url: b2cPartner.profilePicture } : null,
-  profilePicture: b2cPartner.profilePicture,
-  };
-            
+        // Add B2C Partner as a driver option if they can drive
+        if (b2cPartner && (b2cPartner.canDrive || b2cPartner.hasDrivingLicense || b2cPartner.role === 'B2C_PARTNER')) {
+            // Add B2C Partner as a driver option with profile image
+            const partnerAsDriver = {
+                _id: b2cPartner._id,
+                name: 'Self',
+                fullName: b2cPartner.fullName || b2cPartner.businessName || 'Self',
+                email: b2cPartner.email,
+                phone: b2cPartner.whatsappNumber,
+                phoneNumber: b2cPartner.whatsappNumber,
+                isSelf: true, // Flag to identify this is the partner themselves
+                b2cPartnerId: req.userId,
+                createdAt: b2cPartner.createdAt,
+                // Add driver-like fields for compatibility
+                licenseNumber: b2cPartner.driverInfo?.licenseNumber || null,
+                licenseExpiry: b2cPartner.driverInfo?.licenseExpiry || null,
+                experience: b2cPartner.yearsOfExperience || 0,
+                status: b2cPartner.driverInfo?.status || 'AVAILABLE',
+                nationality: b2cPartner.nationality || b2cPartner.country || null,
+                // Add profile image for display - use correct field name
+                driverImage: b2cPartner.profileImage ? { url: b2cPartner.profileImage } : null,
+                profileImage: b2cPartner.profileImage,
+            };
+
             drivers.unshift(partnerAsDriver); // Add at the beginning
         }
-
-        console.log("[v0] Found B2C Partner Drivers:", drivers.length)
-        console.log("[v0] Drivers data:", JSON.stringify(drivers, null, 2))
 
         res.status(200).json({
             success: true,

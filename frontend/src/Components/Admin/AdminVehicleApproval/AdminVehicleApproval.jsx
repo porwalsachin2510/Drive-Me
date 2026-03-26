@@ -90,71 +90,91 @@ function AdminVehicleApproval() {
 
   if (loading) {
     return (
-      <div className="vehicle-approval-loading">
+      <div className="drivemego-adminvehicleapproval-vehicle-approval-loading">
         Loading pending vehicles...
       </div>
     );
   }
 
   return (
-    <div className="admin-vehicle-approval">
-      <div className="approval-header">
+    <div className="drivemego-adminvehicleapproval-admin-vehicle-approval">
+      <div className="drivemego-adminvehicleapproval-approval-header">
         <h2>Vehicle Approvals</h2>
-        <p className="pending-count">
+        <p className="drivemego-adminvehicleapproval-pending-count">
           {pagination.total} pending vehicle{pagination.total !== 1 ? "s" : ""}
         </p>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="drivemego-adminvehicleapproval-error-message">
+          {error}
+        </div>
+      )}
 
       {vehicles.length === 0 ? (
-        <div className="no-vehicles">
+        <div className="drivemego-adminvehicleapproval-no-vehicles">
           <p>No pending vehicles to approve</p>
         </div>
       ) : (
-        <div className="vehicles-list">
+        <div className="drivemego-adminvehicleapproval-vehicles-list">
           {vehicles.map((vehicle) => (
             <div
               key={vehicle._id}
-              className="vehicle-card"
+              className="drivemego-adminvehicleapproval-vehicle-card"
             >
-              <div className="vehicle-header">
+              <div className="drivemego-adminvehicleapproval-vehicle-header">
                 <h3>{vehicle.vehicleName}</h3>
-                <span className="registration">
+                <span className="drivemego-adminvehicleapproval-registration">
                   {vehicle.registrationNumber}
                 </span>
               </div>
 
-              <div className="vehicle-details">
-                <div className="detail-row">
-                  <span className="label">Category:</span>
-                  <span className="value">{vehicle.vehicleCategory}</span>
+              <div className="drivemego-adminvehicleapproval-vehicle-details">
+                <div className="drivemego-adminvehicleapproval-detail-row">
+                  <span className="drivemego-adminvehicleapproval-label">
+                    Category:
+                  </span>
+                  <span className="drivemego-adminvehicleapproval-value">
+                    {vehicle.vehicleCategory}
+                  </span>
                 </div>
-                <div className="detail-row">
-                  <span className="label">Service Type:</span>
-                  <span className="value">{vehicle.serviceType}</span>
+                <div className="drivemego-adminvehicleapproval-detail-row">
+                  <span className="drivemego-adminvehicleapproval-label">
+                    Service Type:
+                  </span>
+                  <span className="drivemego-adminvehicleapproval-value">
+                    {vehicle.serviceType}
+                  </span>
                 </div>
-                <div className="detail-row">
-                  <span className="label">Capacity:</span>
-                  <span className="value">
+                <div className="drivemego-adminvehicleapproval-detail-row">
+                  <span className="drivemego-adminvehicleapproval-label">
+                    Capacity:
+                  </span>
+                  <span className="drivemego-adminvehicleapproval-value">
                     {vehicle.capacity.seatingCapacity || "-"} seats
                   </span>
                 </div>
-                <div className="detail-row">
-                  <span className="label">Fleet Owner:</span>
-                  <span className="value">
+                <div className="drivemego-adminvehicleapproval-detail-row">
+                  <span className="drivemego-adminvehicleapproval-label">
+                    Fleet Owner:
+                  </span>
+                  <span className="drivemego-adminvehicleapproval-value">
                     {vehicle.fleetOwnerId?.fullName || "Unknown"}
                   </span>
                 </div>
-                <div className="detail-row">
-                  <span className="label">Location:</span>
-                  <span className="value">{vehicle.location}</span>
+                <div className="drivemego-adminvehicleapproval-detail-row">
+                  <span className="drivemego-adminvehicleapproval-label">
+                    Location:
+                  </span>
+                  <span className="drivemego-adminvehicleapproval-value">
+                    {vehicle.location}
+                  </span>
                 </div>
               </div>
 
-              <div className="vehicle-actions">
+              <div className="drivemego-adminvehicleapproval-vehicle-actions">
                 <button
-                  className="btn-approve"
+                  className="drivemego-adminvehicleapproval-btn-approve"
                   onClick={(e) => {
                     e.stopPropagation();
                     approveVehicle(vehicle._id);
@@ -164,7 +184,7 @@ function AdminVehicleApproval() {
                   Approve
                 </button>
                 <button
-                  className="btn-reject"
+                  className="drivemego-adminvehicleapproval-btn-reject"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedVehicle(vehicle);
@@ -183,11 +203,11 @@ function AdminVehicleApproval() {
       {selectedVehicle &&
         vehicles.find((v) => v._id === selectedVehicle._id) && (
           <div
-            className="rejection-modal-overlay"
+            className="drivemego-adminvehicleapproval-rejection-modal-overlay"
             onClick={() => setSelectedVehicle(null)}
           >
             <div
-              className="rejection-modal"
+              className="drivemego-adminvehicleapproval-rejection-modal"
               onClick={(e) => e.stopPropagation()}
             >
               <h3>Reject Vehicle</h3>
@@ -200,12 +220,12 @@ function AdminVehicleApproval() {
                 placeholder="Enter rejection reason..."
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                className="rejection-input"
+                className="drivemego-adminvehicleapproval-rejection-input"
               />
 
-              <div className="modal-actions">
+              <div className="drivemego-adminvehicleapproval-modal-actions">
                 <button
-                  className="btn-cancel"
+                  className="drivemego-adminvehicleapproval-btn-cancel"
                   onClick={() => {
                     setSelectedVehicle(null);
                     setRejectionReason("");
@@ -215,7 +235,7 @@ function AdminVehicleApproval() {
                   Cancel
                 </button>
                 <button
-                  className="btn-confirm-reject"
+                  className="drivemego-adminvehicleapproval-btn-confirm-reject"
                   onClick={() => rejectVehicle(selectedVehicle._id)}
                   disabled={actionLoading || !rejectionReason.trim()}
                 >
@@ -228,7 +248,7 @@ function AdminVehicleApproval() {
 
       {/* Pagination */}
       {pagination.total > pagination.limit && (
-        <div className="pagination">
+        <div className="drivemego-adminvehicleapproval-pagination">
           <button
             disabled={pagination.page === 1}
             onClick={() =>

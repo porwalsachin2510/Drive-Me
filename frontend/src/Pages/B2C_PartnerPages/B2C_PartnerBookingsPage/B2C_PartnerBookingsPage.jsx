@@ -133,13 +133,18 @@ const B2C_PartnerBookingsPage = () => {
             driverId: auth.user._id, // B2C_PARTNER uses _id as driverId
             driverType: auth.user.role,
             timestamp: new Date().toISOString(),
+            bookingId: booking._id, // Include booking ID for room-based updates
           };
 
           console.log("📍 B2C_PARTNER Location updated:", locationData);
-          
+
           // Send location to backend
-          await api.post("/location/share", locationData);
-          
+          try {
+            await api.post("/location/share", locationData);
+          } catch (apiError) {
+            console.error("Error sending location to API:", apiError.message);
+          }
+
           // Send real-time location to passenger
           if (socket && booking) {
             socket.socket.emit("driver-location-update", {

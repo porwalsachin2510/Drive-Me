@@ -1,5 +1,133 @@
 import axios from "axios";
 import User from "../models/User.js";
+import { io } from "../index.js";
+
+// In-memory store for driver locations (for quick access)
+const driverLocations = new Map();
+
+// Share driver location - used by B2C_PARTNER and B2C_PARTNER_DRIVER
+export const shareDriverLocation = async (req, res) => {
+    try {
+        const { lat, lng, driverId, driverType, timestamp, bookingId, tripId } = req.body;
+
+        if (!lat || !lng || !driverId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing required fields: lat, lng, driverId"
+            });
+        }
+
+        // Store location in memory
+        driverLocations.set(driverId, {
+            lat,
+            lng,
+            driverId,
+            driverType,
+            timestamp: timestamp || new Date().toISOString(),
+            bookingId,
+            tripId,
+            lastUpdated: Date.now()
+        });
+
+        // Emit location update via socket.io to all connected clients
+        if (io) {
+            // Broadcast to general location updates
+            io.emit('location-update', {
+                driverId,
+                lat,
+                lng,
+                timestamp: timestamp || new Date().toISOString(),
+                driverType
+            });
+
+            // If bookingId is provided, emit to specific booking room
+            if (bookingId) {
+                io.to(`booking-${bookingId}`).emit('driver-location-update', {
+                    driverId,
+                    location: { lat, lng },
+                    timestamp: timestamp || new Date().toISOString(),
+                    bookingId,
+                    driverType
+                });
+            }
+
+            // If tripId is provided, emit to specific trip room
+            if (tripId) {
+                io.to(`trip-${tripId}`).emit('driver-location-update', {
+                    driverId,
+                    location: { lat, lng },
+                    timestamp: timestamp || new Date().toISOString(),
+                    tripId,
+                    driverType
+                });
+            }
+        }
+
+        console.log(`📍 Driver ${driverId} (${driverType}) location shared: ${lat}, ${lng}`);
+
+        return res.status(200).json({
+            success: true,
+            message: "Location shared successfully",
+            location: {
+                lat,
+                lng,
+                driverId,
+                driverType,
+                timestamp: timestamp || new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error("Error sharing driver location:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to share location"
+        });
+    }
+};
+
+// Get driver location by ID
+export const getDriverLocationById = async (req, res) => {
+    try {
+        const { driverId } = req.params;
+
+        if (!driverId) {
+            return res.status(400).json({
+                success: false,
+                message: "Driver ID is required"
+            });
+        }
+
+        const location = driverLocations.get(driverId);
+
+        if (!location) {
+            return res.status(404).json({
+                success: false,
+                message: "Driver location not found",
+                isOnline: false
+            });
+        }
+
+        // Check if location is recent (within last 2 minutes)
+        const isOnline = (Date.now() - location.lastUpdated) < 120000;
+
+        return res.status(200).json({
+            success: true,
+            location: {
+                lat: location.lat,
+                lng: location.lng,
+                timestamp: location.timestamp,
+                driverType: location.driverType
+            },
+            isOnline
+        });
+    } catch (error) {
+        console.error("Error getting driver location:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to get driver location"
+        });
+    }
+};
 
 const COUNTRY_MAP = {
     IN: "India",

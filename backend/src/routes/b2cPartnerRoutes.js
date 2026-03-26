@@ -75,7 +75,15 @@ router.post(
     ]), 
     createB2CPartnerDriver
 )
-router.put("/drivers/:driverId", verifyToken, checkB2CPartnerRole, updateB2CPartnerDriver)
+router.put(
+    "/drivers/:driverId",
+    verifyToken,
+    checkB2CPartnerRole,
+    upload.fields([
+        { name: "driverImage", maxCount: 1 }
+    ]),
+    updateB2CPartnerDriver
+)
 router.delete("/drivers/:driverId", verifyToken, checkB2CPartnerRole, deleteB2CPartnerDriver)
 
 // B2C Partner Routes
