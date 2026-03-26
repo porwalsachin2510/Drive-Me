@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ServiceSelection.css";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -9,6 +9,11 @@ import Footer from "../../../Components/Footer/Footer";
 const ServiceSelection = () => {
   const navigate = useNavigate();
   const [selectedService, setSelectedService] = useState(null);
+  const [activeTab, setActiveTab] = useState("corporate");
+
+  useEffect(() => {
+    localStorage.setItem("activeTab", "corporate");
+  }, []);
 
   const services = [
     {
@@ -75,30 +80,32 @@ const ServiceSelection = () => {
 
   return (
     <div className="homepage">
-      
-      <div className="service-selection-container">
-        <div className="service-selection-content">
-          <div className="service-header">
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className="drivemego-service-selection-container">
+        <div className="drivemego-service-selection-content">
+          <div className="drivemego-service-header">
             <h1>Select Your Service Type</h1>
             <p>
               Choose the type of vehicles or service you need for your business
             </p>
           </div>
 
-          <div className="services-grid">
+          <div className="drivemego-services-grid">
             {services.map((service) => (
               <div
                 key={service.id}
-                className={`service-card ${
-                  selectedService === service.id ? "selected" : ""
+                className={`drivemego-service-card ${
+                  selectedService === service.id ? "drivemego-selected" : ""
                 }`}
                 onClick={() => handleServiceSelect(service.id)}
               >
-                <div className="service-icon">{service.icon}</div>
+                <div className="drivemego-service-icon">{service.icon}</div>
                 <h3>{service.title}</h3>
-                <p className="service-description">{service.description}</p>
+                <p className="drivemego-service-description">
+                  {service.description}
+                </p>
 
-                <div className="service-features">
+                <div className="drivemego-service-features">
                   <h4>Features:</h4>
                   <ul>
                     {service.features.map((feature, index) => (
@@ -107,22 +114,22 @@ const ServiceSelection = () => {
                   </ul>
                 </div>
 
-                <div className="service-use-case">
+                <div className="drivemego-service-use-case">
                   <p>
                     <strong>Best For:</strong> {service.useCases}
                   </p>
                 </div>
 
                 {selectedService === service.id && (
-                  <div className="selected-indicator">✓ Selected</div>
+                  <div className="drivemego-selected-indicator">✓ Selected</div>
                 )}
               </div>
             ))}
           </div>
 
-          <div className="service-actions">
+          <div className="drivemego-service-actions">
             <button
-              className="continue-btn"
+              className="drivemego-continue-btn"
               onClick={handleContinue}
               disabled={!selectedService}
             >
@@ -131,7 +138,7 @@ const ServiceSelection = () => {
           </div>
         </div>
       </div>
-      
+      <Footer />
     </div>
   );
 };

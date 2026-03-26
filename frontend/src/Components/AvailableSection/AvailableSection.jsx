@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import BookingModal from "../BookingModal/BookingModal";
-
+import RoleRestrictionModal from "../RoleRestrictionModal/RoleRestrictionModal";
 import "./availablesection.css";
 
 const AvailableSection = ({
@@ -18,6 +18,8 @@ const AvailableSection = ({
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
+    useState(false);
   const auth = useSelector((state) => state.auth);
   const filterOptions = [
     "All",
@@ -153,7 +155,8 @@ const AvailableSection = ({
 
     // Check if user is a COMMUTER
     if (auth.user.role !== "COMMUTER") {
-      alert("Only Commuter users can book routes. Please login with a Commuter account.");
+      // Show role restriction modal instead of alert
+      setShowRoleRestrictionModal(true);
       return;
     }
 
@@ -390,6 +393,17 @@ const AvailableSection = ({
           onSuccess={handleBookingSuccess}
         />
       )}
+
+      {/* Role Restriction Modal */}
+      <RoleRestrictionModal
+        isOpen={showRoleRestrictionModal}
+        onClose={() => setShowRoleRestrictionModal(false)}
+        title="Commuter Access Required"
+        message="Only Commuter users can book routes. Please login with a Commuter account."
+        requiredRole="COMMUTER"
+        currentRole={auth.user?.role}
+        onLogin={() => navigate("/login")}
+      />
     </div>
   );
 };

@@ -40,11 +40,25 @@
   align-items: flex-start
 }
 
+.filter-section-error {
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #ef4444;
+  background-color: #fef2f2;
+}
+
 .filter-section h3 {
   font-size: 1.3rem;
   color: #34495e;
   margin-bottom: 20px;
   font-weight: 600;
+}
+
+.validation-error {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  display: block;
 }
 
 .vehicle-type-grid {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -15,8 +15,13 @@ const Corporate = () => {
   const dispatch = useDispatch();
   const serviceType = location.state?.serviceType || "passenger";
 
-  const [activeTab, setActiveTab] = useState("commuters");
-  
+  const [activeTab, setActiveTab] = useState("corporate");
+  const [validationErrors, setValidationErrors] = useState({});
+
+  useEffect(() => {
+    localStorage.setItem("activeTab", "corporate");
+  }, []);
+
   const [filters, setFilters] = useState({
     serviceType: serviceType,
     vehicleType: "",
@@ -194,12 +199,50 @@ const Corporate = () => {
     }));
   };
 
+  const validateForm = () => {
+    const errors = {};
+
+    if (!filters.vehicleType) {
+      errors.vehicleType = "Please select a vehicle type";
+    }
+    if (!filters.minseatsrequired || filters.minseatsrequired < 1) {
+      errors.minseatsrequired = "Please enter minimum seats/capacity required";
+    }
+    if (!filters.rentalDuration) {
+      errors.rentalDuration = "Please select a rental duration";
+    }
+    if (!filters.durationValue || filters.durationValue < 1) {
+      errors.durationValue = "Please enter the duration value";
+    }
+    if (!filters.budget) {
+      errors.budget = "Please select a budget range";
+    }
+    if (!filters.location) {
+      errors.location = "Please select a location";
+    }
+    if (!filters.startDate) {
+      errors.startDate = "Please select a start date";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSearch = async () => {
+    if (!validateForm()) {
+      // Scroll to the first error
+      const firstErrorElement = document.querySelector(".filter-section-error");
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+      return;
+    }
+
     try {
       const result = await dispatch(searchVehicles(filters)).unwrap();
-
-      console.log("Search Result for Corporate", result);
-
       navigate("/search-results", { state: { filters, results: result } });
     } catch (error) {
       console.error("Search failed:", error);
@@ -209,7 +252,7 @@ const Corporate = () => {
   // Get current duration option details
   const getCurrentDurationOption = () => {
     return rentalDurationOptions.find(
-      (opt) => opt.value === filters.rentalDuration
+      (opt) => opt.value === filters.rentalDuration,
     );
   };
 
@@ -234,8 +277,10 @@ const Corporate = () => {
 
           <div className="filter-form">
             {/* Vehicle Type Selection */}
-            <div className="filter-section">
-              <h3>Select Vehicle Type</h3>
+            <div
+              className={`filter-section ${validationErrors.vehicleType ? "filter-section-error" : ""}`}
+            >
+              <h3>Select Vehicle Type *</h3>
               <div className="vehicle-type-grid">
                 {vehicleTypeOptions[serviceType].map((type) => (
                   <div
@@ -250,6 +295,11 @@ const Corporate = () => {
                   </div>
                 ))}
               </div>
+              {validationErrors.vehicleType && (
+                <span className="validation-error">
+                  {validationErrors.vehicleType}
+                </span>
+              )}
             </div>
 
             {MinimumSeatsRequiredOptions[serviceType].map((type) => (
@@ -289,8 +339,10 @@ const Corporate = () => {
             />
           </div> */}
             {/* Rental Duration */}
-            <div className="filter-section">
-              <h3>Rental Duration</h3>
+            <div
+              className={`filter-section ${validationErrors.rentalDuration ? "filter-section-error" : ""}`}
+            >
+              <h3>Rental Duration *</h3>
               <div className="duration-options">
                 {rentalDurationOptions.map((option) => (
                   <div
@@ -312,8 +364,10 @@ const Corporate = () => {
             </div>
 
             {filters.rentalDuration && (
-              <div className="filter-section">
-                <h3>Enter Duration in {getCurrentDurationOption()?.unit}</h3>
+              <div
+                className={`filter-section ${validationErrors.durationValue ? "filter-section-error" : ""}`}
+              >
+                <h3>Enter Duration in {getCurrentDurationOption()?.unit} *</h3>
                 <div className="duration-input-container">
                   <input
                     type="number"
@@ -329,6 +383,11 @@ const Corporate = () => {
                     <p className="duration-preview-text">
                       Total Duration: <strong>{getDurationLabel()}</strong>
                     </p>
+                  )}
+                  {validationErrors.durationValue && (
+                    <span className="validation-error">
+                      {validationErrors.durationValue}
+                    </span>
                   )}
                 </div>
               </div>
@@ -355,8 +414,10 @@ const Corporate = () => {
             </div>
           </div> */}
             {/* Budget */}
-            <div className="filter-section">
-              <h3>Budget Per Vehicle</h3>
+            <div
+              className={`filter-section ${validationErrors.budget ? "filter-section-error" : ""}`}
+            >
+              <h3>Budget Per Vehicle *</h3>
               <select
                 value={filters.budget}
                 onChange={(e) => handleInputChange("budget", e.target.value)}
@@ -369,10 +430,17 @@ const Corporate = () => {
                   </option>
                 ))}
               </select>
+              {validationErrors.budget && (
+                <span className="validation-error">
+                  {validationErrors.budget}
+                </span>
+              )}
             </div>
             {/* Location */}
-            <div className="filter-section">
-              <h3>Location</h3>
+            <div
+              className={`filter-section ${validationErrors.location ? "filter-section-error" : ""}`}
+            >
+              <h3>Location *</h3>
               <select
                 value={filters.location}
                 onChange={(e) => handleInputChange("location", e.target.value)}
@@ -385,10 +453,17 @@ const Corporate = () => {
                   </option>
                 ))}
               </select>
+              {validationErrors.location && (
+                <span className="validation-error">
+                  {validationErrors.location}
+                </span>
+              )}
             </div>
             {/* Start Date */}
-            <div className="filter-section">
-              <h3>Required Start Date</h3>
+            <div
+              className={`filter-section ${validationErrors.startDate ? "filter-section-error" : ""}`}
+            >
+              <h3>Required Start Date *</h3>
               <input
                 type="date"
                 value={filters.startDate}
@@ -396,6 +471,11 @@ const Corporate = () => {
                 className="input-field"
                 min={new Date().toISOString().split("T")[0]}
               />
+              {validationErrors.startDate && (
+                <span className="validation-error">
+                  {validationErrors.startDate}
+                </span>
+              )}
             </div>
             {/* Additional Options */}
             <div className="filter-section">

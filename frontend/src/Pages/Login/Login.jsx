@@ -33,6 +33,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = location.state?.returnTo;
+  const returnState = location.state?.returnState;
   const loginMessage = location.state?.message;
 
   const dispatch = useDispatch();
@@ -79,7 +80,7 @@ const Login = () => {
         {
           withCredentials: true,
         },
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" } },
       );
 
       if (response.data.success) {
@@ -87,7 +88,7 @@ const Login = () => {
           loginSuccess({
             user: response.data.user,
             token: response.data.token,
-          })
+          }),
         );
 
         localStorage.setItem("token", response.data.token);
@@ -95,15 +96,24 @@ const Login = () => {
 
         const userRole = response.data.user?.role;
         // If user came from a booking attempt, redirect back there
-        const redirectPath = returnTo || roleRedirectMap[userRole] || "/";
-        navigate(redirectPath);
+        if (returnTo) {
+          // If there's return state, pass it along
+          if (returnState) {
+            navigate(returnTo, { state: returnState });
+          } else {
+            navigate(returnTo);
+          }
+        } else {
+          const redirectPath = roleRedirectMap[userRole] || "/";
+          navigate(redirectPath);
+        }
       }
     } catch (err) {
       console.log(err.response?.data);
       dispatch(
         authError(
-          err.response?.data?.message || "Login failed. Please try again."
-        )
+          err.response?.data?.message || "Login failed. Please try again.",
+        ),
       );
     }
   };

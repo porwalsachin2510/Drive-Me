@@ -97,7 +97,7 @@
 
 .drivemego-topbar-navbar-tab {
   background: none;
-  border: none;
+   border: 1.5px solid transparent;
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 500;
@@ -120,10 +120,51 @@
 .drivemego-topbar-navbar-tab.drivemego-topbar-active {
   background: var(--primary-color, #E85D5D);
   color: #ffffff;
+  border-color: var(--primary-color, #E85D5D);
+}
+
+/* Corporate tab - outlined style when not active */
+.drivemego-topbar-corporate-tab:not(.drivemego-topbar-active) {
+  border-color: var(--text-secondary, #5f6368);
+  background: transparent;
+}
+
+.drivemego-topbar-corporate-tab:not(.drivemego-topbar-active):hover {
+  border-color: var(--text-primary, #202124);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Commuter tab - outlined style when not active */
+.drivemego-topbar-commuter-tab:not(.drivemego-topbar-active) {
+  border-color: var(--text-secondary, #5f6368);
+  background: transparent;
+}
+
+.drivemego-topbar-commuter-tab:not(.drivemego-topbar-active):hover {
+  border-color: var(--text-primary, #202124);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .drivemego-topbar-building-icon {
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drivemego-topbar-building-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.drivemego-topbar-user-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drivemego-topbar-user-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Login Button - DriveMe Brand Style */

@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   MapPin,
   Star,
@@ -11,23 +12,62 @@ import {
 } from "lucide-react";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
+import RoleRestrictionModal from "../../../Components/RoleRestrictionModal/RoleRestrictionModal";
+import {
+  selectIsAuthenticated,
+  selectUserRole,
+} from "../../../Redux/selectors/authSelectors";
 import "./SearchResults.css";
 
 const FleetSearchResults = () => {
-
+  const navigate = useNavigate();
   const location = useLocation();
 
-  
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const userRole = useSelector(selectUserRole);
+
   const [selectedVehicles, setSelectedVehicles] = useState({});
   const [sortBy, setSortBy] = useState("relevance");
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState("grid");
-  const [activeTab, setActiveTab] = useState("commuters");
+  const [activeTab, setActiveTab] = useState("corporate");
+ const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
+    useState(false);
   
-  // Real search results data from backend API via location state
-  const searchData = location.state.results;
+  useEffect(() => {
+    localStorage.setItem("activeTab", "corporate");
+  }, []);
 
-  const userfilters = location.state.filters;
+  // Real search results data from backend API via location state
+  const searchData = location.state?.results;
+  const userfilters = location.state?.filters;
+
+  // If no search data, redirect to corporate search page
+  if (!searchData) {
+    return (
+      <>
+        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <div className="fleet-search-container">
+          <div className="header">
+            <div className="header-content">
+              <h1 className="title">No Search Results</h1>
+              <p className="subtitle">Please search for vehicles first</p>
+            </div>
+          </div>
+          <div style={{ textAlign: "center", padding: "40px" }}>
+            <button
+              className="primary-button"
+              onClick={() => navigate("/corporate")}
+              style={{ padding: "12px 24px", fontSize: "16px" }}
+            >
+              Go to Vehicle Search
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   console.log("first filters ", location.state.filters);
 
@@ -55,9 +95,14 @@ const FleetSearchResults = () => {
     return icons;
   };
 
-  const navigate = useNavigate();
-
   const handleViewAll = (result, userfilters) => {
+    // Check if user is authenticated and has CORPORATE role
+    if (!isAuthenticated || userRole !== "CORPORATE") {
+      // Show role restriction modal
+      setShowRoleRestrictionModal(true);
+      return;
+    }
+
     navigate("/view-single-vehicle-owner", {
       state: { userfilters, results: result },
     });
@@ -302,6 +347,16 @@ const FleetSearchResults = () => {
         )}
       </div>
       <Footer />
+      {/* Role Restriction Modal */}
+      <RoleRestrictionModal
+        isOpen={showRoleRestrictionModal}
+        onClose={() => setShowRoleRestrictionModal(false)}
+        title="Corporate Access Required"
+        message="Only Corporate users can View All Vehicles. Please login with a Corporate account."
+        requiredRole="CORPORATE"
+        currentRole={userRole}
+        onLogin={() => navigate("/login")}
+      />
     </>
   );
 };

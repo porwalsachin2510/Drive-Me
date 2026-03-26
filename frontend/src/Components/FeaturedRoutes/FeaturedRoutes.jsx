@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import BookingModal from "../BookingModal/BookingModal";
+import RoleRestrictionModal from "../RoleRestrictionModal/RoleRestrictionModal";
 import { normalizeTime } from "../../utils/helperutility";
 import "./featuredroutes.css";
 
@@ -14,6 +15,8 @@ const FeaturedRoutes = ({ routes, loading }) => {
 
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+   const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
+     useState(false);
 
   const auth = useSelector((state) => state.auth);
   const navigate = useNavigate();
@@ -124,13 +127,21 @@ const FeaturedRoutes = ({ routes, loading }) => {
   const handleBookRoute = (route) => {
     if (!auth.user) {
       // Redirect unauthenticated users to login, then back to homepage
-      navigate("/login", { state: { returnTo: "/", message: "Please login to book a route" } });
+      navigate("/login", {
+        state: { returnTo: "/", message: "Please login to book a route" },
+      });
       return;
     }
 
+    // Check if user is a COMMUTER
+    if (auth.user.role !== "COMMUTER") {
+      // Show role restriction modal instead of alert
+      setShowRoleRestrictionModal(true);
+      return;
+    }
     setSelectedRoute(route);
     setShowBookingModal(true);
-  };
+  };;
 
   const handleCloseBookingModal = () => {
     setShowBookingModal(false);
@@ -416,6 +427,17 @@ const FeaturedRoutes = ({ routes, loading }) => {
           onSuccess={handleBookingSuccess}
         />
       )}
+
+      {/* Role Restriction Modal */}
+      <RoleRestrictionModal
+        isOpen={showRoleRestrictionModal}
+        onClose={() => setShowRoleRestrictionModal(false)}
+        title="Commuter Access Required"
+        message="Only Commuter users can book routes. Please login with a Commuter account."
+        requiredRole="COMMUTER"
+        currentRole={auth.user?.role}
+        onLogin={() => navigate("/login")}
+      />
     </div>
   );
 };

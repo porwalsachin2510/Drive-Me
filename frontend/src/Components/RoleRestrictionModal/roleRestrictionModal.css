@@ -1,0 +1,222 @@
+.role-restriction-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.role-restriction-modal {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 450px;
+  width: 90%;
+  padding: 40px 30px;
+  position: relative;
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.role-restriction-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s ease;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.role-restriction-close-btn:hover {
+  color: #000;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.role-restriction-icon-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.role-restriction-icon {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: white;
+  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+}
+
+.role-restriction-content {
+  text-align: center;
+}
+
+.role-restriction-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.role-restriction-message {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.role-restriction-info-box {
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(238, 90, 111, 0.1) 100%);
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 28px;
+  border: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.role-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.role-info-item:last-child {
+  margin-bottom: 0;
+}
+
+.role-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.role-value {
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.role-value.required {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+}
+
+.role-value.current {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.role-restriction-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.role-restriction-btn {
+  flex: 1;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.role-restriction-btn.cancel-btn {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #e0e0e0;
+}
+
+.role-restriction-btn.cancel-btn:hover {
+  background: #efefef;
+  border-color: #d0d0d0;
+}
+
+.role-restriction-btn.login-btn {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+}
+
+.role-restriction-btn.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(255, 107, 107, 0.4);
+}
+
+.role-restriction-btn.login-btn:active {
+  transform: translateY(0);
+}
+
+.btn-icon {
+  font-size: 14px;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .role-restriction-modal {
+    width: 95%;
+    padding: 32px 24px;
+    max-width: 100%;
+  }
+
+  .role-restriction-title {
+    font-size: 20px;
+  }
+
+  .role-restriction-message {
+    font-size: 14px;
+  }
+
+  .role-restriction-actions {
+    flex-direction: column;
+  }
+
+  .role-restriction-btn {
+    width: 100%;
+  }
+}

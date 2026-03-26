@@ -155,30 +155,12 @@ function App() {
             }
           />
 
-          {/* <Route
-          path="/service-selection"
-          element={
-            <ProtectedRoleBasedRoute allowedRoles={["CORPORATE"]}>
-              <ServiceSelection />
-            </ProtectedRoleBasedRoute>
-          }
-        /> */}
-          <Route
-            path="/corporate"
-            element={
-              <ProtectedRoleBasedRoute allowedRoles={["CORPORATE"]}>
-                <Corporate />
-              </ProtectedRoleBasedRoute>
-            }
-          />
-          <Route
-            path="/search-results"
-            element={
-              <ProtectedRoleBasedRoute allowedRoles={["CORPORATE"]}>
-                <SearchResults />
-              </ProtectedRoleBasedRoute>
-            }
-          />
+          {/* Public Corporate Flow - accessible without login */}
+          <Route path="/service-selection" element={<ServiceSelection />} />
+          <Route path="/corporate" element={<Corporate />} />
+          <Route path="/search-results" element={<SearchResults />} />
+
+          {/* Protected - requires login to view vehicle owner details */}
           <Route
             path="/view-single-vehicle-owner"
             element={
