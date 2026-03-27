@@ -22,24 +22,23 @@ export default function Navbar({ activeTab, setActiveTab }) {
   const isLoading = useSelector(selectLoading);
 
   const navigate = useNavigate();
+  const location = useLocation();
 
-    const location = useLocation();
+  // Determine active mode based on current path or activeTab
+  const getActiveMode = () => {
+    const path = location.pathname;
+    if (
+      path.startsWith("/service-selection") ||
+      path.startsWith("/corporate") ||
+      path.startsWith("/search-results") ||
+      path.startsWith("/view-single-vehicle-owner")
+    ) {
+      return "corporate";
+    }
+    return activeTab || "commuters";
+  };
 
-    // Determine active mode based on current path or activeTab
-    const getActiveMode = () => {
-      const path = location.pathname;
-      if (
-        path.startsWith("/service-selection") ||
-        path.startsWith("/corporate") ||
-        path.startsWith("/search-results") ||
-        path.startsWith("/view-single-vehicle-owner")
-      ) {
-        return "corporate";
-      }
-      return activeTab || "commuters";
-    };
-
-    const currentMode = getActiveMode();
+  const currentMode = getActiveMode();
 
   const roleRedirectMap = {
     COMMUTER: "/commuter-profile",
@@ -86,22 +85,22 @@ export default function Navbar({ activeTab, setActiveTab }) {
   };
 
   const handleTabClick = (tab) => {
-     if (setActiveTab) {
-       setActiveTab(tab);
-     }
+    if (setActiveTab) {
+      setActiveTab(tab);
+    }
     localStorage.setItem("activeTab", tab);
     setMobileMenuOpen(false);
   };
 
-   const handleCommuterClick = () => {
-     handleTabClick("commuters");
-     navigate("/");
-   };
+  const handleCommuterClick = () => {
+    handleTabClick("commuters");
+    navigate("/");
+  };
 
-   const handleCorporateClick = () => {
-     handleTabClick("corporate");
-     navigate("/service-selection");
-   };
+  const handleCorporateClick = () => {
+    handleTabClick("corporate");
+    navigate("/service-selection");
+  };
 
   const handleContractTabClick = (tab) => {
     console.log("this tab clicked ", tab);
@@ -157,59 +156,68 @@ export default function Navbar({ activeTab, setActiveTab }) {
         <div
           className={`drivemego-topbar-navbar-items ${mobileMenuOpen ? "drivemego-topbar-active" : ""}`}
         >
-          <div className="drivemego-topbar-nav-tabs">
-            <button
-              className={`drivemego-topbar-navbar-tab drivemego-topbar-commuter-tab ${currentMode === "commuters" ? "drivemego-topbar-active" : ""}`}
-              onClick={handleCommuterClick}
-            >
-              <span className="drivemego-topbar-user-icon">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              </span>
-              Commuters
-            </button>
-            <button
-              className={`drivemego-topbar-navbar-tab drivemego-topbar-corporate-tab ${currentMode === "corporate" ? "drivemego-topbar-active" : ""}`}
-              onClick={handleCorporateClick}
-            >
-              <span className="drivemego-topbar-building-icon">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
-                  <path d="M9 22v-4h6v4"></path>
-                  <path d="M8 6h.01"></path>
-                  <path d="M16 6h.01"></path>
-                  <path d="M12 6h.01"></path>
-                  <path d="M12 10h.01"></path>
-                  <path d="M12 14h.01"></path>
-                  <path d="M16 10h.01"></path>
-                  <path d="M16 14h.01"></path>
-                  <path d="M8 10h.01"></path>
-                  <path d="M8 14h.01"></path>
-                </svg>
-              </span>
-              Corporate
-            </button>
-          </div>
+          {!isAuthenticated && (
+            <div className="drivemego-topbar-nav-tabs">
+              <button
+                className={`drivemego-topbar-navbar-tab drivemego-topbar-commuter-tab ${currentMode === "commuters" ? "drivemego-topbar-active" : ""}`}
+                onClick={handleCommuterClick}
+              >
+                <span className="drivemego-topbar-user-icon">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </span>
+                Commuters
+              </button>
+              <button
+                className={`drivemego-topbar-navbar-tab drivemego-topbar-corporate-tab ${currentMode === "corporate" ? "drivemego-topbar-active" : ""}`}
+                onClick={handleCorporateClick}
+              >
+                <span className="drivemego-topbar-building-icon">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect
+                      x="4"
+                      y="2"
+                      width="16"
+                      height="20"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <path d="M9 22v-4h6v4"></path>
+                    <path d="M8 6h.01"></path>
+                    <path d="M16 6h.01"></path>
+                    <path d="M12 6h.01"></path>
+                    <path d="M12 10h.01"></path>
+                    <path d="M12 14h.01"></path>
+                    <path d="M16 10h.01"></path>
+                    <path d="M16 14h.01"></path>
+                    <path d="M8 10h.01"></path>
+                    <path d="M8 14h.01"></path>
+                  </svg>
+                </span>
+                Corporate
+              </button>
+            </div>
+          )}
 
           {isAuthenticated ? (
             // After Login: Show user avatar with dropdown and notifications

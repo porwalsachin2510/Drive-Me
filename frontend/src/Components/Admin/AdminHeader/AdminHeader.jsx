@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../../Redux/slices/authSlice";
 import Notifications from "./Notifications/Notifications"
 import api from "../../../utils/api";
@@ -12,8 +12,62 @@ function AdminHeader() {
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const auth = useSelector((state) => state.auth);
   
   const [showNotifications, setShowNotifications] = useState(false)
+const [formattedLastLogin, setFormattedLastLogin] = useState("");
+
+// Format last login time
+useEffect(() => {
+  if (auth.user?.lastLogin) {
+    const loginDate = new Date(auth.user.lastLogin);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    let dateString = "";
+
+    // Check if login is today
+    if (loginDate.toDateString() === today.toDateString()) {
+      dateString = "Today";
+    }
+    // Check if login is yesterday
+    else if (loginDate.toDateString() === yesterday.toDateString()) {
+      dateString = "Yesterday";
+    }
+    // Otherwise show the date
+    else {
+      dateString = loginDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+
+    const timeString = loginDate.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    setFormattedLastLogin(`${dateString}, ${timeString}`);
+  }
+}, [auth.user?.lastLogin]);
+
+const getRoleDisplayName = (role) => {
+  const roleMap = {
+    ADMIN: "Admin",
+    COMMUTER: "Commuter",
+    CORPORATE: "Corporate",
+    B2C_PARTNER: "B2C Partner",
+    B2B_PARTNER: "B2B Partner",
+    CORPORATE_DRIVER: "Corporate Driver",
+    B2B_PARTNER_DRIVER: "B2B Partner Driver",
+    CORPORATE_EMPLOYEE: "Corporate Employee",
+    B2C_PARTNER_DRIVER: "B2C Partner Driver",
+  };
+  return roleMap[role] || role;
+};
 
   const handleLogout = async () => {
     try {
@@ -58,6 +112,9 @@ function AdminHeader() {
     }
   };
 
+   const userName = auth.user?.fullName || "User";
+   const userRole = auth.user?.role || "ADMIN";
+
   return (
     <header className="ad-dash-header">
       <div className="ad-dash-header-content">
@@ -75,9 +132,11 @@ function AdminHeader() {
         <div className="ad-dash-header-right">
           <div className="ad-dash-user-info">
             <div className="ad-dash-user-details">
-              <span className="ad-dash-user-name">Super Admin</span>
+              <span className="ad-dash-user-name">
+                {getRoleDisplayName(userRole)}
+              </span>
               <span className="ad-dash-user-login">
-                Last login: Today, 09:41 AM
+                Last login: {formattedLastLogin || "Never"}
               </span>
             </div>
             <div className="notification-wrapper">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation  } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../../Redux/slices/authSlice";
 import api from "../../../utils/api";
 
@@ -65,6 +65,57 @@ const handleTabChange = (tab) => {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
 
+    const auth = useSelector((state) => state.auth);
+
+    const [formattedLastLogin, setFormattedLastLogin] = useState("");
+
+    // Format last login time
+    useEffect(() => {
+      if (auth.user?.lastLogin) {
+        const loginDate = new Date(auth.user.lastLogin);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        let dateString = "";
+
+        if (loginDate.toDateString() === today.toDateString()) {
+          dateString = "Today";
+        } else if (loginDate.toDateString() === yesterday.toDateString()) {
+          dateString = "Yesterday";
+        } else {
+          dateString = loginDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+        }
+
+        const timeString = loginDate.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+
+        setFormattedLastLogin(`${dateString}, ${timeString}`);
+      }
+    }, [auth.user?.lastLogin]);
+
+    const getRoleDisplayName = (role) => {
+      const roleMap = {
+        ADMIN: "Admin",
+        COMMUTER: "Commuter",
+        CORPORATE: "Corporate",
+        B2C_PARTNER: "B2C Partner",
+        B2B_PARTNER: "B2B Partner",
+        CORPORATE_DRIVER: "Corporate Driver",
+        B2B_PARTNER_DRIVER: "B2B Partner Driver",
+        CORPORATE_EMPLOYEE: "Corporate Employee",
+        B2C_PARTNER_DRIVER: "B2C Partner Driver",
+      };
+      return roleMap[role] || role;
+  };
+  
   // Fetch corporate stats from backend
   useEffect(() => {
     const fetchCorporateStats = async () => {
@@ -193,6 +244,9 @@ const handleTabChange = (tab) => {
       navigate("/login");
     }
   };
+
+   const userName = auth.user?.fullName || "User";
+   const userRole = auth.user?.role || "ADMIN";
 
   return (
     <div className="corporate-my-profile">
@@ -598,9 +652,42 @@ const handleTabChange = (tab) => {
                 Verified Business
               </span>
             </div>
-            <button className="corporate-logout-btn" onClick={handleLogout}>
-              Log Out
-            </button>
+
+            {/* User Info Header */}
+            <div className="corporate-content-header-right-inside">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      color: "#202124",
+                    }}
+                  >
+                    {getRoleDisplayName(userRole)}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#5f6368",
+                      marginTop: "4px",
+                    }}
+                  >
+                    Last login: {formattedLastLogin || "Never"}
+                  </div>
+                </div>
+              </div>
+
+              <button className="corporate-logout-btn" onClick={handleLogout}>
+                Log Out
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}

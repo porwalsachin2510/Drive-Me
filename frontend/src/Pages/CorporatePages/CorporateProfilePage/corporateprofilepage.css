@@ -114,6 +114,12 @@ body {
   border-radius: 50px;
 }
 
+.corporate-content-header-right-inside {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .corporate-logout-btn {
   background: #dc3545;
   border: 1px solid #FCEAED;

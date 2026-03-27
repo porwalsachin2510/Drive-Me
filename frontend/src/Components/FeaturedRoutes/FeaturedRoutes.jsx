@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import BookingModal from "../BookingModal/BookingModal";
 import RoleRestrictionModal from "../RoleRestrictionModal/RoleRestrictionModal";
 import { normalizeTime } from "../../utils/helperutility";
+import { storeNavigationState } from "../../utils/loginRedirect";
 import "./featuredroutes.css";
 
 const FeaturedRoutes = ({ routes, loading }) => {
@@ -12,11 +13,10 @@ const FeaturedRoutes = ({ routes, loading }) => {
     rating: "Any Rating",
   });
 
-
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
-   const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
-     useState(false);
+  const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
+    useState(false);
 
   const auth = useSelector((state) => state.auth);
   const navigate = useNavigate();
@@ -33,7 +33,7 @@ const FeaturedRoutes = ({ routes, loading }) => {
         route.toLocation?.toLowerCase().includes(locationLower) ||
         (route.stops &&
           route.stops.some((stop) =>
-            stop.toLowerCase().includes(locationLower)
+            stop.toLowerCase().includes(locationLower),
           ));
 
       if (!matchesLocation) return false;
@@ -81,26 +81,27 @@ const FeaturedRoutes = ({ routes, loading }) => {
   const calculateMonthlyPrice = (route) => {
     // If route already has monthlyPrice, use it
     if (route.monthlyPrice && route.monthlyPrice !== "N/A") {
-      return typeof route.monthlyPrice === 'number' 
-        ? `${route.monthlyPrice.toFixed(2)} KWD` 
+      return typeof route.monthlyPrice === "number"
+        ? `${route.monthlyPrice.toFixed(2)} KWD`
         : route.monthlyPrice;
     }
-    
+
     // Calculate from one-way price
-    const oneWayPrice = route.pricing?.oneWayPrice || route.oneWayPrice || route.price;
+    const oneWayPrice =
+      route.pricing?.oneWayPrice || route.oneWayPrice || route.price;
     if (!oneWayPrice) return "Contact for price";
-    
+
     // Calculate travel days per month based on available days
-    const daysPerWeek = route.availableDays?.length || route.daysOfWeek?.length || 5;
+    const daysPerWeek =
+      route.availableDays?.length || route.daysOfWeek?.length || 5;
     const travelDaysPerMonth = Math.round(daysPerWeek * 4.33); // ~4.33 weeks per month
-    
+
     // Monthly price = one-way price * travel days per month
     const monthlyPrice = parseFloat(oneWayPrice) * travelDaysPerMonth;
     return `${monthlyPrice.toFixed(2)} KWD`;
   };
   // END: CALCULATE MONTHLY PRICE FROM ONE-WAY PRICE
 
-  
   const isRouteAvailableForBooking = (route) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -126,9 +127,16 @@ const FeaturedRoutes = ({ routes, loading }) => {
 
   const handleBookRoute = (route) => {
     if (!auth.user) {
-      // Redirect unauthenticated users to login, then back to homepage
+      // Store route data for return
+      storeNavigationState("book-route", { route });
+      // Redirect unauthenticated users to login with return to homepage
       navigate("/login", {
-        state: { returnTo: "/", message: "Please login to book a route" },
+        state: {
+          returnTo: "/",
+          returnState: { openBookingRoute: route._id },
+          requiredRole: "COMMUTER",
+          message: "Please login as a Commuter to book a route",
+        },
       });
       return;
     }
@@ -139,9 +147,10 @@ const FeaturedRoutes = ({ routes, loading }) => {
       setShowRoleRestrictionModal(true);
       return;
     }
+
     setSelectedRoute(route);
     setShowBookingModal(true);
-  };;
+  };
 
   const handleCloseBookingModal = () => {
     setShowBookingModal(false);

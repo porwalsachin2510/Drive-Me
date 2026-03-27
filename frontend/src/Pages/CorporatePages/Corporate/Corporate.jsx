@@ -7,6 +7,7 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import { searchVehicles } from "../../../Redux/slices/vehicleSlice";
 import PriceComparison from "../../../Components/Corporate/PriceComparison/PriceComparison";
+import { isSearchFormComplete } from "../../../utils/searchValidation";
 import "./corporate.css";
 
 const Corporate = () => {
@@ -527,7 +528,11 @@ const Corporate = () => {
             />
             {/* Search Button */}
             <div className="btn-filter-actions">
-              <button className="search-btn" onClick={handleSearch}>
+              <button
+                className={`search-btn ${!isSearchFormComplete(filters) ? "disabled" : ""}`}
+                onClick={handleSearch}
+                disabled={!isSearchFormComplete(filters)}
+              >
                 Search Vehicles
               </button>
             </div>

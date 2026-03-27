@@ -17,6 +17,7 @@ import {
   selectIsAuthenticated,
   selectUserRole,
 } from "../../../Redux/selectors/authSelectors";
+import { storeNavigationState } from "../../../utils/loginRedirect";
 import "./SearchResults.css";
 
 const FleetSearchResults = () => {
@@ -31,9 +32,9 @@ const FleetSearchResults = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState("grid");
   const [activeTab, setActiveTab] = useState("corporate");
- const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
+  const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
     useState(false);
-  
+
   useEffect(() => {
     localStorage.setItem("activeTab", "corporate");
   }, []);
@@ -96,8 +97,22 @@ const FleetSearchResults = () => {
   };
 
   const handleViewAll = (result, userfilters) => {
+    // If not authenticated, redirect to login with return state
+    if (!isAuthenticated) {
+      storeNavigationState("view-vehicles", { result, userfilters });
+      navigate("/login", {
+        state: {
+          returnTo: "/view-single-vehicle-owner",
+          returnState: { userfilters, results: result },
+          requiredRole: "CORPORATE",
+          message: "Please login as a Corporate user to view fleet details.",
+        },
+      });
+      return;
+    }
+
     // Check if user is authenticated and has CORPORATE role
-    if (!isAuthenticated || userRole !== "CORPORATE") {
+    if (userRole !== "CORPORATE") {
       // Show role restriction modal
       setShowRoleRestrictionModal(true);
       return;
@@ -347,6 +362,7 @@ const FleetSearchResults = () => {
         )}
       </div>
       <Footer />
+
       {/* Role Restriction Modal */}
       <RoleRestrictionModal
         isOpen={showRoleRestrictionModal}

@@ -5,6 +5,8 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import BookingModal from "../BookingModal/BookingModal";
 import RoleRestrictionModal from "../RoleRestrictionModal/RoleRestrictionModal";
+import { storeNavigationState } from "../../utils/loginRedirect";
+
 import "./availablesection.css";
 
 const AvailableSection = ({
@@ -105,19 +107,21 @@ const AvailableSection = ({
   const calculateMonthlyPrice = (route) => {
     // If route already has monthlyPrice, use it
     if (route.monthlyPrice && route.monthlyPrice !== "N/A") {
-      return typeof route.monthlyPrice === 'number' 
-        ? route.monthlyPrice.toFixed(2) 
+      return typeof route.monthlyPrice === "number"
+        ? route.monthlyPrice.toFixed(2)
         : route.monthlyPrice;
     }
-    
+
     // Calculate from one-way price
-    const oneWayPrice = route.pricing?.oneWayPrice || route.oneWayPrice || route.price;
+    const oneWayPrice =
+      route.pricing?.oneWayPrice || route.oneWayPrice || route.price;
     if (!oneWayPrice) return null;
-    
+
     // Calculate travel days per month based on available days
-    const daysPerWeek = route.availableDays?.length || route.daysOfWeek?.length || 5;
+    const daysPerWeek =
+      route.availableDays?.length || route.daysOfWeek?.length || 5;
     const travelDaysPerMonth = Math.round(daysPerWeek * 4.33); // ~4.33 weeks per month
-    
+
     // Monthly price = one-way price * travel days per month
     const monthlyPrice = parseFloat(oneWayPrice) * travelDaysPerMonth;
     return monthlyPrice.toFixed(2);
@@ -148,8 +152,17 @@ const AvailableSection = ({
 
   const handleBookRoute = (route) => {
     if (!auth.user) {
-      // Redirect unauthenticated users to login, then back to homepage
-      navigate("/login", { state: { returnTo: "/", message: "Please login as a Commuter to book a route" } });
+      // Store route data for return
+      storeNavigationState("book-route", { route });
+      // Redirect unauthenticated users to login with return to homepage
+      navigate("/login", {
+        state: {
+          returnTo: "/",
+          returnState: { openBookingRoute: route._id },
+          requiredRole: "COMMUTER",
+          message: "Please login as a Commuter to book a route",
+        },
+      });
       return;
     }
 
@@ -164,16 +177,16 @@ const AvailableSection = ({
     setShowBookingModal(true);
   };
 
-   const handleCloseBookingModal = () => {
-     setShowBookingModal(false);
-     setSelectedRoute(null);
-   };
-
-   const handleBookingSuccess = () => {
-     alert("Booking successful!");
-     handleCloseBookingModal();
+  const handleCloseBookingModal = () => {
+    setShowBookingModal(false);
+    setSelectedRoute(null);
   };
-  
+
+  const handleBookingSuccess = () => {
+    alert("Booking successful!");
+    handleCloseBookingModal();
+  };
+
   const isCorporate = auth.user?.role === "COMMUTER" && auth.user?.companyId;
 
   return (

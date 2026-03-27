@@ -11,6 +11,55 @@ export default function Sidebar() {
   const [loading, setLoading] = useState(true);
   const auth = useSelector((state) => state.auth);
 
+    const [formattedLastLogin, setFormattedLastLogin] = useState("");
+
+    // Format last login time
+    useEffect(() => {
+      if (auth.user?.lastLogin) {
+        const loginDate = new Date(auth.user.lastLogin);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        let dateString = "";
+
+        if (loginDate.toDateString() === today.toDateString()) {
+          dateString = "Today";
+        } else if (loginDate.toDateString() === yesterday.toDateString()) {
+          dateString = "Yesterday";
+        } else {
+          dateString = loginDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+        }
+
+        const timeString = loginDate.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+
+        setFormattedLastLogin(`${dateString}, ${timeString}`);
+      }
+    }, [auth.user?.lastLogin]);
+
+    const getRoleDisplayName = (role) => {
+      const roleMap = {
+        ADMIN: "Admin",
+        COMMUTER: "Commuter",
+        CORPORATE: "Corporate",
+        B2C_PARTNER: "B2C Partner",
+        B2B_PARTNER: "B2B Partner",
+        CORPORATE_DRIVER: "Corporate Driver",
+        B2B_PARTNER_DRIVER: "B2B Partner Driver",
+        CORPORATE_EMPLOYEE: "Corporate Employee",
+        B2C_PARTNER_DRIVER: "B2C Partner Driver",
+      };
+      return roleMap[role] || role;
+    };
+
   useEffect(() => {
     fetchSidebarData();
   }, []);
@@ -68,6 +117,9 @@ export default function Sidebar() {
     window.location.hash = '#wallet';
   };
 
+  const userName = auth.user?.fullName || "User";
+  const userRole = auth.user?.role || "ADMIN";
+
   if (loading) {
     return (
       <div className="commuter-sidebar">
@@ -81,9 +133,9 @@ export default function Sidebar() {
       <div className="sidebar-profile">
         <div className="profile-avatar-outer">
           <div className="profile-avatar">
-            <img 
-              src={profileData?.avatar || "https://i.pravatar.cc/100?img=3"} 
-              alt="Profile" 
+            <img
+              src={profileData?.avatar || "https://i.pravatar.cc/100?img=3"}
+              alt="Profile"
             />
             <div className="online-indicator"></div>
           </div>
@@ -95,13 +147,24 @@ export default function Sidebar() {
         <p className="profile-email">
           {profileData?.email || auth.user?.email || "passenger@driveme.com"}
         </p>
-        
+
         {stats?.isPremium && (
           <span className="premium-badge">Premium Member</span>
         )}
+
+        <div className="commuter-sidebar-login-details">
+          <div className="commuter-sidebar-inside">
+            <div className="commuter-sidebar-login-details-first">
+              {getRoleDisplayName(userRole)}
+            </div>
+            <div className="commuter-sidebar-login-details-second">
+              Last login: {formattedLastLogin || "Never"}
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="sidebar-stats">
+      {/* <div className="sidebar-stats">
         <div className="stat-item">
           <p className="stat-label">TOTAL RIDES</p>
           <p className="stat-value">{stats?.totalRides || 0}</p>
@@ -110,7 +173,7 @@ export default function Sidebar() {
           <p className="stat-label">SAVED CO2</p>
           <p className="stat-value green">{stats?.savedCO2 || "0kg"}</p>
         </div>
-      </div>
+      </div> */}
 
       <div className="wallet-card">
         <p className="wallet-label">Wallet Balance</p>

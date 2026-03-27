@@ -7,19 +7,23 @@
   overflow-y: hidden;
   display: flex;
   flex-direction: column;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
 }
 
 .sidebar-profile {
   text-align: center;
-  padding-bottom: 30px;
+  padding-bottom: 20px;
   border-bottom: 1px solid #e5e7eb;
-   display: flex;
-   flex-direction: column;
-   align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.profile-avatar-outer{
+.profile-avatar-outer {
   width: 98px;
   height: 98px;
   position: relative;
@@ -72,11 +76,38 @@
 .premium-badge {
   display: inline-block;
   background-color: rgba(232, 93, 93, 0.1);
-  color: #E85D5D;
+  color: #e85d5d;
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
+}
+
+.commuter-sidebar-inside {
+  display: flex;
+   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.commuter-sidebar-login-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.commuter-sidebar-login-details-first {
+  font-size: 14px;
+  font-weight: 600;
+  color: #202124;
+}
+
+.commuter-sidebar-login-details-second {
+  font-size: 12px;
+  color: #5f6368;
+  margin-top: 4px;
 }
 
 .sidebar-stats {
@@ -107,11 +138,11 @@
 }
 
 .stat-value.green {
-  color: #22C55E;
+  color: #22c55e;
 }
 
 .wallet-card {
-  background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
+  background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 100%);
   border-radius: 12px;
   padding: 20px;
   color: white;
@@ -169,7 +200,7 @@
     text-align: left;
     align-items: center;
     gap: 15px;
-    padding-bottom: 20px;
+    padding-bottom: 10px;
     border-bottom: none;
   }
 
@@ -187,6 +218,33 @@
 
   .wallet-card {
     margin-top: 15px;
+  }
+
+  .commuter-sidebar-inside {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .commuter-sidebar-login-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .commuter-sidebar-login-details-first {
+    font-size: 14px;
+    font-weight: 600;
+    color: #202124;
+  }
+
+  .commuter-sidebar-login-details-second {
+    font-size: 12px;
+    color: #5f6368;
+    margin-top: 4px;
   }
 }
 
@@ -241,5 +299,32 @@
   .topup-btn {
     font-size: 13px;
     padding: 8px;
+  }
+
+  .commuter-sidebar-inside {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .commuter-sidebar-login-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .commuter-sidebar-login-details-first {
+    font-size: 14px;
+    font-weight: 600;
+    color: #202124;
+  }
+
+  .commuter-sidebar-login-details-second {
+    font-size: 12px;
+    color: #5f6368;
+    margin-top: 4px;
   }
 }

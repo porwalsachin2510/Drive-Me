@@ -27,7 +27,8 @@ function B2CPartnerDriverDashboard() {
   const dispatch = useDispatch();
 
   // Get driver-specific bookings from Redux
-  const driverBookings = useSelector((state) => state.booking.driverBookings) || [];
+  const driverBookings =
+    useSelector((state) => state.booking.driverBookings) || [];
 
   const [liveLocation, setLiveLocation] = useState(null);
   const [filterStatus, setFilterStatus] = useState("ACCEPTED");
@@ -36,53 +37,101 @@ function B2CPartnerDriverDashboard() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState("bookings");
   const [isSharingLocation, setIsSharingLocation] = useState(false);
+  const [formattedLastLogin, setFormattedLastLogin] = useState("");
   const [activeTrip, setActiveTrip] = useState(null);
   const locationIntervalRef = useRef(null);
 
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-      try {
-        const token = localStorage.getItem("token");
-  
-        if (!token) {
-          console.log("No token found, redirecting to login");
-          navigate("/login");
-          return;
-        }
-  
-        dispatch(logout());
-  
-        // Call backend logout endpoint to clear cookies and session
-        await api.post(
-          "/auth/logout",
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            withCredentials: true,
-          },
-        );
-  
-        // Clear frontend storage
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-  
-        console.log("User logged out successfully");
-  
-        // Redirect to login page
-        navigate("/login");
-      } catch (err) {
-        console.error("Logout error:", err);
-  
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-  
-        // Redirect to login regardless of error
-        navigate("/login");
+  // Format last login time
+  useEffect(() => {
+    if (user?.lastLogin) {
+      const loginDate = new Date(user.lastLogin);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      let dateString = "";
+
+      if (loginDate.toDateString() === today.toDateString()) {
+        dateString = "Today";
+      } else if (loginDate.toDateString() === yesterday.toDateString()) {
+        dateString = "Yesterday";
+      } else {
+        dateString = loginDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
       }
+
+      const timeString = loginDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      setFormattedLastLogin(`${dateString}, ${timeString}`);
+    }
+  }, [user?.lastLogin]);
+
+  const getRoleDisplayName = (role) => {
+    const roleMap = {
+      ADMIN: "Admin",
+      COMMUTER: "Commuter",
+      CORPORATE: "Corporate",
+      B2C_PARTNER: "B2C Partner",
+      B2B_PARTNER: "B2B Partner",
+      CORPORATE_DRIVER: "Corporate Driver",
+      B2B_PARTNER_DRIVER: "B2B Partner Driver",
+      CORPORATE_EMPLOYEE: "Corporate Employee",
+      B2C_PARTNER_DRIVER: "B2C Partner Driver",
     };
+    return roleMap[role] || role;
+  };
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.log("No token found, redirecting to login");
+        navigate("/login");
+        return;
+      }
+
+      dispatch(logout());
+
+      // Call backend logout endpoint to clear cookies and session
+      await api.post(
+        "/auth/logout",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        },
+      );
+
+      // Clear frontend storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      console.log("User logged out successfully");
+
+      // Redirect to login page
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout error:", err);
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      // Redirect to login regardless of error
+      navigate("/login");
+    }
+  };
 
   // Fetch B2C Partner Driver Bookings
   useEffect(() => {
@@ -94,16 +143,19 @@ function B2CPartnerDriverDashboard() {
   }, [dispatch, user, navigate]);
 
   // Memoize driverBookings to prevent dependency changes
-  const memoizedDriverBookings = useMemo(() => driverBookings, [JSON.stringify(driverBookings)]);
+  const memoizedDriverBookings = useMemo(
+    () => driverBookings,
+    [JSON.stringify(driverBookings)],
+  );
 
   // Compute initial filter status from bookings
   const initialFilterStatus = useMemo(() => {
     if (memoizedDriverBookings && memoizedDriverBookings.length > 0) {
-      const statuses = memoizedDriverBookings.map(b => b.bookingStatus);
+      const statuses = memoizedDriverBookings.map((b) => b.bookingStatus);
       const hasInProgress = statuses.includes("IN_PROGRESS");
       const hasAccepted = statuses.includes("ACCEPTED");
       const hasPending = statuses.includes("PENDING");
-      
+
       if (hasInProgress) return "IN_PROGRESS";
       if (hasAccepted) return "ACCEPTED";
       if (hasPending) return "PENDING";
@@ -120,8 +172,6 @@ function B2CPartnerDriverDashboard() {
       hasSetInitialFilter.current = true;
     }
   }, [memoizedDriverBookings, initialFilterStatus]);
-
-
 
   const handleAccept = (bookingId) => {
     dispatch(acceptBooking(bookingId)).then(() => {
@@ -140,7 +190,7 @@ function B2CPartnerDriverDashboard() {
         rejectBooking({
           bookingId: selectedBooking._id,
           rejectionReason,
-        })
+        }),
       ).then(() => {
         dispatch(getPartnerDriverBookings({ status: filterStatus }));
         setShowRejectModal(false);
@@ -185,10 +235,10 @@ function B2CPartnerDriverDashboard() {
       };
 
       console.log("📍 Location updated:", locationData);
-      
+
       // Send location to backend
       const response = await api.post("/location/share", locationData);
-      
+
       // Send real-time location to passenger
       if (socket && activeTrip) {
         socket.socket.emit("driver-location-update", {
@@ -231,7 +281,7 @@ function B2CPartnerDriverDashboard() {
               timestamp: new Date().toISOString(),
               driverType: user?.role,
             };
-            
+
             console.log("🚗 Emitting driver-location-update:", locationData);
             socket.socket.emit("driver-location-update", locationData);
           }
@@ -287,17 +337,17 @@ function B2CPartnerDriverDashboard() {
   const startTrip = async (bookingId) => {
     try {
       console.log("🚀 Starting trip for booking:", bookingId);
-      
+
       // Start the trip using the new Redux action
       const result = await dispatch(startB2CTrip(bookingId)).unwrap();
-      
+
       console.log("📊 Start trip response:", result);
 
       // Refresh bookings to get updated status
       await dispatch(getPartnerDriverBookings({ status: filterStatus }));
 
       // Start location sharing for the trip
-      const booking = driverBookings.find(b => b._id === bookingId);
+      const booking = driverBookings.find((b) => b._id === bookingId);
       setActiveTrip(booking);
       if (!isSharingLocation) {
         startAutomaticLocationSharing();
@@ -312,19 +362,20 @@ function B2CPartnerDriverDashboard() {
   const completeTrip = async (bookingId) => {
     try {
       console.log("🏁 Completing trip for booking:", bookingId);
-      
+
       // Complete the trip using the new Redux action
       const result = await dispatch(completeB2CTrip(bookingId)).unwrap();
-      
+
       console.log("📊 Complete trip response:", result);
 
       // Refresh bookings to get updated status
       await dispatch(getPartnerDriverBookings({ status: filterStatus }));
-      
+
       const remainingTrips = partnerBookings.filter(
         (booking) =>
           booking._id !== bookingId &&
-          (booking.bookingStatus === "ACCEPTED" || booking.bookingStatus === "IN_PROGRESS"),
+          (booking.bookingStatus === "ACCEPTED" ||
+            booking.bookingStatus === "IN_PROGRESS"),
       );
 
       if (remainingTrips.length === 0) {
@@ -362,7 +413,13 @@ function B2CPartnerDriverDashboard() {
       socket.socket.off("new-b2c-booking");
       socket.socket.off("location-update");
     };
-  }, [socket, isSharingLocation, startAutomaticLocationSharing, dispatch, filterStatus]);
+  }, [
+    socket,
+    isSharingLocation,
+    startAutomaticLocationSharing,
+    dispatch,
+    filterStatus,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -373,10 +430,12 @@ function B2CPartnerDriverDashboard() {
     };
   }, []);
 
-  const filteredBookings = Array.isArray(driverBookings) ? driverBookings.filter((booking) => {
-    if (filterStatus === "ALL") return true;
-    return booking.bookingStatus === filterStatus;
-  }) : [];
+  const filteredBookings = Array.isArray(driverBookings)
+    ? driverBookings.filter((booking) => {
+        if (filterStatus === "ALL") return true;
+        return booking.bookingStatus === filterStatus;
+      })
+    : [];
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -384,7 +443,7 @@ function B2CPartnerDriverDashboard() {
       month: "short",
       day: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -407,17 +466,33 @@ function B2CPartnerDriverDashboard() {
   const driverStats = useMemo(() => {
     const bookingsArr = Array.isArray(driverBookings) ? driverBookings : [];
     const totalTrips = bookingsArr.length;
-    const completedTrips = bookingsArr.filter(b => b.bookingStatus === "COMPLETED").length;
-    const acceptedTrips = bookingsArr.filter(b => ["ACCEPTED", "IN_PROGRESS", "COMPLETED"].includes(b.bookingStatus)).length;
-    const rejectedTrips = bookingsArr.filter(b => b.bookingStatus === "REJECTED").length;
+    const completedTrips = bookingsArr.filter(
+      (b) => b.bookingStatus === "COMPLETED",
+    ).length;
+    const acceptedTrips = bookingsArr.filter((b) =>
+      ["ACCEPTED", "IN_PROGRESS", "COMPLETED"].includes(b.bookingStatus),
+    ).length;
+    const rejectedTrips = bookingsArr.filter(
+      (b) => b.bookingStatus === "REJECTED",
+    ).length;
     const totalDecisions = acceptedTrips + rejectedTrips;
-    const acceptanceRate = totalDecisions > 0 ? Math.round((acceptedTrips / totalDecisions) * 100) : 100;
-    const ratedTrips = bookingsArr.filter(b => b.rating && b.rating > 0);
-    const avgRating = ratedTrips.length > 0 
-      ? (ratedTrips.reduce((sum, b) => sum + b.rating, 0) / ratedTrips.length).toFixed(1)
-      : "N/A";
+    const acceptanceRate =
+      totalDecisions > 0
+        ? Math.round((acceptedTrips / totalDecisions) * 100)
+        : 100;
+    const ratedTrips = bookingsArr.filter((b) => b.rating && b.rating > 0);
+    const avgRating =
+      ratedTrips.length > 0
+        ? (
+            ratedTrips.reduce((sum, b) => sum + b.rating, 0) / ratedTrips.length
+          ).toFixed(1)
+        : "N/A";
     return { totalTrips, completedTrips, acceptanceRate, avgRating };
   }, [driverBookings]);
+
+
+  const userName = user?.fullName || "User";
+  const userRole = user?.role || "ADMIN";
 
   if (loading) {
     return (
@@ -431,21 +506,32 @@ function B2CPartnerDriverDashboard() {
     <div className="b2c-partner-driver-dashboard">
       <div className="dashboard-header">
         <div className="dashboard-header-left">
-          <h1>Driver Dashboard</h1>
-          <p className="driver-welcome">Welcome back, {user?.fullName || user?.name || 'Driver'}</p>
+          <h1>{getRoleDisplayName(userRole)} Dashboard</h1>
+          <p className="driver-welcome">
+            Welcome back, {user?.fullName || user?.name || "Driver"}
+          </p>
+          <small>Last login: {formattedLastLogin || "Never"}</small>
         </div>
+
         <div className="dashboard-header-right">
           <div className="driver-stat-box">
             <span className="driver-stat-label">RATING</span>
-            <span className="driver-stat-value">{driverStats.avgRating}{driverStats.avgRating !== "N/A" ? "\u2605" : ""}</span>
+            <span className="driver-stat-value">
+              {driverStats.avgRating}
+              {driverStats.avgRating !== "N/A" ? "\u2605" : ""}
+            </span>
           </div>
           <div className="driver-stat-box">
             <span className="driver-stat-label">TRIPS</span>
-            <span className="driver-stat-value">{driverStats.totalTrips.toLocaleString()}</span>
+            <span className="driver-stat-value">
+              {driverStats.totalTrips.toLocaleString()}
+            </span>
           </div>
           <div className="driver-stat-box">
             <span className="driver-stat-label">ACCEPTANCE</span>
-            <span className="driver-stat-value">{driverStats.acceptanceRate}%</span>
+            <span className="driver-stat-value">
+              {driverStats.acceptanceRate}%
+            </span>
           </div>
           <div
             className={`location-status ${isSharingLocation ? "active" : ""}`}

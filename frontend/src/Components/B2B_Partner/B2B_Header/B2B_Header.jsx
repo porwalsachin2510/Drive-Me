@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../../Redux/slices/authSlice";
 import "./b2b_header.css";
 import api from "../../../utils/api";
@@ -8,10 +9,61 @@ function B2B_Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  const auth = useSelector((state) => state.auth);
+
+  const [formattedLastLogin, setFormattedLastLogin] = useState("");
+
+  // Format last login time
+  useEffect(() => {
+    if (auth.user?.lastLogin) {
+      const loginDate = new Date(auth.user.lastLogin);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      let dateString = "";
+
+      if (loginDate.toDateString() === today.toDateString()) {
+        dateString = "Today";
+      } else if (loginDate.toDateString() === yesterday.toDateString()) {
+        dateString = "Yesterday";
+      } else {
+        dateString = loginDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+
+      const timeString = loginDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      setFormattedLastLogin(`${dateString}, ${timeString}`);
+    }
+  }, [auth.user?.lastLogin]);
+
+   const getRoleDisplayName = (role) => {
+     const roleMap = {
+       ADMIN: "Admin",
+       COMMUTER: "Commuter",
+       CORPORATE: "Corporate",
+       B2C_PARTNER: "B2C Partner",
+       B2B_PARTNER: "B2B Partner",
+       CORPORATE_DRIVER: "Corporate Driver",
+       B2B_PARTNER_DRIVER: "B2B Partner Driver",
+       CORPORATE_EMPLOYEE: "Corporate Employee",
+       B2C_PARTNER_DRIVER: "B2C Partner Driver",
+     };
+     return roleMap[role] || role;
+   };
+
   const handleLogout = async () => {
     try {
       const token = localStorage.getItem("token");
-      
+
       if (!token) {
         console.log("No token found, redirecting to login");
         navigate("/login");
@@ -29,7 +81,7 @@ function B2B_Header() {
             Authorization: `Bearer ${token}`,
           },
           withCredentials: true,
-        }
+        },
       );
 
       // Clear frontend storage
@@ -51,6 +103,9 @@ function B2B_Header() {
     }
   };
 
+  const userName = auth.user?.fullName || "User";
+  const userRole = auth.user?.role || "ADMIN";
+
   return (
     <header className="b2b-header">
       <div className="b2b-header-left">
@@ -70,12 +125,43 @@ function B2B_Header() {
             <span>VERIFIED PARTNER</span>
           </div>
         </div>
-        <p className="b2b-header-subtitle">Welcome back, Royal Fleets Co.</p>
+        <p className="b2b-header-subtitle">{`Welcome back, ${userName}`}</p>
       </div>
       <div className="b2b-header-right">
-        <button className="b2b-logout-btn" onClick={handleLogout}>
-          Log Out
-        </button>
+        {/* User Info Header */}
+        <div className="b2b-header-right-inside">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  color: "#202124",
+                }}
+              >
+                {getRoleDisplayName(userRole)}
+              </div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#5f6368",
+                  marginTop: "4px",
+                }}
+              >
+                Last login: {formattedLastLogin || "Never"}
+              </div>
+            </div>
+          </div>
+          <button className="b2b-logout-btn" onClick={handleLogout}>
+            Log Out
+          </button>
+        </div>
       </div>
     </header>
   );

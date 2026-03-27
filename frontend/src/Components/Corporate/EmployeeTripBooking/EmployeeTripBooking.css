@@ -32,6 +32,12 @@
   transition: color 0.2s;
 }
 
+.employee-trip-booking-header-top-inside{
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .employee-trip-booking-tab-navigation {
   display: flex;
   gap: 4px;

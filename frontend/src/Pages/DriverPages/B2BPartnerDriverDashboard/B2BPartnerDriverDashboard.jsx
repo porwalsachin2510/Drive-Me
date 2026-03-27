@@ -23,11 +23,59 @@ function B2BPartnerDriverDashboard() {
   const [activeBookingTab, setActiveBookingTab] = useState("confirmed");
   const [activeMainTab, setActiveMainTab] = useState("bookings");
   const [isSharingLocation, setIsSharingLocation] = useState(false);
+  const [formattedLastLogin, setFormattedLastLogin] = useState("");
   const [activeTrip, setActiveTrip] = useState(null);
   const locationIntervalRef = useRef(null);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  // Format last login time
+    useEffect(() => {
+      if (user?.lastLogin) {
+        const loginDate = new Date(user.lastLogin);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+  
+        let dateString = "";
+  
+        if (loginDate.toDateString() === today.toDateString()) {
+          dateString = "Today";
+        } else if (loginDate.toDateString() === yesterday.toDateString()) {
+          dateString = "Yesterday";
+        } else {
+          dateString = loginDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+        }
+  
+        const timeString = loginDate.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+  
+        setFormattedLastLogin(`${dateString}, ${timeString}`);
+      }
+    }, [user?.lastLogin]);
+  
+    const getRoleDisplayName = (role) => {
+      const roleMap = {
+        ADMIN: "Admin",
+        COMMUTER: "Commuter",
+        CORPORATE: "Corporate",
+        B2C_PARTNER: "B2C Partner",
+        B2B_PARTNER: "B2B Partner",
+        CORPORATE_DRIVER: "Corporate Driver",
+        B2B_PARTNER_DRIVER: "B2B Partner Driver",
+        CORPORATE_EMPLOYEE: "Corporate Employee",
+        B2C_PARTNER_DRIVER: "B2C Partner Driver",
+      };
+      return roleMap[role] || role;
+    };
 
   const handleLogout = async () => {
       try {
@@ -351,10 +399,18 @@ function B2BPartnerDriverDashboard() {
     });
   };
 
+  const userName = user?.fullName || "User";
+  const userRole = user?.role || "ADMIN";
+
   return (
     <div className="b2b-partner-driver-dashboard">
       <div className="B2BPartner-driver-dashboard-with-tabs-header">
-        <h1>B2B Partner Driver Dashboard</h1>
+        <div>
+          <h1>{getRoleDisplayName(userRole)} Dashboard</h1>
+          <small style={{ color: "#ffffff" }}>
+            Last login: {formattedLastLogin || "Never"}
+          </small>
+        </div>
         <div className="B2BPartner-driver-dashboard-with-tabs-driver-info">
           <span>Welcome, {user?.fullName || user?.name}</span>
           <div

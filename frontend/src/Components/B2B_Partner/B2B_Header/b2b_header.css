@@ -52,6 +52,12 @@
   align-items: center;
 }
 
+.b2b-header-right-inside{
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .b2b-logout-btn {
   padding: 8px 16px;
   background: #dc3545;

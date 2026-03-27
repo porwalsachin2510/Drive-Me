@@ -23,6 +23,12 @@
   gap: 36px;
 }
 
+.b2c-header-right-inside{
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .b2c-header-title {
   font-size: 28px;
   font-weight: 700;

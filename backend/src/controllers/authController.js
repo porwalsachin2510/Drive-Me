@@ -171,6 +171,10 @@ export const adminLogin = async (req, res) => {
             })
         }
 
+        // Update lastLogin timestamp
+        user.lastLogin = new Date()
+        await user.save()
+
         const token = generateToken(user._id, user.role)
 
         res.cookie("token", token, {
@@ -228,6 +232,10 @@ export const login = async (req, res) => {
             })
         }
 
+        // Update lastLogin timestamp
+        user.lastLogin = new Date()
+        await user.save()
+        
         const token = generateToken(user._id, user.role)
 
         res.cookie("token", token, {

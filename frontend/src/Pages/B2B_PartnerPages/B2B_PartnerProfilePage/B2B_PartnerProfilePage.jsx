@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import "./b2b_partnerprofilepage.css";
@@ -21,7 +22,10 @@ import B2B_Invoices from "../../../Components/B2B_Partner/B2B_Invoices/B2B_Invoi
 
 function B2B_PartnerProfilePage() {
     const location = useLocation();
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  
+  const auth = useSelector((state) => state.auth);
+  const user = auth.user;
 
     // Get initial tab from URL query params on mount
     const getInitialTab = () => {
@@ -30,7 +34,40 @@ function B2B_PartnerProfilePage() {
     };
 
     const [b2bactiveTab, setB2BActiveTab] = useState(getInitialTab);
+    const [formattedLastLogin, setFormattedLastLogin] = useState("");
 
+    // Format last login time
+    useEffect(() => {
+      if (auth.user?.lastLogin) {
+        const loginDate = new Date(auth.user.lastLogin);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        let dateString = "";
+
+        if (loginDate.toDateString() === today.toDateString()) {
+          dateString = "Today";
+        } else if (loginDate.toDateString() === yesterday.toDateString()) {
+          dateString = "Yesterday";
+        } else {
+          dateString = loginDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+        }
+
+        const timeString = loginDate.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+
+        setFormattedLastLogin(`${dateString}, ${timeString}`);
+      }
+    }, [auth.user?.lastLogin]);
+  
     // When URL changes (e.g., back navigation), update the tab
     useEffect(() => {
       const searchParams = new URLSearchParams(location.search);

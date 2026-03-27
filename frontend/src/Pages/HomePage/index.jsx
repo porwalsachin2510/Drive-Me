@@ -1,7 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { selectUserRole } from "../../Redux/selectors/authSelectors";
+import {
+  selectUserRole,
+  selectIsAuthenticated,
+} from "../../Redux/selectors/authSelectors";
 
 import CommuterHomePage from "../CommuterPages/CommuterHomePage/CommuteHomePage";
 import Footer from "../../Components/Footer/Footer";
@@ -13,9 +16,13 @@ import CorporateDriverDashboard from "../DriverPages/CorporateDriverDashboard/Co
 import B2BPartnerDriverDashboard from "../DriverPages/B2BPartnerDriverDashboard/B2BPartnerDriverDashboard";
 import B2CPartnerDriverDashboard from "../DriverPages/B2CPartnerDriverDashboard/B2CPartnerDriverDashboard";
 import EmployeeTripBooking from "../../Components/Corporate/EmployeeTripBooking/EmployeeTripBooking";
+import { useNavigate } from "react-router-dom";
 
 export default function HomePage() {
   const userRole = useSelector(selectUserRole);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem("activeTab") || "commuters";
   });
@@ -24,6 +31,13 @@ export default function HomePage() {
   useEffect(() => {
     localStorage.setItem("activeTab", activeTab);
   }, [activeTab]);
+
+  // Redirect CORPORATE users to corporate page
+  useEffect(() => {
+    if (isAuthenticated && userRole === "CORPORATE") {
+      navigate("/corporate");
+    }
+  }, [isAuthenticated, userRole, navigate]);
 
   // Render based on user role - logged in users see their dashboards
   const renderContent = () => {
@@ -36,8 +50,8 @@ export default function HomePage() {
     if (userRole === "CORPORATE_EMPLOYEE") return <EmployeeTripBooking />;
     if (userRole === "ADMIN") return <AdminDashboardPage />;
 
-    // For COMMUTER, CORPORATE, or guests - show CommuterHomePage
-    // CORPORATE users click "Corporate" button in navbar to go to /service-selection
+    // For COMMUTER or guests - show CommuterHomePage
+    // CORPORATE users are redirected above via useEffect
     return <CommuterHomePage />;
   };
 

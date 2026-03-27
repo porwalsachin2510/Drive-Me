@@ -9,7 +9,7 @@ import api from "../../../utils/api";
 import "./EmployeeTripBooking.css";
 
 function EmployeeTripBooking() {
-  const user = useSelector((state) => state.auth.user);
+  const auth = useSelector((state) => state.auth);
   const socket = useSocket();
   const [trips, setTrips] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
@@ -21,18 +21,65 @@ function EmployeeTripBooking() {
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingTrip, setTrackingTrip] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
-  const [routeId, setRouteId] = useState(localStorage.getItem('routeId') || '');
+  const [routeId, setRouteId] = useState(localStorage.getItem("routeId") || "");
+  const [formattedLastLogin, setFormattedLastLogin] = useState("");
   const [bookingData, setBookingData] = useState({
     pickupPoint: "",
     pickupTime: "",
     seatNumber: 1,
-    useMonthlyPass: false
+    useMonthlyPass: false,
   });
 
-  
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  // Format last login time
+  useEffect(() => {
+    if (auth.user?.lastLogin) {
+      const loginDate = new Date(auth.user.lastLogin);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      let dateString = "";
+
+      if (loginDate.toDateString() === today.toDateString()) {
+        dateString = "Today";
+      } else if (loginDate.toDateString() === yesterday.toDateString()) {
+        dateString = "Yesterday";
+      } else {
+        dateString = loginDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+
+      const timeString = loginDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      setFormattedLastLogin(`${dateString}, ${timeString}`);
+    }
+  }, [auth.user?.lastLogin]);
+
+  const getRoleDisplayName = (role) => {
+    const roleMap = {
+      ADMIN: "Admin",
+      COMMUTER: "Commuter",
+      CORPORATE: "Corporate",
+      B2C_PARTNER: "B2C Partner",
+      B2B_PARTNER: "B2B Partner",
+      CORPORATE_DRIVER: "Corporate Driver",
+      B2B_PARTNER_DRIVER: "B2B Partner Driver",
+      CORPORATE_EMPLOYEE: "Corporate Employee",
+      B2C_PARTNER_DRIVER: "B2C Partner Driver",
+    };
+    return roleMap[role] || role;
+  };
+  
   // Fetch the employee's assigned route to get routeId on mount
   useEffect(() => {
     const fetchEmployeeRoute = async () => {
@@ -41,7 +88,7 @@ function EmployeeTripBooking() {
         if (response.data?.data?.route?._id) {
           const id = response.data.data.route._id;
           setRouteId(id);
-          localStorage.setItem('routeId', id);
+          localStorage.setItem("routeId", id);
         }
       } catch (err) {
         console.error("Error fetching employee route:", err);
@@ -66,43 +113,53 @@ function EmployeeTripBooking() {
   const fetchAvailableTrips = async () => {
     try {
       setLoading(true);
-      
+
       // Use the corporate employee dashboard API which returns upcoming trips and todayTrips
       const response = await api.get("/corporate-employee-users/dashboard");
       const dashboardData = response.data?.data;
-      
+
       // Get todayTrips and upcomingTrips
       const todayTrips = dashboardData?.todayTrips || [];
-      const upcomingTrips = dashboardData?.upcomingTrips || dashboardData?.bookings || [];
-      
+      const upcomingTrips =
+        dashboardData?.upcomingTrips || dashboardData?.bookings || [];
+
       // Merge and deduplicate by _id
       const allTrips = [...todayTrips, ...upcomingTrips];
       const uniqueTrips = allTrips
-        .filter((trip, index, self) => 
-          index === self.findIndex(t => t._id === trip._id)
+        .filter(
+          (trip, index, self) =>
+            index === self.findIndex((t) => t._id === trip._id),
         )
-        .filter(trip => ['SCHEDULED', 'IN_PROGRESS'].includes(trip.status));
+        .filter((trip) => ["SCHEDULED", "IN_PROGRESS"].includes(trip.status));
 
       // Only show today and next day trips (employee should book 1 day advance max)
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
       const dayAfterTomorrow = new Date(todayStart);
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2); // today + tomorrow
-      
-      const filteredTrips = uniqueTrips.filter(trip => {
+
+      const filteredTrips = uniqueTrips.filter((trip) => {
         const tripDate = new Date(trip.tripDate || trip.date);
         return tripDate >= todayStart && tripDate < dayAfterTomorrow;
       });
-      
+
       // Also try to get route stop points for pickup selection
       try {
         const routeResponse = await api.get("/corporate-employee-users/route");
         const routeData = routeResponse.data?.data;
         if (routeData?.route?.stopPoints) {
-          const enrichedTrips = filteredTrips.map(trip => ({
+          const enrichedTrips = filteredTrips.map((trip) => ({
             ...trip,
-            stopPoints: trip.stopPoints || trip.routeId?.stopPoints || routeData.route.stopPoints || [],
-            routeStopPoints: routeData.route.stopPoints || []
+            stopPoints:
+              trip.stopPoints ||
+              trip.routeId?.stopPoints ||
+              routeData.route.stopPoints ||
+              [],
+            routeStopPoints: routeData.route.stopPoints || [],
           }));
           setTrips(enrichedTrips);
         } else {
@@ -124,7 +181,8 @@ function EmployeeTripBooking() {
       setLoading(true);
       // Use the trips/my-bookings endpoint which only returns trips where this employee is a passenger
       const response = await api.get("/trips/my-bookings");
-      const bookingsData = response.data?.data?.bookings || response.data?.data || [];
+      const bookingsData =
+        response.data?.data?.bookings || response.data?.data || [];
       setMyBookings(Array.isArray(bookingsData) ? bookingsData : []);
     } catch (error) {
       console.error("Error fetching bookings:", error);
@@ -135,7 +193,9 @@ function EmployeeTripBooking() {
         const todayTrips = dashboardData?.todayTrips || [];
         const bookings = dashboardData?.bookings || [];
         const all = [...todayTrips, ...bookings];
-        const unique = all.filter((b, i, self) => i === self.findIndex(t => t._id === b._id));
+        const unique = all.filter(
+          (b, i, self) => i === self.findIndex((t) => t._id === b._id),
+        );
         setMyBookings(unique);
       } catch {
         setMyBookings([]);
@@ -155,19 +215,21 @@ function EmployeeTripBooking() {
       const routeData = response.data?.data;
       if (routeData?.route) {
         // Create a pass-like object from the route assignment
-        setMonthlyPasses([{
-          _id: routeData.route._id || 'corporate-pass',
-          status: 'ACTIVE',
-          passType: 'CORPORATE',
-          fromLocation: routeData.route.fromLocation,
-          toLocation: routeData.route.toLocation,
-          pickupLocation: routeData.pickupStop,
-          dropoffLocation: routeData.dropoffStop,
-          shiftType: routeData.shiftType,
-          vehicle: routeData.vehicle,
-          driver: routeData.driver,
-          subscriptionType: 'COMPANY_PAID'
-        }]);
+        setMonthlyPasses([
+          {
+            _id: routeData.route._id || "corporate-pass",
+            status: "ACTIVE",
+            passType: "CORPORATE",
+            fromLocation: routeData.route.fromLocation,
+            toLocation: routeData.route.toLocation,
+            pickupLocation: routeData.pickupStop,
+            dropoffLocation: routeData.dropoffStop,
+            shiftType: routeData.shiftType,
+            vehicle: routeData.vehicle,
+            driver: routeData.driver,
+            subscriptionType: "COMPANY_PAID",
+          },
+        ]);
       } else {
         setMonthlyPasses([]);
       }
@@ -185,7 +247,7 @@ function EmployeeTripBooking() {
       pickupPoint: "",
       pickupTime: "",
       seatNumber: 1,
-      useMonthlyPass: false  // Always false - corporate employees don't need monthly passes
+      useMonthlyPass: false, // Always false - corporate employees don't need monthly passes
     });
     setShowBookingModal(true);
   };
@@ -193,26 +255,31 @@ function EmployeeTripBooking() {
   // Get pickup options for a trip
   const getPickupOptions = (trip) => {
     const options = [];
-    const stopPoints = trip.stopPoints || trip.routeStopPoints || trip.routeId?.stopPoints || [];
-    
+    const stopPoints =
+      trip.stopPoints || trip.routeStopPoints || trip.routeId?.stopPoints || [];
+
     // Add stop points
     stopPoints.forEach((stop) => {
       if (stop.location) {
-        options.push({ location: stop.location, time: stop.time || '' });
+        options.push({ location: stop.location, time: stop.time || "" });
       }
     });
-    
+
     // Always add from/to as fallback options if no stop points or they don't include from/to
     const fromLoc = trip.fromLocation;
     const toLoc = trip.toLocation;
-    
-    if (fromLoc && !options.find(o => o.location === fromLoc)) {
-      options.unshift({ location: fromLoc, time: trip.startTime || '', label: 'Start' });
+
+    if (fromLoc && !options.find((o) => o.location === fromLoc)) {
+      options.unshift({
+        location: fromLoc,
+        time: trip.startTime || "",
+        label: "Start",
+      });
     }
-    if (toLoc && !options.find(o => o.location === toLoc)) {
-      options.push({ location: toLoc, time: trip.endTime || '', label: 'End' });
+    if (toLoc && !options.find((o) => o.location === toLoc)) {
+      options.push({ location: toLoc, time: trip.endTime || "", label: "End" });
     }
-    
+
     return options;
   };
 
@@ -250,11 +317,16 @@ function EmployeeTripBooking() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "SCHEDULED": return "#10b981";
-      case "IN_PROGRESS": return "#3b82f6";
-      case "COMPLETED": return "#6b7280";
-      case "CANCELLED": return "#ef4444";
-      default: return "#6b7280";
+      case "SCHEDULED":
+        return "#10b981";
+      case "IN_PROGRESS":
+        return "#3b82f6";
+      case "COMPLETED":
+        return "#6b7280";
+      case "CANCELLED":
+        return "#ef4444";
+      default:
+        return "#6b7280";
     }
   };
 
@@ -265,17 +337,22 @@ function EmployeeTripBooking() {
       month: "short",
       day: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
   const getPassStatusColor = (status) => {
     switch (status) {
-      case "ACTIVE": return "#10b981";
-      case "EXPIRED": return "#ef4444";
-      case "SUSPENDED": return "#f59e0b";
-      case "CANCELLED": return "#6b7280";
-      default: return "#6b7280";
+      case "ACTIVE":
+        return "#10b981";
+      case "EXPIRED":
+        return "#ef4444";
+      case "SUSPENDED":
+        return "#f59e0b";
+      case "CANCELLED":
+        return "#6b7280";
+      default:
+        return "#6b7280";
     }
   };
 
@@ -288,7 +365,7 @@ function EmployeeTripBooking() {
         setDriverLocation({
           lat: data.location?.lat || data.lat,
           lng: data.location?.lng || data.lng,
-          timestamp: data.timestamp
+          timestamp: data.timestamp,
         });
       }
     };
@@ -303,51 +380,69 @@ function EmployeeTripBooking() {
   }, [socket, trackingTrip]);
 
   // Track Driver handler - fetch fresh trip data to get resolved driver name
-  const handleTrackDriver = useCallback(async (trip) => {
-    setTrackingTrip(trip);
-    setDriverLocation(null);
-    setShowTrackingModal(true);
+  const handleTrackDriver = useCallback(
+    async (trip) => {
+      setTrackingTrip(trip);
+      setDriverLocation(null);
+      setShowTrackingModal(true);
 
-    // Join booking room for this trip to receive location updates
-    if (socket?.socket && trip._id) {
-      socket.socket.emit("join_booking_room", trip._id);
-    }
+      // Join booking room for this trip to receive location updates
+      if (socket?.socket && trip._id) {
+        socket.socket.emit("join_booking_room", trip._id);
+      }
 
-    // Fetch fresh trip data from my-bookings to get properly resolved driver name
-    if (!trip.driverName || trip.driverName === 'Not assigned') {
-      try {
-        const response = await api.get("/trips/my-bookings");
-        const bookings = response.data?.data?.bookings || [];
-        const freshTrip = bookings.find(b => b._id === trip._id);
-        if (freshTrip && freshTrip.driverName && freshTrip.driverName !== 'Not assigned') {
-          setTrackingTrip(prev => ({
-            ...prev,
-            driverName: freshTrip.driverName,
-            driverContact: freshTrip.driverContact,
-            vehicleName: freshTrip.vehicleName || prev.vehicleName,
-            vehicleNumber: freshTrip.vehicleNumber || prev.vehicleNumber
-          }));
-        }
-      } catch (e) {
-        // Fallback: also try dashboard API
+      // Fetch fresh trip data from my-bookings to get properly resolved driver name
+      if (!trip.driverName || trip.driverName === "Not assigned") {
         try {
-          const dashResponse = await api.get("/corporate-employee-users/dashboard");
-          const dashData = dashResponse.data?.data;
-          const allTrips = [...(dashData?.todayTrips || []), ...(dashData?.upcomingTrips || dashData?.bookings || [])];
-          const freshTrip = allTrips.find(t => t._id === trip._id);
-          if (freshTrip && freshTrip.driverName && freshTrip.driverName !== 'Not assigned') {
-            setTrackingTrip(prev => ({
+          const response = await api.get("/trips/my-bookings");
+          const bookings = response.data?.data?.bookings || [];
+          const freshTrip = bookings.find((b) => b._id === trip._id);
+          if (
+            freshTrip &&
+            freshTrip.driverName &&
+            freshTrip.driverName !== "Not assigned"
+          ) {
+            setTrackingTrip((prev) => ({
               ...prev,
               driverName: freshTrip.driverName,
               driverContact: freshTrip.driverContact,
               vehicleName: freshTrip.vehicleName || prev.vehicleName,
-              vehicleNumber: freshTrip.vehicleNumber || prev.vehicleNumber
+              vehicleNumber: freshTrip.vehicleNumber || prev.vehicleNumber,
             }));
           }
-        } catch (e2) {console.log(e2);}
+        } catch (e) {
+          // Fallback: also try dashboard API
+          try {
+            const dashResponse = await api.get(
+              "/corporate-employee-users/dashboard",
+            );
+            const dashData = dashResponse.data?.data;
+            const allTrips = [
+              ...(dashData?.todayTrips || []),
+              ...(dashData?.upcomingTrips || dashData?.bookings || []),
+            ];
+            const freshTrip = allTrips.find((t) => t._id === trip._id);
+            if (
+              freshTrip &&
+              freshTrip.driverName &&
+              freshTrip.driverName !== "Not assigned"
+            ) {
+              setTrackingTrip((prev) => ({
+                ...prev,
+                driverName: freshTrip.driverName,
+                driverContact: freshTrip.driverContact,
+                vehicleName: freshTrip.vehicleName || prev.vehicleName,
+                vehicleNumber: freshTrip.vehicleNumber || prev.vehicleNumber,
+              }));
+            }
+          } catch (e2) {
+            console.log(e2);
+          }
+        }
       }
-    }
-  }, [socket]);
+    },
+    [socket],
+  );
 
   // Stop tracking
   const handleStopTracking = useCallback(() => {
@@ -359,58 +454,91 @@ function EmployeeTripBooking() {
     setDriverLocation(null);
   }, [socket, trackingTrip]);
 
-
   const handleLogout = async () => {
-      try {
-        const token = localStorage.getItem("token");
-  
-        if (!token) {
-          console.log("No token found, redirecting to login");
-          navigate("/login");
-          return;
-        }
-  
-        dispatch(logout());
-  
-        // Call backend logout endpoint to clear cookies and session
-        await api.post(
-          "/auth/logout",
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            withCredentials: true,
-          },
-        );
-  
-        // Clear frontend storage
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-  
-        console.log("User logged out successfully");
-  
-        // Redirect to login page
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.log("No token found, redirecting to login");
         navigate("/login");
-      } catch (err) {
-        console.error("Logout error:", err);
-  
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-  
-        // Redirect to login regardless of error
-        navigate("/login");
+        return;
       }
-    };
+
+      dispatch(logout());
+
+      // Call backend logout endpoint to clear cookies and session
+      await api.post(
+        "/auth/logout",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        },
+      );
+
+      // Clear frontend storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      console.log("User logged out successfully");
+
+      // Redirect to login page
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout error:", err);
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      // Redirect to login regardless of error
+      navigate("/login");
+    }
+  };
+
+   const userName = auth.user?.fullName || "User";
+   const userRole = auth.user?.role || "ADMIN";
 
   return (
     <div className="employee-trip-booking">
       <div className="employee-trip-booking-header">
         <div className="employee-trip-booking-header-top">
           <h2>Trip Booking</h2>
-          <button className="employee-trip-logout-btn" onClick={handleLogout}>
-            Log Out
-          </button>
+          <div className="employee-trip-booking-header-top-inside">
+            {/* User Info Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    color: "#202124",
+                  }}
+                >
+                  {getRoleDisplayName(userRole)}
+                </div>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#5f6368",
+                    marginTop: "4px",
+                  }}
+                >
+                  Last login: {formattedLastLogin || "Never"}
+                </div>
+              </div>
+            </div>
+            <button className="employee-trip-logout-btn" onClick={handleLogout}>
+              Log Out
+            </button>
+          </div>
         </div>
 
         <div className="employee-trip-booking-tab-navigation">
