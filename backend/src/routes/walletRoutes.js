@@ -8,7 +8,8 @@ import {
     getWalletStatement,
     requestPayout,
     getUserPayouts,
-    createPaymentSession
+    createPaymentSession,
+    getPaymentConfig
 } from "../controllers/walletController.js"
 import { verifyToken } from "../middleware/auth.js"
 
@@ -22,6 +23,9 @@ router.get("/balance", getWalletBalance)
 
 // Get wallet transactions
 router.get("/transactions", getWalletTransactions)
+
+// Get payment config based on user's country
+router.get("/payment-config", getPaymentConfig)
 
 // Create payment session for adding funds
 router.post("/create-payment-session", createPaymentSession)

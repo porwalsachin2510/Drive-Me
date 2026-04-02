@@ -828,3 +828,39 @@ export const resetPassword = async (req, res) => {
         })
     }
 }
+
+// Get user by ID
+export const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params
+
+        const user = await User.findById(id).select('-password -otp')
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            })
+        }
+
+        res.status(200).json({
+            success: true,
+            user: {
+                _id: user._id,
+                fullName: user.fullName,
+                email: user.email,
+                role: user.role,
+                companyName: user.companyName,
+                companyLogo: user.companyLogo,
+                phone: user.whatsappNumber || user.phone,
+                profileImage: user.profileImage,
+            }
+        })
+    } catch (error) {
+        console.error("Get user by ID error:", error)
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to get user",
+        })
+    }
+}

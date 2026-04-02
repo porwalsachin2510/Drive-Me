@@ -43,7 +43,7 @@
   position: absolute;
   top: -4px;
   right: -4px;
-  background: var(--primary-color, #ef3b47);
+  background: #4e4e4e;
   border: 2px solid #ffffff;
   border-radius: 10px;
   padding: 2px 5px;

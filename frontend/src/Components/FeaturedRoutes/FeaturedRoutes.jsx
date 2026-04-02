@@ -82,7 +82,7 @@ const FeaturedRoutes = ({ routes, loading }) => {
     // If route already has monthlyPrice, use it
     if (route.monthlyPrice && route.monthlyPrice !== "N/A") {
       return typeof route.monthlyPrice === "number"
-        ? `${route.monthlyPrice.toFixed(2)} KWD`
+        ? `${route.monthlyPrice.toFixed(2)} ${route.pricing?.currency || "KWD"}`
         : route.monthlyPrice;
     }
 
@@ -98,7 +98,8 @@ const FeaturedRoutes = ({ routes, loading }) => {
 
     // Monthly price = one-way price * travel days per month
     const monthlyPrice = parseFloat(oneWayPrice) * travelDaysPerMonth;
-    return `${monthlyPrice.toFixed(2)} KWD`;
+    const currency = route.pricing?.currency || "KWD";
+    return `${monthlyPrice.toFixed(2)} ${currency}`;
   };
   // END: CALCULATE MONTHLY PRICE FROM ONE-WAY PRICE
 

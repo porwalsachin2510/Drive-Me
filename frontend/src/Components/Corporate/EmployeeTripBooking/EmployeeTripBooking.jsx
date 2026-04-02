@@ -1,28 +1,24 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { logout } from "../../../Redux/slices/authSlice";
 import { useSocket } from "../../../hooks/useSocket";
 import api from "../../../utils/api";
 import "./EmployeeTripBooking.css";
 
 function EmployeeTripBooking() {
-  const auth = useSelector((state) => state.auth);
+  const user = useSelector((state) => state.auth.user);
   const socket = useSocket();
   const [trips, setTrips] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
   const [monthlyPasses, setMonthlyPasses] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("available");
+  const [activeTab, setActiveTab] = useState("my-trips"); // Default to assigned trips for corporate employees
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingTrip, setTrackingTrip] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
   const [routeId, setRouteId] = useState(localStorage.getItem("routeId") || "");
-  const [formattedLastLogin, setFormattedLastLogin] = useState("");
   const [bookingData, setBookingData] = useState({
     pickupPoint: "",
     pickupTime: "",
@@ -30,56 +26,6 @@ function EmployeeTripBooking() {
     useMonthlyPass: false,
   });
 
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-
-  // Format last login time
-  useEffect(() => {
-    if (auth.user?.lastLogin) {
-      const loginDate = new Date(auth.user.lastLogin);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      let dateString = "";
-
-      if (loginDate.toDateString() === today.toDateString()) {
-        dateString = "Today";
-      } else if (loginDate.toDateString() === yesterday.toDateString()) {
-        dateString = "Yesterday";
-      } else {
-        dateString = loginDate.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
-      }
-
-      const timeString = loginDate.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-
-      setFormattedLastLogin(`${dateString}, ${timeString}`);
-    }
-  }, [auth.user?.lastLogin]);
-
-  const getRoleDisplayName = (role) => {
-    const roleMap = {
-      ADMIN: "Admin",
-      COMMUTER: "Commuter",
-      CORPORATE: "Corporate",
-      B2C_PARTNER: "B2C Partner",
-      B2B_PARTNER: "B2B Partner",
-      CORPORATE_DRIVER: "Corporate Driver",
-      B2B_PARTNER_DRIVER: "B2B Partner Driver",
-      CORPORATE_EMPLOYEE: "Corporate Employee",
-      B2C_PARTNER_DRIVER: "B2C Partner Driver",
-    };
-    return roleMap[role] || role;
-  };
-  
   // Fetch the employee's assigned route to get routeId on mount
   useEffect(() => {
     const fetchEmployeeRoute = async () => {
@@ -101,8 +47,8 @@ function EmployeeTripBooking() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "available") {
-      fetchAvailableTrips();
+    if (activeTab === "my-trips") {
+      fetchMyScheduledTrips(); // Corporate-assigned trips
     } else if (activeTab === "my-bookings") {
       fetchMyBookings();
     } else if (activeTab === "monthly-pass") {
@@ -110,7 +56,8 @@ function EmployeeTripBooking() {
     }
   }, [activeTab, routeId]);
 
-  const fetchAvailableTrips = async () => {
+  // Fetch corporate-assigned trips for this employee (auto-generated trips)
+  const fetchMyScheduledTrips = async () => {
     try {
       setLoading(true);
 
@@ -118,7 +65,7 @@ function EmployeeTripBooking() {
       const response = await api.get("/corporate-employee-users/dashboard");
       const dashboardData = response.data?.data;
 
-      // Get todayTrips and upcomingTrips
+      // Get todayTrips and upcomingTrips - these are pre-assigned corporate trips
       const todayTrips = dashboardData?.todayTrips || [];
       const upcomingTrips =
         dashboardData?.upcomingTrips || dashboardData?.bookings || [];
@@ -130,24 +77,40 @@ function EmployeeTripBooking() {
           (trip, index, self) =>
             index === self.findIndex((t) => t._id === trip._id),
         )
-        .filter((trip) => ["SCHEDULED", "IN_PROGRESS"].includes(trip.status));
+        .filter((trip) =>
+          ["SCHEDULED", "IN_PROGRESS", "Scheduled", "Confirmed"].includes(
+            trip.status,
+          ),
+        );
 
-      // Only show today and next day trips (employee should book 1 day advance max)
+      // Show trips for next 7 days (corporate-assigned trips are generated ahead)
       const now = new Date();
       const todayStart = new Date(
         now.getFullYear(),
         now.getMonth(),
         now.getDate(),
       );
-      const dayAfterTomorrow = new Date(todayStart);
-      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2); // today + tomorrow
+      const weekFromNow = new Date(todayStart);
+      weekFromNow.setDate(weekFromNow.getDate() + 7);
 
       const filteredTrips = uniqueTrips.filter((trip) => {
         const tripDate = new Date(trip.tripDate || trip.date);
-        return tripDate >= todayStart && tripDate < dayAfterTomorrow;
+        return tripDate >= todayStart && tripDate < weekFromNow;
       });
 
-      // Also try to get route stop points for pickup selection
+      // Sort by date and time (morning trips before evening trips on same day)
+      filteredTrips.sort((a, b) => {
+        const dateA = new Date(a.tripDate || a.date);
+        const dateB = new Date(b.tripDate || b.date);
+        const dateCompare = dateA - dateB;
+        if (dateCompare !== 0) return dateCompare;
+        // Same day - sort by startTime
+        const timeA = a.startTime || "00:00";
+        const timeB = b.startTime || "00:00";
+        return timeA.localeCompare(timeB);
+      });
+
+      // Also try to get route stop points for display
       try {
         const routeResponse = await api.get("/corporate-employee-users/route");
         const routeData = routeResponse.data?.data;
@@ -160,16 +123,21 @@ function EmployeeTripBooking() {
               routeData.route.stopPoints ||
               [],
             routeStopPoints: routeData.route.stopPoints || [],
+            isCorporateAssigned: true, // Mark as corporate-assigned
           }));
           setTrips(enrichedTrips);
         } else {
-          setTrips(filteredTrips);
+          setTrips(
+            filteredTrips.map((t) => ({ ...t, isCorporateAssigned: true })),
+          );
         }
       } catch {
-        setTrips(filteredTrips);
+        setTrips(
+          filteredTrips.map((t) => ({ ...t, isCorporateAssigned: true })),
+        );
       }
     } catch (error) {
-      console.error("Error fetching trips:", error);
+      console.error("Error fetching corporate trips:", error);
       setTrips([]);
     } finally {
       setLoading(false);
@@ -208,9 +176,20 @@ function EmployeeTripBooking() {
   const fetchMonthlyPasses = async () => {
     try {
       setLoading(true);
-      // Corporate employees don't have B2C monthly passes
-      // Their transport is managed by the corporate through contracts
-      // Show contract-based info instead
+      // Try to fetch actual monthly passes from the corporate employee endpoint
+      try {
+        const passResponse = await api.get(
+          "/corporate-employee-users/monthly-passes",
+        );
+        if (passResponse.data?.data?.length > 0) {
+          setMonthlyPasses(passResponse.data.data);
+          return;
+        }
+      } catch (err) {
+        console.log("No monthly passes found, using route info");
+      }
+
+      // Fallback: Show contract-based info from route assignment
       const response = await api.get("/corporate-employee-users/route");
       const routeData = response.data?.data;
       if (routeData?.route) {
@@ -336,8 +315,6 @@ function EmployeeTripBooking() {
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -436,7 +413,7 @@ function EmployeeTripBooking() {
               }));
             }
           } catch (e2) {
-            console.log(e2);
+            console.log(e2)
           }
         }
       }
@@ -454,111 +431,28 @@ function EmployeeTripBooking() {
     setDriverLocation(null);
   }, [socket, trackingTrip]);
 
-  const handleLogout = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        console.log("No token found, redirecting to login");
-        navigate("/login");
-        return;
-      }
-
-      dispatch(logout());
-
-      // Call backend logout endpoint to clear cookies and session
-      await api.post(
-        "/auth/logout",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          withCredentials: true,
-        },
-      );
-
-      // Clear frontend storage
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
-      console.log("User logged out successfully");
-
-      // Redirect to login page
-      navigate("/login");
-    } catch (err) {
-      console.error("Logout error:", err);
-
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
-      // Redirect to login regardless of error
-      navigate("/login");
-    }
-  };
-
-   const userName = auth.user?.fullName || "User";
-   const userRole = auth.user?.role || "ADMIN";
-
   return (
     <div className="employee-trip-booking">
       <div className="employee-trip-booking-header">
-        <div className="employee-trip-booking-header-top">
-          <h2>Trip Booking</h2>
-          <div className="employee-trip-booking-header-top-inside">
-            {/* User Info Header */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    color: "#202124",
-                  }}
-                >
-                  {getRoleDisplayName(userRole)}
-                </div>
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "#5f6368",
-                    marginTop: "4px",
-                  }}
-                >
-                  Last login: {formattedLastLogin || "Never"}
-                </div>
-              </div>
-            </div>
-            <button className="employee-trip-logout-btn" onClick={handleLogout}>
-              Log Out
-            </button>
-          </div>
-        </div>
-
+        <h2>Trip Booking</h2>
         <div className="employee-trip-booking-tab-navigation">
           <button
-            className={`employee-trip-booking-tab-btn ${activeTab === "available" ? "active" : ""}`}
-            onClick={() => setActiveTab("available")}
+            className={`employee-trip-booking-tab-btn ${activeTab === "my-trips" ? "active" : ""}`}
+            onClick={() => setActiveTab("my-trips")}
           >
-            Available Trips
+            My Scheduled Trips
           </button>
           <button
             className={`employee-trip-booking-tab-btn ${activeTab === "my-bookings" ? "active" : ""}`}
             onClick={() => setActiveTab("my-bookings")}
           >
-            My Bookings
+            Trip History
           </button>
           <button
             className={`employee-trip-booking-tab-btn ${activeTab === "monthly-pass" ? "active" : ""}`}
             onClick={() => setActiveTab("monthly-pass")}
           >
-            Monthly Pass
+            Transport Info
           </button>
         </div>
       </div>
@@ -567,22 +461,37 @@ function EmployeeTripBooking() {
         <div className="employee-trip-booking-loading">Loading...</div>
       ) : (
         <div className="employee-trip-booking-tab-content">
-          {activeTab === "available" && (
-            <div className="employee-trip-booking-available-trips">
+          {/* My Scheduled Trips - Corporate-assigned trips */}
+          {activeTab === "my-trips" && (
+            <div className="employee-trip-booking-my-trips">
+              <div className="employee-trip-booking-info-banner">
+                <div className="info-icon">i</div>
+                <p>
+                  These trips have been scheduled by your company. You are
+                  automatically booked on these trips.
+                </p>
+              </div>
               {trips.length === 0 ? (
                 <div className="employee-trip-booking-no-data">
-                  <p>No available trips found.</p>
+                  <p>No scheduled trips found.</p>
+                  <p className="employee-trip-booking-no-data-hint">
+                    Contact your transport coordinator if you believe this is an
+                    error.
+                  </p>
                 </div>
               ) : (
                 <div className="employee-trip-booking-trips-grid">
                   {trips.map((trip) => (
                     <div
                       key={trip._id}
-                      className="employee-trip-booking-trip-card"
+                      className="employee-trip-booking-trip-card corporate-assigned"
                     >
+                      <div className="employee-trip-booking-corporate-badge">
+                        Corporate Transport
+                      </div>
                       <div className="employee-trip-booking-trip-route">
                         <h3>
-                          {trip.fromLocation} → {trip.toLocation}
+                          {trip.fromLocation} &rarr; {trip.toLocation}
                         </h3>
                         <span
                           className="employee-trip-booking-trip-status"
@@ -590,7 +499,10 @@ function EmployeeTripBooking() {
                             backgroundColor: getStatusColor(trip.status),
                           }}
                         >
-                          {trip.status}
+                          {trip.status === "SCHEDULED" ||
+                          trip.status === "Scheduled"
+                            ? "Confirmed"
+                            : trip.status}
                         </span>
                       </div>
 
@@ -600,19 +512,23 @@ function EmployeeTripBooking() {
                           {formatDate(trip.tripDate || trip.date)}
                         </p>
                         <p>
-                          <strong>Time:</strong> {trip.startTime}{" "}
-                          {trip.endTime ? `- ${trip.endTime}` : ""}
+                          <strong>Departure:</strong> {trip.startTime}{" "}
+                          {trip.endTime ? `- Arrival: ${trip.endTime}` : ""}
                         </p>
                         <p>
-                          <strong>Type:</strong> {trip.tripType || "One Way"}{" "}
-                          {trip.direction ? `(${trip.direction})` : ""}
+                          <strong>Direction:</strong>{" "}
+                          {trip.direction === "FORWARD"
+                            ? "To Office"
+                            : trip.direction === "RETURN"
+                              ? "To Home"
+                              : trip.tripType || "One Way"}
                         </p>
                         <p>
                           <strong>Vehicle:</strong>{" "}
                           {trip.vehicleName ||
                             trip.vehicleNumber ||
                             trip.vehicleId?.vehicleName ||
-                            "Not assigned"}
+                            "Will be assigned"}
                         </p>
                         <p>
                           <strong>Driver:</strong>{" "}
@@ -620,96 +536,61 @@ function EmployeeTripBooking() {
                             ? trip.driverName
                             : trip.driverId?.fullName ||
                               trip.driverId?.name ||
-                              (trip.driverId
-                                ? "Driver Assigned"
-                                : "Not assigned")}
+                              "Will be assigned"}
                         </p>
                       </div>
 
-                      <div className="employee-trip-booking-trip-seats">
-                        <div className="employee-trip-booking-seats-info">
-                          <span className="employee-trip-booking-available-seats">
-                            {trip.availableSeats}
-                          </span>
-                          <span className="employee-trip-booking-total-seats">
-                            / {trip.totalSeats} seats
-                          </span>
-                        </div>
-                        <div className="employee-trip-booking-seats-progress">
-                          <div
-                            className="employee-trip-booking-seats-progress-bar"
-                            style={{
-                              width: `${((trip.totalSeats - trip.availableSeats) / trip.totalSeats) * 100}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-
                       <div className="employee-trip-booking-trip-route-stops">
-                        <h4>Stop Points</h4>
+                        <h4>Your Pickup/Dropoff Points</h4>
                         <div className="employee-trip-booking-stops-list">
-                          {(
-                            trip.stopPoints ||
-                            trip.routeStopPoints ||
-                            trip.routeId?.stopPoints ||
-                            []
-                          )
-                            .slice(0, 3)
-                            .map((stop, index) => (
-                              <div
-                                key={index}
-                                className="employee-trip-booking-stop-item"
-                              >
+                          {(() => {
+                            // Find passenger info for current user
+                            const myPassenger = (trip.passengers || []).find(
+                              (p) =>
+                                p.passengerId?.toString() ===
+                                  user?._id?.toString() ||
+                                p.employeeId?.toString() ===
+                                  user?._id?.toString(),
+                            );
+
+                            const pickupStop =
+                              myPassenger?.pickupStop ||
+                              trip.pickupStop ||
+                              trip.pickupLocation ||
+                              trip.stopPoints?.[0]?.location ||
+                              trip.fromLocation;
+                            const dropoffStop =
+                              myPassenger?.dropoffStop ||
+                              trip.dropoffStop ||
+                              trip.dropoffLocation ||
+                              trip.toLocation;
+                            const pickupTime =
+                              myPassenger?.pickupTime || trip.startTime;
+
+                            return (
+                              <div className="employee-trip-booking-stop-item highlight">
                                 <span className="employee-trip-booking-stop-location">
-                                  {stop.location}
+                                  <strong>Pickup:</strong> {pickupStop}{" "}
+                                  {pickupTime ? `(${pickupTime})` : ""}
                                 </span>
-                                <span className="employee-trip-booking-stop-time">
-                                  {stop.time}
+                                <span className="employee-trip-booking-stop-arrow">
+                                  &rarr;
+                                </span>
+                                <span className="employee-trip-booking-stop-location">
+                                  <strong>Dropoff:</strong> {dropoffStop}
                                 </span>
                               </div>
-                            ))}
-                          {(
-                            trip.stopPoints ||
-                            trip.routeStopPoints ||
-                            trip.routeId?.stopPoints ||
-                            []
-                          ).length > 3 && (
-                            <span className="employee-trip-booking-more-stops">
-                              +
-                              {(
-                                trip.stopPoints ||
-                                trip.routeStopPoints ||
-                                trip.routeId?.stopPoints
-                              ).length - 3}{" "}
-                              more stops
-                            </span>
-                          )}
+                            );
+                          })()}
                         </div>
                       </div>
 
                       <div className="employee-trip-booking-trip-actions">
-                        <button
-                          className="employee-trip-booking-book-btn"
-                          onClick={() => handleBookTrip(trip)}
-                          disabled={trip.availableSeats === 0}
-                        >
-                          {trip.availableSeats === 0 ? "Full" : "Book Seat"}
-                        </button>
-                        {trip.status === "IN_PROGRESS" && (
+                        {(trip.status === "IN_PROGRESS" ||
+                          trip.status === "In Progress") && (
                           <button
                             className="employee-trip-booking-track-btn"
                             onClick={() => handleTrackDriver(trip)}
-                            style={{
-                              background: "#3b82f6",
-                              color: "white",
-                              border: "none",
-                              padding: "8px 16px",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              marginTop: "8px",
-                            }}
                           >
                             Track Driver
                           </button>
@@ -755,39 +636,51 @@ function EmployeeTripBooking() {
                           {formatDate(booking.tripDate || booking.date)}
                         </p>
                         <p>
-                          <strong>Time:</strong> {booking.startTime}{" "}
-                          {booking.endTime ? `- ${booking.endTime}` : ""}
+                          <strong>Time:</strong>{" "}
+                          {booking.startTime ||
+                            booking.pickupTime ||
+                            "See schedule"}
                         </p>
                         <p>
-                          <strong>Type:</strong> {booking.tripType || "One Way"}
+                          <strong>Direction:</strong>{" "}
+                          {booking.direction === "FORWARD"
+                            ? "To Office"
+                            : booking.direction === "RETURN"
+                              ? "To Home"
+                              : booking.tripType || "One Way"}
                         </p>
                         <p>
                           <strong>Vehicle:</strong>{" "}
-                          {booking.vehicleName &&
-                          booking.vehicleName !== "Not assigned"
-                            ? `${booking.vehicleName} (${booking.vehicleNumber})`
-                            : "Not assigned"}
+                          {booking.vehicleName ||
+                            booking.vehicle?.vehicleName ||
+                            booking.vehicle?.model ||
+                            "Company Vehicle"}
                         </p>
                         <p>
                           <strong>Driver:</strong>{" "}
                           {booking.driverName &&
                           booking.driverName !== "Not assigned"
                             ? booking.driverName
-                            : "Not assigned"}
+                            : booking.driverId?.fullName ||
+                              booking.driverId?.name ||
+                              "Company Driver"}
                         </p>
                         <p>
                           <strong>Pickup Point:</strong>{" "}
-                          {booking.pickupPoint ||
-                            booking.pickupLocation ||
-                            "Not specified"}
+                          {booking.pickupPoint &&
+                          booking.pickupPoint !== "Not specified"
+                            ? booking.pickupPoint
+                            : booking.pickupStop ||
+                              booking.pickupLocation ||
+                              booking.fromLocation ||
+                              "See schedule"}
                         </p>
                         <p>
-                          <strong>Pickup Time:</strong>{" "}
-                          {booking.pickupTime || "Not specified"}
-                        </p>
-                        <p>
-                          <strong>Seat Number:</strong>{" "}
-                          {booking.seatNumber || "N/A"}
+                          <strong>Dropoff Point:</strong>{" "}
+                          {booking.dropoffStop ||
+                            booking.dropoffLocation ||
+                            booking.toLocation ||
+                            "See schedule"}
                         </p>
                       </div>
 

@@ -849,7 +849,8 @@ const CommuterMyBookingsPage = () => {
                         <div className="cmbp-detail-item">
                           <span className="cmbp-detail-label">Cost</span>
                           <span className="cmbp-detail-value">
-                            {booking.price || "N/A"} KWD
+                            {booking.price || "N/A"}{" "}
+                            {booking.currency || "KWD"}{" "}
                           </span>
                         </div>
                       </>

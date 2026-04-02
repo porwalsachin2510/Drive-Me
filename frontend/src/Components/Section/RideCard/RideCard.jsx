@@ -37,7 +37,9 @@ export default function RideCard({ ride }) {
         </div>
         <div className="detail-item">
           <label>PRICE</label>
-          <p>{ride.price} KWD</p>
+          <p>
+            {ride.price} {ride.currency || "KWD"}
+          </p>
         </div>
       </div>
 

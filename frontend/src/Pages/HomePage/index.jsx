@@ -35,7 +35,7 @@ export default function HomePage() {
   // Redirect CORPORATE users to corporate page
   useEffect(() => {
     if (isAuthenticated && userRole === "CORPORATE") {
-      navigate("/corporate");
+      navigate("/service-selection");
     }
   }, [isAuthenticated, userRole, navigate]);
 

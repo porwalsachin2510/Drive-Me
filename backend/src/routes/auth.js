@@ -1,6 +1,6 @@
 import express from "express"
 import jwt from "jsonwebtoken"
-import { register, login, adminLogin, logout, verifyOTP, resendOTP, setPassword, validatePasswordToken, forgotPassword, verifyResetOTP, resetPassword } from "../controllers/authController.js"
+import { register, login, adminLogin, logout, verifyOTP, resendOTP, setPassword, validatePasswordToken, forgotPassword, verifyResetOTP, resetPassword, getUserById } from "../controllers/authController.js"
 import { verifyToken } from "../middleware/auth.js"
 import { upload } from "../Config/multerConfig.js"
 
@@ -69,5 +69,8 @@ router.post("/set-password", setPassword)
 router.post("/forgot-password", forgotPassword)
 router.post("/verify-reset-otp", verifyResetOTP)
 router.post("/reset-password", resetPassword)
+
+// Get user by ID (for corporate driver dashboard to fetch corporate owner info)
+router.get("/user/:id", verifyToken, getUserById)
 
 export default router

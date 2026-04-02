@@ -223,7 +223,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             // After Login: Show user avatar with dropdown and notifications
             <div className="drivemego-topbar-nav-user-section">
               {user?.role &&
-                ["B2C_PARTNER", "B2B_PARTNER"].includes(user.role) && (
+                ["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"].includes(user.role) && (
                   <WalletIcon />
                 )}
 

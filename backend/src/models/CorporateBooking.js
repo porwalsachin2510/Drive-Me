@@ -20,12 +20,10 @@ const corporateBookingSchema = new mongoose.Schema(
         contractId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Contract",
-            required: true,
         },
         driverId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
         },
         // Booking Details
         pickupLocation: {
@@ -57,6 +55,63 @@ const corporateBookingSchema = new mongoose.Schema(
             type: Number,
             default: 1,
             min: 1,
+        },
+        // Monthly Pass fields (similar to B2CPassengerBooking)
+        bookingType: {
+            type: String,
+            enum: ["ONE_WAY", "ROUND_TRIP"],
+            default: "ONE_WAY",
+        },
+        isMonthlyPass: {
+            type: Boolean,
+            default: false,
+        },
+        monthlyPassId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "MonthlyPass",
+        },
+        passDuration: {
+            type: Number,
+            default: 1,
+        },
+        passStartDate: Date,
+        passEndDate: Date,
+        // Array of all trip IDs for this monthly pass
+        monthlyTrips: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Trip",
+        }],
+        // Return trip info
+        returnPickupLocation: String,
+        returnDropoffLocation: String,
+        returnTravelPath: [
+            {
+                location: String,
+                time: String,
+                isFromLocation: Boolean,
+                isToLocation: Boolean,
+                isStop: Boolean,
+            },
+        ],
+        linkedSchedule: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "CorporateRouteSchedule",
+        },
+        linkedTrip: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Trip",
+        },
+        linkedReturnTrip: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Trip",
+        },
+        createdTripsCount: {
+            type: Number,
+            default: 0,
+        },
+        totalTripsCount: {
+            type: Number,
+            default: 0,
         },
         // Status
         bookingStatus: {

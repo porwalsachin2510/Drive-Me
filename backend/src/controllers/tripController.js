@@ -74,14 +74,14 @@ import { createNotification } from "../Services/notificationService.js";
 
 //         for (let date = new Date(routeStartDate); date <= endDate; date.setDate(date.getDate() + 1)) {
 //             const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-            
+
 //             // Use route's availableDays
 //             if (route.availableDays.includes(dayOfWeek)) {
 //                 // Create multiple trips for this day based on schedules
 //                 for (const schedule of schedulesToUse) {
 //                     const tripDate = new Date(date);
 //                     const tripDateTime = new Date(tripDate);
-                    
+
 //                     // Set time for this specific trip schedule
 //                     const [hours, minutes] = schedule.startTime.split(':');
 //                     tripDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
@@ -103,7 +103,7 @@ import { createNotification } from "../Services/notificationService.js";
 //                         driverId: assignedVehicleDetail.driverId,
 //                         corporateId: corporateId,
 //                         b2bPartnerId: contract.fleetOwnerId,
-                        
+
 //                         tripDate: tripDateTime,
 //                         startTime: schedule.startTime,
 //                         endTime: schedule.endTime,
@@ -111,16 +111,16 @@ import { createNotification } from "../Services/notificationService.js";
 //                         toLocation: toLocation,
 //                         totalDistance: route.totalDistance,
 //                         estimatedDuration: route.estimatedDuration,
-                        
+
 //                         totalSeats: route.totalSeats,
 //                         availableSeats: route.availableSeats,
 //                         pricePerSeat: route.pricePerSeat,
 //                         currency: route.currency,
-                        
+
 //                         tripType: schedule.tripType || "ONE_WAY",
 //                         direction: schedule.direction,
 //                         scheduleIndex: schedulesToUse.indexOf(schedule),
-                        
+
 //                         createdBy: corporateId,
 //                     });
 
@@ -431,7 +431,7 @@ export const bookTripSeat = async (req, res) => {
         }
 
         // Check if employee already booked this trip
-        const existingBooking = trip.passengers.find(p => 
+        const existingBooking = trip.passengers.find(p =>
             p.employeeId.toString() === employeeId
         );
 
@@ -445,7 +445,7 @@ export const bookTripSeat = async (req, res) => {
         // Validate pickup point - check stopPoints if available, or allow fromLocation/toLocation
         const stopPoints = trip.routeId?.stopPoints || [];
         const stopPoint = stopPoints.find(sp => sp.location === pickupPoint);
-        
+
         // If no stop points on route or pickup matches from/to location, allow it
         if (!stopPoint && stopPoints.length > 0) {
             // Check if pickup matches trip's from/to location as fallback
@@ -560,7 +560,7 @@ export const cancelTripBooking = async (req, res) => {
         }
 
         // Find and remove passenger
-        const passengerIndex = trip.passengers.findIndex(p => 
+        const passengerIndex = trip.passengers.findIndex(p =>
             p.employeeId.toString() === employeeId
         );
 
@@ -619,8 +619,12 @@ export const getMyBookings = async (req, res) => {
         const { status, date } = req.query;
 
         // Build query - only show upcoming active bookings, not completed
-        const query = { 
-            "passengers.employeeId": employeeId,
+        // Check both passengerId (User ID) and employeeId (CorporateEmployee ID)
+        const query = {
+            $or: [
+                { "passengers.passengerId": employeeId },
+                { "passengers.employeeId": employeeId }
+            ],
             status: { $in: ['SCHEDULED', 'IN_PROGRESS'] }
         };
 
@@ -636,16 +640,18 @@ export const getMyBookings = async (req, res) => {
             };
         }
 
+        // Don't populate driverId here - it may reference CorporateDriver model, not User model
+        // We'll look it up manually to handle both cases
         const trips = await Trip.find(query)
             .populate('routeId', 'fromLocation toLocation stopPoints')
             .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory model licensePlate')
-            .populate('driverId', 'name email phone fullName whatsappNumber')
-            .sort({ tripDate: 1 });
+            .sort({ tripDate: 1, startTime: 1 });
 
         // Resolve driver names and add seat info
         const myBookings = await Promise.all(trips.map(async (trip) => {
-            const myPassenger = trip.passengers.find(p => 
-                p.employeeId.toString() === employeeId
+            const myPassenger = trip.passengers.find(p =>
+                (p.passengerId?.toString() === employeeId) ||
+                (p.employeeId?.toString() === employeeId)
             );
 
             // Skip if passenger not found (safety check)
@@ -655,54 +661,41 @@ export const getMyBookings = async (req, res) => {
 
             const tripObj = trip.toObject();
 
+            // Get the raw driverId (not populated since we removed .populate('driverId'))
+            const driverObjectId = tripObj.driverId;
+
             // Resolve driver name - try multiple sources
             let driverName = null;
             let driverContact = null;
-            const populatedDriver = tripObj.driverId;
 
-            // 1. Check if populate worked (populated object has _id and name/fullName)
-            if (populatedDriver && typeof populatedDriver === 'object' && populatedDriver._id) {
-                driverName = populatedDriver.name || populatedDriver.fullName || null;
-                driverContact = populatedDriver.phone || populatedDriver.whatsappNumber || null;
-            }
+            if (driverObjectId) {
+                // 1. Try CorporateDriver model first (most common for corporate trips)
+                try {
+                    const CorporateDriver = (await import('../models/CorporateDriver.js')).default;
+                    const corpDriver = await CorporateDriver.findById(driverObjectId).select('name phone email');
+                    if (corpDriver) {
+                        driverName = corpDriver.name;
+                        driverContact = corpDriver.phone || driverContact;
+                    }
+                } catch (e) {
+                    // Not a CorporateDriver ID
+                }
 
-            // 2. If no name yet, check if driverId is actually a Driver model ObjectId
-            if (!driverName && populatedDriver) {
-                const driverObjectId = (typeof populatedDriver === 'object' && populatedDriver._id) ? populatedDriver._id : populatedDriver;
-                if (driverObjectId) {
+                // 2. If not found, try Driver model
+                if (!driverName) {
                     try {
-                        // Check Driver model directly
                         const driverDoc = await Driver.findById(driverObjectId).select('name phone email');
                         if (driverDoc) {
                             driverName = driverDoc.name;
                             driverContact = driverDoc.phone || driverContact;
                         }
                     } catch (e) {
-                        console.log("[v0] Driver lookup failed:", e.message);
+                        // Not a Driver ID
                     }
                 }
-            }
 
-            // 3. If still no name, find the User account that has this driverId
-            if (!driverName && populatedDriver) {
-                const driverObjectId = (typeof populatedDriver === 'object' && populatedDriver._id) ? populatedDriver._id : populatedDriver;
-                if (driverObjectId) {
-                    try {
-                        const driverUser = await User.findOne({ driverId: driverObjectId }).select('fullName whatsappNumber phone');
-                        if (driverUser) {
-                            driverName = driverUser.fullName;
-                            driverContact = driverUser.whatsappNumber || driverUser.phone || driverContact;
-                        }
-                    } catch (e) {
-                        console.log("[v0] User lookup failed:", e.message);
-                    }
-                }
-            }
-
-            // 4. Last resort: look up the User directly by _id (if driverId IS a User _id)
-            if (!driverName && populatedDriver) {
-                const driverObjectId = (typeof populatedDriver === 'object' && populatedDriver._id) ? populatedDriver._id : populatedDriver;
-                if (driverObjectId) {
+                // 3. If still not found, try User model directly
+                if (!driverName) {
                     try {
                         const userDoc = await User.findById(driverObjectId).select('fullName whatsappNumber phone');
                         if (userDoc) {
@@ -710,21 +703,67 @@ export const getMyBookings = async (req, res) => {
                             driverContact = userDoc.whatsappNumber || userDoc.phone || driverContact;
                         }
                     } catch (e) {
-                        console.log("[v0] User direct lookup failed:", e.message);
+                        // Not a User ID
+                    }
+                }
+
+                // 4. Try finding User who has this driverId
+                if (!driverName) {
+                    try {
+                        const driverUser = await User.findOne({ driverId: driverObjectId }).select('fullName whatsappNumber phone');
+                        if (driverUser) {
+                            driverName = driverUser.fullName;
+                            driverContact = driverUser.whatsappNumber || driverUser.phone || driverContact;
+                        }
+                    } catch (e) {
+                        // No user found with this driverId
                     }
                 }
             }
 
+            // 6. If still no driver, try to get from route schedule
+            if (!driverName && tripObj.routeId) {
+                try {
+                    const CorporateRouteSchedule = (await import('../models/CorporateRouteSchedule.js')).default;
+                    const CorporateDriverModel = (await import('../models/CorporateDriver.js')).default;
+                    const routeId = typeof tripObj.routeId === 'object' ? tripObj.routeId._id : tripObj.routeId;
+                    const schedule = await CorporateRouteSchedule.findOne({ routeId: routeId }).select('assignedDriver');
+                    if (schedule?.assignedDriver) {
+                        // First try as CorporateDriver model ID
+                        const corpDriver = await CorporateDriverModel.findById(schedule.assignedDriver).select('name phone email');
+                        if (corpDriver) {
+                            driverName = corpDriver.name;
+                            driverContact = corpDriver.phone || driverContact;
+                        } else {
+                            // Try as User model ID
+                            const scheduleDriver = await User.findById(schedule.assignedDriver).select('fullName whatsappNumber phone');
+                            if (scheduleDriver) {
+                                driverName = scheduleDriver.fullName;
+                                driverContact = scheduleDriver.whatsappNumber || scheduleDriver.phone || driverContact;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.log("[v0] Route schedule driver lookup failed:", e.message);
+                }
+            }
+
+            // Get pickup info from passenger or trip
+            const pickupStop = myPassenger?.pickupStop || myPassenger?.pickupPoint ||
+                tripObj.stopPoints?.[0]?.location || tripObj.fromLocation || 'See schedule';
+            const pickupTime = myPassenger?.pickupTime || tripObj.startTime || 'See schedule';
+
             return {
                 ...tripObj,
-                driverId: (populatedDriver && typeof populatedDriver === 'object') ? populatedDriver._id : populatedDriver,
-                driverName: driverName || 'Not assigned',
+                driverId: driverObjectId,
+                driverName: driverName || 'Will be assigned',
                 driverContact: driverContact || 'Not available',
-                vehicleName: tripObj.vehicleId?.vehicleName || tripObj.vehicleId?.model || 'Not assigned',
-                vehicleNumber: tripObj.vehicleId?.registrationNumber || tripObj.vehicleId?.licensePlate || 'Not assigned',
-                seatNumber: myPassenger?.seatNumber || 'N/A',
-                pickupPoint: myPassenger?.pickupPoint || 'Not specified',
-                pickupTime: myPassenger?.pickupTime || 'Not specified',
+                vehicleName: tripObj.vehicleId?.vehicleName || tripObj.vehicleId?.model || 'Company Vehicle',
+                vehicleNumber: tripObj.vehicleId?.registrationNumber || tripObj.vehicleId?.licensePlate || 'See schedule',
+                seatNumber: myPassenger?.seatNumber || 1,
+                pickupPoint: pickupStop,
+                pickupStop: pickupStop,
+                pickupTime: pickupTime,
                 myBooking: myPassenger
             };
         })).then(results => results.filter(b => b !== null)); // Filter out null entries
@@ -775,7 +814,7 @@ export const startTrip = async (req, res) => {
 
         // Update trip status
         trip.status = "IN_PROGRESS";
-        
+
         // Add trip event
         trip.events.push({
             eventType: "TRIP_STARTED",
@@ -864,7 +903,7 @@ export const completeTrip = async (req, res) => {
 
         // Update trip status
         trip.status = "COMPLETED";
-        
+
         // Add trip event
         trip.events.push({
             eventType: "TRIP_COMPLETED",

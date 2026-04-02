@@ -12,7 +12,7 @@ import "./CorporateDriverDashboard.css";
 export default function CorporateDriverDashboard() {
   const { user } = useSelector((state) => state.auth);
   const socket = useSocket();
-  
+
   // Use driverId from drivers collection if available, fallback to user._id
   const effectiveDriverId = user?.driverId || user?._id;
 
@@ -22,103 +22,55 @@ export default function CorporateDriverDashboard() {
   const [activeBookingTab, setActiveBookingTab] = useState("confirmed");
   const [activeMainTab, setActiveMainTab] = useState("bookings");
   const [isSharingLocation, setIsSharingLocation] = useState(false);
-  const [formattedLastLogin, setFormattedLastLogin] = useState("");
   const [activeTrip, setActiveTrip] = useState(null);
   const [corporateInfo, setCorporateInfo] = useState(null);
   const locationIntervalRef = useRef(null);
 
-   const navigate = useNavigate();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
-  
-   // Format last login time
-    useEffect(() => {
-      if (user?.lastLogin) {
-        const loginDate = new Date(user.lastLogin);
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-  
-        let dateString = "";
-  
-        if (loginDate.toDateString() === today.toDateString()) {
-          dateString = "Today";
-        } else if (loginDate.toDateString() === yesterday.toDateString()) {
-          dateString = "Yesterday";
-        } else {
-          dateString = loginDate.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-        }
-  
-        const timeString = loginDate.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
-  
-        setFormattedLastLogin(`${dateString}, ${timeString}`);
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.log("No token found, redirecting to login");
+        navigate("/login");
+        return;
       }
-    }, [user?.lastLogin]);
-  
-    const getRoleDisplayName = (role) => {
-      const roleMap = {
-        ADMIN: "Admin",
-        COMMUTER: "Commuter",
-        CORPORATE: "Corporate",
-        B2C_PARTNER: "B2C Partner",
-        B2B_PARTNER: "B2B Partner",
-        CORPORATE_DRIVER: "Corporate Driver",
-        B2B_PARTNER_DRIVER: "B2B Partner Driver",
-        CORPORATE_EMPLOYEE: "Corporate Employee",
-        B2C_PARTNER_DRIVER: "B2C Partner Driver",
-      };
-      return roleMap[role] || role;
-    };
-  
-   const handleLogout = async () => {
-     try {
-       const token = localStorage.getItem("token");
 
-       if (!token) {
-         console.log("No token found, redirecting to login");
-         navigate("/login");
-         return;
-       }
+      dispatch(logout());
 
-       dispatch(logout());
+      // Call backend logout endpoint to clear cookies and session
+      await api.post(
+        "/auth/logout",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        },
+      );
 
-       // Call backend logout endpoint to clear cookies and session
-       await api.post(
-         "/auth/logout",
-         {},
-         {
-           headers: {
-             Authorization: `Bearer ${token}`,
-           },
-           withCredentials: true,
-         },
-       );
+      // Clear frontend storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
 
-       // Clear frontend storage
-       localStorage.removeItem("token");
-       localStorage.removeItem("user");
+      console.log("User logged out successfully");
 
-       console.log("User logged out successfully");
+      // Redirect to login page
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout error:", err);
 
-       // Redirect to login page
-       navigate("/login");
-     } catch (err) {
-       console.error("Logout error:", err);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
 
-       localStorage.removeItem("token");
-       localStorage.removeItem("user");
-
-       // Redirect to login regardless of error
-       navigate("/login");
-     }
-   };
+      // Redirect to login regardless of error
+      navigate("/login");
+    }
+  };
 
   const updateLocation = useCallback(() => {
     if (navigator.geolocation) {
@@ -190,22 +142,21 @@ export default function CorporateDriverDashboard() {
   }, [isSharingLocation]);
 
   const fetchCorporateBookings = useCallback(async () => {
-  try {
-  const response = await api.get(`/bookings/corporate/driver/${user._id}`);
-  if (response.data.success) {
-  setBookings(response.data.bookings);
-  
-  // Handle both bookingStatus and status fields
-  const inProgressTrips = response.data.bookings.filter(
-  (booking) => (booking.bookingStatus || booking.status) === "IN_PROGRESS",
-  );
-  
-  const confirmedTrips = response.data.bookings.filter(
-  (booking) => {
-    const status = booking.bookingStatus || booking.status;
-    return status === "CONFIRMED" || status === "SCHEDULED";
-  },
-  );
+    try {
+      const response = await api.get(`/bookings/corporate/driver/${user._id}`);
+      if (response.data.success) {
+        setBookings(response.data.bookings);
+
+        // Handle both bookingStatus and status fields
+        const inProgressTrips = response.data.bookings.filter(
+          (booking) =>
+            (booking.bookingStatus || booking.status) === "IN_PROGRESS",
+        );
+
+        const confirmedTrips = response.data.bookings.filter((booking) => {
+          const status = booking.bookingStatus || booking.status;
+          return status === "CONFIRMED" || status === "SCHEDULED";
+        });
 
         if (
           (inProgressTrips.length > 0 || confirmedTrips.length > 0) &&
@@ -229,7 +180,10 @@ export default function CorporateDriverDashboard() {
     try {
       if (!user?._id) return;
       const response = await api.get(`/notifications/user/${user._id}`);
-      const data = response.data?.data?.notifications || response.data?.notifications || [];
+      const data =
+        response.data?.data?.notifications ||
+        response.data?.notifications ||
+        [];
       setNotifications(data);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -379,37 +333,37 @@ export default function CorporateDriverDashboard() {
     };
   }, []);
 
-const filteredBookings = bookings.filter((booking) => {
-  const status = booking.bookingStatus || booking.status;
-  switch (activeBookingTab) {
-  case "confirmed":
-  return status === "CONFIRMED" || status === "SCHEDULED";
-  case "in-progress":
-  return status === "IN_PROGRESS";
-  case "completed":
-  return status === "COMPLETED";
-  default:
-  return false;
-  }
+  const filteredBookings = bookings.filter((booking) => {
+    const status = booking.bookingStatus || booking.status;
+    switch (activeBookingTab) {
+      case "confirmed":
+        return status === "CONFIRMED" || status === "SCHEDULED";
+      case "in-progress":
+        return status === "IN_PROGRESS";
+      case "completed":
+        return status === "COMPLETED";
+      default:
+        return false;
+    }
   });
-  
+
   // Helper functions for Trip data format
   const getPickupLocation = (booking) => {
     return booking.pickupLocation || booking.fromLocation || "";
   };
-  
+
   const getDropoffLocation = (booking) => {
     return booking.dropoffLocation || booking.toLocation || "";
   };
-  
+
   const getTravelTime = (booking) => {
     return booking.travelTime || booking.startTime || "";
   };
-  
+
   const getPassengerCount = (booking) => {
     return booking.passengerCount || booking.passengers?.length || 0;
   };
-  
+
   const formatTripDate = (date) => {
     if (!date) return "";
     return new Date(date).toLocaleDateString("en-US", {
@@ -419,18 +373,13 @@ const filteredBookings = bookings.filter((booking) => {
     });
   };
 
-    const userName = user?.fullName || "User";
-    const userRole = user?.role || "ADMIN";
-  
   return (
     <div className="corporate-driver-dashboard">
+      <button className="corp-logout-btn" onClick={handleLogout}>
+        Log Out
+      </button>
       <div className="corp-driver-dashboard-header">
-        <div>
-          <h1>{getRoleDisplayName(userRole)} Dashboard</h1>
-          <small style={{ color: "#ffffff" }}>
-            Last login: {formattedLastLogin || "Never"}
-          </small>
-        </div>
+        <h1>Corporate Driver Dashboard</h1>
         <div className="corp-driver-driver-info">
           <span>Welcome, {user?.fullName}</span>
           {corporateInfo && (
@@ -447,9 +396,6 @@ const filteredBookings = bookings.filter((booking) => {
             📍 {isSharingLocation ? "Sharing Live" : "Not Sharing"}
           </div>
         </div>
-        <button className="corp-logout-btn" onClick={handleLogout}>
-          Log Out
-        </button>
       </div>
 
       <div className="corp-driver-dashboard-tabs">
@@ -530,12 +476,31 @@ const filteredBookings = bookings.filter((booking) => {
                             {booking.passengers &&
                               booking.passengers.length > 0 && (
                                 <div className="corp-driver-passenger-list">
-                                  <strong>Employees:</strong>
+                                  <strong>Passengers to Pickup:</strong>
                                   <ul>
                                     {booking.passengers.map((p, idx) => (
-                                      <li key={idx}>
-                                        {p.employeeId?.fullName || "Employee"} -
-                                        Seat {p.seatNumber}
+                                      <li key={idx} className="passenger-item">
+                                        <span className="passenger-name">
+                                          {p.name ||
+                                            p.passengerId?.fullName ||
+                                            p.employeeId?.fullName ||
+                                            "Employee"}
+                                        </span>
+                                        {p.seatNumber && (
+                                          <span className="passenger-seat">
+                                            Seat {p.seatNumber}
+                                          </span>
+                                        )}
+                                        {p.pickupStop && (
+                                          <span className="passenger-pickup">
+                                            Pickup: {p.pickupStop}
+                                          </span>
+                                        )}
+                                        {p.dropoffStop && (
+                                          <span className="passenger-dropoff">
+                                            Drop: {p.dropoffStop}
+                                          </span>
+                                        )}
                                       </li>
                                     ))}
                                   </ul>
@@ -741,4 +706,3 @@ const filteredBookings = bookings.filter((booking) => {
     </div>
   );
 }
-

@@ -7,7 +7,7 @@ import "./corporateemployeebookingspage.css";
 
 const CorporateEmployeeBookingsPage = () => {
   const dispatch = useDispatch();
-  const { corporateOwnerBookings, loading } = useSelector(
+  const { corporateOwnerBookings, loading, error } = useSelector(
     (state) => state.booking,
   );
   const auth = useSelector((state) => state.auth);
@@ -65,35 +65,43 @@ const CorporateEmployeeBookingsPage = () => {
     (sum, b) => sum + (b.numberOfSeats || 1),
     0,
   );
-  
+
   // Helper to get employee name from different data formats
   const getEmployeeName = (booking) => {
-    return booking.employeeName || 
-           booking.passengerId?.fullName || 
-           booking.employee?.fullName || 
-           "Employee";
+    return (
+      booking.employeeName ||
+      booking.passengerId?.fullName ||
+      booking.employee?.fullName ||
+      "Employee"
+    );
   };
-  
+
   const getEmployeeEmail = (booking) => {
-    return booking.employeeEmail || 
-           booking.passengerId?.email || 
-           booking.employee?.email || 
-           booking.passengerId?.whatsappNumber ||
-           booking.employee?.whatsappNumber ||
-           "";
+    return (
+      booking.employeeEmail ||
+      booking.passengerId?.email ||
+      booking.employee?.email ||
+      booking.passengerId?.whatsappNumber ||
+      booking.employee?.whatsappNumber ||
+      ""
+    );
   };
-  
+
   const getPickupLocation = (booking) => {
-    return booking.pickupPoint || booking.pickupLocation || booking.fromLocation || "";
+    return (
+      booking.pickupPoint ||
+      booking.pickupLocation ||
+      booking.fromLocation ||
+      ""
+    );
   };
-  
+
   const getDropoffLocation = (booking) => {
     return booking.dropoffLocation || booking.toLocation || "";
   };
 
   return (
     <div className="corporate-bookings-page">
-
       <div className="bookings-container">
         <div className="bookings-header">
           <div className="header-content">
@@ -156,6 +164,12 @@ const CorporateEmployeeBookingsPage = () => {
             <div className="spinner"></div>
             <p>Loading bookings...</p>
           </div>
+        ) : error ? (
+          <div className="empty-state">
+            <div className="empty-icon">!</div>
+            <p>Error loading bookings</p>
+            <p className="empty-subtitle">{error}</p>
+          </div>
         ) : corporateOwnerBookings.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">📋</div>
@@ -185,12 +199,8 @@ const CorporateEmployeeBookingsPage = () => {
                             {getEmployeeName(booking).charAt(0) || "E"}
                           </div>
                           <div className="employee-info">
-                            <h4>
-                              {getEmployeeName(booking)}
-                            </h4>
-                            <p>
-                              {getEmployeeEmail(booking)}
-                            </p>
+                            <h4>{getEmployeeName(booking)}</h4>
+                            <p>{getEmployeeEmail(booking)}</p>
                           </div>
                           <span
                             className="status-badge"
@@ -223,24 +233,55 @@ const CorporateEmployeeBookingsPage = () => {
                           </div>
                           <div className="meta-item">
                             <span className="meta-icon">🕐</span>
-                            <span>{booking.startTime || booking.pickupTime || formatTime(booking.travelDate || booking.tripDate)}</span>
+                            <span>
+                              {booking.startTime ||
+                                booking.pickupTime ||
+                                formatTime(
+                                  booking.travelDate || booking.tripDate,
+                                )}
+                            </span>
                           </div>
-                          {(booking.vehicleModel || booking.vehiclePlate || booking.vehicle?.model || booking.vehicle?.vehicleName) && (
+                          {(booking.vehicleModel ||
+                            booking.vehiclePlate ||
+                            booking.vehicle?.model ||
+                            booking.vehicle?.vehicleName) && (
                             <div className="meta-item">
                               <span className="meta-icon">🚌</span>
-                              <span>{booking.vehicleModel || booking.vehicle?.vehicleName || booking.vehicle?.model}{booking.vehiclePlate ? ` (${booking.vehiclePlate})` : booking.vehicle?.registrationNumber ? ` (${booking.vehicle.registrationNumber})` : ""}</span>
+                              <span>
+                                {booking.vehicleModel ||
+                                  booking.vehicle?.vehicleName ||
+                                  booking.vehicle?.model}
+                                {booking.vehiclePlate
+                                  ? ` (${booking.vehiclePlate})`
+                                  : booking.vehicle?.registrationNumber
+                                    ? ` (${booking.vehicle.registrationNumber})`
+                                    : ""}
+                              </span>
                             </div>
                           )}
-                          {(booking.driverName || booking.driver?.name || booking.driver?.fullName) && (
+                          {(booking.driverName ||
+                            booking.driver?.name ||
+                            booking.driver?.fullName) && (
                             <div className="meta-item">
                               <span className="meta-icon">🧑‍✈️</span>
-                              <span>{booking.driverName || booking.driver?.name || booking.driver?.fullName}</span>
+                              <span>
+                                {booking.driverName ||
+                                  booking.driver?.name ||
+                                  booking.driver?.fullName}
+                              </span>
                             </div>
                           )}
                           {booking.tripType && (
                             <div className="meta-item">
                               <span className="meta-icon">🔄</span>
-                              <span>{booking.tripType === "ROUND_TRIP" ? "Round Trip" : "One Way"}{booking.direction ? ` - ${booking.direction}` : ""}</span>
+                              <span>
+                                {booking.tripType === "ROUND_TRIP"
+                                  ? "Round Trip"
+                                  : "One Way"}
+                                {booking.direction
+                                  ? ` - ${booking.direction}`
+                                  : ""}
+                              </span>
                             </div>
                           )}
                           {booking.tripStatus && (
@@ -266,7 +307,6 @@ const CorporateEmployeeBookingsPage = () => {
           </div>
         )}
       </div>
-
     </div>
   );
 };

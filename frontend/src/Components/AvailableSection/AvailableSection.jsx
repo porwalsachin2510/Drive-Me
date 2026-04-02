@@ -104,18 +104,42 @@ const AvailableSection = ({
   };
 
   // Calculate monthly price from one-way price if not available
+  // const calculateMonthlyPrice = (route) => {
+  //   // If route already has monthlyPrice, use it
+  //   if (route.monthlyPrice && route.monthlyPrice !== "N/A") {
+  //     return typeof route.monthlyPrice === "number"
+  //       ? route.monthlyPrice.toFixed(2)
+  //       : route.monthlyPrice;
+  //   }
+
+  //   // Calculate from one-way price
+  //   const oneWayPrice =
+  //     route.pricing?.oneWayPrice || route.oneWayPrice || route.price;
+  //   if (!oneWayPrice) return null;
+
+  //   // Calculate travel days per month based on available days
+  //   const daysPerWeek =
+  //     route.availableDays?.length || route.daysOfWeek?.length || 5;
+  //   const travelDaysPerMonth = Math.round(daysPerWeek * 4.33); // ~4.33 weeks per month
+
+  //   // Monthly price = one-way price * travel days per month
+  //   const monthlyPrice = parseFloat(oneWayPrice) * travelDaysPerMonth;
+  //   return monthlyPrice.toFixed(2);
+  // };
+
+  // Calculate monthly price from one-way price if not available
   const calculateMonthlyPrice = (route) => {
     // If route already has monthlyPrice, use it
     if (route.monthlyPrice && route.monthlyPrice !== "N/A") {
       return typeof route.monthlyPrice === "number"
-        ? route.monthlyPrice.toFixed(2)
+        ? `${route.monthlyPrice.toFixed(2)} ${route.pricing?.currency || "KWD"}`
         : route.monthlyPrice;
     }
 
     // Calculate from one-way price
     const oneWayPrice =
       route.pricing?.oneWayPrice || route.oneWayPrice || route.price;
-    if (!oneWayPrice) return null;
+    if (!oneWayPrice) return "Contact for price";
 
     // Calculate travel days per month based on available days
     const daysPerWeek =
@@ -124,7 +148,8 @@ const AvailableSection = ({
 
     // Monthly price = one-way price * travel days per month
     const monthlyPrice = parseFloat(oneWayPrice) * travelDaysPerMonth;
-    return monthlyPrice.toFixed(2);
+    const currency = route.pricing?.currency || "KWD";
+    return `${monthlyPrice.toFixed(2)} ${currency}`;
   };
 
   const isRouteAvailableForBooking = (route) => {
@@ -283,9 +308,7 @@ const AvailableSection = ({
                         MONTHLY
                       </p>
                       <p className="drivemego-availablesection-price-value">
-                        {calculateMonthlyPrice(route)
-                          ? `${calculateMonthlyPrice(route)} KWD`
-                          : "Contact for price"}
+                        {calculateMonthlyPrice(route) || "Contact for price"}
                       </p>
                     </div>
                   </div>
@@ -419,6 +442,6 @@ const AvailableSection = ({
       />
     </div>
   );
-};
+};;
 
 export default AvailableSection;

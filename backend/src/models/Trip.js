@@ -5,7 +5,6 @@ const tripSchema = new mongoose.Schema(
         contractId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Contract",
-            required: true,
         },
         routeId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -15,24 +14,25 @@ const tripSchema = new mongoose.Schema(
         vehicleId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Vehicle",
-            required: true,
         },
         driverId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
         },
         corporateId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
         },
         b2bPartnerId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
         },
-        
+        // Monthly pass reference
+        monthlyPassId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "MonthlyPass",
+        },
+
         // Trip details
         tripDate: {
             type: Date,
@@ -44,9 +44,8 @@ const tripSchema = new mongoose.Schema(
         },
         endTime: {
             type: String,
-            required: true,
         },
-        
+
         // Trip type and direction
         tripType: {
             type: String,
@@ -72,13 +71,13 @@ const tripSchema = new mongoose.Schema(
         },
         totalDistance: {
             type: Number,
-            required: true,
+            default: 0,
         },
         estimatedDuration: {
             type: String,
-            required: true,
+            default: "",
         },
-        
+
         // Booking management
         totalSeats: {
             type: Number,
@@ -100,25 +99,33 @@ const tripSchema = new mongoose.Schema(
             type: String,
             default: "KWD",
         },
-        
+
         // Passengers
         passengers: [{
-            employeeId: {
+            passengerId: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "User",
-                required: true,
             },
+            employeeId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "CorporateEmployee",
+            },
+            name: String,
             seatNumber: {
                 type: Number,
-                required: true,
             },
+            pickupStop: String,
+            dropoffStop: String,
             pickupPoint: {
                 type: String,
-                required: true,
             },
             pickupTime: {
                 type: String,
-                required: true,
+            },
+            status: {
+                type: String,
+                enum: ["Confirmed", "Cancelled", "NoShow", "CONFIRMED", "CANCELLED", "NO_SHOW"],
+                default: "Confirmed",
             },
             bookingStatus: {
                 type: String,
@@ -134,14 +141,14 @@ const tripSchema = new mongoose.Schema(
                 ref: "MonthlyPass",
             },
         }],
-        
+
         // Trip status
         status: {
             type: String,
-            enum: ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
+            enum: ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "Scheduled", "Confirmed", "InProgress", "Completed", "Cancelled"],
             default: "SCHEDULED",
         },
-        
+
         // Real-time tracking
         currentLocation: {
             lat: Number,
@@ -153,7 +160,7 @@ const tripSchema = new mongoose.Schema(
             lng: Number,
             lastUpdated: Date,
         },
-        
+
         // Trip events
         events: [{
             eventType: {
@@ -172,13 +179,13 @@ const tripSchema = new mongoose.Schema(
                 ref: "User",
             },
         }],
-        
+
         // Monthly pass integration
         monthlyPassEligible: {
             type: Boolean,
             default: true,
         },
-        
+
         // Notifications
         notifications: {
             tripReminder: {
@@ -194,11 +201,26 @@ const tripSchema = new mongoose.Schema(
                 default: true,
             },
         },
-        
+
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
+        },
+
+        // Stop points for the trip
+        stopPoints: [{
+            location: String,
+            sequence: Number,
+            scheduledTime: String,
+            actualTime: String,
+        }],
+
+        // Notification tracking
+        notificationsSent: {
+            reminder30Min: { type: Boolean, default: false },
+            reminder5Min: { type: Boolean, default: false },
+            tripStarted: { type: Boolean, default: false },
+            tripCompleted: { type: Boolean, default: false },
         },
     },
     {

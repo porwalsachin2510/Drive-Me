@@ -31,6 +31,10 @@ export const createContractFromQuotation = createAsyncThunk(
 
 export const getContractById = createAsyncThunk("contract/getById", async ({ contractId, silent = false }, { rejectWithValue }) => {
     try {
+        // Validate contractId before making API call
+        if (!contractId || contractId === "undefined" || contractId === "null") {
+            return rejectWithValue("Invalid contract ID")
+        }
         const response = await api.get(`/contracts/${contractId}`)
         return { data: response.data, silent }
     } catch (error) {

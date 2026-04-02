@@ -1,46 +1,71 @@
-import React, { useState, useEffect } from 'react';
-import api from '../../utils/api';
-import './WalletRechargeModal.css';
+/* eslint-disable no-unused-vars */
+import React, { useState, useEffect } from "react";
+import api from "../../utils/api";
+import "./WalletRechargeModal.css";
 
-const WalletRechargeModal = ({ 
-  isOpen, 
-  onClose, 
-  onRechargeSuccess, 
-  country = 'Kuwait',
-  currency = 'KWD'
+const WalletRechargeModal = ({
+  isOpen,
+  onClose,
+  onRechargeSuccess,
+  country = "Kuwait",
+  currency = "KWD",
 }) => {
-  const [amount, setAmount] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('card');
+  const [amount, setAmount] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
 
   // Available payment methods based on country
   useEffect(() => {
-    const methods = country === 'UAE' ? [
-      { id: 'card', name: 'Credit/Debit Card', icon: '💳', gateway: 'STRIPE' },
-      { id: 'apple_pay', name: 'Apple Pay', icon: '🍎', gateway: 'STRIPE' },
-      { id: 'google_pay', name: 'Google Pay', icon: '🤖', gateway: 'STRIPE' },
-      { id: 'knet', name: 'KNET', icon: '🔵', gateway: 'TAP' },
-      { id: 'upi', name: 'UPI', icon: '📱', gateway: 'UPI' },
-    ] : [
-      { id: 'card', name: 'Credit/Debit Card', icon: '💳', gateway: 'TAP' },
-      { id: 'knet', name: 'KNET', icon: '🔵', gateway: 'TAP' },
-      { id: 'benefit', name: 'Benefit', icon: '🟣', gateway: 'TAP' },
-      { id: 'zaincash', name: 'Zain Cash', icon: '🟢', gateway: 'TAP' },
-      { id: 'stcpay', name: 'STC Pay', icon: '🔴', gateway: 'TAP' },
-      { id: 'upi', name: 'UPI', icon: '📱', gateway: 'UPI' },
-    ];
+    const methods =
+      country === "UAE"
+        ? [
+            {
+              id: "card",
+              name: "Credit/Debit Card",
+              icon: "💳",
+              gateway: "STRIPE",
+            },
+            {
+              id: "apple_pay",
+              name: "Apple Pay",
+              icon: "🍎",
+              gateway: "STRIPE",
+            },
+            {
+              id: "google_pay",
+              name: "Google Pay",
+              icon: "🤖",
+              gateway: "STRIPE",
+            },
+            { id: "knet", name: "KNET", icon: "🔵", gateway: "TAP" },
+            { id: "upi", name: "UPI", icon: "📱", gateway: "UPI" },
+          ]
+        : [
+            {
+              id: "card",
+              name: "Credit/Debit Card",
+              icon: "💳",
+              gateway: "TAP",
+            },
+            { id: "knet", name: "KNET", icon: "🔵", gateway: "TAP" },
+            { id: "benefit", name: "Benefit", icon: "🟣", gateway: "TAP" },
+            { id: "zaincash", name: "Zain Cash", icon: "🟢", gateway: "TAP" },
+            { id: "stcpay", name: "STC Pay", icon: "🔴", gateway: "TAP" },
+            { id: "upi", name: "UPI", icon: "📱", gateway: "UPI" },
+          ];
     setPaymentMethods(methods);
   }, [country]);
 
   // Predefined amounts for quick selection
-  const quickAmounts = country === 'UAE' 
-    ? [50, 100, 200, 500, 1000] // AED
-    : [10, 20, 50, 100, 200]; // KWD
+  const quickAmounts =
+    country === "UAE"
+      ? [50, 100, 200, 500, 1000] // AED
+      : [10, 20, 50, 100, 200]; // KWD
 
   const handleAmountChange = (value) => {
     // Only allow numbers and decimal point
-    const numericValue = value.replace(/[^0-9.]/g, '');
+    const numericValue = value.replace(/[^0-9.]/g, "");
     setAmount(numericValue);
   };
 
@@ -50,47 +75,47 @@ const WalletRechargeModal = ({
 
   const handleRecharge = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      alert('Please enter a valid amount');
+      alert("Please enter a valid amount");
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      const selectedMethod = paymentMethods.find(method => method.id === selectedPaymentMethod);
-      
-      // Create payment session based on gateway
-      const response = await api.post('/wallet/create-payment-session', {
+      console.log("[v0] Starting payment session creation:", {
+        amount,
+        currency,
+        paymentMethod: selectedPaymentMethod,
+      });
+
+      // Create payment session
+      const response = await api.post("/wallet/create-payment-session", {
         amount: parseFloat(amount),
         currency: currency,
         paymentMethod: selectedPaymentMethod,
-        country: country
+        country: country,
       });
 
-      if (response.data.success) {
-        // Redirect to payment gateway or handle payment
-        if (response.data.paymentUrl) {
-          window.location.href = response.data.paymentUrl;
-        } else if (response.data.paymentIntentClientSecret) {
-          // Handle Stripe payment
-          const stripe = window.Stripe(response.data.publishableKey);
-          const { error } = await stripe.confirmPayment({
-            clientSecret: response.data.paymentIntentClientSecret,
-            confirmParams: {
-              return_url: `${window.location.origin}/wallet/recharge/success`,
-            },
-          });
+      console.log("[v0] Payment session response:", {
+        success: response.data.success,
+        hasPaymentUrl: !!response.data.data?.paymentUrl,
+        paymentUrl: response.data.data?.paymentUrl?.substring(0, 50),
+      });
 
-          if (error) {
-            alert(`Payment failed: ${error.message}`);
-          }
-        }
+      if (response.data.success && response.data.data?.paymentUrl) {
+        console.log(
+          "[v0] Redirecting to payment page:",
+          response.data.data.paymentUrl,
+        );
+        // Redirect to Stripe/Tap payment page
+        window.location.href = response.data.data.paymentUrl;
       } else {
-        alert(response.data.message || 'Payment initialization failed');
+        console.error("[v0] Invalid payment response:", response.data);
+        alert(response.data.message || "Payment initialization failed");
       }
     } catch (error) {
-      console.error('Recharge error:', error);
-      alert('Failed to process recharge. Please try again.');
+      console.error("[v0] Recharge error:", error);
+      alert("Failed to process recharge. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -113,7 +138,9 @@ const WalletRechargeModal = ({
           <div className="amount-section">
             <label className="section-title">Enter Amount</label>
             <div className="amount-input-container">
-              <span className="currency-symbol">{currency === 'AED' ? 'د.إ' : 'د.ك'}</span>
+              <span className="currency-symbol">
+                {currency === "AED" ? "د.إ" : "د.ك"}
+              </span>
               <input
                 type="text"
                 value={amount}
@@ -123,7 +150,7 @@ const WalletRechargeModal = ({
                 disabled={isProcessing}
               />
             </div>
-            
+
             {/* Quick Amount Buttons */}
             <div className="quick-amounts">
               <label className="quick-amount-label">Quick Amounts:</label>
@@ -135,7 +162,9 @@ const WalletRechargeModal = ({
                     onClick={() => handleQuickAmountSelect(quickAmount)}
                     disabled={isProcessing}
                   >
-                    {currency === 'AED' ? `د.إ${quickAmount}` : `د.ك${quickAmount}`}
+                    {currency === "AED"
+                      ? `د.إ${quickAmount}`
+                      : `د.ك${quickAmount}`}
                   </button>
                 ))}
               </div>
@@ -149,7 +178,7 @@ const WalletRechargeModal = ({
               {paymentMethods.map((method) => (
                 <div
                   key={method.id}
-                  className={`payment-method-option ${selectedPaymentMethod === method.id ? 'selected' : ''}`}
+                  className={`payment-method-option ${selectedPaymentMethod === method.id ? "selected" : ""}`}
                   onClick={() => setSelectedPaymentMethod(method.id)}
                 >
                   <span className="payment-icon">{method.icon}</span>
@@ -176,15 +205,19 @@ const WalletRechargeModal = ({
               <label className="section-title">Transaction Summary</label>
               <div className="summary-item">
                 <span>Recharge Amount:</span>
-                <span>{currency === 'AED' ? `د.إ${amount}` : `د.ك${amount}`}</span>
+                <span>
+                  {currency === "AED" ? `د.إ${amount}` : `د.ك${amount}`}
+                </span>
               </div>
               <div className="summary-item">
                 <span>Processing Fee:</span>
-                <span>{currency === 'AED' ? 'د.إ0.00' : 'د.ك0.00'}</span>
+                <span>{currency === "AED" ? "د.إ0.00" : "د.ك0.00"}</span>
               </div>
               <div className="summary-item total">
                 <span>Total Amount:</span>
-                <span>{currency === 'AED' ? `د.إ${amount}` : `د.ك${amount}`}</span>
+                <span>
+                  {currency === "AED" ? `د.إ${amount}` : `د.ك${amount}`}
+                </span>
               </div>
             </div>
           )}
@@ -203,7 +236,9 @@ const WalletRechargeModal = ({
             onClick={handleRecharge}
             disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
           >
-            {isProcessing ? 'Processing...' : `Add ${currency === 'AED' ? 'د.إ' : 'د.ك'}${amount || '0.00'}`}
+            {isProcessing
+              ? "Processing..."
+              : `Add ${currency === "AED" ? "د.إ" : "د.ك"}${amount || "0.00"}`}
           </button>
         </div>
 
@@ -212,7 +247,10 @@ const WalletRechargeModal = ({
           <div className="security-icon">🔒</div>
           <div className="security-text">
             <strong>Secure Payment</strong>
-            <p>Your payment information is encrypted and secure. We support all major payment methods in {country}.</p>
+            <p>
+              Your payment information is encrypted and secure. We support all
+              major payment methods in {country}.
+            </p>
           </div>
         </div>
       </div>

@@ -40,6 +40,10 @@ const corporateEmployeeSchema = new mongoose.Schema(
             designation: String,
             workLocation: String,
         },
+        // Employee home address (for determining nearest pickup stop)
+        homeAddress: {
+            type: String,
+        },
         // Residential address for route assignment
         residentialAddress: {
             street: String,
@@ -58,6 +62,24 @@ const corporateEmployeeSchema = new mongoose.Schema(
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "Route",
             },
+            // Assigned trip details
+            assignedTripNumber: {
+                type: Number,
+                default: 1
+            },
+            assignedTripType: {
+                type: String,
+                enum: ["One Way", "Round Trip"],
+                default: "One Way"
+            },
+            assignedTripDepartureTime: String,
+            // Outbound trip (home -> office)
+            outboundPickupStop: String,
+            outboundDropoffStop: String,
+            // Return trip (office -> home) - only for Round Trip
+            returnPickupStop: String,
+            returnDropoffStop: String,
+            // Legacy fields
             seatNumber: Number,
             pickupPoint: String,
             dropOffPoint: String,
@@ -71,6 +93,23 @@ const corporateEmployeeSchema = new mongoose.Schema(
                 enum: ["ACTIVE", "INACTIVE", "SUSPENDED", "TERMINATED"],
                 default: "ACTIVE",
             },
+        },
+        // Pass duration for route assignment
+        passDuration: {
+            durationType: {
+                type: String,
+                enum: ["1_MONTH", "2_MONTHS", "3_MONTHS", "6_MONTHS", "1_YEAR", "CUSTOM"],
+                default: "1_MONTH"
+            },
+            customStartDate: Date,
+            customEndDate: Date,
+            validFrom: Date,
+            validTo: Date
+        },
+        // Reference to the created monthly pass
+        monthlyPassId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "MonthlyPass"
         },
         // Subscription management
         subscriptionDetails: {
@@ -268,7 +307,7 @@ const corporateEmployeeSchema = new mongoose.Schema(
             default: Date.now,
         },
     },
-    { 
+    {
         timestamps: true,
         toJSON: { virtuals: true },
         toObject: { virtuals: true }
@@ -283,18 +322,22 @@ corporateEmployeeSchema.index({ "transportDetails.assignedRoute": 1 });
 corporateEmployeeSchema.index({ "attendance.dailyAttendance.date": 1 });
 
 // Virtual for full name
-corporateEmployeeSchema.virtual('fullName').get(function() {
+corporateEmployeeSchema.virtual('fullName').get(function () {
     return `${this.personalInfo.firstName} ${this.personalInfo.lastName}`;
 });
 
 // Virtual for current month attendance
-corporateEmployeeSchema.virtual('currentMonthAttendance').get(function() {
+corporateEmployeeSchema.virtual('currentMonthAttendance').get(function () {
     const currentMonth = new Date().toISOString().slice(0, 7); // "2024-01"
+    // Add null check to prevent "Cannot read properties of undefined (reading 'find')"
+    if (!this.attendance || !this.attendance.monthlyAttendance || !Array.isArray(this.attendance.monthlyAttendance)) {
+        return null;
+    }
     return this.attendance.monthlyAttendance.find(att => att.month === currentMonth);
 });
 
 // Pre-save middleware
-corporateEmployeeSchema.pre('save', function(next) {
+corporateEmployeeSchema.pre('save', function (next) {
     // Update employee email in personal info if user email changes
     if (this.isModified('userId') && this.userId) {
         // This would typically be handled in a separate service

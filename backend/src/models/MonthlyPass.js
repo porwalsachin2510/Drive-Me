@@ -15,14 +15,13 @@ const monthlyPassSchema = new mongoose.Schema(
         contractId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Contract",
-            required: true,
         },
         routeId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Route",
             required: true,
         },
-        
+
         // Pass details
         passType: {
             type: String,
@@ -31,31 +30,26 @@ const monthlyPassSchema = new mongoose.Schema(
         },
         validFrom: {
             type: Date,
-            required: true,
         },
         validTo: {
             type: Date,
-            required: true,
         },
-        
+
         // Route preferences
         preferredPickupPoint: {
             type: String,
-            required: true,
         },
         preferredPickupTime: {
             type: String,
-            required: true,
         },
         preferredDropPoint: {
             type: String,
-            required: true,
         },
-        
+
         // Pricing
         totalAmount: {
             type: Number,
-            required: true,
+            default: 0,
         },
         currency: {
             type: String,
@@ -72,7 +66,7 @@ const monthlyPassSchema = new mongoose.Schema(
             enum: ["CORPORATE_BILLED", "SELF_PAID"],
             default: "CORPORATE_BILLED",
         },
-        
+
         // Usage tracking
         totalTrips: {
             type: Number,
@@ -86,20 +80,20 @@ const monthlyPassSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
-        
+
         // Pass status
         status: {
             type: String,
             enum: ["ACTIVE", "EXPIRED", "SUSPENDED", "CANCELLED"],
             default: "ACTIVE",
         },
-        
+
         // Auto-renewal
         autoRenewal: {
             type: Boolean,
             default: false,
         },
-        
+
         // Notifications
         notifications: {
             renewalReminder: {
@@ -115,7 +109,7 @@ const monthlyPassSchema = new mongoose.Schema(
                 default: true,
             },
         },
-        
+
         // Pass history
         renewalHistory: [{
             renewedFrom: Date,
@@ -123,11 +117,10 @@ const monthlyPassSchema = new mongoose.Schema(
             amount: Number,
             renewedAt: Date,
         }],
-        
+
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
         },
     },
     {

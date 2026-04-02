@@ -14,7 +14,8 @@ import {
     getEmployeeFeedbackSummary,
     assignRouteToEmployee,
     deactivateEmployee,
-    getCorporateRoutes
+    getCorporateRoutes,
+    getRouteSchedule
 } from "../controllers/corporateEmployeeController.js";
 
 const router = express.Router();
@@ -28,6 +29,7 @@ router.get("/", verifyToken, getEmployees);
 
 // Corporate routes for assignment
 router.get("/routes", verifyToken, getCorporateRoutes);
+router.get("/route-schedule/:routeId", verifyToken, getRouteSchedule);
 
 // Invitations
 router.post("/send-invitations", verifyToken, sendInvitationEmails);

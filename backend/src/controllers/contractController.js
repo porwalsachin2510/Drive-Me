@@ -1,6 +1,7 @@
 import Contract from "../models/Contract.js"
 import Quotation from "../models/Quotation.js"
 import Route from "../models/Route.js"
+import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
 import { createNotification, sendAdminNotification } from "../Services/notificationService.js"
 import User from "../models/User.js"
@@ -261,6 +262,14 @@ export const getContractById = async (req, res) => {
     try {
         const { contractId } = req.params
         const userId = req.userId
+
+        // Validate contractId before querying
+        if (!contractId || contractId === "undefined" || contractId === "null") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid contract ID provided",
+            })
+        }
 
         const contract = await Contract.findById(contractId)
             .populate({
@@ -1408,7 +1417,7 @@ export const assignDriverOrFuelToVehicle = async (req, res) => {
     }
 }
 
-// @desc    Assign route to a vehicle
+// @desc    Assign route to a vehicle with trip schedules
 // @route   POST /api/corporate/assign-route/:contractId/:assignedVehicleId
 // @access  Private (CORPORATE only)
 export const assignRouteToVehicle = async (req, res) => {
@@ -1419,6 +1428,7 @@ export const assignRouteToVehicle = async (req, res) => {
             fromLocation,
             toLocation,
             routeStartDate,
+            routeEndDate,
             startTime,
             endTime,
             stopPoints,
@@ -1426,6 +1436,7 @@ export const assignRouteToVehicle = async (req, res) => {
             estimatedDuration,
             availableDays,
             routeNotes,
+            tripTimes, // New: Array of trip times with stop points
         } = req.body
 
         if (!availableDays || !availableDays.length) {
@@ -1454,9 +1465,9 @@ export const assignRouteToVehicle = async (req, res) => {
         let assignedVehicleData = null
         let vehicleDetails = null
         for (const vehicleGroup of contract.vehicles) {
-            
+
             const found = vehicleGroup.assignedVehicles.find((v) => v._id.toString() === assignedVehicleId)
-           
+
             if (found) {
                 assignedVehicleData = found
                 vehicleDetails = vehicleGroup.vehicleId
@@ -1501,6 +1512,59 @@ export const assignRouteToVehicle = async (req, res) => {
 
         await route.save()
 
+        // Create CorporateRouteSchedule with trip times (similar to B2C Partner)
+        let routeSchedule = null
+        if (tripTimes && tripTimes.length > 0) {
+            // Format trip times with properly validated stop points
+            const formattedTripTimes = tripTimes.map((trip, index) => {
+                // Filter out empty stop points
+                const validOutboundStops = (trip.outboundStopPoints || [])
+                    .filter(stop => stop.location && stop.location.trim() !== '')
+                    .map(stop => ({
+                        location: stop.location.trim(),
+                        time: stop.time || ''
+                    }));
+
+                const validReturnStops = (trip.returnStopPoints || [])
+                    .filter(stop => stop.location && stop.location.trim() !== '')
+                    .map(stop => ({
+                        location: stop.location.trim(),
+                        time: stop.time || ''
+                    }));
+
+                return {
+                    tripNumber: index + 1,
+                    departureTime: trip.departureTime,
+                    arrivalTime: trip.arrivalTime || null,
+                    returnDepartureTime: trip.returnTime || null,
+                    returnArrivalTime: trip.returnArrivalTime || null,
+                    tripType: trip.tripType || "One Way",
+                    outboundStopPoints: validOutboundStops,
+                    returnStopPoints: validReturnStops
+                };
+            });
+
+            routeSchedule = new CorporateRouteSchedule({
+                corporateId: corporateOwnerId,
+                routeId: route._id,
+                contractId: contractId,
+                scheduleName: `${fromLocation} to ${toLocation} Schedule`,
+                tripTimes: formattedTripTimes,
+                availableDays: availableDays,
+                assignedVehicleId: assignedVehicleId,
+                assignedVehicle: vehicleDetails?._id || null,
+                assignedDriver: assignedVehicleData.driverId || null,
+                startDate: routeStartDate ? new Date(routeStartDate) : new Date(),
+                endDate: routeEndDate ? new Date(routeEndDate) : null,
+                totalSeats: seatingCapacity,
+                isActive: true,
+                status: "Active"
+            });
+
+            await routeSchedule.save();
+            console.log("[v0] Created CorporateRouteSchedule:", routeSchedule._id);
+        }
+
         let updated = false
         for (const vehicleGroup of contract.vehicles) {
             const assignedVehicle = vehicleGroup.assignedVehicles.find((v) => v._id.toString() === assignedVehicleId)
@@ -1544,6 +1608,7 @@ export const assignRouteToVehicle = async (req, res) => {
             message: "Route assigned successfully",
             data: {
                 route: updatedRoute,
+                routeSchedule: routeSchedule,
                 contract,
                 seatingInfo: {
                     totalSeats: seatingCapacity,

@@ -30,7 +30,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const { loading, error, currentBooking, bookingCreated, paymentData } =
     useSelector((state) => state.booking);
   const { user } = useSelector((state) => state.auth);
-  
+
   // State for schedule data
   const [scheduleData, setScheduleData] = useState(null);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
@@ -44,13 +44,14 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const [tripSeatAvailability, setTripSeatAvailability] = useState({}); // Store seat availability per trip
   const [selectedPickupPoint, setSelectedPickupPoint] = useState("");
   const [selectedDropoffPoint, setSelectedDropoffPoint] = useState("");
-  const [selectedReturnPickupPoint, setSelectedReturnPickupPoint] = useState("");
-  const [selectedReturnDropoffPoint, setSelectedReturnDropoffPoint] = useState("");
+  const [selectedReturnPickupPoint, setSelectedReturnPickupPoint] =
+    useState("");
+  const [selectedReturnDropoffPoint, setSelectedReturnDropoffPoint] =
+    useState("");
   const [passDuration, setPassDuration] = useState(1); // months
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedDays, setSelectedDays] = useState([]); // Selected travel days (Mon-Sun)
-  
 
   // Set default pickup/dropoff points and selected days when route changes
   useEffect(() => {
@@ -59,20 +60,42 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       setSelectedDropoffPoint(route.toLocation || "");
       setSelectedReturnPickupPoint(route.toLocation || "");
       setSelectedReturnDropoffPoint(route.fromLocation || "");
-      
+
       // Initialize selected days from route's available days
-      const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      const routeDays = route.availableDays || route.schedule?.availableDays || [];
-      
+      const allDays = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ];
+      const routeDays =
+        route.availableDays || route.schedule?.availableDays || [];
+
       if (Array.isArray(routeDays) && routeDays.length > 0) {
-        setSelectedDays(routeDays.map(d => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase()));
-      } else if (typeof routeDays === 'string') {
-        if (routeDays.toLowerCase() === 'daily' || routeDays.toLowerCase() === 'all') {
+        setSelectedDays(
+          routeDays.map(
+            (d) => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase(),
+          ),
+        );
+      } else if (typeof routeDays === "string") {
+        if (
+          routeDays.toLowerCase() === "daily" ||
+          routeDays.toLowerCase() === "all"
+        ) {
           setSelectedDays(allDays);
-        } else if (routeDays.toLowerCase() === 'weekdays') {
-          setSelectedDays(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
-        } else if (routeDays.toLowerCase() === 'weekends') {
-          setSelectedDays(['Saturday', 'Sunday']);
+        } else if (routeDays.toLowerCase() === "weekdays") {
+          setSelectedDays([
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+          ]);
+        } else if (routeDays.toLowerCase() === "weekends") {
+          setSelectedDays(["Saturday", "Sunday"]);
         } else {
           setSelectedDays(allDays);
         }
@@ -85,14 +108,17 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   useEffect(() => {
     const fetchScheduleData = async () => {
       if (!route || !route._id) return;
-      
+
       setLoadingSchedule(true);
       try {
-        const response = await api.get(`/b2c-partner/routes/${route._id}/schedules`);
+        const response = await api.get(
+          `/b2c-partner/routes/${route._id}/schedules`,
+        );
         const data = response.data;
-        
+
         if (data.success && data.schedules && data.schedules.length > 0) {
-          const activeSchedule = data.schedules.find(s => s.isActive) || data.schedules[0];
+          const activeSchedule =
+            data.schedules.find((s) => s.isActive) || data.schedules[0];
           setScheduleData(activeSchedule);
         } else {
           setScheduleData(null);
@@ -114,7 +140,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     if (!routeIdentifier) return;
 
     try {
-      const response = await api.get(`/b2c-partner/public/routes/${routeIdentifier}/trips/seat-availability`);
+      const response = await api.get(
+        `/b2c-partner/public/routes/${routeIdentifier}/trips/seat-availability`,
+      );
       const data = response.data;
       setTripSeatAvailability(data.seatAvailability || {});
     } catch (error) {
@@ -213,30 +241,42 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
 
   // Toggle a day in selectedDays
   const toggleDay = (day) => {
-    const routeDays = route.availableDays || route.schedule?.availableDays || [];
-    const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const routeDays =
+      route.availableDays || route.schedule?.availableDays || [];
+    const allDays = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
     // Get the available days for this route
     let allowedDays = allDays;
     if (Array.isArray(routeDays) && routeDays.length > 0) {
-      allowedDays = routeDays.map(d => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase());
+      allowedDays = routeDays.map(
+        (d) => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase(),
+      );
     }
     // Only allow toggling days that the route operates on
     if (!allowedDays.includes(day)) return;
-    
-    setSelectedDays(prev => 
-      prev.includes(day) 
-        ? prev.filter(d => d !== day) 
-        : [...prev, day]
+
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
     );
   };
 
   const availableSeats = route.availableSeats ?? route.totalSeats ?? 10;
   const currency = route.pricing?.currency || route.currency || "KWD";
-  const currencyDecimals = currency === "KWD" || currency === "BHD" || currency === "OMR" ? 3 : 2;
+  const currencyDecimals =
+    currency === "KWD" || currency === "BHD" || currency === "OMR" ? 3 : 2;
   const perDayPrice = getPerDayPrice();
   const travelDaysPerMonth = getTravelDaysPerMonth();
   const pricePerMonth = perDayPrice * travelDaysPerMonth;
-  const totalAmount = (pricePerMonth * numberOfSeats * passDuration).toFixed(currencyDecimals);
+  const totalAmount = (pricePerMonth * numberOfSeats * passDuration).toFixed(
+    currencyDecimals,
+  );
   const adminCommission = (totalAmount * 0.2).toFixed(currencyDecimals);
   const driverEarnings = (totalAmount * 0.8).toFixed(currencyDecimals);
 
@@ -247,17 +287,18 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   // Create trip options from schedule data
   // For ONE_WAY: Show all One Way trips
   // For ROUND_TRIP: Show 2 separate trips - outbound and return
-  
+
   const allTrips = [];
-  
-  tripTimes.forEach(trip => {
+
+  tripTimes.forEach((trip) => {
     if (trip.tripType === "One Way") {
       // Add one way trip as is - always outbound for One Way trips
       allTrips.push({
         ...trip,
-        direction: 'outbound', // One Way trips are always outbound
+        direction: "outbound", // One Way trips are always outbound
         fromLocation: route.fromLocation,
-        toLocation: route.toLocation
+        toLocation: route.toLocation,
+        stopPoints: trip.outboundStopPoints || trip.stopPoints || [],
       });
     } else if (trip.tripType === "Round Trip") {
       // Split round trip into 2 separate one way trips
@@ -267,79 +308,176 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
           ...trip,
           _id: `${trip._id}_outbound`,
           tripType: "One Way",
-          direction: 'outbound',
+          direction: "outbound",
           fromLocation: route.fromLocation,
           toLocation: route.toLocation,
           departureTime: trip.departureTime,
           arrivalTime: trip.arrivalTime,
-          stopPoints: trip.outboundStopPoints || []
+          stopPoints: trip.outboundStopPoints || [],
         });
       }
-      
+
       if (trip.arrivalTime) {
-        // Return trip  
+        // Return trip
         allTrips.push({
           ...trip,
           _id: `${trip._id}_return`,
-          tripType: "One Way", 
-          direction: 'return',
+          tripType: "One Way",
+          direction: "return",
           fromLocation: route.toLocation,
           toLocation: route.fromLocation,
           departureTime: trip.arrivalTime,
           arrivalTime: null,
-          stopPoints: trip.returnStopPoints || []
+          stopPoints: trip.returnStopPoints || [],
         });
       }
     }
   });
 
-  const morningTrips = allTrips.filter(trip => 
-    trip.direction === 'outbound' && trip.departureTime && trip.departureTime.includes('AM')
-  );
-  
-  const eveningTrips = allTrips.filter(trip => 
-    trip.direction === 'return' && trip.departureTime && trip.departureTime.includes('AM')
+  // Outbound trips - trips going FROM origin TO destination
+  const outboundTrips = allTrips.filter(
+    (trip) => trip.direction === "outbound" && trip.departureTime,
   );
 
-  // Get pickup/dropoff points from selected trip
+  // Return trips - trips going FROM destination TO origin (back home)
+  const returnTrips = allTrips.filter(
+    (trip) => trip.direction === "return" && trip.departureTime,
+  );
+
+  // Get pickup/dropoff points from selected trip - includes all stop points with times
   const getPickupPoints = () => {
     if (selectedTrip) {
-      // For morning trips, pickup is fromLocation
-      if (selectedTrip.fromLocation === route.fromLocation) {
-        return [route.fromLocation];
+      const points = [];
+      // Add origin location first (user can board from the starting point)
+      const origin = selectedTrip.fromLocation || route.fromLocation;
+      points.push({ location: origin, time: selectedTrip.departureTime || "" });
+
+      // Add ALL intermediate stop points from the trip
+      // User can board from origin or any intermediate stop
+      // These are the stops between origin and destination
+      if (selectedTrip.stopPoints && selectedTrip.stopPoints.length > 0) {
+        selectedTrip.stopPoints.forEach((stop) => {
+          if (
+            stop.location &&
+            !points.find((p) => p.location === stop.location)
+          ) {
+            points.push({
+              location: stop.location,
+              time: stop.time || stop.scheduledTime || "",
+            });
+          }
+        });
       }
-      // For evening trips, pickup is toLocation
-      return [route.toLocation];
+
+      // Note: We don't add the destination as a pickup point (can't board at final stop)
+      return points;
     }
-    return [route.fromLocation];
+    return [{ location: route.fromLocation, time: "" }];
   };
 
   const getDropoffPoints = () => {
     if (selectedTrip) {
-      // For morning trips, dropoff is toLocation
-      if (selectedTrip.fromLocation === route.fromLocation) {
-        return [route.toLocation];
+      const points = [];
+
+      // Add ALL intermediate stop points from the trip as dropoff options
+      // User can get off at any stop after their pickup point
+      if (selectedTrip.stopPoints && selectedTrip.stopPoints.length > 0) {
+        selectedTrip.stopPoints.forEach((stop) => {
+          if (
+            stop.location &&
+            !points.find((p) => p.location === stop.location)
+          ) {
+            points.push({
+              location: stop.location,
+              time: stop.time || stop.scheduledTime || "",
+            });
+          }
+        });
       }
-      // For evening trips, dropoff is fromLocation
-      return [route.fromLocation];
+
+      // Add destination location last (final stop)
+      const destination = selectedTrip.toLocation || route.toLocation;
+      if (!points.find((p) => p.location === destination)) {
+        points.push({
+          location: destination,
+          time: selectedTrip.arrivalTime || "",
+        });
+      }
+
+      return points;
     }
-    return [route.toLocation];
+    return [{ location: route.toLocation, time: "" }];
   };
 
   const getReturnPickupPoints = () => {
     if (selectedReturnTrip) {
-      // For return trips, pickup is fromLocation (which is route.toLocation)
-      return [route.toLocation];
+      const points = [];
+      // For return trips, origin is where we start going back from (e.g., Safdarjung Hospital)
+      const origin = selectedReturnTrip.fromLocation || route.toLocation;
+      points.push({
+        location: origin,
+        time: selectedReturnTrip.departureTime || "",
+      });
+
+      // Add ALL intermediate stop points from the return trip
+      // User can board from origin or any intermediate stop
+      if (
+        selectedReturnTrip.stopPoints &&
+        selectedReturnTrip.stopPoints.length > 0
+      ) {
+        selectedReturnTrip.stopPoints.forEach((stop) => {
+          if (
+            stop.location &&
+            !points.find((p) => p.location === stop.location)
+          ) {
+            points.push({
+              location: stop.location,
+              time: stop.time || stop.scheduledTime || "",
+            });
+          }
+        });
+      }
+
+      return points;
     }
-    return [route.toLocation];
+    return [{ location: route.toLocation, time: "" }];
   };
 
   const getReturnDropoffPoints = () => {
     if (selectedReturnTrip) {
-      // For return trips, dropoff is toLocation (which is route.fromLocation)
-      return [route.fromLocation];
+      const points = [];
+
+      // Add ALL intermediate stop points from the return trip as dropoff options
+      // User can get off at any stop after their pickup point
+      if (
+        selectedReturnTrip.stopPoints &&
+        selectedReturnTrip.stopPoints.length > 0
+      ) {
+        selectedReturnTrip.stopPoints.forEach((stop) => {
+          if (
+            stop.location &&
+            !points.find((p) => p.location === stop.location)
+          ) {
+            points.push({
+              location: stop.location,
+              time: stop.time || stop.scheduledTime || "",
+            });
+          }
+        });
+      }
+
+      // Add final destination (e.g., Kashmiri Gate ISBT for return trips)
+      const destination = selectedReturnTrip.toLocation || route.fromLocation;
+      if (!points.find((p) => p.location === destination)) {
+        points.push({
+          location: destination,
+          time: selectedReturnTrip.arrivalTime || "",
+        });
+      }
+
+      return points;
     }
-    return [route.fromLocation];
+    return [{ location: route.fromLocation, time: "" }];
   };
 
   const handleIncreaseSeats = () => {
@@ -373,22 +511,34 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       routeId: route._id || route.id || route.routeId,
       scheduleId: scheduleData?._id || route.scheduleId || route._id, // Use schedule data ID
       passType: selectedPassType,
-      outboundTripTime: selectedTrip?.departureTime || morningTrips[0]?.departureTime || allTrips[0]?.departureTime || '8:00 AM',
-      returnTripTime: selectedReturnTrip?.departureTime || eveningTrips[0]?.departureTime || allTrips.find(t => t.direction === 'return')?.departureTime || '',
+      outboundTripTime:
+        selectedTrip?.departureTime ||
+        outboundTrips[0]?.departureTime ||
+        allTrips[0]?.departureTime ||
+        "8:00 AM",
+      returnTripTime:
+        selectedReturnTrip?.departureTime ||
+        returnTrips[0]?.departureTime ||
+        allTrips.find((t) => t.direction === "return")?.departureTime ||
+        "",
       pickupLocation: selectedPickupPoint || route.fromLocation,
       dropoffLocation: selectedDropoffPoint || route.toLocation,
-      returnPickupLocation: selectedReturnPickupPoint || (selectedPassType === 'ROUND_TRIP' ? route.toLocation : ''),
-      returnDropoffLocation: selectedReturnDropoffPoint || (selectedPassType === 'ROUND_TRIP' ? route.fromLocation : ''),
+      returnPickupLocation:
+        selectedReturnPickupPoint ||
+        (selectedPassType === "ROUND_TRIP" ? route.toLocation : ""),
+      returnDropoffLocation:
+        selectedReturnDropoffPoint ||
+        (selectedPassType === "ROUND_TRIP" ? route.fromLocation : ""),
       durationMonths: passDuration,
-      numberOfSeats: numberOfSeats, // 
+      numberOfSeats: numberOfSeats, //
       selectedDays: selectedDays, // Days user selected for travel
       totalAmount: Number.parseFloat(totalAmount),
       paymentMethod: method,
-      notes: notes
+      notes: notes,
     };
 
     try {
-      const response = await api.post('/monthly-pass/create', bookingData);
+      const response = await api.post("/monthly-pass/create", bookingData);
 
       if (response.data.success) {
         // Handle payment redirect for STRIPE
@@ -538,10 +688,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
               <div className="trip-selection-card">
                 <div className="trip-selection-header">
                   <h3>
-                    {selectedPassType === "ROUND_TRIP" 
-                      ? "Select Morning Trip (To Work)" 
-                      : "Select Trip Time"
-                    }
+                    {selectedPassType === "ROUND_TRIP"
+                      ? "Select Outbound Trip (Going)"
+                      : "Select Trip Time"}
                   </h3>
                 </div>
                 <div className="trip-selection-body">
@@ -552,60 +701,91 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                     </div>
                   ) : (
                     <>
-                      {(selectedPassType === "ONE_WAY" ? allTrips : morningTrips).length > 0 ? (
-                        (selectedPassType === "ONE_WAY" ? allTrips : morningTrips).map((trip, index) => (
-                          <div 
+                      {(selectedPassType === "ONE_WAY"
+                        ? allTrips
+                        : outboundTrips
+                      ).length > 0 ? (
+                        (selectedPassType === "ONE_WAY"
+                          ? allTrips
+                          : outboundTrips
+                        ).map((trip, index) => (
+                          <div
                             key={trip._id || index}
-                            className={`trip-option ${selectedTrip?._id === trip._id ? 'selected' : ''}`}
+                            className={`trip-option ${selectedTrip?._id === trip._id ? "selected" : ""}`}
                             onClick={() => {
                               setSelectedTrip(trip);
                               // Use stop points from split trip data
                               const pickupStop = trip.stopPoints?.[0];
-                              const dropoffStop = trip.stopPoints?.[trip.stopPoints?.length - 1];
-                              setSelectedPickupPoint(pickupStop?.location || trip.fromLocation);
-                              setSelectedDropoffPoint(dropoffStop?.location || trip.toLocation);
+                              const dropoffStop =
+                                trip.stopPoints?.[trip.stopPoints?.length - 1];
+                              setSelectedPickupPoint(
+                                pickupStop?.location || trip.fromLocation,
+                              );
+                              setSelectedDropoffPoint(
+                                dropoffStop?.location || trip.toLocation,
+                              );
                             }}
                           >
-                            <div className="trip-time">
-                              <strong>{trip.departureTime}</strong>
-                              {trip.arrivalTime && <span> - {trip.arrivalTime}</span>}
-                              <span className="trip-type">{trip.direction === 'return' ? 'Return' : 'Outbound'}</span>
+                            <div className="trip-option-header">
+                              <div className="trip-time">
+                                <strong>{trip.departureTime}</strong>
+                                {trip.arrivalTime && (
+                                  <span> - {trip.arrivalTime}</span>
+                                )}
+                              </div>
+                              <span
+                                className={`trip-type ${trip.direction === "return" ? "return-badge" : "outbound-badge"}`}
+                              >
+                                {trip.direction === "return"
+                                  ? "RETURN"
+                                  : "OUTBOUND"}
+                              </span>
                             </div>
-                            <div className="trip-route">
-                              {trip.fromLocation} → {trip.toLocation}
-                            </div>
-                            <div className="trip-stops">
-                              {trip.stopPoints?.slice(0, 2).map((stop, idx) => (
-                                <span key={idx} className="stop-point">
-                                  {stop.location} ({stop.time})
-                                </span>
-                              ))}
-                              {trip.stopPoints?.length > 2 && <span>...</span>}
+                            <div className="trip-option-details">
+                              <div className="trip-route">
+                                {trip.fromLocation} &rarr; {trip.toLocation}
+                              </div>
+                              <div className="trip-stops">
+                                {trip.stopPoints
+                                  ?.slice(0, 3)
+                                  .map((stop, idx) => (
+                                    <span key={idx} className="stop-point">
+                                      {stop.location} ({stop.time})
+                                    </span>
+                                  ))}
+                                {trip.stopPoints?.length > 3 && (
+                                  <span className="more-stops">
+                                    +{trip.stopPoints.length - 3} more
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <div className="trip-seats">
                               {(() => {
                                 // Get real-time seat availability for this trip time
                                 const tripKey = `${trip.departureTime}_${trip.direction}`;
                                 const seatInfo = tripSeatAvailability[tripKey];
-                                const availableSeats = seatInfo?.availableSeats || route.availableSeats || route.totalSeats || 35;
-                                const totalSeats = seatInfo?.totalSeats || route.totalSeats || 35;
-                                
-  
+                                const seatsAvailable =
+                                  seatInfo?.availableSeats ||
+                                  route.availableSeats ||
+                                  route.totalSeats ||
+                                  35;
+
                                 // Check if enough seats are available for selected number
-                                const hasEnoughSeats = availableSeats >= numberOfSeats;
-                                const seatStatus = hasEnoughSeats ? 'available' : 'limited';
-                                
+                                const hasEnoughSeats =
+                                  seatsAvailable >= numberOfSeats;
+                                const seatStatus = hasEnoughSeats
+                                  ? "available"
+                                  : "limited";
+
                                 return (
                                   <div className={`seat-info ${seatStatus}`}>
-                                    <span className="seat-count">{availableSeats} seats available</span>
-                                    {numberOfSeats > 1 && (
-                                      <span className="seat-request">
-                                        ({numberOfSeats} needed)
-                                      </span>
-                                    )}
+                                    <span className="seat-count">
+                                      {seatsAvailable} seats available
+                                    </span>
                                     {!hasEnoughSeats && (
                                       <span className="seat-warning">
-                                        ⚠️ Not enough seats
+                                        Not enough seats
                                       </span>
                                     )}
                                   </div>
@@ -616,10 +796,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                         ))
                       ) : (
                         <div className="no-trips">
-                          {selectedPassType === "ROUND_TRIP" 
-                            ? "No outbound trips available" 
-                            : "No trips available in schedule"
-                          }
+                          {selectedPassType === "ROUND_TRIP"
+                            ? "No outbound trips available for this route"
+                            : "No trips available in schedule"}
                         </div>
                       )}
                     </>
@@ -631,7 +810,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
               {selectedPassType === "ROUND_TRIP" && (
                 <div className="trip-selection-card">
                   <div className="trip-selection-header">
-                    <h3>Select Evening Trip (Back Home)</h3>
+                    <h3>Select Return Trip (Coming Back)</h3>
                   </div>
                   <div className="trip-selection-body">
                     {loadingSchedule ? (
@@ -641,70 +820,97 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       </div>
                     ) : (
                       <>
-                        {eveningTrips.length > 0 ? (
-                          eveningTrips.map((trip, index) => (
-                            <div 
+                        {returnTrips.length > 0 ? (
+                          returnTrips.map((trip, index) => (
+                            <div
                               key={trip._id || index}
-                              className={`trip-option ${selectedReturnTrip?._id === trip._id ? 'selected' : ''}`}
+                              className={`trip-option ${selectedReturnTrip?._id === trip._id ? "selected" : ""}`}
                               onClick={() => {
                                 setSelectedReturnTrip(trip);
                                 // Use stop points from split trip data
                                 const pickupStop = trip.stopPoints?.[0];
-                                const dropoffStop = trip.stopPoints?.[trip.stopPoints?.length - 1];
-                                setSelectedReturnPickupPoint(pickupStop?.location || trip.fromLocation);
-                                setSelectedReturnDropoffPoint(dropoffStop?.location || trip.toLocation);
+                                const dropoffStop =
+                                  trip.stopPoints?.[
+                                    trip.stopPoints?.length - 1
+                                  ];
+                                setSelectedReturnPickupPoint(
+                                  pickupStop?.location || trip.fromLocation,
+                                );
+                                setSelectedReturnDropoffPoint(
+                                  dropoffStop?.location || trip.toLocation,
+                                );
                               }}
                             >
-                              <div className="trip-time">
-                                <strong>{trip.departureTime}</strong>
-                                {trip.arrivalTime && <span> - {trip.arrivalTime}</span>}
-                                <span className="trip-type">{trip.direction === 'return' ? 'Return' : 'Outbound'}</span>
+                              <div className="trip-option-header">
+                                <div className="trip-time">
+                                  <strong>{trip.departureTime}</strong>
+                                </div>
+                                <span
+                                  className={`trip-type ${trip.direction === "return" ? "return-badge" : "outbound-badge"}`}
+                                >
+                                  {trip.direction === "return"
+                                    ? "RETURN"
+                                    : "OUTBOUND"}
+                                </span>
                               </div>
-                              <div className="trip-route">
-                                {trip.fromLocation} → {trip.toLocation}
-                              </div>
-                              <div className="trip-stops">
-                                {trip.stopPoints?.slice(0, 2).map((stop, idx) => (
-                                  <span key={idx} className="stop-point">
-                                    {stop.location} ({stop.time})
-                                  </span>
-                                ))}
-                                {trip.stopPoints?.length > 2 && <span>...</span>}
+                              <div className="trip-option-details">
+                                <div className="trip-route">
+                                  {trip.fromLocation} &rarr; {trip.toLocation}
+                                </div>
+                                <div className="trip-stops">
+                                  {trip.stopPoints
+                                    ?.slice(0, 3)
+                                    .map((stop, idx) => (
+                                      <span key={idx} className="stop-point">
+                                        {stop.location} ({stop.time})
+                                      </span>
+                                    ))}
+                                  {trip.stopPoints?.length > 3 && (
+                                    <span className="more-stops">
+                                      +{trip.stopPoints.length - 3} more
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               <div className="trip-seats">
-                              {(() => {
-                                // Get real-time seat availability for this return trip time
-                                const tripKey = `${trip.departureTime}_${trip.direction}`;
-                                const seatInfo = tripSeatAvailability[tripKey];
-                                const availableSeats = seatInfo?.availableSeats || route.availableSeats || route.totalSeats || 35;
-                                const totalSeats = seatInfo?.totalSeats || route.totalSeats || 35;
-                                
-  
-                                // Check if enough seats are available for selected number
-                                const hasEnoughSeats = availableSeats >= numberOfSeats;
-                                const seatStatus = hasEnoughSeats ? 'available' : 'limited';
-                                
-                                return (
-                                  <div className={`seat-info ${seatStatus}`}>
-                                    <span className="seat-count">{availableSeats} seats available</span>
-                                    {numberOfSeats > 1 && (
-                                      <span className="seat-request">
-                                        ({numberOfSeats} needed)
+                                {(() => {
+                                  // Get real-time seat availability for this return trip time
+                                  const tripKey = `${trip.departureTime}_${trip.direction}`;
+                                  const seatInfo =
+                                    tripSeatAvailability[tripKey];
+                                  const seatsAvailable =
+                                    seatInfo?.availableSeats ||
+                                    route.availableSeats ||
+                                    route.totalSeats ||
+                                    35;
+
+                                  // Check if enough seats are available for selected number
+                                  const hasEnoughSeats =
+                                    seatsAvailable >= numberOfSeats;
+                                  const seatStatus = hasEnoughSeats
+                                    ? "available"
+                                    : "limited";
+
+                                  return (
+                                    <div className={`seat-info ${seatStatus}`}>
+                                      <span className="seat-count">
+                                        {seatsAvailable} seats available
                                       </span>
-                                    )}
-                                    {!hasEnoughSeats && (
-                                      <span className="seat-warning">
-                                        ⚠️ Not enough seats
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                            </div>
+                                      {!hasEnoughSeats && (
+                                        <span className="seat-warning">
+                                          Not enough seats
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
                             </div>
                           ))
                         ) : (
-                          <div className="no-trips">No return trips available</div>
+                          <div className="no-trips">
+                            No return trips available
+                          </div>
                         )}
                       </>
                     )}
@@ -729,19 +935,29 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                           setSelectedPassType(e.target.value);
                           // Reset return trip when switching to ONE_WAY
                           setSelectedReturnTrip(null);
-                          setSelectedReturnPickupPoint('');
-                          setSelectedReturnDropoffPoint('');
+                          setSelectedReturnPickupPoint("");
+                          setSelectedReturnDropoffPoint("");
                         }}
                       />
                       <div className="pass-type-content">
-                        <div className="pass-type-title">One Way Monthly Pass</div>
-                        <div className="pass-type-price">{currency} {(route.pricing?.monthlyOneWayPrice || route.monthlyPrice || 3000).toFixed(currencyDecimals)}/month</div>
+                        <div className="pass-type-title">
+                          One Way Monthly Pass
+                        </div>
+                        <div className="pass-type-price">
+                          {currency}{" "}
+                          {(
+                            route.pricing?.monthlyOneWayPrice ||
+                            route.monthlyPrice ||
+                            3000
+                          ).toFixed(currencyDecimals)}
+                          /month
+                        </div>
                         <div className="pass-type-description">
                           Travel in one direction only (e.g., morning to work)
                         </div>
                       </div>
                     </label>
-                    
+
                     <label className="pass-type-option">
                       <input
                         type="radio"
@@ -753,17 +969,26 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                           // Reset trips when switching to ROUND_TRIP
                           setSelectedTrip(null);
                           setSelectedReturnTrip(null);
-                          setSelectedPickupPoint('');
-                          setSelectedDropoffPoint('');
-                          setSelectedReturnPickupPoint('');
-                          setSelectedReturnDropoffPoint('');
+                          setSelectedPickupPoint("");
+                          setSelectedDropoffPoint("");
+                          setSelectedReturnPickupPoint("");
+                          setSelectedReturnDropoffPoint("");
                         }}
                       />
                       <div className="pass-type-content">
-                        <div className="pass-type-title">Round Trip Monthly Pass</div>
-                        <div className="pass-type-price">{currency} {(route.pricing?.monthlyRoundTripPrice || 6000).toFixed(currencyDecimals)}/month</div>
+                        <div className="pass-type-title">
+                          Round Trip Monthly Pass
+                        </div>
+                        <div className="pass-type-price">
+                          {currency}{" "}
+                          {(
+                            route.pricing?.monthlyRoundTripPrice || 6000
+                          ).toFixed(currencyDecimals)}
+                          /month
+                        </div>
                         <div className="pass-type-description">
-                          Travel both directions (e.g., morning to work + evening back home)
+                          Travel both directions (e.g., morning to work +
+                          evening back home)
                         </div>
                       </div>
                     </label>
@@ -776,10 +1001,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 <div className="points-selection-card">
                   <div className="points-selection-header">
                     <h3>
-                      {selectedPassType === "ROUND_TRIP" 
-                        ? "Morning Boarding Points (To Work)" 
-                        : "Select Boarding Points"
-                      }
+                      {selectedPassType === "ROUND_TRIP"
+                        ? "Outbound Boarding Points"
+                        : "Select Boarding Points"}
                     </h3>
                   </div>
                   <div className="points-selection-body">
@@ -792,7 +1016,10 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       >
                         <option value="">Select pickup point</option>
                         {getPickupPoints().map((point, index) => (
-                          <option key={index} value={point}>{point}</option>
+                          <option key={index} value={point.location}>
+                            {point.location}
+                            {point.time ? ` (${point.time})` : ""}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -800,12 +1027,17 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       <label>Dropoff Point</label>
                       <select
                         value={selectedDropoffPoint}
-                        onChange={(e) => setSelectedDropoffPoint(e.target.value)}
+                        onChange={(e) =>
+                          setSelectedDropoffPoint(e.target.value)
+                        }
                         className="point-select"
                       >
                         <option value="">Select dropoff point</option>
                         {getDropoffPoints().map((point, index) => (
-                          <option key={index} value={point}>{point}</option>
+                          <option key={index} value={point.location}>
+                            {point.location}
+                            {point.time ? ` (${point.time})` : ""}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -817,19 +1049,24 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
               {selectedPassType === "ROUND_TRIP" && selectedReturnTrip && (
                 <div className="points-selection-card">
                   <div className="points-selection-header">
-                    <h3>Evening Boarding Points (Back Home)</h3>
+                    <h3>Return Boarding Points</h3>
                   </div>
                   <div className="points-selection-body">
                     <div className="point-selector">
                       <label>Pickup Point</label>
                       <select
                         value={selectedReturnPickupPoint}
-                        onChange={(e) => setSelectedReturnPickupPoint(e.target.value)}
+                        onChange={(e) =>
+                          setSelectedReturnPickupPoint(e.target.value)
+                        }
                         className="point-select"
                       >
                         <option value="">Select pickup point</option>
                         {getReturnPickupPoints().map((point, index) => (
-                          <option key={index} value={point}>{point}</option>
+                          <option key={index} value={point.location}>
+                            {point.location}
+                            {point.time ? ` (${point.time})` : ""}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -837,12 +1074,17 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       <label>Dropoff Point</label>
                       <select
                         value={selectedReturnDropoffPoint}
-                        onChange={(e) => setSelectedReturnDropoffPoint(e.target.value)}
+                        onChange={(e) =>
+                          setSelectedReturnDropoffPoint(e.target.value)
+                        }
                         className="point-select"
                       >
                         <option value="">Select dropoff point</option>
                         {getReturnDropoffPoints().map((point, index) => (
-                          <option key={index} value={point}>{point}</option>
+                          <option key={index} value={point.location}>
+                            {point.location}
+                            {point.time ? ` (${point.time})` : ""}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -853,17 +1095,45 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
               {/* TRAVEL DAYS SELECTION */}
               <div className="days-selection-card">
                 <div className="days-selection-header">
-                  <h3><FaCalendarAlt style={{marginRight: 8}} />Select Travel Days</h3>
-                  <span className="days-count">{selectedDays.length} days/week</span>
+                  <h3>
+                    <FaCalendarAlt style={{ marginRight: 8 }} />
+                    Select Travel Days
+                  </h3>
+                  <span className="days-count">
+                    {selectedDays.length} days/week
+                  </span>
                 </div>
                 <div className="days-selection-body">
                   <div className="days-grid">
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
-                      const routeDays = route.availableDays || route.schedule?.availableDays || [];
-                      const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                    {[
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday",
+                      "Sunday",
+                    ].map((day) => {
+                      const routeDays =
+                        route.availableDays ||
+                        route.schedule?.availableDays ||
+                        [];
+                      const allDays = [
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                        "Sunday",
+                      ];
                       let allowedDays = allDays;
                       if (Array.isArray(routeDays) && routeDays.length > 0) {
-                        allowedDays = routeDays.map(d => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase());
+                        allowedDays = routeDays.map(
+                          (d) =>
+                            d.charAt(0).toUpperCase() +
+                            d.slice(1).toLowerCase(),
+                        );
                       }
                       const isAllowed = allowedDays.includes(day);
                       const isSelected = selectedDays.includes(day);
@@ -871,10 +1141,12 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                         <button
                           key={day}
                           type="button"
-                          className={`day-chip ${isSelected ? 'selected' : ''} ${!isAllowed ? 'disabled' : ''}`}
+                          className={`day-chip ${isSelected ? "selected" : ""} ${!isAllowed ? "disabled" : ""}`}
                           onClick={() => toggleDay(day)}
                           disabled={!isAllowed}
-                          title={!isAllowed ? 'Route not available on this day' : ''}
+                          title={
+                            !isAllowed ? "Route not available on this day" : ""
+                          }
                         >
                           {day.slice(0, 3)}
                         </button>
@@ -882,9 +1154,54 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                     })}
                   </div>
                   <div className="days-presets">
-                    <button type="button" className="preset-btn" onClick={() => setSelectedDays(['Monday','Tuesday','Wednesday','Thursday','Friday'])}>Weekdays</button>
-                    <button type="button" className="preset-btn" onClick={() => setSelectedDays(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])}>All Days</button>
-                    <button type="button" className="preset-btn" onClick={() => setSelectedDays(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'])}>Mon-Sat</button>
+                    <button
+                      type="button"
+                      className="preset-btn"
+                      onClick={() =>
+                        setSelectedDays([
+                          "Monday",
+                          "Tuesday",
+                          "Wednesday",
+                          "Thursday",
+                          "Friday",
+                        ])
+                      }
+                    >
+                      Weekdays
+                    </button>
+                    <button
+                      type="button"
+                      className="preset-btn"
+                      onClick={() =>
+                        setSelectedDays([
+                          "Monday",
+                          "Tuesday",
+                          "Wednesday",
+                          "Thursday",
+                          "Friday",
+                          "Saturday",
+                          "Sunday",
+                        ])
+                      }
+                    >
+                      All Days
+                    </button>
+                    <button
+                      type="button"
+                      className="preset-btn"
+                      onClick={() =>
+                        setSelectedDays([
+                          "Monday",
+                          "Tuesday",
+                          "Wednesday",
+                          "Thursday",
+                          "Friday",
+                          "Saturday",
+                        ])
+                      }
+                    >
+                      Mon-Sat
+                    </button>
                   </div>
                 </div>
               </div>
@@ -899,7 +1216,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                     <label>Number of Months</label>
                     <select
                       value={passDuration}
-                      onChange={(e) => setPassDuration(parseInt(e.target.value))}
+                      onChange={(e) =>
+                        setPassDuration(parseInt(e.target.value))
+                      }
                       className="duration-select"
                     >
                       <option value={1}>1 Month</option>
@@ -930,9 +1249,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                     <FaPlus />
                   </button>
                 </div>
-                <span className="seats-available">
-                  1 seat per user
-                </span>
+                <span className="seats-available">1 seat per user</span>
               </div>
 
               <div className="notes-input">
@@ -948,19 +1265,29 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
               <div className="price-breakdown">
                 <div className="price-row">
                   <span>Pass Type</span>
-                  <span>{selectedPassType === "ONE_WAY" ? "One Way Monthly" : "Round Trip Monthly"}</span>
+                  <span>
+                    {selectedPassType === "ONE_WAY"
+                      ? "One Way Monthly"
+                      : "Round Trip Monthly"}
+                  </span>
                 </div>
                 <div className="price-row">
                   <span>Per Day Rate</span>
-                  <span>{currency} {perDayPrice.toFixed(currencyDecimals)}/day</span>
+                  <span>
+                    {currency} {perDayPrice.toFixed(currencyDecimals)}/day
+                  </span>
                 </div>
                 <div className="price-row">
                   <span>Travel Days/Month</span>
-                  <span>~{travelDaysPerMonth} days ({selectedDays.length} days/week)</span>
+                  <span>
+                    ~{travelDaysPerMonth} days ({selectedDays.length} days/week)
+                  </span>
                 </div>
                 <div className="price-row">
                   <span>Monthly Price (per seat)</span>
-                  <span>{currency} {pricePerMonth.toFixed(currencyDecimals)}</span>
+                  <span>
+                    {currency} {pricePerMonth.toFixed(currencyDecimals)}
+                  </span>
                 </div>
                 <div className="price-row">
                   <span>Number of seats</span>
@@ -968,7 +1295,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 </div>
                 <div className="price-row">
                   <span>Duration</span>
-                  <span>{passDuration} month{passDuration > 1 ? 's' : ''}</span>
+                  <span>
+                    {passDuration} month{passDuration > 1 ? "s" : ""}
+                  </span>
                 </div>
                 {/* {!isCorporate && (
                   <>
@@ -983,13 +1312,24 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   </>
                 )} */}
                 <div className="price-row total">
-                  <span>Total Amount ({passDuration} month{passDuration > 1 ? 's' : ''})</span>
-                  <span>{currency} {totalAmount}</span>
+                  <span>
+                    Total Amount ({passDuration} month
+                    {passDuration > 1 ? "s" : ""})
+                  </span>
+                  <span>
+                    {currency} {totalAmount}
+                  </span>
                 </div>
                 <div className="savings-info">
                   {passDuration > 1 && (
                     <span className="savings-text">
-                      💰 Save {passDuration === 3 ? '5%' : passDuration === 6 ? '10%' : '15%'} with longer duration!
+                      💰 Save{" "}
+                      {passDuration === 3
+                        ? "5%"
+                        : passDuration === 6
+                          ? "10%"
+                          : "15%"}{" "}
+                      with longer duration!
                     </span>
                   )}
                 </div>
@@ -1034,7 +1374,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
             <div className="step-content step-payment">
               <div className="payment-amount-display">
                 <span className="amount-label">Amount to Pay</span>
-                <span className="amount-value">{currency} {totalAmount}</span>
+                <span className="amount-value">
+                  {currency} {totalAmount}
+                </span>
               </div>
 
               {/* <div className="commission-info">
@@ -1160,7 +1502,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Total Amount</span>
-                  <span className="detail-value">{currency} {totalAmount}</span>
+                  <span className="detail-value">
+                    {currency} {totalAmount}
+                  </span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Payment Method</span>

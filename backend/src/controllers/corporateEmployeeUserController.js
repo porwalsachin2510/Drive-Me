@@ -5,6 +5,8 @@ import Route from "../models/Route.js";
 import Trip from "../models/Trip.js";
 import Vehicle from "../models/Vehicle.js";
 import Driver from "../models/Driver.js";
+import CorporateDriver from "../models/CorporateDriver.js";
+import MonthlyPass from "../models/MonthlyPass.js";
 import { sendEmail } from "../Services/emailService.js";
 
 // Register corporate employee
@@ -156,70 +158,78 @@ export const getEmployeeDashboard = async (req, res) => {
         const todayEnd = new Date(todayStart);
         todayEnd.setDate(todayEnd.getDate() + 1);
 
+        // Don't populate driverId since it may reference CorporateDriver model, not User
         const todayTripsRaw = await Trip.find({
             corporateId: employee.companyId,
             tripDate: { $gte: todayStart, $lt: todayEnd },
-            status: { $in: ['SCHEDULED', 'IN_PROGRESS'] }
+            status: { $in: ['SCHEDULED', 'IN_PROGRESS', 'Scheduled', 'Confirmed'] },
+            $or: [
+                { 'passengers.passengerId': userId },
+                { 'passengers.employeeId': employee._id }
+            ]
         })
-        .populate('routeId', 'fromLocation toLocation stopPoints')
-        .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory model licensePlate')
-        .populate('driverId', 'name email phone fullName whatsappNumber')
-        .sort({ startTime: 1 });
+            .populate('routeId', 'fromLocation toLocation stopPoints')
+            .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory model licensePlate')
+            .sort({ startTime: 1 });
 
-        // Resolve driver names from Driver model (has 'name') or User model (has 'fullName')
+        // Resolve driver names - driverId may be CorporateDriver, Driver, or User model ID
         const resolveDriverInfo = async (trip) => {
-            const driverDoc = trip.driverId;
-            if (!driverDoc) {
+            // Get the raw driverId from the trip document (not populated)
+            const driverObjectId = trip.driverId;
+
+            if (!driverObjectId) {
                 // Try to get from vehicleInfo (contract-level assignment)
-                return { 
-                    driverName: vehicleInfo?.driverName || 'Not assigned',
+                return {
+                    driverName: vehicleInfo?.driverName || 'Will be assigned',
                     driverContact: vehicleInfo?.driverContact || 'Not available'
                 };
             }
 
             let driverName = null;
             let driverContact = null;
-            const driverObjectId = driverDoc._id || driverDoc;
 
-            // 1. Check if populate worked (User model has fullName)
-            if (typeof driverDoc === 'object' && driverDoc._id) {
-                driverName = driverDoc.name || driverDoc.fullName || null;
-                driverContact = driverDoc.phone || driverDoc.whatsappNumber || null;
-            }
+            // 1. First try CorporateDriver model (most common for corporate trips)
+            try {
+                const corpDriver = await CorporateDriver.findById(driverObjectId).select('name phone email');
+                if (corpDriver) {
+                    driverName = corpDriver.name;
+                    driverContact = corpDriver.phone || null;
+                }
+            } catch (e) { }
 
-            // 2. If no name, check Driver model directly (driverId might be a Driver ObjectId)
-            if (!driverName && driverObjectId) {
+            // 2. If not found, try Driver model
+            if (!driverName) {
                 try {
                     const driverRecord = await Driver.findById(driverObjectId).select('name phone email');
                     if (driverRecord) {
                         driverName = driverRecord.name;
                         driverContact = driverRecord.phone || driverContact;
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
 
-            // 3. If still no name, find User account that references this driver
-            if (!driverName && driverObjectId) {
-                try {
-                    const driverUserAccount = await User.findOne({ 
-                        driverId: driverObjectId
-                    }).select('fullName whatsappNumber phone');
-                    if (driverUserAccount) {
-                        driverName = driverUserAccount.fullName;
-                        driverContact = driverUserAccount.whatsappNumber || driverUserAccount.phone || driverContact;
-                    }
-                } catch (e) {}
-            }
-
-            // 4. Last resort: look up User by _id directly
-            if (!driverName && driverObjectId) {
+            // 3. Try User model directly
+            if (!driverName) {
                 try {
                     const userDoc = await User.findById(driverObjectId).select('fullName whatsappNumber phone');
                     if (userDoc) {
                         driverName = userDoc.fullName;
                         driverContact = userDoc.whatsappNumber || userDoc.phone || driverContact;
                     }
-                } catch (e) {}
+                } catch (e) { }
+            }
+
+            // 4. Find User account that references this driver
+            if (!driverName) {
+                try {
+                    const driverUserAccount = await User.findOne({
+                        driverId: driverObjectId
+                    }).select('fullName whatsappNumber phone');
+                    if (driverUserAccount) {
+                        driverName = driverUserAccount.fullName;
+                        driverContact = driverUserAccount.whatsappNumber || driverUserAccount.phone || driverContact;
+                    }
+                } catch (e) { }
             }
 
             // Fallback to vehicleInfo from contract
@@ -228,7 +238,7 @@ export const getEmployeeDashboard = async (req, res) => {
                 driverContact = driverContact || vehicleInfo?.driverContact || null;
             }
 
-            return { driverName: driverName || 'Not assigned', driverContact: driverContact || 'Not available' };
+            return { driverName: driverName || 'Will be assigned', driverContact: driverContact || 'Not available' };
         };
 
         const todayTrips = await Promise.all(todayTripsRaw.map(async (trip) => {
@@ -336,25 +346,25 @@ export const getAssignedRoute = async (req, res) => {
         // Get vehicle and driver info from Contract's embedded assignedVehicles
         let vehicleInfo = null;
         let driverInfo = null;
-        
+
         if (employee.companyId) {
             try {
                 // Find active contract for this corporate
-                const contract = await Contract.findOne({ 
+                const contract = await Contract.findOne({
                     corporateOwnerId: employee.companyId,
                     status: 'ACTIVE'
                 });
-                
+
                 if (contract && contract.vehicles && contract.vehicles.length > 0) {
                     // Find the assignment that matches the employee's route
                     let foundAssignment = null;
-                    
+
                     for (const vehicleGroup of contract.vehicles) {
                         if (vehicleGroup.assignedVehicles && vehicleGroup.assignedVehicles.length > 0) {
                             for (const assignment of vehicleGroup.assignedVehicles) {
                                 // Match by routeDetails if available, else take first active assignment
                                 if (assignment.status === 'ACTIVE') {
-                                    if (assignedRoute?._id && assignment.routeDetails && 
+                                    if (assignedRoute?._id && assignment.routeDetails &&
                                         assignment.routeDetails.toString() === assignedRoute._id.toString()) {
                                         foundAssignment = assignment;
                                         break;
@@ -369,7 +379,7 @@ export const getAssignedRoute = async (req, res) => {
                             }
                         }
                     }
-                    
+
                     if (foundAssignment) {
                         // Fetch vehicle details
                         if (foundAssignment.vehicleId) {
@@ -384,7 +394,7 @@ export const getAssignedRoute = async (req, res) => {
                                 };
                             }
                         }
-                        
+
                         // Fetch driver details - driver is stored in Driver model (B2B driver)
                         if (foundAssignment.driverId) {
                             const driverModel = foundAssignment.driverModel || 'Driver';
@@ -581,10 +591,10 @@ export const markNotTravelingToday = async (req, res) => {
         let cancelCount = 0;
         for (const trip of todayTrips) {
             // Check if employee is a passenger
-            const passengerIdx = trip.passengers?.findIndex(p => 
+            const passengerIdx = trip.passengers?.findIndex(p =>
                 p.employeeId && p.employeeId.toString() === userId.toString()
             );
-            
+
             if (passengerIdx >= 0) {
                 trip.passengers[passengerIdx].bookingStatus = 'NO_SHOW';
                 await trip.save();
@@ -632,7 +642,7 @@ export const rateTrip = async (req, res) => {
     try {
         const userId = req.userId;
         const { tripId, rating, feedback, complaints, comments, suggestions,
-                driverRating, punctualityRating, cleanlinessRating, safetyRating } = req.body;
+            driverRating, punctualityRating, cleanlinessRating, safetyRating } = req.body;
 
         const employee = await CorporateEmployee.findOne({ userId });
 
@@ -683,7 +693,7 @@ export const rateTrip = async (req, res) => {
                     vehicleName = vehicle.vehicleName || 'N/A';
                     vehicleNumber = vehicle.registrationNumber || 'N/A';
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Get driver info
@@ -706,11 +716,11 @@ export const rateTrip = async (req, res) => {
                         if (driverUser) driverName = driverUser.fullName;
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Get seat number from passenger entry
-        const passengerEntry = trip.passengers?.find(p => 
+        const passengerEntry = trip.passengers?.find(p =>
             p.employeeId && p.employeeId.toString() === userId.toString()
         );
         seatNumber = passengerEntry?.seatNumber || passengerEntry?.seat || null;
@@ -734,14 +744,14 @@ export const rateTrip = async (req, res) => {
             seatNumber,
             startTime: trip.startTime || null
         });
-        
+
         // Recalculate average
         const allRatings = employee.feedback.feedbackHistory.filter(f => f.rating);
-        employee.feedback.averageRating = allRatings.length > 0 
-            ? allRatings.reduce((sum, f) => sum + f.rating, 0) / allRatings.length 
+        employee.feedback.averageRating = allRatings.length > 0
+            ? allRatings.reduce((sum, f) => sum + f.rating, 0) / allRatings.length
             : 0;
         employee.feedback.totalRides = employee.feedback.feedbackHistory.length;
-        
+
         await employee.save();
 
         res.status(201).json({
@@ -827,7 +837,7 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
 
         const today = new Date();
         let startDate;
-        
+
         switch (period) {
             case 'week':
                 startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -845,10 +855,10 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
             tripDate: { $gte: startDate, $lte: today },
             status: { $in: ['COMPLETED', 'CANCELLED', 'SCHEDULED', 'IN_PROGRESS'] }
         })
-        .populate('routeId', 'fromLocation toLocation')
-        .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory')
-        .populate('driverId', 'fullName whatsappNumber')
-        .sort({ tripDate: -1 });
+            .populate('routeId', 'fromLocation toLocation')
+            .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory')
+            .populate('driverId', 'fullName whatsappNumber')
+            .sort({ tripDate: -1 });
 
         // Map trips to display format - resolve driver names properly
         const Driver = (await import("../models/Driver.js")).default;
@@ -856,7 +866,7 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
 
         return await Promise.all(trips.map(async (trip) => {
             // Check if this employee is a passenger in the trip
-            const passengerEntry = trip.passengers?.find(p => 
+            const passengerEntry = trip.passengers?.find(p =>
                 p.employeeId && p.employeeId.toString() === userId.toString()
             );
 
@@ -881,7 +891,7 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
                             driverName = driver.name;
                             driverContact = driver.phone || driverContact;
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
 
@@ -895,7 +905,7 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
                             driverName = driverUser.fullName;
                             driverContact = driverUser.whatsappNumber || driverUser.phone || driverContact;
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
 
@@ -909,10 +919,10 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
                             driverName = userDoc.fullName;
                             driverContact = userDoc.whatsappNumber || userDoc.phone || driverContact;
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
-            
+
             return {
                 _id: trip._id,
                 date: trip.tripDate,
@@ -926,8 +936,8 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
                 direction: trip.direction,
                 startTime: trip.startTime,
                 endTime: trip.endTime,
-                attendance: passengerEntry ? 
-                    (passengerEntry.bookingStatus === 'NO_SHOW' ? 'ABSENT' : 'PRESENT') : 
+                attendance: passengerEntry ?
+                    (passengerEntry.bookingStatus === 'NO_SHOW' ? 'ABSENT' : 'PRESENT') :
                     (trip.status === 'COMPLETED' ? 'PRESENT' : 'SCHEDULED'),
                 vehicleName: trip.vehicleId?.vehicleName || 'Not assigned',
                 vehicleNumber: trip.vehicleId?.registrationNumber || 'Not assigned',
@@ -951,65 +961,71 @@ const getUpcomingTripsFromTrips = async (userId, employee) => {
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const endDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000); // Show for 30 days
 
-        // Show only tomorrow+ trips (today's trips are in todayTrips)
-        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-
+        // Get trips where this employee is a passenger (or corporate-wide trips they're part of)
+        // Don't populate driverId since it may reference CorporateDriver model, not User
         const trips = await Trip.find({
             corporateId: employee.companyId,
-            tripDate: { $gte: tomorrow, $lte: nextWeek },
-            status: { $in: ['SCHEDULED', 'IN_PROGRESS'] }
+            tripDate: { $gte: today, $lte: endDate },
+            status: { $in: ['SCHEDULED', 'IN_PROGRESS', 'Scheduled', 'Confirmed'] },
+            $or: [
+                { 'passengers.passengerId': userId },
+                { 'passengers.employeeId': employee._id }
+            ]
         })
-        .populate('routeId', 'fromLocation toLocation stopPoints')
-        .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory model licensePlate')
-        .populate('driverId', 'name email phone fullName whatsappNumber')
-        .sort({ tripDate: 1, startTime: 1 });
+            .populate('routeId', 'fromLocation toLocation stopPoints')
+            .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory model licensePlate')
+            .sort({ tripDate: 1, startTime: 1 });
 
         const mappedTrips = await Promise.all(trips.map(async (trip) => {
-            // Resolve driver name - try multiple sources
+            // Resolve driver name - driverId may be CorporateDriver, Driver, or User model ID
             let driverName = null;
             let driverContact = null;
-            const driverDoc = trip.driverId;
-            const driverObjectId = driverDoc?._id || driverDoc;
+            const driverObjectId = trip.driverId;
 
-            // 1. Check if populate worked (User model)
-            if (driverDoc && typeof driverDoc === 'object' && driverDoc._id) {
-                driverName = driverDoc.name || driverDoc.fullName || null;
-                driverContact = driverDoc.phone || driverDoc.whatsappNumber || null;
-            }
-
-            // 2. Check Driver model directly
-            if (!driverName && driverObjectId) {
+            if (driverObjectId) {
+                // 1. First try CorporateDriver model (most common for corporate trips)
                 try {
-                    const driverRecord = await Driver.findById(driverObjectId).select('name phone');
-                    if (driverRecord) {
-                        driverName = driverRecord.name;
-                        driverContact = driverRecord.phone || driverContact;
+                    const corpDriver = await CorporateDriver.findById(driverObjectId).select('name phone email');
+                    if (corpDriver) {
+                        driverName = corpDriver.name;
+                        driverContact = corpDriver.phone || null;
                     }
-                } catch (e) {}
-            }
+                } catch (e) { }
 
-            // 3. Find User account with this driverId
-            if (!driverName && driverObjectId) {
-                try {
-                    const driverUser = await User.findOne({ driverId: driverObjectId }).select('fullName whatsappNumber phone');
-                    if (driverUser) {
-                        driverName = driverUser.fullName;
-                        driverContact = driverUser.whatsappNumber || driverUser.phone || driverContact;
-                    }
-                } catch (e) {}
-            }
+                // 2. If not found, try Driver model
+                if (!driverName) {
+                    try {
+                        const driverRecord = await Driver.findById(driverObjectId).select('name phone');
+                        if (driverRecord) {
+                            driverName = driverRecord.name;
+                            driverContact = driverRecord.phone || driverContact;
+                        }
+                    } catch (e) { }
+                }
 
-            // 4. Last resort: look up User by _id directly
-            if (!driverName && driverObjectId) {
-                try {
-                    const userDoc = await User.findById(driverObjectId).select('fullName whatsappNumber phone');
-                    if (userDoc) {
-                        driverName = userDoc.fullName;
-                        driverContact = userDoc.whatsappNumber || userDoc.phone || driverContact;
-                    }
-                } catch (e) {}
+                // 3. Try User model directly
+                if (!driverName) {
+                    try {
+                        const userDoc = await User.findById(driverObjectId).select('fullName whatsappNumber phone');
+                        if (userDoc) {
+                            driverName = userDoc.fullName;
+                            driverContact = userDoc.whatsappNumber || userDoc.phone || driverContact;
+                        }
+                    } catch (e) { }
+                }
+
+                // 4. Find User account with this driverId
+                if (!driverName) {
+                    try {
+                        const driverUser = await User.findOne({ driverId: driverObjectId }).select('fullName whatsappNumber phone');
+                        if (driverUser) {
+                            driverName = driverUser.fullName;
+                            driverContact = driverUser.whatsappNumber || driverUser.phone || driverContact;
+                        }
+                    } catch (e) { }
+                }
             }
 
             return {
@@ -1024,10 +1040,10 @@ const getUpcomingTripsFromTrips = async (userId, employee) => {
                 tripType: trip.tripType,
                 direction: trip.direction,
                 status: trip.status,
-                driverId: typeof driverDoc === 'object' ? driverDoc?._id : driverDoc,
+                driverId: driverObjectId,
                 vehicleName: trip.vehicleId?.vehicleName || trip.vehicleId?.model || 'Not assigned',
                 vehicleNumber: trip.vehicleId?.registrationNumber || trip.vehicleId?.licensePlate || 'Not assigned',
-                driverName: driverName || 'Not assigned',
+                driverName: driverName || 'Will be assigned',
                 driverContact: driverContact || 'Not available',
                 totalSeats: trip.totalSeats,
                 availableSeats: trip.availableSeats,
@@ -1070,7 +1086,7 @@ const getAssignedVehicleInfoFromContract = async (employee) => {
 
         let foundAssignment = null;
         const assignedRouteId = employee.transportDetails?.assignedRoute?.toString();
-        
+
         for (const vehicleGroup of contract.vehicles) {
             if (vehicleGroup.assignedVehicles?.length > 0) {
                 for (const assignment of vehicleGroup.assignedVehicles) {
@@ -1180,7 +1196,7 @@ const createEmployeeBooking = async (employee, date) => {
         }
 
         // Check if already booked
-        const alreadyBooked = trip.passengers?.some(p => 
+        const alreadyBooked = trip.passengers?.some(p =>
             p.employeeId && p.employeeId.toString() === employee.userId.toString()
         );
         if (alreadyBooked) {
@@ -1232,7 +1248,7 @@ const cancelEmployeeBooking = async (employee, date, reason) => {
         }
 
         // Find passenger entry
-        const passengerIdx = trip.passengers?.findIndex(p => 
+        const passengerIdx = trip.passengers?.findIndex(p =>
             p.employeeId && p.employeeId.toString() === employee.userId.toString()
         );
 
@@ -1272,7 +1288,7 @@ const getEmployeeSummary = async (userId, period) => {
 
         const today = new Date();
         let startDate;
-        
+
         switch (period) {
             case 'week':
                 startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -1386,6 +1402,75 @@ const notifyManagerOfRouteChange = async (employee, changeRequest) => {
     }
 };
 
+// Get employee monthly passes
+export const getEmployeeMonthlyPasses = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        // Find the employee record
+        const employee = await CorporateEmployee.findOne({ userId });
+        if (!employee) {
+            return res.status(404).json({
+                success: false,
+                message: "Employee not found"
+            });
+        }
+
+        // Get monthly passes for this employee
+        const allPasses = await MonthlyPass.find({
+            employeeId: userId,
+            status: { $in: ['ACTIVE', 'PENDING'] }
+        })
+            .populate('routeId', 'fromLocation toLocation stopPoints')
+            .populate('contractId', 'contractType')
+            .sort({ validTo: -1 });
+
+        // Deduplicate - keep only the most recent pass per route
+        const passMap = new Map();
+        for (const pass of allPasses) {
+            const routeKey = pass.routeId?._id?.toString() || 'no-route';
+            if (!passMap.has(routeKey)) {
+                passMap.set(routeKey, pass);
+            }
+        }
+        const passes = Array.from(passMap.values());
+
+        // If no passes found, try to get transport info from employee record
+        if (passes.length === 0 && employee.transportDetails?.assignedRoute) {
+            const route = await Route.findById(employee.transportDetails.assignedRoute);
+            if (route) {
+                // Return a virtual pass based on route assignment
+                return res.status(200).json({
+                    success: true,
+                    data: [{
+                        _id: 'virtual-pass',
+                        passType: 'CORPORATE',
+                        status: 'ACTIVE',
+                        fromLocation: route.fromLocation,
+                        toLocation: route.toLocation,
+                        preferredPickupPoint: employee.transportDetails?.outboundPickupStop || employee.transportDetails?.pickupPoint,
+                        preferredDropPoint: employee.transportDetails?.outboundDropoffStop || employee.transportDetails?.dropOffPoint,
+                        shiftType: employee.transportDetails?.shiftType,
+                        subscriptionType: 'COMPANY_PAID'
+                    }]
+                });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            data: passes
+        });
+    } catch (error) {
+        console.error("Error getting employee monthly passes:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error retrieving monthly passes",
+            error: error.message
+        });
+    }
+};
+
 // Helper functions for database operations
 const getActiveContractForEmployee = async (employeeId) => {
     try {
@@ -1405,14 +1490,14 @@ const getAssignedDriverForEmployee = async (employeeId) => {
     try {
         const employee = await CorporateEmployee.findById(employeeId);
         if (!employee?.companyId) return null;
-        
+
         const contract = await Contract.findOne({
             corporateOwnerId: employee.companyId,
             status: 'ACTIVE'
         });
-        
+
         if (!contract?.vehicles?.length) return null;
-        
+
         for (const vg of contract.vehicles) {
             for (const av of (vg.assignedVehicles || [])) {
                 if (av.status === 'ACTIVE' && av.driverId) {

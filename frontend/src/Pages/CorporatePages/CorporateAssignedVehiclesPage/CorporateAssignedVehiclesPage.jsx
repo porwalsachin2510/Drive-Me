@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -36,18 +37,30 @@ const CorporateAssignedVehiclesPage = () => {
     fuelCardNumber: "",
   });
 
-
   const [routeForm, setRouteForm] = useState({
     fromLocation: "",
     toLocation: "",
     routeStartDate: "",
+    routeEndDate: "",
     stopPoints: [],
     totalDistance: "",
     estimatedDuration: "",
     availableDays: [],
     routeNotes: "",
+    // Trip Times - like B2C Partner route creation
+    tripTimes: [
+      {
+        tripNumber: 1,
+        departureTime: "",
+        tripType: "One Way",
+        outboundStopPoints: [
+          { location: "", time: "" },
+          { location: "", time: "" },
+        ],
+        returnStopPoints: [],
+      },
+    ],
   });
-
 
   const [newStopPoint, setNewStopPoint] = useState({
     location: "",
@@ -60,13 +73,13 @@ const CorporateAssignedVehiclesPage = () => {
   const [tripForm, setTripForm] = useState({
     routeId: "",
     tripSchedules: [
-      { 
-        startTime: "", 
-        endTime: "", 
-        tripType: "ONE_WAY",           // Individual trip type per schedule
-        direction: "FORWARD" 
-      }
-    ]
+      {
+        startTime: "",
+        endTime: "",
+        tripType: "ONE_WAY", // Individual trip type per schedule
+        direction: "FORWARD",
+      },
+    ],
   });
   const [showTripModal, setShowTripModal] = useState(false);
 
@@ -87,7 +100,7 @@ const CorporateAssignedVehiclesPage = () => {
       const driversResponse = await api.get(
         `/corporate/available-corporate-driver`,
       );
-      
+
       console.log("first driversData", driversResponse.data);
 
       if (driversResponse.data.success) {
@@ -101,12 +114,11 @@ const CorporateAssignedVehiclesPage = () => {
     }
   };
 
-
   const fetchAssignedVehicles = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get(
-        `/contracts/assigned-vehicles/${contractId}`
+        `/contracts/assigned-vehicles/${contractId}`,
       );
 
       if (response.data.success) {
@@ -117,7 +129,7 @@ const CorporateAssignedVehiclesPage = () => {
       }
     } catch (err) {
       setError(
-        err.response?.data?.message || "Error loading assigned vehicles"
+        err.response?.data?.message || "Error loading assigned vehicles",
       );
       console.error("Error fetching assigned vehicles:", err);
     } finally {
@@ -141,7 +153,8 @@ const CorporateAssignedVehiclesPage = () => {
       const extractedRoutes = assignedVehicles
         .filter(
           (vehicle) =>
-            vehicle.routeDetails && Object.keys(vehicle.routeDetails).length > 0
+            vehicle.routeDetails &&
+            Object.keys(vehicle.routeDetails).length > 0,
         )
         .map((vehicle) => ({
           ...vehicle.routeDetails,
@@ -174,12 +187,12 @@ const CorporateAssignedVehiclesPage = () => {
     try {
       const response = await api.post(
         `/contracts/assign-driver-fuel/${contractId}/${selectedVehicle._id}`,
-        payload
+        payload,
       );
 
       if (response.data.success) {
         alert(
-          `${type === "driver" ? "Driver" : "Fuel card"} assigned successfully`
+          `${type === "driver" ? "Driver" : "Fuel card"} assigned successfully`,
         );
         closeModal();
         await fetchAssignedVehicles();
@@ -201,7 +214,7 @@ const CorporateAssignedVehiclesPage = () => {
     try {
       const response = await api.post(
         `/contracts/assign-route/${contractId}/${selectedVehicle._id}`,
-        routeForm
+        routeForm,
       );
 
       if (response.data.success) {
@@ -242,7 +255,7 @@ const CorporateAssignedVehiclesPage = () => {
   // Trip creation handlers
   const handleTripSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!tripForm.routeId) {
       alert("Please select a route");
       return;
@@ -250,20 +263,20 @@ const CorporateAssignedVehiclesPage = () => {
 
     try {
       const response = await api.post("/trips/create-from-route", tripForm);
-      
+
       if (response.data.success) {
         alert(`Created ${response.data.data.trips.length} trips successfully`);
         setShowTripModal(false);
         setTripForm({
           routeId: "",
           tripSchedules: [
-            { 
-              startTime: "", 
-              endTime: "", 
+            {
+              startTime: "",
+              endTime: "",
               tripType: "ONE_WAY",
-              direction: "FORWARD" 
-            }
-          ]
+              direction: "FORWARD",
+            },
+          ],
         });
       }
     } catch (err) {
@@ -272,30 +285,29 @@ const CorporateAssignedVehiclesPage = () => {
     }
   };
 
-  
   // Get route locations for dynamic direction labels
   const getRouteLocations = () => {
-    const route = routes.find(r => r._id === tripForm.routeId);
+    const route = routes.find((r) => r._id === tripForm.routeId);
     if (route) {
       return {
         from: route.fromLocation,
-        to: route.toLocation
+        to: route.toLocation,
       };
     }
     return { from: "Start Location", to: "End Location" };
   };
 
   const handleScheduleChange = (index, field, value) => {
-    setTripForm(prev => ({
+    setTripForm((prev) => ({
       ...prev,
-      tripSchedules: prev.tripSchedules.map((schedule, i) => 
-        i === index ? { ...schedule, [field]: value } : schedule
-      )
+      tripSchedules: prev.tripSchedules.map((schedule, i) =>
+        i === index ? { ...schedule, [field]: value } : schedule,
+      ),
     }));
   };
 
   const handleTripTypeChangeForSchedule = (index, tripType) => {
-    setTripForm(prev => ({
+    setTripForm((prev) => ({
       ...prev,
       tripSchedules: prev.tripSchedules.map((schedule, i) => {
         if (i === index) {
@@ -304,55 +316,58 @@ const CorporateAssignedVehiclesPage = () => {
             return {
               ...schedule,
               tripType: tripType,
-              direction: "FORWARD" // Round trip always starts with forward
+              direction: "FORWARD", // Round trip always starts with forward
             };
           } else {
             return {
               ...schedule,
               tripType: tripType,
-              direction: "FORWARD" // One way only forward
+              direction: "FORWARD", // One way only forward
             };
           }
         }
         return schedule;
-      })
+      }),
     }));
   };
 
   const addSchedule = () => {
-    setTripForm(prev => ({
+    setTripForm((prev) => ({
       ...prev,
-      tripSchedules: [...prev.tripSchedules, { 
-        startTime: "", 
-        endTime: "", 
-        tripType: "ONE_WAY",
-        direction: "FORWARD" 
-      }]
+      tripSchedules: [
+        ...prev.tripSchedules,
+        {
+          startTime: "",
+          endTime: "",
+          tripType: "ONE_WAY",
+          direction: "FORWARD",
+        },
+      ],
     }));
   };
 
   const removeSchedule = (index) => {
     if (tripForm.tripSchedules.length > 1) {
-      setTripForm(prev => ({
+      setTripForm((prev) => ({
         ...prev,
-        tripSchedules: prev.tripSchedules.filter((_, i) => i !== index)
+        tripSchedules: prev.tripSchedules.filter((_, i) => i !== index),
       }));
     }
   };
 
   const openTripModal = (routeId) => {
-    const route = routes.find(r => r._id === routeId);
-    setTripForm(prev => ({ 
-      ...prev, 
+    const route = routes.find((r) => r._id === routeId);
+    setTripForm((prev) => ({
+      ...prev,
       routeId,
       tripSchedules: [
-        { 
-          startTime: "", 
-          endTime: "", 
+        {
+          startTime: "",
+          endTime: "",
           tripType: "ONE_WAY",
-          direction: "FORWARD" 
-        }
-      ]
+          direction: "FORWARD",
+        },
+      ],
     }));
     setShowTripModal(true);
   };
@@ -362,7 +377,7 @@ const CorporateAssignedVehiclesPage = () => {
     setModalType(type);
     if (type === "driver") {
       setAssignmentForm({ ...assignmentForm, driverId: "" });
-      fetchAvailableDrivers(); 
+      fetchAvailableDrivers();
     } else if (type === "fuel") {
       setAssignmentForm({ ...assignmentForm, fuelCardNumber: "" });
     }
@@ -375,11 +390,24 @@ const CorporateAssignedVehiclesPage = () => {
       fromLocation: "",
       toLocation: "",
       routeStartDate: "",
+      routeEndDate: "",
       stopPoints: [],
       totalDistance: "",
       estimatedDuration: "",
-      availableDays: [],
+      availableDays: ["MON", "TUE", "WED", "THU", "FRI"],
       routeNotes: "",
+      tripTimes: [
+        {
+          tripNumber: 1,
+          departureTime: "",
+          tripType: "One Way",
+          outboundStopPoints: [
+            { location: "", time: "" },
+            { location: "", time: "" },
+          ],
+          returnStopPoints: [],
+        },
+      ],
     });
     setNewStopPoint({ location: "", time: "" });
   };
@@ -418,7 +446,7 @@ const CorporateAssignedVehiclesPage = () => {
         <div className="error-icon">⚠️</div>
         <h3>Error</h3>
         <p>{error}</p>
-        <button onClick={() => navigate("/corporate-profile?tab=contracts")}>
+        <button onClick={() => navigate("/corporate/contracts")}>
           Back to Contracts
         </button>
       </div>
@@ -439,14 +467,179 @@ const CorporateAssignedVehiclesPage = () => {
       };
     });
   };
-  
+
+  // Trip Times Helper Functions
+  const addTripTime = () => {
+    setRouteForm((prev) => ({
+      ...prev,
+      tripTimes: [
+        ...prev.tripTimes,
+        {
+          tripNumber: prev.tripTimes.length + 1,
+          departureTime: "",
+          returnTime: "",
+          tripType: "One Way",
+          outboundStopPoints: [
+            { location: "", time: "" },
+            { location: "", time: "" },
+          ],
+          returnStopPoints: [],
+        },
+      ],
+    }));
+  };
+
+  const removeTripTime = (index) => {
+    if (routeForm.tripTimes.length > 1) {
+      setRouteForm((prev) => ({
+        ...prev,
+        tripTimes: prev.tripTimes
+          .filter((_, i) => i !== index)
+          .map((trip, i) => ({ ...trip, tripNumber: i + 1 })),
+      }));
+    }
+  };
+
+  const updateTripTime = (index, field, value) => {
+    setRouteForm((prev) => ({
+      ...prev,
+      tripTimes: prev.tripTimes.map((trip, i) =>
+        i === index ? { ...trip, [field]: value } : trip,
+      ),
+    }));
+  };
+
+  const handleTripTypeChange = (index, tripType) => {
+    setRouteForm((prev) => ({
+      ...prev,
+      tripTimes: prev.tripTimes.map((trip, i) => {
+        if (i === index) {
+          return {
+            ...trip,
+            tripType: tripType,
+            returnStopPoints:
+              tripType === "Round Trip"
+                ? [
+                    { location: "", time: "" },
+                    { location: "", time: "" },
+                  ]
+                : [],
+          };
+        }
+        return trip;
+      }),
+    }));
+  };
+
+  const addOutboundStop = (tripIndex) => {
+    setRouteForm((prev) => ({
+      ...prev,
+      tripTimes: prev.tripTimes.map((trip, i) =>
+        i === tripIndex
+          ? {
+              ...trip,
+              outboundStopPoints: [
+                ...trip.outboundStopPoints,
+                { location: "", time: "" },
+              ],
+            }
+          : trip,
+      ),
+    }));
+  };
+
+  const removeOutboundStop = (tripIndex, stopIndex) => {
+    if (routeForm.tripTimes[tripIndex].outboundStopPoints.length > 2) {
+      setRouteForm((prev) => ({
+        ...prev,
+        tripTimes: prev.tripTimes.map((trip, i) =>
+          i === tripIndex
+            ? {
+                ...trip,
+                outboundStopPoints: trip.outboundStopPoints.filter(
+                  (_, si) => si !== stopIndex,
+                ),
+              }
+            : trip,
+        ),
+      }));
+    }
+  };
+
+  const updateOutboundStop = (tripIndex, stopIndex, field, value) => {
+    setRouteForm((prev) => ({
+      ...prev,
+      tripTimes: prev.tripTimes.map((trip, i) =>
+        i === tripIndex
+          ? {
+              ...trip,
+              outboundStopPoints: trip.outboundStopPoints.map((stop, si) =>
+                si === stopIndex ? { ...stop, [field]: value } : stop,
+              ),
+            }
+          : trip,
+      ),
+    }));
+  };
+
+  const addReturnStop = (tripIndex) => {
+    setRouteForm((prev) => ({
+      ...prev,
+      tripTimes: prev.tripTimes.map((trip, i) =>
+        i === tripIndex
+          ? {
+              ...trip,
+              returnStopPoints: [
+                ...trip.returnStopPoints,
+                { location: "", time: "" },
+              ],
+            }
+          : trip,
+      ),
+    }));
+  };
+
+  const removeReturnStop = (tripIndex, stopIndex) => {
+    if (routeForm.tripTimes[tripIndex].returnStopPoints.length > 2) {
+      setRouteForm((prev) => ({
+        ...prev,
+        tripTimes: prev.tripTimes.map((trip, i) =>
+          i === tripIndex
+            ? {
+                ...trip,
+                returnStopPoints: trip.returnStopPoints.filter(
+                  (_, si) => si !== stopIndex,
+                ),
+              }
+            : trip,
+        ),
+      }));
+    }
+  };
+
+  const updateReturnStop = (tripIndex, stopIndex, field, value) => {
+    setRouteForm((prev) => ({
+      ...prev,
+      tripTimes: prev.tripTimes.map((trip, i) =>
+        i === tripIndex
+          ? {
+              ...trip,
+              returnStopPoints: trip.returnStopPoints.map((stop, si) =>
+                si === stopIndex ? { ...stop, [field]: value } : stop,
+              ),
+            }
+          : trip,
+      ),
+    }));
+  };
+
   return (
     <>
       <Navbar activeTab="contracts" setActiveTab={() => {}} />
       <div className="corporate-assigned-vehicles-container">
         <button
           className="corporate-assigned-vehicles-back-btn"
-          onClick={() => navigate("/corporate-profile?tab=contracts")}
+          onClick={() => navigate("/corporate/contracts")}
         >
           ← Back to Contracts
         </button>
@@ -966,194 +1159,365 @@ const CorporateAssignedVehiclesPage = () => {
           </div>
         )}
 
-        {/* Route Assignment Modal */}
+        {/* Route Assignment Modal - Enhanced with Trip Times */}
         {modalType === "route" && selectedVehicle && (
           <div className="modal-overlay" onClick={closeModal}>
             <div
-              className="modal-premium modal-large"
+              className="modal-premium modal-large modal-scrollable"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="modal-header-premium">
                 <h2>Assign Route</h2>
                 <button className="modal-close" onClick={closeModal}>
-                  ✕
+                  &times;
                 </button>
               </div>
               <form onSubmit={handleRouteSubmit} className="modal-form">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>From Location *</label>
-                    <input
-                      type="text"
-                      placeholder="Starting location"
-                      value={routeForm.fromLocation}
-                      onChange={(e) =>
-                        setRouteForm({
-                          ...routeForm,
-                          fromLocation: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>To Location *</label>
-                    <input
-                      type="text"
-                      placeholder="Destination"
-                      value={routeForm.toLocation}
-                      onChange={(e) =>
-                        setRouteForm({
-                          ...routeForm,
-                          toLocation: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Route Start Date</label>
-                    <input
-                      type="date"
-                      value={routeForm.routeStartDate}
-                      onChange={(e) =>
-                        setRouteForm({
-                          ...routeForm,
-                          routeStartDate: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="stop-points-section">
-                  <h3>Stop Points</h3>
-                  <div className="stop-points-input-group">
+                {/* Basic Route Information */}
+                <div className="route-section">
+                  <h3 className="route-section-title">
+                    Basic Route Information
+                  </h3>
+                  <div className="form-row">
                     <div className="form-group">
-                      <label>Location</label>
+                      <label>From Location *</label>
                       <input
                         type="text"
-                        placeholder="Enter stop location"
-                        value={newStopPoint.location}
+                        placeholder="e.g., Employee Pickup Area"
+                        value={routeForm.fromLocation}
                         onChange={(e) =>
-                          setNewStopPoint({
-                            ...newStopPoint,
-                            location: e.target.value,
+                          setRouteForm({
+                            ...routeForm,
+                            fromLocation: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>To Location *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Office Building"
+                        value={routeForm.toLocation}
+                        onChange={(e) =>
+                          setRouteForm({
+                            ...routeForm,
+                            toLocation: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Route Start Date *</label>
+                      <input
+                        type="date"
+                        value={routeForm.routeStartDate}
+                        onChange={(e) =>
+                          setRouteForm({
+                            ...routeForm,
+                            routeStartDate: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Route End Date (Optional)</label>
+                      <input
+                        type="date"
+                        value={routeForm.routeEndDate}
+                        onChange={(e) =>
+                          setRouteForm({
+                            ...routeForm,
+                            routeEndDate: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Available Days *</label>
+                    <div className="days-container">
+                      {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
+                        (day) => (
+                          <button
+                            key={day}
+                            type="button"
+                            className={`day-button ${
+                              routeForm.availableDays?.includes(day)
+                                ? "selected"
+                                : ""
+                            }`}
+                            onClick={() => toggleDay(day)}
+                          >
+                            {day}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trip Times Section */}
+                <div className="route-section trip-times-section">
+                  <div className="trip-times-header">
+                    <h3 className="route-section-title">Trip Times</h3>
+                    <p className="trip-times-description">
+                      Add multiple departure times for this route. Each time
+                      will create separate trips for employee transport.
+                    </p>
+                  </div>
+
+                  {routeForm.tripTimes.map((trip, tripIndex) => (
+                    <div key={tripIndex} className="trip-time-card">
+                      <div className="trip-time-header">
+                        <h4>Trip {trip.tripNumber}</h4>
+                        {routeForm.tripTimes.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn-remove-trip"
+                            onClick={() => removeTripTime(tripIndex)}
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Departure Time *</label>
+                          <input
+                            type="time"
+                            value={trip.departureTime}
+                            onChange={(e) =>
+                              updateTripTime(
+                                tripIndex,
+                                "departureTime",
+                                e.target.value,
+                              )
+                            }
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Trip Type</label>
+                          <select
+                            value={trip.tripType}
+                            onChange={(e) =>
+                              handleTripTypeChange(tripIndex, e.target.value)
+                            }
+                          >
+                            <option value="One Way">One Way</option>
+                            <option value="Round Trip">Round Trip</option>
+                          </select>
+                        </div>
+                        {trip.tripType === "Round Trip" && (
+                          <div className="form-group">
+                            <label>Return Time *</label>
+                            <input
+                              type="time"
+                              value={trip.returnTime || ""}
+                              onChange={(e) =>
+                                updateTripTime(
+                                  tripIndex,
+                                  "returnTime",
+                                  e.target.value,
+                                )
+                              }
+                              required
+                            />
+                            <small className="form-hint">
+                              Time when vehicle returns from destination
+                            </small>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Outbound Stops (Morning: Home -> Office) */}
+                      <div className="stop-points-container">
+                        <div className="stop-points-header">
+                          <span className="stop-indicator outbound">
+                            Outbound Stops: {routeForm.fromLocation || "Start"}{" "}
+                            &rarr; {routeForm.toLocation || "End"}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-add-stop-inline"
+                            onClick={() => addOutboundStop(tripIndex)}
+                          >
+                            + Add Outbound Stop
+                          </button>
+                        </div>
+                        {trip.outboundStopPoints.map((stop, stopIndex) => (
+                          <div key={stopIndex} className="stop-point-row">
+                            <span className="stop-number">{stopIndex + 1}</span>
+                            <input
+                              type="text"
+                              placeholder="Stop location (e.g., Dubai Mall)"
+                              value={stop.location}
+                              onChange={(e) =>
+                                updateOutboundStop(
+                                  tripIndex,
+                                  stopIndex,
+                                  "location",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                            <input
+                              type="time"
+                              value={stop.time}
+                              onChange={(e) =>
+                                updateOutboundStop(
+                                  tripIndex,
+                                  stopIndex,
+                                  "time",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                            {trip.outboundStopPoints.length > 2 && (
+                              <button
+                                type="button"
+                                className="btn-remove-stop-inline"
+                                onClick={() =>
+                                  removeOutboundStop(tripIndex, stopIndex)
+                                }
+                              >
+                                &times;
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Return Stops (Evening: Office -> Home) - Only for Round Trip */}
+                      {trip.tripType === "Round Trip" && (
+                        <div className="stop-points-container return-stops">
+                          <div className="stop-points-header">
+                            <span className="stop-indicator return">
+                              Return Stops: {routeForm.toLocation || "End"}{" "}
+                              &rarr; {routeForm.fromLocation || "Start"}
+                            </span>
+                            <button
+                              type="button"
+                              className="btn-add-stop-inline return"
+                              onClick={() => addReturnStop(tripIndex)}
+                            >
+                              + Add Return Stop
+                            </button>
+                          </div>
+                          {trip.returnStopPoints.map((stop, stopIndex) => (
+                            <div key={stopIndex} className="stop-point-row">
+                              <span className="stop-number return">
+                                {stopIndex + 1}
+                              </span>
+                              <input
+                                type="text"
+                                placeholder="Stop location (e.g., Sharjah)"
+                                value={stop.location}
+                                onChange={(e) =>
+                                  updateReturnStop(
+                                    tripIndex,
+                                    stopIndex,
+                                    "location",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                              <input
+                                type="time"
+                                value={stop.time}
+                                onChange={(e) =>
+                                  updateReturnStop(
+                                    tripIndex,
+                                    stopIndex,
+                                    "time",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                              {trip.returnStopPoints.length > 2 && (
+                                <button
+                                  type="button"
+                                  className="btn-remove-stop-inline"
+                                  onClick={() =>
+                                    removeReturnStop(tripIndex, stopIndex)
+                                  }
+                                >
+                                  &times;
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    className="btn-add-trip-time"
+                    onClick={addTripTime}
+                  >
+                    + Add Another Trip Time
+                  </button>
+                </div>
+
+                {/* Additional Details */}
+                <div className="route-section">
+                  <h3 className="route-section-title">Additional Details</h3>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Total Distance (km)</label>
+                      <input
+                        type="number"
+                        placeholder="Distance in kilometers"
+                        value={routeForm.totalDistance}
+                        onChange={(e) =>
+                          setRouteForm({
+                            ...routeForm,
+                            totalDistance: e.target.value,
                           })
                         }
                       />
                     </div>
                     <div className="form-group">
-                      <label>Time</label>
+                      <label>Estimated Duration</label>
                       <input
-                        type="time"
-                        value={newStopPoint.time}
+                        type="text"
+                        placeholder="e.g., 2 hours 30 minutes"
+                        value={routeForm.estimatedDuration}
                         onChange={(e) =>
-                          setNewStopPoint({
-                            ...newStopPoint,
-                            time: e.target.value,
+                          setRouteForm({
+                            ...routeForm,
+                            estimatedDuration: e.target.value,
                           })
                         }
                       />
                     </div>
-                    <button
-                      type="button"
-                      className="btn-add-stop"
-                      onClick={handleAddStopPoint}
-                    >
-                      Add Stop
-                    </button>
                   </div>
 
-                  {routeForm.stopPoints.length > 0 && (
-                    <div className="stop-points-list">
-                      {routeForm.stopPoints.map((stop, idx) => (
-                        <div key={idx} className="stop-point-item">
-                          <div className="stop-point-info">
-                            <p className="stop-location">{stop.location}</p>
-                            <p className="stop-time">{stop.time}</p>
-                          </div>
-                          <button
-                            type="button"
-                            className="btn-remove-stop"
-                            onClick={() => handleRemoveStopPoint(idx)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="form-row">
                   <div className="form-group">
-                    <label>Total Distance (km)</label>
-                    <input
-                      type="number"
-                      placeholder="Distance in kilometers"
-                      value={routeForm.totalDistance}
+                    <label>Route Notes</label>
+                    <textarea
+                      placeholder="Any special instructions or notes for this route"
+                      value={routeForm.routeNotes}
                       onChange={(e) =>
                         setRouteForm({
                           ...routeForm,
-                          totalDistance: e.target.value,
+                          routeNotes: e.target.value,
                         })
                       }
+                      rows="3"
                     />
                   </div>
-                  <div className="form-group">
-                    <label>Estimated Duration</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., 2 hours 30 minutes"
-                      value={routeForm.estimatedDuration}
-                      onChange={(e) =>
-                        setRouteForm({
-                          ...routeForm,
-                          estimatedDuration: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">
-                    Days Vehicles Available (On/Off)
-                  </label>
-
-                  <div className="days-container">
-                    {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                      (day) => (
-                        <button
-                          type="button"
-                          className={`day-button ${
-                            routeForm.availableDays?.includes(day)
-                              ? "selected"
-                              : ""
-                          }`}
-                          onClick={() => toggleDay(day)}
-                        >
-                          {day}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Route Notes</label>
-                  <textarea
-                    placeholder="Any special instructions or notes for this route"
-                    value={routeForm.routeNotes}
-                    onChange={(e) =>
-                      setRouteForm({ ...routeForm, routeNotes: e.target.value })
-                    }
-                    rows="3"
-                  />
                 </div>
 
                 <div className="modal-actions">

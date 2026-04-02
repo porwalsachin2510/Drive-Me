@@ -146,11 +146,11 @@ const B2B_PartnerContractDetails = () => {
         Array.from(formData.entries()).map(([key, value]) => ({
           key,
           value: value instanceof File ? `File: ${value.name}` : value,
-        }))
+        })),
       );
 
       const result = await dispatch(
-        uploadContractDocument({ contractId: id, formData })
+        uploadContractDocument({ contractId: id, formData }),
       ).unwrap();
 
       console.log("Upload result:", result);
@@ -165,7 +165,7 @@ const B2B_PartnerContractDetails = () => {
       }
 
       // Refresh contract data
-      dispatch(getContractById(id));
+      dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Upload error:", error);
       alert(`Failed to upload document: ${error}`);
@@ -187,7 +187,7 @@ const B2B_PartnerContractDetails = () => {
       alert("Contract approved successfully!");
       setShowApprovalModal(false);
       setApprovalNotes("");
-      dispatch(getContractById(id));
+      dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Approval error:", error);
       alert(error || "Failed to approve contract");
@@ -216,7 +216,7 @@ const B2B_PartnerContractDetails = () => {
       alert("Contract signed successfully!");
       setShowSignModal(false);
       setSignature("");
-      dispatch(getContractById(id));
+      dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Sign error:", error);
       alert(error || "Failed to sign contract");
@@ -258,7 +258,7 @@ const B2B_PartnerContractDetails = () => {
 
       alert("Vehicles assigned successfully!");
       setShowVehicleAssignmentForm(false);
-      dispatch(getContractById(id));
+      dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Assignment error:", error);
       alert(error || "Failed to assign vehicles");

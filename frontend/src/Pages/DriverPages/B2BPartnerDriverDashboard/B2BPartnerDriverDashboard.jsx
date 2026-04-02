@@ -12,7 +12,7 @@ import "./B2BPartnerDriverDashboard.css";
 function B2BPartnerDriverDashboard() {
   const { user } = useSelector((state) => state.auth);
   const socket = useSocket();
-  
+
   // Use driverId from drivers collection if available, fallback to user._id
   const effectiveDriverId = user?.driverId || user?._id;
 
@@ -23,102 +23,54 @@ function B2BPartnerDriverDashboard() {
   const [activeBookingTab, setActiveBookingTab] = useState("confirmed");
   const [activeMainTab, setActiveMainTab] = useState("bookings");
   const [isSharingLocation, setIsSharingLocation] = useState(false);
-  const [formattedLastLogin, setFormattedLastLogin] = useState("");
   const [activeTrip, setActiveTrip] = useState(null);
   const locationIntervalRef = useRef(null);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Format last login time
-    useEffect(() => {
-      if (user?.lastLogin) {
-        const loginDate = new Date(user.lastLogin);
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-  
-        let dateString = "";
-  
-        if (loginDate.toDateString() === today.toDateString()) {
-          dateString = "Today";
-        } else if (loginDate.toDateString() === yesterday.toDateString()) {
-          dateString = "Yesterday";
-        } else {
-          dateString = loginDate.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-        }
-  
-        const timeString = loginDate.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
-  
-        setFormattedLastLogin(`${dateString}, ${timeString}`);
-      }
-    }, [user?.lastLogin]);
-  
-    const getRoleDisplayName = (role) => {
-      const roleMap = {
-        ADMIN: "Admin",
-        COMMUTER: "Commuter",
-        CORPORATE: "Corporate",
-        B2C_PARTNER: "B2C Partner",
-        B2B_PARTNER: "B2B Partner",
-        CORPORATE_DRIVER: "Corporate Driver",
-        B2B_PARTNER_DRIVER: "B2B Partner Driver",
-        CORPORATE_EMPLOYEE: "Corporate Employee",
-        B2C_PARTNER_DRIVER: "B2C Partner Driver",
-      };
-      return roleMap[role] || role;
-    };
-
   const handleLogout = async () => {
-      try {
-        const token = localStorage.getItem("token");
-  
-        if (!token) {
-          console.log("No token found, redirecting to login");
-          navigate("/login");
-          return;
-        }
-  
-        dispatch(logout());
-  
-        // Call backend logout endpoint to clear cookies and session
-        await api.post(
-          "/auth/logout",
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            withCredentials: true,
-          },
-        );
-  
-        // Clear frontend storage
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-  
-        console.log("User logged out successfully");
-  
-        // Redirect to login page
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.log("No token found, redirecting to login");
         navigate("/login");
-      } catch (err) {
-        console.error("Logout error:", err);
-  
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-  
-        // Redirect to login regardless of error
-        navigate("/login");
+        return;
       }
-    };
+
+      dispatch(logout());
+
+      // Call backend logout endpoint to clear cookies and session
+      await api.post(
+        "/auth/logout",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        },
+      );
+
+      // Clear frontend storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      console.log("User logged out successfully");
+
+      // Redirect to login page
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout error:", err);
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      // Redirect to login regardless of error
+      navigate("/login");
+    }
+  };
 
   const updateLocation = useCallback(() => {
     if (navigator.geolocation) {
@@ -304,7 +256,10 @@ function B2BPartnerDriverDashboard() {
     try {
       if (!user?._id) return;
       const response = await api.get(`/notifications/user/${user._id}`);
-      const data = response.data?.data?.notifications || response.data?.notifications || [];
+      const data =
+        response.data?.data?.notifications ||
+        response.data?.notifications ||
+        [];
       setNotifications(data);
     } catch (error) {
       console.error("Error fetching B2B driver notifications:", error);
@@ -372,24 +327,24 @@ function B2BPartnerDriverDashboard() {
         return false;
     }
   });
-  
+
   // Helper functions for Trip data format
   const getPickupLocation = (booking) => {
     return booking.pickupLocation || booking.fromLocation || "";
   };
-  
+
   const getDropoffLocation = (booking) => {
     return booking.dropoffLocation || booking.toLocation || "";
   };
-  
+
   const getTravelTime = (booking) => {
     return booking.travelTime || booking.startTime || "";
   };
-  
+
   const getPassengerCount = (booking) => {
     return booking.passengerCount || booking.passengers?.length || 0;
   };
-  
+
   const formatTripDate = (date) => {
     if (!date) return "";
     return new Date(date).toLocaleDateString("en-US", {
@@ -399,18 +354,14 @@ function B2BPartnerDriverDashboard() {
     });
   };
 
-  const userName = user?.fullName || "User";
-  const userRole = user?.role || "ADMIN";
-
   return (
     <div className="b2b-partner-driver-dashboard">
+      <button className="b2b-logout-btn" onClick={handleLogout}>
+        Log Out
+      </button>
+
       <div className="B2BPartner-driver-dashboard-with-tabs-header">
-        <div>
-          <h1>{getRoleDisplayName(userRole)} Dashboard</h1>
-          <small style={{ color: "#ffffff" }}>
-            Last login: {formattedLastLogin || "Never"}
-          </small>
-        </div>
+        <h1>B2B Partner Driver Dashboard</h1>
         <div className="B2BPartner-driver-dashboard-with-tabs-driver-info">
           <span>Welcome, {user?.fullName || user?.name}</span>
           <div
@@ -419,10 +370,6 @@ function B2BPartnerDriverDashboard() {
             📍 {isSharingLocation ? "Sharing Live" : "Not Sharing"}
           </div>
         </div>
-
-        <button className="b2b-logout-btn" onClick={handleLogout}>
-          Log Out
-        </button>
       </div>
 
       <div className="B2BPartner-driver-dashboard-with-tabs-tabs">
@@ -501,12 +448,30 @@ function B2BPartnerDriverDashboard() {
                             {booking.passengers &&
                               booking.passengers.length > 0 && (
                                 <div className="B2BPartner-driver-dashboard-with-tabs-passenger-list">
-                                  <strong>Booked Employees:</strong>
+                                  <strong>Passengers to Pickup:</strong>
                                   <ul>
                                     {booking.passengers.map((p, idx) => (
-                                      <li key={idx}>
-                                        {p.employeeId?.fullName || "Employee"} -
-                                        Seat {p.seatNumber}
+                                      <li key={idx} className="passenger-item">
+                                        <span className="passenger-name">
+                                          {p.name ||
+                                            p.employeeId?.fullName ||
+                                            "Employee"}
+                                        </span>
+                                        {p.seatNumber && (
+                                          <span className="passenger-seat">
+                                            Seat {p.seatNumber}
+                                          </span>
+                                        )}
+                                        {p.pickupStop && (
+                                          <span className="passenger-pickup">
+                                            Pickup: {p.pickupStop}
+                                          </span>
+                                        )}
+                                        {p.dropoffStop && (
+                                          <span className="passenger-dropoff">
+                                            Drop: {p.dropoffStop}
+                                          </span>
+                                        )}
                                       </li>
                                     ))}
                                   </ul>

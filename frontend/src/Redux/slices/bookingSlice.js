@@ -324,12 +324,6 @@ const bookingSlice = createSlice({
             })
             .addCase(getPartnerBookings.fulfilled, (state, action) => {
                 state.loading = false
-                console.log("[bookingSlice] getPartnerBookings.fulfilled:", {
-                    payload: action.payload,
-                    allBookings: action.payload?.allBookings,
-                    dataAllBookings: action.payload?.data?.allBookings,
-                    isArray: Array.isArray(action.payload?.data?.allBookings)
-                });
                 state.partnerBookings = action.payload?.data?.allBookings || action.payload?.allBookings || action.payload?.bookings || action.payload || []
             })
             .addCase(getPartnerBookings.rejected, (state, action) => {
@@ -343,14 +337,8 @@ const bookingSlice = createSlice({
             })
             .addCase(getPartnerDriverBookings.fulfilled, (state, action) => {
                 state.loading = false
-                console.log("[bookingSlice] getPartnerDriverBookings.fulfilled:", {
-                    payload: action.payload,
-                    bookings: action.payload?.bookings,
-                    dataBookings: action.payload?.data?.bookings,
-                    isArray: Array.isArray(action.payload?.data?.bookings)
-                });
                 state.partnerBookings = action.payload?.data?.bookings || action.payload?.bookings || action.payload || []
-                state.driverBookings = action.payload?.bookings || action.payload?.data?.bookings || action.payload || [] // Fix: Use correct path
+                state.driverBookings = action.payload?.bookings || action.payload?.data?.bookings || action.payload || []
             })
             .addCase(getPartnerDriverBookings.rejected, (state, action) => {
                 state.loading = false

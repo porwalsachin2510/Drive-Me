@@ -62,8 +62,24 @@ const notificationSchema = new mongoose.Schema(
                 "NEW_QUOTATION",
                 "ADMIN_ALERT",
                 "WALLET_UPDATED",
+                "WALLET_LOW_BALANCE",
+                "WALLET_FUND_REQUIRED",
+                "WALLET_FUND_ADDED",
+                "WALLET_WITHDRAWAL",
+                "WALLET_ADMIN_ALERT",
+                "WALLET_ACTION_REQUIRED",
+                "WALLET_USER_RESPONSE",
                 "CONTRACT_EXPIRY_WARNING",
                 "GENERAL",
+                // Admin monitoring types
+                "ADMIN_MONITOR_CONTRACT_CREATED",
+                "ADMIN_MONITOR_CONTRACT_DOCUMENT_UPLOADED",
+                "ADMIN_MONITOR_CONTRACT_SIGNED",
+                "ADMIN_MONITOR_CONTRACT_FULLY_SIGNED",
+                "ADMIN_MONITOR_VEHICLE_ASSIGNED",
+                "ADMIN_MONITOR_PAYMENT_RECEIVED",
+                "ADMIN_MONITOR_QUOTATION_REQUEST",
+                "ADMIN_MONITOR_QUOTATION_RESPONSE",
             ],
             required: true,
         },
@@ -95,8 +111,34 @@ const notificationSchema = new mongoose.Schema(
         relatedEntityId: mongoose.Schema.Types.ObjectId,
         relatedEntityType: {
             type: String,
-            enum: ["QUOTATION", "CONTRACT", "BOOKING", "PAYMENT", "VEHICLE", "B2C_BOOKING", "CORPORATE_BOOKING", "RIDE"],
+            enum: ["QUOTATION", "CONTRACT", "BOOKING", "PAYMENT", "VEHICLE", "B2C_BOOKING", "CORPORATE_BOOKING", "RIDE", "WALLET"],
         },
+
+        // Admin wallet notification specific fields
+        walletId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Wallet",
+            required: false,
+        },
+        adminNotificationReason: {
+            type: String,
+            required: false,
+        },
+        actionRequired: {
+            type: String,
+            enum: ["ADD_FUNDS", "MAKE_PAYMENT", "REVIEW_TRANSACTION", "NONE"],
+            default: "NONE",
+        },
+        userResponseStatus: {
+            type: String,
+            enum: ["PENDING", "COMPLETED", "IGNORED"],
+            default: "PENDING",
+        },
+        userResponseAt: {
+            type: Date,
+            default: null,
+        },
+        
         isRead: {
             type: Boolean,
             default: false,

@@ -503,6 +503,13 @@ export const searchCommuteRoutes = async (req, res) => {
                 departureTime: route.startTime || "",
                 startDate: route.routeStartDate,
                 tripType: route.tripType || "One Way",
+                pricing: {
+                    oneWayPrice: route.pricing?.oneWayPrice,
+                    roundTripPrice: route.pricing?.roundTripPrice,
+                    monthlyOneWayPrice: route.pricing?.monthlyOneWayPrice,
+                    monthlyRoundTripPrice: route.pricing?.monthlyRoundTripPrice,
+                    currency: route.pricing?.currency || "KWD" // Add currency field
+                },
                 roundTripPrice: route.pricing?.roundTripPrice,
                 oneWayPrice: route.pricing?.oneWayPrice,
                 monthlyPrice: route.pricing?.monthlyOneWayPrice,
@@ -653,6 +660,13 @@ export const publicSearchRoutes = async (req, res) => {
                 departureTime: route.startTime || "",
                 startDate: route.routeStartDate,
                 tripType: route.tripType || "One Way",
+                pricing: {
+                    oneWayPrice: route.pricing?.oneWayPrice,
+                    roundTripPrice: route.pricing?.roundTripPrice,
+                    monthlyOneWayPrice: route.pricing?.monthlyOneWayPrice,
+                    monthlyRoundTripPrice: route.pricing?.monthlyRoundTripPrice,
+                    currency: route.pricing?.currency || "KWD" // Add currency field
+                },
                 roundTripPrice: route.pricing?.roundTripPrice,
                 oneWayPrice: route.pricing?.oneWayPrice,
                 monthlyPrice: route.pricing?.monthlyOneWayPrice,

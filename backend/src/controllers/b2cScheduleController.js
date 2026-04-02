@@ -5,6 +5,7 @@ import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import User from "../models/User.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
+import { getCountryCurrency, getCurrencyDecimals, validateCountryPrice } from "../Services/countryLocalizationService.js";
 
 // Helper function to convert time to HH:MM AM/PM format
 const convertToAMPMFormat = (timeString) => {
@@ -70,7 +71,30 @@ export const createB2CPartnerRoute = async (req, res) => {
             });
         }
 
-        // Create route data
+        // Fetch B2C Partner user to get their country
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        console.log("[v0] B2C Partner country:", user.country);
+
+        // Get currency based on user's country
+        const currency = getCountryCurrency(user.country);
+        const decimals = getCurrencyDecimals(currency);
+
+        // Validate and format prices with proper decimals
+        const oneWayPrice = pricing?.oneWayPrice ? parseFloat(pricing.oneWayPrice).toFixed(decimals) : "0.00";
+        const roundTripPrice = pricing?.roundTripPrice ? parseFloat(pricing.roundTripPrice).toFixed(decimals) : "0.00";
+        const monthlyOneWayPrice = pricing?.monthlyOneWayPrice ? parseFloat(pricing.monthlyOneWayPrice).toFixed(decimals) : "0.00";
+        const monthlyRoundTripPrice = pricing?.monthlyRoundTripPrice ? parseFloat(pricing.monthlyRoundTripPrice).toFixed(decimals) : "0.00";
+
+        console.log("[v0] Route pricing with currency:", { currency, oneWayPrice, roundTripPrice, monthlyOneWayPrice, monthlyRoundTripPrice });
+
+        // Create route data with auto-populated currency
         const routeData = {
             b2cPartnerId: req.userId,
             fromLocation,
@@ -79,10 +103,11 @@ export const createB2CPartnerRoute = async (req, res) => {
             availableSeats: parseInt(availableSeats) || parseInt(totalSeats) || 20,
             stops: stops || [],
             pricing: {
-                oneWayPrice: parseFloat(pricing?.oneWayPrice || 0),
-                roundTripPrice: parseFloat(pricing?.roundTripPrice || 0),
-                monthlyOneWayPrice: parseFloat(pricing?.monthlyOneWayPrice || 0),
-                monthlyRoundTripPrice: parseFloat(pricing?.monthlyRoundTripPrice || 0),
+                oneWayPrice: parseFloat(oneWayPrice),
+                roundTripPrice: parseFloat(roundTripPrice),
+                monthlyOneWayPrice: parseFloat(monthlyOneWayPrice),
+                monthlyRoundTripPrice: parseFloat(monthlyRoundTripPrice),
+                currency: currency  // Auto-populated from user's country
             },
             assignedVehicle: assignedVehicle || null,
             assignedDriver: assignedDriver || null,
@@ -360,6 +385,61 @@ export const getB2CPartnerRoutes = async (req, res) => {
         });
     } catch (error) {
         console.error("[v0] Error fetching B2C partner routes:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching B2C partner routes",
+            error: error.message,
+        });
+    }
+};
+
+// Get B2C Routes filtered by commuter's country
+export const getB2CPartnerRoutesByCountry = async (req, res) => {
+    try {
+        console.log("[v0] Fetching B2C Partner Routes for commuter:", req.userId);
+
+        // Fetch commuter user to get their country
+        const commuter = await User.findById(req.userId);
+        if (!commuter) {
+            return res.status(404).json({
+                success: false,
+                message: "Commuter not found",
+            });
+        }
+
+        console.log("[v0] Commuter country:", commuter.country);
+
+        // Find all B2C Partner users from the same country
+        const partnersInCountry = await User.find({
+            country: commuter.country,
+            role: "B2C_PARTNER",
+            status: "ACTIVE"
+        }).select('_id');
+
+        const partnerIds = partnersInCountry.map(p => p._id);
+        console.log("[v0] Found B2C Partners in country:", partnerIds.length);
+
+        // Fetch routes only from partners in the same country
+        const routes = await B2CPartnerRoute.find({
+            b2cPartnerId: { $in: partnerIds },
+            isActive: true,
+            status: "Active"
+        })
+            .populate('b2cPartnerId', 'fullName profileImage')
+            .populate('assignedVehicle', 'model licensePlate vehicleType seatingCapacity')
+            .populate('assignedDriver', 'fullName phoneNumber')
+            .sort({ createdAt: -1 });
+
+        console.log("[v0] Found B2C Partner Routes for commuter:", routes.length);
+
+        res.status(200).json({
+            success: true,
+            count: routes.length,
+            routes: routes,
+            commuter_country: commuter.country
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching B2C partner routes by country:", error);
         res.status(500).json({
             success: false,
             message: "Error fetching B2C partner routes",

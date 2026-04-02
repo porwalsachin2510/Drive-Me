@@ -1,9 +1,10 @@
 import Wallet from "../models/Wallet.js"
 import User from "../models/User.js"
 import Transaction from "../models/Transaction.js"
-import { sendRealTimeNotification } from "../Services/socketService.js"
+import { sendRealTimeNotification, notifyAdminsWalletEvent } from "../Services/socketService.js"
 import { createNotification } from "./notificationController.js"
 import { detectCountryFromCurrency, getPaymentGateway } from "../Services/paymentGatewayService.js"
+import { getCountryCurrency, getCurrencyDecimals, getCurrencySymbol, getCountryPaymentMethods } from "../Services/countryLocalizationService.js"
 import bankValidationService from "../Services/bankValidationService.js"
 import crypto from "crypto"
 
@@ -65,16 +66,24 @@ export const createPaymentSession = async (req, res) => {
             },
         })
 
+        console.log("[v0] Payment session created:", {
+            sessionId: paymentSession.sessionId,
+            hasPaymentUrl: !!paymentSession.paymentUrl,
+            provider: paymentSession.provider
+        })
+
+
         return res.status(200).json({
             success: true,
             message: "Payment session created successfully",
             data: {
-                paymentSession,
+                sessionId: paymentSession.sessionId,
+                paymentUrl: paymentSession.paymentUrl,
                 reference,
                 amount,
                 currency,
                 paymentMethod,
-                gateway
+                gateway: paymentSession.provider || gateway
             }
         })
     } catch (error) {
@@ -200,13 +209,6 @@ export const addFundsToWallet = async (req, res) => {
         const userId = req.userId
         const { amount, paymentMethod, paymentDetails, paymentSessionId, currency = "KWD" } = req.body
 
-        if (!amount || amount <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid amount"
-            })
-        }
-
         if (!paymentSessionId) {
             return res.status(400).json({
                 success: false,
@@ -214,25 +216,56 @@ export const addFundsToWallet = async (req, res) => {
             })
         }
 
+        // Get user to determine currency
+        const user = await User.findById(userId)
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "User not found"
+            })
+        }
+
+        // Use user's currency or fallback to passed currency or KWD
+        const userCurrency = currency || getCountryCurrency(user.country) || "KWD"
+
         // Verify payment session with payment gateway first
         let paymentVerification = null
+        let verifiedAmount = amount // Use provided amount if available
         try {
             // Import payment gateway service
             const paymentGatewayService = await import("../Services/paymentGatewayService.js")
-            const { getPaymentGateway } = paymentGatewayService
-            
-            // Detect country and get gateway
-            const country = detectCountryFromCurrency("KWD") // Default to KWD for wallet
+
+            // Detect country from user currency
+            const country = detectCountryFromCurrency(userCurrency)
             const gateway = getPaymentGateway(country)
+
+            console.log("[v0] Verifying payment with gateway:", { gateway, paymentSessionId, userCurrency });
             
             // Verify payment
             paymentVerification = await paymentGatewayService.default.verifyPayment(gateway, paymentSessionId)
+
+            console.log("[v0] Payment verification result:", {
+                success: paymentVerification.success,
+                status: paymentVerification.status,
+                amount: paymentVerification.amount
+            });
             
             if (!paymentVerification.success || paymentVerification.status !== "COMPLETED") {
                 return res.status(400).json({
                     success: false,
                     message: "Payment verification failed. Please complete payment first."
                 })
+            }
+
+            // Use amount from payment verification if provided amount is 0 or missing
+            if (!amount || amount <= 0) {
+                verifiedAmount = paymentVerification.amount
+                if (!verifiedAmount || verifiedAmount <= 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Payment amount could not be determined"
+                    })
+                }
             }
         } catch (error) {
             console.error("Payment verification error:", error)
@@ -248,7 +281,7 @@ export const addFundsToWallet = async (req, res) => {
             wallet = new Wallet({
                 userId,
                 balance: 0,
-                currency: currency,
+                currency: userCurrency,
                 transactions: []
             })
         }
@@ -256,9 +289,9 @@ export const addFundsToWallet = async (req, res) => {
         // Add transaction only after payment verification
         const transaction = {
             type: "DEPOSIT",
-            amount: amount,
-            description: `Funds added via ${paymentMethod}`,
-            paymentMethod,
+            amount: verifiedAmount,
+            description: `Funds added via ${paymentMethod || 'payment gateway'}`,
+            paymentMethod: paymentMethod || 'card',
             status: "COMPLETED",
             paymentSessionId,
             gatewayTransactionId: paymentVerification.transactionId,
@@ -266,15 +299,22 @@ export const addFundsToWallet = async (req, res) => {
         }
 
         wallet.transactions.push(transaction)
-        wallet.balance += amount
+        wallet.balance += verifiedAmount
         await wallet.save()
 
+        console.log("[v0] Wallet updated:", {
+            userId,
+            newBalance: wallet.balance,
+            addedAmount: verifiedAmount,
+            currency: userCurrency
+        });
+
         // Send real-time notification with wallet currency
-        const walletCurrency = wallet.currency || currency || "KWD"
+        const walletCurrency = wallet.currency || userCurrency || "KWD"
         await sendRealTimeNotification(userId, {
             type: "WALLET_UPDATED",
             title: "Funds Added",
-            message: `${amount} ${walletCurrency} has been added to your wallet`,
+            message: `${verifiedAmount} ${walletCurrency} has been added to your wallet`,
             data: {
                 newBalance: wallet.balance,
                 currency: walletCurrency,
@@ -287,13 +327,26 @@ export const addFundsToWallet = async (req, res) => {
             userId,
             type: "PAYMENT_COMPLETED",
             title: "Funds Added Successfully",
-            message: `${amount} ${walletCurrency} has been added to your wallet via ${paymentMethod}`,
+            message: `${verifiedAmount} ${walletCurrency} has been added to your wallet via ${paymentMethod || 'payment'}`,
             data: {
-                amount,
+                amount: verifiedAmount,
                 currency: walletCurrency,
-                paymentMethod,
+                paymentMethod: paymentMethod || 'card',
                 newBalance: wallet.balance
             }
+        })
+
+        // Notify admins about wallet fund addition
+        const userwallet = await User.findById(userId)
+        notifyAdminsWalletEvent('wallet-fund-added', {
+            userId,
+            userName: userwallet?.fullName || "User",
+            userRole: userwallet?.role,
+            amount,
+            currency: walletCurrency,
+            newBalance: wallet.balance,
+            transactionType: "DEPOSIT",
+            paymentMethod
         })
 
         return res.status(200).json({
@@ -434,6 +487,19 @@ export const withdrawFromWallet = async (req, res) => {
                 processingTime: transaction.processingTime,
                 newBalance: wallet.balance
             }
+        })
+
+        // Notify admins about wallet withdrawal
+        notifyAdminsWalletEvent('wallet-withdrawal', {
+            userId,
+            userName: user?.fullName || "User",
+            userRole: user?.role,
+            amount,
+            currency,
+            newBalance: wallet.balance,
+            transactionType: "WITHDRAWAL",
+            bankName: withdrawalValidation.bankName,
+            reference: withdrawalReference
         })
 
         return res.status(200).json({
@@ -796,3 +862,45 @@ export const getUserPayouts = async (req, res) => {
     }
 }
 
+// Get payment methods and configuration based on user's country
+export const getPaymentConfig = async (req, res) => {
+    try {
+        const userId = req.userId
+
+        // Get user details
+        const user = await User.findById(userId)
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            })
+        }
+
+        console.log("[v0] Fetching payment config for user country:", user.country)
+
+        // Get currency and payment methods based on country
+        const currency = getCountryCurrency(user.country)
+        const decimals = getCurrencyDecimals(currency)
+        const symbol = getCurrencySymbol(currency)
+        const paymentMethods = getCountryPaymentMethods(user.country)
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                country: user.country,
+                currency,
+                currencySymbol: symbol,
+                decimals,
+                paymentMethods,
+                message: "Payment configuration retrieved successfully"
+            }
+        })
+    } catch (error) {
+        console.error("[v0] Error getting payment config:", error)
+        return res.status(500).json({
+            success: false,
+            message: "Error getting payment configuration",
+            error: error.message
+        })
+    }
+}

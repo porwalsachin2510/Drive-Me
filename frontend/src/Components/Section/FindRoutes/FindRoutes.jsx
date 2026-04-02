@@ -105,8 +105,8 @@ export default function FindRoutes() {
         {filteredRoutes.length === 0 ? (
           <div className="fr-empty-state">
             <p className="fr-empty-title">
-              {searchQuery || filterStatus !== "all" 
-                ? "No routes found matching your criteria." 
+              {searchQuery || filterStatus !== "all"
+                ? "No routes found matching your criteria."
                 : "No partner routes available yet."}
             </p>
             <p className="fr-empty-subtitle">
@@ -121,12 +121,15 @@ export default function FindRoutes() {
               <div className="fr-route-header">
                 <div className="fr-route-info">
                   <h3>{route.name}</h3>
-                  <span className={`fr-route-status ${route.isMember ? 'fr-active' : 'fr-available'}`}>
-                    {route.isMember ? 'Active' : 'Available'}
+                  <span
+                    className={`fr-route-status ${route.isMember ? "fr-active" : "fr-available"}`}
+                  >
+                    {route.isMember ? "Active" : "Available"}
                   </span>
                 </div>
                 <div className="fr-route-price">
-                  KWD {route.price || 0}
+                  {route.pricing?.currency || "KWD"}{" "}
+                  {route.price || route.pricing?.oneWayPrice || 0}
                 </div>
               </div>
 
@@ -144,26 +147,36 @@ export default function FindRoutes() {
                 <div className="fr-route-meta">
                   <div className="fr-meta-item">
                     <span className="fr-meta-label">Distance:</span>
-                    <span className="fr-meta-value">{route.distance || 'Not available'}</span>
+                    <span className="fr-meta-value">
+                      {route.distance || "Not available"}
+                    </span>
                   </div>
                   <div className="fr-meta-item">
                     <span className="fr-meta-label">Duration:</span>
-                    <span className="fr-meta-value">{route.estimatedTime || 'Not available'}</span>
+                    <span className="fr-meta-value">
+                      {route.estimatedTime || "Not available"}
+                    </span>
                   </div>
                   <div className="fr-meta-item">
                     <span className="fr-meta-label">Partner:</span>
-                    <span className="fr-meta-value">{route.partnerName || 'Unknown'}</span>
+                    <span className="fr-meta-value">
+                      {route.partnerName || "Unknown"}
+                    </span>
                   </div>
                 </div>
 
                 <div className="fr-route-schedule">
                   <div className="fr-schedule-item">
                     <span className="fr-schedule-label">Departure:</span>
-                    <span className="fr-schedule-time">{route.departureTime || 'Not set'}</span>
+                    <span className="fr-schedule-time">
+                      {route.departureTime || "Not set"}
+                    </span>
                   </div>
                   <div className="fr-schedule-item">
                     <span className="fr-schedule-label">Arrival:</span>
-                    <span className="fr-schedule-time">{route.arrivalTime || 'Not set'}</span>
+                    <span className="fr-schedule-time">
+                      {route.arrivalTime || "Not set"}
+                    </span>
                   </div>
                 </div>
 
@@ -172,7 +185,9 @@ export default function FindRoutes() {
                     <span className="fr-days-label">Operating Days:</span>
                     <div className="fr-days-list">
                       {route.operatingDays.map((day, idx) => (
-                        <span key={idx} className="fr-day-badge">{day}</span>
+                        <span key={idx} className="fr-day-badge">
+                          {day}
+                        </span>
                       ))}
                     </div>
                   </div>
@@ -180,7 +195,9 @@ export default function FindRoutes() {
 
                 <div className="fr-route-seats-info">
                   <span className="fr-seats-label">Available Seats:</span>
-                  <span className="fr-seats-value">{route.availableSeats} / {route.totalSeats}</span>
+                  <span className="fr-seats-value">
+                    {route.availableSeats} / {route.totalSeats}
+                  </span>
                 </div>
               </div>
 
@@ -198,7 +215,7 @@ export default function FindRoutes() {
                     onClick={() => handleJoinRoute(route._id)}
                     disabled={route.availableSeats <= 0}
                   >
-                    {route.availableSeats <= 0 ? 'Full' : 'Join Route'}
+                    {route.availableSeats <= 0 ? "Full" : "Join Route"}
                   </button>
                 )}
               </div>

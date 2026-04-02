@@ -244,6 +244,52 @@
   font-style: italic;
 }
 
+/* Passenger List Styles */
+.corp-driver-passenger-list {
+  margin-top: 12px;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.corp-driver-passenger-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+}
+
+.corp-driver-passenger-list .passenger-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.corp-driver-passenger-list .passenger-name {
+  font-weight: 600;
+  color: #1f2937;
+  flex-basis: 100%;
+}
+
+.corp-driver-passenger-list .passenger-seat {
+  background: #28a745;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.corp-driver-passenger-list .passenger-pickup,
+.corp-driver-passenger-list .passenger-dropoff {
+  color: #6b7280;
+  font-size: 12px;
+}
+
 .corp-driver-notifications-section {
   width: 100%;
 }
@@ -340,6 +386,9 @@
 }
 
 .corp-logout-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
   background: #dc3545;
   color: white;
   border: none;

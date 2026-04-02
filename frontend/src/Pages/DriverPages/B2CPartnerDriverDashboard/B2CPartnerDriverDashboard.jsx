@@ -707,7 +707,8 @@ function B2CPartnerDriverDashboard() {
                         <div className="info-item">
                           <span className="info-label">Price</span>
                           <span className="info-value price-highlight">
-                            {booking.paymentAmount?.toLocaleString()} KWD
+                            {booking.paymentAmount?.toLocaleString()}{" "}
+                            {booking.currency || "KWD"}
                           </span>
                         </div>
                         <div className="info-item">
@@ -727,7 +728,8 @@ function B2CPartnerDriverDashboard() {
                                 Driver Earnings
                               </span>
                               <span className="info-value price-highlight">
-                                {booking.driverEarnings?.toLocaleString()} KWD
+                                {booking.driverEarnings?.toLocaleString()}{" "}
+                                {booking.currency || "KWD"}
                               </span>
                             </div>
                           </>

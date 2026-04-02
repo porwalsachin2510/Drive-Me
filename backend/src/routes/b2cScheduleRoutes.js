@@ -5,6 +5,7 @@ import {
     createB2CPartnerSchedule,
     getB2CPartnerRoutes,
     getB2CPartnerSchedules,
+    getB2CPartnerRoutesByCountry,
     updateB2CPartnerSchedule,
     deleteB2CPartnerSchedule,
     deleteB2CPartnerRoute,
@@ -15,6 +16,7 @@ import { verifyToken, checkB2CPartnerRole } from "../middleware/auth.js";
 
 // B2C Partner Routes Management
 router.get("/routes", verifyToken, checkB2CPartnerRole, getB2CPartnerRoutes);
+router.get("/routes/by-country", verifyToken, getB2CPartnerRoutesByCountry);
 router.post("/routes", verifyToken, checkB2CPartnerRole, createB2CPartnerRoute);
 router.delete("/routes/:routeId", verifyToken, checkB2CPartnerRole, deleteB2CPartnerRoute);
 

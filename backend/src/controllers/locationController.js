@@ -163,13 +163,13 @@ export const detectUserLocation = async (req, res) => {
             userIp.startsWith("10.")
         ) {
             await User.findByIdAndUpdate(userId, {
-                nationality: "Kuwait",
+                nationality: "UAE",
             });
 
             return res.status(200).json({
                 success: true,
-                nationality: "Kuwait",
-                country: "Kuwait",
+                nationality: "UAE",
+                country: "UAE",
                 ip: userIp,
                 isDevelopment: true,
             });

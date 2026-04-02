@@ -8,6 +8,7 @@ function AdminNavigation({ dashboardactiveTab, setDashboardActiveTab }) {
     { id: "ride-pooling", label: "Ride Pooling", icon: "🚗" },
     { id: "b2b", label: "B2B Listings", icon: "📋" },
     { id: "users", label: "Users", icon: "👥" },
+    { id: "wallets", label: "Wallets", icon: "💼" },
     { id: "vehicle-approval", label: "Vehicle Approval", icon: "🚗" },
     { id: "settlement", label: "Settlement", icon: "💳" },
     { id: "reports", label: "Reports", icon: "📈" },

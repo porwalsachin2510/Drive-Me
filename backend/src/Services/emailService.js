@@ -564,6 +564,231 @@ export const sendPasswordResetOTP = async (userEmail, userName, otp) => {
     }
 };
 
+// Send wallet notification email from admin
+export const sendWalletNotificationEmail = async (userEmail, userName, notificationData) => {
+    try {
+        const { title, message, reason, actionRequired, walletBalance, currency } = notificationData;
+
+        const actionButtonText = actionRequired === "ADD_FUNDS" ? "Add Funds Now"
+            : actionRequired === "MAKE_PAYMENT" ? "Make Payment"
+                : actionRequired === "REVIEW_TRANSACTION" ? "Review Transaction"
+                    : "View Wallet";
+
+        const reasonText = {
+            "LOW_BALANCE": "Low Wallet Balance",
+            "PAYMENT_PENDING": "Payment Pending",
+            "BOOKING_ISSUE": "Booking Issue",
+            "CONTRACT_PAYMENT": "Contract Payment Due",
+            "COMMISSION_DUE": "Commission Due",
+            "GENERAL": "Important Notice"
+        }[reason] || "Important Notice";
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${title}</title>
+                <style>
+                    body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .email-card { background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+                    .header { background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%); padding: 30px; text-align: center; }
+                    .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 700; }
+                    .header .badge { display: inline-block; background: rgba(255,255,255,0.2); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; margin-top: 10px; }
+                    .content { padding: 30px; }
+                    .greeting { font-size: 18px; color: #1e293b; margin-bottom: 20px; }
+                    .message-box { background: #f8fafc; border-left: 4px solid #2DD4BF; padding: 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
+                    .message-box h3 { color: #1e293b; margin: 0 0 10px 0; font-size: 16px; }
+                    .message-box p { color: #64748b; margin: 0; font-size: 14px; }
+                    .balance-section { background: linear-gradient(135deg, #f0fdf9 0%, #e0f7f4 100%); padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0; }
+                    .balance-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+                    .balance-value { font-size: 32px; font-weight: 700; color: #0D9488; margin: 8px 0; }
+                    .balance-currency { font-size: 14px; color: #64748b; }
+                    .cta-button { display: inline-block; background: #2DD4BF; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 20px 0; }
+                    .cta-button:hover { background: #14B8A6; }
+                    .warning-box { background: #FEF3C7; border: 1px solid #F59E0B; padding: 16px; border-radius: 8px; margin: 20px 0; }
+                    .warning-box p { color: #92400E; margin: 0; font-size: 14px; }
+                    .footer { background: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0; }
+                    .footer p { color: #64748b; font-size: 12px; margin: 5px 0; }
+                    .footer a { color: #2DD4BF; text-decoration: none; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="email-card">
+                        <div class="header">
+                            <h1>${title}</h1>
+                            <span class="badge">${reasonText}</span>
+                        </div>
+                        <div class="content">
+                            <p class="greeting">Hello ${userName},</p>
+                            
+                            <div class="message-box">
+                                <h3>Message from Admin</h3>
+                                <p>${message}</p>
+                            </div>
+                            
+                            <div class="balance-section">
+                                <span class="balance-label">Your Current Wallet Balance</span>
+                                <div class="balance-value">${walletBalance?.toFixed(2) || '0.00'}</div>
+                                <span class="balance-currency">${currency || 'KWD'}</span>
+                            </div>
+                            
+                            ${actionRequired && actionRequired !== "NONE" ? `
+                            <div class="warning-box">
+                                <p><strong>Action Required:</strong> ${actionButtonText.replace('Now', '').trim()} to continue using our services without interruption.</p>
+                            </div>
+                            ` : ''}
+                            
+                            <div style="text-align: center;">
+                                <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'https://driveme.com'}/wallet" class="cta-button">${actionButtonText}</a>
+                            </div>
+                        </div>
+                        <div class="footer">
+                            <p>This is an automated message from DriveMe Admin</p>
+                            <p>Need help? <a href="mailto:support@driveme.com">Contact Support</a></p>
+                            <p>DriveMe - Your Trusted Transportation Partner</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const transporter = createTransporter();
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe Admin" <admin@driveme.com>',
+            to: userEmail,
+            subject: `DriveMe: ${title}`,
+            html: htmlContent,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Wallet notification email sent to: ${userEmail}`);
+
+        return {
+            success: true,
+            message: 'Wallet notification email sent successfully'
+        };
+    } catch (error) {
+        console.error('[v0] Error sending wallet notification email:', error);
+        return {
+            success: false,
+            message: error.message
+        };
+    }
+};
+
+// Send admin alert when user responds to wallet notification
+export const sendAdminWalletResponseAlert = async (adminEmail, userData, responseData) => {
+    try {
+        const { userName, userEmail, userRole, responseType, newBalance, currency } = responseData;
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>User Wallet Response</title>
+                <style>
+                    body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .email-card { background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+                    .header { background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%); padding: 30px; text-align: center; }
+                    .header h1 { color: white; margin: 0; font-size: 22px; font-weight: 700; }
+                    .content { padding: 30px; }
+                    .user-card { background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; display: flex; align-items: center; gap: 16px; }
+                    .user-avatar { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #2DD4BF, #14B8A6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; }
+                    .user-info h3 { margin: 0; color: #1e293b; font-size: 16px; }
+                    .user-info p { margin: 4px 0 0 0; color: #64748b; font-size: 14px; }
+                    .response-box { background: #D1FAE5; border: 1px solid #22C55E; padding: 16px; border-radius: 8px; margin: 20px 0; }
+                    .response-box h4 { color: #166534; margin: 0 0 8px 0; }
+                    .response-box p { color: #15803D; margin: 0; }
+                    .balance-info { display: flex; justify-content: space-between; padding: 16px; background: #f8fafc; border-radius: 8px; margin: 20px 0; }
+                    .balance-item { text-align: center; }
+                    .balance-item .label { font-size: 11px; color: #64748b; text-transform: uppercase; }
+                    .balance-item .value { font-size: 20px; font-weight: 700; color: #1e293b; }
+                    .cta-button { display: inline-block; background: #2DD4BF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; }
+                    .footer { background: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0; }
+                    .footer p { color: #64748b; font-size: 12px; margin: 5px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="email-card">
+                        <div class="header">
+                            <h1>User Responded to Wallet Alert</h1>
+                        </div>
+                        <div class="content">
+                            <p>A user has responded to your wallet notification:</p>
+                            
+                            <div class="user-card">
+                                <div class="user-avatar">${userName?.charAt(0) || 'U'}</div>
+                                <div class="user-info">
+                                    <h3>${userName}</h3>
+                                    <p>${userEmail} | ${userRole?.replace(/_/g, ' ')}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="response-box">
+                                <h4>Action Taken</h4>
+                                <p>${responseType === 'FUND_ADDED' ? 'User has added funds to their wallet'
+                : responseType === 'PAYMENT_MADE' ? 'User has made a payment'
+                    : responseType === 'TRANSACTION_REVIEWED' ? 'User has reviewed the transaction'
+                        : 'User has responded to the notification'}</p>
+                            </div>
+                            
+                            <div class="balance-info">
+                                <div class="balance-item">
+                                    <span class="label">New Balance</span>
+                                    <span class="value">${newBalance?.toFixed(2) || '0.00'} ${currency || 'KWD'}</span>
+                                </div>
+                                <div class="balance-item">
+                                    <span class="label">Response Time</span>
+                                    <span class="value">${new Date().toLocaleString()}</span>
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: center;">
+                                <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'https://driveme.com'}/admin" class="cta-button">View in Admin Dashboard</a>
+                            </div>
+                        </div>
+                        <div class="footer">
+                            <p>DriveMe Admin Notification System</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const transporter = createTransporter();
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe System" <system@driveme.com>',
+            to: adminEmail,
+            subject: `DriveMe: ${userName} responded to wallet notification`,
+            html: htmlContent,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Admin wallet response alert sent to: ${adminEmail}`);
+
+        return {
+            success: true,
+            message: 'Admin alert email sent successfully'
+        };
+    } catch (error) {
+        console.error('[v0] Error sending admin wallet response alert:', error);
+        return {
+            success: false,
+            message: error.message
+        };
+    }
+};
+
 // Generic email sending function
 export const sendEmail = async (recipientEmail, subject, body, options = {}) => {
     try {

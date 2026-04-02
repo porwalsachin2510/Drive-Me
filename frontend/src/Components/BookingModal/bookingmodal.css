@@ -146,9 +146,23 @@
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.trip-option-header {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  position: relative;
+  width: 100%;
+}
+
+.trip-option-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
 }
 
 .trip-option:hover {
@@ -203,6 +217,14 @@
   text-transform: uppercase;
 }
 
+.trip-type.outbound-badge {
+  background: #17a2b8;
+}
+
+.trip-type.return-badge {
+  background: #6f42c1;
+}
+
 .trip-route {
   color: #6c757d;
   font-size: 14px;
@@ -224,6 +246,15 @@
   border-radius: 4px;
   font-size: 11px;
   white-space: nowrap;
+}
+
+.more-stops {
+  background: #dee2e6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #495057;
 }
 
 .trip-seats {
@@ -275,6 +306,27 @@
   background: #f8f9fa;
   border-radius: 8px;
   border: 1px dashed #dee2e6;
+}
+
+.loading-schedule {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 12px;
+  color: #6c757d;
+}
+
+.loading-schedule .spinner {
+  font-size: 24px;
+  color: #17a2b8;
+  animation: spin 1s linear infinite;
+}
+
+.loading-schedule p {
+  margin: 0;
+  font-size: 14px;
 }
 
 /* Travel Days Selection */
@@ -528,19 +580,35 @@
 }
 
 .point-select {
-  padding: 10px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
+  padding: 12px 14px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
   background: white;
   font-size: 14px;
   width: 100%;
   transition: all 0.3s ease;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+.point-select:hover {
+  border-color: #17a2b8;
 }
 
 .point-select:focus {
   outline: none;
-  border-color: #E85D5D;
-  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
+  border-color: #17a2b8;
+  box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.15);
+}
+
+.point-select option {
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .route-summary-body {

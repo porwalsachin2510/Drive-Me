@@ -80,7 +80,20 @@ import {
     getB2CStats,
     getPendingVehicleApprovals,
     approveVehicle,
-    rejectVehicle
+    rejectVehicle,
+    // Wallet Management APIs
+    getAllWallets,
+    getWalletStats,
+    getWalletDetails,
+    getWalletByUserId,
+    sendWalletNotification,
+    sendBulkWalletNotifications,
+    getLowBalanceWallets,
+    getWalletActivityFeed,
+    markWalletNotificationResponded,
+    getWalletUpdatesSubscription,
+    adjustWalletBalance,
+    getPendingWalletNotifications
 } from "../controllers/adminController.js";
 import { verifyToken, checkAdminRole } from "../middleware/auth.js"
 
@@ -197,5 +210,19 @@ router.get("/contracts", verifyToken, checkAdminRole, getAllContracts)
 router.get("/vehicles/pending", verifyToken, checkAdminRole, getPendingVehicleApprovals)
 router.put("/vehicles/:vehicleId/approve", verifyToken, checkAdminRole, approveVehicle)
 router.put("/vehicles/:vehicleId/reject", verifyToken, checkAdminRole, rejectVehicle)
+
+// Wallet Management Routes
+router.get("/wallets", verifyToken, checkAdminRole, getAllWallets)
+router.get("/wallets/stats", verifyToken, checkAdminRole, getWalletStats)
+router.get("/wallets/low-balance", verifyToken, checkAdminRole, getLowBalanceWallets)
+router.get("/wallets/activity-feed", verifyToken, checkAdminRole, getWalletActivityFeed)
+router.get("/wallets/pending-notifications", verifyToken, checkAdminRole, getPendingWalletNotifications)
+router.get("/wallets/subscription-info", verifyToken, checkAdminRole, getWalletUpdatesSubscription)
+router.get("/wallets/:walletId", verifyToken, checkAdminRole, getWalletDetails)
+router.get("/wallets/user/:userId", verifyToken, checkAdminRole, getWalletByUserId)
+router.post("/wallets/send-notification", verifyToken, checkAdminRole, sendWalletNotification)
+router.post("/wallets/send-bulk-notifications", verifyToken, checkAdminRole, sendBulkWalletNotifications)
+router.put("/wallets/:walletId/adjust", verifyToken, checkAdminRole, adjustWalletBalance)
+router.put("/wallets/notifications/:notificationId/responded", verifyToken, markWalletNotificationResponded)
 
 export default router

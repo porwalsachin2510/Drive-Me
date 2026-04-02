@@ -1,26 +1,26 @@
-.drivemego-manage-corporate-employee-management {
+.corporate-employee-management {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.drivemego-manage-management-header {
+.management-header {
   margin-bottom: 30px;
 }
 
-.drivemego-manage-management-header h2 {
+.management-header h2 {
   color: #333;
   margin-bottom: 20px;
   font-size: 24px;
   font-weight: 600;
 }
 
-.drivemego-manage-tab-navigation {
+.tab-navigation {
   display: flex;
   border-bottom: 2px solid #e5e7eb;
 }
 
-.drivemego-manage-tab-btn {
+.tab-btn {
   padding: 12px 24px;
   background: none;
   border: none;
@@ -32,16 +32,16 @@
   transition: all 0.3s ease;
 }
 
-.drivemego-manage-tab-btn:hover {
+.tab-btn:hover {
   color: #374151;
 }
 
-.drivemego-manage-tab-btn.drivemego-manage-active {
+.tab-btn.active {
   color: #3b82f6;
   border-bottom-color: #3b82f6;
 }
 
-.drivemego-manage-management-content {
+.management-content {
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -49,7 +49,7 @@
 }
 
 /* Employee List Styles */
-.drivemego-manage-employee-list .drivemego-manage-list-header {
+.employee-list .list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -58,14 +58,14 @@
   gap: 15px;
 }
 
-.drivemego-manage-search-filters {
+.search-filters {
   display: flex;
   gap: 10px;
   flex: 1;
   max-width: 400px;
 }
 
-.drivemego-manage-search-input {
+.search-input {
   flex: 1;
   padding: 10px 15px;
   border: 1px solid #d1d5db;
@@ -73,13 +73,13 @@
   font-size: 14px;
 }
 
-.drivemego-manage-search-input:focus {
+.search-input:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.drivemego-manage-filter-select {
+.filter-select {
   padding: 10px 15px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -87,12 +87,12 @@
   background: white;
 }
 
-.drivemego-manage-action-buttons {
+.action-buttons {
   display: flex;
   gap: 10px;
 }
 
-.drivemego-manage-btn {
+.btn {
   padding: 10px 16px;
   border: none;
   border-radius: 6px;
@@ -106,123 +106,131 @@
   gap: 6px;
 }
 
-.drivemego-manage-btn-primary {
+.btn-primary {
   background: #3b82f6;
   color: white;
 }
 
-.drivemego-manage-btn-primary:hover {
+.btn-primary:hover {
   background: #2563eb;
 }
 
-.drivemego-manage-btn-secondary {
+.btn-secondary {
   background: #6b7280;
   color: white;
 }
 
-.drivemego-manage-btn-secondary:hover {
+.btn-secondary:hover {
   background: #4b5563;
 }
 
-.drivemego-manage-btn-info {
+.btn-info {
   background: #0ea5e9;
   color: white;
 }
 
-.drivemego-manage-btn-info:hover {
+.btn-info:hover {
   background: #0284c7;
 }
 
-.drivemego-manage-btn-warning {
+.btn-warning {
   background: #f59e0b;
   color: white;
 }
 
-.drivemego-manage-btn-warning:hover {
+.btn-warning:hover {
   background: #d97706;
 }
 
-.drivemego-manage-btn-danger {
+.btn-danger {
   background: #ef4444;
   color: white;
 }
 
-.drivemego-manage-btn-danger:hover {
+.btn-danger:hover {
   background: #dc2626;
 }
 
-.drivemego-manage-btn-success {
+.btn-success {
   background: #22c55e;
   color: white;
 }
 
-.drivemego-manage-btn-success:hover {
+.btn-success:hover {
   background: #16a34a;
 }
 
-.drivemego-manage-btn-sm {
+.btn-sm {
   padding: 6px 12px;
   font-size: 12px;
 }
 
-.drivemego-manage-btn:disabled {
+.btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.drivemego-manage-loading {
+.loading {
   text-align: center;
   padding: 40px;
   color: #6b7280;
   font-size: 16px;
 }
 
-.drivemego-manage-employees-table {
+.employees-table {
   overflow-x: auto;
 }
 
-.drivemego-manage-employees-table table {
+.employees-table table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.drivemego-manage-employees-table th,
-.drivemego-manage-employees-table td {
+.employees-table th,
+.employees-table td {
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.drivemego-manage-employees-table th {
+.employees-table th {
   background: #f9fafb;
   font-weight: 600;
   color: #374151;
   font-size: 14px;
 }
 
-.drivemego-manage-employees-table td {
+.employees-table td {
   font-size: 14px;
   color: #6b7280;
 }
 
-.drivemego-manage-status-badge {
+.trip-assignment-cell {
+  max-width: 180px;
+  font-size: 12px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-badge {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
 }
 
-.drivemego-manage-status-badge.drivemego-manage-active {
+.status-badge.active {
   background: #dcfce7;
   color: #166534;
 }
 
-.drivemego-manage-status-badge.drivemego-manage-inactive {
+.status-badge.inactive {
   background: #fee2e2;
   color: #991b1b;
 }
 
-.drivemego-manage-pagination {
+.pagination {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -230,7 +238,7 @@
   margin-top: 20px;
 }
 
-.drivemego-manage-pagination button {
+.pagination button {
   padding: 8px 16px;
   border: 1px solid #d1d5db;
   background: white;
@@ -239,17 +247,17 @@
   font-size: 14px;
 }
 
-.drivemego-manage-pagination button:hover:not(:disabled) {
+.pagination button:hover:not(:disabled) {
   background: #f3f4f6;
 }
 
-.drivemego-manage-pagination button:disabled {
+.pagination button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* Modal Styles */
-.drivemego-manage-modal-overlay {
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -262,7 +270,7 @@
   z-index: 1000;
 }
 
-.drivemego-manage-modal {
+.modal {
   background: white;
   border-radius: 8px;
   width: 90%;
@@ -271,7 +279,7 @@
   overflow-y: auto;
 }
 
-.drivemego-manage-modal-header {
+.modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -279,14 +287,14 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.drivemego-manage-modal-header h3 {
+.modal-header h3 {
   margin: 0;
   color: #333;
   font-size: 18px;
   font-weight: 600;
 }
 
-.drivemego-manage-close-btn {
+.close-btn {
   background: none;
   border: none;
   font-size: 24px;
@@ -300,19 +308,19 @@
   justify-content: center;
 }
 
-.drivemego-manage-close-btn:hover {
+.close-btn:hover {
   color: #374151;
 }
 
-.drivemego-manage-modal-form {
+.modal-form {
   padding: 20px;
 }
 
-.drivemego-manage-form-section {
+.form-section {
   margin-bottom: 30px;
 }
 
-.drivemego-manage-form-section h4 {
+.form-section h4 {
   margin: 0 0 15px 0;
   color: #374151;
   font-size: 16px;
@@ -321,14 +329,14 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.drivemego-manage-form-row {
+.form-row {
   display: flex;
   gap: 15px;
   margin-bottom: 15px;
 }
 
-.drivemego-manage-form-row input,
-.drivemego-manage-form-row select {
+.form-row input,
+.form-row select {
   flex: 1;
   padding: 10px 15px;
   border: 1px solid #d1d5db;
@@ -336,18 +344,18 @@
   font-size: 14px;
 }
 
-.drivemego-manage-form-row input:focus,
-.drivemego-manage-form-row select:focus {
+.form-row input:focus,
+.form-row select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.drivemego-manage-form-group {
+.form-group {
   margin-bottom: 20px;
 }
 
-.drivemego-manage-form-group label {
+.form-group label {
   display: block;
   margin-bottom: 8px;
   color: #374151;
@@ -355,7 +363,7 @@
   font-size: 14px;
 }
 
-.drivemego-manage-form-group input[type="file"] {
+.form-group input[type="file"] {
   width: 100%;
   padding: 10px;
   border: 1px solid #d1d5db;
@@ -363,7 +371,7 @@
   font-size: 14px;
 }
 
-.drivemego-manage-modal-actions {
+.modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -372,40 +380,40 @@
 }
 
 /* Bulk Upload Styles */
-.drivemego-manage-bulk-upload-instructions {
+.bulk-upload-instructions {
   margin-bottom: 30px;
 }
 
-.drivemego-manage-bulk-upload-instructions h4 {
+.bulk-upload-instructions h4 {
   margin: 0 0 10px 0;
   color: #374151;
   font-size: 16px;
   font-weight: 600;
 }
 
-.drivemego-manage-bulk-upload-instructions ol {
+.bulk-upload-instructions ol {
   margin: 0 0 15px 0;
   padding-left: 20px;
   color: #6b7280;
   font-size: 14px;
 }
 
-.drivemego-manage-bulk-upload-instructions li {
+.bulk-upload-instructions li {
   margin-bottom: 5px;
 }
 
-.drivemego-manage-upload-preview {
+.upload-preview {
   margin: 20px 0;
 }
 
-.drivemego-manage-upload-preview h4 {
+.upload-preview h4 {
   margin: 0 0 10px 0;
   color: #374151;
   font-size: 14px;
   font-weight: 600;
 }
 
-.drivemego-manage-preview-list {
+.preview-list {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
@@ -413,52 +421,330 @@
   overflow-y: auto;
 }
 
-.drivemego-manage-preview-item {
+.preview-item {
   padding: 8px 12px;
   border-bottom: 1px solid #e5e7eb;
   font-size: 13px;
   color: #6b7280;
 }
 
-.drivemego-manage-preview-item:last-child {
+.preview-item:last-child {
   border-bottom: none;
+}
+
+/* Route Schedule Info Styles */
+.route-schedule-loading {
+  padding: 12px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.route-schedule-info {
+  margin: 16px 0;
+  padding: 16px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+}
+
+.route-schedule-info h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.schedule-details {
+  font-size: 13px;
+  color: #374151;
+}
+
+.schedule-details p {
+  margin: 4px 0;
+}
+
+.trip-times-info {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #86efac;
+}
+
+.trip-times-info h6 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.trip-time-item {
+  background: white;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.trip-time-item p {
+  margin: 0 0 6px 0;
+}
+
+.stop-points-list-info {
+  margin-top: 8px;
+}
+
+.stop-points-list-info .stop-label {
+  font-size: 12px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.stop-label.outbound {
+  color: #059669;
+}
+
+.stop-label.return {
+  color: #d97706;
+}
+
+.stop-points-list-info ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.stop-points-list-info li {
+  margin: 2px 0;
+}
+
+/* Full width input */
+.full-width-input {
+  width: 100% !important;
+  flex: 1 1 100% !important;
+}
+
+/* Trip Selection Section */
+.trip-selection-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+}
+
+.trip-selection-section h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+.trip-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+}
+
+/* Trip Assignment Section */
+.trip-assignment-section {
+  margin-top: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.outbound-trip-section {
+  padding: 16px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.return-trip-section {
+  padding: 16px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+}
+
+.trip-section-title {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.outbound-title {
+  color: #166534;
+}
+
+.return-title {
+  color: #92400e;
+}
+
+.trip-section-subtitle {
+  margin: 0 0 16px 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.trip-assignment-section .form-group {
+  flex: 1;
+}
+
+.trip-assignment-section .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.trip-assignment-section .form-group select,
+.trip-assignment-section .form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+}
+
+.home-address-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #059669;
+  font-style: italic;
+}
+
+.one-way-notice {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.one-way-notice p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Pass Duration Section */
+.section-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 16px 0;
+}
+
+.pass-duration-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 16px;
+}
+
+.pass-duration-info .info-icon {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  background: #16a085;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pass-duration-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #166534;
+  line-height: 1.5;
+}
+
+/* Employee Details Grid */
+.employee-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.detail-section {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.detail-section h4 {
+  margin: 0 0 12px 0;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.detail-section p {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #374151;
+}
+
+.detail-section strong {
+  color: #1f2937;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .drivemego-manage-corporate-employee-management {
+  .corporate-employee-management {
     padding: 15px;
   }
   
-  .drivemego-manage-employee-list .drivemego-manage-list-header {
+  .employee-list .list-header {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .drivemego-manage-search-filters {
+  .search-filters {
     max-width: none;
   }
   
-  .drivemego-manage-form-row {
+  .form-row {
     flex-direction: column;
     gap: 10px;
   }
   
-  .drivemego-manage-modal {
+  .modal {
     width: 95%;
     margin: 20px;
   }
   
-  .drivemego-manage-employees-table {
+  .employees-table {
     font-size: 12px;
   }
   
-  .drivemego-manage-employees-table th,
-  .drivemego-manage-employees-table td {
+  .employees-table th,
+  .employees-table td {
     padding: 8px;
   }
   
-  .drivemego-manage-action-buttons {
+  .action-buttons {
     flex-direction: column;
   }
 }

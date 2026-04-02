@@ -7,7 +7,8 @@ import {
     manageBooking,
     markNotTravelingToday,
     rateTrip,
-    requestRouteChange
+    requestRouteChange,
+    getEmployeeMonthlyPasses
 } from "../controllers/corporateEmployeeUserController.js";
 
 const router = express.Router();
@@ -16,6 +17,7 @@ const router = express.Router();
 router.post("/register", verifyToken, registerCorporateEmployee);
 router.get("/dashboard", verifyToken, getEmployeeDashboard);
 router.get("/route", verifyToken, getAssignedRoute);
+router.get("/monthly-passes", verifyToken, getEmployeeMonthlyPasses);
 
 // Booking management
 router.post("/booking", verifyToken, manageBooking);

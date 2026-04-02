@@ -97,3 +97,37 @@ export function calculateDistance(lat1, lon1, lat2, lon2) {
 
     return R * c
 }
+
+
+// Send wallet activity update to all admins
+export const sendAdminWalletUpdate = (walletData) => {
+    if (!ioInstance) {
+        console.log('Socket.io not initialized yet')
+        return
+    }
+
+    try {
+        ioInstance.to('admin-wallet-updates').emit('wallet-activity', walletData)
+        console.log(`Admin wallet update sent: ${walletData.type}`)
+    } catch (error) {
+        console.error('Error sending admin wallet update:', error)
+    }
+}
+
+// Notify all admins about a wallet event
+export const notifyAdminsWalletEvent = (eventType, data) => {
+    if (!ioInstance) {
+        console.log('Socket.io not initialized yet')
+        return
+    }
+
+    try {
+        ioInstance.to('admin-wallet-updates').emit(eventType, {
+            ...data,
+            timestamp: new Date()
+        })
+        console.log(`Admin wallet event sent: ${eventType}`)
+    } catch (error) {
+        console.error('Error notifying admins about wallet event:', error)
+    }
+}

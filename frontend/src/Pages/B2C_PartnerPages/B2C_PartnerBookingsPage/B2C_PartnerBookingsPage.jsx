@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -66,6 +67,9 @@ const B2C_PartnerBookingsPage = () => {
     dispatch(acceptBooking(booking._id)).then(() => {
       dispatch(getPartnerBookings({ status: filterStatus }));
       fetchWalletBalance(); // Refresh wallet balance
+      }).catch((error) => {
+      console.log("[v0] Accept booking error:", error);
+      // If error is wallet funding needed, wallet modal is shown
     });
   };
 
@@ -228,12 +232,15 @@ const B2C_PartnerBookingsPage = () => {
         <h2>Booking Management</h2>
         <div className="B2C_Partner-bookings-page-wallet-info">
           <span className="B2C_Partner-bookings-page-wallet-balance">
-            Wallet Balance: {walletBalance} KWD
+            Wallet Balance: {walletBalance}{" "}
+            {Array.isArray(partnerBookings) && partnerBookings.length > 0
+              ? partnerBookings[0]?.currency || "AED"
+              : "AED"}
           </span>
         </div>
         <div className="B2C_Partner-bookings-page-filter-controls">
-          <select 
-            value={filterStatus} 
+          <select
+            value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="B2C_Partner-bookings-page-status-filter"
           >
@@ -248,26 +255,43 @@ const B2C_PartnerBookingsPage = () => {
 
       <div className="B2C_Partner-bookings-page-stats">
         <div className="B2C_Partner-bookings-page-stat-card">
-          <span className="B2C_Partner-bookings-page-stat-number">{Array.isArray(partnerBookings) ? partnerBookings.length : 0}</span>
-          <span className="B2C_Partner-bookings-page-stat-label">Total Bookings</span>
-        </div>
-        <div className="B2C_Partner-bookings-page-stat-card">
           <span className="B2C_Partner-bookings-page-stat-number">
-            {Array.isArray(partnerBookings) ? partnerBookings.filter(b => b.bookingStatus === "CONFIRMED").length : 0}
+            {Array.isArray(partnerBookings) ? partnerBookings.length : 0}
           </span>
-          <span className="B2C_Partner-bookings-page-stat-label">Confirmed</span>
+          <span className="B2C_Partner-bookings-page-stat-label">
+            Total Bookings
+          </span>
         </div>
         <div className="B2C_Partner-bookings-page-stat-card">
           <span className="B2C_Partner-bookings-page-stat-number">
-            {Array.isArray(partnerBookings) ? partnerBookings.filter(b => b.bookingStatus === "ACCEPTED").length : 0}
+            {Array.isArray(partnerBookings)
+              ? partnerBookings.filter((b) => b.bookingStatus === "CONFIRMED")
+                  .length
+              : 0}
+          </span>
+          <span className="B2C_Partner-bookings-page-stat-label">
+            Confirmed
+          </span>
+        </div>
+        <div className="B2C_Partner-bookings-page-stat-card">
+          <span className="B2C_Partner-bookings-page-stat-number">
+            {Array.isArray(partnerBookings)
+              ? partnerBookings.filter((b) => b.bookingStatus === "ACCEPTED")
+                  .length
+              : 0}
           </span>
           <span className="B2C_Partner-bookings-page-stat-label">Accepted</span>
         </div>
         <div className="B2C_Partner-bookings-page-stat-card">
           <span className="B2C_Partner-bookings-page-stat-number">
-            {Array.isArray(partnerBookings) ? partnerBookings.filter(b => b.bookingStatus === "COMPLETED").length : 0}
+            {Array.isArray(partnerBookings)
+              ? partnerBookings.filter((b) => b.bookingStatus === "COMPLETED")
+                  .length
+              : 0}
           </span>
-          <span className="B2C_Partner-bookings-page-stat-label">Completed</span>
+          <span className="B2C_Partner-bookings-page-stat-label">
+            Completed
+          </span>
         </div>
       </div>
 
@@ -279,20 +303,30 @@ const B2C_PartnerBookingsPage = () => {
             <p>No bookings found for the selected status</p>
           </div>
         ) : (
-          Array.isArray(partnerBookings) && partnerBookings.map((booking) => (
-            <div key={booking._id} className="B2C_Partner-bookings-page-booking-card">
+          Array.isArray(partnerBookings) &&
+          partnerBookings.map((booking) => (
+            <div
+              key={booking._id}
+              className="B2C_Partner-bookings-page-booking-card"
+            >
               <div className="B2C_Partner-bookings-page-booking-header">
                 <div className="B2C_Partner-bookings-page-booking-info">
                   <h4>Booking #{booking._id.slice(-8)}</h4>
-                  <span 
+                  <span
                     className="B2C_Partner-bookings-page-status-badge"
-                    style={{ backgroundColor: getStatusColor(booking.bookingStatus) }}
+                    style={{
+                      backgroundColor: getStatusColor(booking.bookingStatus),
+                    }}
                   >
                     {booking.bookingStatus}
                   </span>
-                  <span 
+                  <span
                     className="B2C_Partner-bookings-page-booking-type-badge"
-                    style={{ backgroundColor: getBookingTypeColor(booking.isSelfDriver) }}
+                    style={{
+                      backgroundColor: getBookingTypeColor(
+                        booking.isSelfDriver,
+                      ),
+                    }}
                   >
                     {getBookingTypeText(booking.isSelfDriver)}
                   </span>
@@ -305,30 +339,60 @@ const B2C_PartnerBookingsPage = () => {
               <div className="B2C_Partner-bookings-page-booking-details">
                 <div className="B2C_Partner-bookings-page-route-info">
                   <div className="B2C_Partner-bookings-page-route-point">
-                    <strong>From</strong> {booking.pickupLocation || 'N/A'}
+                    <strong>From</strong> {booking.pickupLocation || "N/A"}
                   </div>
-                  <div className="B2C_Partner-bookings-page-route-arrow">&rarr;</div>
+                  <div className="B2C_Partner-bookings-page-route-arrow">
+                    &rarr;
+                  </div>
                   <div className="B2C_Partner-bookings-page-route-point">
-                    <strong>To</strong> {booking.dropoffLocation || 'N/A'}
+                    <strong>To</strong> {booking.dropoffLocation || "N/A"}
                   </div>
                 </div>
 
                 <div className="B2C_Partner-bookings-page-driver-info">
-                  <p><strong>Driver</strong> {booking.driverName || "Not Assigned"}</p>
-                  <p><strong>Phone</strong> {booking.driverPhoneNumber || "N/A"}</p>
-                  <p><strong>Passenger</strong> {booking.passengerId?.name || "Passenger"}</p>
+                  <p>
+                    <strong>Driver</strong>{" "}
+                    {booking.driverName || "Not Assigned"}
+                  </p>
+                  <p>
+                    <strong>Phone</strong> {booking.driverPhoneNumber || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Passenger</strong>{" "}
+                    {booking.passengerId?.name || "Passenger"}
+                  </p>
                 </div>
 
                 <div className="B2C_Partner-bookings-page-booking-info-details">
-                  <p><strong>Seats</strong> {booking.numberOfSeats || 1}</p>
-                  <p><strong>Amount</strong> {(booking.paymentAmount || 0).toLocaleString()} KWD</p>
-                  <p><strong>Payment</strong> {booking.paymentStatus || 'N/A'} / {booking.paymentMethod || 'N/A'}</p>
-                  <p><strong>Type</strong> {booking.isMonthlyPass ? "Monthly Pass" : "Single Trip"}</p>
+                  <p>
+                    <strong>Seats</strong> {booking.numberOfSeats || 1}
+                  </p>
+                  <p>
+                    <strong>Amount</strong>{" "}
+                    {(booking.paymentAmount || 0).toLocaleString()}{" "}
+                    {booking.currency || "KWD"}
+                  </p>
+                  <p>
+                    <strong>Payment</strong> {booking.paymentStatus || "N/A"} /{" "}
+                    {booking.paymentMethod || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Type</strong>{" "}
+                    {booking.isMonthlyPass ? "Monthly Pass" : "Single Trip"}
+                  </p>
                 </div>
 
                 <div className="B2C_Partner-bookings-page-commission-info">
-                  <p><strong>Admin Commission</strong> {(booking.adminCommissionAmount || 0).toLocaleString()} KWD</p>
-                  <p><strong>Driver Earnings</strong> {(booking.driverEarnings || 0).toLocaleString()} KWD</p>
+                  <p>
+                    <strong>Admin Commission</strong>{" "}
+                    {(booking.adminCommissionAmount || 0).toLocaleString()}{" "}
+                    {booking.currency || "KWD"}
+                  </p>
+                  <p>
+                    <strong>Driver Earnings</strong>{" "}
+                    {(booking.driverEarnings || 0).toLocaleString()}{" "}
+                    {booking.currency || "KWD"}
+                  </p>
                 </div>
               </div>
 
@@ -350,37 +414,13 @@ const B2C_PartnerBookingsPage = () => {
                   </>
                 )}
 
-                {booking.bookingStatus === "ACCEPTED" && (
-                  <>
-                    {/* Show Start Trip button only if user can actually start this trip */}
-                    {(auth.user?.role === "B2C_PARTNER" && booking.isSelfDriver === true) || 
-                     (auth.user?.role === "B2C_PARTNER_DRIVER" && booking.assignedDriverId === auth.user?._id) ? (
-                      <button
-                        className="B2C_Partner-bookings-page-start-trip-btn"
-                        onClick={() => handleStartTrip(booking._id)}
-                      >
-                        Start Trip
-                      </button>
-                    ) : null}
-                    
-                    {/* Show Complete Trip button only if user can actually complete this trip */}
-                    {(auth.user?.role === "B2C_PARTNER" && booking.isSelfDriver === true) || 
-                     (auth.user?.role === "B2C_PARTNER_DRIVER" && booking.assignedDriverId === auth.user?._id) ? (
-                      <button
-                        className="B2C_Partner-bookings-page-complete-btn"
-                        onClick={() => handleComplete(booking._id)}
-                      >
-                        Mark Complete
-                      </button>
-                    ) : null}
-                  </>
-                )}
-
                 {booking.bookingStatus === "IN_PROGRESS" && (
                   <>
                     {/* Show Complete Trip button only if user can actually complete this trip */}
-                    {(auth.user?.role === "B2C_PARTNER" && booking.isSelfDriver === true) || 
-                     (auth.user?.role === "B2C_PARTNER_DRIVER" && booking.assignedDriverId === auth.user?._id) ? (
+                    {(auth.user?.role === "B2C_PARTNER" &&
+                      booking.isSelfDriver === true) ||
+                    (auth.user?.role === "B2C_PARTNER_DRIVER" &&
+                      booking.assignedDriverId === auth.user?._id) ? (
                       <button
                         className="B2C_Partner-bookings-page-complete-btn"
                         onClick={() => handleComplete(booking._id)}
@@ -393,9 +433,9 @@ const B2C_PartnerBookingsPage = () => {
               </div>
 
               {/* Daily Trips for this Booking */}
-              {(booking.bookingStatus === "ACCEPTED" || 
+              {(booking.bookingStatus === "ACCEPTED" ||
                 booking.bookingStatus === "IN_PROGRESS") && (
-                <DailyTripsInBooking 
+                <DailyTripsInBooking
                   booking={booking}
                   userRole={auth.user?.role}
                   currentUserId={auth.user?._id}
@@ -406,7 +446,10 @@ const B2C_PartnerBookingsPage = () => {
                   }}
                   onTripStart={(tripId) => {
                     // Start location sharing when driver starts trip
-                    if (auth.user?.role === "B2C_PARTNER" && booking.isSelfDriver) {
+                    if (
+                      auth.user?.role === "B2C_PARTNER" &&
+                      booking.isSelfDriver
+                    ) {
                       startLocationSharing(booking);
                     }
                   }}
@@ -431,7 +474,7 @@ const B2C_PartnerBookingsPage = () => {
           <div className="B2C_Partner-bookings-page-wallet-warning-modal">
             <div className="B2C_Partner-bookings-page-modal-header">
               <h3>Insufficient Wallet Balance</h3>
-              <button 
+              <button
                 className="B2C_Partner-bookings-page-close-btn"
                 onClick={() => setShowWalletWarning(false)}
               >
@@ -439,11 +482,29 @@ const B2C_PartnerBookingsPage = () => {
               </button>
             </div>
             <div className="B2C_Partner-bookings-page-modal-body">
-              <p>You cannot accept this CASH booking because your wallet balance is insufficient.</p>
+              <p>
+                You cannot accept this CASH booking because your wallet balance
+                is insufficient.
+              </p>
               <div className="B2C_Partner-bookings-page-balance-info">
-                <p><strong>Required Amount:</strong> {selectedBooking?.adminCommissionAmount || 0} KWD</p>
-                <p><strong>Current Balance:</strong> {walletBalance} KWD</p>
-                <p><strong>Shortfall:</strong> {Math.max(0, (selectedBooking?.adminCommissionAmount || 0) - walletBalance)} KWD</p>
+                <p>
+                  <strong>Required Amount:</strong>{" "}
+                  {selectedBooking?.adminCommissionAmount || 0}{" "}
+                  {selectedBooking?.currency || "KWD"}
+                </p>
+                <p>
+                  <strong>Current Balance:</strong> {walletBalance}{" "}
+                  {selectedBooking?.currency || "KWD"}
+                </p>
+                <p>
+                  <strong>Shortfall:</strong>{" "}
+                  {Math.max(
+                    0,
+                    (selectedBooking?.adminCommissionAmount || 0) -
+                      walletBalance,
+                  )}{" "}
+                  {selectedBooking?.currency || "KWD"}
+                </p>
               </div>
               <p>Please add funds to your wallet to accept this booking.</p>
             </div>
@@ -474,7 +535,7 @@ const B2C_PartnerBookingsPage = () => {
           <div className="B2C_Partner-bookings-page-reject-modal">
             <div className="B2C_Partner-bookings-page-modal-header">
               <h3>Reject Booking</h3>
-              <button 
+              <button
                 className="B2C_Partner-bookings-page-close-btn"
                 onClick={() => {
                   setShowRejectModal(false);
@@ -519,16 +580,35 @@ const B2C_PartnerBookingsPage = () => {
           </div>
         </div>
       )}
-    {/* Wallet Recharge Modal */}
+      {/* Wallet Recharge Modal */}
       <WalletRechargeModal
         isOpen={showRechargeModal}
         onClose={() => setShowRechargeModal(false)}
         onRechargeSuccess={() => {
           setShowRechargeModal(false);
           fetchWalletBalance(); // Refresh wallet balance after successful recharge
+          // Auto-retry booking acceptance after wallet is funded
+          if (selectedBooking) {
+            console.log(
+              "[v0] Wallet funded, retrying booking acceptance for:",
+              selectedBooking._id,
+            );
+            setTimeout(() => {
+              dispatch(acceptBooking(selectedBooking._id))
+                .then(() => {
+                  dispatch(getPartnerBookings({ status: filterStatus }));
+                  fetchWalletBalance();
+                  alert("Booking accepted successfully!");
+                })
+                .catch((error) => {
+                  console.error("[v0] Retry accept booking failed:", error);
+                  alert("Failed to accept booking. Please try again.");
+                });
+            }, 1000);
+          }
         }}
-        country="KW" // You can make this dynamic based on user's location
-        currency="KWD" // You can make this dynamic based on user's location
+        country={auth.user?.country || "UAE"}
+        currency={auth.user?.country === "UAE" ? "AED" : "KWD"}
       />
     </div>
   );

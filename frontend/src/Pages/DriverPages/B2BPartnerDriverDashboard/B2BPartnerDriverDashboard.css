@@ -213,8 +213,49 @@
 }
 
 .B2BPartner-driver-dashboard-with-tabs-passenger-list {
-  margin-top: 8px;
-}
+  margin-top: 12px;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  }
+  
+  .B2BPartner-driver-dashboard-with-tabs-passenger-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+  }
+  
+  .B2BPartner-driver-dashboard-with-tabs-passenger-list .passenger-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+  }
+  
+  .B2BPartner-driver-dashboard-with-tabs-passenger-list .passenger-name {
+  font-weight: 600;
+  color: #1f2937;
+  flex-basis: 100%;
+  }
+  
+  .B2BPartner-driver-dashboard-with-tabs-passenger-list .passenger-seat {
+  background: #667eea;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  }
+  
+  .B2BPartner-driver-dashboard-with-tabs-passenger-list .passenger-pickup,
+  .B2BPartner-driver-dashboard-with-tabs-passenger-list .passenger-dropoff {
+  color: #6b7280;
+  font-size: 12px;
+  }
 
 .B2BPartner-driver-dashboard-with-tabs-booking-actions {
   margin-top: 15px;
@@ -390,6 +431,9 @@
 }
 
 .b2b-logout-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
   background: #dc3545;
   color: white;
   border: none;

@@ -5946,3 +5946,686 @@ export const rejectVehicle = async (req, res) => {
         });
     }
 };
+
+// ==================== ADMIN WALLET MANAGEMENT APIS ====================
+
+import Notification from "../models/Notification.js";
+import { sendRealTimeNotification } from "../Services/socketService.js";
+import { createNotification } from "./notificationController.js";
+
+// Get all wallets with user details for admin
+export const getAllWallets = async (req, res) => {
+    try {
+        const { role, page = 1, limit = 20, search, sortBy = "createdAt", sortOrder = "desc", minBalance, maxBalance } = req.query;
+        const query = {};
+
+        if (role) query.role = role;
+        if (minBalance !== undefined) query.balance = { ...query.balance, $gte: Number(minBalance) };
+        if (maxBalance !== undefined) query.balance = { ...query.balance, $lte: Number(maxBalance) };
+
+        const wallets = await Wallet.find(query)
+            .populate("userId", "fullName email whatsappNumber role companyName status profileImage")
+            .sort({ [sortBy]: sortOrder === "desc" ? -1 : 1 })
+            .limit(Number.parseInt(limit))
+            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+
+        // Filter by search if provided
+        let filteredWallets = wallets;
+        if (search) {
+            const searchLower = search.toLowerCase();
+            filteredWallets = wallets.filter(wallet =>
+                wallet.userId?.fullName?.toLowerCase().includes(searchLower) ||
+                wallet.userId?.email?.toLowerCase().includes(searchLower) ||
+                wallet.userId?.companyName?.toLowerCase().includes(searchLower) ||
+                wallet.userId?.whatsappNumber?.includes(search)
+            );
+        }
+
+        const total = await Wallet.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            wallets: filteredWallets,
+            pagination: {
+                total,
+                page: Number.parseInt(page),
+                pages: Math.ceil(total / Number.parseInt(limit)),
+            },
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching all wallets:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching wallets",
+            error: error.message,
+        });
+    }
+};
+
+// Get wallet statistics for admin dashboard
+export const getWalletStats = async (req, res) => {
+    try {
+        const [
+            totalWallets,
+            totalBalance,
+            totalDeposits,
+            totalWithdrawals,
+            lowBalanceWallets,
+            activeWallets,
+            walletsByRole
+        ] = await Promise.all([
+            Wallet.countDocuments(),
+            Wallet.aggregate([{ $group: { _id: null, total: { $sum: "$balance" } } }]),
+            Wallet.aggregate([{ $group: { _id: null, total: { $sum: "$totalEarnings" } } }]),
+            Wallet.aggregate([{ $group: { _id: null, total: { $sum: "$totalWithdrawals" } } }]),
+            Wallet.countDocuments({ balance: { $lt: 50 } }), // Wallets with less than 50 balance
+            Wallet.countDocuments({ isActive: true }),
+            Wallet.aggregate([
+                { $group: { _id: "$role", count: { $sum: 1 }, totalBalance: { $sum: "$balance" } } }
+            ])
+        ]);
+
+        // Get recent wallet transactions across all wallets
+        const recentTransactions = await Wallet.aggregate([
+            { $unwind: "$transactions" },
+            { $sort: { "transactions.createdAt": -1 } },
+            { $limit: 20 },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            { $unwind: "$user" },
+            {
+                $project: {
+                    transaction: "$transactions",
+                    user: { fullName: 1, email: 1, role: 1, companyName: 1 },
+                    walletId: "$_id",
+                    balance: 1,
+                    currency: 1
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            stats: {
+                totalWallets,
+                totalBalance: totalBalance[0]?.total || 0,
+                totalDeposits: totalDeposits[0]?.total || 0,
+                totalWithdrawals: totalWithdrawals[0]?.total || 0,
+                lowBalanceWallets,
+                activeWallets,
+                walletsByRole
+            },
+            recentTransactions
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching wallet stats:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching wallet statistics",
+            error: error.message,
+        });
+    }
+};
+
+// Get single wallet details with full transaction history
+export const getWalletDetails = async (req, res) => {
+    try {
+        const { walletId } = req.params;
+
+        const wallet = await Wallet.findById(walletId)
+            .populate("userId", "fullName email whatsappNumber role companyName status profileImage country");
+
+        if (!wallet) {
+            return res.status(404).json({
+                success: false,
+                message: "Wallet not found"
+            });
+        }
+
+        // Get notifications sent to this user related to wallet
+        const walletNotifications = await Notification.find({
+            userId: wallet.userId._id,
+            type: { $in: ["WALLET_UPDATED", "WALLET_LOW_BALANCE", "WALLET_FUND_REQUIRED", "WALLET_ADMIN_ALERT", "WALLET_ACTION_REQUIRED", "WALLET_USER_RESPONSE"] }
+        }).sort({ createdAt: -1 }).limit(20);
+
+        res.status(200).json({
+            success: true,
+            wallet,
+            walletNotifications
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching wallet details:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching wallet details",
+            error: error.message,
+        });
+    }
+};
+
+// Get wallet by user ID
+export const getWalletByUserId = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const wallet = await Wallet.findOne({ userId })
+            .populate("userId", "fullName email whatsappNumber role companyName status profileImage country");
+
+        if (!wallet) {
+            return res.status(404).json({
+                success: false,
+                message: "Wallet not found for this user"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            wallet
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching wallet by user ID:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching wallet",
+            error: error.message,
+        });
+    }
+};
+
+// Send wallet notification to user (email + in-app + real-time)
+export const sendWalletNotification = async (req, res) => {
+    try {
+        const { userId, title, message, reason, actionRequired, sendEmail: shouldSendEmail = true } = req.body;
+        const adminId = req.userId;
+
+        // Get user details
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Get user's wallet
+        const wallet = await Wallet.findOne({ userId });
+
+        // Create notification
+        const notification = await createNotification({
+            userId,
+            type: "WALLET_ADMIN_ALERT",
+            title: title || "Wallet Notification from Admin",
+            message,
+            data: {
+                reason,
+                actionRequired: actionRequired || "NONE",
+                walletBalance: wallet?.balance || 0,
+                walletCurrency: wallet?.currency || "KWD",
+                sentByAdmin: adminId
+            },
+            relatedEntityType: "WALLET",
+            walletId: wallet?._id,
+            adminNotificationReason: reason,
+            actionRequired: actionRequired || "NONE",
+            userResponseStatus: "PENDING"
+        });
+
+        // Send real-time notification
+        sendRealTimeNotification(userId, {
+            _id: notification._id,
+            type: "WALLET_ADMIN_ALERT",
+            title: title || "Wallet Notification from Admin",
+            message,
+            createdAt: new Date(),
+            isRead: false,
+            data: {
+                reason,
+                actionRequired,
+                walletBalance: wallet?.balance || 0
+            }
+        });
+
+        // Send email notification if enabled
+        if (shouldSendEmail && user.email) {
+            try {
+                const { sendWalletNotificationEmail } = await import("../Services/emailService.js");
+                await sendWalletNotificationEmail(user.email, user.fullName, {
+                    title: title || "Wallet Notification from Admin",
+                    message,
+                    reason,
+                    actionRequired,
+                    walletBalance: wallet?.balance || 0,
+                    currency: wallet?.currency || "KWD"
+                });
+            } catch (emailError) {
+                console.error("[v0] Error sending wallet email:", emailError);
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Notification sent successfully",
+            notification
+        });
+    } catch (error) {
+        console.error("[v0] Error sending wallet notification:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error sending notification",
+            error: error.message,
+        });
+    }
+};
+
+// Send bulk wallet notifications
+export const sendBulkWalletNotifications = async (req, res) => {
+    try {
+        const { userIds, title, message, reason, actionRequired, sendEmail: shouldSendEmail = true } = req.body;
+        const adminId = req.userId;
+
+        const results = {
+            success: [],
+            failed: []
+        };
+
+        for (const userId of userIds) {
+            try {
+                const user = await User.findById(userId);
+                if (!user) {
+                    results.failed.push({ userId, error: "User not found" });
+                    continue;
+                }
+
+                const wallet = await Wallet.findOne({ userId });
+
+                // Create notification
+                const notification = await createNotification({
+                    userId,
+                    type: "WALLET_ADMIN_ALERT",
+                    title: title || "Wallet Notification from Admin",
+                    message,
+                    data: {
+                        reason,
+                        actionRequired: actionRequired || "NONE",
+                        walletBalance: wallet?.balance || 0,
+                        walletCurrency: wallet?.currency || "KWD",
+                        sentByAdmin: adminId
+                    },
+                    relatedEntityType: "WALLET",
+                    walletId: wallet?._id,
+                    adminNotificationReason: reason,
+                    actionRequired: actionRequired || "NONE",
+                    userResponseStatus: "PENDING"
+                });
+
+                // Send real-time notification
+                sendRealTimeNotification(userId, {
+                    _id: notification._id,
+                    type: "WALLET_ADMIN_ALERT",
+                    title: title || "Wallet Notification from Admin",
+                    message,
+                    createdAt: new Date(),
+                    isRead: false
+                });
+
+                // Send email if enabled
+                if (shouldSendEmail && user.email) {
+                    try {
+                        const { sendWalletNotificationEmail } = await import("../Services/emailService.js");
+                        await sendWalletNotificationEmail(user.email, user.fullName, {
+                            title,
+                            message,
+                            reason,
+                            actionRequired,
+                            walletBalance: wallet?.balance || 0,
+                            currency: wallet?.currency || "KWD"
+                        });
+                    } catch (emailError) {
+                        console.error("[v0] Error sending wallet email to user:", userId, emailError);
+                    }
+                }
+
+                results.success.push({ userId, userName: user.fullName });
+            } catch (err) {
+                results.failed.push({ userId, error: err.message });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Notifications sent: ${results.success.length} successful, ${results.failed.length} failed`,
+            results
+        });
+    } catch (error) {
+        console.error("[v0] Error sending bulk wallet notifications:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error sending bulk notifications",
+            error: error.message,
+        });
+    }
+};
+
+// Get low balance wallets (wallets that need attention)
+export const getLowBalanceWallets = async (req, res) => {
+    try {
+        const { threshold = 50, role, page = 1, limit = 20 } = req.query;
+        const query = {
+            balance: { $lt: Number(threshold) }
+        };
+
+        if (role) query.role = role;
+
+        const wallets = await Wallet.find(query)
+            .populate("userId", "fullName email whatsappNumber role companyName status")
+            .sort({ balance: 1 })
+            .limit(Number.parseInt(limit))
+            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+
+        const total = await Wallet.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            wallets,
+            pagination: {
+                total,
+                page: Number.parseInt(page),
+                pages: Math.ceil(total / Number.parseInt(limit)),
+            },
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching low balance wallets:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching low balance wallets",
+            error: error.message,
+        });
+    }
+};
+
+// Get wallet activity feed (real-time updates for admin)
+export const getWalletActivityFeed = async (req, res) => {
+    try {
+        const { page = 1, limit = 50, type, startDate, endDate } = req.query;
+
+        let matchConditions = {};
+
+        if (type) {
+            matchConditions["transactions.type"] = type;
+        }
+
+        if (startDate || endDate) {
+            matchConditions["transactions.createdAt"] = {};
+            if (startDate) matchConditions["transactions.createdAt"].$gte = new Date(startDate);
+            if (endDate) matchConditions["transactions.createdAt"].$lte = new Date(endDate);
+        }
+
+        const activities = await Wallet.aggregate([
+            { $unwind: "$transactions" },
+            ...(Object.keys(matchConditions).length > 0 ? [{ $match: matchConditions }] : []),
+            { $sort: { "transactions.createdAt": -1 } },
+            { $skip: (Number.parseInt(page) - 1) * Number.parseInt(limit) },
+            { $limit: Number.parseInt(limit) },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            { $unwind: "$user" },
+            {
+                $project: {
+                    _id: "$transactions._id",
+                    walletId: "$_id",
+                    userId: "$userId",
+                    userName: "$user.fullName",
+                    userEmail: "$user.email",
+                    userRole: "$user.role",
+                    companyName: "$user.companyName",
+                    transactionType: "$transactions.type",
+                    amount: "$transactions.amount",
+                    description: "$transactions.description",
+                    status: "$transactions.status",
+                    createdAt: "$transactions.createdAt",
+                    balance: 1,
+                    currency: 1
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            activities,
+            pagination: {
+                page: Number.parseInt(page),
+                limit: Number.parseInt(limit)
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching wallet activity feed:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching wallet activity feed",
+            error: error.message,
+        });
+    }
+};
+
+// Mark notification as responded by user (called when user takes action)
+export const markWalletNotificationResponded = async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+        const { responseType } = req.body;
+        const userId = req.userId;
+
+        const notification = await Notification.findByIdAndUpdate(
+            notificationId,
+            {
+                userResponseStatus: "COMPLETED",
+                userResponseAt: new Date()
+            },
+            { new: true }
+        );
+
+        if (!notification) {
+            return res.status(404).json({
+                success: false,
+                message: "Notification not found"
+            });
+        }
+
+        // Notify admin about user response
+        const admins = await User.find({ role: "ADMIN" });
+        const user = await User.findById(userId);
+        const wallet = await Wallet.findOne({ userId });
+
+        for (const admin of admins) {
+            await createNotification({
+                userId: admin._id,
+                type: "WALLET_USER_RESPONSE",
+                title: "User Responded to Wallet Alert",
+                message: `${user?.fullName || "User"} has responded to wallet notification: ${responseType}`,
+                data: {
+                    originalNotificationId: notificationId,
+                    responseType,
+                    userId,
+                    userName: user?.fullName,
+                    walletBalance: wallet?.balance || 0
+                },
+                relatedEntityType: "WALLET"
+            });
+
+            sendRealTimeNotification(admin._id, {
+                type: "WALLET_USER_RESPONSE",
+                title: "User Responded to Wallet Alert",
+                message: `${user?.fullName || "User"} has ${responseType}`,
+                createdAt: new Date(),
+                isRead: false
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Response recorded successfully",
+            notification
+        });
+    } catch (error) {
+        console.error("[v0] Error marking notification as responded:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error recording response",
+            error: error.message,
+        });
+    }
+};
+
+// Subscribe to real-time wallet updates (for WebSocket setup)
+export const getWalletUpdatesSubscription = async (req, res) => {
+    try {
+        // This endpoint provides info for socket subscription
+        res.status(200).json({
+            success: true,
+            subscriptionTopic: "admin-wallet-updates",
+            events: [
+                "wallet-fund-added",
+                "wallet-withdrawal",
+                "wallet-transfer",
+                "wallet-low-balance",
+                "wallet-user-response"
+            ]
+        });
+    } catch (error) {
+        console.error("[v0] Error getting wallet subscription info:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error getting subscription info",
+            error: error.message,
+        });
+    }
+};
+
+// Admin adjust wallet balance (for corrections/refunds)
+export const adjustWalletBalance = async (req, res) => {
+    try {
+        const { walletId } = req.params;
+        const { amount, type, reason } = req.body;
+        const adminId = req.userId;
+
+        const wallet = await Wallet.findById(walletId).populate("userId", "fullName email");
+        if (!wallet) {
+            return res.status(404).json({
+                success: false,
+                message: "Wallet not found"
+            });
+        }
+
+        const adjustmentAmount = type === "CREDIT" ? Math.abs(amount) : -Math.abs(amount);
+
+        // Check if debit would result in negative balance
+        if (type === "DEBIT" && wallet.balance < Math.abs(amount)) {
+            return res.status(400).json({
+                success: false,
+                message: "Insufficient balance for debit adjustment"
+            });
+        }
+
+        // Add transaction record
+        const transaction = {
+            type: type === "CREDIT" ? "DEPOSIT" : "WITHDRAWAL",
+            amount: adjustmentAmount,
+            description: `Admin adjustment: ${reason}`,
+            status: "COMPLETED",
+            createdAt: new Date()
+        };
+
+        wallet.transactions.push(transaction);
+        wallet.balance += adjustmentAmount;
+        await wallet.save();
+
+        // Notify user
+        await createNotification({
+            userId: wallet.userId._id,
+            type: "WALLET_UPDATED",
+            title: "Wallet Balance Adjusted",
+            message: `Your wallet balance has been ${type === "CREDIT" ? "credited" : "debited"} by ${Math.abs(amount)} ${wallet.currency}. Reason: ${reason}`,
+            data: {
+                adjustmentType: type,
+                amount: Math.abs(amount),
+                reason,
+                newBalance: wallet.balance,
+                adjustedBy: adminId
+            },
+            relatedEntityType: "WALLET"
+        });
+
+        sendRealTimeNotification(wallet.userId._id, {
+            type: "WALLET_UPDATED",
+            title: "Wallet Balance Adjusted",
+            message: `Your wallet has been ${type === "CREDIT" ? "credited" : "debited"} by ${Math.abs(amount)} ${wallet.currency}`,
+            createdAt: new Date(),
+            isRead: false,
+            data: { newBalance: wallet.balance }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: `Wallet ${type === "CREDIT" ? "credited" : "debited"} successfully`,
+            wallet,
+            transaction
+        });
+    } catch (error) {
+        console.error("[v0] Error adjusting wallet balance:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error adjusting wallet balance",
+            error: error.message,
+        });
+    }
+};
+
+// Get users with pending wallet notifications
+export const getPendingWalletNotifications = async (req, res) => {
+    try {
+        const { page = 1, limit = 20 } = req.query;
+
+        const notifications = await Notification.find({
+            type: { $in: ["WALLET_ADMIN_ALERT", "WALLET_ACTION_REQUIRED", "WALLET_FUND_REQUIRED"] },
+            userResponseStatus: "PENDING"
+        })
+            .populate("userId", "fullName email whatsappNumber role companyName")
+            .populate("walletId", "balance currency")
+            .sort({ createdAt: -1 })
+            .limit(Number.parseInt(limit))
+            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+
+        const total = await Notification.countDocuments({
+            type: { $in: ["WALLET_ADMIN_ALERT", "WALLET_ACTION_REQUIRED", "WALLET_FUND_REQUIRED"] },
+            userResponseStatus: "PENDING"
+        });
+
+        res.status(200).json({
+            success: true,
+            notifications,
+            pagination: {
+                total,
+                page: Number.parseInt(page),
+                pages: Math.ceil(total / Number.parseInt(limit)),
+            },
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching pending wallet notifications:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching pending notifications",
+            error: error.message,
+        });
+    }
+};

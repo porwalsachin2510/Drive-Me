@@ -6,7 +6,6 @@ import Route from "../models/Route.js"
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js"
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js"
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js"
-import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js"
 import Wallet from "../models/Wallet.js"
 import Notification from "../models/Notification.js"
 import Transaction from "../models/Transaction.js"
@@ -391,6 +390,7 @@ export const createB2CBooking = async (req, res) => {
 
             // Payment details
             paymentAmount,
+            currency: b2cRoute.pricing?.currency || "KWD",
             paymentMethod,
             bookingStatus: "PENDING",
 
@@ -433,7 +433,7 @@ export const createB2CBooking = async (req, res) => {
                     countryCode: "971",
                     phone: passenger.whatsappNumber || passenger.phone || "",
                 },
-                redirectUrl: `${process.env.FRONTEND_URL}/booking/success?booking_id=${booking._id}`,
+                redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/booking/success?booking_id=${booking._id}`,
                 webhookUrl: `${process.env.BACKEND_URL}/api/bookings/tap-webhook`,
                 metadata: {
                     bookingId: booking._id.toString(),
@@ -1459,124 +1459,14 @@ export const getPassengerBookings = async (req, res) => {
             if (status) query.bookingStatus = status
 
             const b2cBookings = await B2CPassengerBooking.find(query)
-                .populate("b2cPartnerId", "fullName companyLogo whatsappNumber driverName vehicleModel vehiclePlate profileImage")
-                .populate("routeId", "fromLocation toLocation assignedVehicle assignedDriver")
+                .populate("b2cPartnerId", "fullName companyLogo whatsappNumber driverName vehicleModel vehiclePlate")
                 .sort({ createdAt: -1 })
 
-            // Collect all vehicle IDs from routes for batch lookup
-            const vehicleIds = b2cBookings
-                .map(b => b.routeId?.assignedVehicle)
-                .filter(Boolean)
-
-            // Also collect partner IDs for fallback vehicle lookup
-            const partnerIds = [...new Set(b2cBookings.map(b =>
-                b.b2cPartnerId?._id?.toString() || b.b2cPartnerId?.toString()
-            ).filter(Boolean))]
-
-            // Fetch all vehicles in batch
-            const [routeVehicles, partnerVehicles] = await Promise.all([
-                B2CPartnerVehicle.find({ _id: { $in: vehicleIds } }),
-                B2CPartnerVehicle.find({ b2cPartnerId: { $in: partnerIds }, isActive: true })
-            ])
-
-            // Create lookup maps
-            const vehicleById = {}
-            routeVehicles.forEach(v => {
-                vehicleById[v._id.toString()] = v
-            })
-
-            const vehicleByPartner = {}
-            partnerVehicles.forEach(v => {
-                const pid = v.b2cPartnerId.toString()
-                if (!vehicleByPartner[pid]) {
-                    vehicleByPartner[pid] = v
-                }
-            })
-
-            // Also fetch driver info for non-self-driver bookings
-            const driverIds = b2cBookings
-                .filter(b => !b.isSelfDriver && b.assignedDriverId)
-                .map(b => b.assignedDriverId)
-
-            const drivers = await B2CPartnerDriver.find({ _id: { $in: driverIds } })
-            const driverById = {}
-            drivers.forEach(d => {
-                driverById[d._id.toString()] = d
-            })
-
-            bookings = b2cBookings.map((b) => {
-                const bookingObj = b.toObject()
-                const partnerId = bookingObj.b2cPartnerId?._id?.toString() || bookingObj.b2cPartnerId?.toString()
-                const routeVehicleId = bookingObj.routeId?.assignedVehicle?.toString()
-
-                // Get vehicle info - first from route, then from partner
-                let vehicleInfo = null
-                if (routeVehicleId && vehicleById[routeVehicleId]) {
-                    const vehicle = vehicleById[routeVehicleId]
-                    vehicleInfo = {
-                        model: vehicle.model,
-                        licensePlate: vehicle.licensePlate,
-                        vehicleType: vehicle.vehicleType,
-                        vehicleColor: vehicle.vehicleColor,
-                        seatingCapacity: vehicle.seatingCapacity,
-                        image: vehicle.images?.[0]?.url
-                    }
-                    // Also set flat fields for backward compatibility
-                    bookingObj.vehicleModel = vehicle.model
-                    bookingObj.vehiclePlate = vehicle.licensePlate
-                    bookingObj.vehicleType = vehicle.vehicleType
-                    bookingObj.vehicleColor = vehicle.vehicleColor
-                } else if (partnerId && vehicleByPartner[partnerId]) {
-                    const vehicle = vehicleByPartner[partnerId]
-                    vehicleInfo = {
-                        model: vehicle.model,
-                        licensePlate: vehicle.licensePlate,
-                        vehicleType: vehicle.vehicleType,
-                        vehicleColor: vehicle.vehicleColor,
-                        seatingCapacity: vehicle.seatingCapacity,
-                        image: vehicle.images?.[0]?.url
-                    }
-                    bookingObj.vehicleModel = vehicle.model
-                    bookingObj.vehiclePlate = vehicle.licensePlate
-                    bookingObj.vehicleType = vehicle.vehicleType
-                    bookingObj.vehicleColor = vehicle.vehicleColor
-                }
-
-                // Get driver info - handle both self-driver and assigned driver cases
-                let driverInfo = null
-                if (bookingObj.isSelfDriver && bookingObj.b2cPartnerId) {
-                    // Partner is driving
-                    driverInfo = {
-                        name: bookingObj.driverName || bookingObj.b2cPartnerId.fullName || "Self",
-                        phone: bookingObj.driverPhoneNumber || bookingObj.b2cPartnerId.whatsappNumber,
-                        image: bookingObj.driverImage || bookingObj.b2cPartnerId.profileImage,
-                        isSelfDriver: true
-                    }
-                } else if (bookingObj.assignedDriverId) {
-                    // Assigned driver
-                    const driverId = bookingObj.assignedDriverId?.toString()
-                    const driver = driverById[driverId]
-                    if (driver) {
-                        driverInfo = {
-                            name: driver.name,
-                            phone: driver.phoneNumber,
-                            image: driver.driverImage?.url,
-                            isSelfDriver: false
-                        }
-                        bookingObj.driverName = driver.name
-                        bookingObj.driverPhoneNumber = driver.phoneNumber
-                        bookingObj.driverImage = driver.driverImage?.url
-                    }
-                }
-
-                return {
-                    ...bookingObj,
-                    vehicleInfo,
-                    driverInfo,
-                    type: "B2C",
-                    userType: "NORMAL_PASSENGER",
-                }
-            })
+            bookings = b2cBookings.map((b) => ({
+                ...b.toObject(),
+                type: "B2C",
+                userType: "NORMAL_PASSENGER",
+            }))
         }
 
         return res.status(200).json({
@@ -1593,6 +1483,7 @@ export const getPassengerBookings = async (req, res) => {
         })
     }
 }
+
 
 // Get partner bookings
 export const getPartnerBookings = async (req, res) => {
@@ -1663,71 +1554,78 @@ export const getCorporateOwnerBookings = async (req, res) => {
         const bookings = []
 
         for (const trip of trips) {
-            // Resolve driver name from Driver model or User model
-            let driverName = trip.driverId?.name || "Unknown"
-            let driverInfo = trip.driverId
+            try {
+                // Resolve driver name from Driver model or User model
+                let driverName = trip.driverId?.name || "Unknown"
+                let driverInfo = trip.driverId
 
-            // If driverId populated from Driver model, also try to find the user account
-            if (trip.driverId && !trip.driverId.fullName) {
-                const driverUserAccount = await User.findOne({
-                    driverId: trip.driverId._id,
-                    role: { $in: ["B2B_PARTNER_DRIVER", "CORPORATE_DRIVER"] }
-                }).select("fullName whatsappNumber email")
-                if (driverUserAccount) {
-                    driverName = driverUserAccount.fullName
-                    driverInfo = {
-                        _id: trip.driverId._id,
-                        name: driverUserAccount.fullName,
-                        email: driverUserAccount.email,
-                        phone: driverUserAccount.whatsappNumber,
+                // If driverId populated from Driver model, also try to find the user account
+                if (trip.driverId && typeof trip.driverId === 'object' && !trip.driverId.fullName) {
+                    const driverUserAccount = await User.findOne({
+                        driverId: trip.driverId._id,
+                        role: { $in: ["B2B_PARTNER_DRIVER", "CORPORATE_DRIVER"] }
+                    }).select("fullName whatsappNumber email")
+                    if (driverUserAccount) {
+                        driverName = driverUserAccount.fullName
+                        driverInfo = {
+                            _id: trip.driverId._id,
+                            name: driverUserAccount.fullName,
+                            email: driverUserAccount.email,
+                            phone: driverUserAccount.whatsappNumber,
+                        }
                     }
                 }
-            }
 
-            for (const passenger of trip.passengers) {
-                // Filter by status if provided
-                if (status && passenger.bookingStatus !== status) {
-                    continue
+                for (const passenger of (trip.passengers || [])) {
+                    // Filter by status if provided
+                    if (status && passenger.bookingStatus !== status) {
+                        continue
+                    }
+
+                    bookings.push({
+                        _id: passenger._id,
+                        tripId: trip._id,
+                        passengerId: passenger.employeeId,
+                        employee: passenger.employeeId,
+                        employeeName: passenger.employeeId?.fullName || passenger.name || "Unknown",
+                        employeeEmail: passenger.employeeId?.email,
+                        employeePhone: passenger.employeeId?.whatsappNumber,
+                        seatNumber: passenger.seatNumber || 1,
+                        pickupPoint: passenger.pickupStop || passenger.pickupPoint || trip.fromLocation,
+                        pickupStop: passenger.pickupStop || passenger.pickupPoint || trip.fromLocation,
+                        dropoffStop: passenger.dropoffStop || trip.toLocation,
+                        pickupTime: passenger.pickupTime || trip.startTime,
+                        bookingStatus: passenger.bookingStatus,
+                        bookedAt: passenger.bookedAt,
+                        travelDate: trip.tripDate,
+                        tripDate: trip.tripDate,
+                        startTime: trip.startTime,
+                        endTime: trip.endTime,
+                        tripType: trip.tripType,
+                        direction: trip.direction,
+                        fromLocation: trip.fromLocation,
+                        toLocation: trip.toLocation,
+                        status: trip.status,
+                        tripStatus: trip.status,
+                        numberOfSeats: 1,
+                        route: trip.routeId,
+                        routeId: trip.routeId,
+                        driver: driverInfo,
+                        driverId: trip.driverId,
+                        driverName: driverName,
+                        vehicle: trip.vehicleId,
+                        vehicleId: trip.vehicleId,
+                        vehicleModel: trip.vehicleId?.model || trip.vehicleId?.vehicleName,
+                        vehiclePlate: trip.vehicleId?.licensePlate || trip.vehicleId?.registrationNumber,
+                        contract: trip.contractId,
+                        contractId: trip.contractId,
+                        currentLocation: trip.currentLocation,
+                        driverLocation: trip.driverLocation,
+                    })
                 }
-
-                bookings.push({
-                    _id: passenger._id,
-                    tripId: trip._id,
-                    passengerId: passenger.employeeId,
-                    employee: passenger.employeeId,
-                    employeeName: passenger.employeeId?.fullName || "Unknown",
-                    employeeEmail: passenger.employeeId?.email,
-                    employeePhone: passenger.employeeId?.whatsappNumber,
-                    seatNumber: passenger.seatNumber,
-                    pickupPoint: passenger.pickupPoint,
-                    pickupTime: passenger.pickupTime,
-                    bookingStatus: passenger.bookingStatus,
-                    bookedAt: passenger.bookedAt,
-                    travelDate: trip.tripDate,
-                    tripDate: trip.tripDate,
-                    startTime: trip.startTime,
-                    endTime: trip.endTime,
-                    tripType: trip.tripType,
-                    direction: trip.direction,
-                    fromLocation: trip.fromLocation,
-                    toLocation: trip.toLocation,
-                    status: trip.status,
-                    tripStatus: trip.status,
-                    numberOfSeats: 1,
-                    route: trip.routeId,
-                    routeId: trip.routeId,
-                    driver: driverInfo,
-                    driverId: trip.driverId,
-                    driverName: driverName,
-                    vehicle: trip.vehicleId,
-                    vehicleId: trip.vehicleId,
-                    vehicleModel: trip.vehicleId?.model || trip.vehicleId?.vehicleName,
-                    vehiclePlate: trip.vehicleId?.licensePlate || trip.vehicleId?.registrationNumber,
-                    contract: trip.contractId,
-                    contractId: trip.contractId,
-                    currentLocation: trip.currentLocation,
-                    driverLocation: trip.driverLocation,
-                })
+            } catch (tripError) {
+                console.error("[v0] Error processing trip:", trip._id, tripError?.message)
+                // Continue with next trip instead of failing entire request
             }
         }
 
@@ -1739,10 +1637,11 @@ export const getCorporateOwnerBookings = async (req, res) => {
             totalBookings: bookings.length,
         })
     } catch (error) {
-        console.error("[v0] Error fetching corporate owner bookings:", error)
+        console.error("[v0] Error fetching corporate owner bookings:", error?.message, error?.stack)
         return res.status(500).json({
             success: false,
-            message: "Server error",
+            message: "Error fetching bookings",
+            error: error?.message || "Unknown error"
         })
     }
 }
@@ -2018,14 +1917,16 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
             .populate("corporateId", "companyName fullName")
             .populate("b2bPartnerId", "companyName fullName")
             .populate("passengers.employeeId", "fullName email whatsappNumber")
+            .populate("passengers.passengerId", "fullName email whatsappNumber")
             .sort({ tripDate: 1 })
+            .lean() // Use lean for better performance and simpler objects
 
-        console.log("[v0] Found trips:", trips.length)
+        console.log("[v0] Found trips:", (trips || []).length)
 
         // Transform trips into booking format for frontend compatibility
-        const bookings = trips.map(trip => {
-            // Get passengers with CONFIRMED status
-            const confirmedPassengers = trip.passengers.filter(p =>
+        const bookings = (trips || []).map(trip => {
+            // Get passengers with CONFIRMED status - safely handle undefined passengers
+            const confirmedPassengers = (trip.passengers || []).filter(p =>
                 status ? p.bookingStatus === status : true
             )
 
@@ -2062,10 +1963,10 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
 
         // Filter out trips with no passengers if status filter is applied
         const filteredBookings = status
-            ? bookings.filter(b => b.passengerCount > 0)
-            : bookings
+            ? (bookings || []).filter(b => b && b.passengerCount > 0)
+            : (bookings || [])
 
-        console.log("[v0] Returning bookings:", filteredBookings.length)
+        console.log("[v0] Returning bookings:", (filteredBookings || []).length)
 
         res.status(200).json({
             success: true,
@@ -2384,16 +2285,16 @@ export const getCorporateDriverBookings = async (req, res) => {
             query.status = status
         }
 
-        // Only show today's trips for daily driver view
+        // Show trips from today onwards (not just today - driver may want to see upcoming trips too)
         const todayStart = new Date()
         todayStart.setHours(0, 0, 0, 0)
-        const todayEnd = new Date(todayStart)
-        todayEnd.setDate(todayEnd.getDate() + 1)
 
+        // Include trips from today onwards or any in progress
         const dateFilter = {
             $or: [
-                { tripDate: { $gte: todayStart, $lt: todayEnd } },
-                { status: 'IN_PROGRESS' }
+                { tripDate: { $gte: todayStart } }, // Today and future trips
+                { status: 'IN_PROGRESS' },
+                { status: 'SCHEDULED' }
             ]
         }
         const finalQuery = { $and: [baseFilter, dateFilter] }
@@ -2408,6 +2309,7 @@ export const getCorporateDriverBookings = async (req, res) => {
             .populate("corporateId", "companyName fullName")
             .populate("b2bPartnerId", "companyName fullName")
             .populate("passengers.employeeId", "fullName email whatsappNumber")
+            .populate("passengers.passengerId", "fullName email whatsappNumber")
             .sort({ tripDate: 1 })
 
         console.log("[v0] Found corporate driver trips for today:", trips.length)
@@ -2489,7 +2391,8 @@ export const startCorporateTrip = async (req, res) => {
 
         if (trip) {
             const tripDriverId = trip.driverId?.toString()
-            if (tripDriverId !== driverId && tripDriverId !== actualDriverId) {
+            // Allow if no driver assigned yet, or if driver matches
+            if (tripDriverId && tripDriverId !== driverId && tripDriverId !== actualDriverId) {
                 return res.status(403).json({
                     success: false,
                     message: "Unauthorized: This trip does not belong to you",
@@ -2502,31 +2405,40 @@ export const startCorporateTrip = async (req, res) => {
                 timestamp: new Date(),
                 description: "Trip started by driver",
             })
+            // Assign driver if not yet assigned
+            if (!trip.driverId) {
+                trip.driverId = driverId;
+            }
             await trip.save()
 
             // Notify all passengers
             for (const passenger of trip.passengers) {
-                if (passenger.bookingStatus === "CONFIRMED") {
-                    const tripStartNotification = await createNotification({
-                        userId: passenger.employeeId._id || passenger.employeeId,
-                        type: "TRIP_STARTED",
-                        title: "Trip Started",
-                        message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has started`,
-                        relatedUserId: driverId,
-                        bookingId: trip._id,
-                    })
+                if (passenger.bookingStatus === "CONFIRMED" || passenger.status === "Confirmed") {
+                    // Get the correct user ID - could be passengerId or employeeId
+                    const passengerUserId = passenger.passengerId?._id || passenger.passengerId || passenger.employeeId?._id || passenger.employeeId;
 
-                    await sendRealTimeNotification(passenger.employeeId._id || passenger.employeeId, {
-                        type: "TRIP_STARTED",
-                        title: tripStartNotification.title,
-                        message: tripStartNotification.message,
-                        data: {
-                            tripId: trip._id,
-                            driverId,
-                            status: "IN_PROGRESS",
-                            notification: tripStartNotification
-                        }
-                    })
+                    if (passengerUserId) {
+                        const tripStartNotification = await createNotification({
+                            userId: passengerUserId,
+                            type: "TRIP_STARTED",
+                            title: "Trip Started",
+                            message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has started. Driver is on the way.`,
+                            relatedUserId: driverId,
+                            bookingId: trip._id,
+                        })
+
+                        await sendRealTimeNotification(passengerUserId, {
+                            type: "TRIP_STARTED",
+                            title: tripStartNotification.title,
+                            message: tripStartNotification.message,
+                            data: {
+                                tripId: trip._id,
+                                driverId,
+                                status: "IN_PROGRESS",
+                                notification: tripStartNotification
+                            }
+                        })
+                    }
                 }
             }
 
@@ -2616,10 +2528,12 @@ export const completeCorporateBooking = async (req, res) => {
         // Try to find in Trip model first
         let trip = await Trip.findById(bookingId)
             .populate("passengers.employeeId", "fullName email whatsappNumber")
+            .populate("passengers.passengerId", "fullName email whatsappNumber")
 
         if (trip) {
             const tripDriverId = trip.driverId?.toString()
-            if (tripDriverId !== driverId && tripDriverId !== actualDriverId) {
+            // Allow if no driver assigned, or if driver matches
+            if (tripDriverId && tripDriverId !== driverId && tripDriverId !== actualDriverId) {
                 return res.status(403).json({
                     success: false,
                     message: "Unauthorized: This trip does not belong to you",
@@ -2636,27 +2550,32 @@ export const completeCorporateBooking = async (req, res) => {
 
             // Notify all passengers
             for (const passenger of trip.passengers) {
-                if (passenger.bookingStatus === "CONFIRMED") {
-                    const tripCompleteNotification = await createNotification({
-                        userId: passenger.employeeId._id || passenger.employeeId,
-                        type: "RIDE_COMPLETED",
-                        title: "Trip Completed",
-                        message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has been completed`,
-                        relatedUserId: driverId,
-                        bookingId: trip._id,
-                    })
+                if (passenger.bookingStatus === "CONFIRMED" || passenger.status === "Confirmed") {
+                    // Get the correct user ID - could be passengerId or employeeId
+                    const passengerUserId = passenger.passengerId?._id || passenger.passengerId || passenger.employeeId?._id || passenger.employeeId;
 
-                    await sendRealTimeNotification(passenger.employeeId._id || passenger.employeeId, {
-                        type: "RIDE_COMPLETED",
-                        title: tripCompleteNotification.title,
-                        message: tripCompleteNotification.message,
-                        data: {
-                            tripId: trip._id,
-                            driverId,
-                            status: "COMPLETED",
-                            notification: tripCompleteNotification
-                        }
-                    })
+                    if (passengerUserId) {
+                        const tripCompleteNotification = await createNotification({
+                            userId: passengerUserId,
+                            type: "RIDE_COMPLETED",
+                            title: "Trip Completed",
+                            message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has been completed. Thank you for traveling with us!`,
+                            relatedUserId: driverId,
+                            bookingId: trip._id,
+                        })
+
+                        await sendRealTimeNotification(passengerUserId, {
+                            type: "RIDE_COMPLETED",
+                            title: tripCompleteNotification.title,
+                            message: tripCompleteNotification.message,
+                            data: {
+                                tripId: trip._id,
+                                driverId,
+                                status: "COMPLETED",
+                                notification: tripCompleteNotification
+                            }
+                        })
+                    }
                 }
             }
 

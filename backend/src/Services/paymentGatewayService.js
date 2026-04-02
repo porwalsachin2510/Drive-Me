@@ -131,6 +131,17 @@ class PaymentGatewayService {
         try {
             console.log("[v0] Creating Tap payment charge")
 
+            // Get correct country code based on currency
+            const countryCodeMap = {
+                "AED": "+971", // UAE
+                "KWD": "+965", // Kuwait
+                "SAR": "+966", // Saudi Arabia
+                "BHD": "+973", // Bahrain
+                "OMR": "+968", // Oman
+                "QAR": "+974"  // Qatar
+            }
+            const countryCode = countryCodeMap[data.currency] || "+971"
+
             const charge = await tapPayments.createCharge({
                 amount: data.amount,
                 currency: data.currency,
@@ -138,8 +149,8 @@ class PaymentGatewayService {
                     firstName: data.customer.name.split(" ")[0] || "Customer",
                     lastName: data.customer.name.split(" ")[1] || "Name",
                     email: data.customer.email,
-                    countryCode: "+965", // Kuwait code, adjust based on actual user
-                    phone: data.customer.phone || "50000000",
+                    countryCode: countryCode,
+                    phone: data.customer.phone || "5000000000",
                 },
                 redirectUrl: data.redirectUrl,
                 webhookUrl: data.webhookUrl,
