@@ -512,6 +512,69 @@ export const stripeWebhook = async (req, res) => {
         if (event.type === "checkout.session.completed") {
             const session = event.data.object
 
+            console.log("[v0] Stripe session metadata:", session.metadata)
+
+            // Check if this is a wallet top-up payment
+            if (session.metadata?.type === "WALLET_TOPUP") {
+                console.log("[v0] Processing wallet top-up from Stripe webhook")
+                const userId = session.metadata?.userId
+                const reference = session.metadata?.reference
+
+                if (userId) {
+                    // Find user's wallet
+                    let wallet = await Wallet.findOne({ userId })
+
+                    if (!wallet) {
+                        // Create wallet if doesn't exist
+                        const User = (await import("../models/User.js")).default
+                        const user = await User.findById(userId)
+                        wallet = await Wallet.create({
+                            userId,
+                            role: user?.role || "COMMUTER",
+                            balance: 0,
+                            currency: session.currency?.toUpperCase() || "AED",
+                        })
+                    }
+
+                    // Check if this payment was already processed (by reference or session ID)
+                    const existingTransaction = wallet.transactions?.find(
+                        t => t.paymentSessionId === session.id || t.reference === reference
+                    )
+
+                    if (!existingTransaction) {
+                        const amountToAdd = session.amount_total / 100 // Convert from cents
+
+                        // Add transaction to wallet
+                        const transaction = {
+                            type: "DEPOSIT",
+                            amount: amountToAdd,
+                            description: `Funds added via Stripe (webhook)`,
+                            paymentMethod: "card",
+                            status: "COMPLETED",
+                            paymentSessionId: session.id,
+                            gatewayTransactionId: session.payment_intent,
+                            reference: reference,
+                            createdAt: new Date()
+                        }
+
+                        wallet.transactions.push(transaction)
+                        wallet.balance += amountToAdd
+                        await wallet.save()
+
+                        console.log("[v0] Wallet top-up processed from Stripe webhook:", {
+                            userId,
+                            amountAdded: amountToAdd,
+                            newBalance: wallet.balance
+                        })
+                    } else {
+                        console.log("[v0] Wallet top-up already processed, skipping")
+                    }
+                }
+
+                return res.json({ received: true })
+            }
+
+            // Handle contract payment
             const payment = await Payment.findOne({ gatewaySessionId: session.id })
 
             if (payment && payment.status !== "COMPLETED") {

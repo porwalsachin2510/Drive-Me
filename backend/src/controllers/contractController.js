@@ -1991,6 +1991,134 @@ export const respondToDueDateExtension = async (req, res) => {
     }
 }
 
+// @desc    Update/Change driver assigned by Corporate on contract vehicle
+// @route   PUT /api/contracts/update-corporate-driver/:contractId/:assignedVehicleId
+// @access  Private (CORPORATE only)
+export const updateCorporateDriver = async (req, res) => {
+    try {
+        const corporateId = req.userId
+        const { contractId, assignedVehicleId } = req.params
+        const { newDriverId } = req.body
+
+        if (!newDriverId) {
+            return res.status(400).json({
+                success: false,
+                message: "New driver ID is required"
+            })
+        }
+
+        // Verify contract belongs to corporate
+        const contract = await Contract.findOne({
+            _id: contractId,
+            corporateOwnerId: corporateId
+        })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found or access denied"
+            })
+        }
+
+        // Verify new driver belongs to corporate
+        const CorporateDriver = (await import("../models/CorporateDriver.js")).default
+        const newDriver = await CorporateDriver.findOne({
+            _id: newDriverId,
+            corporateOwnerId: corporateId
+        })
+
+        if (!newDriver) {
+            return res.status(404).json({
+                success: false,
+                message: "New driver not found or doesn't belong to your organization"
+            })
+        }
+
+        // Find the assigned vehicle and verify driver was assigned by CORPORATE
+        let oldDriverId = null
+        let foundVehicle = false
+        for (const vehicleGroup of contract.vehicles) {
+            const assignedVehicle = vehicleGroup.assignedVehicles.find(
+                v => v._id.toString() === assignedVehicleId
+            )
+            if (assignedVehicle) {
+                if (assignedVehicle.driverAssignedBy !== "CORPORATE") {
+                    return res.status(400).json({
+                        success: false,
+                        message: "You can only change drivers that were assigned by your organization"
+                    })
+                }
+                oldDriverId = assignedVehicle.driverId
+                assignedVehicle.driverId = newDriverId
+                assignedVehicle.driverModel = "CorporateDriver"
+                foundVehicle = true
+                break
+            }
+        }
+
+        if (!foundVehicle) {
+            return res.status(404).json({
+                success: false,
+                message: "Assigned vehicle not found"
+            })
+        }
+
+        contract.markModified("vehicles")
+        await contract.save()
+
+        // Update CorporateRouteSchedule - change assigned driver
+        const CorporateRouteSchedule = (await import("../models/CorporateRouteSchedule.js")).default
+        const scheduleUpdateResult = await CorporateRouteSchedule.updateMany(
+            {
+                contractId: contractId,
+                assignedVehicleId: assignedVehicleId,
+                assignedDriver: oldDriverId
+            },
+            { $set: { assignedDriver: newDriverId } }
+        )
+
+        // Update Trips - change driver on scheduled trips
+        const Trip = (await import("../models/Trip.js")).default
+        const tripUpdateResult = await Trip.updateMany(
+            {
+                contractId: contractId,
+                driverId: oldDriverId,
+                status: { $in: ['SCHEDULED', 'PENDING'] }
+            },
+            { $set: { driverId: newDriverId } }
+        )
+
+        // Update driver statuses
+        // Set old driver back to available
+        if (oldDriverId) {
+            await CorporateDriver.findByIdAndUpdate(oldDriverId, {
+                status: "AVAILABLE"
+            })
+        }
+
+        // Set new driver to assigned
+        await CorporateDriver.findByIdAndUpdate(newDriverId, {
+            status: "ASSIGNED"
+        })
+
+        res.status(200).json({
+            success: true,
+            message: "Driver updated successfully across all records",
+            data: {
+                schedulesUpdated: scheduleUpdateResult.modifiedCount,
+                tripsUpdated: tripUpdateResult.modifiedCount
+            }
+        })
+    } catch (error) {
+        console.error("Error updating corporate driver:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to update driver",
+            error: error.message
+        })
+    }
+}
+
 // @desc    Get contracts with pending due date extension requests for B2B Partner
 // @route   GET /api/contracts/fleet/due-date-requests
 // @access  Private (B2B_PARTNER only)

@@ -162,7 +162,7 @@ const B2B_Partner_ContractManagement = () => {
                 <h3>Contract #{contract.contractNumber}</h3>
                 <span
                   className={`b2b-contracts-status-badge ${getStatusBadgeClass(
-                    contract.status
+                    contract.status,
                   )}`}
                 >
                   {contract.status?.replace("-", " ").toUpperCase()}
@@ -205,6 +205,22 @@ const B2B_Partner_ContractManagement = () => {
                 <button className="b2b-contracts-view-btn">
                   View Details →
                 </button>
+                {contract.status === "ACTIVE" && (
+                  <button
+                    className="b2b-contracts-vehicles-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(
+                        `/b2b-partner/assigned-vehicles/${contract._id}`,
+                        {
+                          state: { contractId: contract._id },
+                        },
+                      );
+                    }}
+                  >
+                    View Assigned Vehicles
+                  </button>
+                )}
               </div>
             </div>
           ))}

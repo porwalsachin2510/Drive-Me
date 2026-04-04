@@ -19,7 +19,8 @@ import {
     getContractRoutes,
     requestDueDateExtension,
     respondToDueDateExtension,
-    getDueDateExtensionRequests
+    getDueDateExtensionRequests,
+    updateCorporateDriver
 } from "../controllers/contractController.js"
 import { verifyToken, checkFleetOwnerRole, checkCorporateOwnerRole, requireRole } from "../middleware/auth.js"
 import { upload, handleMulterError } from "../Config/multerConfig.js"
@@ -102,13 +103,14 @@ router.post("/:contractId/assign-vehicles", verifyToken, checkFleetOwnerRole, as
 // Get assigned vehicles for a contract
 router.get("/assigned-vehicles/:contractId", verifyToken, checkCorporateOwnerRole, getAssignedVehiclesForContract)
 
-
-
 // Assign driver or fuel to vehicle
 router.post("/assign-driver-fuel/:contractId/:assignedVehicleId", verifyToken, checkCorporateOwnerRole, assignDriverOrFuelToVehicle)
 
 // Assign route to vehicle
 router.post("/assign-route/:contractId/:assignedVehicleId", verifyToken, checkCorporateOwnerRole, assignRouteToVehicle)
+
+// Update/Change driver assigned by Corporate
+router.put("/update-corporate-driver/:contractId/:assignedVehicleId", verifyToken, checkCorporateOwnerRole, updateCorporateDriver)
 
 // Get contract routes
 router.get("/routes/:contractId", verifyToken, checkCorporateOwnerRole, getContractRoutes)

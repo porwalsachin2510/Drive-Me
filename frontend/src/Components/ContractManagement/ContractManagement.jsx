@@ -257,9 +257,22 @@ const ContractManagement = () => {
                 <div className="drivemego-contractmanagement-contract-date">
                   Created: {formatDate(contract.createdAt)}
                 </div>
-                <button className="drivemego-contractmanagement-view-details-btn">
-                  View Details →
-                </button>
+                <div className="contract-card-actions">
+                  <button className="view-details-btn">View Details</button>
+                  {contract.status === "ACTIVE" && (
+                    <button
+                      className="view-vehicles-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/corporate/assigned-vehicles", {
+                          state: { contractId: contract._id },
+                        });
+                      }}
+                    >
+                      View Assigned Vehicles
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}

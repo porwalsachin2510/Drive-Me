@@ -3,6 +3,9 @@ import Contract from "../models/Contract.js"
 import Quotation from "../models/Quotation.js"
 import Vehicle from "../models/Vehicle.js"
 import Driver from "../models/Driver.js"
+import Route from "../models/Route.js"
+import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
+import Trip from "../models/Trip.js"
 
 // Get B2B Partner Overview
 export const getB2BPartnerOverview = async (req, res) => {
@@ -491,3 +494,508 @@ const generateContractsChart = (contracts, period) => {
     return { labels, data }
 }
 
+
+// ================= B2B Partner Routes Management =================
+
+// Get all routes created by B2B Partner
+export const getB2BPartnerRoutes = async (req, res) => {
+    try {
+        const userId = req.userId
+
+        // Get routes where B2B Partner is the assignedBy (for contract vehicles) or where they created via their fleet
+        const routes = await Route.find({
+            $or: [
+                { assignedBy: userId },
+                { b2cPartnerId: userId }
+            ]
+        })
+            .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory')
+            .populate('contractId', 'contractNumber status')
+            .sort({ createdAt: -1 })
+
+        res.status(200).json({
+            success: true,
+            routes
+        })
+    } catch (error) {
+        console.error("Error fetching B2B partner routes:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch routes",
+            error: error.message
+        })
+    }
+}
+
+// Update a route
+export const updateB2BPartnerRoute = async (req, res) => {
+    try {
+        const userId = req.userId
+        const { routeId } = req.params
+        const updates = req.body
+
+        const route = await Route.findOne({
+            _id: routeId,
+            $or: [
+                { assignedBy: userId },
+                { b2cPartnerId: userId }
+            ]
+        })
+
+        if (!route) {
+            return res.status(404).json({
+                success: false,
+                message: "Route not found or you don't have permission to update it"
+            })
+        }
+
+        // Update allowed fields
+        const allowedFields = ['fromLocation', 'toLocation', 'totalDistance', 'estimatedDuration', 'status', 'availableDays', 'routeNotes']
+        allowedFields.forEach(field => {
+            if (updates[field] !== undefined) {
+                route[field] = updates[field]
+            }
+        })
+
+        await route.save()
+
+        res.status(200).json({
+            success: true,
+            message: "Route updated successfully",
+            route
+        })
+    } catch (error) {
+        console.error("Error updating route:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to update route",
+            error: error.message
+        })
+    }
+}
+
+// Delete a route
+export const deleteB2BPartnerRoute = async (req, res) => {
+    try {
+        const userId = req.userId
+        const { routeId } = req.params
+
+        const route = await Route.findOne({
+            _id: routeId,
+            $or: [
+                { assignedBy: userId },
+                { b2cPartnerId: userId }
+            ]
+        })
+
+        if (!route) {
+            return res.status(404).json({
+                success: false,
+                message: "Route not found or you don't have permission to delete it"
+            })
+        }
+
+        // Delete associated schedules
+        await CorporateRouteSchedule.deleteMany({ routeId: route._id })
+
+        // Delete associated trips that haven't started
+        await Trip.deleteMany({ routeId: route._id, status: 'SCHEDULED' })
+
+        // Delete the route
+        await Route.findByIdAndDelete(routeId)
+
+        res.status(200).json({
+            success: true,
+            message: "Route deleted successfully"
+        })
+    } catch (error) {
+        console.error("Error deleting route:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to delete route",
+            error: error.message
+        })
+    }
+}
+
+// Get assigned vehicles for a contract (B2B Partner view)
+export const getB2BContractAssignedVehicles = async (req, res) => {
+    try {
+        const userId = req.userId
+        const { contractId } = req.params
+
+        const contract = await Contract.findOne({
+            _id: contractId,
+            fleetOwnerId: userId
+        })
+            .populate({
+                path: "vehicles.vehicleId",
+                select: "vehicleName vehicleCategory registrationNumber photos capacity"
+            })
+            .populate({
+                path: "vehicles.assignedVehicles.driverId",
+                select: "name licenseNumber phone email"
+            })
+            .populate({
+                path: "vehicles.assignedVehicles.routeDetails",
+                select: "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes status availableDays"
+            })
+            .populate({
+                path: "corporateOwnerId",
+                select: "fullName companyName email"
+            })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found or access denied"
+            })
+        }
+
+        // Extract assigned vehicles
+        const assignedVehicles = []
+        contract.vehicles.forEach((vehicleGroup) => {
+            if (vehicleGroup.assignedVehicles && vehicleGroup.assignedVehicles.length > 0) {
+                vehicleGroup.assignedVehicles.forEach((assigned) => {
+                    assignedVehicles.push({
+                        ...assigned.toObject(),
+                        vehicleDetails: vehicleGroup.vehicleId
+                    })
+                })
+            }
+        })
+
+        res.status(200).json({
+            success: true,
+            data: {
+                contract,
+                assignedVehicles
+            }
+        })
+    } catch (error) {
+        console.error("Error fetching B2B assigned vehicles:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch assigned vehicles",
+            error: error.message
+        })
+    }
+}
+
+// Assign route to contract vehicle (B2B Partner)
+export const assignRouteToContractVehicle = async (req, res) => {
+    try {
+        const userId = req.userId
+        const { contractId, assignedVehicleId } = req.params
+        const {
+            fromLocation,
+            toLocation,
+            routeStartDate,
+            routeEndDate,
+            availableDays,
+            totalDistance,
+            estimatedDuration,
+            routeNotes,
+            tripTimes
+        } = req.body
+
+        // Verify B2B Partner owns this contract
+        const contract = await Contract.findOne({
+            _id: contractId,
+            fleetOwnerId: userId
+        }).populate({
+            path: "vehicles.vehicleId",
+            select: "capacity vehicleName registrationNumber"
+        })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found or access denied"
+            })
+        }
+
+        // Find the assigned vehicle
+        let assignedVehicleData = null
+        let vehicleDetails = null
+        for (const vehicleGroup of contract.vehicles) {
+            const found = vehicleGroup.assignedVehicles.find(v => v._id.toString() === assignedVehicleId)
+            if (found) {
+                assignedVehicleData = found
+                vehicleDetails = vehicleGroup.vehicleId
+                break
+            }
+        }
+
+        if (!assignedVehicleData) {
+            return res.status(404).json({
+                success: false,
+                message: "Assigned vehicle not found in contract"
+            })
+        }
+
+        const seatingCapacity = vehicleDetails?.capacity?.seatingCapacity || 30
+
+        // Create new route
+        const route = new Route({
+            contractId,
+            assignedVehicleId,
+            vehicleId: vehicleDetails?._id || null,
+            fromLocation,
+            toLocation,
+            routeStartDate,
+            stopPoints: [],
+            totalDistance: totalDistance || 0,
+            estimatedDuration,
+            availableDays: availableDays || ["MON", "TUE", "WED", "THU", "FRI"],
+            routeNotes,
+            assignedBy: userId,
+            totalSeats: seatingCapacity,
+            availableSeats: seatingCapacity,
+            routeType: "CORPORATE",
+            corporateId: contract.corporateOwnerId,
+            status: "ACTIVE"
+        })
+
+        await route.save()
+
+        // Create CorporateRouteSchedule if tripTimes provided
+        let routeSchedule = null
+        if (tripTimes && tripTimes.length > 0) {
+            const formattedTripTimes = tripTimes.map((trip, index) => {
+                const validOutboundStops = (trip.outboundStopPoints || [])
+                    .filter(stop => stop.location && stop.location.trim() !== '')
+                    .map(stop => ({
+                        location: stop.location.trim(),
+                        time: stop.time || ''
+                    }))
+
+                const validReturnStops = (trip.returnStopPoints || [])
+                    .filter(stop => stop.location && stop.location.trim() !== '')
+                    .map(stop => ({
+                        location: stop.location.trim(),
+                        time: stop.time || ''
+                    }))
+
+                return {
+                    tripNumber: index + 1,
+                    departureTime: trip.departureTime,
+                    arrivalTime: trip.arrivalTime || null,
+                    returnDepartureTime: trip.returnTime || null,
+                    returnArrivalTime: trip.returnArrivalTime || null,
+                    tripType: trip.tripType || "One Way",
+                    outboundStopPoints: validOutboundStops,
+                    returnStopPoints: validReturnStops
+                }
+            })
+
+            routeSchedule = new CorporateRouteSchedule({
+                corporateId: contract.corporateOwnerId,
+                routeId: route._id,
+                contractId: contractId,
+                scheduleName: `${fromLocation} to ${toLocation} Schedule`,
+                tripTimes: formattedTripTimes,
+                availableDays: availableDays || ["MON", "TUE", "WED", "THU", "FRI"],
+                assignedVehicleId: assignedVehicleId,
+                assignedVehicle: vehicleDetails?._id || null,
+                assignedDriver: assignedVehicleData.driverId || null,
+                startDate: routeStartDate ? new Date(routeStartDate) : new Date(),
+                endDate: routeEndDate ? new Date(routeEndDate) : null,
+                totalSeats: seatingCapacity,
+                isActive: true,
+                status: "Active"
+            })
+
+            await routeSchedule.save()
+        }
+
+        // Update the contract to link route to assigned vehicle
+        for (const vehicleGroup of contract.vehicles) {
+            const assignedVehicle = vehicleGroup.assignedVehicles.find(v => v._id.toString() === assignedVehicleId)
+            if (assignedVehicle) {
+                assignedVehicle.routeDetails = route._id
+                break
+            }
+        }
+
+        contract.markModified("vehicles")
+        await contract.save()
+
+        res.status(200).json({
+            success: true,
+            message: "Route assigned successfully",
+            data: {
+                route,
+                schedule: routeSchedule
+            }
+        })
+    } catch (error) {
+        console.error("Error assigning route to contract vehicle:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to assign route",
+            error: error.message
+        })
+    }
+}
+
+// Update vehicle on contract (B2B Partner can change vehicle if needed)
+export const updateContractVehicle = async (req, res) => {
+    try {
+        const userId = req.userId
+        const { contractId, assignedVehicleId } = req.params
+        const { newVehicleId } = req.body
+
+        const contract = await Contract.findOne({
+            _id: contractId,
+            fleetOwnerId: userId
+        })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found or access denied"
+            })
+        }
+
+        // Verify new vehicle belongs to B2B Partner
+        const newVehicle = await Vehicle.findOne({
+            _id: newVehicleId,
+            fleetOwnerId: userId
+        })
+
+        if (!newVehicle) {
+            return res.status(404).json({
+                success: false,
+                message: "New vehicle not found or doesn't belong to you"
+            })
+        }
+
+        // Find and update the assigned vehicle
+        let oldVehicleId = null
+        for (const vehicleGroup of contract.vehicles) {
+            const assignedVehicle = vehicleGroup.assignedVehicles.find(v => v._id.toString() === assignedVehicleId)
+            if (assignedVehicle) {
+                oldVehicleId = assignedVehicle.vehicleId
+                assignedVehicle.vehicleId = newVehicleId
+                break
+            }
+        }
+
+        if (!oldVehicleId) {
+            return res.status(404).json({
+                success: false,
+                message: "Assigned vehicle not found"
+            })
+        }
+
+        contract.markModified("vehicles")
+        await contract.save()
+
+        // Update routes
+        await Route.updateMany(
+            { contractId, vehicleId: oldVehicleId },
+            { vehicleId: newVehicleId }
+        )
+
+        // Update schedules
+        await CorporateRouteSchedule.updateMany(
+            { contractId, assignedVehicle: oldVehicleId },
+            { assignedVehicle: newVehicleId }
+        )
+
+        // Update trips
+        await Trip.updateMany(
+            { vehicleId: oldVehicleId, status: 'SCHEDULED' },
+            { vehicleId: newVehicleId }
+        )
+
+        res.status(200).json({
+            success: true,
+            message: "Vehicle updated successfully across all records"
+        })
+    } catch (error) {
+        console.error("Error updating contract vehicle:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to update vehicle",
+            error: error.message
+        })
+    }
+}
+
+// Update driver on contract (B2B Partner can change driver if needed)
+export const updateContractDriver = async (req, res) => {
+    try {
+        const userId = req.userId
+        const { contractId, assignedVehicleId } = req.params
+        const { newDriverId } = req.body
+
+        const contract = await Contract.findOne({
+            _id: contractId,
+            fleetOwnerId: userId
+        })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found or access denied"
+            })
+        }
+
+        // Verify new driver belongs to B2B Partner
+        const newDriver = await Driver.findOne({
+            _id: newDriverId,
+            fleetOwnerId: userId
+        })
+
+        if (!newDriver) {
+            return res.status(404).json({
+                success: false,
+                message: "New driver not found or doesn't belong to you"
+            })
+        }
+
+        // Find and update the assigned vehicle's driver
+        let oldDriverId = null
+        for (const vehicleGroup of contract.vehicles) {
+            const assignedVehicle = vehicleGroup.assignedVehicles.find(v => v._id.toString() === assignedVehicleId)
+            if (assignedVehicle) {
+                oldDriverId = assignedVehicle.driverId
+                assignedVehicle.driverId = newDriverId
+                assignedVehicle.driverAssignedBy = "B2B_PARTNER"
+                assignedVehicle.driverModel = "Driver"
+                break
+            }
+        }
+
+        contract.markModified("vehicles")
+        await contract.save()
+
+        // Update schedules
+        if (oldDriverId) {
+            await CorporateRouteSchedule.updateMany(
+                { contractId, assignedDriver: oldDriverId },
+                { assignedDriver: newDriverId }
+            )
+
+            // Update trips
+            await Trip.updateMany(
+                { driverId: oldDriverId, status: 'SCHEDULED' },
+                { driverId: newDriverId }
+            )
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Driver updated successfully across all records"
+        })
+    } catch (error) {
+        console.error("Error updating contract driver:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to update driver",
+            error: error.message
+        })
+    }
+}

@@ -63,11 +63,11 @@ export const isSearchFormComplete = (filters) => {
         filters.budget !== "0";
 
     // Check that at least one Additional Requirement is selected
-    const hasAdditionalRequirement = filters.driverRequired || filters.fuelIncluded;
+    // const hasAdditionalRequirement = filters.driverRequired || filters.fuelIncluded;
 
     // Check that at least one Preferred Feature is selected
-    const hasPreferredFeatures =
-        filters.features && Array.isArray(filters.features) && filters.features.length > 0;
+    // const hasPreferredFeatures =
+    //     filters.features && Array.isArray(filters.features) && filters.features.length > 0;
 
-    return basicFieldsComplete && hasAdditionalRequirement && hasPreferredFeatures;
+    return basicFieldsComplete;
 };

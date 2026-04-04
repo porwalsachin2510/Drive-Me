@@ -36,6 +36,7 @@ import PaymentCallback from "./Pages/PaymentCallback/PaymentCallback";
 import B2B_PartnerAssignmentUI from "./Pages/B2B_PartnerPages/B2B_PartnerAssignmentUI/B2B_PartnerAssignmentUI";
 import B2B_PartnerVehicleAssignmentList from "./Pages/B2B_PartnerPages/B2B_PartnerVehicleAssignment/B2B_PartnerVehicleAssignmentList";
 import B2B_PartnerVehicleAssignmentForm from "./Pages/B2B_PartnerPages/B2B_PartnerVehicleAssignmentForm/B2B_PartnerVehicleAssignmentForm";
+import B2B_PartnerAssignedVehicles from "./Pages/B2B_PartnerPages/B2B_PartnerAssignedVehicles/B2B_PartnerAssignedVehicles";
 import CorporateAssignedVehiclesPage from "./Pages/CorporatePages/CorporateAssignedVehiclesPage/CorporateAssignedVehiclesPage";
 import CorporateEmployeeBookingsPage from "./Pages/CorporatePages/CorporateEmployeeBookingsPage/CorporateEmployeeBookingsPage";
 import B2C_PartnerBookingsPage from "./Pages/B2C_PartnerPages/B2C_PartnerBookingsPage/B2C_PartnerBookingsPage";
@@ -386,6 +387,16 @@ function App() {
               </ProtectedRoleBasedRoute>
             }
           />
+
+          <Route
+            path="/b2b-partner/assigned-vehicles/:contractId"
+            element={
+              <ProtectedRoleBasedRoute allowedRoles={["B2B_PARTNER"]}>
+                <B2B_PartnerAssignedVehicles />
+              </ProtectedRoleBasedRoute>
+            }
+          />
+          
           <Route
             path="/driver/b2c-dashboard"
             element={

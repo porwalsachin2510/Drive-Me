@@ -375,11 +375,37 @@ const CorporateAssignedVehiclesPage = () => {
   const openAssignmentModal = (vehicle, type) => {
     setSelectedVehicle(vehicle);
     setModalType(type);
-    if (type === "driver") {
+    if (type === "driver" || type === "changeDriver") {
       setAssignmentForm({ ...assignmentForm, driverId: "" });
       fetchAvailableDrivers();
     } else if (type === "fuel") {
       setAssignmentForm({ ...assignmentForm, fuelCardNumber: "" });
+    }
+  };
+
+  // Handle driver change (update) for CORPORATE assigned drivers
+  const handleChangeDriverSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!assignmentForm.driverId) {
+      alert("Please select a driver");
+      return;
+    }
+
+    try {
+      const response = await api.put(
+        `/contracts/update-corporate-driver/${contractId}/${selectedVehicle._id}`,
+        { newDriverId: assignmentForm.driverId },
+      );
+
+      if (response.data.success) {
+        alert("Driver updated successfully across all records");
+        closeModal();
+        await fetchAssignedVehicles();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update driver");
+      console.error("Error updating driver:", err);
     }
   };
 
@@ -745,6 +771,18 @@ const CorporateAssignedVehiclesPage = () => {
                             Assign Driver
                           </button>
                         )}
+                        {/* Change Driver button - only for drivers assigned by CORPORATE */}
+                        {vehicle.driverId &&
+                          vehicle.driverAssignedBy === "CORPORATE" && (
+                            <button
+                              className="change-btn"
+                              onClick={() =>
+                                openAssignmentModal(vehicle, "changeDriver")
+                              }
+                            >
+                              Change Driver
+                            </button>
+                          )}
                       </div>
 
                       {/* Fuel Section */}
@@ -1106,6 +1144,83 @@ const CorporateAssignedVehiclesPage = () => {
                   </button>
                   <button type="submit" className="btn-submit">
                     Assign Driver
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Change Driver Modal - For updating CORPORATE assigned drivers */}
+        {modalType === "changeDriver" && selectedVehicle && (
+          <div className="modal-overlay" onClick={closeModal}>
+            <div className="modal-premium" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header-premium">
+                <h2>Change Driver</h2>
+                <button className="modal-close" onClick={closeModal}>
+                  X
+                </button>
+              </div>
+
+              <div className="current-driver-info">
+                <p>
+                  <strong>Current Driver:</strong>{" "}
+                  {selectedVehicle.driverId?.name}
+                </p>
+                <p>
+                  <strong>License:</strong>{" "}
+                  {selectedVehicle.driverId?.licenseNumber}
+                </p>
+              </div>
+
+              <form onSubmit={handleChangeDriverSubmit} className="modal-form">
+                <div className="form-group">
+                  <label>Select New Driver *</label>
+
+                  {driversLoading ? (
+                    <p>Loading drivers...</p>
+                  ) : (
+                    <select
+                      value={assignmentForm.driverId}
+                      onChange={(e) =>
+                        setAssignmentForm({
+                          ...assignmentForm,
+                          driverId: e.target.value,
+                        })
+                      }
+                      required
+                    >
+                      <option value="">-- Select New Driver --</option>
+
+                      {availableDrivers
+                        .filter(
+                          (driver) =>
+                            driver._id !== selectedVehicle.driverId?._id,
+                        )
+                        .map((driver) => (
+                          <option key={driver._id} value={driver._id}>
+                            {driver.name} - {driver.licenseNumber}
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                </div>
+
+                <p className="change-driver-note">
+                  Note: Changing the driver will update all associated trips,
+                  routes, and schedules.
+                </p>
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={closeModal}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-submit btn-change">
+                    Change Driver
                   </button>
                 </div>
               </form>
@@ -1722,6 +1837,6 @@ const CorporateAssignedVehiclesPage = () => {
       <Footer />
     </>
   );
-};
+};;
 
 export default CorporateAssignedVehiclesPage;

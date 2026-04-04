@@ -34,21 +34,44 @@ const WalletPaymentCallback = () => {
         paymentId = chargeId;
       }
 
+      // Also detect from session ID format for extra safety
+      if (
+        paymentId &&
+        (paymentId.startsWith("cs_test_") ||
+          paymentId.startsWith("cs_live_") ||
+          paymentId.startsWith("pi_"))
+      ) {
+        provider = "STRIPE";
+      } else if (
+        paymentId &&
+        (paymentId.startsWith("chg_") || paymentId.startsWith("txn_"))
+      ) {
+        provider = "TAP";
+      }
+
+      console.log("[Wallet] Detected provider:", provider);
+
       if (status === "success" && paymentId) {
         try {
           // Call wallet add funds with payment verification
-          const response = await api.post('/wallet/add-funds', {
+          const response = await api.post("/wallet/add-funds", {
             amount: 0, // Will be determined from payment session
             paymentMethod: "card",
             paymentDetails: {},
-            paymentSessionId: paymentId
+            paymentSessionId: paymentId,
+            gateway: provider, // Pass the detected gateway to backend
           });
 
           if (response.data.success) {
-            console.log("[Wallet] Payment verified and funds added:", response.data);
-            
+            console.log(
+              "[Wallet] Payment verified and funds added:",
+              response.data,
+            );
+
             setVerificationStatus("success");
-            setMessage("Payment completed successfully! Funds have been added to your wallet.");
+            setMessage(
+              "Payment completed successfully! Funds have been added to your wallet.",
+            );
 
             // Refresh wallet balance
             dispatch(getWalletBalance());
@@ -58,9 +81,15 @@ const WalletPaymentCallback = () => {
               navigate("/wallet");
             }, 3000);
           } else {
-            console.error("[Wallet] Payment verification failed:", response.data.message);
+            console.error(
+              "[Wallet] Payment verification failed:",
+              response.data.message,
+            );
             setVerificationStatus("failed");
-            setMessage(response.data.message || "Payment verification failed. Please contact support.");
+            setMessage(
+              response.data.message ||
+                "Payment verification failed. Please contact support.",
+            );
           }
         } catch (error) {
           console.error("[Wallet] Payment verification error:", error);
@@ -69,7 +98,9 @@ const WalletPaymentCallback = () => {
         }
       } else if (status === "cancelled" || status === "canceled") {
         setVerificationStatus("cancelled");
-        setMessage("Payment was cancelled. You can try again from the wallet page.");
+        setMessage(
+          "Payment was cancelled. You can try again from the wallet page.",
+        );
         setTimeout(() => {
           navigate("/wallet");
         }, 3000);
@@ -80,7 +111,7 @@ const WalletPaymentCallback = () => {
           navigate("/wallet");
         }, 3000);
       }
-    };
+    };;
 
     verifyWalletPayment();
   }, [searchParams, dispatch, navigate]);

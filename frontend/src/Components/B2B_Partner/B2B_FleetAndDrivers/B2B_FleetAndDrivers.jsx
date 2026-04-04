@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react"
 import B2B_VehiclesTab from "../B2B_FleetAndDriversSub/B2B_VehiclesTab/B2B_VehiclesTab"
 import B2B_DriversTab from "../B2B_FleetAndDriversSub/B2B_DriversTab/B2B_DriversTab"
+import B2B_RoutesTab from "../B2B_FleetAndDriversSub/B2B_RoutesTab/B2B_RoutesTab"
 import B2B_AddDriverModal from "../B2B_FleetAndDriversSub/B2B_AddDriverModal/B2B_AddDriverModal"
 import B2B_AddVehicleModal from "../B2B_FleetAndDriversSub/B2B_AddVehicleModal/B2B_AddVehicleModal"
+import B2B_AddRouteModal from "../B2B_FleetAndDriversSub/B2B_RoutesTab/B2B_AddRouteModal"
 import "./b2b_fleetanddrivers.css"
 import api from "../../../utils/api"
 
@@ -12,11 +14,16 @@ function B2B_FleetAndDrivers() {
   const [activeSubTab, setActiveSubTab] = useState("vehicles")
   const [showAddDriverModal, setShowAddDriverModal] = useState(false)
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false)
+  const [showAddRouteModal, setShowAddRouteModal] = useState(false)
   const [fleetData, setFleetData] = useState(null)
+   const [routes, setRoutes] = useState([])
+   const [contracts, setContracts] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchFleetData()
+    fetchRoutes()
+    fetchContracts()
   }, [])
 
   const fetchFleetData = async () => {
@@ -37,6 +44,28 @@ function B2B_FleetAndDrivers() {
       setLoading(false)
     }
   }
+
+  const fetchRoutes = async () => {
+    try {
+      const response = await api.get("/b2b-partner/routes");
+      if (response.data.success) {
+        setRoutes(response.data.routes || []);
+      }
+    } catch (error) {
+      console.error("Error fetching routes:", error);
+    }
+  };
+
+  const fetchContracts = async () => {
+    try {
+      const response = await api.get("/contracts/fleet/all");
+      if (response.data.success) {
+        setContracts(response.data.data?.contracts || []);
+      }
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+    }
+  };
 
   const handleAddDriver = async (driverData) => {
     try {
@@ -95,6 +124,13 @@ function B2B_FleetAndDrivers() {
           >
             + Add Driver
           </button>
+        ) : activeSubTab === "routes" ? (
+          <button
+            className="add-btn"
+            onClick={() => setShowAddRouteModal(true)}
+          >
+            + Add Route
+          </button>
         ) : (
           <button
             className="b2b-operator-dashboard-add-btn"
@@ -118,6 +154,13 @@ function B2B_FleetAndDrivers() {
         >
           👤 Drivers ({fleetData.drivers?.length || 0})
         </button>
+
+        <button
+          className={`fleet-tab ${activeSubTab === "routes" ? "active" : ""}`}
+          onClick={() => setActiveSubTab("routes")}
+        >
+          Routes ({routes?.length || 0})
+        </button>
       </div>
 
       <div className="b2b-operator-dashboard-fleet-content">
@@ -125,6 +168,12 @@ function B2B_FleetAndDrivers() {
           <B2B_VehiclesTab
             vehicles={fleetData.vehicles || []}
             onRefresh={fetchFleetData}
+          />
+        ) : activeSubTab === "routes" ? (
+          <B2B_RoutesTab
+            routes={routes || []}
+            onRefresh={fetchRoutes}
+            onAddRoute={() => setShowAddRouteModal(true)}
           />
         ) : (
           <B2B_DriversTab
@@ -147,6 +196,18 @@ function B2B_FleetAndDrivers() {
         <B2B_AddVehicleModal
           onClose={() => setShowAddVehicleModal(false)}
           onSave={handleAddVehicle}
+        />
+      )}
+
+      {/* Add Route Modal */}
+      {showAddRouteModal && (
+        <B2B_AddRouteModal
+          onClose={() => setShowAddRouteModal(false)}
+          onSuccess={() => {
+            fetchRoutes();
+            setShowAddRouteModal(false);
+          }}
+          contracts={contracts}
         />
       )}
     </div>

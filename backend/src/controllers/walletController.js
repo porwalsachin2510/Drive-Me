@@ -203,11 +203,39 @@ export const getWalletTransactions = async (req, res) => {
     }
 }
 
+// Helper function to detect gateway from session ID format
+const detectGatewayFromSessionId = (sessionId) => {
+    if (!sessionId) return null;
+
+    // Stripe session IDs start with cs_test_ or cs_live_
+    if (sessionId.startsWith('cs_test_') || sessionId.startsWith('cs_live_')) {
+        return 'STRIPE';
+    }
+
+    // Stripe payment intents start with pi_
+    if (sessionId.startsWith('pi_')) {
+        return 'STRIPE';
+    }
+
+    // TAP charge IDs start with chg_
+    if (sessionId.startsWith('chg_')) {
+        return 'TAP';
+    }
+
+    // TAP transaction IDs may start with txn_
+    if (sessionId.startsWith('txn_')) {
+        return 'TAP';
+    }
+
+    // Default to null if cannot detect
+    return null;
+}
+
 // Add funds to wallet
 export const addFundsToWallet = async (req, res) => {
     try {
         const userId = req.userId
-        const { amount, paymentMethod, paymentDetails, paymentSessionId, currency = "KWD" } = req.body
+        const { amount, paymentMethod, paymentDetails, paymentSessionId, currency = "KWD", gateway: providedGateway } = req.body
 
         if (!paymentSessionId) {
             return res.status(400).json({
@@ -235,11 +263,21 @@ export const addFundsToWallet = async (req, res) => {
             // Import payment gateway service
             const paymentGatewayService = await import("../Services/paymentGatewayService.js")
 
-            // Detect country from user currency
-            const country = detectCountryFromCurrency(userCurrency)
-            const gateway = getPaymentGateway(country)
+            // IMPORTANT: Detect gateway from session ID format first, then fall back to provided gateway or currency-based detection
+            // This fixes the issue where Stripe payments were being verified with TAP gateway
+            let gateway = detectGatewayFromSessionId(paymentSessionId);
 
-            console.log("[v0] Verifying payment with gateway:", { gateway, paymentSessionId, userCurrency });
+            if (!gateway) {
+                // Fall back to provided gateway or detect from currency
+                if (providedGateway) {
+                    gateway = providedGateway;
+                } else {
+                    const country = detectCountryFromCurrency(userCurrency)
+                    gateway = getPaymentGateway(country)
+                }
+            }
+
+            console.log("[v0] Verifying payment with gateway:", { gateway, paymentSessionId, userCurrency, detectedFromId: detectGatewayFromSessionId(paymentSessionId) });
             
             // Verify payment
             paymentVerification = await paymentGatewayService.default.verifyPayment(gateway, paymentSessionId)

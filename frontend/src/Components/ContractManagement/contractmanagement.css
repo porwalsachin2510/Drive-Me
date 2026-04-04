@@ -285,6 +285,29 @@
   transform: translateX(4px);
 }
 
+.contract-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.view-vehicles-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #16a085 0%, #138d7b 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.view-vehicles-btn:hover {
+  background: linear-gradient(135deg, #138d7b 0%, #117a6d 100%);
+  transform: translateX(4px);
+}
+
 /* Empty State */
 .drivemego-contractmanagement-corporate-contracts-empty {
   padding: 80px 40px;

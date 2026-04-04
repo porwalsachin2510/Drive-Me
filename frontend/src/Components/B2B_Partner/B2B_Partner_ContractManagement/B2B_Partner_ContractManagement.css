@@ -241,10 +241,14 @@
   padding: 16px 20px;
   background: #f9fafb;
   border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .b2b-contracts-view-btn {
-  width: 100%;
+  flex: 1;
+  min-width: 120px;
   padding: 10px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -258,6 +262,26 @@
 
 .b2b-contracts-view-btn:hover {
   transform: scale(1.02);
+}
+
+
+.b2b-contracts-vehicles-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px;
+  background: linear-gradient(135deg, #16a085 0%, #138d7b 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.b2b-contracts-vehicles-btn:hover {
+  transform: scale(1.02);
+  background: linear-gradient(135deg, #138d7b 0%, #117a6d 100%);
 }
 
 @media (max-width: 768px) {
