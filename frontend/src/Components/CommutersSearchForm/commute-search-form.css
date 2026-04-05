@@ -161,6 +161,16 @@
   box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
+/* Input Hint */
+.input-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* Error Message */
 .commute-search-form-error-message {
   font-size: 12px;

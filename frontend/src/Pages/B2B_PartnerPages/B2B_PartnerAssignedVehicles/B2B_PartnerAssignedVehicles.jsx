@@ -194,18 +194,18 @@ const B2B_PartnerAssignedVehicles = () => {
   return (
     <>
       <Navbar activeTab="contracts" setActiveTab={() => {}} />
-      <div className="b2b-assigned-vehicles-container">
+      <div className="drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-container">
         <button
-          className="b2b-back-btn"
+          className="drivemego-b2b-partnerassignedvehiclespage-b2b-back-btn"
           onClick={() => navigate("/?tab=contracts")}
         >
           Back to Contracts
         </button>
 
-        <div className="b2b-assigned-vehicles-header">
+        <div className="drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-header">
           <div>
             <h1>Assigned Vehicles</h1>
-            <p className="contract-info">
+            <p className="drivemego-b2b-partnerassignedvehiclespage-contract-info">
               Contract: {contract?.contractNumber} | Corporate:{" "}
               {contract?.corporateOwnerId?.companyName ||
                 contract?.corporateOwnerId?.fullName}
@@ -213,15 +213,15 @@ const B2B_PartnerAssignedVehicles = () => {
           </div>
         </div>
 
-        <div className="b2b-assigned-vehicles-tabs">
+        <div className="drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-tabs">
           <button
-            className={`tab-button ${activeTab === "vehicles" ? "active" : ""}`}
+            className={`drivemego-b2b-partnerassignedvehiclespage-tab-button ${activeTab === "vehicles" ? "drivemego-b2b-partnerassignedvehiclespage-active" : ""}`}
             onClick={() => setActiveTab("vehicles")}
           >
             Vehicles ({assignedVehicles.length})
           </button>
           <button
-            className={`tab-button ${activeTab === "routes" ? "active" : ""}`}
+            className={`drivemego-b2b-partnerassignedvehiclespage-tab-button ${activeTab === "routes" ? "drivemego-b2b-partnerassignedvehiclespage-active" : ""}`}
             onClick={() => setActiveTab("routes")}
           >
             Routes ({routes.length})
@@ -230,50 +230,57 @@ const B2B_PartnerAssignedVehicles = () => {
 
         {/* Vehicles Tab */}
         {activeTab === "vehicles" && (
-          <div className="b2b-assigned-vehicles-content">
+          <div className="drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-content">
             {assignedVehicles.length === 0 ? (
-              <div className="empty-state">
+              <div className="drivemego-b2b-partnerassignedvehiclespage-empty-state">
                 <p>No assigned vehicles yet</p>
               </div>
             ) : (
-              <div className="vehicles-grid">
+              <div className="drivemego-b2b-partnerassignedvehiclespage-vehicles-grid">
                 {assignedVehicles.map((vehicle) => (
-                  <div key={vehicle._id} className="vehicle-card">
-                    <div className="vehicle-card-header">
+                  <div
+                    key={vehicle._id}
+                    className="drivemego-b2b-partnerassignedvehiclespage-vehicle-card"
+                  >
+                    <div className="drivemego-b2b-partnerassignedvehiclespage-vehicle-card-header">
                       <h3>{vehicle.vehicleDetails?.vehicleName}</h3>
-                      <span className="vehicle-category">
+                      <span className="drivemego-b2b-partnerassignedvehiclespage-vehicle-category">
                         {vehicle.vehicleDetails?.vehicleCategory}
                       </span>
                     </div>
-                    <p className="vehicle-reg">
+                    <p className="drivemego-b2b-partnerassignedvehiclespage-vehicle-reg">
                       {vehicle.vehicleDetails?.registrationNumber}
                     </p>
 
                     {/* Driver Section */}
-                    <div className="assignment-section">
-                      <div className="assignment-header">
-                        <span className="assignment-label">Driver</span>
+                    <div className="drivemego-b2b-partnerassignedvehiclespage-assignment-section">
+                      <div className="drivemego-b2b-partnerassignedvehiclespage-assignment-header">
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-assignment-label">
+                          Driver
+                        </span>
                         <span
-                          className={`status-badge ${vehicle.driverId ? "assigned" : "pending"}`}
+                          className={`drivemego-b2b-partnerassignedvehiclespage-status-badge ${vehicle.driverId ? "drivemego-b2b-partnerassignedvehiclespage-assigned" : "drivemego-b2b-partnerassignedvehiclespage-pending"}`}
                         >
                           {vehicle.driverId ? "Assigned" : "Pending"}
                         </span>
                       </div>
                       {vehicle.driverId ? (
-                        <div className="assignment-details">
-                          <p className="assignment-value">
+                        <div className="drivemego-b2b-partnerassignedvehiclespage-assignment-details">
+                          <p className="drivemego-b2b-partnerassignedvehiclespage-assignment-value">
                             {vehicle.driverId?.name || "Driver"}
                           </p>
-                          <p className="assigned-by">
+                          <p className="drivemego-b2b-partnerassignedvehiclespage-assigned-by">
                             Assigned by: {vehicle.driverAssignedBy || "N/A"}
                           </p>
                         </div>
                       ) : (
-                        <p className="no-assignment">No driver assigned</p>
+                        <p className="drivemego-b2b-partnerassignedvehiclespage-no-assignment">
+                          No driver assigned
+                        </p>
                       )}
                       {vehicle.driverAssignedBy === "B2B_PARTNER" && (
                         <button
-                          className="update-btn"
+                          className="drivemego-b2b-partnerassignedvehiclespage-update-btn"
                           onClick={() => openUpdateModal(vehicle, "driver")}
                         >
                           Change Driver
@@ -282,12 +289,14 @@ const B2B_PartnerAssignedVehicles = () => {
                     </div>
 
                     {/* Vehicle Change Section */}
-                    <div className="assignment-section">
-                      <div className="assignment-header">
-                        <span className="assignment-label">Vehicle Status</span>
+                    <div className="drivemego-b2b-partnerassignedvehiclespage-assignment-section">
+                      <div className="drivemego-b2b-partnerassignedvehiclespage-assignment-header">
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-assignment-label">
+                          Vehicle Status
+                        </span>
                       </div>
                       <button
-                        className="update-btn"
+                        className="drivemego-b2b-partnerassignedvehiclespage-update-btn"
                         onClick={() => openUpdateModal(vehicle, "vehicle")}
                       >
                         Change Vehicle
@@ -296,16 +305,18 @@ const B2B_PartnerAssignedVehicles = () => {
 
                     {/* Route Section */}
                     {vehicle.routeDetails && (
-                      <div className="route-section">
-                        <div className="route-header">
-                          <span className="route-label">Assigned Route</span>
+                      <div className="drivemego-b2b-partnerassignedvehiclespage-route-section">
+                        <div className="drivemego-b2b-partnerassignedvehiclespage-route-header">
+                          <span className="drivemego-b2b-partnerassignedvehiclespage-route-label">
+                            Assigned Route
+                          </span>
                         </div>
-                        <div className="route-details">
-                          <p className="route-path">
+                        <div className="drivemego-b2b-partnerassignedvehiclespage-route-details">
+                          <p className="drivemego-b2b-partnerassignedvehiclespage-route-path">
                             {vehicle.routeDetails.fromLocation} →{" "}
                             {vehicle.routeDetails.toLocation}
                           </p>
-                          <p className="route-info">
+                          <p className="drivemego-b2b-partnerassignedvehiclespage-route-info">
                             Start:{" "}
                             {formatDate(vehicle.routeDetails.routeStartDate)}
                           </p>
@@ -321,57 +332,70 @@ const B2B_PartnerAssignedVehicles = () => {
 
         {/* Routes Tab */}
         {activeTab === "routes" && (
-          <div className="b2b-routes-content">
+          <div className="drivemego-b2b-partnerassignedvehiclespage-b2b-routes-content">
             {routes.length === 0 ? (
-              <div className="empty-state">
+              <div className="drivemego-b2b-partnerassignedvehiclespage-empty-state">
                 <p>No routes assigned yet</p>
               </div>
             ) : (
-              <div className="routes-grid">
+              <div className="drivemego-b2b-partnerassignedvehiclespage-routes-grid">
                 {routes.map((route) => (
                   <div key={route._id} className="route-card">
-                    <div className="route-card-header">
+                    <div className="drivemego-b2b-partnerassignedvehiclespage-route-card-header">
                       <h3>
                         {route.fromLocation} → {route.toLocation}
                       </h3>
                       <span
-                        className={`status-badge ${route.status?.toLowerCase()}`}
+                        className={`drivemego-b2b-partnerassignedvehiclespage-status-badge ${route.status?.toLowerCase()}`}
                       >
                         {route.status}
                       </span>
                     </div>
-                    <div className="route-card-body">
-                      <div className="route-info-row">
-                        <span className="label">Vehicle:</span>
-                        <span className="value">
+                    <div className="drivemego-b2b-partnerassignedvehiclespage-route-card-body">
+                      <div className="drivemego-b2b-partnerassignedvehiclespage-route-info-row">
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-label">
+                          Vehicle:
+                        </span>
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-value">
                           {route.vehicleName} ({route.registrationNumber})
                         </span>
                       </div>
-                      <div className="route-info-row">
-                        <span className="label">Start Date:</span>
-                        <span className="value">
+                      <div className="drivemego-b2b-partnerassignedvehiclespage-route-info-row">
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-label">
+                          Start Date:
+                        </span>
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-value">
                           {formatDate(route.routeStartDate)}
                         </span>
                       </div>
-                      <div className="route-info-row">
-                        <span className="label">Distance:</span>
-                        <span className="value">
+                      <div className="drivemego-b2b-partnerassignedvehiclespage-route-info-row">
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-label">
+                          Distance:
+                        </span>
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-value">
                           {route.totalDistance
                             ? `${route.totalDistance} km`
                             : "N/A"}
                         </span>
                       </div>
-                      <div className="route-info-row">
-                        <span className="label">Duration:</span>
-                        <span className="value">
+                      <div className="drivemego-b2b-partnerassignedvehiclespage-route-info-row">
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-label">
+                          Duration:
+                        </span>
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-value">
                           {route.estimatedDuration || "N/A"}
                         </span>
                       </div>
-                      <div className="route-days">
-                        <span className="label">Available Days:</span>
-                        <div className="days-badges">
+                      <div className="drivemego-b2b-partnerassignedvehiclespage-route-days">
+                        <span className="drivemego-b2b-partnerassignedvehiclespage-label">
+                          Available Days:
+                        </span>
+                        <div className="drivemego-b2b-partnerassignedvehiclespage-days-badges">
                           {route.availableDays?.map((day) => (
-                            <span key={day} className="day-badge">
+                            <span
+                              key={day}
+                              className="drivemego-b2b-partnerassignedvehiclespage-day-badge"
+                            >
                               {day}
                             </span>
                           ))}
@@ -387,24 +411,33 @@ const B2B_PartnerAssignedVehicles = () => {
 
         {/* Update Driver Modal */}
         {modalType === "driver" && selectedVehicle && (
-          <div className="modal-overlay" onClick={closeModal}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
+          <div
+            className="drivemego-b2b-partnerassignedvehiclespage-modal-overlay"
+            onClick={closeModal}
+          >
+            <div
+              className="drivemego-b2b-partnerassignedvehiclespage-modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="drivemego-b2b-partnerassignedvehiclespage-modal-header">
                 <h3>Change Driver</h3>
-                <button className="modal-close" onClick={closeModal}>
+                <button
+                  className="drivemego-b2b-partnerassignedvehiclespage-modal-close"
+                  onClick={closeModal}
+                >
                   X
                 </button>
               </div>
-              <div className="modal-body">
-                <p className="modal-info">
+              <div className="drivemego-b2b-partnerassignedvehiclespage-modal-body">
+                <p className="drivemego-b2b-partnerassignedvehiclespage-modal-info">
                   Changing driver for:{" "}
                   {selectedVehicle.vehicleDetails?.vehicleName}
                 </p>
-                <p className="modal-warning">
+                <p className="drivemego-b2b-partnerassignedvehiclespage-modal-warning">
                   This will update the driver across contracts, routes,
                   schedules, and trips.
                 </p>
-                <div className="form-group">
+                <div className="drivemego-b2b-partnerassignedvehiclespage-form-group">
                   <label>Select New Driver</label>
                   <select
                     value={updateForm.newDriverId}
@@ -424,12 +457,15 @@ const B2B_PartnerAssignedVehicles = () => {
                   </select>
                 </div>
               </div>
-              <div className="modal-footer">
-                <button className="cancel-btn" onClick={closeModal}>
+              <div className="drivemego-b2b-partnerassignedvehiclespage-modal-footer">
+                <button
+                  className="drivemego-b2b-partnerassignedvehiclespage-cancel-btn"
+                  onClick={closeModal}
+                >
                   Cancel
                 </button>
                 <button
-                  className="submit-btn"
+                  className="drivemego-b2b-partnerassignedvehiclespage-submit-btn"
                   onClick={handleUpdateDriver}
                   disabled={updating}
                 >
@@ -441,58 +477,72 @@ const B2B_PartnerAssignedVehicles = () => {
         )}
 
         {/* Update Vehicle Modal */}
-        {modalType === "vehicle" && selectedVehicle && (
-          <div className="modal-overlay" onClick={closeModal}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3>Change Vehicle</h3>
-                <button className="modal-close" onClick={closeModal}>
-                  X
-                </button>
-              </div>
-              <div className="modal-body">
-                <p className="modal-info">
-                  Current vehicle: {selectedVehicle.vehicleDetails?.vehicleName}
-                </p>
-                <p className="modal-warning">
-                  This will update the vehicle across contracts, routes,
-                  schedules, and trips.
-                </p>
-                <div className="form-group">
-                  <label>Select New Vehicle</label>
-                  <select
-                    value={updateForm.newVehicleId}
-                    onChange={(e) =>
-                      setUpdateForm({
-                        ...updateForm,
-                        newVehicleId: e.target.value,
-                      })
-                    }
+        {modalType === "vehicle" &&
+          selectedVehicle && (
+            <div
+              className="drivemego-b2b-partnerassignedvehiclespage-modal-overlay"
+              onClick={closeModal}
+            >
+              <div
+                className="drivemego-b2b-partnerassignedvehiclespage-modal-content"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="drivemego-b2b-partnerassignedvehiclespage-modal-header">
+                  <h3>Change Vehicle</h3>
+                  <button
+                    className="drivemego-b2b-partnerassignedvehiclespage-modal-close"
+                    onClick={closeModal}
                   >
-                    <option value="">-- Select Vehicle --</option>
-                    {availableVehicles.map((vehicle) => (
-                      <option key={vehicle._id} value={vehicle._id}>
-                        {vehicle.vehicleName} - {vehicle.registrationNumber}
-                      </option>
-                    ))}
-                  </select>
+                    X
+                  </button>
+                </div>
+                <div className="drivemego-b2b-partnerassignedvehiclespage-modal-body">
+                  <p className="drivemego-b2b-partnerassignedvehiclespage-modal-info">
+                    Current vehicle:{" "}
+                    {selectedVehicle.vehicleDetails?.vehicleName}
+                  </p>
+                  <p className="drivemego-b2b-partnerassignedvehiclespage-modal-warning">
+                    This will update the vehicle across contracts, routes,
+                    schedules, and trips.
+                  </p>
+                  <div className="drivemego-b2b-partnerassignedvehiclespage-form-group">
+                    <label>Select New Vehicle</label>
+                    <select
+                      value={updateForm.newVehicleId}
+                      onChange={(e) =>
+                        setUpdateForm({
+                          ...updateForm,
+                          newVehicleId: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">-- Select Vehicle --</option>
+                      {availableVehicles.map((vehicle) => (
+                        <option key={vehicle._id} value={vehicle._id}>
+                          {vehicle.vehicleName} - {vehicle.registrationNumber}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="drivemego-b2b-partnerassignedvehiclespage-modal-footer">
+                  <button
+                    className="drivemego-b2b-partnerassignedvehiclespage-cancel-btn"
+                    onClick={closeModal}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="drivemego-b2b-partnerassignedvehiclespage-submit-btn"
+                    onClick={handleUpdateVehicle}
+                    disabled={updating}
+                  >
+                    {updating ? "Updating..." : "Update Vehicle"}
+                  </button>
                 </div>
               </div>
-              <div className="modal-footer">
-                <button className="cancel-btn" onClick={closeModal}>
-                  Cancel
-                </button>
-                <button
-                  className="submit-btn"
-                  onClick={handleUpdateVehicle}
-                  disabled={updating}
-                >
-                  {updating ? "Updating..." : "Update Vehicle"}
-                </button>
-              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     </>
   );

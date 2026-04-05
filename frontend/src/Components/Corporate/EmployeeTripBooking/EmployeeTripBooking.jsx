@@ -1,6 +1,8 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { useSocket } from "../../../hooks/useSocket";
 import api from "../../../utils/api";
 import "./EmployeeTripBooking.css";
@@ -19,12 +21,64 @@ function EmployeeTripBooking() {
   const [trackingTrip, setTrackingTrip] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
   const [routeId, setRouteId] = useState(localStorage.getItem("routeId") || "");
+  const [formattedLastLogin, setFormattedLastLogin] = useState("");
   const [bookingData, setBookingData] = useState({
     pickupPoint: "",
     pickupTime: "",
     seatNumber: 1,
     useMonthlyPass: false,
   });
+
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+
+  // Format last login time
+  useEffect(() => {
+    if (user?.lastLogin) {
+      const loginDate = new Date(user.lastLogin);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      let dateString = "";
+
+      if (loginDate.toDateString() === today.toDateString()) {
+        dateString = "Today";
+      } else if (loginDate.toDateString() === yesterday.toDateString()) {
+        dateString = "Yesterday";
+      } else {
+        dateString = loginDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+
+      const timeString = loginDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      setFormattedLastLogin(`${dateString}, ${timeString}`);
+    }
+  }, [user?.lastLogin]);
+
+    const getRoleDisplayName = (role) => {
+      const roleMap = {
+        ADMIN: "Admin",
+        COMMUTER: "Commuter",
+        CORPORATE: "Corporate",
+        B2C_PARTNER: "B2C Partner",
+        B2B_PARTNER: "B2B Partner",
+        CORPORATE_DRIVER: "Corporate Driver",
+        B2B_PARTNER_DRIVER: "B2B Partner Driver",
+        CORPORATE_EMPLOYEE: "Corporate Employee",
+        B2C_PARTNER_DRIVER: "B2C Partner Driver",
+      };
+      return roleMap[role] || role;
+    };
+  
 
   // Fetch the employee's assigned route to get routeId on mount
   useEffect(() => {
@@ -413,7 +467,7 @@ function EmployeeTripBooking() {
               }));
             }
           } catch (e2) {
-            console.log(e2)
+            console.log(e2);
           }
         }
       }
@@ -431,10 +485,94 @@ function EmployeeTripBooking() {
     setDriverLocation(null);
   }, [socket, trackingTrip]);
 
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.log("No token found, redirecting to login");
+        navigate("/login");
+        return;
+      }
+
+      dispatch(logout());
+
+      // Call backend logout endpoint to clear cookies and session
+      await api.post(
+        "/auth/logout",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        },
+      );
+
+      // Clear frontend storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      console.log("User logged out successfully");
+
+      // Redirect to login page
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout error:", err);
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      // Redirect to login regardless of error
+      navigate("/login");
+    }
+  };
+
+    const userName = user?.fullName || "User";
+    const userRole = user?.role || "ADMIN";
+
   return (
     <div className="employee-trip-booking">
       <div className="employee-trip-booking-header">
-        <h2>Trip Booking</h2>
+        <div className="employee-trip-booking-header-top">
+          <h2>Trip Booking</h2>
+
+          <div className="employee-trip-booking-header-top-inside">
+            {/* User Info Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    color: "#202124",
+                  }}
+                >
+                  {getRoleDisplayName(userRole)}
+                </div>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#5f6368",
+                    marginTop: "4px",
+                  }}
+                >
+                  Last login: {formattedLastLogin || "Never"}
+                </div>
+              </div>
+            </div>
+            <button className="employee-trip-logout-btn" onClick={handleLogout}>
+              Log Out
+            </button>
+          </div>
+        </div>
+        
         <div className="employee-trip-booking-tab-navigation">
           <button
             className={`employee-trip-booking-tab-btn ${activeTab === "my-trips" ? "active" : ""}`}

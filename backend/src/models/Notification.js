@@ -71,6 +71,10 @@ const notificationSchema = new mongoose.Schema(
                 "WALLET_USER_RESPONSE",
                 "CONTRACT_EXPIRY_WARNING",
                 "GENERAL",
+                // Booking timeout/auto-cancellation notifications
+                "BOOKING_WARNING",
+                "BOOKING_AUTO_CANCELLED",
+                "BOOKING_TIMEOUT_CANCELLED",
                 // Admin monitoring types
                 "ADMIN_MONITOR_CONTRACT_CREATED",
                 "ADMIN_MONITOR_CONTRACT_DOCUMENT_UPLOADED",
@@ -80,6 +84,10 @@ const notificationSchema = new mongoose.Schema(
                 "ADMIN_MONITOR_PAYMENT_RECEIVED",
                 "ADMIN_MONITOR_QUOTATION_REQUEST",
                 "ADMIN_MONITOR_QUOTATION_RESPONSE",
+                // Admin monitoring for booking timeout/auto-cancellation
+                "ADMIN_MONITOR_BOOKING_WARNING",
+                "ADMIN_MONITOR_BOOKING_AUTO_CANCELLED",
+                "ADMIN_MONITOR_BOOKING_TIMEOUT_CANCELLED",
             ],
             required: true,
         },

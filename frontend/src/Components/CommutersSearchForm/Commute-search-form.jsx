@@ -115,7 +115,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               <input
                 type="text"
                 name="pickupLocation"
-                placeholder="Enter home location (Google Places)"
+                placeholder="Enter location, stop point, or area name"
                 value={formData.pickupLocation}
                 onChange={handleInputChange}
                 className={`commute-search-form-form-input ${
@@ -123,6 +123,9 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
                 }`}
               />
             </div>
+            <span className="input-hint">
+              Search by location, route stops, or landmarks
+            </span>
             {errors.pickupLocation && (
               <span className="commute-search-form-error-message">
                 {errors.pickupLocation}
@@ -149,7 +152,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               <input
                 type="text"
                 name="dropoffLocation"
-                placeholder="Enter work location (Google Places)"
+                placeholder="Enter location, stop point, or area name"
                 value={formData.dropoffLocation}
                 onChange={handleInputChange}
                 className={`commute-search-form-form-input ${
@@ -159,6 +162,9 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
                 }`}
               />
             </div>
+            <span className="input-hint">
+              Search by location, route stops, or landmarks
+            </span>
             {errors.dropoffLocation && (
               <span className="commute-search-form-error-message">
                 {errors.dropoffLocation}

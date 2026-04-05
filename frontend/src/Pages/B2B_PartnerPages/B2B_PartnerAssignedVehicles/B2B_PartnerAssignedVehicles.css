@@ -1,10 +1,10 @@
-.b2b-assigned-vehicles-container {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 24px;
 }
 
-.b2b-back-btn {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-back-btn {
   padding: 10px 20px;
   background: #f3f4f6;
   border: 1px solid #d1d5db;
@@ -16,28 +16,28 @@
   margin-bottom: 24px;
 }
 
-.b2b-back-btn:hover {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-back-btn:hover {
   background: #e5e7eb;
 }
 
-.b2b-assigned-vehicles-header {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-header {
   margin-bottom: 24px;
 }
 
-.b2b-assigned-vehicles-header h1 {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-header h1 {
   font-size: 28px;
   font-weight: 700;
   color: #1f2937;
   margin: 0 0 8px 0;
 }
 
-.b2b-assigned-vehicles-header .contract-info {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-header .drivemego-b2b-partnerassignedvehiclespage-contract-info {
   font-size: 14px;
   color: #6b7280;
   margin: 0;
 }
 
-.b2b-assigned-vehicles-tabs {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-tabs {
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
@@ -45,7 +45,7 @@
   padding-bottom: 0;
 }
 
-.tab-button {
+.drivemego-b2b-partnerassignedvehiclespage-tab-button {
   padding: 12px 24px;
   background: none;
   border: none;
@@ -57,11 +57,11 @@
   transition: all 0.2s;
 }
 
-.tab-button:hover {
+.drivemego-b2b-partnerassignedvehiclespage-tab-button:hover {
   color: #374151;
 }
 
-.tab-button.active {
+.drivemego-b2b-partnerassignedvehiclespage-tab-button.drivemego-b2b-partnerassignedvehiclespage-active {
   color: #16a085;
   border-bottom-color: #16a085;
 }
@@ -71,15 +71,15 @@
   padding: 20px 0;
 }
 
-.vehicles-grid,
-.routes-grid {
+.drivemego-b2b-partnerassignedvehiclespage-vehicles-grid,
+.drivemego-b2b-partnerassignedvehiclespage-routes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 20px;
 }
 
-.vehicle-card,
-.route-card {
+.drivemego-b2b-partnerassignedvehiclespage-vehicle-card,
+.drivemego-b2b-partnerassignedvehiclespage-route-card {
   background: #ffffff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -87,26 +87,26 @@
   transition: box-shadow 0.2s;
 }
 
-.vehicle-card:hover,
-.route-card:hover {
+.drivemego-b2b-partnerassignedvehiclespage-vehicle-card:hover,
+.drivemego-b2b-partnerassignedvehiclespage-route-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.vehicle-card-header {
+.drivemego-b2b-partnerassignedvehiclespage-vehicle-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
 
-.vehicle-card-header h3 {
+.drivemego-b2b-partnerassignedvehiclespage-vehicle-card-header h3 {
   font-size: 18px;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-.vehicle-category {
+.drivemego-b2b-partnerassignedvehiclespage-vehicle-category {
   padding: 4px 10px;
   background: #e5e7eb;
   border-radius: 12px;
@@ -115,78 +115,78 @@
   color: #4b5563;
 }
 
-.vehicle-reg {
+.drivemego-b2b-partnerassignedvehiclespage-vehicle-reg {
   font-size: 14px;
   color: #6b7280;
   margin: 0 0 16px 0;
 }
 
-.assignment-section {
+.drivemego-b2b-partnerassignedvehiclespage-assignment-section {
   padding: 12px 0;
   border-top: 1px solid #f3f4f6;
 }
 
-.assignment-header {
+.drivemego-b2b-partnerassignedvehiclespage-assignment-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
 
-.assignment-label {
+.drivemego-b2b-partnerassignedvehiclespage-assignment-label {
   font-size: 12px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
 }
 
-.status-badge {
+.drivemego-b2b-partnerassignedvehiclespage-status-badge {
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
 }
 
-.status-badge.assigned {
+.drivemego-b2b-partnerassignedvehiclespage-status-badge.drivemego-b2b-partnerassignedvehiclespage-assigned {
   background: #d1fae5;
   color: #065f46;
 }
 
-.status-badge.pending {
+.drivemego-b2b-partnerassignedvehiclespage-status-badge.drivemego-b2b-partnerassignedvehiclespage-pending {
   background: #fef3c7;
   color: #92400e;
 }
 
-.status-badge.active {
+.drivemego-b2b-partnerassignedvehiclespage-status-badge.drivemego-b2b-partnerassignedvehiclespage-active {
   background: #d1fae5;
   color: #065f46;
 }
 
-.assignment-details {
+.drivemego-b2b-partnerassignedvehiclespage-assignment-details {
   margin-bottom: 8px;
 }
 
-.assignment-value {
+.drivemego-b2b-partnerassignedvehiclespage-assignment-value {
   font-size: 15px;
   font-weight: 500;
   color: #1f2937;
   margin: 0 0 4px 0;
 }
 
-.assigned-by {
+.drivemego-b2b-partnerassignedvehiclespage-assigned-by {
   font-size: 12px;
   color: #9ca3af;
   margin: 0;
 }
 
-.no-assignment {
+.drivemego-b2b-partnerassignedvehiclespage-no-assignment {
   font-size: 14px;
   color: #9ca3af;
   font-style: italic;
   margin: 0 0 8px 0;
 }
 
-.update-btn {
+.drivemego-b2b-partnerassignedvehiclespage-update-btn {
   padding: 8px 16px;
   background: #16a085;
   border: none;
@@ -198,47 +198,47 @@
   margin-top: 8px;
 }
 
-.update-btn:hover {
+.drivemego-b2b-partnerassignedvehiclespage-update-btn:hover {
   background: #138d7b;
 }
 
-.route-section {
+.drivemego-b2b-partnerassignedvehiclespage-route-section {
   padding: 12px 0;
   border-top: 1px solid #f3f4f6;
 }
 
-.route-header {
+.drivemego-b2b-partnerassignedvehiclespage-route-header {
   margin-bottom: 8px;
 }
 
-.route-label {
+.drivemego-b2b-partnerassignedvehiclespage-route-label {
   font-size: 12px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
 }
 
-.route-details {
+.drivemego-b2b-partnerassignedvehiclespage-route-details {
   background: #f9fafb;
   padding: 12px;
   border-radius: 8px;
 }
 
-.route-path {
+.drivemego-b2b-partnerassignedvehiclespage-route-path {
   font-size: 14px;
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 4px 0;
 }
 
-.route-info {
+.drivemego-b2b-partnerassignedvehiclespage-route-info {
   font-size: 13px;
   color: #6b7280;
   margin: 0;
 }
 
 /* Route Card */
-.route-card-header {
+.drivemego-b2b-partnerassignedvehiclespage-route-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -247,53 +247,53 @@
   border-bottom: 1px solid #f3f4f6;
 }
 
-.route-card-header h3 {
+.drivemego-b2b-partnerassignedvehiclespage-route-card-header h3 {
   font-size: 16px;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-.route-card-body {
+.drivemego-b2b-partnerassignedvehiclespage-route-card-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.route-info-row {
+.drivemego-b2b-partnerassignedvehiclespage-route-info-row {
   display: flex;
   justify-content: space-between;
 }
 
-.route-info-row .label {
+.drivemego-b2b-partnerassignedvehiclespage-route-info-row .drivemego-b2b-partnerassignedvehiclespage-label {
   font-size: 13px;
   color: #6b7280;
 }
 
-.route-info-row .value {
+.drivemego-b2b-partnerassignedvehiclespage-route-info-row .drivemego-b2b-partnerassignedvehiclespage-value {
   font-size: 13px;
   font-weight: 500;
   color: #1f2937;
 }
 
-.route-days {
+.drivemego-b2b-partnerassignedvehiclespage-route-days {
   margin-top: 8px;
 }
 
-.route-days .label {
+.drivemego-b2b-partnerassignedvehiclespage-route-days .drivemego-b2b-partnerassignedvehiclespage-label {
   font-size: 12px;
   color: #6b7280;
   display: block;
   margin-bottom: 6px;
 }
 
-.days-badges {
+.drivemego-b2b-partnerassignedvehiclespage-days-badges {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.day-badge {
+.drivemego-b2b-partnerassignedvehiclespage-day-badge {
   padding: 3px 8px;
   background: #e5e7eb;
   border-radius: 4px;
@@ -303,7 +303,7 @@
 }
 
 /* Empty State */
-.empty-state {
+.drivemego-b2b-partnerassignedvehiclespage-empty-state {
   text-align: center;
   padding: 60px 20px;
   background: #f9fafb;
@@ -311,27 +311,27 @@
   border: 2px dashed #e5e7eb;
 }
 
-.empty-state p {
+.drivemego-b2b-partnerassignedvehiclespage-empty-state p {
   color: #6b7280;
   margin: 0;
 }
 
 /* Loading/Error States */
-.b2b-assigned-vehicles-loading {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-loading {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 60vh;
 }
 
-.b2b-assigned-vehicles-error {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-error {
   text-align: center;
   padding: 60px 20px;
   max-width: 400px;
   margin: 60px auto;
 }
 
-.b2b-assigned-vehicles-error .error-icon {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-error .drivemego-b2b-partnerassignedvehiclespage-error-icon {
   width: 64px;
   height: 64px;
   background: #fee2e2;
@@ -345,20 +345,20 @@
   margin: 0 auto 20px;
 }
 
-.b2b-assigned-vehicles-error h3 {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-error h3 {
   font-size: 20px;
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 8px 0;
 }
 
-.b2b-assigned-vehicles-error p {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-error p {
   font-size: 14px;
   color: #6b7280;
   margin: 0 0 20px 0;
 }
 
-.b2b-assigned-vehicles-error button {
+.drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-error button {
   padding: 12px 24px;
   background: #16a085;
   border: none;
@@ -370,7 +370,7 @@
 }
 
 /* Modal Styles */
-.modal-overlay {
+.drivemego-b2b-partnerassignedvehiclespage-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -384,14 +384,14 @@
   padding: 20px;
 }
 
-.modal-content {
+.drivemego-b2b-partnerassignedvehiclespage-modal-content {
   background: #ffffff;
   border-radius: 12px;
   width: 100%;
   max-width: 480px;
 }
 
-.modal-header {
+.drivemego-b2b-partnerassignedvehiclespage-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -399,14 +399,14 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.modal-header h3 {
+.drivemego-b2b-partnerassignedvehiclespage-modal-header h3 {
   font-size: 18px;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-.modal-close {
+.drivemego-b2b-partnerassignedvehiclespage-modal-close {
   width: 32px;
   height: 32px;
   display: flex;
@@ -420,21 +420,21 @@
   cursor: pointer;
 }
 
-.modal-close:hover {
+.drivemego-b2b-partnerassignedvehiclespage-modal-close:hover {
   background: #e5e7eb;
 }
 
-.modal-body {
+.drivemego-b2b-partnerassignedvehiclespage-modal-body {
   padding: 20px;
 }
 
-.modal-info {
+.drivemego-b2b-partnerassignedvehiclespage-modal-info {
   font-size: 14px;
   color: #374151;
   margin: 0 0 8px 0;
 }
 
-.modal-warning {
+.drivemego-b2b-partnerassignedvehiclespage-modal-warning {
   font-size: 13px;
   color: #f59e0b;
   background: #fef3c7;
@@ -443,11 +443,11 @@
   margin: 0 0 16px 0;
 }
 
-.form-group {
+.drivemego-b2b-partnerassignedvehiclespage-form-group {
   margin-top: 16px;
 }
 
-.form-group label {
+.drivemego-b2b-partnerassignedvehiclespage-form-group label {
   display: block;
   font-size: 13px;
   font-weight: 500;
@@ -455,7 +455,7 @@
   margin-bottom: 6px;
 }
 
-.form-group select {
+.drivemego-b2b-partnerassignedvehiclespage-form-group select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
@@ -464,20 +464,20 @@
   color: #1f2937;
 }
 
-.form-group select:focus {
+.drivemego-b2b-partnerassignedvehiclespage-form-group select:focus {
   outline: none;
   border-color: #16a085;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
 
-.modal-footer {
+.drivemego-b2b-partnerassignedvehiclespage-modal-footer {
   display: flex;
   gap: 12px;
   padding: 16px 20px;
   border-top: 1px solid #e5e7eb;
 }
 
-.cancel-btn {
+.drivemego-b2b-partnerassignedvehiclespage-cancel-btn {
   flex: 1;
   padding: 12px;
   border: 1px solid #d1d5db;
@@ -489,11 +489,11 @@
   cursor: pointer;
 }
 
-.cancel-btn:hover {
+.drivemego-b2b-partnerassignedvehiclespage-cancel-btn:hover {
   background: #f9fafb;
 }
 
-.submit-btn {
+.drivemego-b2b-partnerassignedvehiclespage-submit-btn {
   flex: 1;
   padding: 12px;
   border: none;
@@ -505,26 +505,26 @@
   cursor: pointer;
 }
 
-.submit-btn:hover {
+.drivemego-b2b-partnerassignedvehiclespage-submit-btn:hover {
   background: #138d7b;
 }
 
-.submit-btn:disabled {
+.drivemego-b2b-partnerassignedvehiclespage-submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
-  .b2b-assigned-vehicles-container {
+  .drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-container {
     padding: 16px;
   }
 
-  .vehicles-grid,
-  .routes-grid {
+  .drivemego-b2b-partnerassignedvehiclespage-vehicles-grid,
+  .drivemego-b2b-partnerassignedvehiclespage-routes-grid {
     grid-template-columns: 1fr;
   }
 
-  .b2b-assigned-vehicles-header h1 {
+  .drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-header h1 {
     font-size: 22px;
   }
 }

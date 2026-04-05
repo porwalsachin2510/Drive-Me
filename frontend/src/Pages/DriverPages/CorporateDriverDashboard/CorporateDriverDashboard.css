@@ -386,9 +386,6 @@
 }
 
 .corp-logout-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
   background: #dc3545;
   color: white;
   border: none;

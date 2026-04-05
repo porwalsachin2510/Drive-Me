@@ -789,6 +789,289 @@ export const sendAdminWalletResponseAlert = async (adminEmail, userData, respons
     }
 };
 
+// Send booking warning email to B2C_PARTNER
+export const sendBookingWarningEmail = async (partnerEmail, partnerName, bookingDetails) => {
+    try {
+        const transporter = createTransporter();
+
+        const travelDateFormatted = bookingDetails.travelDate
+            ? new Date(bookingDetails.travelDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })
+            : 'N/A';
+
+        const cancellationTimeFormatted = bookingDetails.cancellationTime
+            ? new Date(bookingDetails.cancellationTime).toLocaleString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            : 'N/A';
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to: partnerEmail,
+            subject: 'WARNING: Booking Acceptance Required - Action Needed Within ' + bookingDetails.hoursRemaining + ' Hours',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #f5af19 0%, #f12711 100%); color: white; padding: 30px; border-radius: 10px; text-align: center;">
+                        <h1 style="margin: 0; font-size: 28px;">WARNING: Booking Acceptance Required</h1>
+                        <p style="margin: 10px 0 0 0; font-size: 16px;">Action needed within ${bookingDetails.hoursRemaining} hours</p>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; margin: 20px 0;">
+                        <h3 style="color: #333; margin-top: 0;">Hello ${partnerName},</h3>
+                        
+                        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <p style="margin: 0; color: #856404; font-weight: bold;">
+                                <span style="font-size: 20px;">IMPORTANT:</span> You have a pending booking that requires your acceptance.
+                            </p>
+                            <p style="margin: 10px 0 0 0; color: #856404;">
+                                If you do not accept this booking within <strong>${bookingDetails.hoursRemaining} hours</strong>, 
+                                it will be <strong>automatically cancelled</strong>.
+                            </p>
+                        </div>
+                        
+                        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 20px 0;">
+                            <h4 style="color: #333; margin-top: 0;">Booking Details:</h4>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Booking ID:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">#${bookingDetails.bookingId}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Passenger:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${bookingDetails.passengerName}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>From:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${bookingDetails.pickupLocation}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>To:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${bookingDetails.dropoffLocation}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Travel Date:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${travelDateFormatted}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Amount:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333; font-weight: bold;">${bookingDetails.paymentAmount} ${bookingDetails.currency}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <p style="margin: 0; color: #721c24;">
+                                <strong>Auto-cancellation deadline:</strong> ${cancellationTimeFormatted}
+                            </p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${process.env.FRONTEND_URL}/b2c-partner/bookings" 
+                               style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
+                                Accept Booking Now
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #667eea; color: white; padding: 20px; border-radius: 0 0 10px 10px; text-align: center;">
+                        <p style="margin: 0; font-size: 14px;">Need help? Contact our support team</p>
+                        <p style="margin: 5px 0 0 0;">
+                            <a href="mailto:support@driveme.com" style="color: white; text-decoration: underline;">support@driveme.com</a>
+                        </p>
+                    </div>
+                </div>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Booking warning email sent to partner: ${partnerEmail}`);
+
+        return {
+            success: true,
+            message: 'Warning email sent successfully'
+        };
+    } catch (error) {
+        console.error('[v0] Error sending booking warning email:', error);
+        return {
+            success: false,
+            message: error.message
+        };
+    }
+};
+
+// Send booking auto-cancelled email to both passenger and partner
+export const sendBookingAutoCancelledEmail = async (recipientEmail, recipientName, bookingDetails, recipientType = 'passenger') => {
+    try {
+        const transporter = createTransporter();
+
+        const travelDateFormatted = bookingDetails.travelDate
+            ? new Date(bookingDetails.travelDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })
+            : 'N/A';
+
+        const isPassenger = recipientType === 'passenger';
+
+        const subject = isPassenger
+            ? 'Your Booking Has Been Auto-Cancelled - Book With Another Partner'
+            : 'Booking Auto-Cancelled Due to Timeout';
+
+        const headerGradient = isPassenger
+            ? 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)'
+            : 'linear-gradient(135deg, #6c757d 0%, #495057 100%)';
+
+        const headerText = isPassenger
+            ? 'Booking Auto-Cancelled'
+            : 'Booking Timeout - Auto-Cancelled';
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to: recipientEmail,
+            subject: subject,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: ${headerGradient}; color: white; padding: 30px; border-radius: 10px; text-align: center;">
+                        <h1 style="margin: 0; font-size: 28px;">${headerText}</h1>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; margin: 20px 0;">
+                        <h3 style="color: #333; margin-top: 0;">Hello ${recipientName},</h3>
+                        
+                        ${isPassenger ? `
+                        <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <p style="margin: 0; color: #721c24;">
+                                <strong>We are sorry!</strong> Your booking has been automatically cancelled because 
+                                <strong>${bookingDetails.partnerName}</strong> did not accept it within 24 hours.
+                            </p>
+                        </div>
+                        
+                        <p style="color: #666; line-height: 1.6;">
+                            Don't worry! You can easily book with another B2C Partner for the same route. 
+                            We apologize for the inconvenience caused.
+                        </p>
+                        ` : `
+                        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <p style="margin: 0; color: #856404;">
+                                <strong>Notice:</strong> A booking from <strong>${bookingDetails.passengerName}</strong> 
+                                has been automatically cancelled because you did not accept it within 24 hours.
+                            </p>
+                        </div>
+                        
+                        <p style="color: #666; line-height: 1.6;">
+                            Please make sure to accept or reject bookings within 24 hours to maintain good service 
+                            and avoid losing potential customers.
+                        </p>
+                        `}
+                        
+                        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545; margin: 20px 0;">
+                            <h4 style="color: #333; margin-top: 0;">Cancelled Booking Details:</h4>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Booking ID:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">#${bookingDetails.bookingId}</td>
+                                </tr>
+                                ${isPassenger ? `
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Partner:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${bookingDetails.partnerName}</td>
+                                </tr>
+                                ` : `
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Passenger:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${bookingDetails.passengerName}</td>
+                                </tr>
+                                `}
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>From:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${bookingDetails.pickupLocation}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>To:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${bookingDetails.dropoffLocation}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Travel Date:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${travelDateFormatted}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Amount:</strong></td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${bookingDetails.paymentAmount} ${bookingDetails.currency}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #666;"><strong>Reason:</strong></td>
+                                    <td style="padding: 8px 0; color: #dc3545;">${bookingDetails.reason}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        ${isPassenger ? `
+                        <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <p style="margin: 0; color: #155724;">
+                                <strong>What to do next?</strong> Browse available routes and book with another B2C Partner. 
+                                Your journey doesn't have to wait!
+                            </p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${process.env.FRONTEND_URL}/" 
+                               style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
+                                Find Another Route
+                            </a>
+                        </div>
+                        ` : `
+                        <div style="background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <p style="margin: 0; color: #0c5460;">
+                                <strong>Tip:</strong> Check your bookings regularly and accept or reject them promptly 
+                                to provide the best service to your customers.
+                            </p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${process.env.FRONTEND_URL}/b2c-partner/bookings" 
+                               style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
+                                View My Bookings
+                            </a>
+                        </div>
+                        `}
+                    </div>
+                    
+                    <div style="background: #667eea; color: white; padding: 20px; border-radius: 0 0 10px 10px; text-align: center;">
+                        <p style="margin: 0; font-size: 14px;">Need help? Contact our support team</p>
+                        <p style="margin: 5px 0 0 0;">
+                            <a href="mailto:support@driveme.com" style="color: white; text-decoration: underline;">support@driveme.com</a>
+                        </p>
+                    </div>
+                </div>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Booking auto-cancelled email sent to ${recipientType}: ${recipientEmail}`);
+
+        return {
+            success: true,
+            message: 'Auto-cancelled email sent successfully'
+        };
+    } catch (error) {
+        console.error('[v0] Error sending booking auto-cancelled email:', error);
+        return {
+            success: false,
+            message: error.message
+        };
+    }
+};
+
 // Generic email sending function
 export const sendEmail = async (recipientEmail, subject, body, options = {}) => {
     try {

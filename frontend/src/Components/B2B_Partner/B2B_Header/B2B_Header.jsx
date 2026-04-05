@@ -158,7 +158,10 @@ function B2B_Header() {
               </div>
             </div>
           </div>
-          <button className="b2b-logout-btn" onClick={handleLogout}>
+          <button
+            className="drivemego-b2b-partner-b2b-logout-btn"
+            onClick={handleLogout}
+          >
             Log Out
           </button>
         </div>

@@ -405,6 +405,41 @@ body {
   transform: translateY(-2px);
 }
 
+/* ============ NOTIFY / REQUEST ROUTE BUTTON ============ */
+.commuterhomepage-notify-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #00a699 0%, #008b7a 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.commuterhomepage-notify-btn:hover {
+  background: linear-gradient(135deg, #008b7a 0%, #007a6c 100%);
+  box-shadow: 0 4px 12px rgba(0, 166, 153, 0.3);
+  transform: translateY(-2px);
+}
+
+.commuterhomepage-notify-btn:active {
+  transform: translateY(0);
+}
+
+.commuterhomepage-notify-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* ============ FOOTER ============ */
 .footer {
   background-color: #1a3a52;

@@ -49,6 +49,7 @@ import corporateRoutes from "./routes/corporateRoutes.js"
 import pageRoutes from "./routes/pageRoutes.js"
 import { dailyTripGeneration, frequentTripGeneration, hourlyTripGeneration, runImmediateGeneration, corporateTripGeneration } from "./cron/tripGenerationCron.js"
 import { processDailyRenewals, sendDailyRenewalReminders } from "./cron/subscriptionCron.js"
+import { bookingWarningsCron, bookingAutoCancellationCron, runImmediateBookingTimeoutCheck } from "./cron/bookingTimeoutCron.js"
 
 dotenv.config()
 
@@ -533,6 +534,9 @@ server.listen(PORT, async () => {
     console.log(`Subscription cron jobs ENABLED`)
     console.log(`- Daily Renewals: 00:15`)
     console.log(`- Renewal Reminders: 09:00`)
+    console.log(`Booking timeout cron jobs ENABLED`)
+    console.log(`- Booking warnings: every 15 minutes`)
+    console.log(`- Booking auto-cancellations: every 15 minutes`)
     
     // Run immediate trip generation on server start
     console.log(`[v0] Initializing trip generation on server startup...`)
@@ -541,5 +545,14 @@ server.listen(PORT, async () => {
         console.log(`[v0] Server startup trip generation completed`)
     } catch (error) {
         console.error(`[v0] Error during server startup trip generation:`, error.message)
+    }
+
+    // Run immediate booking timeout check on server start
+    console.log(`[v0] Initializing booking timeout check on server startup...`)
+    try {
+        await runImmediateBookingTimeoutCheck();
+        console.log(`[v0] Server startup booking timeout check completed`)
+    } catch (error) {
+        console.error(`[v0] Error during server startup booking timeout check:`, error.message)
     }
 })

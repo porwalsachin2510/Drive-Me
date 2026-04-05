@@ -126,7 +126,7 @@ function B2B_FleetAndDrivers() {
           </button>
         ) : activeSubTab === "routes" ? (
           <button
-            className="add-btn"
+            className="b2b-operator-dashboard-add-btn"
             onClick={() => setShowAddRouteModal(true)}
           >
             + Add Route
@@ -156,7 +156,7 @@ function B2B_FleetAndDrivers() {
         </button>
 
         <button
-          className={`fleet-tab ${activeSubTab === "routes" ? "active" : ""}`}
+          className={`b2b-operator-dashboard-fleet-tab ${activeSubTab === "routes" ? "b2b-operator-dashboard-active" : ""}`}
           onClick={() => setActiveSubTab("routes")}
         >
           Routes ({routes?.length || 0})

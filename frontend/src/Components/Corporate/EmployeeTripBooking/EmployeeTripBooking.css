@@ -15,6 +15,30 @@
   margin: 0 0 16px 0;
 }
 
+.employee-trip-booking-header-top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.employee-trip-booking-header-top-inside{
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.employee-trip-logout-btn {
+  padding: 8px 16px;
+  background: #dc3545;
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
 .employee-trip-booking-tab-navigation {
   display: flex;
   gap: 4px;

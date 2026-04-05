@@ -21,15 +21,23 @@ const normalize = (val) => {
     return ""
 }
 
-// Check location match (from / to / stops)
-const isLocationMatch = (searchLocation, from, to, stops = []) => {
+// Check location match (from / to / stops including schedule stops)
+const isLocationMatch = (searchLocation, from, to, stops = [], scheduleStops = []) => {
     if (!searchLocation) return true
     const search = normalize(searchLocation)
 
     if (from && normalize(from).includes(search)) return true
     if (to && normalize(to).includes(search)) return true
 
-    return stops.some((stop) => {
+    // Check route-level stops
+    const routeStopMatch = stops.some((stop) => {
+        const stopLocation = typeof stop === "string" ? stop : stop.location
+        return normalize(stopLocation).includes(search)
+    })
+    if (routeStopMatch) return true
+
+    // Check schedule-level stops (outboundStopPoints and returnStopPoints)
+    return scheduleStops.some((stop) => {
         const stopLocation = typeof stop === "string" ? stop : stop.location
         return normalize(stopLocation).includes(search)
     })
@@ -425,6 +433,19 @@ export const searchCommuteRoutes = async (req, res) => {
                 console.log("No schedule found for route:", route._id, "- using route-level data")
             }
 
+            // Extract all stop points from schedule tripTimes (outboundStopPoints and returnStopPoints)
+            const scheduleStops = []
+            if (schedule?.tripTimes && schedule.tripTimes.length > 0) {
+                for (const tripTime of schedule.tripTimes) {
+                    if (tripTime.outboundStopPoints && tripTime.outboundStopPoints.length > 0) {
+                        scheduleStops.push(...tripTime.outboundStopPoints)
+                    }
+                    if (tripTime.returnStopPoints && tripTime.returnStopPoints.length > 0) {
+                        scheduleStops.push(...tripTime.returnStopPoints)
+                    }
+                }
+            }
+
             // Get upcoming trips for this route
             const today = new Date()
             today.setHours(0, 0, 0, 0)
@@ -457,8 +478,10 @@ export const searchCommuteRoutes = async (req, res) => {
             let shouldInclude = false
 
             if (filterType === "matched" && (pickupLocation || dropoffLocation)) {
-                const pickupMatch = isLocationMatch(pickupLocation, route.fromLocation, route.toLocation, route.stopPoints)
-                const dropMatch = isLocationMatch(dropoffLocation, route.fromLocation, route.toLocation, route.stopPoints)
+                // Include schedule stops in location matching
+                const allStops = [...(route.stopPoints || []), ...scheduleStops]
+                const pickupMatch = isLocationMatch(pickupLocation, route.fromLocation, route.toLocation, route.stopPoints, scheduleStops)
+                const dropMatch = isLocationMatch(dropoffLocation, route.fromLocation, route.toLocation, route.stopPoints, scheduleStops)
                 shouldInclude = pickupMatch && dropMatch
             } else {
                 shouldInclude = true
@@ -466,11 +489,20 @@ export const searchCommuteRoutes = async (req, res) => {
 
             if (!shouldInclude) continue
 
+            // Combine route-level and schedule-level stops for travel path
+            const allStopsForPath = [...(route.stopPoints || []), ...scheduleStops]
+            // Remove duplicate stops by location (case-insensitive)
+            const uniqueStops = allStopsForPath.filter((stop, index, self) =>
+                index === self.findIndex(s =>
+                    normalize(s.location || s) === normalize(stop.location || stop)
+                )
+            )
+
             // Create travel path with schedule data (fallback to route-level data)
             const travelData = getTravelPath({
                 from: route.fromLocation,
                 to: route.toLocation,
-                stops: route.stopPoints || [],
+                stops: uniqueStops,
                 inboundStart: route.startTime || "",
                 pickupLocation,
                 dropoffLocation,
@@ -522,6 +554,9 @@ export const searchCommuteRoutes = async (req, res) => {
                 vehicleModel: route.assignedVehicle?.model,
                 vehiclePlate: route.assignedVehicle?.licensePlate,
                 images: route.assignedVehicle?.images?.map(img => img.url) || [],
+                stopPoints: route.stopPoints || [],
+                scheduleStops: scheduleStops, // Include schedule stops for display
+                allStops: uniqueStops, // Combined unique stops
                 type: "b2c",
             })
         }
@@ -593,20 +628,42 @@ export const publicSearchRoutes = async (req, res) => {
             // Even without schedule, show the route based on its own data
             const routeAvailableDays = schedule?.availableDays || route.availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
-            // Location filtering
+            // Extract all stop points from schedule tripTimes (outboundStopPoints and returnStopPoints)
+            const scheduleStops = []
+            if (schedule?.tripTimes && schedule.tripTimes.length > 0) {
+                for (const tripTime of schedule.tripTimes) {
+                    if (tripTime.outboundStopPoints && tripTime.outboundStopPoints.length > 0) {
+                        scheduleStops.push(...tripTime.outboundStopPoints)
+                    }
+                    if (tripTime.returnStopPoints && tripTime.returnStopPoints.length > 0) {
+                        scheduleStops.push(...tripTime.returnStopPoints)
+                    }
+                }
+            }
+
+            // Location filtering - now includes schedule stops
             let shouldInclude = true
             if (filterType === "matched" && (pickupLocation || dropoffLocation)) {
-                const pickupMatch = isLocationMatch(pickupLocation, route.fromLocation, route.toLocation, route.stopPoints)
-                const dropMatch = isLocationMatch(dropoffLocation, route.fromLocation, route.toLocation, route.stopPoints)
+                const pickupMatch = isLocationMatch(pickupLocation, route.fromLocation, route.toLocation, route.stopPoints, scheduleStops)
+                const dropMatch = isLocationMatch(dropoffLocation, route.fromLocation, route.toLocation, route.stopPoints, scheduleStops)
                 shouldInclude = pickupMatch && dropMatch
             }
             if (!shouldInclude) continue
+
+            // Combine route-level and schedule-level stops for travel path
+            const allStopsForPath = [...(route.stopPoints || []), ...scheduleStops]
+            // Remove duplicate stops by location (case-insensitive)
+            const uniqueStops = allStopsForPath.filter((stop, index, self) =>
+                index === self.findIndex(s =>
+                    normalize(s.location || s) === normalize(stop.location || stop)
+                )
+            )
 
             // Build travel path using route data (with or without schedule)
             const travelData = getTravelPath({
                 from: route.fromLocation,
                 to: route.toLocation,
-                stops: route.stopPoints || [],
+                stops: uniqueStops,
                 inboundStart: route.startTime || "",
                 pickupLocation,
                 dropoffLocation,
@@ -675,7 +732,8 @@ export const publicSearchRoutes = async (req, res) => {
                 totalSeats: route.totalSeats,
                 dayMatching: travelData.dayMatching,
                 stopPoints: route.stopPoints || [],
-
+                scheduleStops: scheduleStops, // Include schedule stops for display
+                allStops: uniqueStops, // Combined unique stops
                 images: (route.images || []).map(img => typeof img === 'string' ? img : img?.url).filter(Boolean),
                 type: "b2c",
             })

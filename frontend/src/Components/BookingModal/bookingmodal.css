@@ -107,6 +107,10 @@
   padding: 12px 16px;
 }
 
+.route-summary-header h3 {
+  color: white;
+}
+
 /* Trip Selection Styles */
 .trip-selection-card {
   background: #f8f9fa;

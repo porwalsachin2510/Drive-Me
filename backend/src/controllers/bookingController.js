@@ -15,6 +15,7 @@ import { calculateCommission, calculateDriverCommission } from "../Services/Help
 import { sendRealTimeNotification, sendBookingUpdate } from "../Services/socketService.js"
 import { createNotification } from "./notificationController.js"
 import { sendAdminNotification } from "../Services/notificationService.js"
+import { setBookingDeadlines } from "../cron/bookingTimeoutCron.js"
 
 // Check if route is available for booking
 export const checkRouteAvailability = async (req, res) => {
@@ -411,6 +412,9 @@ export const createB2CBooking = async (req, res) => {
             driverEarnings: paymentMethod === "CASH" ? paymentAmount : commissionData.fleetOwnerAmount,
         })
 
+        // Set acceptance deadlines for booking timeout feature
+        // Warning at 20 hours, auto-cancel at 24 hours
+        setBookingDeadlines(booking);
         await booking.save()
 
         // NEW LOGIC: For monthly passes, don't reduce seats immediately
@@ -627,6 +631,8 @@ export const createCorporateBooking = async (req, res) => {
             passengerNotes,
         })
 
+        // Set acceptance deadlines for booking timeout feature
+        setBookingDeadlines(booking);
         await booking.save()
 
         await Route.updateOne(

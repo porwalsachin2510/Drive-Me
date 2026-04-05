@@ -3,18 +3,18 @@ import "./LoadingSpinner.css";
 const LoadingSpinner = ({ size = "medium", fullScreen = false }) => {
   if (fullScreen) {
     return (
-      <div className="loading-spinner-fullscreen">
-        <div className={`spinner spinner-${size}`}>
-          <div className="spinner-circle"></div>
+      <div className="drivemego-loading-spinner-fullscreen">
+        <div className={`drivemego-spinner drivemego-spinner-${size}`}>
+          <div className="drivemego-spinner-circle"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="loading-spinner-container">
-      <div className={`spinner spinner-${size}`}>
-        <div className="spinner-circle"></div>
+    <div className="drivemego-loading-spinner-container">
+      <div className={`drivemego-spinner spinner-${size}`}>
+        <div className="drivemego-spinner-circle"></div>
       </div>
     </div>
   );

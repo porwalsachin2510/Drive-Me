@@ -30,6 +30,8 @@ const CommuterMyBookingsPage = () => {
   const [noShowReason, setNoShowReason] = useState("");
   const [noShowCustomReason, setNoShowCustomReason] = useState("");
   const [noShowLoading, setNoShowLoading] = useState(false);
+  const [showAutoCancelModal, setShowAutoCancelModal] = useState(false);
+  const [autoCancelData, setAutoCancelData] = useState(null);
 
   // Download monthly pass certificate
   const handleDownloadPassCertificate = useCallback(async (passId) => {
@@ -290,6 +292,25 @@ const CommuterMyBookingsPage = () => {
         }
       });
 
+      // Listen for booking auto-cancellation notification
+      socket.socket.on("BOOKING_AUTO_CANCELLED", (data) => {
+        console.log("Booking auto-cancelled notification received:", data);
+        setAutoCancelData(data);
+        setShowAutoCancelModal(true);
+        // Refresh bookings to reflect the cancellation
+        dispatch(getPassengerBookings());
+      });
+
+      // Listen for general notifications that include auto-cancellation
+      socket.socket.on("notification", (notification) => {
+        console.log("Notification received:", notification);
+        if (notification.type === "BOOKING_AUTO_CANCELLED") {
+          setAutoCancelData(notification.data || notification);
+          setShowAutoCancelModal(true);
+          dispatch(getPassengerBookings());
+        }
+      });
+
       return () => {
         if (socket.socket) {
           socket.socket.off("location-update");
@@ -301,6 +322,8 @@ const CommuterMyBookingsPage = () => {
           socket.socket.off("trip-completed");
           socket.socket.off("driver-status-change");
           socket.socket.off("driver-location-update");
+          socket.socket.off("BOOKING_AUTO_CANCELLED");
+          socket.socket.off("notification");
         }
       };
     }
@@ -362,6 +385,19 @@ const CommuterMyBookingsPage = () => {
   // Navigate to booking details page
   const handleViewDetails = (booking) => {
     navigate(`/commuter/my-bookings/${booking._id}`);
+  };
+
+  // Handle auto-cancel modal close and redirect to home page
+  const handleAutoCancelRedirect = () => {
+    setShowAutoCancelModal(false);
+    setAutoCancelData(null);
+    navigate("/"); // Redirect to CommuterHomePage
+  };
+
+  // Close auto-cancel modal without redirect
+  const handleAutoCancelClose = () => {
+    setShowAutoCancelModal(false);
+    setAutoCancelData(null);
   };
 
   const handleSubmitNoShow = async () => {
@@ -1820,8 +1856,188 @@ const CommuterMyBookingsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Auto-Cancellation Modal */}
+      {showAutoCancelModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1200,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "16px",
+              padding: "32px",
+              maxWidth: "500px",
+              width: "90%",
+              textAlign: "center",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+            }}
+          >
+            {/* Warning Icon */}
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "50%",
+                backgroundColor: "#fee2e2",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+              }}
+            >
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+
+            <h2
+              style={{
+                fontSize: "24px",
+                fontWeight: "700",
+                color: "#1f2937",
+                marginBottom: "12px",
+              }}
+            >
+              Booking Auto-Cancelled
+            </h2>
+
+            <p
+              style={{
+                fontSize: "16px",
+                color: "#6b7280",
+                marginBottom: "8px",
+                lineHeight: "1.6",
+              }}
+            >
+              Your booking has been automatically cancelled because{" "}
+              <strong style={{ color: "#374151" }}>
+                {autoCancelData?.partnerName || "the B2C Partner"}
+              </strong>{" "}
+              did not accept it within 24 hours.
+            </p>
+
+            {autoCancelData?.pickupLocation &&
+              autoCancelData?.dropoffLocation && (
+                <div
+                  style={{
+                    backgroundColor: "#f9fafb",
+                    padding: "16px",
+                    borderRadius: "12px",
+                    marginTop: "16px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>
+                    <strong>Route:</strong> {autoCancelData.pickupLocation} →{" "}
+                    {autoCancelData.dropoffLocation}
+                  </p>
+                  {autoCancelData?.bookingId && (
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        color: "#9ca3af",
+                        margin: "8px 0 0 0",
+                      }}
+                    >
+                      Booking ID: #
+                      {autoCancelData.bookingId.toString().slice(-8)}
+                    </p>
+                  )}
+                </div>
+              )}
+
+            <div
+              style={{
+                backgroundColor: "#d1fae5",
+                padding: "16px",
+                borderRadius: "12px",
+                marginBottom: "24px",
+              }}
+            >
+              <p style={{ fontSize: "14px", color: "#065f46", margin: 0 }}>
+                <strong>Good news!</strong> You can now book with another B2C
+                Partner for the same route.
+              </p>
+            </div>
+
+            <div
+              style={{ display: "flex", gap: "12px", justifyContent: "center" }}
+            >
+              <button
+                onClick={handleAutoCancelClose}
+                style={{
+                  padding: "12px 24px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "10px",
+                  backgroundColor: "white",
+                  color: "#374151",
+                  cursor: "pointer",
+                  fontSize: "15px",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = "#f3f4f6";
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = "white";
+                }}
+              >
+                Stay Here
+              </button>
+              <button
+                onClick={handleAutoCancelRedirect}
+                style={{
+                  padding: "12px 24px",
+                  border: "none",
+                  borderRadius: "10px",
+                  background:
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "15px",
+                  fontWeight: "600",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.transform = "translateY(-2px)";
+                  e.target.style.boxShadow =
+                    "0 4px 12px rgba(102, 126, 234, 0.4)";
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "none";
+                }}
+              >
+                Find New Route
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+};;
 
 export default CommuterMyBookingsPage;

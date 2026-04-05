@@ -156,8 +156,21 @@
   transition: box-shadow 0.3s ease;
 }
 
-.drivemego-availablesection-route-item:hover {
+.drivemego-availablesection-route-item:hover,
+.available-section-route-item:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.available-section-route-item {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-left: 5px solid #fdb913;
+  border-radius: 8px;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: box-shadow 0.3s ease;
 }
 
 /* Row 1: Route info on left, price on right */
@@ -383,6 +396,101 @@
   background: #fee2e2;
   border-color: #ef4444;
   color: #b91c1c;
+}
+
+/* Route Stops Section */
+.availablesection-stops-group {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.availablesection-stops-group .availablesection-detail-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.stops-icon {
+  font-size: 14px;
+}
+
+.route-stops-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  position: relative;
+  padding: 8px 0;
+}
+
+.route-stop-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #475569;
+  position: relative;
+}
+
+.route-stop-item.start-point {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border-color: #86efac;
+  color: #166534;
+}
+
+.route-stop-item.end-point {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.stop-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+}
+
+.stop-dot.start {
+  background: #22c55e;
+}
+
+.stop-dot.end {
+  background: #ef4444;
+}
+
+.stop-name {
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stop-time {
+  font-size: 10px;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* Arrow between stops */
+.route-stop-item:not(:last-child)::after {
+  content: "→";
+  position: absolute;
+  right: -14px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 /* Responsive: Tablet layout */

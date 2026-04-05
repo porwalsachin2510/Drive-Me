@@ -180,8 +180,39 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
         passengerNotes: String,
         rejectionReason: String,
         cancelledAt: Date,
-        cancelledBy: String, // "PASSENGER", "DRIVER", "ADMIN"
+        cancelledBy: String, // "PASSENGER", "DRIVER", "ADMIN", "SYSTEM"
         completedAt: Date,
+
+        // Booking Timeout Fields - for auto-cancellation feature
+        acceptanceDeadline: {
+            type: Date, // 24 hours after booking creation
+            default: null,
+        },
+        warningDeadline: {
+            type: Date, // 20 hours after booking creation (4 hours before cancellation)
+            default: null,
+        },
+        warningSentAt: {
+            type: Date, // When warning was sent to B2C_PARTNER
+            default: null,
+        },
+        warningEmailSent: {
+            type: Boolean,
+            default: false,
+        },
+        warningNotificationSent: {
+            type: Boolean,
+            default: false,
+        },
+        autoCancelledAt: {
+            type: Date, // When booking was auto-cancelled
+            default: null,
+        },
+        autoCancelReason: {
+            type: String,
+            default: null,
+        },
+
         rating: Number, // Passenger rating for this ride
         review: String,
         // Monthly Pass Specific Fields

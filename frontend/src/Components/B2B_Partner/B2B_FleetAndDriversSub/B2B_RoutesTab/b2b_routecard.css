@@ -1,4 +1,4 @@
-.b2b-route-card {
+.drivemego-b2broutecard-b2b-route-card {
   background: #ffffff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -6,12 +6,12 @@
   transition: box-shadow 0.2s, transform 0.2s;
 }
 
-.b2b-route-card:hover {
+.drivemego-b2broutecard-b2b-route-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
 
-.b2b-route-header {
+.drivemego-b2broutecard-b2b-route-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -20,48 +20,48 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.b2b-route-info {
+.drivemego-b2broutecard-b2b-route-info {
   flex: 1;
 }
 
-.b2b-route-locations {
+.drivemego-b2broutecard-b2b-route-locations {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.b2b-location {
+.drivemego-b2broutecard-b2b-location {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.b2b-location-dot {
+.drivemego-b2broutecard-b2b-location-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
 }
 
-.b2b-location-dot.b2b-from {
+.drivemego-b2broutecard-b2b-location-dot.drivemego-b2broutecard-b2b-from {
   background: #10b981;
 }
 
-.b2b-location-dot.b2b-to {
+.drivemego-b2broutecard-b2b-location-dot.drivemego-b2broutecard-b2b-to {
   background: #ef4444;
 }
 
-.b2b-location-text {
+.drivemego-b2broutecard-b2b-location-text {
   font-size: 14px;
   font-weight: 600;
   color: #1f2937;
 }
 
-.b2b-route-arrow {
+.drivemego-b2broutecard-b2b-route-arrow {
   color: #9ca3af;
 }
 
-.b2b-status-badge {
+.drivemego-b2broutecard-b2b-status-badge {
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 11px;
@@ -70,51 +70,51 @@
   text-transform: uppercase;
 }
 
-.b2b-route-details {
+.drivemego-b2broutecard-b2b-route-details {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.b2b-detail-row {
+.drivemego-b2broutecard-b2b-detail-row {
   display: flex;
   gap: 16px;
 }
 
-.b2b-detail-item {
+.drivemego-b2broutecard-b2b-detail-item {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.b2b-detail-label {
+.drivemego-b2broutecard-b2b-detail-label {
   font-size: 11px;
   font-weight: 500;
   color: #6b7280;
   text-transform: uppercase;
 }
 
-.b2b-detail-value {
+.drivemego-b2broutecard-b2b-detail-value {
   font-size: 14px;
   font-weight: 500;
   color: #1f2937;
 }
 
-.b2b-days-row {
+.drivemego-b2broutecard-b2b-days-row {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.b2b-days-badges {
+.drivemego-b2broutecard-b2b-days-badges {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.b2b-day-badge {
+.drivemego-b2broutecard-b2b-day-badge {
   padding: 3px 8px;
   background: #e5e7eb;
   border-radius: 4px;
@@ -123,19 +123,19 @@
   color: #374151;
 }
 
-.b2b-notes-row {
+.drivemego-b2broutecard-b2b-notes-row {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.b2b-notes-text {
+.drivemego-b2broutecard-b2b-notes-text {
   font-size: 13px;
   color: #4b5563;
   line-height: 1.4;
 }
 
-.b2b-contract-info {
+.drivemego-b2broutecard-b2b-contract-info {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -143,7 +143,7 @@
   border-top: 1px solid #f3f4f6;
 }
 
-.b2b-contract-badge {
+.drivemego-b2broutecard-b2b-contract-badge {
   padding: 4px 10px;
   background: #dbeafe;
   color: #1d4ed8;
@@ -152,12 +152,12 @@
   font-weight: 500;
 }
 
-.b2b-stop-points {
+.drivemego-b2broutecard-b2b-stop-points {
   border-top: 1px solid #f3f4f6;
   padding-top: 12px;
 }
 
-.b2b-toggle-details {
+.drivemego-b2broutecard-b2b-toggle-details {
   background: none;
   border: none;
   color: #16a085;
@@ -167,18 +167,18 @@
   padding: 0;
 }
 
-.b2b-toggle-details:hover {
+.drivemego-b2broutecard-b2b-toggle-details:hover {
   text-decoration: underline;
 }
 
-.b2b-stop-points-list {
+.drivemego-b2broutecard-b2b-stop-points-list {
   margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.b2b-stop-point {
+.drivemego-b2broutecard-b2b-stop-point {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -187,7 +187,7 @@
   border-radius: 6px;
 }
 
-.b2b-stop-number {
+.drivemego-b2broutecard-b2b-stop-number {
   width: 24px;
   height: 24px;
   display: flex;
@@ -200,19 +200,19 @@
   font-weight: 600;
 }
 
-.b2b-stop-location {
+.drivemego-b2broutecard-b2b-stop-location {
   flex: 1;
   font-size: 13px;
   color: #374151;
 }
 
-.b2b-stop-time {
+.drivemego-b2broutecard-b2b-stop-time {
   font-size: 13px;
   font-weight: 500;
   color: #6b7280;
 }
 
-.b2b-route-actions {
+.drivemego-b2broutecard-b2b-route-actions {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
@@ -220,7 +220,7 @@
   border-top: 1px solid #e5e7eb;
 }
 
-.b2b-action-btn {
+.drivemego-b2broutecard-b2b-action-btn {
   flex: 1;
   padding: 10px 16px;
   border: none;
@@ -231,31 +231,31 @@
   transition: all 0.2s;
 }
 
-.b2b-edit-btn {
+.drivemego-b2broutecard-b2b-edit-btn {
   background: #16a085;
   color: #ffffff;
 }
 
-.b2b-edit-btn:hover {
+.drivemego-b2broutecard-b2b-edit-btn:hover {
   background: #138d7b;
 }
 
-.b2b-delete-btn {
+.drivemego-b2broutecard-b2b-delete-btn {
   background: #fee2e2;
   color: #dc2626;
 }
 
-.b2b-delete-btn:hover {
+.drivemego-b2broutecard-b2b-delete-btn:hover {
   background: #fecaca;
 }
 
-.b2b-delete-btn:disabled {
+.drivemego-b2broutecard-b2b-delete-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 /* Modal Styles */
-.b2b-modal-overlay {
+.drivemego-b2broutecard-b2b-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -269,7 +269,7 @@
   padding: 20px;
 }
 
-.b2b-modal-content {
+.drivemego-b2broutecard-b2b-modal-content {
   background: #ffffff;
   border-radius: 12px;
   width: 100%;
@@ -278,7 +278,7 @@
   overflow-y: auto;
 }
 
-.b2b-modal-header {
+.drivemego-b2broutecard-b2b-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -286,14 +286,14 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.b2b-modal-header h3 {
+.drivemego-b2broutecard-b2b-modal-header h3 {
   font-size: 18px;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-.b2b-modal-close {
+.drivemego-b2broutecard-b2b-modal-close {
   width: 32px;
   height: 32px;
   display: flex;
@@ -307,11 +307,11 @@
   cursor: pointer;
 }
 
-.b2b-modal-close:hover {
+.drivemego-b2broutecard-b2b-modal-close:hover {
   background: #e5e7eb;
 }
 
-.b2b-edit-error {
+.drivemego-b2broutecard-b2b-edit-error {
   margin: 12px 20px 0;
   padding: 10px 12px;
   background: #fee2e2;
@@ -320,34 +320,34 @@
   font-size: 13px;
 }
 
-.b2b-edit-form {
+.drivemego-b2broutecard-b2b-edit-form {
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.b2b-edit-row {
+.drivemego-b2broutecard-b2b-edit-row {
   display: flex;
   gap: 16px;
 }
 
-.b2b-edit-field {
+.drivemego-b2broutecard-b2b-edit-field {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.b2b-edit-field label {
+.drivemego-b2broutecard-b2b-edit-field label {
   font-size: 13px;
   font-weight: 500;
   color: #374151;
 }
 
-.b2b-edit-field input,
-.b2b-edit-field select,
-.b2b-edit-field textarea {
+.drivemego-b2broutecard-b2b-edit-field input,
+.drivemego-b2broutecard-b2b-edit-field select,
+.drivemego-b2broutecard-b2b-edit-field textarea {
   padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -355,25 +355,25 @@
   color: #1f2937;
 }
 
-.b2b-edit-field input:focus,
-.b2b-edit-field select:focus,
-.b2b-edit-field textarea:focus {
+.drivemego-b2broutecard-b2b-edit-field input:focus,
+.drivemego-b2broutecard-b2b-edit-field select:focus,
+.drivemego-b2broutecard-b2b-edit-field textarea:focus {
   outline: none;
   border-color: #16a085;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
 
-.b2b-days-field {
+.drivemego-b2broutecard-b2b-days-field {
   margin-top: 8px;
 }
 
-.b2b-days-grid {
+.drivemego-b2broutecard-b2b-days-grid {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.b2b-days-grid .b2b-day-btn {
+.drivemego-b2broutecard-b2b-days-grid .drivemego-b2broutecard-b2b-day-btn {
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   background: #ffffff;
@@ -385,23 +385,23 @@
   transition: all 0.2s;
 }
 
-.b2b-days-grid .b2b-day-btn:hover {
+.drivemego-b2broutecard-b2b-days-grid .drivemego-b2broutecard-b2b-day-btn:hover {
   border-color: #16a085;
 }
 
-.b2b-days-grid .b2b-day-btn.active {
+.drivemego-b2broutecard-b2b-days-grid .drivemego-b2broutecard-b2b-day-btn.active {
   background: #16a085;
   border-color: #16a085;
   color: #ffffff;
 }
 
-.b2b-edit-actions {
+.drivemego-b2broutecard-b2b-edit-actions {
   display: flex;
   gap: 12px;
   margin-top: 8px;
 }
 
-.b2b-cancel-btn {
+.drivemego-b2broutecard-b2b-cancel-btn {
   flex: 1;
   padding: 12px;
   border: 1px solid #d1d5db;
@@ -413,11 +413,11 @@
   cursor: pointer;
 }
 
-.b2b-cancel-btn:hover {
+.drivemego-b2broutecard-b2b-cancel-btn:hover {
   background: #f9fafb;
 }
 
-.b2b-save-btn {
+.drivemego-b2broutecard-b2b-save-btn {
   flex: 1;
   padding: 12px;
   border: none;
@@ -429,27 +429,27 @@
   cursor: pointer;
 }
 
-.b2b-save-btn:hover {
+.drivemego-b2broutecard-b2b-save-btn:hover {
   background: #138d7b;
 }
 
-.b2b-save-btn:disabled {
+.drivemego-b2broutecard-b2b-save-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 @media (max-width: 480px) {
-  .b2b-edit-row {
+  .drivemego-b2broutecard-b2b-edit-row {
     flex-direction: column;
   }
   
-  .b2b-route-locations {
+  .drivemego-b2broutecard-b2b-route-locations {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
   
-  .b2b-route-arrow {
+  .drivemego-b2broutecard-b2b-route-arrow {
     transform: rotate(90deg);
     margin-left: 4px;
   }

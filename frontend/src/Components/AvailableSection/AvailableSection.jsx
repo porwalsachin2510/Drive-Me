@@ -398,6 +398,59 @@ const AvailableSection = ({
                     ))}
                   </div>
                 </div>
+                {/* Stop Points - Show all stops along the route */}
+                {(route.allStops?.length > 0 ||
+                  route.scheduleStops?.length > 0 ||
+                  route.stopPoints?.length > 0) && (
+                  <div className="availablesection-stops-group">
+                    <label className="availablesection-detail-label">
+                      <span className="stops-icon">🚏</span> ROUTE STOPS
+                    </label>
+                    <div className="route-stops-container">
+                      {/* Start Point */}
+                      <div className="route-stop-item start-point">
+                        <span className="stop-dot start"></span>
+                        <span className="stop-name">{route.fromLocation}</span>
+                        {route.pickupArrivalTime &&
+                          route.pickupArrivalTime !== "N/A" && (
+                            <span className="stop-time">
+                              {route.pickupArrivalTime}
+                            </span>
+                          )}
+                      </div>
+
+                      {/* Intermediate Stops */}
+                      {(
+                        route.allStops ||
+                        route.scheduleStops ||
+                        route.stopPoints ||
+                        []
+                      ).map((stop, stopIdx) => (
+                        <div key={stopIdx} className="route-stop-item">
+                          <span className="stop-dot"></span>
+                          <span className="stop-name">
+                            {typeof stop === "string" ? stop : stop.location}
+                          </span>
+                          {stop.time && stop.time !== "N/A" && (
+                            <span className="stop-time">{stop.time}</span>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* End Point */}
+                      <div className="route-stop-item end-point">
+                        <span className="stop-dot end"></span>
+                        <span className="stop-name">{route.toLocation}</span>
+                        {route.dropoffArrivalTime &&
+                          route.dropoffArrivalTime !== "N/A" && (
+                            <span className="stop-time">
+                              {route.dropoffArrivalTime}
+                            </span>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

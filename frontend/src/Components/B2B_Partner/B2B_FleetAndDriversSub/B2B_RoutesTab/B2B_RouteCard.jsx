@@ -87,7 +87,7 @@ function B2B_RouteCard({ route, onRefresh }) {
       return;
     setDeleting(true);
     try {
-      await api.delete(`/b2b/routes/${route._id}`);
+      await api.delete(`/b2b-partner/routes/${route._id}`);
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error deleting route:", error);
@@ -107,158 +107,201 @@ function B2B_RouteCard({ route, onRefresh }) {
   };
 
   return (
-    <div className="b2b-route-card">
-      <div className="b2b-route-header">
-        <div className="b2b-route-info">
-          <div className="b2b-route-locations">
-            <div className="b2b-location">
-              <span className="b2b-location-dot b2b-from"></span>
-              <span className="b2b-location-text">{route.fromLocation}</span>
-            </div>
-            <div className="b2b-route-arrow">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#9ca3af"
-                strokeWidth="2"
-              >
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </div>
-            <div className="b2b-location">
-              <span className="b2b-location-dot b2b-to"></span>
-              <span className="b2b-location-text">{route.toLocation}</span>
-            </div>
-          </div>
-        </div>
-        <span
-          className="b2b-status-badge"
-          style={{ backgroundColor: getStatusColor(route.status) }}
-        >
-          {route.status}
-        </span>
-      </div>
-
-      <div className="b2b-route-details">
-        <div className="b2b-detail-row">
-          <div className="b2b-detail-item">
-            <span className="b2b-detail-label">Start Date:</span>
-            <span className="b2b-detail-value">
-              {formatDate(route.routeStartDate)}
-            </span>
-          </div>
-          <div className="b2b-detail-item">
-            <span className="b2b-detail-label">Distance:</span>
-            <span className="b2b-detail-value">
-              {route.totalDistance ? `${route.totalDistance} km` : "N/A"}
-            </span>
-          </div>
-        </div>
-
-        <div className="b2b-detail-row">
-          <div className="b2b-detail-item">
-            <span className="b2b-detail-label">Duration:</span>
-            <span className="b2b-detail-value">
-              {route.estimatedDuration || "N/A"}
-            </span>
-          </div>
-          <div className="b2b-detail-item">
-            <span className="b2b-detail-label">Seats:</span>
-            <span className="b2b-detail-value">{route.totalSeats || 0}</span>
-          </div>
-        </div>
-
-        <div className="b2b-days-row">
-          <span className="b2b-detail-label">Available Days:</span>
-          <div className="b2b-days-badges">
-            {route.availableDays?.map((day) => (
-              <span key={day} className="b2b-day-badge">
-                {day}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {route.routeNotes && (
-          <div className="b2b-notes-row">
-            <span className="b2b-detail-label">Notes:</span>
-            <span className="b2b-notes-text">{route.routeNotes}</span>
-          </div>
-        )}
-
-        {/* Contract Info */}
-        {route.contractId && (
-          <div className="b2b-contract-info">
-            <span className="b2b-detail-label">Contract:</span>
-            <span className="b2b-contract-badge">
-              {route.contractId?.contractNumber || "Linked"}
-            </span>
-          </div>
-        )}
-
-        {/* Stop Points Toggle */}
-        {route.stopPoints && route.stopPoints.length > 0 && (
-          <div className="b2b-stop-points">
-            <button
-              className="b2b-toggle-details"
-              onClick={() => setShowDetails(!showDetails)}
-            >
-              {showDetails ? "Hide" : "Show"} Stop Points (
-              {route.stopPoints.length})
-            </button>
-            {showDetails && (
-              <div className="b2b-stop-points-list">
-                {route.stopPoints.map((stop, index) => (
-                  <div key={index} className="b2b-stop-point">
-                    <span className="b2b-stop-number">{index + 1}</span>
-                    <span className="b2b-stop-location">{stop.location}</span>
-                    <span className="b2b-stop-time">{stop.time}</span>
-                  </div>
-                ))}
+    <>
+      <div className="drivemego-b2broutecard-b2b-route-card">
+        <div className="drivemego-b2broutecard-b2b-route-header">
+          <div className="drivemego-b2broutecard-b2b-route-info">
+            <div className="drivemego-b2broutecard-b2b-route-locations">
+              <div className="drivemego-b2broutecard-b2b-location">
+                <span className="drivemego-b2broutecard-b2b-location-dot drivemego-b2broutecard-b2b-from"></span>
+                <span className="drivemego-b2broutecard-b2b-location-text">
+                  {route.fromLocation}
+                </span>
               </div>
-            )}
+              <div className="drivemego-b2broutecard-b2b-route-arrow">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#9ca3af"
+                  strokeWidth="2"
+                >
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+              <div className="drivemego-b2broutecard-b2b-location">
+                <span className="drivemego-b2broutecard-b2b-location-dot drivemego-b2broutecard-b2b-to"></span>
+                <span className="drivemego-b2broutecard-b2b-location-text">
+                  {route.toLocation}
+                </span>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+          <span
+            className="drivemego-b2broutecard-b2b-status-badge"
+            style={{ backgroundColor: getStatusColor(route.status) }}
+          >
+            {route.status}
+          </span>
+        </div>
 
-      <div className="b2b-route-actions">
-        <button className="b2b-action-btn b2b-edit-btn" onClick={openEditModal}>
-          Edit
-        </button>
-        <button
-          className="b2b-action-btn b2b-delete-btn"
-          onClick={handleDeleteRoute}
-          disabled={deleting}
-        >
-          {deleting ? "Deleting..." : "Delete"}
-        </button>
+        <div className="drivemego-b2broutecard-b2b-route-details">
+          <div className="drivemego-b2broutecard-b2b-detail-row">
+            <div className="drivemego-b2broutecard-b2b-detail-item">
+              <span className="drivemego-b2broutecard-b2b-detail-label">
+                Start Date:
+              </span>
+              <span className="drivemego-b2broutecard-b2b-detail-value">
+                {formatDate(route.routeStartDate)}
+              </span>
+            </div>
+            <div className="drivemego-b2broutecard-b2b-detail-item">
+              <span className="drivemego-b2broutecard-b2b-detail-label">
+                Distance:
+              </span>
+              <span className="drivemego-b2broutecard-b2b-detail-value">
+                {route.totalDistance ? `${route.totalDistance} km` : "N/A"}
+              </span>
+            </div>
+          </div>
+
+          <div className="drivemego-b2broutecard-b2b-detail-row">
+            <div className="drivemego-b2broutecard-b2b-detail-item">
+              <span className="drivemego-b2broutecard-b2b-detail-label">
+                Duration:
+              </span>
+              <span className="drivemego-b2broutecard-b2b-detail-value">
+                {route.estimatedDuration || "N/A"}
+              </span>
+            </div>
+            <div className="drivemego-b2broutecard-b2b-detail-item">
+              <span className="drivemego-b2broutecard-b2b-detail-label">
+                Seats:
+              </span>
+              <span className="drivemego-b2broutecard-b2b-detail-value">
+                {route.totalSeats || 0}
+              </span>
+            </div>
+          </div>
+
+          <div className="drivemego-b2broutecard-b2b-days-row">
+            <span className="drivemego-b2broutecard-b2b-detail-label">
+              Available Days:
+            </span>
+            <div className="drivemego-b2broutecard-b2b-days-badges">
+              {route.availableDays?.map((day) => (
+                <span
+                  key={day}
+                  className="drivemego-b2broutecard-b2b-day-badge"
+                >
+                  {day}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {route.routeNotes && (
+            <div className="drivemego-b2broutecard-b2b-notes-row">
+              <span className="drivemego-b2broutecard-b2b-detail-label">
+                Notes:
+              </span>
+              <span className="drivemego-b2broutecard-b2b-notes-text">
+                {route.routeNotes}
+              </span>
+            </div>
+          )}
+
+          {/* Contract Info */}
+          {route.contractId && (
+            <div className="drivemego-b2broutecard-b2b-contract-info">
+              <span className="drivemego-b2broutecard-b2b-detail-label">
+                Contract:
+              </span>
+              <span className="drivemego-b2broutecard-b2b-contract-badge">
+                {route.contractId?.contractNumber || "Linked"}
+              </span>
+            </div>
+          )}
+
+          {/* Stop Points Toggle */}
+          {route.stopPoints && route.stopPoints.length > 0 && (
+            <div className="drivemego-b2broutecard-b2b-stop-points">
+              <button
+                className="drivemego-b2broutecard-b2b-toggle-details"
+                onClick={() => setShowDetails(!showDetails)}
+              >
+                {showDetails ? "Hide" : "Show"} Stop Points (
+                {route.stopPoints.length})
+              </button>
+              {showDetails && (
+                <div className="drivemego-b2broutecard-b2b-stop-points-list">
+                  {route.stopPoints.map((stop, index) => (
+                    <div key={index} className="b2b-stop-point">
+                      <span className="drivemego-b2broutecard-b2b-stop-number">
+                        {index + 1}
+                      </span>
+                      <span className="drivemego-b2broutecard-b2b-stop-location">
+                        {stop.location}
+                      </span>
+                      <span className="drivemego-b2broutecard-b2b-stop-time">
+                        {stop.time}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="drivemego-b2broutecard-b2b-route-actions">
+          <button
+            className="drivemego-b2broutecard-b2b-action-btn drivemego-b2broutecard-b2b-edit-btn"
+            onClick={openEditModal}
+          >
+            Edit
+          </button>
+          <button
+            className="drivemego-b2broutecard-b2b-action-btn drivemego-b2broutecard-b2b-delete-btn"
+            onClick={handleDeleteRoute}
+            disabled={deleting}
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
       </div>
 
       {/* Edit Route Modal */}
       {showEditModal && (
         <div
-          className="b2b-modal-overlay"
+          className="drivemego-b2broutecard-b2b-modal-overlay"
           onClick={() => setShowEditModal(false)}
         >
           <div
-            className="b2b-modal-content b2b-edit-modal"
+            className="drivemego-b2broutecard-b2b-modal-content drivemego-b2broutecard-b2b-edit-modal"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="b2b-modal-header">
+            <div className="drivemego-b2broutecard-b2b-modal-header">
               <h3>Edit Route</h3>
               <button
-                className="b2b-modal-close"
+                className="drivemego-b2broutecard-b2b-modal-close"
                 onClick={() => setShowEditModal(false)}
               >
                 X
               </button>
             </div>
-            {editError && <div className="b2b-edit-error">{editError}</div>}
-            <form onSubmit={handleEditSubmit} className="b2b-edit-form">
-              <div className="b2b-edit-row">
-                <div className="b2b-edit-field">
+            {editError && (
+              <div className="drivemego-b2broutecard-b2b-edit-error">
+                {editError}
+              </div>
+            )}
+            <form
+              onSubmit={handleEditSubmit}
+              className="drivemego-b2broutecard-b2b-edit-form"
+            >
+              <div className="drivemego-b2broutecard-b2b-edit-row">
+                <div className="drivemego-b2broutecard-b2b-edit-field">
                   <label>From Location</label>
                   <input
                     type="text"
@@ -269,7 +312,7 @@ function B2B_RouteCard({ route, onRefresh }) {
                     required
                   />
                 </div>
-                <div className="b2b-edit-field">
+                <div className="drivemego-b2broutecard-b2b-edit-field">
                   <label>To Location</label>
                   <input
                     type="text"
@@ -281,8 +324,8 @@ function B2B_RouteCard({ route, onRefresh }) {
                   />
                 </div>
               </div>
-              <div className="b2b-edit-row">
-                <div className="b2b-edit-field">
+              <div className="drivemego-b2broutecard-b2b-edit-row">
+                <div className="drivemego-b2broutecard-b2b-edit-field">
                   <label>Total Distance (km)</label>
                   <input
                     type="number"
@@ -292,7 +335,7 @@ function B2B_RouteCard({ route, onRefresh }) {
                     }
                   />
                 </div>
-                <div className="b2b-edit-field">
+                <div className="drivemego-b2broutecard-b2b-edit-field">
                   <label>Estimated Duration</label>
                   <input
                     type="text"
@@ -304,8 +347,8 @@ function B2B_RouteCard({ route, onRefresh }) {
                   />
                 </div>
               </div>
-              <div className="b2b-edit-row">
-                <div className="b2b-edit-field">
+              <div className="drivemego-b2broutecard-b2b-edit-row">
+                <div className="drivemego-b2broutecard-b2b-edit-field">
                   <label>Status</label>
                   <select
                     value={editForm.status}
@@ -316,14 +359,14 @@ function B2B_RouteCard({ route, onRefresh }) {
                   </select>
                 </div>
               </div>
-              <div className="b2b-edit-field b2b-days-field">
+              <div className="drivemego-b2broutecard-b2b-edit-field drivemego-b2broutecard-b2b-days-field">
                 <label>Available Days</label>
-                <div className="b2b-days-grid">
+                <div className="drivemego-b2broutecard-b2b-days-grid">
                   {dayOptions.map((day) => (
                     <button
                       key={day}
                       type="button"
-                      className={`b2b-day-btn ${editForm.availableDays.includes(day) ? "active" : ""}`}
+                      className={`drivemego-b2broutecard-b2b-day-btn ${editForm.availableDays.includes(day) ? "drivemego-b2broutecard-active" : ""}`}
                       onClick={() => toggleDay(day)}
                     >
                       {day}
@@ -331,7 +374,7 @@ function B2B_RouteCard({ route, onRefresh }) {
                   ))}
                 </div>
               </div>
-              <div className="b2b-edit-field">
+              <div className="drivemego-b2broutecard-b2b-edit-field">
                 <label>Route Notes</label>
                 <textarea
                   value={editForm.routeNotes}
@@ -341,17 +384,17 @@ function B2B_RouteCard({ route, onRefresh }) {
                   rows="3"
                 />
               </div>
-              <div className="b2b-edit-actions">
+              <div className="drivemego-b2broutecard-b2b-edit-actions">
                 <button
                   type="button"
-                  className="b2b-cancel-btn"
+                  className="drivemego-b2broutecard-b2b-cancel-btn"
                   onClick={() => setShowEditModal(false)}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="b2b-save-btn"
+                  className="drivemego-b2broutecard-b2b-save-btn"
                   disabled={editLoading}
                 >
                   {editLoading ? "Saving..." : "Save Changes"}
@@ -361,7 +404,7 @@ function B2B_RouteCard({ route, onRefresh }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

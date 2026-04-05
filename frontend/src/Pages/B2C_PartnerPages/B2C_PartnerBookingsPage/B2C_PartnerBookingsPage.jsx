@@ -25,6 +25,8 @@ const B2C_PartnerBookingsPage = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const locationSharingRef = useRef(null);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningData, setWarningData] = useState(null);
 
   const fetchWalletBalance = async () => {
     try {
@@ -53,6 +55,46 @@ const B2C_PartnerBookingsPage = () => {
     }
   }, [auth.user]);
 
+  // Socket listener for booking warning notifications
+  useEffect(() => {
+    if (socket && socket.socket && auth.user) {
+      // Join notification room
+      socket.socket.emit(
+        "join-notification-room",
+        auth.user.id || auth.user._id,
+      );
+
+      // Listen for booking warning notifications
+      socket.socket.on("BOOKING_WARNING", (data) => {
+        console.log("[v0] Booking warning notification received:", data);
+        setWarningData(data);
+        setShowWarningModal(true);
+        // Refresh bookings to update warning indicators
+        dispatch(getPartnerBookings({ status: filterStatus }));
+      });
+
+      // Listen for general notifications that include warnings
+      socket.socket.on("notification", (notification) => {
+        if (notification.type === "BOOKING_WARNING") {
+          setWarningData(notification.data || notification);
+          setShowWarningModal(true);
+          dispatch(getPartnerBookings({ status: filterStatus }));
+        }
+        if (notification.type === "BOOKING_TIMEOUT_CANCELLED") {
+          // Refresh bookings when a booking is auto-cancelled
+          dispatch(getPartnerBookings({ status: filterStatus }));
+        }
+      });
+
+      return () => {
+        if (socket.socket) {
+          socket.socket.off("BOOKING_WARNING");
+          socket.socket.off("notification");
+        }
+      };
+    }
+  }, [socket, auth.user, dispatch, filterStatus]);
+
   const handleAccept = (booking) => {
     // Check wallet balance for cash bookings
     if (booking.paymentMethod === "CASH") {
@@ -63,14 +105,16 @@ const B2C_PartnerBookingsPage = () => {
         return;
       }
     }
-    
-    dispatch(acceptBooking(booking._id)).then(() => {
-      dispatch(getPartnerBookings({ status: filterStatus }));
-      fetchWalletBalance(); // Refresh wallet balance
-      }).catch((error) => {
-      console.log("[v0] Accept booking error:", error);
-      // If error is wallet funding needed, wallet modal is shown
-    });
+
+    dispatch(acceptBooking(booking._id))
+      .then(() => {
+        dispatch(getPartnerBookings({ status: filterStatus }));
+        fetchWalletBalance(); // Refresh wallet balance
+      })
+      .catch((error) => {
+        console.log("[v0] Accept booking error:", error);
+        // If error is wallet funding needed, wallet modal is shown
+      });
   };
 
   const handleRejectClick = (booking) => {
@@ -84,7 +128,7 @@ const B2C_PartnerBookingsPage = () => {
         rejectBooking({
           bookingId: selectedBooking._id,
           rejectionReason,
-        })
+        }),
       ).then(() => {
         dispatch(getPartnerBookings({ status: filterStatus }));
         setShowRejectModal(false);
@@ -104,12 +148,14 @@ const B2C_PartnerBookingsPage = () => {
   const handleStartTrip = (bookingId) => {
     dispatch(startB2CTrip(bookingId)).then(() => {
       dispatch(getPartnerBookings({ status: filterStatus }));
-      
+
       // Start location sharing if B2C_PARTNER is self-driving
       if (auth.user?.role === "B2C_PARTNER") {
-        const booking = partnerBookings.find(b => b._id === bookingId);
+        const booking = partnerBookings.find((b) => b._id === bookingId);
         if (booking && booking.isSelfDriver) {
-          console.log("🚀 B2C_PARTNER starting self-drive trip, starting location sharing");
+          console.log(
+            "🚀 B2C_PARTNER starting self-drive trip, starting location sharing",
+          );
           startLocationSharing(booking);
         }
       }
@@ -171,8 +217,11 @@ const B2C_PartnerBookingsPage = () => {
 
       // Store interval ID for cleanup
       locationSharingRef.current = interval;
-      
-      console.log("🚀 B2C_PARTNER location sharing started for booking:", booking._id);
+
+      console.log(
+        "🚀 B2C_PARTNER location sharing started for booking:",
+        booking._id,
+      );
     } catch (error) {
       console.error("Error starting location sharing:", error);
     }
@@ -184,7 +233,7 @@ const B2C_PartnerBookingsPage = () => {
       month: "short",
       day: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -211,11 +260,39 @@ const B2C_PartnerBookingsPage = () => {
     return isSelfDriver ? "Self-Driving" : "Assigned Driver";
   };
 
+  // Calculate hours remaining before auto-cancellation for CONFIRMED bookings
+  const getHoursRemaining = (booking) => {
+    if (booking.bookingStatus !== "CONFIRMED") return null;
+
+    const createdAt = new Date(booking.createdAt);
+    const cancellationTime = new Date(
+      createdAt.getTime() + 24 * 60 * 60 * 1000,
+    ); // 24 hours
+    const now = new Date();
+    const hoursRemaining = Math.max(
+      0,
+      (cancellationTime - now) / (1000 * 60 * 60),
+    );
+
+    return hoursRemaining;
+  };
+
+  // Get warning level based on hours remaining
+  const getWarningLevel = (hoursRemaining) => {
+    if (hoursRemaining === null) return null;
+    if (hoursRemaining <= 4) return "critical"; // Red - 4 hours or less
+    if (hoursRemaining <= 8) return "warning"; // Orange - 8 hours or less
+    if (hoursRemaining <= 20) return "caution"; // Yellow - 20 hours or less
+    return null;
+  };
+
   if (loading) {
     console.log("[B2C_PartnerBookingsPage] Loading state, showing loader...");
     return (
       <div className="B2C_Partner-bookings-page-container">
-        <div className="B2C_Partner-bookings-page-loading">Loading bookings...</div>
+        <div className="B2C_Partner-bookings-page-loading">
+          Loading bookings...
+        </div>
       </div>
     );
   }
@@ -223,7 +300,7 @@ const B2C_PartnerBookingsPage = () => {
   console.log("[B2C_PartnerBookingsPage] Rendering with partnerBookings:", {
     isArray: Array.isArray(partnerBookings),
     length: partnerBookings?.length || 0,
-    firstBooking: partnerBookings?.[0]
+    firstBooking: partnerBookings?.[0],
   });
 
   return (
@@ -330,6 +407,64 @@ const B2C_PartnerBookingsPage = () => {
                   >
                     {getBookingTypeText(booking.isSelfDriver)}
                   </span>
+                  {/* Timeout Warning Indicator for CONFIRMED bookings */}
+                  {booking.bookingStatus === "CONFIRMED" &&
+                    (() => {
+                      const hoursRemaining = getHoursRemaining(booking);
+                      const warningLevel = getWarningLevel(hoursRemaining);
+                      if (warningLevel) {
+                        const warningStyles = {
+                          critical: {
+                            bg: "#fee2e2",
+                            color: "#dc2626",
+                            border: "#fca5a5",
+                          },
+                          warning: {
+                            bg: "#ffedd5",
+                            color: "#ea580c",
+                            border: "#fdba74",
+                          },
+                          caution: {
+                            bg: "#fef9c3",
+                            color: "#ca8a04",
+                            border: "#fde047",
+                          },
+                        };
+                        const style = warningStyles[warningLevel];
+                        return (
+                          <span
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: "20px",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              backgroundColor: style.bg,
+                              color: style.color,
+                              border: `1px solid ${style.border}`,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                            {hoursRemaining < 1
+                              ? "< 1 hour left"
+                              : `${Math.floor(hoursRemaining)}h left`}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                 </div>
                 <div className="B2C_Partner-bookings-page-booking-date">
                   {formatDate(booking.createdAt)}
@@ -610,6 +745,172 @@ const B2C_PartnerBookingsPage = () => {
         country={auth.user?.country || "UAE"}
         currency={auth.user?.country === "UAE" ? "AED" : "KWD"}
       />
+
+      {/* Booking Warning Modal */}
+      {showWarningModal && warningData && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1200,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "16px",
+              padding: "32px",
+              maxWidth: "520px",
+              width: "90%",
+              textAlign: "center",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+            }}
+          >
+            {/* Warning Icon */}
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "50%",
+                backgroundColor: "#fef3c7",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+              }}
+            >
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#d97706"
+                strokeWidth="2"
+              >
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+
+            <h2
+              style={{
+                fontSize: "24px",
+                fontWeight: "700",
+                color: "#1f2937",
+                marginBottom: "12px",
+              }}
+            >
+              Booking Acceptance Warning
+            </h2>
+
+            <p
+              style={{
+                fontSize: "16px",
+                color: "#6b7280",
+                marginBottom: "16px",
+                lineHeight: "1.6",
+              }}
+            >
+              You have a pending booking that requires your attention. If you do
+              not accept it within{" "}
+              <strong style={{ color: "#d97706" }}>
+                {warningData?.hoursRemaining || 4} hours
+              </strong>
+              , it will be automatically cancelled.
+            </p>
+
+            {warningData?.pickupLocation && warningData?.dropoffLocation && (
+              <div
+                style={{
+                  backgroundColor: "#f9fafb",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  marginBottom: "16px",
+                  textAlign: "left",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: "#374151",
+                    margin: "0 0 8px 0",
+                  }}
+                >
+                  <strong>Route:</strong> {warningData.pickupLocation} →{" "}
+                  {warningData.dropoffLocation}
+                </p>
+                {warningData?.paymentAmount && (
+                  <p style={{ fontSize: "14px", color: "#374151", margin: 0 }}>
+                    <strong>Amount:</strong> {warningData.paymentAmount}{" "}
+                    {warningData.currency || "AED"}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div
+              style={{
+                backgroundColor: "#fef2f2",
+                padding: "14px",
+                borderRadius: "10px",
+                marginBottom: "24px",
+              }}
+            >
+              <p style={{ fontSize: "14px", color: "#dc2626", margin: 0 }}>
+                <strong>Action Required:</strong> Please accept or reject the
+                booking before the deadline to avoid automatic cancellation.
+              </p>
+            </div>
+
+            <div
+              style={{ display: "flex", gap: "12px", justifyContent: "center" }}
+            >
+              <button
+                onClick={() => setShowWarningModal(false)}
+                style={{
+                  padding: "12px 24px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "10px",
+                  backgroundColor: "white",
+                  color: "#374151",
+                  cursor: "pointer",
+                  fontSize: "15px",
+                  fontWeight: "500",
+                }}
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowWarningModal(false);
+                  setFilterStatus("CONFIRMED");
+                }}
+                style={{
+                  padding: "12px 24px",
+                  border: "none",
+                  borderRadius: "10px",
+                  background:
+                    "linear-gradient(135deg, #28a745 0%, #20c997 100%)",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "15px",
+                  fontWeight: "600",
+                }}
+              >
+                View Pending Bookings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
