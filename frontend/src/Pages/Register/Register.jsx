@@ -47,7 +47,6 @@ const Register = () => {
     { id: "CORPORATE", label: "CORPORATE", icon: "🏢" },
     { id: "B2C_PARTNER", label: "B2C PARTNER", icon: "🚗" },
     { id: "B2B_PARTNER", label: "B2B PARTNER", icon: "🏭" },
-    { id: "CORPORATE_EMPLOYEE", label: "CORPORATE EMPLOYEE", icon: "👔" },
   ];
 
   const roleRedirectMap = {
@@ -888,7 +887,7 @@ const Register = () => {
               )}
 
               {/* Corporate Employee Specific */}
-              {selectedRole === "CORPORATE_EMPLOYEE" && (
+              {/* {selectedRole === "CORPORATE_EMPLOYEE" && (
                 <>
                   <div className="register-form-divider"></div>
                   <div className="register-corp-section-header">
@@ -914,7 +913,7 @@ const Register = () => {
                     </div>
                   </div>
                 </>
-              )}
+              )} */}
 
               {/* B2C Partner Specific - Simple Registration (no company fields) */}
               {selectedRole === "B2C_PARTNER" && (

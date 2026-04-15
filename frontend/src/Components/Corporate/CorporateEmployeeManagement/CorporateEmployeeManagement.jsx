@@ -1817,7 +1817,7 @@ function CorporateEmployeeManagement() {
                   <p>
                     <strong>Home Address:</strong>{" "}
                     <span>{getEmployeeHomeAddress(selectedEmployee)}</span>
-                    {typeof selectedEmployee.homeAddress === "object" &&
+                    {/* {typeof selectedEmployee.homeAddress === "object" &&
                     selectedEmployee.homeAddress
                       ? [
                           selectedEmployee.homeAddress.street,
@@ -1841,7 +1841,7 @@ function CorporateEmployeeManagement() {
                             .join(", ")
                         : selectedEmployee.homeAddress ||
                           selectedEmployee.residentialAddress ||
-                          "Not specified"}
+                          "Not specified"} */}
                   </p>
                 </div>
               </div>

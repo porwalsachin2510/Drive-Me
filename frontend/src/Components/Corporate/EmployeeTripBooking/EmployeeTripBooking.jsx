@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import { logout } from "../../../Redux/slices/authSlice";
 import { useSocket } from "../../../hooks/useSocket";
 import api from "../../../utils/api";
 import "./EmployeeTripBooking.css";
@@ -29,8 +30,12 @@ function EmployeeTripBooking() {
     useMonthlyPass: false,
   });
 
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [tripsPerPage] = useState(9); // 3x3 grid
+
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   // Format last login time
   useEffect(() => {
@@ -64,21 +69,20 @@ function EmployeeTripBooking() {
     }
   }, [user?.lastLogin]);
 
-    const getRoleDisplayName = (role) => {
-      const roleMap = {
-        ADMIN: "Admin",
-        COMMUTER: "Commuter",
-        CORPORATE: "Corporate",
-        B2C_PARTNER: "B2C Partner",
-        B2B_PARTNER: "B2B Partner",
-        CORPORATE_DRIVER: "Corporate Driver",
-        B2B_PARTNER_DRIVER: "B2B Partner Driver",
-        CORPORATE_EMPLOYEE: "Corporate Employee",
-        B2C_PARTNER_DRIVER: "B2C Partner Driver",
-      };
-      return roleMap[role] || role;
+  const getRoleDisplayName = (role) => {
+    const roleMap = {
+      ADMIN: "Admin",
+      COMMUTER: "Commuter",
+      CORPORATE: "Corporate",
+      B2C_PARTNER: "B2C Partner",
+      B2B_PARTNER: "B2B Partner",
+      CORPORATE_DRIVER: "Corporate Driver",
+      B2B_PARTNER_DRIVER: "B2B Partner Driver",
+      CORPORATE_EMPLOYEE: "Corporate Employee",
+      B2C_PARTNER_DRIVER: "B2C Partner Driver",
     };
-  
+    return roleMap[role] || role;
+  };
 
   // Fetch the employee's assigned route to get routeId on mount
   useEffect(() => {
@@ -137,19 +141,17 @@ function EmployeeTripBooking() {
           ),
         );
 
-      // Show trips for next 7 days (corporate-assigned trips are generated ahead)
+      // Filter to only show trips from today onwards (no past trips in scheduled)
       const now = new Date();
       const todayStart = new Date(
         now.getFullYear(),
         now.getMonth(),
         now.getDate(),
       );
-      const weekFromNow = new Date(todayStart);
-      weekFromNow.setDate(weekFromNow.getDate() + 7);
 
       const filteredTrips = uniqueTrips.filter((trip) => {
         const tripDate = new Date(trip.tripDate || trip.date);
-        return tripDate >= todayStart && tripDate < weekFromNow;
+        return tripDate >= todayStart; // Show all future trips, not just 7 days
       });
 
       // Sort by date and time (morning trips before evening trips on same day)
@@ -201,24 +203,32 @@ function EmployeeTripBooking() {
   const fetchMyBookings = async () => {
     try {
       setLoading(true);
-      // Use the trips/my-bookings endpoint which only returns trips where this employee is a passenger
+      // Use the trips/my-bookings endpoint which returns trips where this employee is a passenger
+      // Then filter to only show COMPLETED trips for Trip History
       const response = await api.get("/trips/my-bookings");
       const bookingsData =
         response.data?.data?.bookings || response.data?.data || [];
-      setMyBookings(Array.isArray(bookingsData) ? bookingsData : []);
+
+      // Filter to only show COMPLETED trips in Trip History
+      const completedTrips = (
+        Array.isArray(bookingsData) ? bookingsData : []
+      ).filter(
+        (trip) => trip.status === "COMPLETED" || trip.status === "Completed",
+      );
+
+      setMyBookings(completedTrips);
     } catch (error) {
       console.error("Error fetching bookings:", error);
-      // Fallback to dashboard
+      // Fallback to dashboard - filter for completed trips
       try {
         const response = await api.get("/corporate-employee-users/dashboard");
         const dashboardData = response.data?.data;
-        const todayTrips = dashboardData?.todayTrips || [];
-        const bookings = dashboardData?.bookings || [];
-        const all = [...todayTrips, ...bookings];
-        const unique = all.filter(
-          (b, i, self) => i === self.findIndex((t) => t._id === b._id),
+        const historyTrips = dashboardData?.travelHistory || [];
+        // Filter for completed trips only
+        const completedTrips = historyTrips.filter(
+          (trip) => trip.status === "COMPLETED" || trip.status === "Completed",
         );
-        setMyBookings(unique);
+        setMyBookings(completedTrips);
       } catch {
         setMyBookings([]);
       }
@@ -528,8 +538,8 @@ function EmployeeTripBooking() {
     }
   };
 
-    const userName = user?.fullName || "User";
-    const userRole = user?.role || "ADMIN";
+  const userName = user?.fullName || "User";
+  const userRole = user?.role || "ADMIN";
 
   return (
     <div className="employee-trip-booking">
@@ -572,7 +582,7 @@ function EmployeeTripBooking() {
             </button>
           </div>
         </div>
-        
+
         <div className="employee-trip-booking-tab-navigation">
           <button
             className={`employee-trip-booking-tab-btn ${activeTab === "my-trips" ? "active" : ""}`}
@@ -618,125 +628,229 @@ function EmployeeTripBooking() {
                   </p>
                 </div>
               ) : (
-                <div className="employee-trip-booking-trips-grid">
-                  {trips.map((trip) => (
-                    <div
-                      key={trip._id}
-                      className="employee-trip-booking-trip-card corporate-assigned"
-                    >
-                      <div className="employee-trip-booking-corporate-badge">
-                        Corporate Transport
-                      </div>
-                      <div className="employee-trip-booking-trip-route">
-                        <h3>
-                          {trip.fromLocation} &rarr; {trip.toLocation}
-                        </h3>
-                        <span
-                          className="employee-trip-booking-trip-status"
-                          style={{
-                            backgroundColor: getStatusColor(trip.status),
-                          }}
+                <>
+                  <div className="employee-trip-booking-trips-grid">
+                    {trips
+                      .slice(
+                        (currentPage - 1) * tripsPerPage,
+                        currentPage * tripsPerPage,
+                      )
+                      .map((trip) => (
+                        <div
+                          key={trip._id}
+                          className="employee-trip-booking-trip-card corporate-assigned"
                         >
-                          {trip.status === "SCHEDULED" ||
-                          trip.status === "Scheduled"
-                            ? "Confirmed"
-                            : trip.status}
-                        </span>
-                      </div>
+                          <div className="employee-trip-booking-corporate-badge">
+                            Corporate Transport
+                          </div>
+                          <div className="employee-trip-booking-trip-route">
+                            <h3>
+                              {trip.fromLocation} &rarr; {trip.toLocation}
+                            </h3>
+                            <span
+                              className="employee-trip-booking-trip-status"
+                              style={{
+                                backgroundColor: getStatusColor(trip.status),
+                              }}
+                            >
+                              {trip.status === "SCHEDULED" ||
+                              trip.status === "Scheduled"
+                                ? "Confirmed"
+                                : trip.status}
+                            </span>
+                          </div>
 
-                      <div className="employee-trip-booking-trip-info">
-                        <p>
-                          <strong>Date:</strong>{" "}
-                          {formatDate(trip.tripDate || trip.date)}
-                        </p>
-                        <p>
-                          <strong>Departure:</strong> {trip.startTime}{" "}
-                          {trip.endTime ? `- Arrival: ${trip.endTime}` : ""}
-                        </p>
-                        <p>
-                          <strong>Direction:</strong>{" "}
-                          {trip.direction === "FORWARD"
-                            ? "To Office"
-                            : trip.direction === "RETURN"
-                              ? "To Home"
-                              : trip.tripType || "One Way"}
-                        </p>
-                        <p>
-                          <strong>Vehicle:</strong>{" "}
-                          {trip.vehicleName ||
-                            trip.vehicleNumber ||
-                            trip.vehicleId?.vehicleName ||
-                            "Will be assigned"}
-                        </p>
-                        <p>
-                          <strong>Driver:</strong>{" "}
-                          {trip.driverName && trip.driverName !== "Not assigned"
-                            ? trip.driverName
-                            : trip.driverId?.fullName ||
-                              trip.driverId?.name ||
-                              "Will be assigned"}
-                        </p>
-                      </div>
+                          <div className="employee-trip-booking-trip-info">
+                            <p>
+                              <strong>Date:</strong>{" "}
+                              {formatDate(trip.tripDate || trip.date)}
+                            </p>
+                            <p>
+                              <strong>Departure:</strong> {trip.startTime}{" "}
+                              {trip.endTime ? `- Arrival: ${trip.endTime}` : ""}
+                            </p>
+                            <p>
+                              <strong>Direction:</strong>{" "}
+                              {trip.direction === "FORWARD"
+                                ? "To Office"
+                                : trip.direction === "RETURN"
+                                  ? "To Home"
+                                  : trip.tripType || "One Way"}
+                            </p>
+                            <p>
+                              <strong>Vehicle:</strong>{" "}
+                              {trip.vehicleName ||
+                                trip.vehicleNumber ||
+                                trip.vehicleId?.vehicleName ||
+                                "Will be assigned"}
+                            </p>
+                            <p>
+                              <strong>Driver:</strong>{" "}
+                              {trip.driverName &&
+                              trip.driverName !== "Not assigned"
+                                ? trip.driverName
+                                : trip.driverId?.fullName ||
+                                  trip.driverId?.name ||
+                                  "Will be assigned"}
+                            </p>
+                          </div>
 
-                      <div className="employee-trip-booking-trip-route-stops">
-                        <h4>Your Pickup/Dropoff Points</h4>
-                        <div className="employee-trip-booking-stops-list">
-                          {(() => {
-                            // Find passenger info for current user
-                            const myPassenger = (trip.passengers || []).find(
-                              (p) =>
-                                p.passengerId?.toString() ===
-                                  user?._id?.toString() ||
-                                p.employeeId?.toString() ===
-                                  user?._id?.toString(),
-                            );
+                          <div className="employee-trip-booking-trip-route-stops">
+                            <h4>Your Pickup/Dropoff Points</h4>
+                            <div className="employee-trip-booking-stops-list">
+                              {(() => {
+                                // Use pre-computed myPickupStop/myDropoffStop from backend if available
+                                // These are calculated based on passenger record or employee's assigned stops
+                                let pickupStop = trip.myPickupStop;
+                                let dropoffStop = trip.myDropoffStop;
 
-                            const pickupStop =
-                              myPassenger?.pickupStop ||
-                              trip.pickupStop ||
-                              trip.pickupLocation ||
-                              trip.stopPoints?.[0]?.location ||
-                              trip.fromLocation;
-                            const dropoffStop =
-                              myPassenger?.dropoffStop ||
-                              trip.dropoffStop ||
-                              trip.dropoffLocation ||
-                              trip.toLocation;
-                            const pickupTime =
-                              myPassenger?.pickupTime || trip.startTime;
+                                // Fallback: try to find from passengers array if not pre-computed
+                                if (!pickupStop || !dropoffStop) {
+                                  const extractId = (id) => {
+                                    if (!id) return null;
+                                    if (typeof id === "string") return id;
+                                    if (id.$oid) return id.$oid;
+                                    if (id._id) return extractId(id._id);
+                                    return id.toString?.() || null;
+                                  };
 
-                            return (
-                              <div className="employee-trip-booking-stop-item highlight">
-                                <span className="employee-trip-booking-stop-location">
-                                  <strong>Pickup:</strong> {pickupStop}{" "}
-                                  {pickupTime ? `(${pickupTime})` : ""}
-                                </span>
-                                <span className="employee-trip-booking-stop-arrow">
-                                  &rarr;
-                                </span>
-                                <span className="employee-trip-booking-stop-location">
-                                  <strong>Dropoff:</strong> {dropoffStop}
-                                </span>
-                              </div>
-                            );
-                          })()}
+                                  const userId = extractId(user?._id);
+                                  const myPassenger = (
+                                    trip.passengers || []
+                                  ).find((p) => {
+                                    const pId = extractId(p.passengerId);
+                                    const eId = extractId(p.employeeId);
+                                    return pId === userId || eId === userId;
+                                  });
+
+                                  if (myPassenger) {
+                                    pickupStop =
+                                      pickupStop || myPassenger.pickupStop;
+                                    dropoffStop =
+                                      dropoffStop || myPassenger.dropoffStop;
+                                  }
+                                }
+
+                                // Final fallback based on trip direction
+                                if (!pickupStop || !dropoffStop) {
+                                  if (trip.direction === "FORWARD") {
+                                    pickupStop =
+                                      pickupStop ||
+                                      trip.pickupLocation ||
+                                      trip.fromLocation;
+                                    dropoffStop =
+                                      dropoffStop ||
+                                      trip.dropoffLocation ||
+                                      trip.toLocation;
+                                  } else if (trip.direction === "RETURN") {
+                                    pickupStop =
+                                      pickupStop || trip.fromLocation;
+                                    dropoffStop =
+                                      dropoffStop || trip.toLocation;
+                                  } else {
+                                    pickupStop =
+                                      pickupStop || trip.fromLocation;
+                                    dropoffStop =
+                                      dropoffStop || trip.toLocation;
+                                  }
+                                }
+
+                                // Get pickup time from stop points
+                                let pickupTime = null;
+                                if (pickupStop && trip.stopPoints?.length) {
+                                  const stopInfo = trip.stopPoints.find(
+                                    (s) => s.location === pickupStop,
+                                  );
+                                  pickupTime =
+                                    stopInfo?.scheduledTime || stopInfo?.time;
+                                }
+                                // For FORWARD trips, if pickup is the route start, use startTime
+                                if (
+                                  !pickupTime &&
+                                  trip.direction === "FORWARD" &&
+                                  pickupStop === trip.fromLocation
+                                ) {
+                                  pickupTime = trip.startTime;
+                                }
+                                // For RETURN trips, use startTime if pickup is fromLocation (office)
+                                if (
+                                  !pickupTime &&
+                                  trip.direction === "RETURN" &&
+                                  pickupStop === trip.fromLocation
+                                ) {
+                                  pickupTime = trip.startTime;
+                                }
+                                pickupTime = pickupTime || trip.startTime;
+
+                                return (
+                                  <div className="employee-trip-booking-stop-item highlight">
+                                    <span className="employee-trip-booking-stop-location">
+                                      <strong>Pickup:</strong> {pickupStop}{" "}
+                                      {pickupTime ? `(${pickupTime})` : ""}
+                                    </span>
+                                    <span className="employee-trip-booking-stop-arrow">
+                                      &rarr;
+                                    </span>
+                                    <span className="employee-trip-booking-stop-location">
+                                      <strong>Dropoff:</strong> {dropoffStop}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+
+                          <div className="employee-trip-booking-trip-actions">
+                            {(trip.status === "IN_PROGRESS" ||
+                              trip.status === "In Progress") && (
+                              <button
+                                className="employee-trip-booking-track-btn"
+                                onClick={() => handleTrackDriver(trip)}
+                              >
+                                Track Driver
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      ))}
+                  </div>
 
-                      <div className="employee-trip-booking-trip-actions">
-                        {(trip.status === "IN_PROGRESS" ||
-                          trip.status === "In Progress") && (
-                          <button
-                            className="employee-trip-booking-track-btn"
-                            onClick={() => handleTrackDriver(trip)}
-                          >
-                            Track Driver
-                          </button>
-                        )}
-                      </div>
+                  {/* Pagination Controls */}
+                  {trips.length > tripsPerPage && (
+                    <div className="employee-trip-booking-pagination">
+                      <button
+                        className="employee-trip-booking-pagination-btn"
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(prev - 1, 1))
+                        }
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </button>
+                      <span className="employee-trip-booking-pagination-info">
+                        Page {currentPage} of{" "}
+                        {Math.ceil(trips.length / tripsPerPage)} ({trips.length}{" "}
+                        trips)
+                      </span>
+                      <button
+                        className="employee-trip-booking-pagination-btn"
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(
+                              prev + 1,
+                              Math.ceil(trips.length / tripsPerPage),
+                            ),
+                          )
+                        }
+                        disabled={
+                          currentPage === Math.ceil(trips.length / tripsPerPage)
+                        }
+                      >
+                        Next
+                      </button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -745,7 +859,11 @@ function EmployeeTripBooking() {
             <div className="employee-trip-booking-my-bookings">
               {myBookings.length === 0 ? (
                 <div className="employee-trip-booking-no-data">
-                  <p>You haven't booked any trips yet.</p>
+                  <p>No completed trips found.</p>
+                  <p className="employee-trip-booking-no-data-hint">
+                    Your completed trips will appear here after they are
+                    finished.
+                  </p>
                 </div>
               ) : (
                 <div className="employee-trip-booking-bookings-grid">

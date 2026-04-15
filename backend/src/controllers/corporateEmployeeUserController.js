@@ -243,6 +243,26 @@ export const getEmployeeDashboard = async (req, res) => {
 
         const todayTrips = await Promise.all(todayTripsRaw.map(async (trip) => {
             const driverInfo = await resolveDriverInfo(trip);
+
+            // Find the current user's passenger record
+            const myPassenger = trip.passengers?.find(p =>
+                p.passengerId?.toString() === userId.toString() ||
+                p.employeeId?.toString() === employee._id.toString()
+            );
+
+            // Get pickup/dropoff based on direction and passenger record
+            let pickupStop, dropoffStop;
+            if (myPassenger) {
+                pickupStop = myPassenger.pickupStop;
+                dropoffStop = myPassenger.dropoffStop;
+            } else if (trip.direction === 'FORWARD') {
+                pickupStop = employee.transportDetails?.outboundPickupStop;
+                dropoffStop = employee.transportDetails?.outboundDropoffStop;
+            } else if (trip.direction === 'RETURN') {
+                pickupStop = employee.transportDetails?.returnPickupStop;
+                dropoffStop = employee.transportDetails?.returnDropoffStop;
+            }
+
             return {
                 _id: trip._id,
                 date: trip.tripDate?.toISOString().split('T')[0],
@@ -263,7 +283,11 @@ export const getEmployeeDashboard = async (req, res) => {
                 totalSeats: trip.totalSeats,
                 availableSeats: trip.availableSeats,
                 bookedSeats: trip.bookedSeats,
-                stopPoints: trip.routeId?.stopPoints || [],
+                stopPoints: trip.stopPoints || trip.routeId?.stopPoints || [],
+                passengers: trip.passengers || [],
+                // Add employee-specific pickup/dropoff for this trip
+                myPickupStop: pickupStop,
+                myDropoffStop: dropoffStop,
                 routeId: trip.routeId ? {
                     _id: trip.routeId._id,
                     fromLocation: trip.routeId.fromLocation,
@@ -1028,6 +1052,25 @@ const getUpcomingTripsFromTrips = async (userId, employee) => {
                 }
             }
 
+            // Find the current user's passenger record
+            const myPassenger = trip.passengers?.find(p =>
+                p.passengerId?.toString() === userId.toString() ||
+                p.employeeId?.toString() === employee._id.toString()
+            );
+
+            // Get pickup/dropoff based on direction and passenger record
+            let pickupStop, dropoffStop;
+            if (myPassenger) {
+                pickupStop = myPassenger.pickupStop;
+                dropoffStop = myPassenger.dropoffStop;
+            } else if (trip.direction === 'FORWARD') {
+                pickupStop = employee.transportDetails?.outboundPickupStop;
+                dropoffStop = employee.transportDetails?.outboundDropoffStop;
+            } else if (trip.direction === 'RETURN') {
+                pickupStop = employee.transportDetails?.returnPickupStop;
+                dropoffStop = employee.transportDetails?.returnDropoffStop;
+            }
+
             return {
                 _id: trip._id,
                 date: trip.tripDate?.toISOString().split('T')[0],
@@ -1050,7 +1093,11 @@ const getUpcomingTripsFromTrips = async (userId, employee) => {
                 bookedSeats: trip.bookedSeats,
                 pickupLocation: employee.transportDetails?.pickupPoint || trip.fromLocation,
                 dropoffLocation: employee.transportDetails?.dropOffPoint || trip.toLocation,
-                stopPoints: trip.routeId?.stopPoints || [],
+                stopPoints: trip.stopPoints || trip.routeId?.stopPoints || [],
+                passengers: trip.passengers || [],
+                // Add employee-specific pickup/dropoff for this trip
+                myPickupStop: pickupStop,
+                myDropoffStop: dropoffStop,
                 routeId: trip.routeId ? {
                     _id: trip.routeId._id,
                     fromLocation: trip.routeId.fromLocation,

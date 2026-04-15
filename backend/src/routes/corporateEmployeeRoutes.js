@@ -15,7 +15,8 @@ import {
     assignRouteToEmployee,
     deactivateEmployee,
     getCorporateRoutes,
-    getRouteSchedule
+    getRouteSchedule,
+    resetEmployeePassword
 } from "../controllers/corporateEmployeeController.js";
 
 const router = express.Router();
@@ -46,5 +47,6 @@ router.delete("/:employeeId", verifyToken, deleteEmployee);
 router.patch("/:employeeId/assign-stops", verifyToken, assignStopsToEmployee);
 router.put("/:employeeId/assign-route", verifyToken, assignRouteToEmployee);
 router.put("/:employeeId/deactivate", verifyToken, deactivateEmployee);
+router.post("/:employeeId/reset-password", verifyToken, resetEmployeePassword);
 
 export default router;

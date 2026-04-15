@@ -467,10 +467,9 @@ export const bulkUploadEmployees = async (req, res) => {
                     continue;
                 }
 
-                // Create user account for employee with a random temporary password
-                // The real password will be set by the employee via invitation link
-                const crypto = await import('crypto');
-                const tempPassword = crypto.default.randomBytes(16).toString('hex');
+                // Create user account for employee with a known temporary password
+                // Using a consistent password that will be sent in the email
+                const tempPassword = "tempPassword123";
 
                 const user = new User({
                     fullName: employeeData.fullName,
@@ -518,7 +517,7 @@ export const bulkUploadEmployees = async (req, res) => {
                         returnPickupStop: employeeData.returnPickupStop || "",
                         returnDropoffStop: employeeData.returnDropoffStop || "",
                         assignedTripNumber: employeeData.assignedTripNumber || 1,
-                        assignedTripType: employeeData.assignedTripType || "",
+                        assignedTripType: employeeData.assignedTripType || employeeData.transportDetails?.assignedTripType || "One Way",
                         shiftType: employeeData.workShift || employeeData.transportDetails?.shiftType || "FULL_DAY",
                         transportStatus: "ACTIVE"
                     },
@@ -1891,6 +1890,80 @@ export const getCorporateRoutes = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error fetching routes",
+            error: error.message
+        });
+    }
+};
+
+
+// Reset employee password to default temporary password
+export const resetEmployeePassword = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+        const corporateId = req.corporateId || req.companyId;
+
+        // Find the corporate employee
+        const employee = await CorporateEmployee.findOne({
+            _id: employeeId,
+            companyId: corporateId
+        });
+
+        if (!employee) {
+            return res.status(404).json({
+                success: false,
+                message: "Employee not found"
+            });
+        }
+
+        // Find the associated user
+        const user = await User.findById(employee.userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User account not found for this employee"
+            });
+        }
+
+        // Reset password to default temporary password
+        const tempPassword = "tempPassword123";
+        user.password = tempPassword;
+        user.isPasswordSet = false;
+        await user.save();
+
+        // Send email with new credentials
+        try {
+            await sendEmail(
+                user.email,
+                "Password Reset - DriveMe Corporate Transport",
+                `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2>Password Reset - DriveMe Corporate Transport</h2>
+                        <p>Hello <strong>${user.fullName || 'Employee'}</strong>,</p>
+                        <p>Your password has been reset by your company administrator.</p>
+                        <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                            <p><strong>Login Email:</strong> ${user.email}</p>
+                            <p><strong>New Temporary Password:</strong> ${tempPassword}</p>
+                        </div>
+                        <p>Please login and change your password after signing in.</p>
+                        <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'http://localhost:5173'}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
+                    </div>
+                `
+            );
+        } catch (emailError) {
+            console.error("Error sending password reset email:", emailError);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Password reset successfully. A new temporary password has been sent to the employee's email.",
+            temporaryPassword: tempPassword
+        });
+
+    } catch (error) {
+        console.error("Error resetting employee password:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error resetting password",
             error: error.message
         });
     }
