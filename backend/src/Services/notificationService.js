@@ -2,6 +2,9 @@ import Notification from "../models/Notification.js";
 import User from "../models/User.js";
 import { sendRealTimeNotification } from "./socketService.js";
 
+// Re-export sendRealTimeNotification for convenience
+export { sendRealTimeNotification };
+    
 // Create notification with null safety
 export const createNotification = async (notificationData) => {
     try {

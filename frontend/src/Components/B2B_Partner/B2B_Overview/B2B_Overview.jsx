@@ -48,16 +48,30 @@ function B2B_Overview() {
     );
   }
 
+  const currency = overview.revenue?.currency || "AED";
+  
   const metrics = [
-    { 
-      label: "ACTIVE VEHICLES", 
-      value: `${overview.vehicles?.active || 0}/${overview.vehicles?.total || 0}`, 
-      icon: "🚗" 
+    {
+      label: "ACTIVE VEHICLES",
+      value: `${overview.vehicles?.active || 0}/${overview.vehicles?.total || 0}`,
+      icon: "🚗",
     },
-    { label: "ACTIVE CONTRACTS", value: overview.contracts?.active || 0, icon: "📄" },
-    { label: "REVENUE (MO)", value: `${overview.revenue?.monthly || 0} KWD`, icon: "$" },
-    { label: "FLEET HEALTH", value: overview.vehicles?.utilization || "0%", icon: "✓" },
-  ]
+    {
+      label: "ACTIVE CONTRACTS",
+      value: overview.contracts?.active || 0,
+      icon: "📄",
+    },
+    {
+      label: "REVENUE (MO)",
+      value: `${overview.revenue?.monthly || 0} ${currency}`,
+      icon: "📈",
+    },
+    {
+      label: "FLEET HEALTH",
+      value: overview.vehicles?.utilization || "0%",
+      icon: "✓",
+    },
+  ];
 
   // Use real chart data from backend, fallback to empty data if none available
   const chartData = overview.revenue?.chartData || {

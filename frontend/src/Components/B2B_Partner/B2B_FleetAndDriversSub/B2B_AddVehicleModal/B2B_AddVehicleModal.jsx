@@ -5,12 +5,23 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { addVehicle, clearError } from "../../../../Redux/slices/vehicleSlice";
 import LoadingSpinner from "../../../LoadingSpinner/LoadingSpinner";
+import { useDropdownOptions, DROPDOWN_CATEGORIES } from "../../../../hooks/useDropdownOptions";
 import "./b2b_addvehiclemodal.css";
 
 const B2B_AddVehicleModal = ({ onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.vehicles);
+
+  // Fetch dynamic dropdown options
+  const { options: dropdownOptions, loading: dropdownLoading } =
+    useDropdownOptions([
+      DROPDOWN_CATEGORIES.LOCATIONS,
+      DROPDOWN_CATEGORIES.CURRENCIES,
+      DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_PASSENGER,
+      DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_GOODS,
+      DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_MANAGED,
+    ]);
 
   const [formData, setFormData] = useState({
     vehicleName: "",
@@ -91,7 +102,10 @@ const B2B_AddVehicleModal = ({ onClose }) => {
     inspection: null,
   });
 
-  const locations = [
+  // Dynamic dropdown options from backend
+  const locations = dropdownOptions[
+    DROPDOWN_CATEGORIES.LOCATIONS
+  ]?.options?.map((opt) => opt.value) || [
     "Dubai",
     "Abu Dhabi",
     "Sharjah",
@@ -102,25 +116,36 @@ const B2B_AddVehicleModal = ({ onClose }) => {
     "Jeddah",
   ];
 
+  const currencies = dropdownOptions[DROPDOWN_CATEGORIES.CURRENCIES]
+    ?.options || [
+    { value: "AED", label: "AED - UAE Dirham" },
+    { value: "KWD", label: "KWD - Kuwaiti Dinar" },
+    { value: "SAR", label: "SAR - Saudi Riyal" },
+  ];
+
   const vehicleCategories = {
-    PASSENGER: [
+    PASSENGER: dropdownOptions[DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_PASSENGER]
+      ?.options || [
       { value: "SEDAN", label: "Sedan" },
       { value: "SUV", label: "SUV" },
       { value: "MINIVAN", label: "Minivan" },
       { value: "COASTER_BUS", label: "Coaster Bus" },
       { value: "LUXURY_COACH", label: "Luxury Coach" },
     ],
-    GOODS_CARRIER: [
+    GOODS_CARRIER: dropdownOptions[DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_GOODS]
+      ?.options || [
       { value: "PICKUP_1TON", label: "Pickup 1 Ton" },
       { value: "PICKUP_3TON", label: "Pickup 3 Ton" },
       { value: "TRUCK_7TON", label: "Truck 7 Ton" },
       { value: "REEFER_TRUCK", label: "Reefer Truck" },
       { value: "FLATBED_TRAILER", label: "Flatbed Trailer" },
     ],
-    MANAGED_SERVICES: [
+    MANAGED_SERVICES: dropdownOptions[
+      DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_MANAGED
+    ]?.options || [
       { value: "ANY_TYPE", label: "Any Type" },
       { value: "SHUTTLE_BUS", label: "Shuttle Bus" },
-      { value: "EXECUTIVE_VAN", label: "Executive Van" }
+      { value: "EXECUTIVE_VAN", label: "Executive Van" },
     ],
   };
 
@@ -205,7 +230,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
     submitData.append("capacity", JSON.stringify(formData.capacity));
     submitData.append(
       "driverAvailability",
-      JSON.stringify(formData.driverAvailability)
+      JSON.stringify(formData.driverAvailability),
     );
     submitData.append("fuelOptions", JSON.stringify(formData.fuelOptions));
     submitData.append("facilities", JSON.stringify(formData.facilities));
@@ -215,12 +240,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
 
     console.log(`Appending ${images.length} images...`);
     images.forEach((image, index) => {
-      console.log(
-        `Image ${index + 1}:`,
-        image.name,
-        image.type,
-        image.size
-      );
+      console.log(`Image ${index + 1}:`, image.name, image.type, image.size);
       submitData.append("images", image);
     });
 
@@ -240,12 +260,12 @@ const B2B_AddVehicleModal = ({ onClose }) => {
 
     const result = await dispatch(addVehicle(submitData));
 
-  if (addVehicle.fulfilled.match(result)) {
-  console.log("Vehicle added successfully!");
-  alert("Vehicle added successfully!");
-  // Close modal instead of navigating away - stay on current tab
-  onClose();
-  }
+    if (addVehicle.fulfilled.match(result)) {
+      console.log("Vehicle added successfully!");
+      alert("Vehicle added successfully!");
+      // Close modal instead of navigating away - stay on current tab
+      onClose();
+    }
   };
 
   if (loading) return <LoadingSpinner />;
@@ -486,12 +506,11 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                     }
                     required
                   >
-                    <option value="AED">AED - UAE Dirham</option>
-                    <option value="KWD">KWD - Kuwaiti Dinar</option>
-                    <option value="SAR">SAR - Saudi Riyal</option>
-                    <option value="BHD">BHD - Bahraini Dinar</option>
-                    <option value="OMR">OMR - Omani Rial</option>
-                    <option value="QAR">QAR - Qatari Riyal</option>
+                    {currencies.map((currency) => (
+                      <option key={currency.value} value={currency.value}>
+                        {currency.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -971,6 +990,6 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       </div>
     </>
   );
-};
+};;;
 
 export default B2B_AddVehicleModal;

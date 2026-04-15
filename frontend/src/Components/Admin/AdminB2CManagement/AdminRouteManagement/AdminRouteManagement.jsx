@@ -207,9 +207,15 @@ function AdminRouteManagement() {
     <div className="route-management-container">
       {/* Notification */}
       {notification && (
-        <div className={`route-management-notification route-management-notification-${notification.type}`}>
+        <div
+          className={`route-management-notification route-management-notification-${notification.type}`}
+        >
           <span className="route-management-notification-icon">
-            {notification.type === 'success' ? '✅' : notification.type === 'error' ? '❌' : '⏳'}
+            {notification.type === "success"
+              ? "✅"
+              : notification.type === "error"
+                ? "❌"
+                : "⏳"}
           </span>
           <span className="route-management-notification-message">
             {notification.message}
@@ -227,38 +233,45 @@ function AdminRouteManagement() {
             Manage and monitor all B2C transportation routes and schedules
           </p>
         </div>
-        
+
         <div className="route-management-stats">
           <div className="route-management-stat-item">
             <div className="route-management-stat-icon">🛣️</div>
             <div className="route-management-stat-content">
-              <span className="route-management-stat-number">{stats.totalRoutes}</span>
+              <span className="route-management-stat-number">
+                {stats.totalRoutes}
+              </span>
               <span className="route-management-stat-label">Total Routes</span>
             </div>
           </div>
           <div className="route-management-stat-item">
             <div className="route-management-stat-icon">✅</div>
             <div className="route-management-stat-content">
-              <span className="route-management-stat-number">{stats.activeRoutes}</span>
+              <span className="route-management-stat-number">
+                {stats.activeRoutes}
+              </span>
               <span className="route-management-stat-label">Active</span>
             </div>
           </div>
           <div className="route-management-stat-item">
             <div className="route-management-stat-icon">⏸️</div>
             <div className="route-management-stat-content">
-              <span className="route-management-stat-number">{stats.inactiveRoutes}</span>
+              <span className="route-management-stat-number">
+                {stats.inactiveRoutes}
+              </span>
               <span className="route-management-stat-label">Inactive</span>
             </div>
           </div>
           <div className="route-management-stat-item">
             <div className="route-management-stat-icon">🔧</div>
             <div className="route-management-stat-content">
-              <span className="route-management-stat-number">{stats.maintenanceRoutes}</span>
+              <span className="route-management-stat-number">
+                {stats.maintenanceRoutes}
+              </span>
               <span className="route-management-stat-label">Maintenance</span>
             </div>
           </div>
         </div>
-      
       </div>
 
       <div className="route-management-controls">
@@ -274,11 +287,11 @@ function AdminRouteManagement() {
             />
           </div>
         </div>
-        
+
         <div className="route-management-filters">
-          <select 
+          <select
             className="route-management-filter-select"
-            value={statusFilter} 
+            value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="all">All Status</option>
@@ -297,89 +310,128 @@ function AdminRouteManagement() {
                 <div className="route-management-title-section">
                   <h4 className="route-management-route-name">{route.name}</h4>
                   {route.featured && (
-                    <span className="route-management-featured-badge">⭐ Featured</span>
+                    <span className="route-management-featured-badge">
+                      ⭐ Featured
+                    </span>
                   )}
                 </div>
                 <div className="route-management-status-badge">
-                  <span className={`route-management-status route-management-status-${route.status.toLowerCase()}`}>
+                  <span
+                    className={`route-management-status route-management-status-${route.status.toLowerCase()}`}
+                  >
                     {route.status}
                   </span>
                 </div>
               </div>
-              
+
               <div className="route-management-card-content">
                 <div className="route-management-provider">
-                  <span className="route-management-provider-label">Provider:</span>
-                  <span className="route-management-provider-name">{route.providerName}</span>
+                  <span className="route-management-provider-label">
+                    Provider:
+                  </span>
+                  <span className="route-management-provider-name">
+                    {route.providerName}
+                  </span>
                 </div>
-                
+
                 <div className="route-management-path">
                   <div className="route-management-point">
                     <span className="route-management-point-icon">📍</span>
-                    <span className="route-management-point-text">{route.startPoint}</span>
+                    <span className="route-management-point-text">
+                      {route.startPoint}
+                    </span>
                   </div>
                   <div className="route-management-arrow">→</div>
                   <div className="route-management-point">
                     <span className="route-management-point-icon">🎯</span>
-                    <span className="route-management-point-text">{route.endPoint}</span>
+                    <span className="route-management-point-text">
+                      {route.endPoint}
+                    </span>
                   </div>
                 </div>
-                
+
                 <div className="route-management-details">
                   <div className="route-management-detail-item">
                     <span className="route-management-detail-icon">⏰</span>
                     <div className="route-management-detail-content">
-                      <span className="route-management-detail-label">Time</span>
-                      <span className="route-management-detail-value">{route.departureTime} - {route.arrivalTime}</span>
+                      <span className="route-management-detail-label">
+                        Time
+                      </span>
+                      <span className="route-management-detail-value">
+                        {route.departureTime} - {route.arrivalTime}
+                      </span>
                     </div>
                   </div>
-                  
+
                   <div className="route-management-detail-item">
                     <span className="route-management-detail-icon">💺</span>
                     <div className="route-management-detail-content">
-                      <span className="route-management-detail-label">Capacity</span>
-                      <span className="route-management-detail-value">{route.bookedSeats}/{route.capacity}</span>
+                      <span className="route-management-detail-label">
+                        Capacity
+                      </span>
+                      <span className="route-management-detail-value">
+                        {route.bookedSeats}/{route.capacity}
+                      </span>
                     </div>
                   </div>
-                  
+
                   <div className="route-management-detail-item">
                     <span className="route-management-detail-icon">💰</span>
                     <div className="route-management-detail-content">
-                      <span className="route-management-detail-label">Price</span>
-                      <span className="route-management-detail-value">{route.pricing?.currency || route.currency || 'KWD'} {route.price?.toFixed(route.pricing?.currency === 'KWD' || route.pricing?.currency === 'BHD' || route.pricing?.currency === 'OMR' ? 3 : 2)}</span>
+                      <span className="route-management-detail-label">
+                        Price
+                      </span>
+                      <span className="route-management-detail-value">
+                        {route.pricing?.currency || route.currency || "AED"}{" "}
+                        {route.price?.toFixed(
+                          route.pricing?.currency === "KWD" ||
+                            route.pricing?.currency === "BHD" ||
+                            route.pricing?.currency === "OMR"
+                            ? 3
+                            : 2,
+                        )}
+                      </span>
                     </div>
                   </div>
-                  
+
                   <div className="route-management-detail-item">
                     <span className="route-management-detail-icon">📏</span>
                     <div className="route-management-detail-content">
-                      <span className="route-management-detail-label">Distance</span>
-                      <span className="route-management-detail-value">{route.distance}</span>
+                      <span className="route-management-detail-label">
+                        Distance
+                      </span>
+                      <span className="route-management-detail-value">
+                        {route.distance}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="route-management-card-actions">
-                <button 
+                <button
                   className="route-management-action-btn route-management-edit-btn"
                   onClick={() => handleEditClick(route)}
                 >
                   ✏️ Edit
                 </button>
-                <button 
+                <button
                   className="route-management-action-btn route-management-status-btn"
                   onClick={() => handleToggleStatus(route._id, route.status)}
                 >
-                  {route.status?.toLowerCase() === 'active' ? '⏸️ Deactivate' : '✅ Activate'}
+                  {route.status?.toLowerCase() === "active"
+                    ? "⏸️ Deactivate"
+                    : "✅ Activate"}
                 </button>
-                <button 
+                <button
                   className="route-management-action-btn route-management-featured-btn"
-                  onClick={() => handleToggleFeatured(route._id, route.featured)}
+                  onClick={() =>
+                    handleToggleFeatured(route._id, route.featured)
+                  }
                 >
-                  {route.featured ? '⭐ Unfeature' : '☆ Feature'}
+                  {route.featured ? "⭐ Unfeature" : "☆ Feature"}
                 </button>
-                <button 
+                <button
                   className="route-management-action-btn route-management-delete-btn"
                   onClick={() => handleDeleteRoute(route._id)}
                 >
@@ -399,7 +451,7 @@ function AdminRouteManagement() {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export default AdminRouteManagement

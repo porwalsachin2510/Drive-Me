@@ -20,7 +20,6 @@ const requirementSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
-        
         // Vehicle requirements
         vehicleRequirements: [{
             vehicleType: {
@@ -196,7 +195,7 @@ const requirementSchema = new mongoose.Schema(
         // Status and workflow
         status: {
             type: String,
-            enum: ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED"],
+            enum: ["DRAFT", "PUBLISHED", "IN_PROGRESS", "CLOSED", "CANCELLED"],
             default: "DRAFT",
         },
         
@@ -206,6 +205,35 @@ const requirementSchema = new mongoose.Schema(
             ref: "Quotation",
         }],
         
+        // B2B Partner responses (before formal quotation)
+        partnerResponses: [{
+            partnerId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+                required: true,
+            },
+            responseType: {
+                type: String,
+                enum: ["INTERESTED", "NOT_INTERESTED", "WILL_ADD_VEHICLE"],
+                required: true,
+            },
+            message: String,
+            estimatedAvailability: Date,
+            vehicleDetails: String,
+            vehicleAddedNotified: {
+                type: Boolean,
+                default: false,
+            },
+            linkedVehicleId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Vehicle",
+            },
+            respondedAt: {
+                type: Date,
+                default: Date.now,
+            },
+        }],
+
         // Selected quotation (if any)
         selectedQuotation: {
             type: mongoose.Schema.Types.ObjectId,

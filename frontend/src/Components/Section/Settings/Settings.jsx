@@ -118,55 +118,57 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="settings-section">
+      <div className="drivemego-cst-settings-section">
         <h2>Settings</h2>
-        <div className="loading">Loading settings...</div>
+        <div className="drivemego-cst-loading">Loading settings...</div>
       </div>
     );
   }
 
   return (
-    <div className="settings-section">
+    <div className="drivemego-cst-settings-section">
       <h2>Settings</h2>
 
-      <div className="settings-container">
+      <div className="drivemego-cst-settings-container">
         {/* Profile Information */}
-        <div className="settings-group">
-          <div className="settings-header">
+        <div className="drivemego-cst-settings-group">
+          <div className="drivemego-cst-settings-header">
             <h3>👤 Profile Information</h3>
             <p>Update your personal information</p>
           </div>
-          
-          <div className="settings-form">
-            <div className="form-group">
+
+          <div className="drivemego-cst-settings-form">
+            <div className="drivemego-cst-form-group">
               <label>Full Name</label>
               <input
                 type="text"
                 value={profileData.fullName}
-                onChange={(e) => handleProfileChange('fullName', e.target.value)}
-                className="form-input"
+                onChange={(e) =>
+                  handleProfileChange("fullName", e.target.value)
+                }
+                className="drivemego-cst-form-input"
                 placeholder="Enter your full name"
               />
             </div>
-            
-            <div className="form-group">
+
+            <div className="drivemego-cst-form-group">
               <label>Email Address</label>
               <input
                 type="email"
                 value={profileData.email}
-                onChange={(e) => handleProfileChange('email', e.target.value)}
-                className="form-input"
+                onChange={(e) => handleProfileChange("email", e.target.value)}
+                className="drivemego-cst-form-input"
                 placeholder="Enter your email"
               />
             </div>
-            
-            <div className="form-group">
+
+            <div className="drivemego-cst-form-group">
               <label>Phone Number</label>
               <input
                 type="tel"
                 value={profileData.phone}
-                onChange={(e) => handleProfileChange('phone', e.target.value)}
-                className="form-input"
+                onChange={(e) => handleProfileChange("phone", e.target.value)}
+                className="drivemego-cst-form-input"
                 placeholder="Enter your phone number"
               />
             </div>
@@ -174,32 +176,36 @@ export default function Settings() {
         </div>
 
         {/* Regional Preferences */}
-        <div className="settings-group">
-          <div className="settings-header">
+        <div className="drivemego-cst-settings-group">
+          <div className="drivemego-cst-settings-header">
             <h3>🌐 Regional Preferences</h3>
             <p>Customize your language and currency</p>
           </div>
-          
-          <div className="settings-form">
-            <div className="form-group">
+
+          <div className="drivemego-cst-settings-form">
+            <div className="drivemego-cst-form-group">
               <label>Language</label>
               <select
                 value={profileData.language}
-                onChange={(e) => handleProfileChange('language', e.target.value)}
-                className="form-select"
+                onChange={(e) =>
+                  handleProfileChange("language", e.target.value)
+                }
+                className="drivemego-cst-form-select"
               >
                 <option value="en">English</option>
                 <option value="ar">Arabic</option>
                 <option value="ur">Urdu</option>
               </select>
             </div>
-            
-            <div className="form-group">
+
+            <div className="drivemego-cst-form-group">
               <label>Currency</label>
               <select
                 value={profileData.currency}
-                onChange={(e) => handleProfileChange('currency', e.target.value)}
-                className="form-select"
+                onChange={(e) =>
+                  handleProfileChange("currency", e.target.value)
+                }
+                className="drivemego-cst-form-select"
               >
                 <option value="KWD">Kuwaiti Dinar (KWD)</option>
                 <option value="AED">UAE Dirham (AED)</option>
@@ -213,115 +219,115 @@ export default function Settings() {
         </div>
 
         {/* Notification Preferences */}
-        <div className="settings-group">
-          <div className="settings-header">
+        <div className="drivemego-cst-settings-group">
+          <div className="drivemego-cst-settings-header">
             <h3>🔔 Notification Preferences</h3>
             <p>Control how you receive notifications</p>
           </div>
-          
-          <div className="preferences-list">
-            <div className="preference-item">
-              <div className="preference-info">
-                <h4>Push Notifications</h4>
+
+          <div className="drivemego-cst-preferences-list">
+            <div className="drivemego-cst-preference-item">
+              <div className="drivemego-cst-preference-info">
+                <h4 className="drivemego-cst-pref-label">Push Notifications</h4>
                 <p>Receive push notifications on your device</p>
               </div>
-              <label className="toggle-switch">
+              <label className="drivemego-cst-toggle-switch">
                 <input
                   type="checkbox"
                   checked={preferences.pushNotifications}
-                  onChange={() => handlePreferenceToggle('pushNotifications')}
+                  onChange={() => handlePreferenceToggle("pushNotifications")}
                 />
-                <span className="toggle-slider"></span>
+                <span className="drivemego-cst-toggle-slider"></span>
               </label>
             </div>
 
-            <div className="preference-item">
-              <div className="preference-info">
-                <h4>Marketing Emails</h4>
+            <div className="drivemego-cst-preference-item">
+              <div className="drivemego-cst-preference-info">
+                <h4 className="drivemego-cst-pref-label">Marketing Emails</h4>
                 <p>Receive promotional offers and updates</p>
               </div>
-              <label className="toggle-switch">
+              <label className="drivemego-cst-toggle-switch">
                 <input
                   type="checkbox"
                   checked={preferences.marketingEmails}
-                  onChange={() => handlePreferenceToggle('marketingEmails')}
+                  onChange={() => handlePreferenceToggle("marketingEmails")}
                 />
-                <span className="toggle-slider"></span>
+                <span className="drivemego-cst-toggle-slider"></span>
               </label>
             </div>
 
-            <div className="preference-item">
-              <div className="preference-info">
-                <h4>Trip Reminders</h4>
+            <div className="drivemego-cst-preference-item">
+              <div className="drivemego-cst-preference-info">
+                <h4 className="drivemego-cst-pref-label">Trip Reminders</h4>
                 <p>Get notified before your scheduled trips</p>
               </div>
-              <label className="toggle-switch">
+              <label className="drivemego-cst-toggle-switch">
                 <input
                   type="checkbox"
                   checked={preferences.tripReminders}
-                  onChange={() => handlePreferenceToggle('tripReminders')}
+                  onChange={() => handlePreferenceToggle("tripReminders")}
                 />
-                <span className="toggle-slider"></span>
+                <span className="drivemego-cst-toggle-slider"></span>
               </label>
             </div>
 
-            <div className="preference-item">
-              <div className="preference-info">
+            <div className="drivemego-cst-preference-item">
+              <div className="drivemego-cst-preference-info">
                 <h4>Promotional Offers</h4>
                 <p>Receive notifications about special offers</p>
               </div>
-              <label className="toggle-switch">
+              <label className="drivemego-cst-toggle-switch">
                 <input
                   type="checkbox"
                   checked={preferences.promotionalOffers}
-                  onChange={() => handlePreferenceToggle('promotionalOffers')}
+                  onChange={() => handlePreferenceToggle("promotionalOffers")}
                 />
-                <span className="toggle-slider"></span>
+                <span className="drivemego-cst-toggle-slider"></span>
               </label>
             </div>
           </div>
         </div>
 
         {/* Security Settings */}
-        <div className="settings-group">
-          <div className="settings-header">
+        <div className="drivemego-cst-settings-group">
+          <div className="drivemego-cst-settings-header">
             <h3>🔒 Security Settings</h3>
             <p>Update your password and security preferences</p>
           </div>
-          
-          <div className="settings-form">
-            <div className="form-group">
+
+          <div className="drivemego-cst-settings-form">
+            <div className="drivemego-cst-form-group">
               <label>Current Password</label>
               <input
                 type="password"
                 name="current"
                 value={passwords.current}
                 onChange={handlePasswordChange}
-                className="form-input"
+                className="drivemego-cst-form-input"
                 placeholder="Enter current password"
               />
             </div>
-            
-            <div className="form-group">
+
+            <div className="drivemego-cst-form-group">
               <label>New Password</label>
               <input
                 type="password"
                 name="new"
                 value={passwords.new}
                 onChange={handlePasswordChange}
-                className="form-input"
+                className="drivemego-cst-form-input"
                 placeholder="Enter new password"
               />
             </div>
-            
-            <div className="form-group">
+
+            <div className="drivemego-cst-form-group">
               <label>Confirm New Password</label>
               <input
                 type="password"
                 name="confirm"
                 value={passwords.confirm}
                 onChange={handlePasswordChange}
-                className="form-input"
+                className="drivemego-cst-form-input"
                 placeholder="Confirm new password"
               />
             </div>
@@ -329,17 +335,17 @@ export default function Settings() {
         </div>
 
         {/* Save Actions */}
-        <div className="settings-actions">
+        <div className="drivemego-cst-settings-actions">
           <button
-            className="save-profile-btn"
+            className="drivemego-cst-save-btn"
             onClick={handleSaveProfile}
             disabled={saving}
           >
             {saving ? "Saving..." : "Save Profile Changes"}
           </button>
-          
+
           <button
-            className="change-password-btn"
+            className="drivemego-cst-change-password-btn"
             onClick={handleChangePassword}
             disabled={saving || !passwords.current || !passwords.new}
           >

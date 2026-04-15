@@ -260,12 +260,15 @@ function AddDriverModal({ onClose, onSuccess }) {
   }, []);
 
   return (
-    <div className="modal-overlay" onClick={handleModalClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+    <div className="drivemego-cadm-modal-overlay" onClick={handleModalClose}>
+      <div
+        className="drivemego-cadm-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="drivemego-cadm-modal-header">
           <h2>Add New Driver</h2>
           <button
-            className="modal-close"
+            className="drivemego-cadm-modal-close"
             onClick={handleModalClose}
             disabled={loading}
           >
@@ -274,22 +277,26 @@ function AddDriverModal({ onClose, onSuccess }) {
         </div>
 
         {successMessage && (
-          <div className="success-message">
+          <div className="drivemego-cadm-success-message">
             <span>✓</span> {successMessage}
           </div>
         )}
 
         {error && (
-          <div className="error-message">
+          <div className="drivemego-cadm-error-message">
             <span>✕</span> {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="modal-form" noValidate>
-          <div className="section-title">Basic Information</div>
+        <form
+          onSubmit={handleSubmit}
+          className="drivemego-cadm-modal-form"
+          noValidate
+        >
+          <div className="drivemego-cadm-section-title">Basic Information</div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="drivemego-cadm-form-row">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="name">Full Name *</label>
               <input
                 type="text"
@@ -298,15 +305,17 @@ function AddDriverModal({ onClose, onSuccess }) {
                 placeholder="e.g. Mohammed Ali"
                 value={formData.name}
                 onChange={handleChange}
-                className={validationErrors.name ? "error" : ""}
+                className={validationErrors.name ? "drivemego-cadm-error" : ""}
                 disabled={loading}
               />
               {validationErrors.name && (
-                <span className="error-text">{validationErrors.name}</span>
+                <span className="drivemego-cadm-error-text">
+                  {validationErrors.name}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="dateOfBirth">Date of Birth *</label>
               <input
                 type="date"
@@ -314,19 +323,21 @@ function AddDriverModal({ onClose, onSuccess }) {
                 name="dateOfBirth"
                 value={formData.dateOfBirth}
                 onChange={handleChange}
-                className={validationErrors.dateOfBirth ? "error" : ""}
+                className={
+                  validationErrors.dateOfBirth ? "drivemego-cadm-error" : ""
+                }
                 disabled={loading}
               />
               {validationErrors.dateOfBirth && (
-                <span className="error-text">
+                <span className="drivemego-cadm-error-text">
                   {validationErrors.dateOfBirth}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="drivemego-cadm-form-row">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="email">Email Address *</label>
               <input
                 type="email"
@@ -335,15 +346,17 @@ function AddDriverModal({ onClose, onSuccess }) {
                 placeholder="driver@example.com"
                 value={formData.email}
                 onChange={handleChange}
-                className={validationErrors.email ? "error" : ""}
+                className={validationErrors.email ? "drivemego-cadm-error" : ""}
                 disabled={loading}
               />
               {validationErrors.email && (
-                <span className="error-text">{validationErrors.email}</span>
+                <span className="drivemego-cadm-error-text">
+                  {validationErrors.email}
+                </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="phone">Phone Number *</label>
               <input
                 type="tel"
@@ -352,17 +365,19 @@ function AddDriverModal({ onClose, onSuccess }) {
                 placeholder="+965 XXXX XXXX"
                 value={formData.phone}
                 onChange={handleChange}
-                className={validationErrors.phone ? "error" : ""}
+                className={validationErrors.phone ? "drivemego-cadm-error" : ""}
                 disabled={loading}
               />
               {validationErrors.phone && (
-                <span className="error-text">{validationErrors.phone}</span>
+                <span className="drivemego-cadm-error-text">
+                  {validationErrors.phone}
+                </span>
               )}
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="drivemego-cadm-form-row">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="nationality">Nationality *</label>
               <input
                 type="text"
@@ -371,21 +386,25 @@ function AddDriverModal({ onClose, onSuccess }) {
                 placeholder="e.g. Indian"
                 value={formData.nationality}
                 onChange={handleChange}
-                className={validationErrors.nationality ? "error" : ""}
+                className={
+                  validationErrors.nationality ? "drivemego-cadm-error" : ""
+                }
                 disabled={loading}
               />
               {validationErrors.nationality && (
-                <span className="error-text">
+                <span className="drivemego-cadm-error-text">
                   {validationErrors.nationality}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="section-title">License Information</div>
+          <div className="drivemego-cadm-section-title">
+            License Information
+          </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="drivemego-cadm-form-row">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="licenseNumber">License Number *</label>
               <input
                 type="text"
@@ -394,17 +413,19 @@ function AddDriverModal({ onClose, onSuccess }) {
                 placeholder="License number"
                 value={formData.licenseNumber}
                 onChange={handleChange}
-                className={validationErrors.licenseNumber ? "error" : ""}
+                className={
+                  validationErrors.licenseNumber ? "drivemego-cadm-error" : ""
+                }
                 disabled={loading}
               />
               {validationErrors.licenseNumber && (
-                <span className="error-text">
+                <span className="drivemego-cadm-error-text">
                   {validationErrors.licenseNumber}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="licenseExpiry">License Expiry *</label>
               <input
                 type="date"
@@ -412,18 +433,20 @@ function AddDriverModal({ onClose, onSuccess }) {
                 name="licenseExpiry"
                 value={formData.licenseExpiry}
                 onChange={handleChange}
-                className={validationErrors.licenseExpiry ? "error" : ""}
+                className={
+                  validationErrors.licenseExpiry ? "drivemego-cadm-error" : ""
+                }
                 disabled={loading}
               />
               {validationErrors.licenseExpiry && (
-                <span className="error-text">
+                <span className="drivemego-cadm-error-text">
                   {validationErrors.licenseExpiry}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="drivemego-cadm-form-group">
             <label htmlFor="licenseType">License Type *</label>
             <select
               id="licenseType"
@@ -439,9 +462,9 @@ function AddDriverModal({ onClose, onSuccess }) {
             </select>
           </div>
 
-          <div className="section-title">Address</div>
+          <div className="drivemego-cadm-section-title">Address</div>
 
-          <div className="form-group">
+          <div className="drivemego-cadm-form-group">
             <label htmlFor="addressStreet">Street Address *</label>
             <input
               type="text"
@@ -450,18 +473,20 @@ function AddDriverModal({ onClose, onSuccess }) {
               placeholder="Street address"
               value={formData.addressStreet}
               onChange={handleChange}
-              className={validationErrors.addressStreet ? "error" : ""}
+              className={
+                validationErrors.addressStreet ? "drivemego-cadm-error" : ""
+              }
               disabled={loading}
             />
             {validationErrors.addressStreet && (
-              <span className="error-text">
+              <span className="drivemego-cadm-error-text">
                 {validationErrors.addressStreet}
               </span>
             )}
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="drivemego-cadm-form-row">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="addressCity">City *</label>
               <input
                 type="text"
@@ -470,17 +495,19 @@ function AddDriverModal({ onClose, onSuccess }) {
                 placeholder="City"
                 value={formData.addressCity}
                 onChange={handleChange}
-                className={validationErrors.addressCity ? "error" : ""}
+                className={
+                  validationErrors.addressCity ? "drivemego-cadm-error" : ""
+                }
                 disabled={loading}
               />
               {validationErrors.addressCity && (
-                <span className="error-text">
+                <span className="drivemego-cadm-error-text">
                   {validationErrors.addressCity}
                 </span>
               )}
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="addressCountry">Country *</label>
               <input
                 type="text"
@@ -489,21 +516,23 @@ function AddDriverModal({ onClose, onSuccess }) {
                 placeholder="Country"
                 value={formData.addressCountry}
                 onChange={handleChange}
-                className={validationErrors.addressCountry ? "error" : ""}
+                className={
+                  validationErrors.addressCountry ? "drivemego-cadm-error" : ""
+                }
                 disabled={loading}
               />
               {validationErrors.addressCountry && (
-                <span className="error-text">
+                <span className="drivemego-cadm-error-text">
                   {validationErrors.addressCountry}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="section-title">Experience</div>
+          <div className="drivemego-cadm-section-title">Experience</div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="drivemego-cadm-form-row">
+            <div className="drivemego-cadm-form-group">
               <label htmlFor="experienceYears">Years of Experience *</label>
               <input
                 type="number"
@@ -513,18 +542,20 @@ function AddDriverModal({ onClose, onSuccess }) {
                 min="0"
                 value={formData.experienceYears}
                 onChange={handleChange}
-                className={validationErrors.experienceYears ? "error" : ""}
+                className={
+                  validationErrors.experienceYears ? "drivemego-cadm-error" : ""
+                }
                 disabled={loading}
               />
               {validationErrors.experienceYears && (
-                <span className="error-text">
+                <span className="drivemego-cadm-error-text">
                   {validationErrors.experienceYears}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="drivemego-cadm-form-group">
             <label htmlFor="experienceDescription">
               Description (Optional)
             </label>
@@ -539,22 +570,22 @@ function AddDriverModal({ onClose, onSuccess }) {
             />
           </div>
 
-          <div className="section-title">Documents</div>
+          <div className="drivemego-cadm-section-title">Documents</div>
 
-          <div className="form-group">
+          <div className="drivemego-cadm-form-group">
             <label>License Document * (Required)</label>
-            <div className="file-input-wrapper">
+            <div className="drivemego-cadm-file-input-wrapper">
               <input
                 type="file"
                 ref={licenseInputRef}
                 onChange={(e) => handleFileChange(e, "license")}
                 accept="image/*,.pdf"
                 disabled={loading}
-                className="file-input"
+                className="drivemego-cadm-file-input"
               />
               <button
                 type="button"
-                className="file-button"
+                className="drivemego-cadm-file-button"
                 onClick={handleLicenseClick}
                 disabled={loading}
               >
@@ -562,24 +593,26 @@ function AddDriverModal({ onClose, onSuccess }) {
               </button>
             </div>
             {validationErrors.license && (
-              <span className="error-text">{validationErrors.license}</span>
+              <span className="drivemego-cadm-error-text">
+                {validationErrors.license}
+              </span>
             )}
           </div>
 
-          <div className="form-group">
+          <div className="drivemego-cadm-form-group">
             <label>Passport (Optional)</label>
-            <div className="file-input-wrapper">
+            <div className="drivemego-cadm-file-input-wrapper">
               <input
                 type="file"
                 ref={passportInputRef}
                 onChange={(e) => handleFileChange(e, "passport")}
                 accept="image/*,.pdf"
                 disabled={loading}
-                className="file-input"
+                className="drivemego-cadm-file-input"
               />
               <button
                 type="button"
-                className="file-button"
+                className="drivemego-cadm-file-button"
                 onClick={handlePassportClick}
                 disabled={loading}
               >
@@ -587,24 +620,26 @@ function AddDriverModal({ onClose, onSuccess }) {
               </button>
             </div>
             {validationErrors.passport && (
-              <span className="error-text">{validationErrors.passport}</span>
+              <span className="drivemego-cadm-error-text">
+                {validationErrors.passport}
+              </span>
             )}
           </div>
 
-          <div className="form-group">
+          <div className="drivemego-cadm-form-group">
             <label>Visa (Optional)</label>
-            <div className="file-input-wrapper">
+            <div className="drivemego-cadm-file-input-wrapper">
               <input
                 type="file"
                 ref={visaInputRef}
                 onChange={(e) => handleFileChange(e, "visa")}
                 accept="image/*,.pdf"
                 disabled={loading}
-                className="file-input"
+                className="drivemego-cadm-file-input"
               />
               <button
                 type="button"
-                className="file-button"
+                className="drivemego-cadm-file-button"
                 onClick={handleVisaClick}
                 disabled={loading}
               >
@@ -612,24 +647,26 @@ function AddDriverModal({ onClose, onSuccess }) {
               </button>
             </div>
             {validationErrors.visa && (
-              <span className="error-text">{validationErrors.visa}</span>
+              <span className="drivemego-cadm-error-text">
+                {validationErrors.visa}
+              </span>
             )}
           </div>
 
-          <div className="form-group">
+          <div className="drivemego-cadm-form-group">
             <label>Medical Certificate (Optional)</label>
-            <div className="file-input-wrapper">
+            <div className="drivemego-cadm-file-input-wrapper">
               <input
                 type="file"
                 ref={medicalCertificateInputRef}
                 onChange={(e) => handleFileChange(e, "medicalCertificate")}
                 accept="image/*,.pdf"
                 disabled={loading}
-                className="file-input"
+                className="drivemego-cadm-file-input"
               />
               <button
                 type="button"
-                className="file-button"
+                className="drivemego-cadm-file-button"
                 onClick={handleMedicalCertificateClick}
                 disabled={loading}
               >
@@ -639,22 +676,26 @@ function AddDriverModal({ onClose, onSuccess }) {
               </button>
             </div>
             {validationErrors.medicalCertificate && (
-              <span className="error-text">
+              <span className="drivemego-cadm-error-text">
                 {validationErrors.medicalCertificate}
               </span>
             )}
           </div>
 
-          <div className="modal-actions">
+          <div className="drivemego-cadm-modal-actions">
             <button
               type="button"
-              className="btn-cancel"
+              className="drivemego-cadm-btn-cancel"
               onClick={handleModalClose}
               disabled={loading}
             >
               Cancel
             </button>
-            <button type="submit" className="btn-register" disabled={loading}>
+            <button
+              type="submit"
+              className="drivemego-cadm-btn-register"
+              disabled={loading}
+            >
               {loading ? "Registering..." : "Register Driver"}
             </button>
           </div>

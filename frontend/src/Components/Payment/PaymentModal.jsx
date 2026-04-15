@@ -120,53 +120,65 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
   const selectedPaymentMethod = paymentMethods.find(m => m.id === selectedMethod);
 
   return (
-    <div className="payment-modal-overlay" onClick={onClose}>
-      <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="payment-modal-header">
+    <div className="drivemego-wppm-payment-modal-overlay" onClick={onClose}>
+      <div
+        className="drivemego-wppm-payment-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="drivemego-wppm-payment-modal-header">
           <h2>Add Funds to Wallet</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <button className="drivemego-wppm-close-btn" onClick={onClose}>
+            ✕
+          </button>
         </div>
 
-        <div className="payment-amount-display">
-          <div className="amount-label">Amount to Add</div>
-          <div className="amount-value">
-            {currency === 'KWD' ? 'KWD' : 'AED'} {parseFloat(amount).toFixed(currency === 'KWD' ? 3 : 2)}
+        <div className="drivemego-wppm-payment-amount-display">
+          <div className="drivemego-wppm-amount-label">Amount to Add</div>
+          <div className="drivemego-wppm-amount-value">
+            {currency === "KWD" ? "KWD" : "AED"}{" "}
+            {parseFloat(amount).toFixed(currency === "KWD" ? 3 : 2)}
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="payment-form">
-          <div className="payment-methods-section">
+        <form onSubmit={handleSubmit} className="drivemego-wppm-payment-form">
+          <div className="drivemego-wppm-payment-methods-section">
             <h3>Select Payment Method</h3>
-            <div className="payment-methods-grid">
+            <div className="drivemego-wppm-payment-methods-grid">
               {paymentMethods.map((method) => (
                 <button
                   key={method.id}
                   type="button"
-                  className={`payment-method-card ${selectedMethod === method.id ? 'selected' : ''}`}
+                  className={`drivemego-wppm-payment-method-card ${selectedMethod === method.id ? "drivemego-wppm-selected" : ""}`}
                   onClick={() => setSelectedMethod(method.id)}
                 >
-                  <div className="method-icon">{method.icon}</div>
-                  <div className="method-name">{method.name}</div>
+                  <div className="drivemego-wppm-method-icon">
+                    {method.icon}
+                  </div>
+                  <div className="drivemego-wppm-method-name">
+                    {method.name}
+                  </div>
                 </button>
               ))}
             </div>
           </div>
 
           {selectedPaymentMethod.fields.length > 0 && (
-            <div className="payment-details-section">
+            <div className="drivemego-wppm-payment-details-section">
               <h3>Payment Details</h3>
-              <div className="form-fields">
+              <div className="drivemego-wppm-form-fields">
                 {selectedPaymentMethod.fields.includes("cardNumber") && (
-                  <div className="form-group">
+                  <div className="drivemego-wppm-form-group">
                     <label>Card Number</label>
                     <input
                       type="text"
                       name="cardNumber"
                       value={formData.cardNumber}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        cardNumber: formatCardNumber(e.target.value)
-                      }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          cardNumber: formatCardNumber(e.target.value),
+                        }))
+                      }
                       placeholder="1234 5678 9012 3456"
                       maxLength="19"
                       required
@@ -175,16 +187,18 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
                 )}
 
                 {selectedPaymentMethod.fields.includes("expiryDate") && (
-                  <div className="form-group">
+                  <div className="drivemego-wppm-form-group">
                     <label>Expiry Date</label>
                     <input
                       type="text"
                       name="expiryDate"
                       value={formData.expiryDate}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        expiryDate: formatExpiryDate(e.target.value)
-                      }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          expiryDate: formatExpiryDate(e.target.value),
+                        }))
+                      }
                       placeholder="MM/YY"
                       maxLength="5"
                       required
@@ -193,7 +207,7 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
                 )}
 
                 {selectedPaymentMethod.fields.includes("cvv") && (
-                  <div className="form-group">
+                  <div className="drivemego-wppm-form-group">
                     <label>CVV</label>
                     <input
                       type="text"
@@ -208,7 +222,7 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
                 )}
 
                 {selectedPaymentMethod.fields.includes("holderName") && (
-                  <div className="form-group">
+                  <div className="drivemego-wppm-form-group">
                     <label>Cardholder Name</label>
                     <input
                       type="text"
@@ -222,7 +236,7 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
                 )}
 
                 {selectedPaymentMethod.fields.includes("phone") && (
-                  <div className="form-group">
+                  <div className="drivemego-wppm-form-group">
                     <label>Phone Number</label>
                     <input
                       type="tel"
@@ -238,31 +252,39 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
             </div>
           )}
 
-          <div className="payment-actions">
-            <button type="button" className="btn-cancel" onClick={onClose}>
+          <div className="drivemego-wppm-payment-actions">
+            <button
+              type="button"
+              className="drivemego-wppm-btn-cancel"
+              onClick={onClose}
+            >
               Cancel
             </button>
-            <button type="submit" className="btn-pay" disabled={isProcessing}>
+            <button
+              type="submit"
+              className="drivemego-wppm-btn-pay"
+              disabled={isProcessing}
+            >
               {isProcessing ? (
                 <>
-                  <span className="spinner"></span>
+                  <span className="drivemego-wppm-spinner"></span>
                   Processing...
                 </>
               ) : (
                 <>
-                  Pay {currency === 'KWD' ? 'KWD' : 'AED'} {parseFloat(amount).toFixed(currency === 'KWD' ? 3 : 2)}
+                  Pay {currency === "KWD" ? "KWD" : "AED"}{" "}
+                  {parseFloat(amount).toFixed(currency === "KWD" ? 3 : 2)}
                 </>
               )}
             </button>
           </div>
         </form>
 
-        <div className="security-info">
-          <div className="security-badge">
-            🔒 Secure Payment
-          </div>
-          <div className="security-text">
-            Your payment information is encrypted and secure. We use industry-standard security measures.
+        <div className="drivemego-wppm-security-info">
+          <div className="drivemego-wppm-security-badge">🔒 Secure Payment</div>
+          <div className="drivemego-wppm-security-text">
+            Your payment information is encrypted and secure. We use
+            industry-standard security measures.
           </div>
         </div>
       </div>

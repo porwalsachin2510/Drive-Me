@@ -438,7 +438,7 @@ const QuotationDetails = () => {
                       <div className="single-quotation-breakdown-row">
                         <span>Vehicle Rental:</span>
                         <strong>
-                          KWD{" "}
+                          {quotedPrice.currency || "AED"}{" "}
                           {quotedPrice.breakdown?.vehicleRental?.toFixed(2) ||
                             "0.00"}
                         </strong>
@@ -447,7 +447,7 @@ const QuotationDetails = () => {
                         <div className="single-quotation-breakdown-row">
                           <span>Driver Charges:</span>
                           <strong>
-                            KWD{" "}
+                            {quotedPrice.currency || "AED"}{" "}
                             {quotedPrice.breakdown?.driverCharges?.toFixed(2) ||
                               "0.00"}
                           </strong>
@@ -457,7 +457,7 @@ const QuotationDetails = () => {
                         <div className="single-quotation-breakdown-row">
                           <span>Fuel Charges:</span>
                           <strong>
-                            KWD{" "}
+                            {quotedPrice.currency || "AED"}{" "}
                             {quotedPrice.breakdown?.fuelCharges?.toFixed(2) ||
                               "0.00"}
                           </strong>
@@ -466,7 +466,8 @@ const QuotationDetails = () => {
                       <div className="single-quotation-breakdown-row single-quotation-breakdown-total">
                         <span>Total Amount:</span>
                         <strong>
-                          KWD {quotedPrice.totalAmount?.toFixed(2) || "0.00"}
+                          {quotedPrice.currency || "AED"}{" "}
+                          {quotedPrice.totalAmount?.toFixed(2) || "0.00"}
                         </strong>
                       </div>
                     </div>
@@ -496,7 +497,7 @@ const QuotationDetails = () => {
                               <div className="single-quotation-breakdown-row">
                                 <span>Base Rental:</span>
                                 <strong>
-                                  KWD{" "}
+                                  {quotedPrice.currency || "AED"}{" "}
                                   {breakdown.baseRental?.toFixed(2) || "0.00"}
                                 </strong>
                               </div>
@@ -505,7 +506,7 @@ const QuotationDetails = () => {
                                   <div className="single-quotation-breakdown-row">
                                     <span>Driver Charges:</span>
                                     <strong>
-                                      KWD{" "}
+                                      {quotedPrice.currency || "AED"}{" "}
                                       {breakdown.driverCharges?.toFixed(2) ||
                                         "0.00"}
                                     </strong>
@@ -516,7 +517,7 @@ const QuotationDetails = () => {
                                   <div className="single-quotation-breakdown-row">
                                     <span>Fuel Charges:</span>
                                     <strong>
-                                      KWD{" "}
+                                      {quotedPrice.currency || "AED"}{" "}
                                       {breakdown.fuelCharges?.toFixed(2) ||
                                         "0.00"}
                                     </strong>
@@ -525,7 +526,7 @@ const QuotationDetails = () => {
                               <div className="single-quotation-breakdown-row single-quotation-breakdown-subtotal">
                                 <span>Subtotal:</span>
                                 <strong>
-                                  KWD{" "}
+                                  {quotedPrice.currency || "AED"}{" "}
                                   {breakdown.totalAmount?.toFixed(2) || "0.00"}
                                 </strong>
                               </div>
@@ -601,7 +602,7 @@ const QuotationDetails = () => {
                       Vehicle Rental:
                     </span>
                     <span className="single-quotation-price-value">
-                      KWD{" "}
+                      {quotation.quotedPrice.currency || "AED"}{" "}
                       {quotation.quotedPrice.breakdown?.vehicleRental?.toFixed(
                         2,
                       ) || "0.00"}
@@ -612,7 +613,7 @@ const QuotationDetails = () => {
                       Driver Charges:
                     </span>
                     <span className="single-quotation-price-value">
-                      KWD{" "}
+                      {quotation.quotedPrice.currency || "AED"}{" "}
                       {quotation.quotedPrice.breakdown?.driverCharges?.toFixed(
                         2,
                       ) || "0.00"}
@@ -623,7 +624,7 @@ const QuotationDetails = () => {
                       Fuel Charges:
                     </span>
                     <span className="single-quotation-price-value">
-                      KWD{" "}
+                      {quotation.quotedPrice.currency || "AED"}{" "}
                       {quotation.quotedPrice.breakdown?.fuelCharges?.toFixed(
                         2,
                       ) || "0.00"}
@@ -634,7 +635,7 @@ const QuotationDetails = () => {
                       Total Amount:
                     </span>
                     <span className="single-quotation-price-value single-quotation-total-value">
-                      KWD{" "}
+                      {quotation.quotedPrice.currency || "AED"}{" "}
                       {quotation.quotedPrice.totalAmount?.toFixed(2) || "0.00"}
                     </span>
                   </div>

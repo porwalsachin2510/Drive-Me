@@ -1242,7 +1242,11 @@ const B2B_Quotation = () => {
                       <td className="drivermego-b2b-quotation-amount-cell">
                         {quotation.quotedPrice?.totalAmount ? (
                           <span className="drivermego-b2b-quotation-amount-value">
-                            KWD {quotation.quotedPrice.totalAmount.toFixed(2)}
+                            {quotation.currency ||
+                              quotation.vehicles?.[0]?.vehicleId?.pricing
+                                ?.currency ||
+                              "AED"}{" "}
+                            {quotation.quotedPrice.totalAmount.toFixed(2)}
                           </span>
                         ) : (
                           <span className="drivermego-b2b-quotation-amount-pending">

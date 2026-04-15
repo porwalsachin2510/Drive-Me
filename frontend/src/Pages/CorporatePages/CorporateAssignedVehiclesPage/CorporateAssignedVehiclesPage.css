@@ -24,6 +24,33 @@
   box-shadow: 0 6px 16px rgba(0, 102, 255, 0.3);
 }
 
+/* ============ ADD BUTTON ============ */
+.corporate-assigned-vehicles-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #00a699 0%, #008b7a 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.corporate-assigned-vehicles-add-btn:hover {
+  background: linear-gradient(135deg, #008b7a 0%, #007a6c 100%);
+  box-shadow: 0 4px 12px rgba(0, 166, 153, 0.3);
+  transform: translateY(-1px);
+}
+
+.corporate-assigned-vehicles-add-btn:active {
+  transform: translateY(0);
+}
+
 .corporate-assigned-vehicles-header {
   display: flex;
   justify-content: space-between;

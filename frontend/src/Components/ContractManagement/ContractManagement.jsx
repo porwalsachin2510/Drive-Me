@@ -220,7 +220,10 @@ const ContractManagement = () => {
                     Total Amount:
                   </div>
                   <div className="drivemego-contractmanagement-info-value drivemego-contractmanagement-contract-amount">
-                    KWD {contract.totalAmount?.toFixed(2)}
+                    {contract.financials?.currency || "AED"}{" "}
+                    {(
+                      contract.financials?.totalAmount || contract.totalAmount
+                    )?.toFixed(2) || "0.00"}
                   </div>
                 </div>
 

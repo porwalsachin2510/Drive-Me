@@ -116,19 +116,19 @@ function Account() {
 
   if (loading) {
     return (
-      <div className="account">
-        <div className="loading">Loading profile...</div>
+      <div className="drivemego-btoc-at-account">
+        <div className="drivemego-btoc-at-loading">Loading profile...</div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="account">
-      <div className="account-content">
+    <div className="drivemego-btoc-at-account">
+      <div className="drivemego-btoc-at-account-content">
         {/* Driver Profile */}
-        <div className="account-section">
-          <div className="section-header">
-            <div className="header-icon driver-icon">
+        <div className="drivemego-btoc-at-account-section">
+          <div className="drivemego-btoc-at-section-header">
+            <div className="drivemego-btoc-at-header-icon drivemego-btoc-at-driver-icon">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <circle
                   cx="10"
@@ -144,112 +144,146 @@ function Account() {
                 />
               </svg>
             </div>
-            <h2 className="section-title">Partner Profile</h2>
+            <h2 className="drivemego-btoc-at-section-title">Partner Profile</h2>
           </div>
 
           {/* Profile Image Section */}
-          <div className="profile-image-section" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div className="profile-image-container" style={{ position: 'relative' }}>
+          <div
+            className="drivemego-btoc-at-profile-image-section"
+            style={{
+              marginBottom: "24px",
+              display: "flex",
+              alignItems: "center",
+              gap: "20px",
+            }}
+          >
+            <div
+              className="drivemego-btoc-at-profile-image-container"
+              style={{ position: "relative" }}
+            >
               {uploadingImage ? (
-                <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div
+                  style={{
+                    width: "100px",
+                    height: "100px",
+                    borderRadius: "50%",
+                    background: "#f0f0f0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   <span>Uploading...</span>
                 </div>
               ) : (
                 <img
-                  src={imagePreview || profileData.profileImage || '/default-avatar.png'}
+                  src={
+                    imagePreview ||
+                    profileData.profileImage ||
+                    "/default-avatar.png"
+                  }
                   alt="Profile"
-                  style={{ 
-                    width: '100px', 
-                    height: '100px', 
-                    borderRadius: '50%', 
-                    objectFit: 'cover', 
-                    border: '3px solid #e74c3c',
-                    background: '#f0f0f0'
+                  style={{
+                    width: "100px",
+                    height: "100px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "3px solid #e74c3c",
+                    background: "#f0f0f0",
                   }}
                   onError={(e) => {
-                    e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23e0e0e0" width="100" height="100"/><text x="50" y="55" fill="%23888" font-size="40" text-anchor="middle">?</text></svg>'
+                    e.target.src =
+                      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23e0e0e0" width="100" height="100"/><text x="50" y="55" fill="%23888" font-size="40" text-anchor="middle">?</text></svg>';
                   }}
                 />
               )}
             </div>
-            <div className="profile-image-actions">
-              <label 
-                htmlFor="profileImageUpload" 
-                style={{ 
-                  padding: '8px 16px', 
-                  background: '#e74c3c', 
-                  color: 'white', 
-                  borderRadius: '6px', 
-                  cursor: uploadingImage ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  display: 'inline-block',
-                  opacity: uploadingImage ? 0.7 : 1
+            <div className="drivemego-btoc-at-profile-image-actions">
+              <label
+                htmlFor="profileImageUpload"
+                style={{
+                  padding: "8px 16px",
+                  background: "#e74c3c",
+                  color: "white",
+                  borderRadius: "6px",
+                  cursor: uploadingImage ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  display: "inline-block",
+                  opacity: uploadingImage ? 0.7 : 1,
                 }}
               >
-                {uploadingImage ? 'Uploading...' : 'Change Photo'}
+                {uploadingImage ? "Uploading..." : "Change Photo"}
               </label>
               <input
                 type="file"
                 id="profileImageUpload"
                 accept="image/*"
                 onChange={handleProfileImageChange}
-                style={{ display: 'none' }}
+                style={{ display: "none" }}
                 disabled={uploadingImage}
               />
-              <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
+              <p style={{ fontSize: "12px", color: "#888", marginTop: "8px" }}>
                 Recommended: Square image, at least 200x200px
               </p>
             </div>
           </div>
 
-          <div className="profile-grid">
-            <div className="profile-field">
-              <label className="field-label">Full Name</label>
+          <div className="drivemego-btoc-at-profile-grid">
+            <div className="drivemego-btoc-at-profile-field">
+              <label className="drivemego-btoc-at-field-label">Full Name</label>
               <input
                 type="text"
-                className="field-input"
+                className="drivemego-btoc-at-field-input"
                 value={profileData.fullName}
-                onChange={(e) => handleProfileChange('fullName', e.target.value)}
+                onChange={(e) =>
+                  handleProfileChange("fullName", e.target.value)
+                }
                 placeholder="Enter your full name"
               />
             </div>
-            <div className="profile-field">
-              <label className="field-label">Email</label>
+            <div className="drivemego-btoc-at-profile-field">
+              <label className="drivemego-btoc-at-field-label">Email</label>
               <input
                 type="email"
-                className="field-input"
+                className="drivemego-btoc-at-field-input"
                 value={profileData.email}
-                onChange={(e) => handleProfileChange('email', e.target.value)}
+                onChange={(e) => handleProfileChange("email", e.target.value)}
                 placeholder="Enter your email"
               />
             </div>
-            <div className="profile-field">
-              <label className="field-label">Phone</label>
+            <div className="drivemego-btoc-at-profile-field">
+              <label className="drivemego-btoc-at-field-label">Phone</label>
               <input
                 type="tel"
-                className="field-input"
+                className="drivemego-btoc-at-field-input"
                 value={profileData.phone}
-                onChange={(e) => handleProfileChange('phone', e.target.value)}
+                onChange={(e) => handleProfileChange("phone", e.target.value)}
                 placeholder="Enter your phone number"
               />
             </div>
-            <div className="profile-field">
-              <label className="field-label">Company Name</label>
+            <div className="drivemego-btoc-at-profile-field">
+              <label className="drivemego-btoc-at-field-label">
+                Company Name
+              </label>
               <input
                 type="text"
-                className="field-input"
+                className="drivemego-btoc-at-field-input"
                 value={profileData.company}
-                onChange={(e) => handleProfileChange('company', e.target.value)}
+                onChange={(e) => handleProfileChange("company", e.target.value)}
                 placeholder="Enter company name"
               />
             </div>
-            <div className="profile-field">
-              <label className="field-label">License Number</label>
+            <div className="drivemego-btoc-at-profile-field">
+              <label className="drivemego-btoc-at-field-label">
+                License Number
+              </label>
               <input
                 type="text"
-                className="field-input"
+                className="drivemego-btoc-at-field-input"
                 value={profileData.licenseNumber}
-                onChange={(e) => handleProfileChange('licenseNumber', e.target.value)}
+                onChange={(e) =>
+                  handleProfileChange("licenseNumber", e.target.value)
+                }
                 placeholder="Enter license number"
               />
             </div>
@@ -257,9 +291,9 @@ function Account() {
         </div>
 
         {/* Notification Preferences */}
-        <div className="account-section">
-          <div className="section-header">
-            <div className="header-icon notification-icon">
+        <div className="drivemego-btoc-at-account-section">
+          <div className="drivemego-btoc-at-section-header">
+            <div className="drivemego-btoc-at-header-icon drivemego-btoc-at-notification-icon">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path
                   d="M10 2C6.13 2 3 5.13 3 9V14L1 16V17H19V16L17 14V9C17 5.13 13.87 2 10 2Z"
@@ -274,61 +308,69 @@ function Account() {
                 />
               </svg>
             </div>
-            <h2 className="section-title">Notification Preferences</h2>
+            <h2 className="drivemego-btoc-at-section-title">
+              Notification Preferences
+            </h2>
           </div>
 
-          <div className="preferences-list">
-            <div className="preference-item">
-              <div className="preference-info">
-                <h4>New Trip Alerts</h4>
+          <div className="drivemego-btoc-at-preferences-list">
+            <div className="drivemego-btoc-at-preference-item">
+              <div className="drivemego-btoc-at-preference-info">
+                <h4 className="drivemego-btoc-at-pref-label">
+                  New Trip Alerts
+                </h4>
                 <p>Get notified when new trips are booked</p>
               </div>
-              <label className="toggle-switch">
+              <label className="drivemego-btoc-at-toggle-switch">
                 <input
                   type="checkbox"
                   checked={preferences.newTripAlerts}
                   onChange={() => handleToggle("newTripAlerts")}
                 />
-                <span className="toggle-slider"></span>
+                <span className="drivemego-btoc-at-slider"></span>
               </label>
             </div>
 
-            <div className="preference-item">
-              <div className="preference-info">
-                <h4>Daily Earnings Summary</h4>
+            <div className="drivemego-btoc-at-preference-item">
+              <div className="drivemego-btoc-at-preference-info">
+                <h4 className="drivemego-btoc-at-pref-label">
+                  Daily Earnings Summary
+                </h4>
                 <p>Receive daily earnings reports</p>
               </div>
-              <label className="toggle-switch">
+              <label className="drivemego-btoc-at-toggle-switch">
                 <input
                   type="checkbox"
                   checked={preferences.dailyEarnings}
                   onChange={() => handleToggle("dailyEarnings")}
                 />
-                <span className="toggle-slider"></span>
+                <span className="drivemego-btoc-at-slider"></span>
               </label>
             </div>
 
-            <div className="preference-item">
-              <div className="preference-info">
-                <h4>Promotional Offers</h4>
+            <div className="drivemego-btoc-at-preference-item">
+              <div className="drivemego-btoc-at-preference-info">
+                <h4 className="drivemego-btoc-at-pref-label">
+                  Promotional Offers
+                </h4>
                 <p>Receive special offers and promotions</p>
               </div>
-              <label className="toggle-switch">
+              <label className="drivemego-btoc-at-toggle-switch">
                 <input
                   type="checkbox"
                   checked={preferences.promotionalOffers}
                   onChange={() => handleToggle("promotionalOffers")}
                 />
-                <span className="toggle-slider"></span>
+                <span className="drivemego-btoc-at-slider"></span>
               </label>
             </div>
           </div>
         </div>
 
         {/* Save Button */}
-        <div className="account-actions">
-          <button 
-            className="save-btn"
+        <div className="drivemego-btoc-at-security-actions">
+          <button
+            className="drivemego-btoc-at-save-changes-btn"
             onClick={handleSave}
             disabled={saving}
           >
@@ -337,7 +379,7 @@ function Account() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default Account

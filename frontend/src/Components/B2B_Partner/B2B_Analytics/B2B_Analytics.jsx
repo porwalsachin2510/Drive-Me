@@ -84,14 +84,15 @@ function B2B_Analytics() {
             className="drivemego-b2b_analytics-metric-icon"
             style={{ backgroundColor: "#e8f5e9" }}
           >
-            $
+            📈
           </div>
           <div className="drivemego-b2b_analytics-metric-content">
             <p className="drivemego-b2b_analytics-metric-label">
               Total Revenue
             </p>
             <p className="drivemego-b2b_analytics-metric-value">
-              {analytics.revenue?.total?.toLocaleString() || 0} KWD
+              {analytics.revenue?.total?.toLocaleString() || 0}{" "}
+              {analytics.revenue?.currency || "AED"}
             </p>
             <p className="drivemego-b2b_analytics-metric-change">
               {analytics.revenue?.growth || "+0%"}

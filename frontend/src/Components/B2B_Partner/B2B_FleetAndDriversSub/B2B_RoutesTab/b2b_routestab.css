@@ -1,10 +1,10 @@
-.b2b-routes-tab {
+.drivemego-btobrt-b2b-routes-tab {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.b2b-routes-filters {
+.drivemego-btobrt-b2b-routes-filters {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -12,13 +12,13 @@
   gap: 12px;
 }
 
-.b2b-filter-buttons {
+.drivemego-btobrt-b2b-filter-buttons {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.b2b-filter-btn {
+.drivemego-btobrt-b2b-filter-btn {
   padding: 8px 16px;
   border: 1px solid #e5e7eb;
   background: #ffffff;
@@ -30,24 +30,24 @@
   transition: all 0.2s;
 }
 
-.b2b-filter-btn:hover {
+.drivemego-btobrt-b2b-filter-btn:hover {
   border-color: #16a085;
   color: #16a085;
 }
 
-.b2b-filter-btn.active {
+.drivemego-btobrt-b2b-filter-btn.drivemego-btobrt-active {
   background: #16a085;
   border-color: #16a085;
   color: #ffffff;
 }
 
-.b2b-routes-grid {
+.drivemego-btobrt-b2b-routes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 20px;
 }
 
-.b2b-empty-state {
+.drivemego-btobrt-b2b-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,26 +59,26 @@
   border: 2px dashed #e5e7eb;
 }
 
-.b2b-empty-icon {
+.drivemego-btobrt-b2b-empty-icon {
   margin-bottom: 16px;
   color: #9ca3af;
 }
 
-.b2b-empty-title {
+.drivemego-btobrt-b2b-empty-title {
   font-size: 18px;
   font-weight: 600;
   color: #374151;
   margin: 0 0 8px 0;
 }
 
-.b2b-empty-description {
+.drivemego-btobrt-b2b-empty-description {
   font-size: 14px;
   color: #6b7280;
   margin: 0 0 20px 0;
   max-width: 400px;
 }
 
-.b2b-add-route-btn {
+.drivemego-btobrt-b2b-add-route-btn {
   padding: 12px 24px;
   background: #16a085;
   color: #ffffff;
@@ -90,21 +90,21 @@
   transition: background 0.2s;
 }
 
-.b2b-add-route-btn:hover {
+.drivemego-btobrt-b2b-add-route-btn:hover {
   background: #138d7b;
 }
 
 @media (max-width: 768px) {
-  .b2b-routes-grid {
+  .drivemego-btobrt-b2b-routes-grid {
     grid-template-columns: 1fr;
   }
   
-  .b2b-filter-buttons {
+  .drivemego-btobrt-b2b-filter-buttons {
     width: 100%;
     justify-content: flex-start;
   }
   
-  .b2b-filter-btn {
+  .drivemego-btobrt-b2b-filter-btn {
     font-size: 12px;
     padding: 6px 12px;
   }

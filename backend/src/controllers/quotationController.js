@@ -1,6 +1,6 @@
 import Quotation from "../models/Quotation.js"
 import Notification from "../models/Notification.js"
-import { createNotification as createNotificationService, sendAdminNotification } from "../Services/notificationService.js"
+import { createNotification as createNotificationService, sendAdminNotification, sendRealTimeNotification } from "../Services/notificationService.js"
 import User from "../models/User.js"
 
 const createNotification = async (userId, type, title, message, relatedEntityId, relatedEntityType) => {
@@ -83,8 +83,24 @@ export const requestQuotation = async (req, res) => {
             "QUOTATION",
         )
 
-        // Get user names for admin notification
+        // Send real-time notification to B2B Partner
         const corporateName = await getUserName(req.userId);
+        const realTimeNotif = await createNotificationService({
+            userId: fleetOwnerId,
+            type: "QUOTATION_REQUEST",
+            title: "New Quotation Request",
+            message: `${corporateName} has requested a quotation for ${totalQty} vehicle(s). Please respond within 48 hours.`,
+            metadata: {
+                quotationId: quotation._id,
+                corporateId: req.userId,
+                corporateName,
+                vehicleCount: totalQty,
+                rentalPeriod: rentalPeriod,
+            },
+        })
+        sendRealTimeNotification(fleetOwnerId.toString(), realTimeNotif)
+
+        // Get fleet name for admin notification (corporateName already declared above)
         const fleetName = await getUserName(fleetOwnerId);
 
         // Send notification to ADMIN
@@ -484,6 +500,24 @@ export const corporateDecisionOnQuotation = async (req, res) => {
                 "QUOTATION"
             );
             
+
+            // Send REAL-TIME notification to B2B Partner
+            const acceptNotif = await createNotificationService({
+                userId: quotation.fleetOwnerId._id,
+                type: "QUOTATION_ACCEPTED",
+                title: "Quotation Accepted!",
+                message: `Great news! ${corporateName} has accepted your quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'}. A contract will be created shortly.`,
+                metadata: {
+                    quotationId: quotation._id,
+                    quotationNumber: quotation.quotationNumber,
+                    corporateId: corporateOwnerId,
+                    corporateName,
+                    totalAmount: quotation.quotedPrice?.totalAmount,
+                    currency: quotation.quotedPrice?.currency,
+                },
+            })
+            sendRealTimeNotification(quotation.fleetOwnerId._id.toString(), acceptNotif)
+
             // Notify ADMIN
             await sendAdminNotification(
                 "Quotation Accepted",
@@ -501,6 +535,23 @@ export const corporateDecisionOnQuotation = async (req, res) => {
                 "QUOTATION"
             );
             
+
+            // Send REAL-TIME notification to B2B Partner about rejection
+            const rejectNotif = await createNotificationService({
+                userId: quotation.fleetOwnerId._id,
+                type: "QUOTATION_REJECTED",
+                title: "Quotation Rejected",
+                message: `${corporateName} has rejected your quotation. Reason: ${message || 'No reason provided'}`,
+                metadata: {
+                    quotationId: quotation._id,
+                    quotationNumber: quotation.quotationNumber,
+                    corporateId: corporateOwnerId,
+                    corporateName,
+                    reason: message || 'No reason provided',
+                },
+            })
+            sendRealTimeNotification(quotation.fleetOwnerId._id.toString(), rejectNotif)
+
             // Notify ADMIN
             await sendAdminNotification(
                 "Quotation Rejected by Corporate",
@@ -756,6 +807,24 @@ export const respondToQuotation = async (req, res) => {
                 "QUOTATION"
             );
             
+            // Send REAL-TIME notification to Corporate
+            const realTimeNotif = await createNotificationService({
+                userId: quotation.corporateOwnerId._id,
+                type: "QUOTATION_RECEIVED",
+                title: "Quotation Received",
+                message: `${fleetName} has sent you a quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'}. Please review and accept or reject within 7 days.`,
+                metadata: {
+                    quotationId: quotation._id,
+                    quotationNumber: quotation.quotationNumber,
+                    fleetOwnerId,
+                    fleetName,
+                    totalAmount: quotation.quotedPrice?.totalAmount,
+                    currency: quotation.quotedPrice?.currency,
+                    validUntil: quotation.validUntil,
+                },
+            })
+            sendRealTimeNotification(quotation.corporateOwnerId._id.toString(), realTimeNotif)
+
             // Send to ADMIN
             await sendAdminNotification(
                 "Quotation Sent",
@@ -773,6 +842,22 @@ export const respondToQuotation = async (req, res) => {
                 "QUOTATION"
             );
             
+            // Send REAL-TIME notification to Corporate about rejection
+            const rejectNotif = await createNotificationService({
+                userId: quotation.corporateOwnerId._id,
+                type: "QUOTATION_REJECTED",
+                title: "Quotation Request Rejected",
+                message: `${fleetName} has declined your quotation request. Reason: ${message}. You can request from another fleet owner.`,
+                metadata: {
+                    quotationId: quotation._id,
+                    quotationNumber: quotation.quotationNumber,
+                    fleetOwnerId,
+                    fleetName,
+                    reason: message,
+                },
+            })
+            sendRealTimeNotification(quotation.corporateOwnerId._id.toString(), rejectNotif)
+
             // Send to ADMIN
             await sendAdminNotification(
                 "Quotation Rejected by Fleet Owner",

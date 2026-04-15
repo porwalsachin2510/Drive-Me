@@ -368,6 +368,30 @@ export const getCostAnalysis = async (dateRange = {}) => {
   }
 };
 
+// Get corporate routes with schedules and trip details
+// Backend: GET /api/corporate/routes (corporateRoutes.js)
+export const getCorporateRoutes = async (filters = {}) => {
+  try {
+    const response = await api.get("/corporate/routes", { params: filters });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching corporate routes:", error);
+    throw error;
+  }
+};
+
+// Get single route details with full schedule and trip history
+// Backend: GET /api/corporate/routes/:routeId (corporateRoutes.js)
+export const getCorporateRouteDetails = async (routeId) => {
+  try {
+    const response = await api.get(`/corporate/routes/${routeId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching route details:", error);
+    throw error;
+  }
+};
+
 export default {
   getDailyTrips,
   getTripDetails,
@@ -398,5 +422,7 @@ export default {
   getCorporateProfile,
   updateCorporateProfile,
   getPerformanceAnalytics,
-  getCostAnalysis
+  getCostAnalysis,
+  getCorporateRoutes,
+  getCorporateRouteDetails
 };

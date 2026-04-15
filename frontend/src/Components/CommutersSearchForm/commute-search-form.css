@@ -178,35 +178,87 @@
   margin-top: 4px;
 }
 
+/* Days Section */
+.commute-search-form-days-section {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.commute-search-form-days-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.commute-search-form-days-quick-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.commute-search-form-quick-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.commute-search-form-quick-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.commute-search-form-quick-btn.commute-search-form-clear-btn {
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+.commute-search-form-quick-btn.commute-search-form-clear-btn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
 /* Days Container */
 .commute-search-form-days-container {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 /* Day Button */
 .commute-search-form-day-button {
-  width: 40px;
-  height: 40px;
-  border: 2px solid #d1d5db;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
   background: white;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  color: #4b5563;
+  color: #64748b;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .commute-search-form-day-button:hover {
-  border-color: #9ca3af;
+  border-color: #E85D5D;
+  color: #E85D5D;
+  background: #fef2f2;
 }
 
 .commute-search-form-day-button.commute-search-form-selected {
   background: #E85D5D;
   border-color: #E85D5D;
   color: white;
+  box-shadow: 0 2px 8px rgba(232, 93, 93, 0.3);
 }
 
 /* Button Section */
@@ -250,6 +302,12 @@
 
 .commute-search-form-search-icon {
   font-size: 18px;
+}
+
+.commute-search-form-search-icon-svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
 }
 
 /* Request Button */

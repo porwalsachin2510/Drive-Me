@@ -12,6 +12,7 @@ import RequirementManagement from "../../../Components/Corporate/RequirementMana
 import CorporateContractPage from "../CorporateContractPage/CorporateContractPage";
 import CorporateEmployeeBookingsPage from "../CorporateEmployeeBookingsPage/CorporateEmployeeBookingsPage";
 import CorporateBilling from "../../../Components/Corporate/CorporateBilling/CorporateBilling";
+import CorporateRoutesTab from "../../../Components/Corporate/CorporateRoutesTab/CorporateRoutesTab";
 import MyQuotationsContent from "../MyQuotations/MyQuotationsContent";
 import Footer from "../../../Components/Footer/Footer";
 import "./corporateprofilepage.css";
@@ -32,6 +33,7 @@ const getInitialTab = () => {
 
 const [corporateactiveTab, setCorporateActiveTab] = useState(getInitialTab);
 
+  console.log('corporateactiveTab', corporateactiveTab);
 // When URL changes (e.g., back navigation), update the tab
 useEffect(() => {
   const searchParams = new URLSearchParams(location.search);
@@ -193,6 +195,8 @@ const handleTabChange = (tab) => {
         return <CorporateEmployeeBookingsPage />;
       case "requirement-management":
         return <RequirementManagement />;
+      case "routes":
+        return <CorporateRoutesTab />;
       case "billing":
         return <CorporateBilling />;
       case "account-settings":
@@ -747,6 +751,14 @@ const handleTabChange = (tab) => {
               onClick={() => handleTabChange("requirement-management")}
             >
               Requirements
+            </button>
+            <button
+              className={`corporate-tab ${
+                corporateactiveTab === "routes" ? "corporate-active" : ""
+              }`}
+              onClick={() => handleTabChange("routes")}
+            >
+              Active Routes
             </button>
             <button
               className={`corporate-tab ${

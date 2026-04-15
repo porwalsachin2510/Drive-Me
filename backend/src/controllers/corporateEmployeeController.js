@@ -506,12 +506,19 @@ export const bulkUploadEmployees = async (req, res) => {
                         designation: employeeData.designation || "",
                         workLocation: employeeData.workLocation || ""
                     },
+                    homeAddress: employeeData.homeAddress || "",
                     residentialAddress: employeeData.residentialAddress || {},
                     transportDetails: {
                         assignedRoute: employeeData.routeId || employeeData.transportDetails?.assignedRoute || undefined,
                         seatNumber: employeeData.seatNumber || employeeData.transportDetails?.seatNumber || undefined,
-                        pickupPoint: employeeData.pickupLocation || employeeData.transportDetails?.pickupPoint || "",
-                        dropOffPoint: employeeData.dropoffLocation || employeeData.transportDetails?.dropOffPoint || "",
+                        pickupPoint: employeeData.pickupLocation || employeeData.outboundPickupStop || employeeData.transportDetails?.pickupPoint || "",
+                        dropOffPoint: employeeData.dropoffLocation || employeeData.outboundDropoffStop || employeeData.transportDetails?.dropOffPoint || "",
+                        outboundPickupStop: employeeData.outboundPickupStop || employeeData.pickupLocation || "",
+                        outboundDropoffStop: employeeData.outboundDropoffStop || employeeData.dropoffLocation || "",
+                        returnPickupStop: employeeData.returnPickupStop || "",
+                        returnDropoffStop: employeeData.returnDropoffStop || "",
+                        assignedTripNumber: employeeData.assignedTripNumber || 1,
+                        assignedTripType: employeeData.assignedTripType || "",
                         shiftType: employeeData.workShift || employeeData.transportDetails?.shiftType || "FULL_DAY",
                         transportStatus: "ACTIVE"
                     },
@@ -734,6 +741,9 @@ export const updateEmployee = async (req, res) => {
         if (updates.personalInfo) {
             Object.assign(employee.personalInfo, updates.personalInfo);
         }
+        if (updates.homeAddress !== undefined) {
+            employee.homeAddress = updates.homeAddress;
+        }
         if (updates.transportDetails) {
             Object.assign(employee.transportDetails, updates.transportDetails);
         }
@@ -795,24 +805,46 @@ export const deleteEmployee = async (req, res) => {
             });
         }
 
-        // Deactivate employee instead of deleting
-        employee.accessControl.isActive = false;
-        employee.transportDetails.transportStatus = "TERMINATED";
-        await employee.save();
+        const userId = employee.userId;
 
-        // Deactivate user account
-        await User.findByIdAndUpdate(employee.userId, { isActive: false });
+        // Delete any trips where this employee is a passenger
+        await Trip.updateMany(
+            { 'passengers.passengerId': userId },
+            {
+                $pull: { passengers: { passengerId: userId } },
+                $inc: { bookedSeats: -1, availableSeats: 1 }
+            }
+        );
+
+        // Delete trips that have no passengers left
+        await Trip.deleteMany({
+            'passengers': { $size: 0 }
+        });
+
+        // Delete any monthly passes for this employee
+        await MonthlyPass.deleteMany({ employeeId: userId });
+
+        // Delete any bookings for this employee
+        await CorporateBooking.deleteMany({ passengerId: userId });
+
+        // Delete the corporate employee record
+        await CorporateEmployee.findByIdAndDelete(employeeId);
+
+        // Delete the user account associated with the employee
+        if (userId) {
+            await User.findByIdAndDelete(userId);
+        }
 
         res.status(200).json({
             success: true,
-            message: "Employee deactivated successfully"
+            message: "Employee deleted successfully"
         });
 
     } catch (error) {
-        console.error("Error deactivating employee:", error);
+        console.error("Error deleting employee:", error);
         res.status(500).json({
             success: false,
-            message: "Error deactivating employee",
+            message: "Error deleting employee",
             error: error.message
         });
     }

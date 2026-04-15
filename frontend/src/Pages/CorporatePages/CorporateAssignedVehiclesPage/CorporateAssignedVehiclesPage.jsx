@@ -665,7 +665,7 @@ const CorporateAssignedVehiclesPage = () => {
       <div className="corporate-assigned-vehicles-container">
         <button
           className="corporate-assigned-vehicles-back-btn"
-          onClick={() => navigate("/corporate/contracts")}
+          onClick={() => navigate("/corporate-profile?tab=contracts")}
         >
           ← Back to Contracts
         </button>
@@ -678,7 +678,7 @@ const CorporateAssignedVehiclesPage = () => {
             </p>
           </div>
           <button
-            className="add-btn"
+            className="corporate-assigned-vehicles-add-btn"
             onClick={() => setShowAddCorporateDriverModal(true)}
           >
             + Add Driver

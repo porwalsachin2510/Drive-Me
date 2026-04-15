@@ -1,5 +1,5 @@
 /* ==================== Base Container - Premium Inter Font ==================== */
-.fleet-search-container {
+.drivemego-searchresults-fleet-search-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
@@ -9,7 +9,7 @@
 }
 
 /* ==================== Header Section ==================== */
-.header {
+.drivemego-searchresults-header {
   background-color: white;
   padding: 24px;
   border-radius: 12px;
@@ -22,31 +22,31 @@
   gap: 16px;
 }
 
-.header-content {
+.drivemego-searchresults-header-content {
   flex: 1;
   min-width: 250px;
 }
 
-.title {
+.drivemego-searchresults-title {
   font-size: 28px;
   font-weight: 700;
   color: #1e293b;
   margin: 0 0 8px 0;
 }
 
-.subtitle {
+.drivemego-searchresults-subtitle {
   font-size: 16px;
   color: #64748b;
   margin: 0;
 }
 
-.header-controls {
+.drivemego-searchresults-header-controls {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.sort-select {
+.drivemego-searchresults-sort-select {
   padding: 10px 16px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
@@ -57,17 +57,17 @@
   transition: all 0.2s ease;
 }
 
-.sort-select:hover {
+.drivemego-searchresults-sort-select:hover {
   border-color: #cbd5e1;
 }
 
-.sort-select:focus {
+.drivemego-searchresults-sort-select:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.filter-button,
-.view-button {
+.drivemego-searchresults-filter-button,
+.drivemego-searchresults-view-button {
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
@@ -78,31 +78,31 @@
   outline: none;
 }
 
-.filter-button {
+.drivemego-searchresults-filter-button {
   border: 1px solid #e2e8f0;
   background-color: white;
   color: #1e293b;
 }
 
-.filter-button:hover {
+.drivemego-searchresults-filter-button:hover {
   background-color: #f8fafc;
   border-color: #cbd5e1;
   transform: translateY(-1px);
 }
 
-.view-button {
+.drivemego-searchresults-view-button {
   border: 1px solid #3b82f6;
   background-color: #3b82f6;
   color: white;
 }
 
-.view-button:hover {
+.drivemego-searchresults-view-button:hover {
   background-color: #2563eb;
   transform: translateY(-1px);
 }
 
 /* ==================== Search Parameters Bar ==================== */
-.search-params-bar {
+.drivemego-searchresults-search-params-bar {
   background-color: white;
   padding: 16px 24px;
   border-radius: 12px;
@@ -113,7 +113,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.search-param {
+.drivemego-searchresults-search-param {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -123,14 +123,14 @@
 }
 
 /* ==================== Results Container ==================== */
-.search-param-results-container {
+.drivemego-searchresults-search-param-results-container {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
 /* ==================== Fleet Owner Card ==================== */
-.search-param-fleet-owner-card {
+.drivemego-searchresults-search-param-fleet-owner-card {
   background-color: rgb(255, 255, 255);
   border-radius: 16px;
   padding: 28px;
@@ -139,38 +139,38 @@
   transition: all 0.3s ease;
 }
 
-.fleet-owner-card:hover {
+.drivemego-searchresults-fleet-owner-card:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ==================== Owner Header ==================== */
-.owner-header {
+.drivemego-searchresults-owner-header {
   border-bottom: 2px solid #f1f5f9;
   padding-bottom: 20px;
   margin-bottom: 24px;
 }
 
-.owner-info {
+.drivemego-searchresults-owner-info {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.owner-name-row {
+.drivemego-searchresults-owner-name-row {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.owner-name {
+.drivemego-searchresults-owner-name {
   font-size: 24px;
   font-weight: 700;
   color: #1e293b;
   margin: 0;
 }
 
-.rating-badge {
+.drivemego-searchresults-rating-badge {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -182,14 +182,14 @@
   color: #92400e;
 }
 
-.owner-meta {
+.drivemego-searchresults-owner-meta {
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
   align-items: center;
 }
 
-.meta-item {
+.drivemego-searchresults-meta-item {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -197,7 +197,7 @@
   color: #64748b;
 }
 
-.verified-badge {
+.drivemego-searchresults-verified-badge {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -209,13 +209,13 @@
   color: #166534;
 }
 
-.contact-info {
+.drivemego-searchresults-contact-info {
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
 }
 
-.contact-item {
+.drivemego-searchresults-contact-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -224,7 +224,7 @@
 }
 
 /* ==================== Vehicles Grid ==================== */
-.vehicles-grid {
+.drivemego-searchresults-vehicles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
@@ -232,7 +232,7 @@
 }
 
 /* ==================== Vehicle Card ==================== */
-.vehicle-card {
+.drivemego-searchresults-vehicle-card {
   border: 2px solid #e2e8f0;
   border-radius: 12px;
   overflow: hidden;
@@ -241,18 +241,18 @@
   background-color: #fafafa;
 }
 
-.vehicle-card:hover {
+.drivemego-searchresults-vehicle-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
 }
 
-.vehicle-card.selected {
+.drivemego-searchresults-vehicle-card.drivemego-searchresults-selected {
   border-color: #3b82f6;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   transform: translateY(-2px);
 }
 
-.vehicle-image-container {
+.drivemego-searchresults-vehicle-image-container {
   position: relative;
   width: 100%;
   height: 200px;
@@ -260,18 +260,18 @@
   background-color: #e2e8f0;
 }
 
-.vehicle-image {
+.drivemego-searchresults-vehicle-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s ease;
 }
 
-.vehicle-card:hover .vehicle-image {
+.drivemego-searchresults-vehicle-card:hover .drivemego-searchresults-vehicle-image {
   transform: scale(1.05);
 }
 
-.selected-overlay {
+.drivemego-searchresults-selected-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -293,11 +293,11 @@
   }
 }
 
-.vehicle-content {
+.drivemego-searchresults-vehicle-content {
   padding: 16px;
 }
 
-.vehicle-name {
+.drivemego-searchresults-vehicle-name {
   font-size: 14px;
   font-weight: 600;
   color: #64748b;
@@ -306,21 +306,21 @@
   letter-spacing: 0.5px;
 }
 
-.vehicle-model {
+.drivemego-searchresults-vehicle-model {
   font-size: 18px;
   font-weight: 700;
   color: #1e293b;
   margin: 0 0 12px 0;
 }
 
-.vehicle-specs {
+.drivemego-searchresults-vehicle-specs {
   display: flex;
   gap: 12px;
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
 
-.spec-item {
+.drivemego-searchresults-spec-item {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -329,7 +329,7 @@
   font-weight: 500;
 }
 
-.vehicle-price {
+.drivemego-searchresults-vehicle-price {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -339,25 +339,25 @@
   border-radius: 8px;
 }
 
-.price-amount {
+.drivemego-searchresults-price-amount {
   font-size: 20px;
   font-weight: 700;
   color: #059669;
 }
 
-.price-detail {
+.drivemego-searchresults-price-detail {
   font-size: 13px;
   color: #64748b;
 }
 
-.facilities-list {
+.drivemego-searchresults-facilities-list {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
 }
 
-.facility-badge {
+.drivemego-searchresults-facility-badge {
   font-size: 12px;
   padding: 4px 8px;
   background-color: #eff6ff;
@@ -366,13 +366,13 @@
   font-weight: 500;
 }
 
-.availability-info {
+.drivemego-searchresults-availability-info {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.avail-badge {
+.drivemego-searchresults-avail-badge {
   font-size: 12px;
   padding: 4px 10px;
   background-color: #dcfce7;
@@ -382,7 +382,7 @@
 }
 
 /* ==================== More Vehicles Card ==================== */
-.more-vehicles-card {
+.drivemego-searchresults-more-vehicles-card {
   border: 2px dashed #cbd5e1;
   border-radius: 12px;
   display: flex;
@@ -394,17 +394,17 @@
   transition: all 0.3s ease;
 }
 
-.more-vehicles-card:hover {
+.drivemego-searchresults-more-vehicles-card:hover {
   background-color: #f1f5f9;
   border-color: #94a3b8;
   transform: translateY(-2px);
 }
 
-.more-vehicles-content {
+.drivemego-searchresults-more-vehicles-content {
   text-align: center;
 }
 
-.more-vehicles-count {
+.drivemego-searchresults-more-vehicles-count {
   display: block;
   font-size: 32px;
   font-weight: 700;
@@ -412,7 +412,7 @@
   margin-bottom: 8px;
 }
 
-.more-vehicles-text {
+.drivemego-searchresults-more-vehicles-text {
   display: block;
   font-size: 14px;
   color: #64748b;
@@ -420,14 +420,14 @@
 }
 
 /* ==================== Action Buttons ==================== */
-.action-buttons {
+.drivemego-searchresults-action-buttons {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.primary-button,
-.secondary-button {
+.drivemego-searchresults-primary-button,
+.drivemego-searchresults-secondary-button {
   flex: 1;
   min-width: 200px;
   padding: 14px 24px;
@@ -440,31 +440,31 @@
   outline: none;
 }
 
-.primary-button {
+.drivemego-searchresults-primary-button {
   background-color: #3b82f6;
   color: white;
   border: 2px solid #3b82f6;
 }
 
-.primary-button:hover {
+.drivemego-searchresults-primary-button:hover {
   background-color: #2563eb;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
-.secondary-button {
+.drivemego-searchresults-secondary-button {
   background-color: white;
   color: #3b82f6;
   border: 2px solid #3b82f6;
 }
 
-.secondary-button:hover {
+.drivemego-searchresults-secondary-button:hover {
   background-color: #eff6ff;
   transform: translateY(-1px);
 }
 
 /* ==================== Pagination ==================== */
-.pagination {
+.drivemego-searchresults-pagination {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -473,7 +473,7 @@
   padding: 20px;
 }
 
-.pagination-button {
+.drivemego-searchresults-pagination-button {
   padding: 10px 20px;
   background-color: white;
   border: 1px solid #e2e8f0;
@@ -485,18 +485,18 @@
   outline: none;
 }
 
-.pagination-button:hover {
+.drivemego-searchresults-pagination-button:hover {
   background-color: #f8fafc;
   border-color: #cbd5e1;
   transform: translateY(-1px);
 }
 
-.pagination-button:disabled {
+.drivemego-searchresults-pagination-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.page-info {
+.drivemego-searchresults-page-info {
   font-size: 14px;
   color: #64748b;
   font-weight: 500;
@@ -504,80 +504,80 @@
 
 /* ==================== Responsive Design ==================== */
 @media (max-width: 1024px) {
-  .vehicles-grid {
+  .drivemego-searchresults-vehicles-grid {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .header {
+  .drivemego-searchresults-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .header-controls {
+  .drivemego-searchresults-header-controls {
     width: 100%;
   }
 
-  .sort-select,
-  .filter-button,
-  .view-button {
+  .drivemego-searchresults-sort-select,
+  .drivemego-searchresults-filter-button,
+  .drivemego-searchresults-view-button {
     flex: 1;
   }
 
-  .vehicles-grid {
+  .drivemego-searchresults-vehicles-grid {
     grid-template-columns: 1fr;
   }
 
-  .action-buttons {
+  .drivemego-searchresults-action-buttons {
     flex-direction: column;
   }
 
-  .primary-button,
-  .secondary-button {
+  .drivemego-searchresults-primary-button,
+  .drivemego-searchresults-secondary-button {
     width: 100%;
   }
 
-  .search-params-bar {
+  .drivemego-searchresults-search-params-bar {
     gap: 12px;
   }
 
-  .owner-meta {
+  .drivemego-searchresults-owner-meta {
     gap: 12px;
   }
 
-  .contact-info {
+  .drivemego-searchresults-contact-info {
     flex-direction: column;
     gap: 12px;
   }
 }
 
 @media (max-width: 480px) {
-  .fleet-search-container {
+  .drivemego-searchresults-fleet-search-container {
     padding: 12px;
   }
 
-  .header,
-  .search-params-bar,
-  .fleet-owner-card {
+  .drivemego-searchresults-header,
+  .drivemego-searchresults-search-params-bar,
+  .drivemego-searchresults-fleet-owner-card {
     padding: 16px;
   }
 
-  .title {
+  .drivemego-searchresults-title {
     font-size: 22px;
   }
 
-  .owner-name {
+  .drivemego-searchresults-owner-name {
     font-size: 20px;
   }
 
-  .vehicle-image-container {
+  .drivemego-searchresults-vehicle-image-container {
     height: 180px;
   }
 }
 
 /* ==================== Utility Classes ==================== */
-.no-select {
+.drivemego-searchresults-no-select {
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -586,17 +586,17 @@
 
 /* ==================== Print Styles ==================== */
 @media print {
-  .header-controls,
-  .action-buttons,
-  .pagination {
+  .drivemego-searchresults-header-controls,
+  .drivemego-searchresults-action-buttons,
+  .drivemego-searchresults-pagination {
     display: none;
   }
 
-  .fleet-search-container {
+  .drivemego-searchresults-fleet-search-container {
     background-color: white;
   }
 
-  .vehicle-card {
+  .drivemego-searchresults-vehicle-card {
     break-inside: avoid;
   }
 }

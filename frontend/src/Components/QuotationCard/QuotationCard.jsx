@@ -3,10 +3,9 @@ import { useNavigate } from "react-router-dom";
 import "./QuotationCard.css";
 
 const QuotationCard = ({ quotation }) => {
-
   const totalQuantity = quotation?.vehicles?.reduce(
     (sum, v) => sum + (v.quantity || 0),
-    0
+    0,
   );
 
   const navigate = useNavigate();
@@ -72,9 +71,7 @@ const QuotationCard = ({ quotation }) => {
       style: "currency",
       currency: "KWD",
       minimumFractionDigits: 0,
-    })
-      .format(price)
-      .replace("KWD", "KD");
+    }).format(price);
   };
 
   const handleViewDetails = () => {

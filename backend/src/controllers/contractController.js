@@ -3,7 +3,7 @@ import Quotation from "../models/Quotation.js"
 import Route from "../models/Route.js"
 import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
-import { createNotification, sendAdminNotification } from "../Services/notificationService.js"
+import { createNotification, sendAdminNotification, sendRealTimeNotification } from "../Services/notificationService.js"
 import User from "../models/User.js"
 
 // Helper to get user name
@@ -1393,7 +1393,7 @@ export const assignDriverOrFuelToVehicle = async (req, res) => {
             },
             {
                 path: "vehicles.assignedVehicles.driverId",
-                select: "name licenseNumber",
+                select: "name fullName licenseNumber",
             },
             {
                 path: "vehicles.assignedVehicles.routeDetails",
@@ -1401,6 +1401,54 @@ export const assignDriverOrFuelToVehicle = async (req, res) => {
                     "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes status",
             },
         ])
+
+        // Find the vehicle details for notification
+        let vehicleName = "Vehicle"
+        let driverName = "Driver"
+        for (const vehicleGroup of contract.vehicles) {
+            const assignedVehicle = vehicleGroup.assignedVehicles.find((v) => v._id.toString() === assignedVehicleId)
+            if (assignedVehicle) {
+                vehicleName = vehicleGroup.vehicleId?.vehicleName || "Vehicle"
+                driverName = assignedVehicle.driverId?.fullName || assignedVehicle.driverId?.name || "New Driver"
+                break
+            }
+        }
+
+        // Get user names for notifications
+        const corporateUser = await User.findById(corporateOwnerId).select('fullName companyName')
+        const corporateName = corporateUser?.companyName || corporateUser?.fullName || 'Corporate'
+
+        // Send notification to B2B Partner about assignment change by Corporate
+        const b2bNotif = await createNotification({
+            userId: contract.fleetOwnerId,
+            type: "ASSIGNMENT_UPDATED",
+            title: "Vehicle Assignment Updated",
+            message: `${corporateName} has ${driverId ? 'assigned a new driver' : 'updated fuel card'} for ${vehicleName} in contract ${contract.contractNumber}. ${driverId ? `Driver: ${driverName}` : `Fuel Card: ${fuelCardNumber}`}`,
+            metadata: {
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                assignedVehicleId,
+                vehicleName,
+                changeType: driverId ? 'DRIVER_ASSIGNED' : 'FUEL_CARD_UPDATED',
+                driverId: driverId || null,
+                driverName: driverId ? driverName : null,
+                fuelCardNumber: fuelCardNumber || null,
+            },
+        })
+        sendRealTimeNotification(contract.fleetOwnerId.toString(), b2bNotif)
+
+        // Notify admin about assignment change
+        await sendAdminNotification(
+            "Vehicle Assignment Changed",
+            `${corporateName} ${driverId ? 'assigned new driver' : 'updated fuel card'} for ${vehicleName} in contract ${contract.contractNumber}`,
+            "ASSIGNMENT_UPDATED",
+            {
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                corporateId: corporateOwnerId,
+                b2bPartnerId: contract.fleetOwnerId,
+            }
+        )
 
         res.status(200).json({
             success: true,

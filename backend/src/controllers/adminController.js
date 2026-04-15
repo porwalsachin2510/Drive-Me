@@ -4,6 +4,7 @@ import Wallet from "../models/Wallet.js";
 import Transaction from "../models/Transaction.js";
 import PaymentSchedule from "../models/PaymentSchedule.js";
 import User from "../models/User.js";
+import Notification from "../models/Notification.js";
 import Vehicle from "../models/Vehicle.js";
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
@@ -16,6 +17,8 @@ import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import { uploadToCloudinary } from "../Config/Cloudinary.js";
+import { createNotification, sendRealTimeNotification } from "../Services/notificationService.js";
+
 // Get all users for admin
 export const getAllUsers = async (req, res) => {
     try {
@@ -481,8 +484,26 @@ export const getFinanceMetrics = async (req, res) => {
             ]),
             Wallet.aggregate([
                 { $group: { _id: null, total: { $sum: '$securityDepositHeld' } } }
+            ]),
+            // Get dominant currency
+            Wallet.aggregate([
+                { $group: { _id: "$currency", count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 1 }
             ])
         ]);
+
+        const currency = securityDeposits.length > 0 && securityDeposits[securityDeposits.length - 1]?.[0]?._id
+            ? securityDeposits[securityDeposits.length - 1][0]._id
+            : "AED";
+
+        // Get the actual currency from the last aggregation result (which is dominantCurrency)
+        const results = await Wallet.aggregate([
+            { $group: { _id: "$currency", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 1 }
+        ]);
+        const dominantCurrency = results[0]?._id || "AED";
 
         res.status(200).json({
             success: true,
@@ -494,7 +515,8 @@ export const getFinanceMetrics = async (req, res) => {
                 totalTransactions,
                 monthlyRevenue: monthlyRevenue[0]?.total || 0,
                 commissionEarned: commissionEarned[0]?.total || 0,
-                securityDeposits: securityDeposits[0]?.total || 0
+                securityDeposits: securityDeposits[0]?.total || 0,
+                currency: dominantCurrency
             }
         });
     } catch (error) {
@@ -3143,20 +3165,26 @@ export const getB2CPartnerEarnings = async (req, res) => {
             { $limit: 20 }
         ]);
 
+        // Get currency from user's routes or default to AED
+        const B2CPartnerRoute = (await import("../models/B2CPartnerRoute.js")).default;
+        const partnerRoute = await B2CPartnerRoute.findOne({ b2cPartnerId: userId });
+        const currency = partnerRoute?.currency || "AED";
+
         const transactions = transactionHistory.map(t => ({
             date: t._id,
             trips: t.trips,
-            amount: `+${(t.totalAmount || 0).toFixed(3)} KWD`,
+            amount: `+${(t.totalAmount || 0).toFixed(2)} ${currency}`,
             status: t.status === 'PAID' ? 'Paid' : 'Pending'
         }));
 
         res.status(200).json({
             success: true,
             earnings: {
-                total: `${totalEarnings.toFixed(3)} KWD`,
-                thisWeek: `${thisWeekEarnings.toFixed(3)} KWD`,
+                total: `${totalEarnings.toFixed(2)} ${currency}`,
+                thisWeek: `${thisWeekEarnings.toFixed(2)} ${currency}`,
                 thisWeekChange: weekChange,
-                today: `${todayEarnings.toFixed(3)} KWD`,
+                today: `${todayEarnings.toFixed(2)} ${currency}`,
+                currency: currency,
             },
             transactions
         });
@@ -4622,17 +4650,24 @@ export const getB2BPartnerOverview = async (req, res) => {
 // Get payment statistics for admin
 export const getPaymentStats = async (req, res) => {
     try {
-        const [totalPending, totalVerified, totalRejected, totalAmountResult] = await Promise.all([
+        const [totalPending, totalVerified, totalRejected, totalAmountResult, dominantCurrencyResult] = await Promise.all([
             Payment.countDocuments({ verificationStatus: 'PENDING' }),
             Payment.countDocuments({ verificationStatus: { $in: ['VERIFIED', 'AUTO_VERIFIED'] } }),
             Payment.countDocuments({ verificationStatus: 'REJECTED' }),
             Payment.aggregate([
                 { $match: { status: { $in: ['COMPLETED', 'PROCESSING'] } } },
                 { $group: { _id: null, total: { $sum: '$amount' } } }
+            ]),
+            // Get dominant currency from payments
+            Payment.aggregate([
+                { $group: { _id: "$currency", count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 1 }
             ])
         ]);
 
         const totalAmount = totalAmountResult[0]?.total || 0;
+        const currency = dominantCurrencyResult[0]?._id || "AED";
 
         res.status(200).json({
             success: true,
@@ -4640,7 +4675,8 @@ export const getPaymentStats = async (req, res) => {
                 totalPending,
                 totalVerified,
                 totalRejected,
-                totalAmount
+                totalAmount,
+                currency
             }
         });
     } catch (error) {
@@ -5401,6 +5437,89 @@ export const verifyPayment = async (req, res) => {
 
             console.log("[v0] Contract updated to status:", contract.status)
             
+
+            // Send real-time notifications to Corporate and B2B Partner
+            const corporateUser = await User.findById(contract.corporateOwnerId)
+            const b2bPartnerUser = await User.findById(contract.fleetOwnerId)
+
+            // Notification for Corporate user
+            if (corporateUser) {
+                const corporateNotification = await createNotification({
+                    userId: contract.corporateOwnerId,
+                    type: "PAYMENT_VERIFIED",
+                    title: "Payment Verified",
+                    message: `Your ${payment.paymentType} payment of ${payment.amount} ${payment.currency} for contract ${contract.contractNumber} has been verified and approved.${contract.status === "ACTIVE" ? " Your contract is now ACTIVE!" : ""}`,
+                    metadata: {
+                        paymentId: payment._id,
+                        contractId: contract._id,
+                        contractNumber: contract.contractNumber,
+                        amount: payment.amount,
+                        currency: payment.currency,
+                        paymentMethod: payment.paymentMethod,
+                        paymentType: payment.paymentType,
+                        contractStatus: contract.status,
+                    },
+                })
+                sendRealTimeNotification(contract.corporateOwnerId.toString(), corporateNotification)
+            }
+
+            // Notification for B2B Partner
+            if (b2bPartnerUser) {
+                const b2bNotification = await createNotification({
+                    userId: contract.fleetOwnerId,
+                    type: "PAYMENT_RECEIVED",
+                    title: "Payment Received",
+                    message: `Payment of ${fleetOwnerAmount} ${payment.currency} (90% of advance) has been credited to your wallet for contract ${contract.contractNumber}. Payment method: ${payment.paymentMethod}.${contract.status === "ACTIVE" ? " Contract is now ACTIVE!" : ""}`,
+                    metadata: {
+                        paymentId: payment._id,
+                        contractId: contract._id,
+                        contractNumber: contract.contractNumber,
+                        totalAmount: payment.amount,
+                        yourShare: fleetOwnerAmount,
+                        adminCommission: adminCommissionAmount,
+                        currency: payment.currency,
+                        paymentMethod: payment.paymentMethod,
+                        paymentType: payment.paymentType,
+                        contractStatus: contract.status,
+                        expectedPayoutDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+                    },
+                })
+                sendRealTimeNotification(contract.fleetOwnerId.toString(), b2bNotification)
+            }
+
+            // If contract is now ACTIVE, send contract activation notification
+            if (contract.status === "ACTIVE") {
+                // Notification for Corporate
+                const corporateActivationNotif = await createNotification({
+                    userId: contract.corporateOwnerId,
+                    type: "CONTRACT_ACTIVATED",
+                    title: "Contract Activated",
+                    message: `Your contract ${contract.contractNumber} is now active! You can now use the assigned vehicles.`,
+                    metadata: {
+                        contractId: contract._id,
+                        contractNumber: contract.contractNumber,
+                        startDate: contract.rentalPeriod.startDate,
+                        endDate: contract.rentalPeriod.endDate,
+                    },
+                })
+                sendRealTimeNotification(contract.corporateOwnerId.toString(), corporateActivationNotif)
+
+                // Notification for B2B Partner
+                const b2bActivationNotif = await createNotification({
+                    userId: contract.fleetOwnerId,
+                    type: "CONTRACT_ACTIVATED",
+                    title: "Contract Activated",
+                    message: `Contract ${contract.contractNumber} is now active! Please ensure vehicles are ready for the client.`,
+                    metadata: {
+                        contractId: contract._id,
+                        contractNumber: contract.contractNumber,
+                        startDate: contract.rentalPeriod.startDate,
+                        endDate: contract.rentalPeriod.endDate,
+                    },
+                })
+                sendRealTimeNotification(contract.fleetOwnerId.toString(), b2bActivationNotif)
+            }
+
             return res.status(200).json({
                 success: true,
                 message: "Payment verified successfully",
@@ -5422,6 +5541,42 @@ export const verifyPayment = async (req, res) => {
             payment.failureReason = reason || "Payment rejected by admin"
 
             await payment.save()
+
+
+            // Get contract for notification
+            const contract = payment.contractId
+
+            // Send rejection notification to Corporate
+            const corporateRejectionNotif = await createNotification({
+                userId: contract.corporateOwnerId,
+                type: "PAYMENT_REJECTED",
+                title: "Payment Rejected",
+                message: `Your payment of ${payment.amount} ${payment.currency} for contract ${contract.contractNumber} has been rejected. Reason: ${reason || "Payment rejected by admin"}. Please contact support or try again.`,
+                metadata: {
+                    paymentId: payment._id,
+                    contractId: contract._id,
+                    contractNumber: contract.contractNumber,
+                    amount: payment.amount,
+                    currency: payment.currency,
+                    reason: reason || "Payment rejected by admin",
+                },
+            })
+            sendRealTimeNotification(contract.corporateOwnerId.toString(), corporateRejectionNotif)
+
+            // Send notification to B2B Partner about rejection
+            const b2bRejectionNotif = await createNotification({
+                userId: contract.fleetOwnerId,
+                type: "PAYMENT_REJECTED",
+                title: "Payment Rejected",
+                message: `Payment for contract ${contract.contractNumber} was rejected. The corporate client will need to resubmit payment.`,
+                metadata: {
+                    paymentId: payment._id,
+                    contractId: contract._id,
+                    contractNumber: contract.contractNumber,
+                    reason: reason || "Payment rejected by admin",
+                },
+            })
+            sendRealTimeNotification(contract.fleetOwnerId.toString(), b2bRejectionNotif)
 
             return res.status(200).json({
                 success: true,
@@ -5486,13 +5641,21 @@ export const getAllContracts = async (req, res) => {
 // Get admin dashboard statistics
 export const getDashboardStats = async (req, res) => {
     try {
-        const [totalContracts, activeContracts, pendingPayments, totalRevenue, adminWallet] = await Promise.all([
+        const [totalContracts, activeContracts, pendingPayments, totalRevenue, adminWallet, dominantCurrencyResult] = await Promise.all([
             Contract.countDocuments(),
             Contract.countDocuments({ status: "ACTIVE" }),
             Payment.countDocuments({ verificationStatus: "PENDING" }),
             Payment.aggregate([{ $match: { status: "COMPLETED" } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
             Wallet.findOne({ userId: req.userId, role: "ADMIN" }),
+            // Get the dominant currency from wallets
+            Wallet.aggregate([
+                { $group: { _id: "$currency", count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 1 }
+            ])
         ])
+
+        const currency = dominantCurrencyResult[0]?._id || adminWallet?.currency || "AED";
 
         res.status(200).json({
             success: true,
@@ -5502,6 +5665,7 @@ export const getDashboardStats = async (req, res) => {
                 pendingPayments,
                 totalRevenue: totalRevenue[0]?.total || 0,
                 adminBalance: adminWallet?.balance || 0,
+                currency: currency,
             },
         })
     } catch (error) {
@@ -5949,10 +6113,6 @@ export const rejectVehicle = async (req, res) => {
 
 // ==================== ADMIN WALLET MANAGEMENT APIS ====================
 
-import Notification from "../models/Notification.js";
-import { sendRealTimeNotification } from "../Services/socketService.js";
-import { createNotification } from "./notificationController.js";
-
 // Get all wallets with user details for admin
 export const getAllWallets = async (req, res) => {
     try {
@@ -6050,6 +6210,14 @@ export const getWalletStats = async (req, res) => {
             }
         ]);
 
+        // Get the dominant currency from wallets (most common currency)
+        const currencyStats = await Wallet.aggregate([
+            { $group: { _id: "$currency", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 1 }
+        ]);
+        const dominantCurrency = currencyStats[0]?._id || "AED";
+
         res.status(200).json({
             success: true,
             stats: {
@@ -6059,7 +6227,8 @@ export const getWalletStats = async (req, res) => {
                 totalWithdrawals: totalWithdrawals[0]?.total || 0,
                 lowBalanceWallets,
                 activeWallets,
-                walletsByRole
+                walletsByRole,
+                currency: dominantCurrency
             },
             recentTransactions
         });

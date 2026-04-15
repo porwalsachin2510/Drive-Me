@@ -16,7 +16,8 @@ const PaymentVerification = () => {
     totalPending: 0,
     totalVerified: 0,
     totalRejected: 0,
-    totalAmount: 0
+    totalAmount: 0,
+    currency: "AED",
   });
 
   useEffect(() => {
@@ -86,10 +87,11 @@ const PaymentVerification = () => {
     }
   };
 
-  const formatCurrency = (amount, currency = 'KWD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
+  const formatCurrency = (amount, currency = null) => {
+     const curr = currency || stats.currency || "AED";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: curr,
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -166,7 +168,7 @@ const PaymentVerification = () => {
                 <td>{payment.contractId?.contractNumber || "N/A"}</td>
                 <td>{payment.corporateOwnerId?.fullName || "N/A"}</td>
                 <td>{payment.fleetOwnerId?.fullName || "N/A"}</td>
-                <td>{formatCurrency(payment.amount)}</td>
+                <td>{formatCurrency(payment.amount, payment.currency)}</td>
                 <td>{payment.paymentType}</td>
                 <td>
                   <span
@@ -254,7 +256,10 @@ const PaymentVerification = () => {
                     Amount:
                   </span>
                   <span className="drivemego-paymentverification-value">
-                    {formatCurrency(selectedPayment.amount)}
+                    {formatCurrency(
+                      selectedPayment.amount,
+                      selectedPayment.currency,
+                    )}
                   </span>
                 </div>
                 <div className="drivemego-paymentverification-info-row">

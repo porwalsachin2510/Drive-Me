@@ -11,6 +11,8 @@ function CorporateEmployeeManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
   const [sendingInvitations, setSendingInvitations] = useState(false);
   const [availableRoutes, setAvailableRoutes] = useState([]);
@@ -127,7 +129,8 @@ function CorporateEmployeeManagement() {
   };
 
   // Fetch route schedule when route is selected
-  const fetchRouteSchedule = async (routeId) => {
+  // If preserveExisting is true, it will keep existing transport details (used for editing)
+  const fetchRouteSchedule = async (routeId, preserveExisting = false) => {
     if (!routeId) {
       setSelectedRouteSchedule(null);
       return;
@@ -141,8 +144,13 @@ function CorporateEmployeeManagement() {
       if (response.data.success && response.data.data) {
         const scheduleData = response.data.data;
         setSelectedRouteSchedule(scheduleData);
-        // Auto-select the first trip if available
-        if (scheduleData.tripTimes && scheduleData.tripTimes.length > 0) {
+
+        // Only auto-select the first trip if not preserving existing (i.e., for new selection)
+        if (
+          !preserveExisting &&
+          scheduleData.tripTimes &&
+          scheduleData.tripTimes.length > 0
+        ) {
           const firstTrip = scheduleData.tripTimes[0];
           setEmployeeForm((prev) => ({
             ...prev,
@@ -157,6 +165,27 @@ function CorporateEmployeeManagement() {
                   : "",
             },
           }));
+        } else if (preserveExisting) {
+          // When editing, update the tripType based on the selected trip from schedule
+          setEmployeeForm((prev) => {
+            const tripIdx =
+              parseInt(prev.transportDetails.selectedTripIndex) || 0;
+            const selectedTrip = scheduleData.tripTimes?.[tripIdx];
+            if (selectedTrip) {
+              // Always use the schedule's trip type as the source of truth
+              return {
+                ...prev,
+                transportDetails: {
+                  ...prev.transportDetails,
+                  tripType:
+                    selectedTrip.tripType ||
+                    prev.transportDetails.tripType ||
+                    "One Way",
+                },
+              };
+            }
+            return prev;
+          });
         }
       } else {
         setSelectedRouteSchedule(null);
@@ -380,54 +409,315 @@ function CorporateEmployeeManagement() {
     setSelectedRouteSchedule(null);
   };
 
-  const handleBulkUploadFile = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const jsonData = JSON.parse(event.target.result);
-          setBulkUploadData({ employees: jsonData });
-        } catch (error) {
-          alert("Invalid JSON file");
-        }
-      };
-      reader.readAsText(file);
+  // const handleBulkUploadFile = async (e) => {
+  //   const file = e.target.files[0];
+  //   if (!file) return;
+
+  //   const fileExtension = file.name.split(".").pop().toLowerCase();
+
+  //   if (fileExtension === "xlsx" || fileExtension === "xls") {
+  //     // Handle Excel file
+  //     try {
+  //       const xlsxModule = await import("xlsx");
+  //       const XLSX = xlsxModule.default || xlsxModule;
+  //       const reader = new FileReader();
+  //       reader.onload = (event) => {
+  //         try {
+  //           const data = new Uint8Array(event.target.result);
+  //           const workbook = XLSX.read(data, { type: "array" });
+  //           const firstSheetName = workbook.SheetNames[0];
+  //           const worksheet = workbook.Sheets[firstSheetName];
+  //           const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+  //           // Map Excel columns to expected format
+  //           const employees = jsonData.map((row) => ({
+  //             fullName: row["Full Name"] || row["fullName"] || "",
+  //             email: row["Email"] || row["email"] || "",
+  //             contactNumber:
+  //               row["Phone"] ||
+  //               row["Phone Number"] ||
+  //               row["contactNumber"] ||
+  //               "",
+  //             department: row["Department"] || row["department"] || "",
+  //             designation: row["Designation"] || row["designation"] || "",
+  //             workLocation: row["Work Location"] || row["workLocation"] || "",
+  //             homeAddress: row["Home Address"] || row["homeAddress"] || "",
+  //             workShift: row["Work Shift"] || row["workShift"] || "FULL_DAY",
+  //           }));
+
+  //           setBulkUploadData({ employees });
+  //         } catch (error) {
+  //           console.error("Error parsing Excel:", error);
+  //           alert("Invalid Excel file. Please check the format.");
+  //         }
+  //       };
+  //       reader.readAsArrayBuffer(file);
+  //     } catch (error) {
+  //       console.error("Error loading xlsx library:", error);
+  //       alert("Error processing Excel file");
+  //     }
+  //   } else if (fileExtension === "json") {
+  //     // Handle JSON file (legacy support)
+  //     const reader = new FileReader();
+  //     reader.onload = (event) => {
+  //       try {
+  //         const jsonData = JSON.parse(event.target.result);
+  //         setBulkUploadData({
+  //           employees: Array.isArray(jsonData) ? jsonData : [jsonData],
+  //         });
+  //       } catch (error) {
+  //         alert("Invalid JSON file");
+  //       }
+  //     };
+  //     reader.readAsText(file);
+  //   } else {
+  //     alert("Please upload an Excel (.xlsx, .xls) file");
+  //   }
+  // };
+
+   const handleBulkUploadFile = async (e) => {
+     const file = e.target.files[0];
+     if (!file) return;
+
+     const fileExtension = file.name.split(".").pop().toLowerCase();
+
+     if (fileExtension === "xlsx" || fileExtension === "xls") {
+       // Handle Excel file
+       try {
+         const xlsxModule = await import("xlsx");
+         const XLSX = xlsxModule.default || xlsxModule;
+         const reader = new FileReader();
+         reader.onload = (event) => {
+           try {
+             const data = new Uint8Array(event.target.result);
+             const workbook = XLSX.read(data, { type: "array" });
+             const firstSheetName = workbook.SheetNames[0];
+             const worksheet = workbook.Sheets[firstSheetName];
+             const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+             // Map Excel columns to expected format
+             const employees = jsonData.map((row) => ({
+               fullName: row["Full Name"] || row["fullName"] || "",
+               email: row["Email"] || row["email"] || "",
+               contactNumber:
+                 row["Phone"] ||
+                 row["Phone Number"] ||
+                 row["contactNumber"] ||
+                 "",
+               department: row["Department"] || row["department"] || "",
+               designation: row["Designation"] || row["designation"] || "",
+               workLocation: row["Work Location"] || row["workLocation"] || "",
+               homeAddress: row["Home Address"] || row["homeAddress"] || "",
+               workShift: row["Work Shift"] || row["workShift"] || "FULL_DAY",
+             }));
+
+             setBulkUploadData({ employees });
+           } catch (error) {
+             console.error("Error parsing Excel:", error);
+             alert("Invalid Excel file. Please check the format.");
+           }
+         };
+         reader.readAsArrayBuffer(file);
+       } catch (error) {
+         console.error("Error loading xlsx library:", error);
+         alert("Error processing Excel file");
+       }
+     } else if (fileExtension === "json") {
+       // Handle JSON file (legacy support)
+       const reader = new FileReader();
+       reader.onload = (event) => {
+         try {
+           const jsonData = JSON.parse(event.target.result);
+           setBulkUploadData({
+             employees: Array.isArray(jsonData) ? jsonData : [jsonData],
+           });
+         } catch (error) {
+           alert("Invalid JSON file");
+         }
+       };
+       reader.readAsText(file);
+     } else {
+       alert("Please upload an Excel (.xlsx, .xls) file");
+     }
+  };
+  
+  const downloadSampleTemplate = async () => {
+    try {
+      const xlsxModule = await import("xlsx");
+      const XLSX = xlsxModule.default || xlsxModule;
+
+      const sampleData = [
+        {
+          "Full Name": "John Doe",
+          Email: "john@company.com",
+          "Phone Number": "+1234567890",
+          Department: "IT",
+          Designation: "Software Engineer",
+          "Work Location": "Main Office",
+          "Home Address": "123 Main St, Downtown",
+          "Work Shift": "FULL_DAY",
+        },
+        {
+          "Full Name": "Jane Smith",
+          Email: "jane@company.com",
+          "Phone Number": "+0987654321",
+          Department: "HR",
+          Designation: "HR Manager",
+          "Work Location": "Main Office",
+          "Home Address": "456 Park Ave",
+          "Work Shift": "FULL_DAY",
+        },
+      ];
+
+      const worksheet = XLSX.utils.json_to_sheet(sampleData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
+
+      // Set column widths
+      worksheet["!cols"] = [
+        { wch: 20 }, // Full Name
+        { wch: 25 }, // Email
+        { wch: 15 }, // Phone Number
+        { wch: 15 }, // Department
+        { wch: 20 }, // Designation
+        { wch: 20 }, // Work Location
+        { wch: 30 }, // Home Address
+        { wch: 12 }, // Work Shift
+      ];
+
+      XLSX.writeFile(workbook, "employee_template.xlsx");
+    } catch (error) {
+      console.error("Error generating Excel template:", error);
+      alert(
+        "Error generating template. Please make sure xlsx package is installed.",
+      );
     }
   };
 
-  const downloadSampleTemplate = () => {
-    const sampleData = [
-      {
-        fullName: "John Doe",
-        email: "john@company.com",
-        contactNumber: "+1234567890",
-        department: "IT",
-        designation: "Software Engineer",
-        workLocation: "Main Office",
-        residentialAddress: {
-          street: "123 Main St",
-          area: "Downtown",
-          city: "New York",
-          state: "NY",
-          postalCode: "10001",
-        },
-        routeId: "",
-        pickupLocation: "",
-        dropoffLocation: "",
-        workShift: "FULL_DAY",
-      },
-    ];
+  // Open Edit Modal and populate form with employee data
+  const handleOpenEditModal = (employee) => {
+    setEditingEmployee(employee);
 
-    const blob = new Blob([JSON.stringify(sampleData, null, 2)], {
-      type: "application/json",
+    // Populate the form with employee data
+    setEmployeeForm({
+      personalInfo: {
+        firstName: employee.personalInfo?.firstName || "",
+        lastName: employee.personalInfo?.lastName || "",
+        email: employee.personalInfo?.email || "",
+        phoneNumber: employee.personalInfo?.phoneNumber || "",
+        department: employee.personalInfo?.department || "",
+        designation: employee.personalInfo?.designation || "",
+        workLocation: employee.personalInfo?.workLocation || "",
+      },
+      homeAddress:
+        typeof employee.homeAddress === "string" ? employee.homeAddress : "",
+      residentialAddress: employee.residentialAddress || {
+        street: "",
+        area: "",
+        city: "",
+        state: "",
+        postalCode: "",
+      },
+      transportDetails: {
+        assignedRoute:
+          employee.transportDetails?.assignedRoute?._id ||
+          employee.transportDetails?.assignedRoute ||
+          "",
+        selectedTripIndex: employee.transportDetails?.assignedTripNumber
+          ? String(employee.transportDetails.assignedTripNumber - 1)
+          : "",
+        tripType: employee.transportDetails?.assignedTripType || "",
+        outboundPickupStop:
+          employee.transportDetails?.outboundPickupStop ||
+          employee.transportDetails?.pickupPoint ||
+          "",
+        outboundDropoffStop:
+          employee.transportDetails?.outboundDropoffStop ||
+          employee.transportDetails?.dropOffPoint ||
+          "",
+        returnPickupStop: employee.transportDetails?.returnPickupStop || "",
+        returnDropoffStop: employee.transportDetails?.returnDropoffStop || "",
+        shiftType: employee.transportDetails?.shiftType || "FULL_DAY",
+      },
+      passDuration: employee.passDuration || {
+        durationType: "1_MONTH",
+        startDate: new Date().toISOString().split("T")[0],
+        customEndDate: "",
+      },
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "employee_template.json";
-    a.click();
-    URL.revokeObjectURL(url);
+
+    // Fetch route schedule if route is assigned
+    if (
+      employee.transportDetails?.assignedRoute?._id ||
+      employee.transportDetails?.assignedRoute
+    ) {
+      const routeId =
+        employee.transportDetails?.assignedRoute?._id ||
+        employee.transportDetails?.assignedRoute;
+      fetchRouteSchedule(routeId);
+    }
+
+    setShowEditModal(true);
+  };
+
+  // Handle Edit Employee submission
+  const handleEditEmployee = async (e) => {
+    e.preventDefault();
+    if (!editingEmployee) return;
+
+    try {
+      setLoading(true);
+
+      const selectedTripIndex =
+        employeeForm.transportDetails.selectedTripIndex !== ""
+          ? parseInt(employeeForm.transportDetails.selectedTripIndex)
+          : 0;
+      const selectedTrip =
+        selectedRouteSchedule?.tripTimes?.[selectedTripIndex];
+
+      const updateData = {
+        personalInfo: employeeForm.personalInfo,
+        homeAddress: employeeForm.homeAddress,
+        residentialAddress: employeeForm.residentialAddress,
+        transportDetails: {
+          assignedRoute:
+            employeeForm.transportDetails.assignedRoute || undefined,
+          pickupPoint: employeeForm.transportDetails.outboundPickupStop,
+          dropOffPoint:
+            employeeForm.transportDetails.outboundDropoffStop ||
+            selectedRouteSchedule?.routeInfo?.toLocation,
+          outboundPickupStop: employeeForm.transportDetails.outboundPickupStop,
+          outboundDropoffStop:
+            employeeForm.transportDetails.outboundDropoffStop ||
+            selectedRouteSchedule?.routeInfo?.toLocation,
+          returnPickupStop: employeeForm.transportDetails.returnPickupStop,
+          returnDropoffStop: employeeForm.transportDetails.returnDropoffStop,
+          shiftType: employeeForm.transportDetails.shiftType,
+          assignedTripNumber:
+            selectedTrip?.tripNumber ||
+            employeeForm.transportDetails.selectedTripIndex
+              ? parseInt(employeeForm.transportDetails.selectedTripIndex) + 1
+              : 1,
+          assignedTripType:
+            selectedTrip?.tripType ||
+            employeeForm.transportDetails.tripType ||
+            "",
+        },
+      };
+
+      await api.put(`/corporate-employees/${editingEmployee._id}`, updateData);
+
+      setShowEditModal(false);
+      setEditingEmployee(null);
+      resetEmployeeForm();
+      fetchEmployees();
+      alert("Employee updated successfully!");
+    } catch (error) {
+      console.error("Error updating employee:", error);
+      alert(error.response?.data?.message || "Failed to update employee");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSendInvitations = async () => {
@@ -487,6 +777,7 @@ function CorporateEmployeeManagement() {
   const getEmployeeDepartment = (emp) => emp.personalInfo?.department || "N/A";
   const getEmployeeDesignation = (emp) =>
     emp.personalInfo?.designation || "N/A";
+   const getEmployeeHomeAddress = (emp) => emp.homeAddress || "N/A";
   const getEmployeeRoute = (emp) => {
     if (emp.transportDetails?.assignedRoute?.routeName)
       return emp.transportDetails.assignedRoute.routeName;
@@ -505,8 +796,9 @@ function CorporateEmployeeManagement() {
   };
   const getEmployeeTripInfo = (emp) => {
     const td = emp.transportDetails;
-    if (!td?.assignedTripNumber && !td?.assignedTripType && !td?.assignedRoute)
-      return "Not Assigned";
+    // Check if no route is assigned at all
+    if (!td?.assignedRoute) return "Not Assigned";
+
     const tripNum = td.assignedTripNumber || 1;
     // Check if it's round trip - look at actual stored trip type first, then check for return trip info
     let tripType = td.assignedTripType;
@@ -517,51 +809,55 @@ function CorporateEmployeeManagement() {
     ) {
       tripType = "Round Trip";
     }
-    if (!tripType) tripType = "One Way";
+    // Only show trip type if it's Round Trip (One Way is default, no need to show it)
     const pickup = td.outboundPickupStop || td.pickupPoint || "";
-    return `Trip ${tripNum} (${tripType})${pickup ? ` - ${pickup}` : ""}`;
+    if (tripType === "Round Trip") {
+      return `Trip ${tripNum} (Round Trip)${pickup ? ` - ${pickup}` : ""}`;
+    }
+    // For One Way or no trip type, just show trip number and pickup
+    return pickup ? `Trip ${tripNum} - ${pickup}` : `Trip ${tripNum}`;
   };
 
   const renderContent = () => {
     switch (activeTab) {
       case "list":
         return (
-          <div className="employee-list">
-            <div className="list-header">
-              <div className="search-filters">
+          <div className="drivemego-cem-employee-list">
+            <div className="drivemego-cem-list-header">
+              <div className="drivemego-cem-search-filters">
                 <input
                   type="text"
                   placeholder="Search employees..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="search-input"
+                  className="drivemego-cem-search-input"
                 />
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="filter-select"
+                  className="drivemego-cem-filter-select"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
-              <div className="action-buttons">
+              <div className="drivemego-cem-action-buttons">
                 <button
-                  className="btn btn-primary"
+                  className="drivemego-cem-btn drivemego-cem-btn-primary"
                   onClick={() => setShowAddModal(true)}
                 >
                   + Add Employee
                 </button>
                 <button
-                  className="btn btn-secondary"
+                  className="drivemego-cem-btn drivemego-cem-btn-secondary"
                   onClick={() => setShowBulkUploadModal(true)}
                 >
                   Bulk Upload
                 </button>
                 {selectedEmployeeIds.length > 0 && (
                   <button
-                    className="btn btn-success"
+                    className="drivemego-cem-btn drivemego-cem-btn-success"
                     onClick={handleSendInvitations}
                     disabled={sendingInvitations}
                   >
@@ -574,9 +870,9 @@ function CorporateEmployeeManagement() {
             </div>
 
             {loading ? (
-              <div className="loading">Loading employees...</div>
+              <div className="drivemego-cem-loading">Loading employees...</div>
             ) : (
-              <div className="employees-table">
+              <div className="drivemego-cem-employees-table">
                 <table>
                   <thead>
                     <tr>
@@ -637,26 +933,32 @@ function CorporateEmployeeManagement() {
                             <td>{getEmployeeDepartment(employee)}</td>
                             <td>{getEmployeeDesignation(employee)}</td>
                             <td>{getEmployeeRoute(employee)}</td>
-                            <td className="trip-assignment-cell">
+                            <td className="drivemego-cem-trip-assignment-cell">
                               {getEmployeeTripInfo(employee)}
                             </td>
                             <td>
                               <span
-                                className={`status-badge ${isActive ? "active" : "inactive"}`}
+                                className={`drivemego-cem-status-badge ${isActive ? "drivemego-cem-active" : "drivemego-cem-inactive"}`}
                               >
                                 {isActive ? "Active" : "Inactive"}
                               </span>
                             </td>
                             <td>
-                              <div className="action-buttons">
+                              <div className="drivemego-cem-action-buttons">
                                 <button
-                                  className="btn btn-sm btn-info"
+                                  className="drivemego-cem-btn drivemego-cem-btn-sm drivemego-cem-btn-info"
                                   onClick={() => setSelectedEmployee(employee)}
                                 >
                                   View
                                 </button>
                                 <button
-                                  className="btn btn-sm btn-danger"
+                                  className="btn btn-sm btn-warning"
+                                  onClick={() => handleOpenEditModal(employee)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="drivemego-cem-btn drivemego-cem-btn-sm drivemego-cem-btn-danger"
                                   onClick={() =>
                                     handleDeleteEmployee(employee._id)
                                   }
@@ -675,7 +977,7 @@ function CorporateEmployeeManagement() {
             )}
 
             {totalPages > 1 && (
-              <div className="pagination">
+              <div className="drivemego-cem-pagination">
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(currentPage - 1)}
@@ -702,12 +1004,12 @@ function CorporateEmployeeManagement() {
   };
 
   return (
-    <div className="corporate-employee-management">
-      <div className="management-header">
+    <div className="drivemego-cem-corporate-employee-management">
+      <div className="drivemego-cem-management-header">
         <h2>Employee Management</h2>
-        <div className="tab-navigation">
+        <div className="drivemego-cem-tab-navigation">
           <button
-            className={`tab-btn ${activeTab === "list" ? "active" : ""}`}
+            className={`drivemego-cem-tab-btn ${activeTab === "list" ? "drivemego-cem-active" : ""}`}
             onClick={() => setActiveTab("list")}
           >
             Employee List
@@ -715,25 +1017,28 @@ function CorporateEmployeeManagement() {
         </div>
       </div>
 
-      <div className="management-content">{renderContent()}</div>
+      <div className="drivemego-cem-management-content">{renderContent()}</div>
 
       {/* Add Employee Modal */}
       {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="drivemego-cem-modal-overlay">
+          <div className="drivemego-cem-modal">
+            <div className="drivemego-cem-modal-header">
               <h3>Add New Employee</h3>
               <button
-                className="close-btn"
+                className="drivemego-cem-close-btn"
                 onClick={() => setShowAddModal(false)}
               >
                 ×
               </button>
             </div>
-            <form onSubmit={handleAddEmployee} className="modal-form">
-              <div className="form-section">
+            <form
+              onSubmit={handleAddEmployee}
+              className="drivemego-cem-modal-form"
+            >
+              <div className="drivemego-cem-form-section">
                 <h4>Personal Information</h4>
-                <div className="form-row">
+                <div className="drivemego-cem-form-row">
                   <input
                     type="text"
                     placeholder="First Name"
@@ -765,7 +1070,7 @@ function CorporateEmployeeManagement() {
                     required
                   />
                 </div>
-                <div className="form-row">
+                <div className="drivemego-cem-form-row">
                   <input
                     type="email"
                     placeholder="Email"
@@ -797,7 +1102,7 @@ function CorporateEmployeeManagement() {
                     required
                   />
                 </div>
-                <div className="form-row">
+                <div className="drivemego-cem-form-row">
                   <input
                     type="text"
                     placeholder="Department"
@@ -827,7 +1132,7 @@ function CorporateEmployeeManagement() {
                     }
                   />
                 </div>
-                <div className="form-row">
+                <div className="drivemego-cem-form-row">
                   <input
                     type="text"
                     placeholder="Work Location (Office)"
@@ -843,7 +1148,7 @@ function CorporateEmployeeManagement() {
                     }
                   />
                 </div>
-                <div className="form-row">
+                <div className="drivemego-cem-form-row">
                   <input
                     type="text"
                     placeholder="Home Address (Employee's residential area for nearest pickup stop)"
@@ -854,14 +1159,14 @@ function CorporateEmployeeManagement() {
                         homeAddress: e.target.value,
                       }))
                     }
-                    className="full-width-input"
+                    className="drivemego-cem-full-width-input"
                   />
                 </div>
               </div>
 
-              <div className="form-section">
+              <div className="drivemego-cem-form-section">
                 <h4>Transport Details</h4>
-                <div className="form-row">
+                <div className="drivemego-cem-form-row">
                   <select
                     value={employeeForm.transportDetails.assignedRoute}
                     onChange={(e) => handleRouteChange(e.target.value)}
@@ -895,15 +1200,15 @@ function CorporateEmployeeManagement() {
 
                 {/* Route Schedule Info */}
                 {routeSchedulesLoading && (
-                  <div className="route-schedule-loading">
+                  <div className="drivemego-cem-route-schedule-loading">
                     <p>Loading route schedule...</p>
                   </div>
                 )}
 
                 {selectedRouteSchedule && !routeSchedulesLoading && (
-                  <div className="route-schedule-info">
+                  <div className="drivemego-cem-route-schedule-info">
                     <h5>Route Schedule</h5>
-                    <div className="schedule-details">
+                    <div className="drivemego-cem-schedule-details">
                       <p>
                         <strong>Route:</strong>{" "}
                         {selectedRouteSchedule.routeInfo?.fromLocation} &rarr;{" "}
@@ -916,19 +1221,22 @@ function CorporateEmployeeManagement() {
 
                       {selectedRouteSchedule.tripTimes &&
                         selectedRouteSchedule.tripTimes.length > 0 && (
-                          <div className="trip-times-info">
+                          <div className="drivemego-cem-trip-times-info">
                             <h6>Trip Times</h6>
                             {selectedRouteSchedule.tripTimes.map(
                               (trip, idx) => (
-                                <div key={idx} className="trip-time-item">
+                                <div
+                                  key={idx}
+                                  className="drivemego-cem-trip-time-item"
+                                >
                                   <p>
                                     <strong>Trip {trip.tripNumber}:</strong>{" "}
                                     {trip.departureTime} ({trip.tripType})
                                   </p>
                                   {trip.outboundStopPoints &&
                                     trip.outboundStopPoints.length > 0 && (
-                                      <div className="stop-points-list-info">
-                                        <span className="stop-label outbound">
+                                      <div className="drivemego-cem-stop-points-list-info">
+                                        <span className="drivemego-cem-stop-label drivemego-cem-outbound">
                                           Pickup Stops:
                                         </span>
                                         <ul>
@@ -953,15 +1261,15 @@ function CorporateEmployeeManagement() {
 
                 {/* Trip Selection - Which trip to assign to this employee */}
                 {selectedRouteSchedule?.tripTimes?.length > 0 && (
-                  <div className="trip-selection-section">
+                  <div className="drivemego-cem-trip-selection-section">
                     <h5>Select Trip to Assign</h5>
-                    <div className="form-row">
+                    <div className="drivemego-cem-form-row">
                       <select
                         value={employeeForm.transportDetails.selectedTripIndex}
                         onChange={(e) =>
                           handleTripSelection(parseInt(e.target.value))
                         }
-                        className="trip-select"
+                        className="drivemego-cem-trip-select"
                       >
                         <option value="">Select Trip</option>
                         {selectedRouteSchedule.tripTimes.map((trip, idx) => (
@@ -978,19 +1286,19 @@ function CorporateEmployeeManagement() {
                 {/* Outbound Trip Details (Home -> Office) */}
                 {employeeForm.transportDetails.selectedTripIndex !== "" &&
                   selectedRouteSchedule?.tripTimes && (
-                    <div className="trip-assignment-section">
-                      <div className="outbound-trip-section">
-                        <h5 className="trip-section-title outbound-title">
+                    <div className="drivemego-cem-trip-assignment-section">
+                      <div className="drivemego-cem-outbound-trip-section">
+                        <h5 className="drivemego-cem-trip-section-title drivemego-cem-outbound-title">
                           Outbound Trip:{" "}
                           {selectedRouteSchedule.routeInfo?.fromLocation} &rarr;{" "}
                           {selectedRouteSchedule.routeInfo?.toLocation}
                         </h5>
-                        <p className="trip-section-subtitle">
+                        <p className="drivemego-cem-trip-section-subtitle">
                           Morning commute - Employee travels from home to office
                         </p>
 
-                        <div className="form-row">
-                          <div className="form-group">
+                        <div className="drivemego-cem-form-row">
+                          <div className="drivemego-cem-form-group">
                             <label>Pickup Stop (Near Home)</label>
                             <select
                               value={
@@ -1007,6 +1315,25 @@ function CorporateEmployeeManagement() {
                               }
                             >
                               <option value="">Select Pickup Stop</option>
+                              {/* Include route starting point as first pickup option */}
+                              {selectedRouteSchedule.routeInfo
+                                ?.fromLocation && (
+                                <option
+                                  value={
+                                    selectedRouteSchedule.routeInfo.fromLocation
+                                  }
+                                >
+                                  {selectedRouteSchedule.routeInfo.fromLocation}{" "}
+                                  (Start Point -{" "}
+                                  {selectedRouteSchedule.tripTimes[
+                                    parseInt(
+                                      employeeForm.transportDetails
+                                        .selectedTripIndex,
+                                    )
+                                  ]?.departureTime || "Departure"}
+                                  )
+                                </option>
+                              )}
                               {selectedRouteSchedule.tripTimes[
                                 parseInt(
                                   employeeForm.transportDetails
@@ -1019,12 +1346,12 @@ function CorporateEmployeeManagement() {
                               ))}
                             </select>
                             {employeeForm.homeAddress && (
-                              <small className="home-address-hint">
+                              <small className="drivemego-cem-home-address-hint">
                                 Employee Home: {employeeForm.homeAddress}
                               </small>
                             )}
                           </div>
-                          <div className="form-group">
+                          <div className="drivemego-cem-form-group">
                             <label>Drop-off (Office)</label>
                             <input
                               type="text"
@@ -1052,19 +1379,19 @@ function CorporateEmployeeManagement() {
                       {/* Return Trip Details (Office -> Home) - Only for Round Trip */}
                       {employeeForm.transportDetails.tripType ===
                         "Round Trip" && (
-                        <div className="return-trip-section">
-                          <h5 className="trip-section-title return-title">
+                        <div className="drivemego-cem-return-trip-section">
+                          <h5 className="drivemego-cem-trip-section-title drivemego-cem-return-title">
                             Return Trip:{" "}
                             {selectedRouteSchedule.routeInfo?.toLocation} &rarr;{" "}
                             {selectedRouteSchedule.routeInfo?.fromLocation}
                           </h5>
-                          <p className="trip-section-subtitle">
+                          <p className="drivemego-cem-trip-section-subtitle">
                             Evening commute - Employee travels from office to
                             home
                           </p>
 
-                          <div className="form-row">
-                            <div className="form-group">
+                          <div className="drivemego-cem-form-row">
+                            <div className="drivemego-cem-form-group">
                               <label>Pickup (Office)</label>
                               <input
                                 type="text"
@@ -1086,7 +1413,7 @@ function CorporateEmployeeManagement() {
                                 }
                               />
                             </div>
-                            <div className="form-group">
+                            <div className="drivemego-cem-form-group">
                               <label>Drop-off Stop (Near Home)</label>
                               <select
                                 value={
@@ -1114,9 +1441,32 @@ function CorporateEmployeeManagement() {
                                     {stop.location} ({stop.time})
                                   </option>
                                 ))}
+                                {/* Include route starting point (original fromLocation) as final drop-off option */}
+                                {selectedRouteSchedule.routeInfo
+                                  ?.fromLocation && (
+                                  <option
+                                    value={
+                                      selectedRouteSchedule.routeInfo
+                                        .fromLocation
+                                    }
+                                  >
+                                    {
+                                      selectedRouteSchedule.routeInfo
+                                        .fromLocation
+                                    }{" "}
+                                    (End Point -{" "}
+                                    {selectedRouteSchedule.tripTimes[
+                                      parseInt(
+                                        employeeForm.transportDetails
+                                          .selectedTripIndex,
+                                      )
+                                    ]?.returnArrivalTime || "Arrival"}
+                                    )
+                                  </option>
+                                )}
                               </select>
                               {employeeForm.homeAddress && (
-                                <small className="home-address-hint">
+                                <small className="drivemego-cem-home-address-hint">
                                   Employee Home: {employeeForm.homeAddress}
                                 </small>
                               )}
@@ -1127,7 +1477,7 @@ function CorporateEmployeeManagement() {
 
                       {/* One Way Trip Notice */}
                       {employeeForm.transportDetails.tripType === "One Way" && (
-                        <div className="one-way-notice">
+                        <div className="drivemego-cem-one-way-notice">
                           <p>
                             This is a One Way trip. Employee will only be
                             transported in one direction.
@@ -1140,15 +1490,15 @@ function CorporateEmployeeManagement() {
 
               {/* Pass Duration Section */}
               {employeeForm.transportDetails.assignedRoute && (
-                <div className="form-section">
+                <div className="drivemego-cem-form-section">
                   <h4>Pass Duration</h4>
-                  <p className="section-description">
+                  <p className="drivemego-cem-section-description">
                     Specify how long this route should be assigned to the
                     employee
                   </p>
 
-                  <div className="form-row">
-                    <div className="form-group">
+                  <div className="drivemego-cem-form-row">
+                    <div className="drivemego-cem-form-group">
                       <label>Duration Type</label>
                       <select
                         value={
@@ -1176,7 +1526,7 @@ function CorporateEmployeeManagement() {
                         <option value="CUSTOM">Custom Date Range</option>
                       </select>
                     </div>
-                    <div className="form-group">
+                    <div className="drivemego-cem-form-group">
                       <label>Pass Start Date</label>
                       <input
                         type="date"
@@ -1199,8 +1549,8 @@ function CorporateEmployeeManagement() {
                   </div>
 
                   {employeeForm.passDuration?.durationType === "CUSTOM" && (
-                    <div className="form-row">
-                      <div className="form-group">
+                    <div className="drivemego-cem-form-row">
+                      <div className="drivemego-cem-form-group">
                         <label>End Date</label>
                         <input
                           type="date"
@@ -1223,8 +1573,8 @@ function CorporateEmployeeManagement() {
                     </div>
                   )}
 
-                  <div className="pass-duration-info">
-                    <div className="info-icon">i</div>
+                  <div className="drivemego-cem-pass-duration-info">
+                    <div className="drivemego-cem-info-icon">i</div>
                     <p>
                       {employeeForm.passDuration?.durationType === "CUSTOM"
                         ? `Custom duration: ${employeeForm.passDuration?.startDate || "Start"} to ${employeeForm.passDuration?.customEndDate || "End"}`
@@ -1251,17 +1601,17 @@ function CorporateEmployeeManagement() {
                 </div>
               )}
 
-              <div className="modal-actions">
+              <div className="drivemego-cem-modal-actions">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="drivemego-cem-btn drivemego-cem-btn-secondary"
                   onClick={() => setShowAddModal(false)}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="drivemego-cem-btn drivemego-cem-btn-primary"
                   disabled={loading}
                 >
                   {loading ? "Adding..." : "Add Employee"}
@@ -1274,62 +1624,68 @@ function CorporateEmployeeManagement() {
 
       {/* Bulk Upload Modal */}
       {showBulkUploadModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="drivemego-cem-modal-overlay">
+          <div className="drivemego-cem-modal">
+            <div className="drivemego-cem-modal-header">
               <h3>Bulk Upload Employees</h3>
               <button
-                className="close-btn"
+                className="drivemego-cem-close-btn"
                 onClick={() => setShowBulkUploadModal(false)}
               >
                 ×
               </button>
             </div>
-            <div className="modal-content">
-              <div className="bulk-upload-instructions">
+            <div className="drivemego-cem-modal-content">
+              <div className="drivemego-cem-bulk-upload-instructions">
                 <h4>Instructions:</h4>
                 <ol>
-                  <li>Download the sample template below</li>
-                  <li>Fill in employee details in the JSON file</li>
-                  <li>Upload the completed file</li>
+                  <li>Download the Excel template below</li>
+                  <li>Fill in employee details in the spreadsheet</li>
+                  <li>Upload the completed Excel file</li>
                 </ol>
                 <button
                   type="button"
-                  className="btn btn-info"
+                  className="drivemego-cem-btn drivemego-cem-btn-info"
                   onClick={downloadSampleTemplate}
                 >
-                  📥 Download Sample Template
+                  📥 Download Excel Template
                 </button>
               </div>
 
-              <form onSubmit={handleBulkUpload} className="modal-form">
-                <div className="form-group">
-                  <label>Upload JSON File</label>
+              <form
+                onSubmit={handleBulkUpload}
+                className="drivemego-cem-modal-form"
+              >
+                <div className="drivemego-cem-form-group">
+                  <label>Upload Excel File (.xlsx)</label>
                   <input
                     type="file"
-                    accept=".json"
+                    accept=".xlsx,.xls"
                     onChange={handleBulkUploadFile}
                     required
                   />
                 </div>
 
                 {bulkUploadData.employees.length > 0 && (
-                  <div className="upload-preview">
+                  <div className="drivemego-cem-upload-preview">
                     <h4>
                       Preview ({bulkUploadData.employees.length} employees)
                     </h4>
-                    <div className="preview-list">
+                    <div className="drivemego-cem-preview-list">
                       {bulkUploadData.employees
                         .slice(0, 5)
                         .map((emp, index) => (
-                          <div key={index} className="preview-item">
+                          <div
+                            key={index}
+                            className="drivemego-cem-preview-item"
+                          >
                             {emp.fullName ||
                               `${emp.personalInfo?.firstName || ""} ${emp.personalInfo?.lastName || ""}`}{" "}
                             - {emp.email || emp.personalInfo?.email || "N/A"}
                           </div>
                         ))}
                       {bulkUploadData.employees.length > 5 && (
-                        <div className="preview-item">
+                        <div className="drivemego-cem-preview-item">
                           ... and {bulkUploadData.employees.length - 5} more
                         </div>
                       )}
@@ -1337,17 +1693,17 @@ function CorporateEmployeeManagement() {
                   </div>
                 )}
 
-                <div className="modal-actions">
+                <div className="drivemego-cem-modal-actions">
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="drivemego-cem-btn drivemego-cem-btn-secondary"
                     onClick={() => setShowBulkUploadModal(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary"
+                    className="drivemego-cem-btn drivemego-cem-btn-primary"
                     disabled={loading || bulkUploadData.employees.length === 0}
                   >
                     {loading ? "Uploading..." : "Upload Employees"}
@@ -1361,20 +1717,20 @@ function CorporateEmployeeManagement() {
 
       {/* View Employee Modal */}
       {selectedEmployee && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="drivemego-cem-modal-overlay">
+          <div className="drivemego-cem-modal">
+            <div className="drivemego-cem-modal-header">
               <h3>Employee Details</h3>
               <button
-                className="close-btn"
+                className="drivemego-cem-close-btn"
                 onClick={() => setSelectedEmployee(null)}
               >
                 ×
               </button>
             </div>
-            <div className="modal-content">
-              <div className="employee-details-grid">
-                <div className="detail-section">
+            <div className="drivemego-cem-modal-content">
+              <div className="drivemego-cem-employee-details-grid">
+                <div className="drivemego-cem-detail-section">
                   <h4>Personal Information</h4>
                   <p>
                     <strong>Name:</strong> {getEmployeeName(selectedEmployee)}
@@ -1394,47 +1750,64 @@ function CorporateEmployeeManagement() {
                     {getEmployeeDesignation(selectedEmployee)}
                   </p>
                 </div>
-                <div className="detail-section">
+                <div className="drivemego-cem-detail-section">
                   <h4>Transport Details</h4>
                   <p>
                     <strong>Route:</strong> {getEmployeeRoute(selectedEmployee)}
                   </p>
                   <p>
                     <strong>Trip Assignment:</strong>{" "}
-                    {getEmployeeTripInfo(selectedEmployee)}
+                    {selectedEmployee.transportDetails?.assignedRoute
+                      ? `Trip ${selectedEmployee.transportDetails?.assignedTripNumber || 1}${selectedEmployee.transportDetails?.assignedTripType && selectedEmployee.transportDetails.assignedTripType !== "One Way" ? ` (${selectedEmployee.transportDetails.assignedTripType})` : ""}`
+                      : "Not Assigned"}
                   </p>
                   <p>
                     <strong>Pickup Stop:</strong>{" "}
                     {selectedEmployee.transportDetails?.outboundPickupStop ||
-                      "Not specified"}
+                      selectedEmployee.transportDetails?.pickupPoint ||
+                      (selectedEmployee.transportDetails?.assignedRoute
+                        ? "Not specified"
+                        : "N/A")}
                   </p>
                   <p>
                     <strong>Dropoff Stop:</strong>{" "}
                     {selectedEmployee.transportDetails?.outboundDropoffStop ||
-                      "Not specified"}
+                      selectedEmployee.transportDetails?.dropOffPoint ||
+                      selectedEmployee.transportDetails?.assignedRoute
+                        ?.toLocation ||
+                      (selectedEmployee.transportDetails?.assignedRoute
+                        ? "Not specified"
+                        : "N/A")}
                   </p>
-                  {selectedEmployee.transportDetails?.assignedTripType ===
-                    "Round Trip" && (
+                  {(selectedEmployee.transportDetails?.assignedTripType ===
+                    "Round Trip" ||
+                    selectedEmployee.transportDetails?.returnPickupStop ||
+                    selectedEmployee.transportDetails?.returnDropoffStop) && (
                     <>
                       <p>
                         <strong>Return Pickup:</strong>{" "}
                         {selectedEmployee.transportDetails?.returnPickupStop ||
+                          selectedEmployee.transportDetails?.assignedRoute
+                            ?.toLocation ||
                           "Office"}
                       </p>
                       <p>
                         <strong>Return Dropoff:</strong>{" "}
                         {selectedEmployee.transportDetails?.returnDropoffStop ||
+                          selectedEmployee.transportDetails
+                            ?.outboundPickupStop ||
+                          selectedEmployee.transportDetails?.pickupPoint ||
                           "Home"}
                       </p>
                     </>
                   )}
                 </div>
-                <div className="detail-section">
+                <div className="drivemego-cem-detail-section">
                   <h4>Status</h4>
                   <p>
                     <strong>Status:</strong>
                     <span
-                      className={`status-badge ${getEmployeeStatus(selectedEmployee) ? "active" : "inactive"}`}
+                      className={`drivemego-cem-status-badge ${getEmployeeStatus(selectedEmployee) ? "drivemego-cem-active" : "drivemego-cem-inactive"}`}
                     >
                       {getEmployeeStatus(selectedEmployee)
                         ? "Active"
@@ -1443,6 +1816,7 @@ function CorporateEmployeeManagement() {
                   </p>
                   <p>
                     <strong>Home Address:</strong>{" "}
+                    <span>{getEmployeeHomeAddress(selectedEmployee)}</span>
                     {typeof selectedEmployee.homeAddress === "object" &&
                     selectedEmployee.homeAddress
                       ? [
@@ -1472,15 +1846,459 @@ function CorporateEmployeeManagement() {
                 </div>
               </div>
             </div>
-            <div className="modal-actions">
+            <div className="drivemego-cem-modal-actions">
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="drivemego-cem-btn drivemego-cem-btn-secondary"
                 onClick={() => setSelectedEmployee(null)}
               >
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Employee Modal */}
+      {showEditModal && editingEmployee && (
+        <div className="drivemego-cem-modal-overlay">
+          <div className="drivemego-cem-modal drivemego-cem-modal-large">
+            <div className="drivemego-cem-modal-header">
+              <h3>Edit Employee</h3>
+              <button
+                className="drivemego-cem-close-btn"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingEmployee(null);
+                  resetEmployeeForm();
+                }}
+              >
+                x
+              </button>
+            </div>
+            <form
+              onSubmit={handleEditEmployee}
+              className="drivemego-cem-modal-form"
+            >
+              <div className="drivemego-cem-form-section">
+                <h4>Personal Information</h4>
+                <div className="drivemego-cem-form-row">
+                  <input
+                    type="text"
+                    placeholder="First Name"
+                    value={employeeForm.personalInfo.firstName}
+                    onChange={(e) =>
+                      setEmployeeForm((prev) => ({
+                        ...prev,
+                        personalInfo: {
+                          ...prev.personalInfo,
+                          firstName: e.target.value,
+                        },
+                      }))
+                    }
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Last Name"
+                    value={employeeForm.personalInfo.lastName}
+                    onChange={(e) =>
+                      setEmployeeForm((prev) => ({
+                        ...prev,
+                        personalInfo: {
+                          ...prev.personalInfo,
+                          lastName: e.target.value,
+                        },
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="drivemego-cem-form-row">
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={employeeForm.personalInfo.email}
+                    onChange={(e) =>
+                      setEmployeeForm((prev) => ({
+                        ...prev,
+                        personalInfo: {
+                          ...prev.personalInfo,
+                          email: e.target.value,
+                        },
+                      }))
+                    }
+                    required
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone Number"
+                    value={employeeForm.personalInfo.phoneNumber}
+                    onChange={(e) =>
+                      setEmployeeForm((prev) => ({
+                        ...prev,
+                        personalInfo: {
+                          ...prev.personalInfo,
+                          phoneNumber: e.target.value,
+                        },
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="drivemego-cem-form-row">
+                  <input
+                    type="text"
+                    placeholder="Department"
+                    value={employeeForm.personalInfo.department}
+                    onChange={(e) =>
+                      setEmployeeForm((prev) => ({
+                        ...prev,
+                        personalInfo: {
+                          ...prev.personalInfo,
+                          department: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                  <input
+                    type="text"
+                    placeholder="Designation"
+                    value={employeeForm.personalInfo.designation}
+                    onChange={(e) =>
+                      setEmployeeForm((prev) => ({
+                        ...prev,
+                        personalInfo: {
+                          ...prev.personalInfo,
+                          designation: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="drivemego-cem-form-row">
+                  <input
+                    type="text"
+                    placeholder="Work Location (Office)"
+                    value={employeeForm.personalInfo.workLocation}
+                    onChange={(e) =>
+                      setEmployeeForm((prev) => ({
+                        ...prev,
+                        personalInfo: {
+                          ...prev.personalInfo,
+                          workLocation: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="drivemego-cem-form-row">
+                  <input
+                    type="text"
+                    placeholder="Home Address"
+                    value={employeeForm.homeAddress}
+                    onChange={(e) =>
+                      setEmployeeForm((prev) => ({
+                        ...prev,
+                        homeAddress: e.target.value,
+                      }))
+                    }
+                    className="drivemego-cem-full-width-input"
+                  />
+                </div>
+              </div>
+
+              <div className="drivemego-cem-form-section">
+                <h4>Transport Details (Assign/Change Route)</h4>
+                <div className="drivemego-cem-form-row">
+                  <select
+                    value={employeeForm.transportDetails.assignedRoute}
+                    onChange={(e) => handleRouteChange(e.target.value)}
+                  >
+                    <option value="">Select Route</option>
+                    {Array.isArray(availableRoutes) &&
+                      availableRoutes.map((route) => (
+                        <option key={route.routeId} value={route.routeId}>
+                          {route.routeName}
+                        </option>
+                      ))}
+                  </select>
+                  <select
+                    value={employeeForm.transportDetails.shiftType}
+                    onChange={(e) =>
+                      setEmployeeForm((prev) => ({
+                        ...prev,
+                        transportDetails: {
+                          ...prev.transportDetails,
+                          shiftType: e.target.value,
+                        },
+                      }))
+                    }
+                  >
+                    <option value="FULL_DAY">Full Day</option>
+                    <option value="MORNING">Morning</option>
+                    <option value="EVENING">Evening</option>
+                    <option value="NIGHT">Night</option>
+                  </select>
+                </div>
+
+                {/* Route Schedule Info */}
+                {routeSchedulesLoading && (
+                  <div className="drivemego-cem-route-schedule-loading">
+                    <p>Loading route schedule...</p>
+                  </div>
+                )}
+
+                {selectedRouteSchedule && !routeSchedulesLoading && (
+                  <div className="drivemego-cem-route-schedule-info">
+                    <h5>Route Schedule</h5>
+                    <div className="drivemego-cem-schedule-details">
+                      <p>
+                        <strong>Route:</strong>{" "}
+                        {selectedRouteSchedule.routeInfo?.fromLocation} to{" "}
+                        {selectedRouteSchedule.routeInfo?.toLocation}
+                      </p>
+                      <p>
+                        <strong>Available Days:</strong>{" "}
+                        {selectedRouteSchedule.availableDays?.join(", ")}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Trip Selection */}
+                {selectedRouteSchedule?.tripTimes?.length > 0 && (
+                  <div className="drivemego-cem-trip-selection-section">
+                    <h5>Select Trip to Assign</h5>
+                    <div className="drivemego-cem-form-row">
+                      <select
+                        value={employeeForm.transportDetails.selectedTripIndex}
+                        onChange={(e) =>
+                          handleTripSelection(parseInt(e.target.value))
+                        }
+                        className="drivemego-cem-trip-select"
+                      >
+                        <option value="">Select Trip</option>
+                        {selectedRouteSchedule.tripTimes.map((trip, idx) => (
+                          <option key={idx} value={idx}>
+                            Trip {trip.tripNumber}: {trip.departureTime} (
+                            {trip.tripType})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Outbound Trip Details */}
+                {employeeForm.transportDetails.selectedTripIndex !== "" &&
+                  selectedRouteSchedule?.tripTimes && (
+                    <div className="drivemego-cem-trip-assignment-section">
+                      <div className="drivemego-cem-outbound-trip-section">
+                        <h5 className="drivemego-cem-trip-section-title drivemego-cem-outbound-title">
+                          Outbound Trip:{" "}
+                          {selectedRouteSchedule.routeInfo?.fromLocation} to{" "}
+                          {selectedRouteSchedule.routeInfo?.toLocation}
+                        </h5>
+
+                        <div className="drivemego-cem-form-row">
+                          <div className="drivemego-cem-form-group">
+                            <label>Pickup Stop (Near Home)</label>
+                            <select
+                              value={
+                                employeeForm.transportDetails.outboundPickupStop
+                              }
+                              onChange={(e) =>
+                                setEmployeeForm((prev) => ({
+                                  ...prev,
+                                  transportDetails: {
+                                    ...prev.transportDetails,
+                                    outboundPickupStop: e.target.value,
+                                  },
+                                }))
+                              }
+                            >
+                              <option value="">Select Pickup Stop</option>
+                              {/* Include route starting point as first pickup option */}
+                              {selectedRouteSchedule.routeInfo
+                                ?.fromLocation && (
+                                <option
+                                  value={
+                                    selectedRouteSchedule.routeInfo.fromLocation
+                                  }
+                                >
+                                  {selectedRouteSchedule.routeInfo.fromLocation}{" "}
+                                  (Start Point -{" "}
+                                  {selectedRouteSchedule.tripTimes[
+                                    parseInt(
+                                      employeeForm.transportDetails
+                                        .selectedTripIndex,
+                                    )
+                                  ]?.departureTime || "Departure"}
+                                  )
+                                </option>
+                              )}
+                              {selectedRouteSchedule.tripTimes[
+                                parseInt(
+                                  employeeForm.transportDetails
+                                    .selectedTripIndex,
+                                )
+                              ]?.outboundStopPoints?.map((stop, idx) => (
+                                <option key={idx} value={stop.location}>
+                                  {stop.location} ({stop.time})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="drivemego-cem-form-group">
+                            <label>Drop-off (Office)</label>
+                            <input
+                              type="text"
+                              placeholder="Office Location"
+                              value={
+                                employeeForm.transportDetails
+                                  .outboundDropoffStop ||
+                                selectedRouteSchedule.routeInfo?.toLocation ||
+                                ""
+                              }
+                              onChange={(e) =>
+                                setEmployeeForm((prev) => ({
+                                  ...prev,
+                                  transportDetails: {
+                                    ...prev.transportDetails,
+                                    outboundDropoffStop: e.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Return Trip Details - Only for Round Trip */}
+                      {employeeForm.transportDetails.tripType ===
+                        "Round Trip" && (
+                        <div className="drivemego-cem-return-trip-section">
+                          <h5 className="drivemego-cem-trip-section-title drivemego-cem-return-title">
+                            Return Trip:{" "}
+                            {selectedRouteSchedule.routeInfo?.toLocation} to{" "}
+                            {selectedRouteSchedule.routeInfo?.fromLocation}
+                          </h5>
+
+                          <div className="drivemego-cem-form-row">
+                            <div className="drivemego-cem-form-group">
+                              <label>Pickup (Office)</label>
+                              <input
+                                type="text"
+                                placeholder="Office Location"
+                                value={
+                                  employeeForm.transportDetails
+                                    .returnPickupStop ||
+                                  selectedRouteSchedule.routeInfo?.toLocation ||
+                                  ""
+                                }
+                                onChange={(e) =>
+                                  setEmployeeForm((prev) => ({
+                                    ...prev,
+                                    transportDetails: {
+                                      ...prev.transportDetails,
+                                      returnPickupStop: e.target.value,
+                                    },
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="drivemego-cem-form-group">
+                              <label>Drop-off Stop (Near Home)</label>
+                              <select
+                                value={
+                                  employeeForm.transportDetails
+                                    .returnDropoffStop
+                                }
+                                onChange={(e) =>
+                                  setEmployeeForm((prev) => ({
+                                    ...prev,
+                                    transportDetails: {
+                                      ...prev.transportDetails,
+                                      returnDropoffStop: e.target.value,
+                                    },
+                                  }))
+                                }
+                              >
+                                <option value="">Select Drop-off Stop</option>
+                                {/* Use returnStopPoints if available, otherwise use outboundStopPoints as fallback */}
+                                {(
+                                  selectedRouteSchedule.tripTimes[
+                                    parseInt(
+                                      employeeForm.transportDetails
+                                        .selectedTripIndex,
+                                    )
+                                  ]?.returnStopPoints ||
+                                  selectedRouteSchedule.tripTimes[
+                                    parseInt(
+                                      employeeForm.transportDetails
+                                        .selectedTripIndex,
+                                    )
+                                  ]?.outboundStopPoints ||
+                                  []
+                                )?.map((stop, idx) => (
+                                  <option key={idx} value={stop.location}>
+                                    {stop.location} ({stop.time})
+                                  </option>
+                                ))}
+                                {/* Include route starting point (original fromLocation) as final drop-off option */}
+                                {selectedRouteSchedule.routeInfo
+                                  ?.fromLocation && (
+                                  <option
+                                    value={
+                                      selectedRouteSchedule.routeInfo
+                                        .fromLocation
+                                    }
+                                  >
+                                    {
+                                      selectedRouteSchedule.routeInfo
+                                        .fromLocation
+                                    }{" "}
+                                    (End Point -{" "}
+                                    {selectedRouteSchedule.tripTimes[
+                                      parseInt(
+                                        employeeForm.transportDetails
+                                          .selectedTripIndex,
+                                      )
+                                    ]?.returnArrivalTime || "Arrival"}
+                                    )
+                                  </option>
+                                )}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+              </div>
+
+              <div className="drivemego-cem-modal-actions">
+                <button
+                  type="button"
+                  className="drivemego-cem-btn drivemego-cem-btn-secondary"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingEmployee(null);
+                    resetEmployeeForm();
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="drivemego-cem-btn drivemego-cem-btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

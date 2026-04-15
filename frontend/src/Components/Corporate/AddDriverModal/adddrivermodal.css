@@ -1,4 +1,4 @@
-.modal-overlay {
+.drivemego-cadm-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -22,7 +22,7 @@
   }
 }
 
-.modal-content {
+.drivemego-cadm-modal-content {
   background-color: #ffffff;
   border-radius: 12px;
   width: 100%;
@@ -45,7 +45,7 @@
   }
 }
 
-.modal-header {
+.drivemego-cadm-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -55,14 +55,14 @@
   z-index: 10;
 }
 
-.modal-header h2 {
+.drivemego-cadm-modal-header h2 {
   font-size: 20px;
   font-weight: 700;
   color: #1a1a1a;
   margin: 0;
 }
 
-.modal-close {
+.drivemego-cadm-modal-close {
   width: 36px;
   height: 36px;
   border: none;
@@ -77,18 +77,18 @@
   justify-content: center;
 }
 
-.modal-close:hover:not(:disabled) {
+.drivemego-cadm-modal-close:hover:not(:disabled) {
   background-color: #e0e0e0;
   color: #333;
 }
 
-.modal-close:disabled {
+.drivemego-cadm-modal-close:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 /* Success and Error Messages */
-.success-message {
+.drivemego-cadm-success-message {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -103,12 +103,12 @@
   animation: slideDown 0.3s ease-out;
 }
 
-.success-message span {
+.drivemego-cadm-success-message span {
   font-size: 16px;
   font-weight: 700;
 }
 
-.error-message {
+.drivemego-cadm-error-message {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -123,7 +123,7 @@
   animation: slideDown 0.3s ease-out;
 }
 
-.error-message span {
+.drivemego-cadm-error-message span {
   font-size: 16px;
   font-weight: 700;
 }
@@ -139,14 +139,14 @@
   }
 }
 
-.modal-form {
+.drivemego-cadm-modal-form {
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.section-title {
+.drivemego-cadm-section-title {
   font-size: 15px;
   font-weight: 700;
   color: #333;
@@ -158,23 +158,23 @@
   padding-bottom: 8px;
 }
 
-.form-row {
+.drivemego-cadm-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.form-row.single {
+.drivemego-cadm-form-row.drivemego-cadm-single {
   grid-template-columns: 1fr;
 }
 
-.form-group {
+.drivemego-cadm-form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.form-group label {
+.drivemego-cadm-form-group label {
   font-size: 13px;
   font-weight: 700;
   color: #333;
@@ -182,9 +182,9 @@
   letter-spacing: 0.4px;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+.drivemego-cadm-form-group input,
+.drivemego-cadm-form-group select,
+.drivemego-cadm-form-group textarea {
   padding: 12px 14px;
   border: 2px solid #e0e0e0;
   border-radius: 6px;
@@ -195,36 +195,36 @@
   background-color: #fafafa;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.drivemego-cadm-form-group input:focus,
+.drivemego-cadm-form-group select:focus,
+.drivemego-cadm-form-group textarea:focus {
   outline: none;
   border-color: #16a085;
   background-color: #ffffff;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
 
-.form-group input::placeholder,
-.form-group textarea::placeholder {
+.drivemego-cadm-form-group input::placeholder,
+.drivemego-cadm-form-group textarea::placeholder {
   color: #aaa;
 }
 
-.form-group input.error,
-.form-group select.error,
-.form-group textarea.error {
+.drivemego-cadm-form-group input.drivemego-cadm-error,
+.drivemego-cadm-form-group select.drivemego-cadm-error,
+.drivemego-cadm-form-group textarea.drivemego-cadm-error {
   border-color: #dc3545;
   background-color: #fff5f5;
 }
 
-.form-group input:disabled,
-.form-group select:disabled,
-.form-group textarea:disabled {
+.drivemego-cadm-form-group input:disabled,
+.drivemego-cadm-form-group select:disabled,
+.drivemego-cadm-form-group textarea:disabled {
   background-color: #f5f5f5;
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-.error-text {
+.drivemego-cadm-error-text {
   font-size: 12px;
   color: #dc3545;
   font-weight: 600;
@@ -232,16 +232,16 @@
 }
 
 /* File Input Styling */
-.file-input {
+.drivemego-cadm-file-input {
   display: none;
 }
 
-.file-input-wrapper {
+.drivemego-cadm-file-input-wrapper {
   display: flex;
   gap: 8px;
 }
 
-.file-button {
+.drivemego-cadm-file-button {
   flex: 1;
   padding: 12px 14px;
   background-color: #f0f0f0;
@@ -258,19 +258,19 @@
   white-space: nowrap;
 }
 
-.file-button:hover:not(:disabled) {
+.drivemego-cadm-file-button:hover:not(:disabled) {
   background-color: #e8e8e8;
   border-color: #16a085;
   color: #16a085;
 }
 
-.file-button:disabled {
+.drivemego-cadm-file-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 /* Modal Actions */
-.modal-actions {
+.drivemego-cadm-modal-actions {
   display: flex;
   gap: 12px;
   margin-top: 20px;
@@ -279,8 +279,8 @@
   background-color: #ffffff;
 }
 
-.btn-cancel,
-.btn-register {
+.drivemego-cadm-btn-cancel,
+.drivemego-cadm-btn-register {
   flex: 1;
   padding: 13px 20px;
   border: none;
@@ -294,104 +294,104 @@
   letter-spacing: 0.4px;
 }
 
-.btn-cancel {
+.drivemego-cadm-btn-cancel {
   background-color: #ffffff;
   color: #333;
   border: 2px solid #e0e0e0;
 }
 
-.btn-cancel:hover:not(:disabled) {
+.drivemego-cadm-btn-cancel:hover:not(:disabled) {
   background-color: #f5f5f5;
   border-color: #999;
 }
 
-.btn-cancel:disabled {
+.drivemego-cadm-btn-cancel:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.btn-register {
+.drivemego-cadm-btn-register {
   background-color: #16a085;
   color: #ffffff;
   border: 2px solid #16a085;
 }
 
-.btn-register:hover:not(:disabled) {
+.drivemego-cadm-btn-register:hover:not(:disabled) {
   background-color: #138d7b;
   border-color: #0d7063;
   box-shadow: 0 4px 12px rgba(22, 160, 133, 0.3);
 }
 
-.btn-register:disabled {
+.drivemego-cadm-btn-register:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
 /* Responsive Design */
 @media (max-width: 640px) {
-  .modal-content {
+  .drivemego-cadm-modal-content {
     margin: 10px;
     max-width: calc(100% - 20px);
   }
 
-  .modal-header {
+  .drivemego-cadm-modal-header {
     padding: 16px;
   }
 
-  .modal-form {
+  .drivemego-cadm-modal-form {
     padding: 16px;
     gap: 16px;
   }
 
-  .form-row {
+  .drivemego-cadm-form-row {
     grid-template-columns: 1fr;
   }
 
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
+  .drivemego-cadm-form-group input,
+  .drivemego-cadm-form-group select,
+  .drivemego-cadm-form-group textarea {
     padding: 10px 12px;
     font-size: 13px;
   }
 
-  .modal-header h2 {
+  .drivemego-cadm-modal-header h2 {
     font-size: 16px;
   }
 
-  .section-title {
+  .drivemego-cadm-section-title {
     font-size: 13px;
   }
 
-  .file-button {
+  .drivemego-cadm-file-button {
     font-size: 13px;
     padding: 10px 12px;
   }
 
-  .modal-actions {
+  .drivemego-cadm-modal-actions {
     flex-direction: column;
   }
 
-  .btn-cancel,
-  .btn-register {
+  .drivemego-cadm-btn-cancel,
+  .drivemego-cadm-btn-register {
     padding: 11px 16px;
     font-size: 13px;
   }
 }
 
 /* Scrollbar Styling */
-.modal-content::-webkit-scrollbar {
+.drivemego-cadm-modal-content::-webkit-scrollbar {
   width: 8px;
 }
 
-.modal-content::-webkit-scrollbar-track {
+.drivemego-cadm-modal-content::-webkit-scrollbar-track {
   background-color: #f5f5f5;
 }
 
-.modal-content::-webkit-scrollbar-thumb {
+.drivemego-cadm-modal-content::-webkit-scrollbar-thumb {
   background-color: #c0c0c0;
   border-radius: 4px;
 }
 
-.modal-content::-webkit-scrollbar-thumb:hover {
+.drivemego-cadm-modal-content::-webkit-scrollbar-thumb:hover {
   background-color: #a0a0a0;
 }

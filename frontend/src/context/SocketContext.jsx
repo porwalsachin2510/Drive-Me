@@ -41,6 +41,13 @@ export const SocketProvider = ({ children }) => {
 
         // Join user's notification room
         instance.emit("join-notification-room", user._id);
+        instance.emit("join_user_room", user._id); // Alias for compatibility
+
+        // Join admin room if user is admin
+        if (user.role === "ADMIN") {
+          instance.emit("join-admin-room");
+          console.log("Admin joined admin notification room");
+        }
 
         // Fetch initial unread count
         dispatch(getUnreadNotificationCount(user._id));
@@ -294,6 +301,166 @@ export const SocketProvider = ({ children }) => {
         }
       });
 
+      // Payment notifications (Corporate payments to B2B)
+      instance.on("payment_submitted", (data) => {
+        console.log("Payment submitted:", data);
+        const notification = {
+          _id: data._id || `payment-submitted-${Date.now()}`,
+          userId: user._id,
+          type: "PAYMENT_SUBMITTED",
+          title: data.title || "Payment Submitted",
+          message: data.message || "A payment has been submitted",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Payment Submitted", {
+            body: data.message || "A payment has been submitted",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      instance.on("payment_received", (data) => {
+        console.log("Payment received:", data);
+        const notification = {
+          _id: data._id || `payment-received-${Date.now()}`,
+          userId: user._id,
+          type: "PAYMENT_RECEIVED",
+          title: data.title || "Payment Received",
+          message: data.message || "Payment has been credited to your wallet",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Payment Received", {
+            body: data.message || "Payment has been credited to your wallet",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      instance.on("payment_verified", (data) => {
+        console.log("Payment verified:", data);
+        const notification = {
+          _id: data._id || `payment-verified-${Date.now()}`,
+          userId: user._id,
+          type: "PAYMENT_VERIFIED",
+          title: data.title || "Payment Verified",
+          message: data.message || "Your payment has been verified",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Payment Verified", {
+            body: data.message || "Your payment has been verified",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      instance.on("payment_rejected", (data) => {
+        console.log("Payment rejected:", data);
+        const notification = {
+          _id: data._id || `payment-rejected-${Date.now()}`,
+          userId: user._id,
+          type: "PAYMENT_REJECTED",
+          title: data.title || "Payment Rejected",
+          message: data.message || "Your payment has been rejected",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Payment Rejected", {
+            body: data.message || "Your payment has been rejected",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // Contract activation notification
+      instance.on("contract_activated", (data) => {
+        console.log("Contract activated:", data);
+        const notification = {
+          _id: data._id || `contract-activated-${Date.now()}`,
+          userId: user._id,
+          type: "CONTRACT_ACTIVATED",
+          title: data.title || "Contract Activated",
+          message: data.message || "Your contract is now active!",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Contract Activated", {
+            body: data.message || "Your contract is now active!",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // Assignment update notifications
+      instance.on("assignment_updated", (data) => {
+        console.log("Assignment updated:", data);
+        const notification = {
+          _id: data._id || `assignment-${Date.now()}`,
+          userId: user._id,
+          type: "ASSIGNMENT_UPDATED",
+          title: data.title || "Assignment Updated",
+          message:
+            data.message || "Vehicle or driver assignment has been changed",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Assignment Updated", {
+            body:
+              data.message || "Vehicle or driver assignment has been changed",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // Late trip start warning
+      instance.on("late_trip_start", (data) => {
+        console.log("Late trip start:", data);
+        const notification = {
+          _id: data._id || `late-trip-${Date.now()}`,
+          userId: user._id,
+          type: "LATE_TRIP_START",
+          title: data.title || "Late Trip Start Warning",
+          message: data.message || "A driver started their trip late",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Late Trip Start Warning", {
+            body: data.message || "A driver started their trip late",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
       // B2C Partner specific events
       instance.on("new-booking-request", (data) => {
         console.log("New booking request:", data);
@@ -347,7 +514,9 @@ export const SocketProvider = ({ children }) => {
           userId: user._id,
           type: "NEW_TRIP_AVAILABLE",
           title: "New Trip Available",
-          message: data.message || `New trip available: ${data.pickup || ''} to ${data.dropoff || ''}`,
+          message:
+            data.message ||
+            `New trip available: ${data.pickup || ""} to ${data.dropoff || ""}`,
           isRead: false,
           createdAt: new Date().toISOString(),
           data: data,
@@ -356,7 +525,9 @@ export const SocketProvider = ({ children }) => {
         dispatch(getUnreadNotificationCount(user._id));
         if (Notification.permission === "granted") {
           new Notification("New Trip Available", {
-            body: data.message || `New trip available: ${data.pickup || ''} to ${data.dropoff || ''}`,
+            body:
+              data.message ||
+              `New trip available: ${data.pickup || ""} to ${data.dropoff || ""}`,
             icon: "/favicon.ico",
           });
         }
@@ -369,7 +540,9 @@ export const SocketProvider = ({ children }) => {
           userId: user._id,
           type: "EARNINGS_UPDATED",
           title: "Earnings Updated",
-          message: data.message || `Your earnings have been updated: ${data.amount || ''}`,
+          message:
+            data.message ||
+            `Your earnings have been updated: ${data.amount || ""}`,
           isRead: false,
           createdAt: new Date().toISOString(),
           data: data,
@@ -459,7 +632,8 @@ export const SocketProvider = ({ children }) => {
           userId: user._id,
           type: "EMPLOYEE_BOOKING_APPROVED",
           title: "Booking Approved",
-          message: data.message || "Your booking has been approved by your company",
+          message:
+            data.message || "Your booking has been approved by your company",
           isRead: false,
           createdAt: new Date().toISOString(),
           data: data,
@@ -468,7 +642,8 @@ export const SocketProvider = ({ children }) => {
         dispatch(getUnreadNotificationCount(user._id));
         if (Notification.permission === "granted") {
           new Notification("Booking Approved", {
-            body: data.message || "Your booking has been approved by your company",
+            body:
+              data.message || "Your booking has been approved by your company",
             icon: "/favicon.ico",
           });
         }

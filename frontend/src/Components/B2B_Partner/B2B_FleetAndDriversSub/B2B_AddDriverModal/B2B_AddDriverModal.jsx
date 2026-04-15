@@ -1,18 +1,49 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   createDriver,
   clearDriverError,
   clearDriverSuccess,
 } from "../../../../Redux/slices/driverSlice";
+import { useDropdownOptions, DROPDOWN_CATEGORIES } from "../../../../hooks/useDropdownOptions";
 import "./b2b_adddrivermodal.css";
 
 function B2B_AddDriverModal({ onClose }) {
   const dispatch = useDispatch();
   // eslint-disable-next-line no-unused-vars
   const { loading, error, success } = useSelector((state) => state.driver);
+
+  // Fetch dynamic dropdown options
+  const { options: dropdownOptions } = useDropdownOptions([
+    DROPDOWN_CATEGORIES.LICENSE_TYPES,
+    DROPDOWN_CATEGORIES.CITIES,
+    DROPDOWN_CATEGORIES.COUNTRIES,
+  ]);
+
+  // Dynamic dropdown options from backend with fallbacks
+  const licenseTypes = dropdownOptions[DROPDOWN_CATEGORIES.LICENSE_TYPES]
+    ?.options || [
+    { value: "Light", label: "Light" },
+    { value: "Heavy", label: "Heavy" },
+    { value: "Commercial", label: "Commercial" },
+    { value: "Private", label: "Private" },
+  ];
+
+  const cities = dropdownOptions[DROPDOWN_CATEGORIES.CITIES]?.options || [
+    { value: "Dubai", label: "Dubai" },
+    { value: "Abu Dhabi", label: "Abu Dhabi" },
+    { value: "Sharjah", label: "Sharjah" },
+    { value: "Kuwait City", label: "Kuwait City" },
+  ];
+
+  const countries = dropdownOptions[DROPDOWN_CATEGORIES.COUNTRIES]?.options || [
+    { value: "UAE", label: "United Arab Emirates" },
+    { value: "Kuwait", label: "Kuwait" },
+    { value: "Saudi Arabia", label: "Saudi Arabia" },
+    { value: "India", label: "India" },
+  ];
 
   const licenseInputRef = useRef(null);
   const passportInputRef = useRef(null);
@@ -178,7 +209,7 @@ function B2B_AddDriverModal({ onClose }) {
     formDataToSend.append("experienceYears", formData.experienceYears);
     formDataToSend.append(
       "experienceDescription",
-      formData.experienceDescription
+      formData.experienceDescription,
     );
 
     if (files.license) formDataToSend.append("license", files.license);
@@ -474,10 +505,11 @@ function B2B_AddDriverModal({ onClose }) {
               onChange={handleChange}
               disabled={loading}
             >
-              <option value="Light">Light</option>
-              <option value="Heavy">Heavy</option>
-              <option value="Commercial">Commercial</option>
-              <option value="Private">Private</option>
+              {licenseTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -511,11 +543,9 @@ function B2B_AddDriverModal({ onClose }) {
           <div className="b2b-operator-dashboard-add-driver-form-row">
             <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="addressCity">City *</label>
-              <input
-                type="text"
+              <select
                 id="addressCity"
                 name="addressCity"
-                placeholder="City"
                 value={formData.addressCity}
                 onChange={handleChange}
                 className={
@@ -524,7 +554,14 @@ function B2B_AddDriverModal({ onClose }) {
                     : ""
                 }
                 disabled={loading}
-              />
+              >
+                <option value="">Select City</option>
+                {cities.map((city) => (
+                  <option key={city.value} value={city.value}>
+                    {city.label}
+                  </option>
+                ))}
+              </select>
               {validationErrors.addressCity && (
                 <span className="b2b-operator-dashboard-add-driver-error-text">
                   {validationErrors.addressCity}
@@ -534,11 +571,9 @@ function B2B_AddDriverModal({ onClose }) {
 
             <div className="b2b-operator-dashboard-add-driver-form-group">
               <label htmlFor="addressCountry">Country *</label>
-              <input
-                type="text"
+              <select
                 id="addressCountry"
                 name="addressCountry"
-                placeholder="Country"
                 value={formData.addressCountry}
                 onChange={handleChange}
                 className={
@@ -547,7 +582,14 @@ function B2B_AddDriverModal({ onClose }) {
                     : ""
                 }
                 disabled={loading}
-              />
+              >
+                <option value="">Select Country</option>
+                {countries.map((country) => (
+                  <option key={country.value} value={country.value}>
+                    {country.label}
+                  </option>
+                ))}
+              </select>
               {validationErrors.addressCountry && (
                 <span className="b2b-operator-dashboard-add-driver-error-text">
                   {validationErrors.addressCountry}

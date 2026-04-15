@@ -114,6 +114,10 @@ function B2B_ContractCard({ contract }) {
     );
   };
 
+   const getCurrency = () => {
+     return contract.financials?.currency || "AED";
+   };
+
   return (
     <div className="drivemego-b2b_contractcard-contract-card">
       <div className="drivemego-b2b_contractcard-contract-top">
@@ -140,7 +144,7 @@ function B2B_ContractCard({ contract }) {
             CONTRACT VALUE
           </span>
           <span className="drivemego-b2b_contractcard-detail-text">
-            {getContractValue().toLocaleString()} KWD
+            {getContractValue().toLocaleString()} {getCurrency()}
           </span>
         </div>
         <div>

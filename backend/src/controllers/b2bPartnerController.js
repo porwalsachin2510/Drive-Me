@@ -6,6 +6,7 @@ import Driver from "../models/Driver.js"
 import Route from "../models/Route.js"
 import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
 import Trip from "../models/Trip.js"
+import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js"
 
 // Get B2B Partner Overview
 export const getB2BPartnerOverview = async (req, res) => {
@@ -39,6 +40,9 @@ export const getB2BPartnerOverview = async (req, res) => {
         const totalRevenue = contracts
             .filter(c => c.status === 'ACTIVE')
             .reduce((sum, contract) => sum + (contract.financials?.totalAmount || 0), 0)
+
+        // Get currency from the first active contract or default to AED
+        const currency = contracts.find(c => c.financials?.currency)?.financials?.currency || 'AED'
 
         // Calculate monthly revenue data for charts
         const monthlyRevenue = []
@@ -103,6 +107,7 @@ export const getB2BPartnerOverview = async (req, res) => {
             revenue: {
                 total: Math.round(totalRevenue),
                 monthly: Math.round(totalRevenue / 12), // Monthly average
+                currency: currency,
                 growth: calculateRevenueGrowth(contracts),
                 chartData: {
                     labels: months.slice(0, 6), // Show first 6 months
@@ -249,9 +254,13 @@ export const getB2BPartnerAnalytics = async (req, res) => {
 
         const periodContracts = contracts.filter(c => new Date(c.createdAt) >= startDate)
         
+        // Get currency from contracts
+        const currency = contracts.find(c => c.financials?.currency)?.financials?.currency || 'AED'
+
         const analytics = {
             revenue: {
                 total: periodContracts.reduce((sum, c) => sum + (c.financials?.totalAmount || 0), 0),
+                currency: currency,
                 growth: '+15.3%',
                 chartData: generateRevenueChart(periodContracts, period)
             },
@@ -910,6 +919,47 @@ export const updateContractVehicle = async (req, res) => {
             { vehicleId: newVehicleId }
         )
 
+        // Get user info for notifications
+        const b2bPartner = await User.findById(userId).select('fullName companyName businessName')
+        const b2bPartnerName = b2bPartner?.companyName || b2bPartner?.businessName || b2bPartner?.fullName || 'B2B Partner'
+        const oldVehicle = await Vehicle.findById(oldVehicleId).select('vehicleName registrationNumber')
+        const oldVehicleName = oldVehicle?.vehicleName || 'Previous Vehicle'
+
+        // Send notification to Corporate user about vehicle change
+        const corporateNotification = await createNotification({
+            userId: contract.corporateOwnerId,
+            type: "ASSIGNMENT_UPDATED",
+            title: "Vehicle Changed for Your Contract",
+            message: `${b2bPartnerName} has changed the vehicle assignment for contract ${contract.contractNumber}. Old vehicle: ${oldVehicleName}. New vehicle: ${newVehicle.vehicleName} (${newVehicle.registrationNumber}).`,
+            metadata: {
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                changeType: "VEHICLE_CHANGED",
+                oldVehicleId,
+                oldVehicleName,
+                newVehicleId,
+                newVehicleName: newVehicle.vehicleName,
+                newVehicleRegistration: newVehicle.registrationNumber,
+                changedBy: userId,
+                changedByName: b2bPartnerName,
+            },
+        })
+        sendRealTimeNotification(contract.corporateOwnerId.toString(), corporateNotification)
+
+        // Notify Admin
+        await sendAdminNotification(
+            "Contract Vehicle Changed",
+            `${b2bPartnerName} changed vehicle for contract ${contract.contractNumber}. From: ${oldVehicleName} To: ${newVehicle.vehicleName}`,
+            "ASSIGNMENT_UPDATED",
+            {
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                b2bPartnerId: userId,
+                corporateId: contract.corporateOwnerId,
+                changeType: "VEHICLE_CHANGED",
+            }
+        )
+
         res.status(200).json({
             success: true,
             message: "Vehicle updated successfully across all records"
@@ -985,6 +1035,58 @@ export const updateContractDriver = async (req, res) => {
                 { driverId: newDriverId }
             )
         }
+
+        // Get user info for notifications
+        const b2bPartner = await User.findById(userId).select('fullName companyName businessName')
+        const b2bPartnerName = b2bPartner?.companyName || b2bPartner?.businessName || b2bPartner?.fullName || 'B2B Partner'
+        const oldDriver = oldDriverId ? await Driver.findById(oldDriverId).select('name fullName') : null
+        const oldDriverName = oldDriver?.fullName || oldDriver?.name || 'Previous Driver'
+
+        // Get vehicle name for this assignment
+        let vehicleName = "Vehicle"
+        for (const vehicleGroup of contract.vehicles) {
+            const assignedVehicle = vehicleGroup.assignedVehicles.find(v => v._id.toString() === assignedVehicleId)
+            if (assignedVehicle) {
+                const vehicle = await Vehicle.findById(vehicleGroup.vehicleId).select('vehicleName')
+                vehicleName = vehicle?.vehicleName || "Vehicle"
+                break
+            }
+        }
+
+        // Send notification to Corporate user about driver change
+        const corporateNotification = await createNotification({
+            userId: contract.corporateOwnerId,
+            type: "ASSIGNMENT_UPDATED",
+            title: "Driver Changed for Your Contract",
+            message: `${b2bPartnerName} has assigned a new driver for ${vehicleName} in contract ${contract.contractNumber}. New driver: ${newDriver.fullName || newDriver.name}. ${oldDriver ? `Previous driver: ${oldDriverName}.` : ''}`,
+            metadata: {
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                changeType: "DRIVER_CHANGED",
+                oldDriverId: oldDriverId?.toString(),
+                oldDriverName,
+                newDriverId,
+                newDriverName: newDriver.fullName || newDriver.name,
+                vehicleName,
+                changedBy: userId,
+                changedByName: b2bPartnerName,
+            },
+        })
+        sendRealTimeNotification(contract.corporateOwnerId.toString(), corporateNotification)
+
+        // Notify Admin
+        await sendAdminNotification(
+            "Contract Driver Changed",
+            `${b2bPartnerName} changed driver for ${vehicleName} in contract ${contract.contractNumber}. New driver: ${newDriver.fullName || newDriver.name}`,
+            "ASSIGNMENT_UPDATED",
+            {
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                b2bPartnerId: userId,
+                corporateId: contract.corporateOwnerId,
+                changeType: "DRIVER_CHANGED",
+            }
+        )
 
         res.status(200).json({
             success: true,

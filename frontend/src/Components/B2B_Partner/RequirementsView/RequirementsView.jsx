@@ -1,8 +1,53 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import api from "../../../utils/api";
 import "./RequirementsView.css";
 
+// Helper component for company logo with fallback
+const CompanyLogo = ({ logo, name, size = 40 }) => {
+  const [imgError, setImgError] = useState(false);
+
+  if (!logo || imgError) {
+    return (
+      <div
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          borderRadius: "8px",
+          backgroundColor: "#e2e8f0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: `${size * 0.4}px`,
+          fontWeight: "600",
+          color: "#64748b",
+          flexShrink: 0,
+        }}
+      >
+        {(name || "C").charAt(0).toUpperCase()}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={logo}
+      alt={name || "Company"}
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "8px",
+        objectFit: "cover",
+        flexShrink: 0,
+      }}
+      onError={() => setImgError(true)}
+    />
+  );
+};
+
 function RequirementsView() {
+  const auth = useSelector((state) => state.auth);
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState(null);
@@ -12,6 +57,22 @@ function RequirementsView() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showQuotationModal, setShowQuotationModal] = useState(false);
+  const [showResponseModal, setShowResponseModal] = useState(false);
+  const [submittingResponse, setSubmittingResponse] = useState(false);
+  const [responseForm, setResponseForm] = useState({
+    responseType: "INTERESTED", // INTERESTED, NOT_INTERESTED, WILL_ADD_VEHICLE
+    message: "",
+    estimatedAvailability: "",
+    vehicleDetails: "",
+  });
+  const [activeTab, setActiveTab] = useState("open"); // "open" or "my-responses"
+  const [myResponses, setMyResponses] = useState([]);
+  const [loadingMyResponses, setLoadingMyResponses] = useState(false);
+  const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [notifyingVehicle, setNotifyingVehicle] = useState(false);
+  const [selectedResponseForNotify, setSelectedResponseForNotify] =
+    useState(null);
+  const [notifyMessage, setNotifyMessage] = useState("");
 
   // Quotation form state
   const [quotationForm, setQuotationForm] = useState({
@@ -23,21 +84,21 @@ function RequirementsView() {
       year: "",
       seatingCapacity: "",
       features: [],
-      images: []
+      images: [],
     },
     pricing: {
       monthlyRate: 0,
       currency: "KWD",
       driverIncluded: true,
       fuelIncluded: true,
-      additionalCharges: []
+      additionalCharges: [],
     },
     terms: {
       paymentTerms: "MONTHLY",
       contractDuration: 12,
       noticePeriod: 30,
       maintenanceIncluded: true,
-      insuranceIncluded: true
+      insuranceIncluded: true,
     },
     availability: {
       availableFrom: "",
@@ -46,24 +107,24 @@ function RequirementsView() {
         name: "",
         licenseNumber: "",
         experience: "",
-        languages: []
-      }
+        languages: [],
+      },
     },
     message: "",
-    validUntil: ""
+    validUntil: "",
   });
 
   const fetchRequirements = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/requirements/open', {
+      const response = await api.get("/requirements/open", {
         params: {
           page: currentPage,
           limit: 10,
           search: searchTerm || undefined,
           vehicleType: filterVehicleType || undefined,
-          location: filterLocation || undefined
-        }
+          location: filterLocation || undefined,
+        },
       });
       setRequirements(response.data.data.requirements);
       setTotalPages(response.data.data.pagination.pages);
@@ -80,7 +141,7 @@ function RequirementsView() {
 
   const handleCreateQuotation = (requirement) => {
     setSelectedRequirement(requirement);
-    
+
     // Pre-fill form with requirement data
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -93,112 +154,20 @@ function RequirementsView() {
       vehicleType: requirement.vehicleRequirements[0]?.vehicleType || "BUS",
       pricing: {
         ...quotationForm.pricing,
-        currency: requirement.contractDetails.budgetRange.currency
+        currency: requirement.contractDetails.budgetRange.currency,
       },
       terms: {
         ...quotationForm.terms,
-        contractDuration: requirement.contractDetails.duration
+        contractDuration: requirement.contractDetails.duration,
       },
       availability: {
         ...quotationForm.availability,
-        availableFrom: requirement.contractDetails.startDate
+        availableFrom: requirement.contractDetails.startDate,
       },
-      validUntil: requirement.quotationDeadline
+      validUntil: requirement.quotationDeadline,
     });
-    
+
     setShowQuotationModal(true);
-  };
-
-  const handleSubmitQuotation = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      
-      // Build the payload matching the backend endpoint
-      const payload = {
-        vehicleOfferings: [{
-          vehicleType: quotationForm.vehicleType,
-          quantity: quotationForm.availability.availableVehicles,
-          make: quotationForm.vehicleDetails.make,
-          model: quotationForm.vehicleDetails.model,
-          year: quotationForm.vehicleDetails.year,
-          seatingCapacity: quotationForm.vehicleDetails.seatingCapacity,
-          features: quotationForm.vehicleDetails.features
-        }],
-        pricing: {
-          monthlyRate: quotationForm.pricing.monthlyRate,
-          totalAmount: quotationForm.pricing.monthlyRate * (quotationForm.terms.contractDuration || 1),
-          currency: quotationForm.pricing.currency,
-          vehicleRental: quotationForm.pricing.monthlyRate,
-          driverCharges: quotationForm.pricing.driverIncluded ? 0 : 0,
-          fuelCharges: quotationForm.pricing.fuelIncluded ? 0 : 0,
-          perVehicleBreakdown: []
-        },
-        terms: {
-          paymentTerms: quotationForm.terms.paymentTerms,
-          contractDuration: quotationForm.terms.contractDuration,
-          noticePeriod: quotationForm.terms.noticePeriod,
-          maintenanceIncluded: quotationForm.terms.maintenanceIncluded,
-          insuranceIncluded: quotationForm.terms.insuranceIncluded,
-          notes: `Payment: ${quotationForm.terms.paymentTerms}, Notice: ${quotationForm.terms.noticePeriod} days, Maintenance: ${quotationForm.terms.maintenanceIncluded ? 'Included' : 'Not included'}, Insurance: ${quotationForm.terms.insuranceIncluded ? 'Included' : 'Not included'}`
-        },
-        availability: quotationForm.availability,
-        message: quotationForm.message,
-        validUntil: quotationForm.validUntil
-      };
-
-      await api.post(`/requirements/${quotationForm.requirementId}/submit-quotation`, payload);
-      setShowQuotationModal(false);
-      resetQuotationForm();
-      fetchRequirements();
-      alert("Quotation submitted successfully!");
-    } catch (error) {
-      console.error("Error submitting quotation:", error);
-      alert(error.response?.data?.message || "Failed to submit quotation");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetQuotationForm = () => {
-    setQuotationForm({
-      requirementId: "",
-      vehicleType: "",
-      vehicleDetails: {
-        make: "",
-        model: "",
-        year: "",
-        seatingCapacity: "",
-        features: [],
-        images: []
-      },
-      pricing: {
-        monthlyRate: 0,
-        currency: "KWD",
-        driverIncluded: true,
-        fuelIncluded: true,
-        additionalCharges: []
-      },
-      terms: {
-        paymentTerms: "MONTHLY",
-        contractDuration: 12,
-        noticePeriod: 30,
-        maintenanceIncluded: true,
-        insuranceIncluded: true
-      },
-      availability: {
-        availableFrom: "",
-        availableVehicles: 1,
-        driverDetails: {
-          name: "",
-          licenseNumber: "",
-          experience: "",
-          languages: []
-        }
-      },
-      message: "",
-      validUntil: ""
-    });
   };
 
   const getDaysUntilDeadline = (deadline) => {
@@ -217,62 +186,139 @@ function RequirementsView() {
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case "LOW": return "#10b981";
-      case "MEDIUM": return "#f59e0b";
-      case "HIGH": return "#ef4444";
-      case "URGENT": return "#dc2626";
-      default: return "#6b7280";
+      case "LOW":
+        return "#10b981";
+      case "MEDIUM":
+        return "#f59e0b";
+      case "HIGH":
+        return "#ef4444";
+      case "URGENT":
+        return "#dc2626";
+      default:
+        return "#6b7280";
     }
   };
 
-  const addFeature = (feature) => {
-    if (!quotationForm.vehicleDetails.features.includes(feature)) {
-      setQuotationForm(prev => ({
-        ...prev,
-        vehicleDetails: {
-          ...prev.vehicleDetails,
-          features: [...prev.vehicleDetails.features, feature]
-        }
-      }));
-    }
+  const handleOpenResponseModal = (requirement) => {
+    setSelectedRequirement(requirement);
+    setResponseForm({
+      responseType: "INTERESTED",
+      message: "",
+      estimatedAvailability: "",
+      vehicleDetails: "",
+    });
+    setShowResponseModal(true);
   };
 
-  const removeFeature = (feature) => {
-    setQuotationForm(prev => ({
-      ...prev,
-      vehicleDetails: {
-        ...prev.vehicleDetails,
-        features: prev.vehicleDetails.features.filter(f => f !== feature)
+  const handleSubmitResponse = async () => {
+    if (!selectedRequirement) return;
+
+    try {
+      setSubmittingResponse(true);
+      const response = await api.post(
+        `/requirements/${selectedRequirement._id}/respond`,
+        {
+          responseType: responseForm.responseType,
+          message: responseForm.message,
+          estimatedAvailability: responseForm.estimatedAvailability,
+          vehicleDetails: responseForm.vehicleDetails,
+        },
+      );
+
+      if (response.data.success) {
+        toast.success("Response submitted successfully!");
+        setShowResponseModal(false);
+        setSelectedRequirement(null);
+        fetchRequirements(); // Refresh list
+        fetchMyResponses(); // Also refresh my responses
       }
-    }));
-  };
-
-  const addLanguage = (language) => {
-    if (!quotationForm.availability.driverDetails.languages.includes(language)) {
-      setQuotationForm(prev => ({
-        ...prev,
-        availability: {
-          ...prev.availability,
-          driverDetails: {
-            ...prev.availability.driverDetails,
-            languages: [...prev.availability.driverDetails.languages, language]
-          }
-        }
-      }));
+    } catch (error) {
+      console.error("Error submitting response:", error);
+      toast.error(error.response?.data?.message || "Failed to submit response");
+    } finally {
+      setSubmittingResponse(false);
     }
   };
 
-  const removeLanguage = (language) => {
-    setQuotationForm(prev => ({
-      ...prev,
-      availability: {
-        ...prev.availability,
-        driverDetails: {
-          ...prev.availability.driverDetails,
-          languages: prev.availability.driverDetails.languages.filter(l => l !== language)
-        }
+  const fetchMyResponses = useCallback(async () => {
+    try {
+      setLoadingMyResponses(true);
+      const response = await api.get("/requirements/my-responses");
+      setMyResponses(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching my responses:", error);
+    } finally {
+      setLoadingMyResponses(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "my-responses") {
+      fetchMyResponses();
+    }
+  }, [activeTab, fetchMyResponses]);
+
+  const handleNotifyVehicleAdded = async () => {
+    if (!selectedResponseForNotify) return;
+
+    try {
+      setNotifyingVehicle(true);
+      const response = await api.post(
+        `/requirements/${selectedResponseForNotify.requirementId}/notify-vehicle-added`,
+        {
+          message: notifyMessage,
+        },
+      );
+
+      if (response.data.success) {
+        toast.success(
+          "Corporate has been notified that the vehicle is now available!",
+        );
+        setShowNotifyModal(false);
+        setSelectedResponseForNotify(null);
+        setNotifyMessage("");
+        fetchMyResponses(); // Refresh
       }
-    }));
+    } catch (error) {
+      console.error("Error notifying vehicle added:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to notify corporate",
+      );
+    } finally {
+      setNotifyingVehicle(false);
+    }
+  };
+
+  const openNotifyModal = (responseData) => {
+    setSelectedResponseForNotify(responseData);
+    setNotifyMessage("");
+    setShowNotifyModal(true);
+  };
+
+  const getResponseTypeColor = (responseType) => {
+    switch (responseType) {
+      case "INTERESTED":
+        return "#10b981";
+      case "WILL_ADD_VEHICLE":
+        return "#3b82f6";
+      case "NOT_INTERESTED":
+        return "#ef4444";
+      default:
+        return "#6b7280";
+    }
+  };
+
+  const getResponseTypeLabel = (responseType) => {
+    switch (responseType) {
+      case "INTERESTED":
+        return "Interested";
+      case "WILL_ADD_VEHICLE":
+        return "Will Add Vehicle";
+      case "NOT_INTERESTED":
+        return "Not Interested";
+      default:
+        return responseType;
+    }
   };
 
   if (loading && requirements.length === 0) {
@@ -286,774 +332,758 @@ function RequirementsView() {
   return (
     <div className="b2bpartner-RequirementsTab-requirements-view">
       <div className="b2bpartner-RequirementsTab-view-header">
-        <h2>Open Requirements</h2>
+        <h2>{activeTab === "open" ? "Open Requirements" : "My Responses"}</h2>
         <p>
-          Find and quote on transportation requirements from corporate clients
+          {activeTab === "open"
+            ? "Find and quote on transportation requirements from corporate clients"
+            : "View your responses to corporate requirements"}
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="b2bpartner-RequirementsTab-filters-section">
-        <div className="b2bpartner-RequirementsTab-filter-row">
-          <input
-            type="text"
-            placeholder="Search requirements..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="b2bpartner-RequirementsTab-search-input"
-          />
-          <select
-            value={filterVehicleType}
-            onChange={(e) => setFilterVehicleType(e.target.value)}
-            className="b2bpartner-RequirementsTab-filter-select"
-          >
-            <option value="">All Vehicle Types</option>
-            <option value="BUS">Bus</option>
-            <option value="VAN">Van</option>
-            <option value="MINIBUS">Minibus</option>
-            <option value="SEDAN">Sedan</option>
-            <option value="SUV">SUV</option>
-            <option value="TRUCK">Truck</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Filter by location..."
-            value={filterLocation}
-            onChange={(e) => setFilterLocation(e.target.value)}
-            className="b2bpartner-RequirementsTab-filter-input"
-          />
-        </div>
+      {/* Tab Navigation */}
+      <div
+        className="b2bpartner-RequirementsTab-tabs"
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "20px",
+          borderBottom: "2px solid #e2e8f0",
+          paddingBottom: "0",
+        }}
+      >
+        <button
+          onClick={() => setActiveTab("open")}
+          style={{
+            padding: "12px 20px",
+            border: "none",
+            backgroundColor: "transparent",
+            cursor: "pointer",
+            fontWeight: activeTab === "open" ? "600" : "400",
+            color: activeTab === "open" ? "#3b82f6" : "#64748b",
+            borderBottom:
+              activeTab === "open"
+                ? "2px solid #3b82f6"
+                : "2px solid transparent",
+            marginBottom: "-2px",
+            transition: "all 0.2s",
+          }}
+        >
+          Open Requirements
+        </button>
+        <button
+          onClick={() => setActiveTab("my-responses")}
+          style={{
+            padding: "12px 20px",
+            border: "none",
+            backgroundColor: "transparent",
+            cursor: "pointer",
+            fontWeight: activeTab === "my-responses" ? "600" : "400",
+            color: activeTab === "my-responses" ? "#3b82f6" : "#64748b",
+            borderBottom:
+              activeTab === "my-responses"
+                ? "2px solid #3b82f6"
+                : "2px solid transparent",
+            marginBottom: "-2px",
+            transition: "all 0.2s",
+          }}
+        >
+          My Responses
+        </button>
       </div>
 
-      {/* Requirements List */}
-      <div className="b2bpartner-RequirementsTab-requirements-list">
-        {requirements.length === 0 ? (
-          <div className="b2bpartner-RequirementsTab-no-requirements">
-            <div className="b2bpartner-RequirementsTab-no-requirements-icon">
-              📋
+      {activeTab === "open" && (
+        <>
+          {/* Filters */}
+          <div className="b2bpartner-RequirementsTab-filters-section">
+            <div className="b2bpartner-RequirementsTab-filter-row">
+              <input
+                type="text"
+                placeholder="Search requirements..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="b2bpartner-RequirementsTab-search-input"
+              />
+              <select
+                value={filterVehicleType}
+                onChange={(e) => setFilterVehicleType(e.target.value)}
+                className="b2bpartner-RequirementsTab-filter-select"
+              >
+                <option value="">All Vehicle Types</option>
+                <option value="BUS">Bus</option>
+                <option value="VAN">Van</option>
+                <option value="MINIBUS">Minibus</option>
+                <option value="SEDAN">Sedan</option>
+                <option value="SUV">SUV</option>
+                <option value="TRUCK">Truck</option>
+              </select>
+              <input
+                type="text"
+                placeholder="Filter by location..."
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                className="b2bpartner-RequirementsTab-filter-input"
+              />
             </div>
-            <h3>No Open Requirements Found</h3>
-            <p>
-              Try adjusting your filters or check back later for new
-              requirements.
-            </p>
           </div>
-        ) : (
-          <div className="b2bpartner-RequirementsTab-requirements-grid">
-            {requirements.map((requirement) => {
-              const daysUntilDeadline = getDaysUntilDeadline(
-                requirement.quotationDeadline,
-              );
 
-              return (
+          {/* Requirements List */}
+          <div className="b2bpartner-RequirementsTab-requirements-list">
+            {requirements.length === 0 ? (
+              <div className="b2bpartner-RequirementsTab-no-requirements">
+                <div className="b2bpartner-RequirementsTab-no-requirements-icon">
+                  📋
+                </div>
+                <h3>No Open Requirements Found</h3>
+                <p>
+                  Try adjusting your filters or check back later for new
+                  requirements.
+                </p>
+              </div>
+            ) : (
+              <div className="b2bpartner-RequirementsTab-requirements-grid">
+                {requirements.map((requirement) => {
+                  const daysUntilDeadline = getDaysUntilDeadline(
+                    requirement.quotationDeadline,
+                  );
+
+                  return (
+                    <div
+                      key={requirement._id}
+                      className="b2bpartner-RequirementsTab-requirement-card"
+                    >
+                      <div className="b2bpartner-RequirementsTab-card-header">
+                        <div className="b2bpartner-RequirementsTab-requirement-title">
+                          <h3>{requirement.title}</h3>
+                          <div
+                            className="b2bpartner-RequirementsTab-priority-badge"
+                            style={{
+                              backgroundColor: getPriorityColor(
+                                requirement.priority,
+                              ),
+                            }}
+                          >
+                            {requirement.priority}
+                          </div>
+                        </div>
+                        <div className="b2bpartner-RequirementsTab-corporate-info">
+                          <CompanyLogo
+                            logo={requirement.corporateId?.companyLogo}
+                            name={
+                              requirement.corporateId?.companyName ||
+                              "Corporate"
+                            }
+                          />
+                          <span className="b2bpartner-RequirementsTab-company-name">
+                            {requirement.corporateId?.companyName ||
+                              "Corporate"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="b2bpartner-RequirementsTab-card-body">
+                        <p className="b2bpartner-RequirementsTab-description">
+                          {requirement.description}
+                        </p>
+
+                        <div className="b2bpartner-RequirementsTab-route-info">
+                          <div className="b2bpartner-RequirementsTab-route-item">
+                            <span className="b2bpartner-RequirementsTab-label">
+                              Route:
+                            </span>
+                            <span className="b2bpartner-RequirementsTab-value">
+                              {requirement.routeInfo.fromLocation} →{" "}
+                              {requirement.routeInfo.toLocation}
+                            </span>
+                          </div>
+                          <div className="b2bpartner-RequirementsTab-route-item">
+                            <span className="b2bpartner-RequirementsTab-label">
+                              Distance:
+                            </span>
+                            <span className="b2bpartner-RequirementsTab-value">
+                              {requirement.routeInfo.estimatedDistance} km
+                            </span>
+                          </div>
+                          <div className="b2bpartner-RequirementsTab-route-item">
+                            <span className="b2bpartner-RequirementsTab-label">
+                              Duration:
+                            </span>
+                            <span className="b2bpartner-RequirementsTab-value">
+                              {requirement.routeInfo.estimatedDuration}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="b2bpartner-RequirementsTab-vehicle-requirements">
+                          <h4>Vehicle Requirements:</h4>
+                          {requirement.vehicleRequirements.map(
+                            (vehicle, index) => (
+                              <div
+                                key={index}
+                                className="b2bpartner-RequirementsTab-vehicle-item"
+                              >
+                                <span className="b2bpartner-RequirementsTab-vehicle-type">
+                                  {vehicle.quantity}x {vehicle.vehicleType}
+                                </span>
+                                <span className="b2bpartner-RequirementsTab-vehicle-capacity">
+                                  ({vehicle.capacity} seats)
+                                </span>
+                                {vehicle.features.length > 0 && (
+                                  <div className="b2bpartner-RequirementsTab-features">
+                                    {vehicle.features
+                                      .slice(0, 3)
+                                      .map((feature, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="b2bpartner-RequirementsTab-feature-tag"
+                                        >
+                                          {feature}
+                                        </span>
+                                      ))}
+                                    {vehicle.features.length > 3 && (
+                                      <span className="b2bpartner-RequirementsTab-feature-more">
+                                        +{vehicle.features.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ),
+                          )}
+                        </div>
+
+                        <div className="b2bpartner-RequirementsTab-budget-info">
+                          <div className="b2bpartner-RequirementsTab-budget-item">
+                            <span className="b2bpartner-RequirementsTab-label">
+                              Budget Range:
+                            </span>
+                            <span className="b2bpartner-RequirementsTab-value b2bpartner-RequirementsTab-budget">
+                              {requirement.contractDetails.budgetRange.min} -{" "}
+                              {requirement.contractDetails.budgetRange.max}{" "}
+                              {requirement.contractDetails.budgetRange.currency}
+                            </span>
+                          </div>
+                          <div className="b2bpartner-RequirementsTab-budget-item">
+                            <span className="b2bpartner-RequirementsTab-label">
+                              Duration:
+                            </span>
+                            <span className="b2bpartner-RequirementsTab-value">
+                              {requirement.contractDetails.duration} months
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="b2bpartner-RequirementsTab-schedule-info">
+                          <div className="b2bpartner-RequirementsTab-schedule-item">
+                            <span className="b2bpartner-RequirementsTab-label">
+                              Service:
+                            </span>
+                            <span className="b2bpartner-RequirementsTab-value">
+                              {requirement.scheduleRequirements.serviceType}
+                            </span>
+                          </div>
+                          <div className="b2bpartner-RequirementsTab-schedule-item">
+                            <span className="b2bpartner-RequirementsTab-label">
+                              Days:
+                            </span>
+                            <span className="b2bpartner-RequirementsTab-value">
+                              {requirement.scheduleRequirements.operatingDays.join(
+                                ", ",
+                              )}
+                            </span>
+                          </div>
+                          <div className="b2bpartner-RequirementsTab-schedule-item">
+                            <span className="b2bpartner-RequirementsTab-label">
+                              Time:
+                            </span>
+                            <span className="b2bpartner-RequirementsTab-value">
+                              {requirement.scheduleRequirements.startTime} -{" "}
+                              {requirement.scheduleRequirements.endTime}
+                            </span>
+                          </div>
+                        </div>
+
+                        {requirement.tags.length > 0 && (
+                          <div className="b2bpartner-RequirementsTab-tags">
+                            {requirement.tags.map((tag, index) => (
+                              <span
+                                key={index}
+                                className="b2bpartner-RequirementsTab-tag"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="b2bpartner-RequirementsTab-card-footer">
+                        <div className="b2bpartner-RequirementsTab-deadline-info">
+                          <span className="b2bpartner-RequirementsTab-deadline-label">
+                            Deadline:
+                          </span>
+                          <span
+                            className="b2bpartner-RequirementsTab-deadline-value"
+                            style={{
+                              color: getDeadlineColor(daysUntilDeadline),
+                            }}
+                          >
+                            {new Date(
+                              requirement.quotationDeadline,
+                            ).toLocaleDateString()}{" "}
+                            ({daysUntilDeadline} days left)
+                          </span>
+                        </div>
+                        <div className="b2bpartner-RequirementsTab-action-buttons">
+                          {/* Check if already responded */}
+                          {requirement.partnerResponses?.some(
+                            (r) => r.partnerId === auth.user?._id,
+                          ) ? (
+                            <span
+                              style={{
+                                padding: "8px 16px",
+                                backgroundColor: "#dcfce7",
+                                color: "#166534",
+                                borderRadius: "6px",
+                                fontSize: "13px",
+                                fontWeight: "500",
+                              }}
+                            >
+                              Already Responded
+                            </span>
+                          ) : (
+                            <button
+                              className="b2bpartner-RequirementsTab-btn b2bpartner-RequirementsTab-btn-outline"
+                              onClick={() =>
+                                setSelectedRequirement(requirement)
+                              }
+                            >
+                              View Details
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="b2bpartner-RequirementsTab-pagination">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                Previous
+              </button>
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* My Responses Tab */}
+      {activeTab === "my-responses" && (
+        <div className="b2bpartner-RequirementsTab-my-responses">
+          {loadingMyResponses ? (
+            <div
+              style={{ textAlign: "center", padding: "40px", color: "#64748b" }}
+            >
+              Loading your responses...
+            </div>
+          ) : myResponses.length === 0 ? (
+            <div
+              style={{ textAlign: "center", padding: "60px", color: "#64748b" }}
+            >
+              <div style={{ fontSize: "48px", marginBottom: "16px" }}>📋</div>
+              <h3 style={{ margin: "0 0 8px 0", color: "#374151" }}>
+                No Responses Yet
+              </h3>
+              <p style={{ margin: 0 }}>
+                You have not responded to any corporate requirements yet.
+                <br />
+                Browse open requirements and submit your interest.
+              </p>
+              <button
+                onClick={() => setActiveTab("open")}
+                style={{
+                  marginTop: "20px",
+                  padding: "10px 20px",
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                }}
+              >
+                Browse Open Requirements
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              {myResponses.map((item, index) => (
                 <div
-                  key={requirement._id}
-                  className="b2bpartner-RequirementsTab-requirement-card"
+                  key={index}
+                  style={{
+                    padding: "20px",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    backgroundColor: "white",
+                  }}
                 >
-                  <div className="b2bpartner-RequirementsTab-card-header">
-                    <div className="b2bpartner-RequirementsTab-requirement-title">
-                      <h3>{requirement.title}</h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: "15px",
+                    }}
+                  >
+                    <div>
+                      <h3 style={{ margin: "0 0 8px 0", color: "#1e293b" }}>
+                        {item.title}
+                      </h3>
                       <div
-                        className="b2bpartner-RequirementsTab-priority-badge"
                         style={{
-                          backgroundColor: getPriorityColor(
-                            requirement.priority,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        {item.corporateId?.companyLogo ? (
+                          <img
+                            src={item.corporateId.companyLogo}
+                            alt={item.corporateId?.companyName || "Corporate"}
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              borderRadius: "4px",
+                              objectFit: "cover",
+                            }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        ) : null}
+                        <span style={{ fontSize: "14px", color: "#64748b" }}>
+                          {item.corporateId?.companyName || "Corporate"}
+                        </span>
+                      </div>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "14px",
+                          color: "#64748b",
+                        }}
+                      >
+                        {item.routeInfo?.fromLocation} to{" "}
+                        {item.routeInfo?.toLocation}
+                      </p>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-end",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "20px",
+                          fontSize: "12px",
+                          fontWeight: "600",
+                          color: "white",
+                          backgroundColor: getResponseTypeColor(
+                            item.myResponse?.responseType,
                           ),
                         }}
                       >
-                        {requirement.priority}
-                      </div>
-                    </div>
-                    <div className="b2bpartner-RequirementsTab-corporate-info">
-                      <img
-                        src={
-                          requirement.corporateId.companyLogo ||
-                          "/default-company.png"
-                        }
-                        alt={requirement.corporateId.companyName}
-                        className="b2bpartner-RequirementsTab-company-logo"
-                      />
-                      <span className="b2bpartner-RequirementsTab-company-name">
-                        {requirement.corporateId.companyName}
+                        {getResponseTypeLabel(item.myResponse?.responseType)}
+                      </span>
+                      <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                        {item.myResponse?.respondedAt &&
+                          new Date(
+                            item.myResponse.respondedAt,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
                       </span>
                     </div>
                   </div>
 
-                  <div className="b2bpartner-RequirementsTab-card-body">
-                    <p className="b2bpartner-RequirementsTab-description">
-                      {requirement.description}
-                    </p>
+                  {/* Vehicle Requirements Summary */}
+                  <div style={{ marginBottom: "15px" }}>
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        color: "#374151",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Required:{" "}
+                      {item.vehicleRequirements
+                        ?.map((v) => `${v.quantity}x ${v.vehicleType}`)
+                        .join(", ")}
+                    </span>
+                    <span
+                      style={{
+                        marginLeft: "15px",
+                        fontSize: "13px",
+                        color: "#3b82f6",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Budget: {item.contractDetails?.budgetRange?.min} -{" "}
+                      {item.contractDetails?.budgetRange?.max}{" "}
+                      {item.contractDetails?.budgetRange?.currency}
+                    </span>
+                  </div>
 
-                    <div className="b2bpartner-RequirementsTab-route-info">
-                      <div className="b2bpartner-RequirementsTab-route-item">
-                        <span className="b2bpartner-RequirementsTab-label">
-                          Route:
-                        </span>
-                        <span className="b2bpartner-RequirementsTab-value">
-                          {requirement.routeInfo.fromLocation} →{" "}
-                          {requirement.routeInfo.toLocation}
-                        </span>
-                      </div>
-                      <div className="b2bpartner-RequirementsTab-route-item">
-                        <span className="b2bpartner-RequirementsTab-label">
-                          Distance:
-                        </span>
-                        <span className="b2bpartner-RequirementsTab-value">
-                          {requirement.routeInfo.estimatedDistance} km
-                        </span>
-                      </div>
-                      <div className="b2bpartner-RequirementsTab-route-item">
-                        <span className="b2bpartner-RequirementsTab-label">
-                          Duration:
-                        </span>
-                        <span className="b2bpartner-RequirementsTab-value">
-                          {requirement.routeInfo.estimatedDuration}
-                        </span>
-                      </div>
+                  {item.myResponse?.message && (
+                    <div
+                      style={{
+                        padding: "12px 15px",
+                        backgroundColor: "#f8fafc",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        color: "#374151",
+                        marginBottom: "15px",
+                      }}
+                    >
+                      <strong>Your Message:</strong> {item.myResponse.message}
                     </div>
+                  )}
 
-                    <div className="b2bpartner-RequirementsTab-vehicle-requirements">
-                      <h4>Vehicle Requirements:</h4>
-                      {requirement.vehicleRequirements.map((vehicle, index) => (
+                  {/* Will Add Vehicle - Notify Button */}
+                  {item.myResponse?.responseType === "WILL_ADD_VEHICLE" && (
+                    <div
+                      style={{
+                        padding: "15px",
+                        backgroundColor: item.myResponse.vehicleAddedNotified
+                          ? "#dcfce7"
+                          : "#eff6ff",
+                        borderRadius: "8px",
+                        border: item.myResponse.vehicleAddedNotified
+                          ? "1px solid #86efac"
+                          : "1px solid #bfdbfe",
+                      }}
+                    >
+                      {item.myResponse.vehicleAddedNotified ? (
                         <div
-                          key={index}
-                          className="b2bpartner-RequirementsTab-vehicle-item"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            color: "#166534",
+                          }}
                         >
-                          <span className="b2bpartner-RequirementsTab-vehicle-type">
-                            {vehicle.quantity}x {vehicle.vehicleType}
-                          </span>
-                          <span className="b2bpartner-RequirementsTab-vehicle-capacity">
-                            ({vehicle.capacity} seats)
-                          </span>
-                          {vehicle.features.length > 0 && (
-                            <div className="b2bpartner-RequirementsTab-features">
-                              {vehicle.features
-                                .slice(0, 3)
-                                .map((feature, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="b2bpartner-RequirementsTab-feature-tag"
-                                  >
-                                    {feature}
-                                  </span>
-                                ))}
-                              {vehicle.features.length > 3 && (
-                                <span className="b2bpartner-RequirementsTab-feature-more">
-                                  +{vehicle.features.length - 3} more
-                                </span>
+                          <span style={{ fontSize: "20px" }}>check_mark</span>
+                          <div>
+                            <p style={{ margin: 0, fontWeight: "500" }}>
+                              Corporate Notified
+                            </p>
+                            <p
+                              style={{ margin: "4px 0 0 0", fontSize: "13px" }}
+                            >
+                              The corporate has been informed that your vehicle
+                              is now available.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <span style={{ fontSize: "20px" }}>info</span>
+                            <div>
+                              <p
+                                style={{
+                                  margin: 0,
+                                  fontWeight: "500",
+                                  color: "#1e40af",
+                                }}
+                              >
+                                Have you added the vehicle?
+                              </p>
+                              {item.myResponse.estimatedAvailability && (
+                                <p
+                                  style={{
+                                    margin: "4px 0 0 0",
+                                    fontSize: "13px",
+                                    color: "#374151",
+                                  }}
+                                >
+                                  Estimated availability:{" "}
+                                  {new Date(
+                                    item.myResponse.estimatedAvailability,
+                                  ).toLocaleDateString()}
+                                </p>
                               )}
                             </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="b2bpartner-RequirementsTab-budget-info">
-                      <div className="b2bpartner-RequirementsTab-budget-item">
-                        <span className="b2bpartner-RequirementsTab-label">
-                          Budget Range:
-                        </span>
-                        <span className="b2bpartner-RequirementsTab-value b2bpartner-RequirementsTab-budget">
-                          {requirement.contractDetails.budgetRange.min} -{" "}
-                          {requirement.contractDetails.budgetRange.max}{" "}
-                          {requirement.contractDetails.budgetRange.currency}
-                        </span>
-                      </div>
-                      <div className="b2bpartner-RequirementsTab-budget-item">
-                        <span className="b2bpartner-RequirementsTab-label">
-                          Duration:
-                        </span>
-                        <span className="b2bpartner-RequirementsTab-value">
-                          {requirement.contractDetails.duration} months
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="b2bpartner-RequirementsTab-schedule-info">
-                      <div className="b2bpartner-RequirementsTab-schedule-item">
-                        <span className="b2bpartner-RequirementsTab-label">
-                          Service:
-                        </span>
-                        <span className="b2bpartner-RequirementsTab-value">
-                          {requirement.scheduleRequirements.serviceType}
-                        </span>
-                      </div>
-                      <div className="b2bpartner-RequirementsTab-schedule-item">
-                        <span className="b2bpartner-RequirementsTab-label">
-                          Days:
-                        </span>
-                        <span className="b2bpartner-RequirementsTab-value">
-                          {requirement.scheduleRequirements.operatingDays.join(
-                            ", ",
-                          )}
-                        </span>
-                      </div>
-                      <div className="b2bpartner-RequirementsTab-schedule-item">
-                        <span className="b2bpartner-RequirementsTab-label">
-                          Time:
-                        </span>
-                        <span className="b2bpartner-RequirementsTab-value">
-                          {requirement.scheduleRequirements.startTime} -{" "}
-                          {requirement.scheduleRequirements.endTime}
-                        </span>
-                      </div>
-                    </div>
-
-                    {requirement.tags.length > 0 && (
-                      <div className="b2bpartner-RequirementsTab-tags">
-                        {requirement.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className="b2bpartner-RequirementsTab-tag"
+                          </div>
+                          <button
+                            onClick={() => openNotifyModal(item)}
+                            style={{
+                              padding: "10px 20px",
+                              backgroundColor: "#3b82f6",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "8px",
+                              cursor: "pointer",
+                              fontWeight: "500",
+                              width: "100%",
+                            }}
                           >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="b2bpartner-RequirementsTab-card-footer">
-                    <div className="b2bpartner-RequirementsTab-deadline-info">
-                      <span className="b2bpartner-RequirementsTab-deadline-label">
-                        Deadline:
-                      </span>
-                      <span
-                        className="b2bpartner-RequirementsTab-deadline-value"
-                        style={{ color: getDeadlineColor(daysUntilDeadline) }}
-                      >
-                        {new Date(
-                          requirement.quotationDeadline,
-                        ).toLocaleDateString()}{" "}
-                        ({daysUntilDeadline} days left)
-                      </span>
+                            Notify Corporate - Vehicle is Ready
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="b2bpartner-RequirementsTab-action-buttons">
-                      <button
-                        className="b2bpartner-RequirementsTab-btn b2bpartner-RequirementsTab-btn-outline"
-                        onClick={() => setSelectedRequirement(requirement)}
-                      >
-                        View Details
-                      </button>
-                      <button
-                        className="b2bpartner-RequirementsTab-btn b2bpartner-RequirementsTab-btn-primary"
-                        onClick={() => handleCreateQuotation(requirement)}
-                      >
-                        Send Quotation
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="b2bpartner-RequirementsTab-pagination">
-          <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(currentPage - 1)}
-          >
-            Previous
-          </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(currentPage + 1)}
-          >
-            Next
-          </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Quotation Modal */}
-      {showQuotationModal && selectedRequirement && (
+      {/* Notify Vehicle Added Modal */}
+      {showNotifyModal && selectedResponseForNotify && (
         <div className="b2bpartner-RequirementsTab-modal-overlay">
-          <div className="b2bpartner-RequirementsTab-modal large-modal">
+          <div
+            className="b2bpartner-RequirementsTab-modal"
+            style={{ maxWidth: "500px" }}
+          >
             <div className="b2bpartner-RequirementsTab-modal-header">
-              <h3>Send Quotation</h3>
-              <div className="b2bpartner-RequirementsTab-requirement-summary">
-                <h4>{selectedRequirement.title}</h4>
-                <p>{selectedRequirement.corporateId.companyName}</p>
-                <p>
-                  Budget: {selectedRequirement.contractDetails.budgetRange.min}{" "}
-                  - {selectedRequirement.contractDetails.budgetRange.max}{" "}
-                  {selectedRequirement.contractDetails.budgetRange.currency}
-                </p>
-              </div>
+              <h3>Notify Corporate</h3>
               <button
                 className="b2bpartner-RequirementsTab-close-btn"
-                onClick={() => setShowQuotationModal(false)}
+                onClick={() => {
+                  setShowNotifyModal(false);
+                  setSelectedResponseForNotify(null);
+                  setNotifyMessage("");
+                }}
               >
-                ×
+                x
               </button>
             </div>
-            <form onSubmit={handleSubmitQuotation} className="modal-form">
-              <div className="b2bpartner-RequirementsTab-form-section">
-                <h4>Vehicle Details</h4>
-                <div className="b2bpartner-RequirementsTab-form-row">
-                  <select
-                    value={quotationForm.vehicleType}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        vehicleType: e.target.value,
-                      }))
-                    }
-                    required
-                  >
-                    <option value="">Select Vehicle Type</option>
-                    <option value="BUS">Bus</option>
-                    <option value="VAN">Van</option>
-                    <option value="MINIBUS">Minibus</option>
-                    <option value="SEDAN">Sedan</option>
-                    <option value="SUV">SUV</option>
-                    <option value="TRUCK">Truck</option>
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Vehicle Make"
-                    value={quotationForm.vehicleDetails.make}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        vehicleDetails: {
-                          ...prev.vehicleDetails,
-                          make: e.target.value,
-                        },
-                      }))
-                    }
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Vehicle Model"
-                    value={quotationForm.vehicleDetails.model}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        vehicleDetails: {
-                          ...prev.vehicleDetails,
-                          model: e.target.value,
-                        },
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="b2bpartner-RequirementsTab-form-row">
-                  <input
-                    type="number"
-                    placeholder="Year"
-                    value={quotationForm.vehicleDetails.year}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        vehicleDetails: {
-                          ...prev.vehicleDetails,
-                          year: e.target.value,
-                        },
-                      }))
-                    }
-                    min="2000"
-                    max={new Date().getFullYear()}
-                    required
-                  />
-                  <input
-                    type="number"
-                    placeholder="Seating Capacity"
-                    value={quotationForm.vehicleDetails.seatingCapacity}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        vehicleDetails: {
-                          ...prev.vehicleDetails,
-                          seatingCapacity: e.target.value,
-                        },
-                      }))
-                    }
-                    min="1"
-                    required
-                  />
-                  <input
-                    type="number"
-                    placeholder="Available Vehicles"
-                    value={quotationForm.availability.availableVehicles}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        availability: {
-                          ...prev.availability,
-                          availableVehicles: parseInt(e.target.value),
-                        },
-                      }))
-                    }
-                    min="1"
-                    required
-                  />
-                </div>
-                <div className="b2bpartner-RequirementsTab-form-group">
-                  <label>Vehicle Features</label>
-                  <div className="features-selection">
-                    {[
-                      "AC",
-                      "NON_AC",
-                      "GPS",
-                      "CAMERA",
-                      "USB_CHARGING",
-                      "WIFI",
-                      "ENTERTAINMENT",
-                      "DISABLED_ACCESS",
-                    ].map((feature) => (
-                      <label
-                        key={feature}
-                        className="b2bpartner-RequirementsTab-feature-checkbox"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={quotationForm.vehicleDetails.features.includes(
-                            feature,
-                          )}
-                          onChange={() => {
-                            if (
-                              quotationForm.vehicleDetails.features.includes(
-                                feature,
-                              )
-                            ) {
-                              removeFeature(feature);
-                            } else {
-                              addFeature(feature);
-                            }
-                          }}
-                        />
-                        <span>{feature.replace("_", " ")}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+            <div className="b2bpartner-RequirementsTab-modal-content">
+              <div
+                style={{
+                  marginBottom: "20px",
+                  padding: "15px",
+                  backgroundColor: "#f8fafc",
+                  borderRadius: "8px",
+                }}
+              >
+                <h4 style={{ margin: "0 0 8px 0", color: "#1e293b" }}>
+                  {selectedResponseForNotify.title}
+                </h4>
+                <p style={{ margin: 0, fontSize: "14px", color: "#64748b" }}>
+                  {selectedResponseForNotify.corporateId?.companyName}
+                </p>
               </div>
 
-              <div className="b2bpartner-RequirementsTab-form-section">
-                <h4>Pricing</h4>
-                <div className="b2bpartner-RequirementsTab-form-row">
-                  <input
-                    type="number"
-                    placeholder="Monthly Rate"
-                    value={quotationForm.pricing.monthlyRate}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        pricing: {
-                          ...prev.pricing,
-                          monthlyRate: parseFloat(e.target.value),
-                        },
-                      }))
-                    }
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                  <select
-                    value={quotationForm.pricing.currency}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        pricing: { ...prev.pricing, currency: e.target.value },
-                      }))
-                    }
-                  >
-                    <option value="KWD">KWD</option>
-                    <option value="AED">AED</option>
-                    <option value="SAR">SAR</option>
-                    <option value="BHD">BHD</option>
-                    <option value="OMR">OMR</option>
-                    <option value="QAR">QAR</option>
-                  </select>
-                </div>
-                <div className="b2bpartner-RequirementsTab-form-row">
-                  <label className="b2bpartner-RequirementsTab-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={quotationForm.pricing.driverIncluded}
-                      onChange={(e) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          pricing: {
-                            ...prev.pricing,
-                            driverIncluded: e.target.checked,
-                          },
-                        }))
-                      }
-                    />
-                    Driver Included
-                  </label>
-                  <label className="b2bpartner-RequirementsTab-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={quotationForm.pricing.fuelIncluded}
-                      onChange={(e) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          pricing: {
-                            ...prev.pricing,
-                            fuelIncluded: e.target.checked,
-                          },
-                        }))
-                      }
-                    />
-                    Fuel Included
-                  </label>
-                </div>
+              <p style={{ color: "#374151", marginBottom: "15px" }}>
+                Let the corporate know that you have added the vehicle they were
+                looking for. They will receive an email and in-app notification.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "500",
+                    color: "#374151",
+                  }}
+                >
+                  Additional Message (Optional)
+                </label>
+                <textarea
+                  value={notifyMessage}
+                  onChange={(e) => setNotifyMessage(e.target.value)}
+                  placeholder="Add any details about the vehicle you have added..."
+                  rows={4}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    resize: "vertical",
+                  }}
+                />
               </div>
 
-              <div className="b2bpartner-RequirementsTab-form-section">
-                <h4>Driver Details</h4>
-                <div className="b2bpartner-RequirementsTab-form-row">
-                  <input
-                    type="text"
-                    placeholder="Driver Name"
-                    value={quotationForm.availability.driverDetails.name}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        availability: {
-                          ...prev.availability,
-                          driverDetails: {
-                            ...prev.availability.driverDetails,
-                            name: e.target.value,
-                          },
-                        },
-                      }))
-                    }
-                  />
-                  <input
-                    type="text"
-                    placeholder="License Number"
-                    value={
-                      quotationForm.availability.driverDetails.licenseNumber
-                    }
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        availability: {
-                          ...prev.availability,
-                          driverDetails: {
-                            ...prev.availability.driverDetails,
-                            licenseNumber: e.target.value,
-                          },
-                        },
-                      }))
-                    }
-                  />
-                  <input
-                    type="number"
-                    placeholder="Experience (years)"
-                    value={quotationForm.availability.driverDetails.experience}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        availability: {
-                          ...prev.availability,
-                          driverDetails: {
-                            ...prev.availability.driverDetails,
-                            experience: e.target.value,
-                          },
-                        },
-                      }))
-                    }
-                    min="0"
-                  />
-                </div>
-                <div className="b2bpartner-RequirementsTab-form-group">
-                  <label>Languages</label>
-                  <div className="b2bpartner-RequirementsTab-languages-selection">
-                    {[
-                      "ENGLISH",
-                      "ARABIC",
-                      "HINDI",
-                      "URDU",
-                      "FRENCH",
-                      "SPANISH",
-                    ].map((language) => (
-                      <label
-                        key={language}
-                        className="b2bpartner-RequirementsTab-language-checkbox"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={quotationForm.availability.driverDetails.languages.includes(
-                            language,
-                          )}
-                          onChange={() => {
-                            if (
-                              quotationForm.availability.driverDetails.languages.includes(
-                                language,
-                              )
-                            ) {
-                              removeLanguage(language);
-                            } else {
-                              addLanguage(language);
-                            }
-                          }}
-                        />
-                        <span>{language}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="b2bpartner-RequirementsTab-form-section">
-                <h4>Terms & Conditions</h4>
-                <div className="b2bpartner-RequirementsTab-form-row">
-                  <select
-                    value={quotationForm.terms.paymentTerms}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        terms: { ...prev.terms, paymentTerms: e.target.value },
-                      }))
-                    }
-                  >
-                    <option value="MONTHLY">Monthly</option>
-                    <option value="QUARTERLY">Quarterly</option>
-                    <option value="ANNUALLY">Annually</option>
-                  </select>
-                  <input
-                    type="number"
-                    placeholder="Contract Duration (months)"
-                    value={quotationForm.terms.contractDuration}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        terms: {
-                          ...prev.terms,
-                          contractDuration: parseInt(e.target.value),
-                        },
-                      }))
-                    }
-                    min="1"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Notice Period (days)"
-                    value={quotationForm.terms.noticePeriod}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        terms: {
-                          ...prev.terms,
-                          noticePeriod: parseInt(e.target.value),
-                        },
-                      }))
-                    }
-                    min="1"
-                  />
-                </div>
-                <div className="b2bpartner-RequirementsTab-form-row">
-                  <label className="b2bpartner-RequirementsTab-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={quotationForm.terms.maintenanceIncluded}
-                      onChange={(e) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          terms: {
-                            ...prev.terms,
-                            maintenanceIncluded: e.target.checked,
-                          },
-                        }))
-                      }
-                    />
-                    Maintenance Included
-                  </label>
-                  <label className="b2bpartner-RequirementsTab-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={quotationForm.terms.insuranceIncluded}
-                      onChange={(e) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          terms: {
-                            ...prev.terms,
-                            insuranceIncluded: e.target.checked,
-                          },
-                        }))
-                      }
-                    />
-                    Insurance Included
-                  </label>
-                </div>
-              </div>
-
-              <div className="b2bpartner-RequirementsTab-form-section">
-                <h4>Additional Information</h4>
-                <div className="b2bpartner-RequirementsTab-form-row">
-                  <input
-                    type="date"
-                    placeholder="Available From"
-                    value={quotationForm.availability.availableFrom}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        availability: {
-                          ...prev.availability,
-                          availableFrom: e.target.value,
-                        },
-                      }))
-                    }
-                    required
-                  />
-                  <input
-                    type="date"
-                    placeholder="Quotation Valid Until"
-                    value={quotationForm.validUntil}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        validUntil: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="b2bpartner-RequirementsTab-form-group">
-                  <textarea
-                    placeholder="Additional message or special notes..."
-                    value={quotationForm.message}
-                    onChange={(e) =>
-                      setQuotationForm((prev) => ({
-                        ...prev,
-                        message: e.target.value,
-                      }))
-                    }
-                    rows={4}
-                  />
-                </div>
-              </div>
-
-              <div className="b2bpartner-RequirementsTab-modal-actions">
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "flex-end",
+                }}
+              >
                 <button
-                  type="button"
-                  className="b2bpartner-RequirementsTab-btn b2bpartner-RequirementsTab-btn-secondary"
-                  onClick={() => setShowQuotationModal(false)}
+                  onClick={() => {
+                    setShowNotifyModal(false);
+                    setSelectedResponseForNotify(null);
+                    setNotifyMessage("");
+                  }}
+                  style={{
+                    padding: "10px 20px",
+                    backgroundColor: "#f1f5f9",
+                    color: "#374151",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                  }}
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="b2bpartner-RequirementsTab-btn b2bpartner-RequirementsTab-btn-primary"
-                  disabled={loading}
+                  onClick={handleNotifyVehicleAdded}
+                  disabled={notifyingVehicle}
+                  style={{
+                    padding: "10px 20px",
+                    backgroundColor: "#10b981",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: notifyingVehicle ? "not-allowed" : "pointer",
+                    fontWeight: "500",
+                    opacity: notifyingVehicle ? 0.7 : 1,
+                  }}
                 >
-                  {loading ? "Submitting..." : "Send Quotation"}
+                  {notifyingVehicle ? "Sending..." : "Send Notification"}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
@@ -1351,11 +1381,306 @@ function RequirementsView() {
                 <button
                   className="b2bpartner-RequirementsTab-btn b2bpartner-RequirementsTab-btn-primary"
                   onClick={() => {
-                    setSelectedRequirement(null);
-                    handleCreateQuotation(selectedRequirement);
+                    handleOpenResponseModal(selectedRequirement);
                   }}
                 >
-                  Send Quotation
+                  Respond to Requirement
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Response Modal */}
+      {showResponseModal && selectedRequirement && (
+        <div className="b2bpartner-RequirementsTab-modal-overlay">
+          <div
+            className="b2bpartner-RequirementsTab-modal"
+            style={{ maxWidth: "600px" }}
+          >
+            <div className="b2bpartner-RequirementsTab-modal-header">
+              <h3>Respond to Requirement</h3>
+              <button
+                className="b2bpartner-RequirementsTab-close-btn"
+                onClick={() => {
+                  setShowResponseModal(false);
+                  setSelectedRequirement(null);
+                }}
+              >
+                x
+              </button>
+            </div>
+            <div className="b2bpartner-RequirementsTab-modal-content">
+              <div
+                className="b2bpartner-RequirementsTab-response-info"
+                style={{
+                  marginBottom: "20px",
+                  padding: "15px",
+                  backgroundColor: "#f8fafc",
+                  borderRadius: "8px",
+                }}
+              >
+                <h4 style={{ margin: "0 0 10px 0", color: "#1e293b" }}>
+                  {selectedRequirement.title}
+                </h4>
+                <p style={{ margin: 0, fontSize: "14px", color: "#64748b" }}>
+                  {selectedRequirement.corporateId?.companyName} |{" "}
+                  {selectedRequirement.routeInfo?.fromLocation} to{" "}
+                  {selectedRequirement.routeInfo?.toLocation}
+                </p>
+              </div>
+
+              <div
+                className="b2bpartner-RequirementsTab-form-group"
+                style={{ marginBottom: "20px" }}
+              >
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "500",
+                    color: "#374151",
+                  }}
+                >
+                  Response Type
+                </label>
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "10px 15px",
+                      border:
+                        responseForm.responseType === "INTERESTED"
+                          ? "2px solid #10b981"
+                          : "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      backgroundColor:
+                        responseForm.responseType === "INTERESTED"
+                          ? "#f0fdf4"
+                          : "white",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="responseType"
+                      value="INTERESTED"
+                      checked={responseForm.responseType === "INTERESTED"}
+                      onChange={(e) =>
+                        setResponseForm({
+                          ...responseForm,
+                          responseType: e.target.value,
+                        })
+                      }
+                    />
+                    <span>Interested</span>
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "10px 15px",
+                      border:
+                        responseForm.responseType === "WILL_ADD_VEHICLE"
+                          ? "2px solid #3b82f6"
+                          : "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      backgroundColor:
+                        responseForm.responseType === "WILL_ADD_VEHICLE"
+                          ? "#eff6ff"
+                          : "white",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="responseType"
+                      value="WILL_ADD_VEHICLE"
+                      checked={responseForm.responseType === "WILL_ADD_VEHICLE"}
+                      onChange={(e) =>
+                        setResponseForm({
+                          ...responseForm,
+                          responseType: e.target.value,
+                        })
+                      }
+                    />
+                    <span>Will Add Vehicle</span>
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "10px 15px",
+                      border:
+                        responseForm.responseType === "NOT_INTERESTED"
+                          ? "2px solid #ef4444"
+                          : "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      backgroundColor:
+                        responseForm.responseType === "NOT_INTERESTED"
+                          ? "#fef2f2"
+                          : "white",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="responseType"
+                      value="NOT_INTERESTED"
+                      checked={responseForm.responseType === "NOT_INTERESTED"}
+                      onChange={(e) =>
+                        setResponseForm({
+                          ...responseForm,
+                          responseType: e.target.value,
+                        })
+                      }
+                    />
+                    <span>Not Interested</span>
+                  </label>
+                </div>
+              </div>
+
+              {responseForm.responseType === "WILL_ADD_VEHICLE" && (
+                <>
+                  <div
+                    className="b2bpartner-RequirementsTab-form-group"
+                    style={{ marginBottom: "15px" }}
+                  >
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "8px",
+                        fontWeight: "500",
+                        color: "#374151",
+                      }}
+                    >
+                      Estimated Availability Date
+                    </label>
+                    <input
+                      type="date"
+                      value={responseForm.estimatedAvailability}
+                      onChange={(e) =>
+                        setResponseForm({
+                          ...responseForm,
+                          estimatedAvailability: e.target.value,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                      }}
+                    />
+                  </div>
+                  <div
+                    className="b2bpartner-RequirementsTab-form-group"
+                    style={{ marginBottom: "15px" }}
+                  >
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "8px",
+                        fontWeight: "500",
+                        color: "#374151",
+                      }}
+                    >
+                      Vehicle Details (Optional)
+                    </label>
+                    <textarea
+                      value={responseForm.vehicleDetails}
+                      onChange={(e) =>
+                        setResponseForm({
+                          ...responseForm,
+                          vehicleDetails: e.target.value,
+                        })
+                      }
+                      placeholder="Describe the vehicle you plan to add (e.g., make, model, capacity, features)"
+                      rows={3}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        resize: "vertical",
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div
+                className="b2bpartner-RequirementsTab-form-group"
+                style={{ marginBottom: "20px" }}
+              >
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "500",
+                    color: "#374151",
+                  }}
+                >
+                  Message to Corporate
+                </label>
+                <textarea
+                  value={responseForm.message}
+                  onChange={(e) =>
+                    setResponseForm({
+                      ...responseForm,
+                      message: e.target.value,
+                    })
+                  }
+                  placeholder={
+                    responseForm.responseType === "INTERESTED"
+                      ? "I am interested in this requirement and can provide the requested vehicles..."
+                      : responseForm.responseType === "WILL_ADD_VEHICLE"
+                        ? "I will add this type of vehicle to my fleet soon..."
+                        : "Thank you for the opportunity, but I cannot fulfill this requirement because..."
+                  }
+                  rows={4}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              <div
+                className="b2bpartner-RequirementsTab-modal-actions"
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  className="b2bpartner-RequirementsTab-btn b2bpartner-RequirementsTab-btn-secondary"
+                  onClick={() => {
+                    setShowResponseModal(false);
+                    setSelectedRequirement(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="b2bpartner-RequirementsTab-btn b2bpartner-RequirementsTab-btn-primary"
+                  onClick={handleSubmitResponse}
+                  disabled={submittingResponse}
+                  style={{ opacity: submittingResponse ? 0.7 : 1 }}
+                >
+                  {submittingResponse ? "Submitting..." : "Submit Response"}
                 </button>
               </div>
             </div>

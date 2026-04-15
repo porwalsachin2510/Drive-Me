@@ -278,21 +278,32 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
   };
 
   return (
-    <div className="b2b-modal-overlay" onClick={onClose}>
-      <div className="b2b-add-route-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="b2b-modal-header">
+    <div className="drivemego-btobarm-b2b-modal-overlay" onClick={onClose}>
+      <div
+        className="drivemego-btobarm-b2b-add-route-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="drivemego-btobarm-b2b-modal-header">
           <h2>Add New Route</h2>
-          <button className="b2b-modal-close" onClick={onClose}>
+          <button
+            className="drivemego-btobarm-b2b-modal-close"
+            onClick={onClose}
+          >
             X
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="b2b-route-form">
+        <form
+          onSubmit={handleSubmit}
+          className="drivemego-btobarm-b2b-route-form"
+        >
           {/* Contract & Vehicle Selection */}
-          <div className="b2b-form-section">
-            <h3 className="b2b-section-title">Contract & Vehicle</h3>
-            <div className="b2b-form-row">
-              <div className="b2b-form-group">
+          <div className="drivemego-btobarm-b2b-form-section">
+            <h3 className="drivemego-btobarm-b2b-section-title">
+              Contract & Vehicle
+            </h3>
+            <div className="drivemego-btobarm-b2b-form-row">
+              <div className="drivemego-btobarm-b2b-form-group">
                 <label>Select Contract *</label>
                 <select
                   name="contractId"
@@ -310,7 +321,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                 </select>
               </div>
 
-              <div className="b2b-form-group">
+              <div className="drivemego-btobarm-b2b-form-group">
                 <label>Select Vehicle *</label>
                 <select
                   name="assignedVehicleId"
@@ -334,10 +345,12 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
           </div>
 
           {/* Basic Route Information */}
-          <div className="b2b-form-section">
-            <h3 className="b2b-section-title">Basic Route Information</h3>
-            <div className="b2b-form-row">
-              <div className="b2b-form-group">
+          <div className="drivemego-btobarm-b2b-form-section">
+            <h3 className="drivemego-btobarm-b2b-section-title">
+              Basic Route Information
+            </h3>
+            <div className="drivemego-btobarm-b2b-form-row">
+              <div className="drivemego-btobarm-b2b-form-group">
                 <label>From Location *</label>
                 <input
                   type="text"
@@ -348,7 +361,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                   required
                 />
               </div>
-              <div className="b2b-form-group">
+              <div className="drivemego-btobarm-b2b-form-group">
                 <label>To Location *</label>
                 <input
                   type="text"
@@ -361,8 +374,8 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
               </div>
             </div>
 
-            <div className="b2b-form-row">
-              <div className="b2b-form-group">
+            <div className="drivemego-btobarm-b2b-form-row">
+              <div className="drivemego-btobarm-b2b-form-group">
                 <label>Route Start Date *</label>
                 <input
                   type="date"
@@ -372,7 +385,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                   required
                 />
               </div>
-              <div className="b2b-form-group">
+              <div className="drivemego-btobarm-b2b-form-group">
                 <label>Route End Date (Optional)</label>
                 <input
                   type="date"
@@ -383,14 +396,14 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
               </div>
             </div>
 
-            <div className="b2b-form-group">
+            <div className="drivemego-btobarm-b2b-form-group">
               <label>Available Days *</label>
-              <div className="b2b-days-selector">
+              <div className="drivemego-btobarm-b2b-days-selector">
                 {daysOfWeek.map((day) => (
                   <button
                     key={day}
                     type="button"
-                    className={`b2b-day-btn ${formData.availableDays.includes(day) ? "selected" : ""}`}
+                    className={`drivemego-btobarm-b2b-day-btn ${formData.availableDays.includes(day) ? "drivemego-btobarm-selected" : ""}`}
                     onClick={() => handleDayChange(day)}
                   >
                     {day}
@@ -401,23 +414,26 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
           </div>
 
           {/* Trip Times */}
-          <div className="b2b-form-section">
-            <h3 className="b2b-section-title">Trip Times</h3>
-            <p className="b2b-section-desc">
+          <div className="drivemego-btobarm-b2b-form-section">
+            <h3 className="drivemego-btobarm-b2b-section-title">Trip Times</h3>
+            <p className="drivemego-btobarm-b2b-section-desc">
               Add multiple departure times for this route. Each time will create
               separate trips for employee transport.
             </p>
 
             {formData.tripTimes.map((trip, tripIndex) => (
-              <div key={tripIndex} className="b2b-trip-time-item">
-                <div className="b2b-trip-header">
-                  <span className="b2b-trip-number">
+              <div
+                key={tripIndex}
+                className="drivemego-btobarm-b2b-trip-time-item"
+              >
+                <div className="drivemego-btobarm-b2b-trip-header">
+                  <span className="drivemego-btobarm-b2b-trip-number">
                     Trip {trip.tripNumber}
                   </span>
                   {formData.tripTimes.length > 1 && (
                     <button
                       type="button"
-                      className="b2b-remove-trip-btn"
+                      className="drivemego-btobarm-b2b-remove-trip-btn"
                       onClick={() => removeTripTime(tripIndex)}
                     >
                       X
@@ -425,8 +441,8 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                   )}
                 </div>
 
-                <div className="b2b-form-row">
-                  <div className="b2b-form-group">
+                <div className="drivemego-btobarm-b2b-form-row">
+                  <div className="drivemego-btobarm-b2b-form-group">
                     <label>Departure Time *</label>
                     <input
                       type="time"
@@ -441,7 +457,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                       required
                     />
                   </div>
-                  <div className="b2b-form-group">
+                  <div className="drivemego-btobarm-b2b-form-group">
                     <label>Trip Type</label>
                     <select
                       value={trip.tripType}
@@ -456,8 +472,8 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                 </div>
 
                 {trip.tripType === "Round Trip" && (
-                  <div className="b2b-form-row">
-                    <div className="b2b-form-group">
+                  <div className="drivemego-btobarm-b2b-form-row">
+                    <div className="drivemego-btobarm-b2b-form-group">
                       <label>Return Time *</label>
                       <input
                         type="time"
@@ -471,7 +487,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                         }
                         required
                       />
-                      <small className="b2b-form-help">
+                      <small className="drivemego-btobarm-b2b-form-help">
                         Time when vehicle returns from destination
                       </small>
                     </div>
@@ -479,24 +495,27 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                 )}
 
                 {/* Outbound Stop Points */}
-                <div className="b2b-stop-points-section">
-                  <div className="b2b-stop-header">
-                    <span className="b2b-stop-title outbound">
+                <div className="drivemego-btobarm-b2b-stop-points-section">
+                  <div className="drivemego-btobarm-b2b-stop-header">
+                    <span className="drivemego-btobarm-b2b-stop-title outbound">
                       Outbound Stops: {formData.fromLocation || "Start"} →{" "}
                       {formData.toLocation || "End"}
                     </span>
                     <button
                       type="button"
-                      className="b2b-add-stop-btn"
+                      className="drivemego-btobarm-b2b-add-stop-btn"
                       onClick={() => addStopPointToTrip(tripIndex, "outbound")}
                     >
                       + Add Outbound Stop
                     </button>
                   </div>
-                  <div className="b2b-stop-points-list">
+                  <div className="drivemego-btobarm-b2b-stop-points-list">
                     {trip.outboundStopPoints.map((stop, stopIndex) => (
-                      <div key={stopIndex} className="b2b-stop-point-row">
-                        <span className="b2b-stop-index outbound">
+                      <div
+                        key={stopIndex}
+                        className="drivemego-btobarm-b2b-stop-point-row"
+                      >
+                        <span className="drivemego-btobarm-b2b-stop-index drivemego-btobarm-outbound">
                           {stopIndex + 1}
                         </span>
                         <input
@@ -529,7 +548,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                         {trip.outboundStopPoints.length > 2 && (
                           <button
                             type="button"
-                            className="b2b-remove-stop-btn"
+                            className="drivemego-btobarm-b2b-remove-stop-btn"
                             onClick={() =>
                               removeStopPointFromTrip(
                                 tripIndex,
@@ -548,24 +567,24 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
 
                 {/* Return Stop Points (only for Round Trip) */}
                 {trip.tripType === "Round Trip" && (
-                  <div className="b2b-stop-points-section">
-                    <div className="b2b-stop-header">
-                      <span className="b2b-stop-title return">
+                  <div className="drivemego-btobarm-b2b-stop-points-section">
+                    <div className="drivemego-btobarm-b2b-stop-header">
+                      <span className="drivemego-btobarm-b2b-stop-title return">
                         Return Stops: {formData.toLocation || "End"} →{" "}
                         {formData.fromLocation || "Start"}
                       </span>
                       <button
                         type="button"
-                        className="b2b-add-stop-btn return"
+                        className="drivemego-btobarm-b2b-add-stop-btn return"
                         onClick={() => addStopPointToTrip(tripIndex, "return")}
                       >
                         + Add Return Stop
                       </button>
                     </div>
-                    <div className="b2b-stop-points-list">
+                    <div className="drivemego-btobarm-b2b-stop-points-list">
                       {trip.returnStopPoints.map((stop, stopIndex) => (
                         <div key={stopIndex} className="b2b-stop-point-row">
-                          <span className="b2b-stop-index return">
+                          <span className="drivemego-btobarm-b2b-stop-index return">
                             {stopIndex + 1}
                           </span>
                           <input
@@ -598,7 +617,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                           {trip.returnStopPoints.length > 2 && (
                             <button
                               type="button"
-                              className="b2b-remove-stop-btn"
+                              className="drivemego-btobarm-b2b-remove-stop-btn"
                               onClick={() =>
                                 removeStopPointFromTrip(
                                   tripIndex,
@@ -620,7 +639,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
 
             <button
               type="button"
-              className="b2b-add-trip-btn"
+              className="drivemego-btobarm-b2b-add-trip-btn"
               onClick={addTripTime}
             >
               + Add Another Trip Time
@@ -628,10 +647,12 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
           </div>
 
           {/* Additional Details */}
-          <div className="b2b-form-section">
-            <h3 className="b2b-section-title">Additional Details</h3>
-            <div className="b2b-form-row">
-              <div className="b2b-form-group">
+          <div className="drivemego-btobarm-b2b-form-section">
+            <h3 className="drivemego-btobarm-b2b-section-title">
+              Additional Details
+            </h3>
+            <div className="drivemego-btobarm-b2b-form-row">
+              <div className="drivemego-btobarm-b2b-form-group">
                 <label>Total Distance (KM)</label>
                 <input
                   type="number"
@@ -641,7 +662,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                   onChange={handleChange}
                 />
               </div>
-              <div className="b2b-form-group">
+              <div className="drivemego-btobarm-b2b-form-group">
                 <label>Estimated Duration</label>
                 <input
                   type="text"
@@ -653,7 +674,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
               </div>
             </div>
 
-            <div className="b2b-form-group">
+            <div className="drivemego-btobarm-b2b-form-group">
               <label>Route Notes</label>
               <textarea
                 name="routeNotes"
@@ -666,11 +687,19 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
           </div>
 
           {/* Actions */}
-          <div className="b2b-form-actions">
-            <button type="button" className="b2b-cancel-btn" onClick={onClose}>
+          <div className="drivemego-btobarm-b2b-form-actions">
+            <button
+              type="button"
+              className="drivemego-btobarm-b2b-cancel-btn"
+              onClick={onClose}
+            >
               Cancel
             </button>
-            <button type="submit" className="b2b-submit-btn" disabled={loading}>
+            <button
+              type="submit"
+              className="drivemego-btobarm-b2b-submit-btn"
+              disabled={loading}
+            >
               {loading ? "Creating..." : "Assign Route"}
             </button>
           </div>

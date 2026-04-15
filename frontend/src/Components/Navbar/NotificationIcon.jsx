@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef, useContext } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { 
-  fetchNotifications, 
-  markNotificationAsRead, 
+import {
+  fetchNotifications,
+  markNotificationAsRead,
   markAllNotificationsAsRead,
   addRealtimeNotification,
-  getUnreadNotificationCount
+  getUnreadNotificationCount,
 } from "../../Redux/slices/notificationSlice";
 import { SocketContext } from "../../context/SocketContext";
 import { getSocket } from "../../utils/socket";
@@ -17,11 +17,13 @@ import "./NotificationIcon.css";
 function NotificationIcon() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { notifications, unreadCount, loading } = useSelector((state) => state.notifications);
+  const { notifications, unreadCount, loading } = useSelector(
+    (state) => state.notifications,
+  );
   const { user } = useSelector((state) => state.auth);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
-  
+
   // Use SocketContext for real-time connection status
   const socketContext = useContext(SocketContext);
 
@@ -37,22 +39,22 @@ function NotificationIcon() {
   useEffect(() => {
     // Get socket from context or direct socket utility
     const socket = socketContext?.socket || getSocket();
-    
+
     if (socket && user && user._id) {
       // Join user's notification room
-      socket.emit('join_user_room', user._id);
-      socket.emit('join-notification-room', user._id);
-      
+      socket.emit("join_user_room", user._id);
+      socket.emit("join-notification-room", user._id);
+
       // Listen for new notifications - real-time updates
       const handleNewNotification = (notification) => {
         dispatch(addRealtimeNotification(notification));
         dispatch(getUnreadNotificationCount(user._id));
-        
+
         // Show browser notification if permission granted
-        if (Notification.permission === 'granted') {
-          new Notification(notification.title || 'New Notification', {
-            body: notification.message || 'You have a new notification',
-            icon: '/favicon.ico',
+        if (Notification.permission === "granted") {
+          new Notification(notification.title || "New Notification", {
+            body: notification.message || "You have a new notification",
+            icon: "/favicon.ico",
             tag: notification._id,
           });
         }
@@ -61,8 +63,8 @@ function NotificationIcon() {
       const handleWalletUpdate = (data) => {
         const notification = {
           _id: `wallet_${Date.now()}`,
-          type: 'WALLET_UPDATED',
-          title: 'Wallet Updated',
+          type: "WALLET_UPDATED",
+          title: "Wallet Updated",
           message: data.message || `Your wallet balance has been updated`,
           isRead: false,
           createdAt: new Date().toISOString(),
@@ -74,8 +76,8 @@ function NotificationIcon() {
       const handleTripUpdate = (data) => {
         const notification = {
           _id: `trip_${Date.now()}`,
-          type: 'TRIP_UPDATE',
-          title: data.title || 'Trip Update',
+          type: "TRIP_UPDATE",
+          title: data.title || "Trip Update",
           message: data.message,
           isRead: false,
           createdAt: new Date().toISOString(),
@@ -87,8 +89,8 @@ function NotificationIcon() {
       const handleBookingUpdate = (data) => {
         const notification = {
           _id: `booking_${Date.now()}`,
-          type: data.type || 'BOOKING_UPDATE',
-          title: data.title || 'Booking Update',
+          type: data.type || "BOOKING_UPDATE",
+          title: data.title || "Booking Update",
           message: data.message,
           isRead: false,
           createdAt: new Date().toISOString(),
@@ -98,36 +100,36 @@ function NotificationIcon() {
       };
 
       // Register all event listeners
-      socket.on('new_notification', handleNewNotification);
-      socket.on('new-notification', handleNewNotification);
-      socket.on('wallet_update', handleWalletUpdate);
-      socket.on('wallet-updated', handleWalletUpdate);
-      socket.on('trip_update', handleTripUpdate);
-      socket.on('trip-started', handleTripUpdate);
-      socket.on('trip-completed', handleTripUpdate);
-      socket.on('booking-accepted', handleBookingUpdate);
-      socket.on('booking-rejected', handleBookingUpdate);
-      socket.on('driver-assigned', handleBookingUpdate);
+      socket.on("new_notification", handleNewNotification);
+      socket.on("new-notification", handleNewNotification);
+      socket.on("wallet_update", handleWalletUpdate);
+      socket.on("wallet-updated", handleWalletUpdate);
+      socket.on("trip_update", handleTripUpdate);
+      socket.on("trip-started", handleTripUpdate);
+      socket.on("trip-completed", handleTripUpdate);
+      socket.on("booking-accepted", handleBookingUpdate);
+      socket.on("booking-rejected", handleBookingUpdate);
+      socket.on("driver-assigned", handleBookingUpdate);
 
       // Cleanup listeners on unmount
       return () => {
-        socket.off('new_notification', handleNewNotification);
-        socket.off('new-notification', handleNewNotification);
-        socket.off('wallet_update', handleWalletUpdate);
-        socket.off('wallet-updated', handleWalletUpdate);
-        socket.off('trip_update', handleTripUpdate);
-        socket.off('trip-started', handleTripUpdate);
-        socket.off('trip-completed', handleTripUpdate);
-        socket.off('booking-accepted', handleBookingUpdate);
-        socket.off('booking-rejected', handleBookingUpdate);
-        socket.off('driver-assigned', handleBookingUpdate);
+        socket.off("new_notification", handleNewNotification);
+        socket.off("new-notification", handleNewNotification);
+        socket.off("wallet_update", handleWalletUpdate);
+        socket.off("wallet-updated", handleWalletUpdate);
+        socket.off("trip_update", handleTripUpdate);
+        socket.off("trip-started", handleTripUpdate);
+        socket.off("trip-completed", handleTripUpdate);
+        socket.off("booking-accepted", handleBookingUpdate);
+        socket.off("booking-rejected", handleBookingUpdate);
+        socket.off("driver-assigned", handleBookingUpdate);
       };
     }
   }, [dispatch, user, socketContext?.socket]);
 
   useEffect(() => {
     // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
+    if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
   }, []);
@@ -140,41 +142,61 @@ function NotificationIcon() {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
   const handleNotificationClick = (notification) => {
     if (!notification.isRead) {
-      dispatch(markNotificationAsRead({ 
-        notificationId: notification._id, 
-        userId: user._id 
-      }));
+      dispatch(
+        markNotificationAsRead({
+          notificationId: notification._id,
+          userId: user._id,
+        }),
+      );
     }
-    
+
     // Navigate based on notification type
     switch (notification.type) {
-      case 'TRIP_REMINDER':
-      case 'TRIP_STARTED':
-      case 'TRIP_COMPLETED':
-        navigate('/commuter/my-bookings');
+      case "TRIP_REMINDER":
+      case "TRIP_STARTED":
+      case "TRIP_COMPLETED":
+      case "LATE_TRIP_START":
+        navigate("/commuter/my-bookings");
         break;
-      case 'WALLET_UPDATED':
-      case 'PAYMENT_COMPLETED':
-        navigate('/wallet');
+      case "WALLET_UPDATED":
+      case "PAYMENT_COMPLETED":
+      case "PAYMENT_SUBMITTED":
+      case "PAYMENT_RECEIVED":
+      case "PAYMENT_VERIFIED":
+      case "PAYMENT_REJECTED":
+        navigate("/wallet");
         break;
-      case 'SUBSCRIPTION_RENEWAL':
-        navigate('/commuter/my-bookings');
+      case "SUBSCRIPTION_RENEWAL":
+        navigate("/commuter/my-bookings");
         break;
-      case 'EMERGENCY':
-        navigate('/commuter/support');
+      case "QUOTATION_REQUEST":
+      case "QUOTATION_RECEIVED":
+      case "QUOTATION_ACCEPTED":
+      case "QUOTATION_REJECTED":
+        navigate("/b2b/quotations");
+        break;
+      case "CONTRACT_ACTIVATED":
+      case "CONTRACT_UPDATE":
+      case "ASSIGNMENT_UPDATED":
+      case "DRIVER_ASSIGNED":
+      case "VEHICLE_CHANGED":
+        navigate("/corporate/contracts");
+        break;
+      case "EMERGENCY":
+        navigate("/commuter/support");
         break;
       default:
-        navigate('/notifications');
+        navigate("/notifications");
     }
-    
+
     setShowDropdown(false);
   };
 
@@ -183,18 +205,18 @@ function NotificationIcon() {
   };
 
   const handleViewAll = () => {
-    navigate('/notifications');
+    navigate("/notifications");
     setShowDropdown(false);
   };
 
   const formatTime = (timestamp) => {
-    if (!timestamp) return 'Just now';
+    if (!timestamp) return "Just now";
     const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return 'Just now';
+    if (isNaN(date.getTime())) return "Just now";
     const now = new Date();
     const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-    
-    if (isNaN(diffInMinutes) || diffInMinutes < 1) return 'Just now';
+
+    if (isNaN(diffInMinutes) || diffInMinutes < 1) return "Just now";
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
@@ -202,25 +224,39 @@ function NotificationIcon() {
 
   const getNotificationIcon = (type) => {
     const icons = {
-      'TRIP_REMINDER': '⏰',
-      'TRIP_STARTED': '🚌',
-      'TRIP_COMPLETED': '✅',
-      'TRIP_DELAY': '⏱️',
-      'WALLET_UPDATED': '💰',
-      'PAYMENT_COMPLETED': '💳',
-      'SUBSCRIPTION_RENEWAL': '🔄',
-      'EMERGENCY': '🚨',
-      'ROUTE_REQUEST': '📍',
-      'CORPORATE_UPDATE': '🏢',
+      TRIP_REMINDER: "⏰",
+      TRIP_STARTED: "🚌",
+      TRIP_COMPLETED: "✅",
+      TRIP_DELAY: "⏱️",
+      LATE_TRIP_START: "⚠️",
+      WALLET_UPDATED: "💰",
+      PAYMENT_COMPLETED: "💳",
+      PAYMENT_SUBMITTED: "📤",
+      PAYMENT_RECEIVED: "💵",
+      PAYMENT_VERIFIED: "✅",
+      PAYMENT_REJECTED: "❌",
+      SUBSCRIPTION_RENEWAL: "🔄",
+      EMERGENCY: "🚨",
+      ROUTE_REQUEST: "📍",
+      CORPORATE_UPDATE: "🏢",
+      QUOTATION_REQUEST: "📋",
+      QUOTATION_RECEIVED: "📩",
+      QUOTATION_ACCEPTED: "✅",
+      QUOTATION_REJECTED: "❌",
+      CONTRACT_ACTIVATED: "🎉",
+      CONTRACT_UPDATE: "📝",
+      ASSIGNMENT_UPDATED: "🔄",
+      DRIVER_ASSIGNED: "👤",
+      VEHICLE_CHANGED: "🚗",
     };
-    return icons[type] || '📢';
+    return icons[type] || "📢";
   };
 
   const recentNotifications = notifications.slice(0, 5);
 
   return (
     <div className="notification-icon-container" ref={dropdownRef}>
-      <button 
+      <button
         className="notification-button"
         onClick={() => setShowDropdown(!showDropdown)}
       >
@@ -242,7 +278,9 @@ function NotificationIcon() {
             />
           </svg>
           {unreadCount > 0 && (
-            <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+            <span className="notification-badge">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
           )}
         </div>
       </button>
@@ -252,12 +290,15 @@ function NotificationIcon() {
           <div className="dropdown-header">
             <h3>Notifications</h3>
             {unreadCount > 0 && (
-              <button className="mark-all-read-btn" onClick={handleMarkAllAsRead}>
+              <button
+                className="mark-all-read-btn"
+                onClick={handleMarkAllAsRead}
+              >
                 Mark all as read
               </button>
             )}
           </div>
-          
+
           <div className="notification-list">
             {loading ? (
               <div className="loading-notifications">
@@ -268,7 +309,7 @@ function NotificationIcon() {
               recentNotifications.map((notification) => (
                 <div
                   key={notification._id}
-                  className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
+                  className={`notification-item ${!notification.isRead ? "unread" : ""}`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="notification-icon-wrapper">
@@ -277,8 +318,12 @@ function NotificationIcon() {
                     </span>
                   </div>
                   <div className="notification-content">
-                    <div className="notification-title">{notification.title}</div>
-                    <div className="notification-message">{notification.message}</div>
+                    <div className="notification-title">
+                      {notification.title}
+                    </div>
+                    <div className="notification-message">
+                      {notification.message}
+                    </div>
                     <div className="notification-time">
                       {formatTime(notification.createdAt)}
                     </div>
@@ -295,7 +340,7 @@ function NotificationIcon() {
               </div>
             )}
           </div>
-          
+
           {notifications.length > 0 && (
             <div className="dropdown-footer">
               <button className="view-all-btn" onClick={handleViewAll}>

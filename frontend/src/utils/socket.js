@@ -60,7 +60,7 @@ export const setupSocketListeners = (userRole, userId, dispatch) => {
       type: 'wallet/updateWalletBalance',
       payload: data.balance
     });
-    
+
     dispatch({
       type: 'notifications/addRealtimeNotification',
       payload: {
@@ -85,7 +85,13 @@ export const setupSocketListeners = (userRole, userId, dispatch) => {
     case 'B2B_PARTNER':
       setupB2BPartnerListeners(dispatch);
       break;
+    case 'CORPORATE':
+      setupCorporateListeners(dispatch);
+      break;
     case 'DRIVER':
+    case 'B2B_PARTNER_DRIVER':
+    case 'CORPORATE_DRIVER':
+    case 'B2C_PARTNER_DRIVER':
       setupDriverListeners(dispatch);
       break;
     case 'ADMIN':
@@ -215,7 +221,233 @@ const setupB2CPartnerListeners = (dispatch) => {
   });
 };
 
+const setupCorporateListeners = (dispatch) => {
+  // Quotation response from B2B Partner
+  socket.on('quotation_received', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `quotation_received_${Date.now()}`,
+        type: 'QUOTATION_RECEIVED',
+        title: data.title || 'Quotation Received',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Quotation rejected by B2B Partner
+  socket.on('quotation_rejected', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `quotation_rejected_${Date.now()}`,
+        type: 'QUOTATION_REJECTED',
+        title: data.title || 'Quotation Request Rejected',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Payment verified by Admin
+  socket.on('payment_verified', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `payment_verified_${Date.now()}`,
+        type: 'PAYMENT_VERIFIED',
+        title: data.title || 'Payment Verified',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Payment rejected by Admin
+  socket.on('payment_rejected', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `payment_rejected_${Date.now()}`,
+        type: 'PAYMENT_REJECTED',
+        title: data.title || 'Payment Rejected',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Contract activated
+  socket.on('contract_activated', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `contract_activated_${Date.now()}`,
+        type: 'CONTRACT_ACTIVATED',
+        title: data.title || 'Contract Activated',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Assignment updates (driver/vehicle change)
+  socket.on('assignment_updated', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `assignment_${Date.now()}`,
+        type: 'ASSIGNMENT_UPDATED',
+        title: data.title || 'Vehicle Assignment Updated',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Late trip notifications from drivers
+  socket.on('late_trip_start', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `late_trip_${Date.now()}`,
+        type: 'LATE_TRIP_START',
+        title: data.title || 'Driver Started Trip Late',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+};
+
 const setupB2BPartnerListeners = (dispatch) => {
+  // Quotation request from Corporate
+  socket.on('quotation_request', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `quotation_request_${Date.now()}`,
+        type: 'QUOTATION_REQUEST',
+        title: data.title || 'New Quotation Request',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Quotation accepted by Corporate
+  socket.on('quotation_accepted', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `quotation_accepted_${Date.now()}`,
+        type: 'QUOTATION_ACCEPTED',
+        title: data.title || 'Quotation Accepted!',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Quotation rejected by Corporate
+  socket.on('quotation_rejected', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `quotation_rejected_${Date.now()}`,
+        type: 'QUOTATION_REJECTED',
+        title: data.title || 'Quotation Rejected',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Payment submitted by Corporate
+  socket.on('payment_submitted', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `payment_submitted_${Date.now()}`,
+        type: 'PAYMENT_SUBMITTED',
+        title: data.title || 'Payment Submitted',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Payment verified/received
+  socket.on('payment_received', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `payment_received_${Date.now()}`,
+        type: 'PAYMENT_RECEIVED',
+        title: data.title || 'Payment Received',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Contract activated
+  socket.on('contract_activated', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `contract_activated_${Date.now()}`,
+        type: 'CONTRACT_ACTIVATED',
+        title: data.title || 'Contract Activated',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Late trip start notifications (driver is late)
+  socket.on('late_trip_start', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `late_trip_${Date.now()}`,
+        type: 'LATE_TRIP_START',
+        title: data.title || 'Driver Started Trip Late',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
   // Employee notifications
   socket.on('employee_added', (data) => {
     dispatch({
@@ -240,6 +472,22 @@ const setupB2BPartnerListeners = (dispatch) => {
         type: 'CONTRACT_UPDATE',
         title: 'Contract Updated',
         message: data.message,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Assignment updates (driver/vehicle change)
+  socket.on('assignment_updated', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `assignment_${Date.now()}`,
+        type: 'ASSIGNMENT_UPDATED',
+        title: data.title || 'Assignment Updated',
+        message: data.message,
+        metadata: data.metadata,
         isRead: false,
         createdAt: new Date().toISOString(),
       }
@@ -286,6 +534,10 @@ const setupDriverListeners = (dispatch) => {
 };
 
 const setupAdminListeners = (dispatch) => {
+  // Join admin-specific rooms
+  socket.emit('join-admin-room');
+  socket.emit('join_admin_room');
+
   // System notifications
   socket.on('new_user_registration', (data) => {
     dispatch({
@@ -309,6 +561,22 @@ const setupAdminListeners = (dispatch) => {
         type: 'PAYMENT_VERIFICATION',
         title: 'Payment Verification Required',
         message: data.message,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Late trip start notifications
+  socket.on('late_trip_start', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `late_trip_${Date.now()}`,
+        type: 'LATE_TRIP_START',
+        title: data.title || 'Late Trip Start Warning',
+        message: data.message,
+        metadata: data.metadata,
         isRead: false,
         createdAt: new Date().toISOString(),
       }

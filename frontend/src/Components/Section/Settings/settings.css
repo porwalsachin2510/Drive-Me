@@ -1,9 +1,17 @@
-.settings-section {
+.drivemego-cst-settings-section {
   display: flex;
+  flex-direction: column;
   justify-content: center;
+  gap: 10px;
 }
 
-.settings-container {
+.drivemego-cst-settings-section h2{
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.drivemego-cst-settings-container {
   max-width: 800px;
   width: 100%;
   display: flex;
@@ -11,20 +19,20 @@
   gap: 25px;
 }
 
-.settings-group {
+.drivemego-cst-settings-group {
   background-color: white;
   border-radius: 12px;
   padding: 30px;
   border: 1px solid #e5e7eb;
 }
 
-.settings-header {
+.drivemego-cst-settings-header {
   margin-bottom: 25px;
   padding-bottom: 15px;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.settings-header h3 {
+.drivemego-cst-settings-header h3 {
   font-size: 16px;
   font-weight: 700;
   color: #1a1a1a;
@@ -34,33 +42,33 @@
   gap: 8px;
 }
 
-.settings-header p {
+.drivemego-cst-settings-header p {
   font-size: 13px;
   color: #6b7280;
   margin: 0;
 }
 
-.settings-form {
+.drivemego-cst-settings-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.form-group {
+.drivemego-cst-form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.form-group label {
+.drivemego-cst-form-group label {
   font-size: 13px;
   font-weight: 600;
   color: #1a1a1a;
   text-transform: capitalize;
 }
 
-.form-group select,
-.form-group input {
+.drivemego-cst-form-group select,
+.drivemego-cst-form-group input {
   padding: 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -71,19 +79,19 @@
   transition: all 0.3s ease;
 }
 
-.form-group select:hover,
-.form-group input:hover {
+.drivemego-cst-form-group select:hover,
+.drivemego-cst-form-group input:hover {
   border-color: #9ca3af;
 }
 
-.form-group select:focus,
-.form-group input:focus {
+.drivemego-cst-form-group select:focus,
+.drivemego-cst-form-group input:focus {
   outline: none;
   border-color: #E85D5D;
   box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
-.form-group select {
+.drivemego-cst-form-group select {
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231a1a1a' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
@@ -92,19 +100,19 @@
   padding-right: 36px;
 }
 
-.form-row {
+.drivemego-cst-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
-.settings-toggles {
+.drivemego-cst-settings-toggles {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.toggle-item {
+.drivemego-cst-toggle-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -113,20 +121,44 @@
   border-radius: 8px;
 }
 
-.toggle-label {
+.drivemego-cst-toggle-label {
   font-size: 14px;
   font-weight: 600;
   color: #1a1a1a;
   margin-bottom: 4px;
 }
 
-.toggle-description {
+.drivemego-cst-toggle-description {
   font-size: 12px;
   color: #6b7280;
   margin: 0;
 }
 
-.toggle-switch {
+.drivemego-cst-preferences-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drivemego-cst-preference-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.drivemego-cst-preference-item:last-child {
+  border-bottom: none;
+}
+
+.drivemego-cst-pref-label {
+  font-size: 16px;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.drivemego-cst-toggle-switch {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
@@ -140,11 +172,11 @@
   flex-shrink: 0;
 }
 
-.toggle-switch input {
+.drivemego-cst-toggle-switch input {
   display: none;
 }
 
-.toggle-slider {
+.drivemego-cst-toggle-slider {
   width: 24px;
   height: 24px;
   background-color: white;
@@ -155,19 +187,19 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.toggle-switch input:checked + .toggle-slider {
+.drivemego-cst-toggle-switch input:checked + .drivemego-cst-toggle-slider {
   left: 24px;
 }
 
-.toggle-switch input:checked {
+.drivemego-cst-toggle-switch input:checked {
   background-color: #E85D5D;
 }
 
-.toggle-switch:has(input:checked) {
+.drivemego-cst-toggle-switch:has(input:checked) {
   background-color: #E85D5D;
 }
 
-.save-btn {
+.drivemego-cst-save-btn {
   background-color: #1a1a1a;
   color: white;
   border: none;
@@ -185,45 +217,45 @@
   justify-content: center;
 }
 
-.save-btn:hover {
+.drivemego-cst-save-btn:hover {
   background-color: #2d2d2d;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.save-btn:active {
+.drivemego-cst-save-btn:active {
   transform: translateY(0);
 }
 
 /* Tablet */
 @media (max-width: 1199px) {
-  .settings-container {
+  .drivemego-cst-settings-container {
     max-width: 100%;
     gap: 20px;
   }
 
-  .settings-group {
+  .drivemego-cst-settings-group {
     padding: 25px;
   }
 
-  .settings-header {
+  .drivemego-cst-settings-header {
     margin-bottom: 20px;
     padding-bottom: 12px;
   }
 
-  .settings-header h3 {
+  .drivemego-cst-settings-header h3 {
     font-size: 15px;
   }
 
-  .form-row {
+  .drivemego-cst-form-row {
     gap: 15px;
   }
 
-  .toggle-item {
+  .drivemego-cst-toggle-item {
     padding: 12px;
   }
 
-  .save-btn {
+  .drivemego-cst-save-btn {
     align-self: center;
     width: 100%;
     min-width: auto;
@@ -232,66 +264,66 @@
 
 /* Mobile */
 @media (max-width: 767px) {
-  .settings-container {
+  .drivemego-cst-settings-container {
     gap: 15px;
   }
 
-  .settings-group {
+  .drivemego-cst-settings-group {
     padding: 20px;
   }
 
-  .settings-header {
+  .drivemego-cst-settings-header {
     margin-bottom: 15px;
     padding-bottom: 12px;
   }
 
-  .settings-header h3 {
+  .drivemego-cst-settings-header h3 {
     font-size: 14px;
   }
 
-  .settings-header p {
+  .drivemego-cst-settings-header p {
     font-size: 12px;
   }
 
-  .settings-form {
+  .drivemego-cst-settings-form {
     gap: 15px;
   }
 
-  .form-group {
+  .drivemego-cst-form-group {
     gap: 6px;
   }
 
-  .form-group label {
+  .drivemego-cst-form-group label {
     font-size: 12px;
   }
 
-  .form-group select,
-  .form-group input {
+  .drivemego-cst-form-group select,
+  .drivemego-cst-form-group input {
     padding: 10px;
     font-size: 13px;
   }
 
-  .form-row {
+  .drivemego-cst-form-row {
     grid-template-columns: 1fr;
     gap: 15px;
   }
 
-  .settings-toggles {
+  .drivemego-cst-settings-toggles {
     gap: 15px;
   }
 
-  .toggle-item {
+  .drivemego-cst-toggle-item {
     padding: 12px;
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
 
-  .toggle-switch {
+  .drivemego-cst-toggle-switch {
     align-self: flex-end;
   }
 
-  .save-btn {
+  .drivemego-cst-save-btn {
     width: 100%;
     padding: 12px;
     font-size: 13px;

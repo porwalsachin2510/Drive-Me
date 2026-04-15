@@ -2,6 +2,8 @@
 import "./QuotationDetailsModal.css";
 
 const QuotationDetailsModal = ({ quotation, onClose }) => {
+  const currency = quotation.currency || quotation.vehicles?.[0]?.vehicleId?.pricing?.currency || "AED";
+  
   const mapStatus = (status) => {
     const statusMap = {
       REQUESTED: "pending",
@@ -412,14 +414,15 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                         <div className="b2b-quotation-details-breakdown-row">
                           <span>Base Rate:</span>
                           <span>
-                            KWD {(breakdown.baseRental ?? 0).toFixed(2)}
+                            {currency} {(breakdown.baseRental ?? 0).toFixed(2)}
                           </span>
                         </div>
                         {breakdown.driverCharges > 0 && (
                           <div className="b2b-quotation-details-breakdown-row">
                             <span>Driver Charges:</span>
                             <span>
-                              KWD {(breakdown.driverCharges ?? 0).toFixed(2)}
+                              {currency}{" "}
+                              {(breakdown.driverCharges ?? 0).toFixed(2)}
                             </span>
                           </div>
                         )}
@@ -427,7 +430,8 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                           <div className="b2b-quotation-details-breakdown-row">
                             <span>Fuel Charges:</span>
                             <span>
-                              KWD {(breakdown.fuelCharges ?? 0).toFixed(2)}
+                              {currency}{" "}
+                              {(breakdown.fuelCharges ?? 0).toFixed(2)}
                             </span>
                           </div>
                         )}
@@ -438,7 +442,7 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                         <div className="b2b-quotation-details-breakdown-row b2b-quotation-details-subtotal">
                           <span>Subtotal:</span>
                           <span>
-                            KWD {(breakdown.totalAmount ?? 0).toFixed(2)}
+                            {currency} {(breakdown.totalAmount ?? 0).toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -448,7 +452,7 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                 <div className="b2b-quotation-details-total-amount-section">
                   <h3>Total Amount</h3>
                   <p className="b2b-quotation-details-total-amount">
-                    KWD {quotation.quotedPrice.totalAmount.toFixed(2)}
+                    {currency} {quotation.quotedPrice.totalAmount.toFixed(2)}
                   </p>
                 </div>
                 {quotation.responseMessage && (

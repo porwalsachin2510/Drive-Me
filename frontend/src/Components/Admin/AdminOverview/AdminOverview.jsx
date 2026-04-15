@@ -143,8 +143,8 @@ function AdminOverview() {
   if (loading) {
     return (
       <div className="admin-overview">
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
+        <div className="drivemego-aot-loading-container">
+          <div className="drivemego-aot-loading-spinner"></div>
           <p>Loading dashboard...</p>
         </div>
       </div>

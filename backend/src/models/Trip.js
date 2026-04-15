@@ -165,7 +165,7 @@ const tripSchema = new mongoose.Schema(
         events: [{
             eventType: {
                 type: String,
-                enum: ["TRIP_STARTED", "TRIP_COMPLETED", "DRIVER_ASSIGNED", "VEHICLE_ASSIGNED", "PASSENGER_BOARDED", "PASSENGER_DROPPED"],
+                enum: ["TRIP_STARTED", "TRIP_COMPLETED", "DRIVER_ASSIGNED", "VEHICLE_ASSIGNED", "PASSENGER_BOARDED", "PASSENGER_DROPPED", "LATE_START"],
                 required: true,
             },
             timestamp: {
@@ -178,6 +178,14 @@ const tripSchema = new mongoose.Schema(
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "User",
             },
+            isLate: {
+                type: Boolean,
+                default: false,
+            },
+            lateByMinutes: {
+                type: Number,
+                default: 0,
+            },
         }],
 
         // Monthly pass integration
@@ -186,6 +194,19 @@ const tripSchema = new mongoose.Schema(
             default: true,
         },
 
+        // Late start tracking
+        isLateStart: {
+            type: Boolean,
+            default: false,
+        },
+        lateStartMinutes: {
+            type: Number,
+            default: 0,
+        },
+        actualStartTime: {
+            type: Date,
+        },
+        
         // Notifications
         notifications: {
             tripReminder: {

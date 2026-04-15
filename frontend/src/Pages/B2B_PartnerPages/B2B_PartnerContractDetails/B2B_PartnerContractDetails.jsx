@@ -475,25 +475,29 @@ const B2B_PartnerContractDetails = () => {
               <div className="b2b-contract-info-item">
                 <span className="b2b-contract-label">Total Amount:</span>
                 <span className="b2b-contract-value b2b-contract-amount">
-                  KWD {financials.totalAmount?.toFixed(2) || "0.00"}
+                  {financials.currency || "AED"}{" "}
+                  {financials.totalAmount?.toFixed(2) || "0.00"}
                 </span>
               </div>
               <div className="b2b-contract-info-item">
                 <span className="b2b-contract-label">Advance Payment:</span>
                 <span className="b2b-contract-value b2b-contract-amount">
-                  KWD {financials.advancePayment?.amount?.toFixed(2) || "0.00"}
+                  {financials.currency || "AED"}{" "}
+                  {financials.advancePayment?.amount?.toFixed(2) || "0.00"}
                 </span>
               </div>
               <div className="b2b-contract-info-item">
                 <span className="b2b-contract-label">Remaining Amount:</span>
                 <span className="b2b-contract-value">
-                  KWD {financials.remainingAmount?.toFixed(2) || "0.00"}
+                  {financials.currency || "AED"}{" "}
+                  {financials.remainingAmount?.toFixed(2) || "0.00"}
                 </span>
               </div>
               <div className="b2b-contract-info-item">
                 <span className="b2b-contract-label">Security Deposit:</span>
                 <span className="b2b-contract-value">
-                  KWD {financials.securityDeposit?.amount?.toFixed(2) || "0.00"}
+                  {financials.currency || "AED"}{" "}
+                  {financials.securityDeposit?.amount?.toFixed(2) || "0.00"}
                 </span>
               </div>
             </div>
@@ -515,7 +519,7 @@ const B2B_PartnerContractDetails = () => {
                   <div className="b2b-contract-info-item">
                     <span className="b2b-contract-label">Vehicle Rental:</span>
                     <span className="b2b-contract-value">
-                      KWD{" "}
+                      {financials.currency || "AED"}{" "}
                       {quotation.quotedPrice.breakdown?.vehicleRental?.toFixed(
                         2,
                       ) || "0.00"}
@@ -524,7 +528,7 @@ const B2B_PartnerContractDetails = () => {
                   <div className="b2b-contract-info-item">
                     <span className="b2b-contract-label">Driver Charges:</span>
                     <span className="b2b-contract-value">
-                      KWD{" "}
+                      {financials.currency || "AED"}{" "}
                       {quotation.quotedPrice.breakdown?.driverCharges?.toFixed(
                         2,
                       ) || "0.00"}
@@ -533,7 +537,7 @@ const B2B_PartnerContractDetails = () => {
                   <div className="b2b-contract-info-item">
                     <span className="b2b-contract-label">Fuel Charges:</span>
                     <span className="b2b-contract-value">
-                      KWD{" "}
+                      {financials.currency || "AED"}{" "}
                       {quotation.quotedPrice.breakdown?.fuelCharges?.toFixed(
                         2,
                       ) || "0.00"}

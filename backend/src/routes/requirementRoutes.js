@@ -11,7 +11,11 @@ import {
     getRequirementStatistics,
     submitQuotationForRequirement,
     selectQuotationForRequirement,
-    getRequirementQuotations
+    getRequirementQuotations,
+    respondToRequirement,
+    getMyResponses,
+    notifyVehicleAdded,
+    getRequirementResponses
 } from '../controllers/requirementController.js';
 import { verifyToken } from '../middleware/auth.js';
 
@@ -31,6 +35,9 @@ router.get('/corporate', getCorporateRequirements);
 
 // Get open requirements for B2B partners
 router.get('/open', getOpenRequirements);
+
+// Get B2B Partner's own responses (must be before /:id)
+router.get('/my-responses', getMyResponses);
 
 // Get specific requirement by ID
 router.get('/:id', getRequirementById);
@@ -55,5 +62,14 @@ router.post('/:id/select-quotation', selectQuotationForRequirement);
 
 // Get all quotations for a specific requirement (Corporate view)
 router.get('/:id/quotations', getRequirementQuotations);
+
+// B2B Partner responds to a requirement (before formal quotation)
+router.post('/:id/respond', respondToRequirement);
+
+// B2B Partner notifies Corporate that vehicle is now available
+router.post('/:id/notify-vehicle-added', notifyVehicleAdded);
+
+// Get all responses for a specific requirement (Corporate view)
+router.get('/:id/responses', getRequirementResponses);
 
 export default router;

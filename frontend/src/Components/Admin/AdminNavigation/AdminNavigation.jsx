@@ -11,6 +11,7 @@ function AdminNavigation({ dashboardactiveTab, setDashboardActiveTab }) {
     { id: "wallets", label: "Wallets", icon: "💼" },
     { id: "vehicle-approval", label: "Vehicle Approval", icon: "🚗" },
     { id: "settlement", label: "Settlement", icon: "💳" },
+    { id: "dropdowns", label: "Dropdowns", icon: "📋" },
     { id: "reports", label: "Reports", icon: "📈" },
     { id: "finance", label: "Finance", icon: "💰" },
     { id: "comm", label: "Comm.", icon: "💬" },

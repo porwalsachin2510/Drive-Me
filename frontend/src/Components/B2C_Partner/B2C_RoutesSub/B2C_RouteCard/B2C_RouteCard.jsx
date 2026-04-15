@@ -204,7 +204,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
           <div className="b2c-price-item">
             <span className="b2c-price-label">One Way:</span>
             <span className="b2c-price-value">
-              {route.pricing?.currency || "KWD"}{" "}
+              {route.pricing?.currency || "AED"}{" "}
               {route.pricing?.oneWayPrice || 0}
             </span>
           </div>
@@ -212,7 +212,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
             <div className="b2c-price-item">
               <span className="b2c-price-label">Round Trip:</span>
               <span className="b2c-price-value">
-                {route.pricing?.currency || "KWD"}{" "}
+                {route.pricing?.currency || "AED"}{" "}
                 {route.pricing.roundTripPrice}
               </span>
             </div>
@@ -399,7 +399,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
               <div className="b2c-edit-row">
                 <div className="b2c-edit-field">
                   <label>
-                    One Way Price ({route.pricing?.currency || "KWD"})
+                    One Way Price ({route.pricing?.currency || "AED"})
                   </label>
                   <input
                     type="number"
@@ -414,7 +414,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                 </div>
                 <div className="b2c-edit-field">
                   <label>
-                    Round Trip Price ({route.pricing?.currency || "KWD"})
+                    Round Trip Price ({route.pricing?.currency || "AED"})
                   </label>
                   <input
                     type="number"

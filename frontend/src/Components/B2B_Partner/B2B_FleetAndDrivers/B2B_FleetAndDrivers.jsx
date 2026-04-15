@@ -95,8 +95,8 @@ function B2B_FleetAndDrivers() {
 
   if (loading) {
     return (
-      <div className="b2b-operator-dashboard-fleet-and-drivers">
-        <div className="b2b-operator-dashboard-loading">
+      <div className="drivemego-fad-b2b-operator-dashboard-fleet-and-drivers">
+        <div className="drivemego-fad-b2b-operator-dashboard-loading">
           Loading fleet data...
         </div>
       </div>
@@ -105,8 +105,8 @@ function B2B_FleetAndDrivers() {
 
   if (!fleetData) {
     return (
-      <div className="b2b-operator-dashboard-fleet-and-drivers">
-        <div className="b2b-operator-dashboard-error">
+      <div className="drivemego-fad-b2b-operator-dashboard-fleet-and-drivers">
+        <div className="drivemego-fad-b2b-operator-dashboard-error">
           Failed to load fleet data
         </div>
       </div>
@@ -114,26 +114,28 @@ function B2B_FleetAndDrivers() {
   }
 
   return (
-    <div className="b2b-operator-dashboard-fleet-and-drivers">
-      <div className="b2b-operator-dashboard-fleet-header">
-        <h2 className="b2b-operator-dashboard-fleet-title">Fleet Management</h2>
+    <div className="drivemego-fad-b2b-operator-dashboard-fleet-and-drivers">
+      <div className="drivemego-fad-b2b-operator-dashboard-fleet-header">
+        <h2 className="drivemego-fad-b2b-operator-dashboard-fleet-title">
+          Fleet Management
+        </h2>
         {activeSubTab === "drivers" ? (
           <button
-            className="b2b-operator-dashboard-add-btn"
+            className="drivemego-fad-b2b-operator-dashboard-add-btn"
             onClick={() => setShowAddDriverModal(true)}
           >
             + Add Driver
           </button>
         ) : activeSubTab === "routes" ? (
           <button
-            className="b2b-operator-dashboard-add-btn"
+            className="drivemego-fad-b2b-operator-dashboard-add-btn"
             onClick={() => setShowAddRouteModal(true)}
           >
             + Add Route
           </button>
         ) : (
           <button
-            className="b2b-operator-dashboard-add-btn"
+            className="drivemego-fad-b2b-operator-dashboard-add-btn"
             onClick={() => setShowAddVehicleModal(true)}
           >
             + Add Vehicle
@@ -141,29 +143,29 @@ function B2B_FleetAndDrivers() {
         )}
       </div>
 
-      <div className="b2b-operator-dashboard-fleet-tabs">
+      <div className="drivemego-fad-b2b-operator-dashboard-fleet-tabs">
         <button
-          className={`b2b-operator-dashboard-fleet-tab ${activeSubTab === "vehicles" ? "b2b-operator-dashboard-active" : ""}`}
+          className={`drivemego-fad-b2b-operator-dashboard-fleet-tab ${activeSubTab === "vehicles" ? "drivemego-fad-b2b-operator-dashboard-active" : ""}`}
           onClick={() => setActiveSubTab("vehicles")}
         >
           🚗 Vehicles ({fleetData.vehicles?.length || 0})
         </button>
         <button
-          className={`b2b-operator-dashboard-fleet-tab ${activeSubTab === "drivers" ? "b2b-operator-dashboard-active" : ""}`}
+          className={`drivemego-fad-b2b-operator-dashboard-fleet-tab ${activeSubTab === "drivers" ? "drivemego-fad-b2b-operator-dashboard-active" : ""}`}
           onClick={() => setActiveSubTab("drivers")}
         >
           👤 Drivers ({fleetData.drivers?.length || 0})
         </button>
 
         <button
-          className={`b2b-operator-dashboard-fleet-tab ${activeSubTab === "routes" ? "b2b-operator-dashboard-active" : ""}`}
+          className={`drivemego-fad-b2b-operator-dashboard-fleet-tab ${activeSubTab === "routes" ? "drivemego-fad-b2b-operator-dashboard-active" : ""}`}
           onClick={() => setActiveSubTab("routes")}
         >
           Routes ({routes?.length || 0})
         </button>
       </div>
 
-      <div className="b2b-operator-dashboard-fleet-content">
+      <div className="drivemego-fad-b2b-operator-dashboard-fleet-content">
         {activeSubTab === "vehicles" ? (
           <B2B_VehiclesTab
             vehicles={fleetData.vehicles || []}

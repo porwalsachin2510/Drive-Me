@@ -7,7 +7,7 @@ import Driver from "../models/Driver.js";
 import MonthlyPass from "../models/MonthlyPass.js";
 import CorporateEmployee from "../models/CorporateEmployee.js";
 import { io } from "../index.js";
-import { createNotification } from "../Services/notificationService.js";
+import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js";
 
 // @desc    Create recurring trips from route
 // @route   POST /api/trips/create-from-route
@@ -812,44 +812,140 @@ export const startTrip = async (req, res) => {
             });
         }
 
+        // Check if trip is starting late
+        const now = new Date();
+        const scheduledDateTime = new Date(trip.tripDate);
+
+        // Parse startTime (format: "HH:MM" or "HH:MM AM/PM")
+        if (trip.startTime) {
+            const timeParts = trip.startTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+            if (timeParts) {
+                let hours = parseInt(timeParts[1]);
+                const minutes = parseInt(timeParts[2]);
+                const period = timeParts[3];
+
+                if (period) {
+                    if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
+                    if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+                }
+
+                scheduledDateTime.setHours(hours, minutes, 0, 0);
+            }
+        }
+
+        const lateThresholdMinutes = 5; // Consider late if more than 5 minutes past scheduled time
+        const isLate = now > new Date(scheduledDateTime.getTime() + lateThresholdMinutes * 60 * 1000);
+        const lateByMinutes = Math.floor((now - scheduledDateTime) / (1000 * 60));
+
         // Update trip status
         trip.status = "IN_PROGRESS";
+
+        if (isLate) {
+            trip.isLateStart = true;
+            trip.lateStartMinutes = Math.max(0, lateByMinutes);
+        }
 
         // Add trip event
         trip.events.push({
             eventType: "TRIP_STARTED",
             timestamp: new Date(),
-            description: "Trip started by driver",
-            location: trip.fromLocation
+            description: isLate ? `Trip started late by ${lateByMinutes} minutes` : "Trip started by driver",
+            location: trip.fromLocation,
+            isLate,
+            lateByMinutes: isLate ? lateByMinutes : 0
         });
 
         await trip.save();
 
+        // If trip started late, notify admin and driver owner
+        if (isLate && lateByMinutes > 0) {
+            // Get driver details
+            const driver = await User.findById(driverId).select('fullName role companyId');
+            const driverName = driver?.fullName || 'Driver';
+            const driverRole = driver?.role;
+
+            // Notify Admin about late trip start
+            await sendAdminNotification(
+                "Late Trip Start Warning",
+                `${driverName} (${driverRole}) started trip ${lateByMinutes} minutes late. Trip: ${trip.fromLocation} to ${trip.toLocation}. Scheduled: ${trip.startTime}, Actual: ${now.toLocaleTimeString()}.`,
+                "LATE_TRIP_START",
+                {
+                    tripId: trip._id,
+                    driverId,
+                    driverName,
+                    driverRole,
+                    lateByMinutes,
+                    scheduledTime: trip.startTime,
+                    actualStartTime: now.toISOString(),
+                    fromLocation: trip.fromLocation,
+                    toLocation: trip.toLocation,
+                }
+            );
+
+            // Find the driver's owner based on role
+            let ownerId = null;
+            let ownerType = null;
+
+            if (driverRole === 'B2B_PARTNER_DRIVER') {
+                // Owner is the B2B Partner (companyId or the one who created the driver)
+                const driverRecord = await Driver.findOne({ userId: driverId }).select('createdBy partnerId');
+                ownerId = driverRecord?.partnerId || driverRecord?.createdBy || driver?.companyId;
+                ownerType = 'B2B_PARTNER';
+            } else if (driverRole === 'CORPORATE_DRIVER') {
+                // Owner is the Corporate
+                const driverRecord = await Driver.findOne({ userId: driverId }).select('createdBy corporateId');
+                ownerId = driverRecord?.corporateId || driverRecord?.createdBy || driver?.companyId;
+                ownerType = 'CORPORATE';
+            } else if (driverRole === 'B2C_PARTNER_DRIVER') {
+                // Owner is the B2C Partner
+                const driverRecord = await Driver.findOne({ userId: driverId }).select('createdBy partnerId');
+                ownerId = driverRecord?.partnerId || driverRecord?.createdBy || driver?.companyId;
+                ownerType = 'B2C_PARTNER';
+            }
+
+            // Send notification to driver's owner
+            if (ownerId) {
+                const ownerNotification = await createNotification({
+                    userId: ownerId,
+                    type: "LATE_TRIP_START",
+                    title: "Driver Started Trip Late",
+                    message: `Your driver ${driverName} started a trip ${lateByMinutes} minutes late. Trip from ${trip.fromLocation} to ${trip.toLocation}. Scheduled: ${trip.startTime}. Please address this with the driver.`,
+                    metadata: {
+                        tripId: trip._id,
+                        driverId,
+                        driverName,
+                        lateByMinutes,
+                        scheduledTime: trip.startTime,
+                        actualStartTime: now.toISOString(),
+                        fromLocation: trip.fromLocation,
+                        toLocation: trip.toLocation,
+                    },
+                });
+                sendRealTimeNotification(ownerId.toString(), ownerNotification);
+            }
+        }
+
         // Notify all passengers via socket AND persistent notification
         for (const passenger of trip.passengers) {
             if (passenger.employeeId) {
-                // Socket notification
-                io.to(`notifications-${passenger.employeeId}`).emit('trip-started', {
-                    tripId: trip._id,
-                    startTime: new Date(),
-                    driverLocation: trip.driverLocation
-                });
-
                 // Find the user account for this employee to create persistent notification
                 try {
                     const employee = await CorporateEmployee.findById(passenger.employeeId).select('userId');
                     const notifUserId = employee?.userId || passenger.employeeId;
-                    await createNotification({
+                    const tripStartNotif = await createNotification({
                         userId: notifUserId,
                         type: "TRIP_STARTED",
                         title: "Trip Started",
                         message: `Your trip from ${trip.fromLocation || 'pickup'} to ${trip.toLocation || 'destination'} has started`,
-                        data: {
+                        metadata: {
                             tripId: trip._id,
                             fromLocation: trip.fromLocation,
-                            toLocation: trip.toLocation
+                            toLocation: trip.toLocation,
+                            startTime: new Date().toISOString(),
                         }
                     });
+                    // Send real-time notification using the service
+                    sendRealTimeNotification(notifUserId.toString(), tripStartNotif);
                 } catch (notifErr) {
                     console.error("Error creating trip start notification:", notifErr);
                 }

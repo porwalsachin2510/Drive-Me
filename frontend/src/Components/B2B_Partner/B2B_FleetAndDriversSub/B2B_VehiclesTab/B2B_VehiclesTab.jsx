@@ -171,7 +171,8 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
                   Daily Rate
                 </span>
                 <span className="b2b-operator-dashboard-vehicles-tab-detail-value">
-                  {vehicle.pricing?.dailyRate || 0} KWD
+                  {vehicle.pricing?.dailyRate || 0}{" "}
+                  {vehicle.pricing?.currency || "AED"}
                 </span>
               </div>
             </div>

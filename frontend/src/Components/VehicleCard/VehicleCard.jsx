@@ -18,14 +18,12 @@ const VehicleCard = ({ vehicle }) => {
 
   
   const formatPrice = (price) => {
-    if (!price) return "KD 0";
-    return new Intl.NumberFormat("en-US", {
+    if (!price) return "AED 0";
+    return new Intl.NumberFormat("en-AE", {
       style: "currency",
-      currency: "KWD",
+      currency: "AED",
       minimumFractionDigits: 0,
-    })
-      .format(price)
-      .replace("KWD", "KD");
+    }).format(price);
   };
 
   const getPriceDisplay = () => {

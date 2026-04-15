@@ -853,6 +853,9 @@ export const getB2CPartnerDashboardStats = async (req, res) => {
             })
         )
 
+        // Get currency from routes or default to AED
+        const currency = activeRoutes[0]?.currency || "AED"
+
         return res.status(200).json({
             success: true,
             stats: {
@@ -861,6 +864,7 @@ export const getB2CPartnerDashboardStats = async (req, res) => {
                 totalSubscribers,
                 monthlyRevenue,
                 totalRevenue,
+                currency,
                 pendingRouteRequests,
                 totalRouteRequests,
                 upcomingTrips,

@@ -31,14 +31,14 @@ function AdminEarningsPayments() {
     fetchEarnings()
   }, [fetchEarnings])
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'KWD',
+  const formatCurrency = (amount, currency = "AED") => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "AED",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
-  }
+  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {

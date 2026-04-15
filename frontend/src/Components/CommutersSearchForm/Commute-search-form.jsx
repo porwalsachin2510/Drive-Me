@@ -5,11 +5,6 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
   const [formData, setFormData] = useState({
     pickupLocation: "",
     dropoffLocation: "",
-    workCategory: "",
-    tripType: "Round Trip",
-    startDate: "",
-    shiftType: "Full Day",
-    pickupTime: "",
   });
 
   const [selectedDays, setSelectedDays] = useState([]);
@@ -29,17 +24,9 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
     }
   };
 
-  const handleSelectChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
   const toggleDay = (day) => {
     setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
     );
     if (errors.selectedDays) {
       setErrors((prev) => ({
@@ -47,6 +34,30 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
         selectedDays: undefined,
       }));
     }
+  };
+
+  const selectAllWeekdays = () => {
+    setSelectedDays(["MON", "TUE", "WED", "THU", "FRI"]);
+    if (errors.selectedDays) {
+      setErrors((prev) => ({
+        ...prev,
+        selectedDays: undefined,
+      }));
+    }
+  };
+
+  const selectAllDays = () => {
+    setSelectedDays(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
+    if (errors.selectedDays) {
+      setErrors((prev) => ({
+        ...prev,
+        selectedDays: undefined,
+      }));
+    }
+  };
+
+  const clearDays = () => {
+    setSelectedDays([]);
   };
 
   const validateForm = () => {
@@ -57,12 +68,6 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
     }
     if (!formData.dropoffLocation.trim()) {
       newErrors.dropoffLocation = "Drop-off location is required";
-    }
-    if (!formData.startDate.trim()) {
-      newErrors.startDate = "Start date is required";
-    }
-    if (!formData.pickupTime.trim()) {
-      newErrors.pickupTime = "Pickup time is required";
     }
     if (selectedDays.length === 0) {
       newErrors.selectedDays = "Please select at least one day";
@@ -75,16 +80,13 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
   const handleSearchCommute = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      // START: CALL PARENT COMPONENT'S onSearch FUNCTION WITH SEARCH PARAMS
       if (onSearch) {
         onSearch({
           ...formData,
           selectedDays,
-          filterType: "matched", // INDICATE THIS IS A MATCHED SEARCH
+          filterType: "matched",
         });
       }
-      // END: CALL PARENT COMPONENT'S onSearch FUNCTION
-
     }
   };
 
@@ -108,6 +110,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
                   d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z"
                   strokeWidth="2"
                 />
+                <circle cx="12" cy="10" r="3" strokeWidth="2" fill="none" />
               </svg>
               PICKUP LOCATION
             </label>
@@ -115,7 +118,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               <input
                 type="text"
                 name="pickupLocation"
-                placeholder="Enter location, stop point, or area name"
+                placeholder="Enter area, stop point, or landmark"
                 value={formData.pickupLocation}
                 onChange={handleInputChange}
                 className={`commute-search-form-form-input ${
@@ -124,7 +127,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               />
             </div>
             <span className="input-hint">
-              Search by location, route stops, or landmarks
+              E.g., Salmiya, Habibganj ISBT, Electronic City
             </span>
             {errors.pickupLocation && (
               <span className="commute-search-form-error-message">
@@ -136,7 +139,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
           <div className="commute-search-form-form-group">
             <label className="commute-search-form-form-label commute-search-form-location-label">
               <svg
-                className="commute-search-form-label-icon commute-search-form-teal"
+                className="commute-search-form-label-icon commute-search-form-red"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -145,6 +148,13 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
                   d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z"
                   strokeWidth="2"
                 />
+                <circle
+                  cx="12"
+                  cy="10"
+                  r="3"
+                  strokeWidth="2"
+                  fill="currentColor"
+                />
               </svg>
               DROP-OFF LOCATION
             </label>
@@ -152,7 +162,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               <input
                 type="text"
                 name="dropoffLocation"
-                placeholder="Enter location, stop point, or area name"
+                placeholder="Enter area, stop point, or landmark"
                 value={formData.dropoffLocation}
                 onChange={handleInputChange}
                 className={`commute-search-form-form-input ${
@@ -163,7 +173,7 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
               />
             </div>
             <span className="input-hint">
-              Search by location, route stops, or landmarks
+              E.g., Reggae, New Market Bus Stop, Wilson Garden
             </span>
             {errors.dropoffLocation && (
               <span className="commute-search-form-error-message">
@@ -173,139 +183,12 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
           </div>
         </div>
 
-        {/* Form Fields Grid */}
-        <div className="commute-search-form-form-fields-grid">
-          {/* Work Category */}
-          <div className="commute-search-form-form-group">
-            <label className="commute-search-form-form-label">
-              <svg
-                className="commute-search-form-label-icon commute-search-form-red"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <circle cx="12" cy="12" r="2" />
-              </svg>
-              Work Category
-            </label>
-            <select
-              name="workCategory"
-              value={formData.workCategory}
-              onChange={handleSelectChange}
-              className="commute-search-form-form-select"
-            >
-              <option value="">Select Category</option>
-              <option value="Office Staff">Office Staff</option>
-              <option value="Medical or Hospital">Medical/Hospital</option>
-              <option value="Education or School">Education/School</option>
-              <option value="Construction">Construction</option>
-              <option value="Retail or Mall">Retail/Mall</option>
-            </select>
-          </div>
-
-          {/* Pickup Time */}
-          <div className="commute-search-form-form-group">
-            <label className="commute-search-form-form-label">
-              <svg
-                className="commute-search-form-label-icon commute-search-form-red"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                <polyline
-                  points="12 6 12 12 16 14"
-                  strokeWidth="2"
-                  fill="none"
-                />
-              </svg>
-              Pickup Time
-            </label>
-            <div className="commute-search-form-input-wrapper">
-              <input
-                type="time"
-                name="pickupTime"
-                placeholder="--:--"
-                value={formData.pickupTime}
-                onChange={handleInputChange}
-                className={`commute-search-form-form-input commute-search-form-time-input ${
-                  errors.pickupTime ? "commute-search-form-input-error" : ""
-                }`}
-              />
-            </div>
-            {errors.pickupTime && (
-              <span className="commute-search-form-error-message">
-                {errors.pickupTime}
-              </span>
-            )}
-          </div>
-
-          {/* Shift Type */}
-          <div className="commute-search-form-form-group">
+        {/* Days Needed */}
+        <div className="commute-search-form-form-group commute-search-form-days-section">
+          <div className="commute-search-form-days-header">
             <label className="commute-search-form-form-label">
               <svg
                 className="commute-search-form-label-icon commute-search-form-blue"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="1"
-                  strokeWidth="2"
-                  fill="currentColor"
-                />
-              </svg>
-              Shift Type
-            </label>
-            <select
-              name="shiftType"
-              value={formData.shiftType}
-              onChange={handleSelectChange}
-              className="commute-search-form-form-select"
-            >
-              <option value="Full Day">Full Day</option>
-              <option value="Morning Shift">Morning Shift</option>
-              <option value="Evening Shift">Evening Shift</option>
-              <option value="Night Shift">Night Shift</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Second Row */}
-        <div className="commute-search-form-form-fields-grid">
-          {/* Trip Type */}
-          <div className="commute-search-form-form-group">
-            <label className="form-label">
-              <svg
-                className="commute-search-form-label-icon commute-search-form-red"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <path
-                  d="M12 2L19 8v8c0 4-7 6-7 6s-7-2-7-6V8l7-6z"
-                  strokeWidth="2"
-                />
-              </svg>
-              Trip Type
-            </label>
-            <select
-              name="tripType"
-              value={formData.tripType}
-              onChange={handleSelectChange}
-              className="commute-search-form-form-select"
-            >
-              <option value="Round Trip">Round Trip</option>
-              <option value="One Way">One Way</option>
-            </select>
-          </div>
-
-          {/* Start Date */}
-          <div className="commute-search-form-form-group">
-            <label className="commute-search-form-form-label">
-              <svg
-                className="commute-search-form-label-icon commute-search-form-red"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -318,54 +201,38 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
                   rx="2"
                   strokeWidth="2"
                 />
-                <polyline
-                  points="16 2 16 6 8 6 8 2"
-                  strokeWidth="2"
-                  fill="none"
-                />
                 <line x1="3" y1="10" x2="21" y2="10" strokeWidth="2" />
+                <line x1="8" y1="2" x2="8" y2="6" strokeWidth="2" />
+                <line x1="16" y1="2" x2="16" y2="6" strokeWidth="2" />
               </svg>
-              Start Date
+              Select Your Commute Days
             </label>
-            <div className="commute-search-form-input-wrapper">
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleInputChange}
-                placeholder="dd-mm-yyyy"
-                className={`commute-search-form-form-input commute-search-form-date-input ${
-                  errors.startDate ? "commute-search-form-input-error" : ""
-                }`}
-              />
+            <div className="commute-search-form-days-quick-actions">
+              <button
+                type="button"
+                className="commute-search-form-quick-btn"
+                onClick={selectAllWeekdays}
+              >
+                Weekdays
+              </button>
+              <button
+                type="button"
+                className="commute-search-form-quick-btn"
+                onClick={selectAllDays}
+              >
+                All Days
+              </button>
+              {selectedDays.length > 0 && (
+                <button
+                  type="button"
+                  className="commute-search-form-quick-btn commute-search-form-clear-btn"
+                  onClick={clearDays}
+                >
+                  Clear
+                </button>
+              )}
             </div>
-            {errors.startDate && (
-              <span className="commute-search-form-error-message">
-                {errors.startDate}
-              </span>
-            )}
           </div>
-        </div>
-
-        {/* Days Needed */}
-        <div className="commute-search-form-form-group">
-          <label className="commute-search-form-form-label">
-            <svg
-              className="commute-search-form-label-icon commute-search-form-red"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" strokeWidth="2" />
-              <polyline
-                points="16 2 16 6 8 6 8 2"
-                strokeWidth="2"
-                fill="none"
-              />
-              <line x1="3" y1="10" x2="21" y2="10" strokeWidth="2" />
-            </svg>
-            Days Needed (On/Off)
-          </label>
           <div className="commute-search-form-days-container">
             {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
               <button
@@ -392,7 +259,16 @@ export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
         {/* Button Section */}
         <div className="commute-search-form-button-section">
           <button type="submit" className="commute-search-form-search-button">
-            <span className="commute-search-form-search-icon">🔍</span>
+            <svg
+              className="commute-search-form-search-icon-svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
             Search Commutes
           </button>
           <button

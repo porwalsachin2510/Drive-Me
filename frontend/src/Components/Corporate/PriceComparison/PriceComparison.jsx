@@ -60,13 +60,12 @@ const PriceComparison = ({ pricing }) => {
     return comparisons.filter((c) => c.savings > 0);
   };
 
-  // eslint-disable-next-line no-unused-vars
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "KWD",
       minimumFractionDigits: 0,
-    }).replace("KWD", "KD");
+    }).format(price);
   };
 
   const comparisons = calculateSavings();

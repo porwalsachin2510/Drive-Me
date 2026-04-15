@@ -1,4 +1,4 @@
-.wallet-page {
+.drivemego-wp-wallet-page {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
@@ -6,18 +6,18 @@
   min-height: 100vh;
 }
 
-.wallet-header {
+.drivemego-wp-wallet-header {
   margin-bottom: 32px;
 }
 
-.wallet-header h1 {
+.drivemego-wp-wallet-header h1 {
   font-size: 32px;
   font-weight: 700;
   color: #1f2937;
   margin: 0 0 24px 0;
 }
 
-.wallet-balance-card {
+.drivemego-wp-wallet-balance-card {
   background: white;
   border-radius: 16px;
   padding: 32px;
@@ -27,30 +27,30 @@
   align-items: center;
 }
 
-.balance-info {
+.drivemego-wp-balance-info {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.balance-label {
+.drivemego-wp-balance-label {
   font-size: 14px;
   color: #6b7280;
   font-weight: 500;
 }
 
-.balance-amount {
+.drivemego-wp-balance-amount {
   font-size: 36px;
   font-weight: 700;
   transition: color 0.2s ease;
 }
 
-.balance-actions {
+.drivemego-wp-balance-actions {
   display: flex;
   gap: 12px;
 }
 
-.action-btn {
+.drivemego-wp-action-btn {
   padding: 12px 24px;
   border-radius: 8px;
   font-size: 14px;
@@ -60,25 +60,25 @@
   border: none;
 }
 
-.action-btn.primary {
+.drivemego-wp-action-btn.drivemego-wp-primary {
   background: #3b82f6;
   color: white;
 }
 
-.action-btn.primary:hover {
+.drivemego-wp-action-btn.drivemego-wp-primary:hover {
   background: #2563eb;
 }
 
-.action-btn.secondary {
+.drivemego-wp-action-btn.drivemego-wp-secondary {
   background: #f3f4f6;
   color: #374151;
 }
 
-.action-btn.secondary:hover {
+.drivemego-wp-action-btn.drivemego-wp-secondary:hover {
   background: #e5e7eb;
 }
 
-.wallet-tabs {
+.drivemego-wp-wallet-tabs {
   display: flex;
   gap: 0;
   margin-bottom: 24px;
@@ -88,7 +88,7 @@
   overflow: hidden;
 }
 
-.tab-btn {
+.drivemego-wp-tab-btn {
   padding: 14px 24px;
   background: white;
   border: none;
@@ -102,32 +102,32 @@
   text-align: center;
 }
 
-.tab-btn:hover {
+.drivemego-wp-tab-btn:hover {
   color: #1f2937;
   background: #f3f4f6;
 }
 
-.tab-btn.active {
+.drivemego-wp-tab-btn.drivemego-wp-active {
   color: #3b82f6;
   border-bottom-color: #3b82f6;
   background: #eff6ff;
 }
 
-.wallet-content {
+.drivemego-wp-wallet-content {
   background: white;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.overview-cards {
+.drivemego-wp-overview-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 32px;
 }
 
-.overview-card {
+.drivemego-wp-overview-card {
   background: #f8f9fa;
   border-radius: 12px;
   padding: 20px;
@@ -137,11 +137,11 @@
   transition: transform 0.2s ease;
 }
 
-.overview-card:hover {
+.drivemego-wp-overview-card:hover {
   transform: translateY(-2px);
 }
 
-.card-icon {
+.drivemego-wp-card-icon {
   font-size: 32px;
   width: 60px;
   height: 60px;
@@ -152,34 +152,34 @@
   border-radius: 12px;
 }
 
-.card-content h3 {
+.drivemego-wp-card-content h3 {
   font-size: 14px;
   color: #6b7280;
   font-weight: 500;
   margin: 0 0 4px 0;
 }
 
-.card-content p {
+.drivemego-wp-card-content p {
   font-size: 24px;
   font-weight: 700;
   color: #1f2937;
   margin: 0;
 }
 
-.recent-transactions h3 {
+.drivemego-wp-recent-transactions h3 {
   font-size: 20px;
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 20px 0;
 }
 
-.transaction-list {
+.drivemego-wp-transaction-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.transaction-item {
+.drivemego-wp-transaction-item {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -189,11 +189,11 @@
   transition: background-color 0.2s ease;
 }
 
-.transaction-item:hover {
+.drivemego-wp-transaction-item:hover {
   background: #f3f4f6;
 }
 
-.transaction-icon {
+.drivemego-wp-transaction-icon {
   font-size: 20px;
   width: 40px;
   height: 40px;
@@ -204,55 +204,55 @@
   border-radius: 8px;
 }
 
-.transaction-details {
+.drivemego-wp-transaction-details {
   flex: 1;
 }
 
-.transaction-description {
+.drivemego-wp-transaction-description {
   font-size: 14px;
   color: #374151;
   font-weight: 500;
   margin: 0 0 4px 0;
 }
 
-.transaction-date {
+.drivemego-wp-transaction-date {
   font-size: 12px;
   color: #6b7280;
 }
 
-.transaction-amount {
+.drivemego-wp-transaction-amount {
   font-size: 16px;
   font-weight: 600;
 }
 
-.transaction-amount.credit {
+.drivemego-wp-transaction-amount.drivemego-wp-credit {
   color: #10b981;
 }
 
-.transaction-amount.debit {
+.drivemego-wp-transaction-amount.drivemego-wp-debit {
   color: #ef4444;
 }
 
-.transactions-header {
+.drivemego-wp-transactions-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
 }
 
-.transactions-header h3 {
+.drivemego-wp-transactions-header h3 {
   font-size: 20px;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-.transaction-filters {
+.drivemego-wp-transaction-filters {
   display: flex;
   gap: 12px;
 }
 
-.filter-select {
+.drivemego-wp-filter-select {
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -260,20 +260,20 @@
   background: white;
 }
 
-.payment-methods-section h3 {
+.drivemego-wp-payment-methods-section h3 {
   font-size: 20px;
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 24px 0;
 }
 
-.payment-methods-grid {
+.drivemego-wp-payment-methods-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
 }
 
-.payment-method-card {
+.drivemego-wp-payment-method-card {
   background: #f8f9fa;
   border-radius: 12px;
   padding: 20px;
@@ -283,11 +283,11 @@
   transition: transform 0.2s ease;
 }
 
-.payment-method-card:hover {
+.drivemego-wp-payment-method-card:hover {
   transform: translateY(-2px);
 }
 
-.method-icon {
+.drivemego-wp-method-icon {
   font-size: 24px;
   width: 48px;
   height: 48px;
@@ -298,21 +298,21 @@
   border-radius: 8px;
 }
 
-.method-info h4 {
+.drivemego-wp-method-info h4 {
   font-size: 16px;
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 4px 0;
 }
 
-.method-info p {
+.drivemego-wp-method-info p {
   font-size: 12px;
   color: #6b7280;
   margin: 0;
 }
 
 /* Modal Styles */
-.modal-overlay {
+.drivemego-wp-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -325,7 +325,7 @@
   z-index: 1000;
 }
 
-.modal-content {
+.drivemego-wp-modal-content {
   background: white;
   border-radius: 16px;
   width: 90%;
@@ -334,7 +334,7 @@
   overflow-y: auto;
 }
 
-.modal-header {
+.drivemego-wp-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -342,14 +342,14 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.modal-header h2 {
+.drivemego-wp-modal-header h2 {
   font-size: 20px;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-.modal-close {
+.drivemego-wp-modal-close {
   background: none;
   border: none;
   font-size: 24px;
@@ -360,31 +360,31 @@
   transition: background-color 0.2s ease;
 }
 
-.modal-close:hover {
+.drivemego-wp-modal-close:hover {
   background: #f3f4f6;
 }
 
-.modal-form {
+.drivemego-wp-modal-form {
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.form-group {
+.drivemego-wp-form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.form-group label {
+.drivemego-wp-form-group label {
   font-size: 14px;
   font-weight: 500;
   color: #374151;
 }
 
-.form-group input,
-.form-group select {
+.drivemego-wp-form-group input,
+.drivemego-wp-form-group select {
   padding: 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -392,21 +392,21 @@
   transition: border-color 0.2s ease;
 }
 
-.form-group input:focus,
-.form-group select:focus {
+.drivemego-wp-form-group input:focus,
+.drivemego-wp-form-group select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.modal-actions {
+.drivemego-wp-modal-actions {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
 }
 
-.btn-cancel,
-.btn-primary {
+.drivemego-wp-btn-cancel,
+.drivemego-wp-btn-primary {
   padding: 12px 24px;
   border-radius: 8px;
   font-size: 14px;
@@ -416,65 +416,65 @@
   border: none;
 }
 
-.btn-cancel {
+.drivemego-wp-btn-cancel {
   background: #f3f4f6;
   color: #374151;
 }
 
-.btn-cancel:hover {
+.drivemego-wp-btn-cancel:hover {
   background: #e5e7eb;
 }
 
-.btn-primary {
+.drivemego-wp-btn-primary {
   background: #3b82f6;
   color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
+.drivemego-wp-btn-primary:hover:not(:disabled) {
   background: #2563eb;
 }
 
-.btn-primary:disabled {
+.drivemego-wp-btn-primary:disabled {
   background: #9ca3af;
   cursor: not-allowed;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .wallet-page {
+  .drivemego-wp-wallet-page {
     padding: 16px;
   }
   
-  .wallet-balance-card {
+  .drivemego-wp-wallet-balance-card {
     flex-direction: column;
     align-items: flex-start;
     gap: 20px;
   }
   
-  .balance-amount {
+  .drivemego-wp-balance-amount {
     font-size: 28px;
   }
   
-  .overview-cards {
+  .drivemego-wp-overview-cards {
     grid-template-columns: 1fr;
   }
   
-  .payment-methods-grid {
+  .drivemego-wp-payment-methods-grid {
     grid-template-columns: 1fr;
   }
   
-  .transactions-header {
+  .drivemego-wp-transactions-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
   
-  .transaction-filters {
+  .drivemego-wp-transaction-filters {
     flex-direction: column;
     width: 100%;
   }
   
-  .filter-select {
+  .drivemego-wp-filter-select {
     width: 100%;
   }
 }

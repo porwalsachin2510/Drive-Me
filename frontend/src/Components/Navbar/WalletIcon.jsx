@@ -14,7 +14,13 @@ function WalletIcon() {
   const { user } = useSelector((state) => state.auth);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const walletAllowedRoles = ['COMMUTER', 'B2C_PARTNER', 'B2B_PARTNER'];
+  const walletAllowedRoles = [
+    "COMMUTER",
+    "B2C_PARTNER",
+    "B2B_PARTNER",
+    "ADMIN",
+  ];
+
   const isAllowed = user && walletAllowedRoles.includes(user.role);
 
   useEffect(() => {

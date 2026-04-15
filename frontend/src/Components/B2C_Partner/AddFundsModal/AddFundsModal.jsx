@@ -9,8 +9,8 @@ const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
     useCurrency();
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
-  const [currency, setCurrency] = useState("KWD");
-  const [decimals, setDecimals] = useState(3);
+  const [currency, setCurrency] = useState("AED");
+  const [decimals, setDecimals] = useState(2);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("card");
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loadingPaymentConfig, setLoadingPaymentConfig] = useState(true);
@@ -54,8 +54,8 @@ const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
     } catch (error) {
       console.error("[v0] Error fetching payment config:", error);
       // Fallback to defaults
-      setCurrency("KWD");
-      setDecimals(3);
+       setCurrency("AED");
+       setDecimals(2);
       setPaymentMethods([
         {
           id: "card",

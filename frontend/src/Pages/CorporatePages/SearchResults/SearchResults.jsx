@@ -44,20 +44,24 @@ const FleetSearchResults = () => {
   const userfilters = location.state?.filters;
 
   // If no search data, redirect to corporate search page
-  if (!searchData) {
+  if (searchData.fleetOwners.length === 0) {
     return (
       <>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <div className="fleet-search-container">
-          <div className="header">
-            <div className="header-content">
-              <h1 className="title">No Search Results</h1>
-              <p className="subtitle">Please search for vehicles first</p>
+        <div className="drivemego-searchresults-fleet-search-container">
+          <div className="drivemego-searchresults-header">
+            <div className="drivemego-searchresults-header-content">
+              <h1 className="drivemego-searchresults-title">
+                No Search Results
+              </h1>
+              <p className="drivemego-searchresults-subtitle">
+                Please search for vehicles first
+              </p>
             </div>
           </div>
           <div style={{ textAlign: "center", padding: "40px" }}>
             <button
-              className="primary-button"
+              className="drivemego-searchresults-primary-button"
               onClick={() => navigate("/corporate")}
               style={{ padding: "12px 24px", fontSize: "16px" }}
             >
@@ -70,7 +74,6 @@ const FleetSearchResults = () => {
     );
   }
 
-  console.log("first filters ", location.state.filters);
 
   const toggleVehicleSelection = (fleetOwnerId, vehicleId) => {
     setSelectedVehicles((prev) => {
@@ -82,7 +85,7 @@ const FleetSearchResults = () => {
     });
   };
 
-  const formatCurrency = (amount, currency = "KWD") => {
+  const formatCurrency = (amount, currency = "AED") => {
     return `${amount?.toLocaleString() || 0} ${currency}`;
   };
 
@@ -128,19 +131,21 @@ const FleetSearchResults = () => {
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="fleet-search-container">
         {/* Header Section */}
-        <div className="header">
-          <div className="header-content">
-            <h1 className="title">Vehicle Search Results</h1>
-            <p className="subtitle">
+        <div className="drivemego-searchresults-header">
+          <div className="drivemego-searchresults-header-content">
+            <h1 className="drivemego-searchresults-title">
+              Vehicle Search Results
+            </h1>
+            <p className="drivemego-searchresults-subtitle">
               Showing {searchData.totalVehicles} vehicles from{" "}
               {searchData.totalFleetOwners} fleet owner
               {searchData.totalFleetOwners !== 1 ? "s" : ""}
             </p>
           </div>
 
-          <div className="header-controls">
+          <div className="drivemego-searchresults-header-controls">
             <select
-              className="sort-select"
+              className="drivemego-searchresults-sort-select"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
@@ -151,14 +156,14 @@ const FleetSearchResults = () => {
             </select>
 
             <button
-              className="filter-button"
+              className="drivemego-searchresults-filter-button"
               onClick={() => setShowFilters(!showFilters)}
             >
               Filter
             </button>
 
             <button
-              className="view-button"
+              className="drivemego-searchresults-view-button"
               onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
             >
               {viewMode === "grid" ? "List View" : "Grid View"}
@@ -167,57 +172,59 @@ const FleetSearchResults = () => {
         </div>
 
         {/* Search Parameters Display */}
-        <div className="search-params-bar">
-          <div className="search-param">
+        <div className="drivemego-searchresults-search-params-bar">
+          <div className="drivemego-searchresults-search-param">
             <MapPin size={16} />
             <span>{searchData.searchParams.location}</span>
           </div>
-          <div className="search-param">
+          <div className="drivemego-searchresults-search-param">
             <Users size={16} />
             <span>{searchData.searchParams.minseatsrequired}+ Seats</span>
           </div>
-          <div className="search-param">
+          <div className="drivemego-searchresults-search-param">
             <Calendar size={16} />
             <span>{searchData.searchParams.rentalDuration}</span>
           </div>
-          <div className="search-param">
+          <div className="drivemego-searchresults-search-param">
             <span>Budget: {searchData.searchParams.budget}</span>
           </div>
         </div>
 
         {/* Fleet Owners List */}
-        <div className="search-param-results-container">
+        <div className="drivemego-searchresults-search-param-results-container">
           {searchData.fleetOwners.map((owner) => (
             <div
               key={owner.fleetOwnerId}
-              className="search-param-fleet-owner-card"
+              className="drivemego-searchresults-search-param-fleet-owner-card"
             >
               {/* Fleet Owner Header */}
-              <div className="owner-header">
-                <div className="owner-info">
-                  <div className="owner-name-row">
-                    <h2 className="owner-name">🚐 {owner.fullName}</h2>
+              <div className="drivemego-searchresults-owner-header">
+                <div className="drivemego-searchresults-owner-info">
+                  <div className="drivemego-searchresults-owner-name-row">
+                    <h2 className="drivemego-searchresults-owner-name">
+                      🚐 {owner.fullName}
+                    </h2>
                     {parseFloat(owner.rating) > 0 && (
-                      <div className="rating-badge">
+                      <div className="drivemego-searchresults-rating-badge">
                         <Star size={16} fill="#fbbf24" color="#fbbf24" />
                         <span>{owner.rating}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="owner-meta">
-                    <div className="meta-item">
+                  <div className="drivemego-searchresults-owner-meta">
+                    <div className="drivemego-searchresults-meta-item">
                       <MapPin size={14} />
                       <span>
                         {owner.vehicles[0]?.location ||
                           "Location not specified"}
                       </span>
                     </div>
-                    <div className="verified-badge">
+                    <div className="drivemego-searchresults-verified-badge">
                       <CheckCircle size={14} />
                       <span>Verified Fleet Owner</span>
                     </div>
-                    <div className="meta-item">
+                    <div className="drivemego-searchresults-meta-item">
                       <span>
                         {owner.totalVehicles} Vehicle
                         {owner.totalVehicles !== 1 ? "s" : ""}
@@ -225,12 +232,12 @@ const FleetSearchResults = () => {
                     </div>
                   </div>
 
-                  <div className="contact-info">
-                    <div className="contact-item">
+                  <div className="drivemego-searchresults-contact-info">
+                    <div className="drivemego-searchresults-contact-item">
                       <Phone size={14} />
                       <span>{owner.whatsappNumber}</span>
                     </div>
-                    <div className="contact-item">
+                    <div className="drivemego-searchresults-contact-item">
                       <Mail size={14} />
                       <span>{owner.email}</span>
                     </div>
@@ -239,7 +246,7 @@ const FleetSearchResults = () => {
               </div>
 
               {/* Vehicles Grid */}
-              <div className="vehicles-grid">
+              <div className="drivemego-searchresults-vehicles-grid">
                 {owner.vehicles.map((vehicle, index) => {
                   const isSelected =
                     selectedVehicles[`${owner.fleetOwnerId}-${vehicle._id}`];
@@ -247,75 +254,94 @@ const FleetSearchResults = () => {
                   return (
                     <div
                       key={vehicle._id}
-                      className={`vehicle-card ${isSelected ? "selected" : ""}`}
+                      className={`drivemego-searchresults-vehicle-card ${isSelected ? "drivemego-searchresults-selected" : ""}`}
                       onClick={() =>
                         toggleVehicleSelection(owner.fleetOwnerId, vehicle._id)
                       }
                     >
-                      <div className="vehicle-image-container">
+                      <div className="drivemego-searchresults-vehicle-image-container">
                         <img
                           src={
                             vehicle.photos[0]?.url ||
                             "https://via.placeholder.com/300x200?text=No+Image"
                           }
                           alt={vehicle.vehicleName}
-                          className="vehicle-image"
+                          className="drivemego-searchresults-vehicle-image"
                         />
                         {isSelected && (
-                          <div className="selected-overlay">
+                          <div className="drivemego-searchresults-selected-overlay">
                             <CheckCircle size={32} color="white" fill="white" />
                           </div>
                         )}
                       </div>
 
-                      <div className="vehicle-content">
-                        <h3 className="vehicle-name">Vehicle {index + 1}</h3>
-                        <p className="vehicle-model">{vehicle.vehicleName}</p>
+                      <div className="drivemego-searchresults-vehicle-content">
+                        <h3 className="drivemego-searchresults-vehicle-name">
+                          Vehicle {index + 1}
+                        </h3>
+                        <p className="drivemego-searchresults-vehicle-model">
+                          {vehicle.vehicleName}
+                        </p>
 
-                        <div className="vehicle-specs">
-                          <div className="spec-item">
+                        <div className="drivemego-searchresults-vehicle-specs">
+                          <div className="drivemego-searchresults-spec-item">
                             <Users size={14} />
                             <span>
                               {vehicle.capacity.seatingCapacity} Seater
                             </span>
                           </div>
-                          <div className="spec-item">
+                          <div className="drivemego-searchresults-spec-item">
                             <span>
                               {vehicle.vehicleCategory.replace("_", " ")}
                             </span>
                           </div>
                         </div>
 
-                        <div className="vehicle-price">
-                          <span className="price-amount">
-                            {formatCurrency(vehicle.pricing.monthlyRate)}/month
+                        <div className="drivemego-searchresults-vehicle-price">
+                          <span className="drivemego-searchresults-price-amount">
+                            {formatCurrency(
+                              vehicle.pricing.monthlyRate,
+                              vehicle.pricing.currency || "AED",
+                            )}
+                            /month
                           </span>
-                          <span className="price-detail">
-                            {formatCurrency(vehicle.pricing.dailyRate)}/day
+                          <span className="drivemego-searchresults-price-detail">
+                            {formatCurrency(
+                              vehicle.pricing.dailyRate,
+                              vehicle.pricing.currency || "AED",
+                            )}
+                            /day
                           </span>
                         </div>
 
-                        <div className="facilities-list">
+                        <div className="drivemego-searchresults-facilities-list">
                           {getFacilityIcons(vehicle.facilities)
                             .slice(0, 4)
                             .map((facility, idx) => (
-                              <span key={idx} className="facility-badge">
+                              <span
+                                key={idx}
+                                className="drivemego-searchresults-facility-badge"
+                              >
                                 ✓ {facility}
                               </span>
                             ))}
                           {getFacilityIcons(vehicle.facilities).length > 4 && (
-                            <span className="facility-badge">
+                            <span className="drivemego-searchresults-facility-badge">
                               +{getFacilityIcons(vehicle.facilities).length - 4}
                             </span>
                           )}
                         </div>
 
-                        <div className="availability-info">
+                        <div className="drivemego-searchresults-availability-info">
                           {vehicle.driverAvailability.withDriver && (
-                            <span className="avail-badge">✓ Driver</span>
+                            <span className="drivemego-searchresults-avail-badge">
+                              ✓ Driver
+                            </span>
                           )}
                           {vehicle.fuelOptions.fuelIncluded && (
-                            <span className="avail-badge">✓ Fuel</span>
+                            <span className="drivemego-searchresults-avail-badge">
+                              ✓ Fuel
+                            </span>
                           )}
                         </div>
                       </div>
@@ -324,12 +350,12 @@ const FleetSearchResults = () => {
                 })}
 
                 {owner.totalVehicles > owner.vehicles.length && (
-                  <div className="more-vehicles-card">
-                    <div className="more-vehicles-content">
-                      <span className="more-vehicles-count">
+                  <div className="drivemego-searchresults-more-vehicles-card">
+                    <div className="drivemego-searchresults-more-vehicles-content">
+                      <span className="drivemego-searchresults-more-vehicles-count">
                         +{owner.totalVehicles - owner.vehicles.length} More
                       </span>
-                      <span className="more-vehicles-text">
+                      <span className="drivemego-searchresults-more-vehicles-text">
                         Vehicles Available
                       </span>
                     </div>
@@ -338,9 +364,9 @@ const FleetSearchResults = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="action-buttons">
+              <div className="drivemego-searchresults-action-buttons">
                 <button
-                  className="primary-button"
+                  className="drivemego-searchresults-primary-button"
                   onClick={() => handleViewAll(owner, userfilters)}
                 >
                   View All {owner.totalVehicles} Vehicles
@@ -352,12 +378,16 @@ const FleetSearchResults = () => {
 
         {/* Pagination */}
         {searchData.totalPages > 1 && (
-          <div className="pagination">
-            <button className="pagination-button">Previous</button>
-            <span className="page-info">
+          <div className="drivemego-searchresults-pagination">
+            <button className="drivemego-searchresults-pagination-button">
+              Previous
+            </button>
+            <span className="drivemego-searchresults-page-info">
               Page {searchData.currentPage} of {searchData.totalPages}
             </span>
-            <button className="pagination-button">Next</button>
+            <button className="drivemego-searchresults-pagination-button">
+              Next
+            </button>
           </div>
         )}
       </div>

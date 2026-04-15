@@ -8,6 +8,7 @@ import Footer from "../../../Components/Footer/Footer";
 import { searchVehicles } from "../../../Redux/slices/vehicleSlice";
 import PriceComparison from "../../../Components/Corporate/PriceComparison/PriceComparison";
 import { isSearchFormComplete } from "../../../utils/searchValidation";
+import { useDropdownOptions, DROPDOWN_CATEGORIES } from "../../../hooks/useDropdownOptions";
 import "./corporate.css";
 
 const Corporate = () => {
@@ -18,6 +19,24 @@ const Corporate = () => {
 
   const [activeTab, setActiveTab] = useState("corporate");
   const [validationErrors, setValidationErrors] = useState({});
+
+  // Fetch dynamic dropdown options
+  const { options: dropdownOptions, loading: dropdownLoading } =
+    useDropdownOptions([
+      DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_PASSENGER,
+      DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_GOODS,
+      DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_MANAGED,
+      DROPDOWN_CATEGORIES.LOCATIONS,
+      DROPDOWN_CATEGORIES.RENTAL_DURATIONS,
+      DROPDOWN_CATEGORIES.BUDGET_RANGES_DAILY,
+      DROPDOWN_CATEGORIES.BUDGET_RANGES_WEEKLY,
+      DROPDOWN_CATEGORIES.BUDGET_RANGES_MONTHLY,
+      DROPDOWN_CATEGORIES.BUDGET_RANGES_LONGTERM,
+      DROPDOWN_CATEGORIES.VEHICLE_FEATURES,
+      DROPDOWN_CATEGORIES.MIN_SEATS_PASSENGER,
+      DROPDOWN_CATEGORIES.MIN_SEATS_GOODS,
+      DROPDOWN_CATEGORIES.MIN_SEATS_MANAGED,
+    ]);
 
   useEffect(() => {
     localStorage.setItem("activeTab", "corporate");
@@ -41,46 +60,95 @@ const Corporate = () => {
 
   console.log("My Search Parameters", filters);
 
+  // Dynamic vehicle type options from backend with icon fallbacks
+  const getVehicleIcon = (value) => {
+    const icons = {
+      SEDAN: "🚗",
+      SUV: "🚙",
+      LUXURY_COACH: "🏎️",
+      MINIVAN: "🚐",
+      COASTER_BUS: "🚐",
+      PICKUP_1TON: "🛻",
+      PICKUP_3TON: "🛻",
+      TRUCK_7TON: "🚛",
+      REEFER_TRUCK: "❄️",
+      FLATBED_TRAILER: "🚚",
+      SHUTTLE_BUS: "🚐",
+      EXECUTIVE_VAN: "🚐",
+      ANY_TYPE: "🛻",
+    };
+    return icons[value] || "🛻";
+  };
+
   const vehicleTypeOptions = {
-    passenger: [
-      { value: "SEDAN", label: "Sedan", icon: "🚗" },
-      { value: "SUV", label: "SUV", icon: "🚙" },
-      { value: "LUXURY_COACH", label: "Luxury Coach", icon: "🏎️" },
-      { value: "MINIVAN", label: "Minivan", icon: "🚐" },
-      { value: "COASTER_BUS", label: "Coaster Bus", icon: "🚐" },
-    ],
-    goods: [
-      { value: "PICKUP_1TON", label: "Pickup 1 Ton", icon: "🛻" },
-      { value: "PICKUP_3TON", label: "Pickup 3 Ton", icon: "🛻" },
-      { value: "TRUCK_7TON", label: "Truck 7 Ton", icon: "🚛" },
-      { value: "REEFER_TRUCK", label: "Reefer Truck", icon: "❄️" },
-      { value: "FLATBED_TRAILER", label: "Flatbed Trailer", icon: "🚚" },
-    ],
-    managed: [
-      { value: "SHUTTLE_BUS", label: "Shuttle Bus", icon: "🚐" },
-      { value: "EXECUTIVE_VAN", label: "Executive Van", icon: "🚐" },
-    ],
+    passenger: (
+      dropdownOptions[DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_PASSENGER]
+        ?.options || [
+        { value: "SEDAN", label: "Sedan" },
+        { value: "SUV", label: "SUV" },
+        { value: "LUXURY_COACH", label: "Luxury Coach" },
+        { value: "MINIVAN", label: "Minivan" },
+        { value: "COASTER_BUS", label: "Coaster Bus" },
+      ]
+    ).map((opt) => ({ ...opt, icon: getVehicleIcon(opt.value) })),
+    goods: (
+      dropdownOptions[DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_GOODS]
+        ?.options || [
+        { value: "PICKUP_1TON", label: "Pickup 1 Ton" },
+        { value: "PICKUP_3TON", label: "Pickup 3 Ton" },
+        { value: "TRUCK_7TON", label: "Truck 7 Ton" },
+        { value: "REEFER_TRUCK", label: "Reefer Truck" },
+        { value: "FLATBED_TRAILER", label: "Flatbed Trailer" },
+      ]
+    ).map((opt) => ({ ...opt, icon: getVehicleIcon(opt.value) })),
+    managed: (
+      dropdownOptions[DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_MANAGED]
+        ?.options || [
+        { value: "SHUTTLE_BUS", label: "Shuttle Bus" },
+        { value: "EXECUTIVE_VAN", label: "Executive Van" },
+      ]
+    ).map((opt) => ({ ...opt, icon: getVehicleIcon(opt.value) })),
   };
 
   const MinimumSeatsRequiredOptions = {
-    passenger: [
+    passenger: dropdownOptions[
+      DROPDOWN_CATEGORIES.MIN_SEATS_PASSENGER
+    ]?.options?.map((opt) => ({
+      value: opt.value,
+      label: opt.label,
+      placeholder: opt.metadata?.placeholder || "5 Seats",
+    })) || [
       { value: "1", label: "Minimum Seats Required *", placeholder: "5 Seats" },
     ],
-
-    goods: [
-      {
-        value: "3",
-        label: "Cargo Capacity Required *",
-        placeholder: "3 Tons",
-      },
+    goods: dropdownOptions[DROPDOWN_CATEGORIES.MIN_SEATS_GOODS]?.options?.map(
+      (opt) => ({
+        value: opt.value,
+        label: opt.label,
+        placeholder: opt.metadata?.placeholder || "3 Tons",
+      }),
+    ) || [
+      { value: "3", label: "Cargo Capacity Required *", placeholder: "3 Tons" },
     ],
-
-    managed: [
+    managed: dropdownOptions[
+      DROPDOWN_CATEGORIES.MIN_SEATS_MANAGED
+    ]?.options?.map((opt) => ({
+      value: opt.value,
+      label: opt.label,
+      placeholder: opt.metadata?.placeholder || "30 Seats",
+    })) || [
       { value: "30", label: "Minimum Seats Required", placeholder: "30 Seats" },
     ],
   };
 
-  const rentalDurationOptions = [
+  const rentalDurationOptions = dropdownOptions[
+    DROPDOWN_CATEGORIES.RENTAL_DURATIONS
+  ]?.options?.map((opt) => ({
+    value: opt.value,
+    label: opt.label,
+    description: opt.description || "",
+    unit: opt.metadata?.unit || "days",
+    placeholder: opt.metadata?.placeholder || "e.g. 1",
+  })) || [
     {
       value: "daily",
       label: "Daily Rental",
@@ -134,25 +202,29 @@ const Corporate = () => {
   // ];
 
   const budgetRanges = {
-    daily: [
+    daily: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_DAILY]
+      ?.options || [
       { value: "0-1500", label: "Less than 1,500 AED (Budget)" },
       { value: "1500-3000", label: "1,500-3,000 AED (Economy)" },
       { value: "3000-6000", label: "3,000-6,000 AED (Standard)" },
       { value: "6000+", label: "6,000+ AED (Premium)" },
     ],
-    weekly: [
+    weekly: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_WEEKLY]
+      ?.options || [
       { value: "0-9000", label: "Less than 9,000 AED (Budget)" },
       { value: "9000-18000", label: "9,000-18,000 AED (Economy)" },
       { value: "18000-35000", label: "18,000-35,000 AED (Standard)" },
       { value: "35000+", label: "35,000+ AED (Premium)" },
     ],
-    monthly: [
+    monthly: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_MONTHLY]
+      ?.options || [
       { value: "0-10000", label: "Less than 10,000 AED (Budget)" },
       { value: "10000-25000", label: "10,000-25,000 AED (Economy)" },
       { value: "25000-50000", label: "25,000-50,000 AED (Standard)" },
       { value: "50000+", label: "50,000+ AED (Premium)" },
     ],
-    "long-term": [
+    "long-term": dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_LONGTERM]
+      ?.options || [
       { value: "0-8000", label: "Less than 8,000 AED/month (Budget)" },
       { value: "8000-20000", label: "8,000-20,000 AED/month (Economy)" },
       { value: "20000-40000", label: "20,000-40,000 AED/month (Standard)" },
@@ -160,7 +232,9 @@ const Corporate = () => {
     ],
   };
 
-  const featureOptions = [
+  const featureOptions = dropdownOptions[
+    DROPDOWN_CATEGORIES.VEHICLE_FEATURES
+  ]?.options?.map((opt) => opt.value) || [
     "GPS Tracking",
     "Dash Camera",
     "Premium Sound System",
@@ -173,7 +247,9 @@ const Corporate = () => {
     "Child Safety Seats",
   ];
 
-  const locations = [
+  const locations = dropdownOptions[
+    DROPDOWN_CATEGORIES.LOCATIONS
+  ]?.options?.map((opt) => opt.value) || [
     "Dubai",
     "Abu Dhabi",
     "Sharjah",
@@ -542,6 +618,6 @@ const Corporate = () => {
       <Footer />
     </>
   );
-};
+};;;
 
 export default Corporate;

@@ -47,6 +47,8 @@ import corporateOperationsRoutes from "./routes/corporateOperationsRoutes.js"
 import driverLocationRoutes from "./routes/driverLocationRoutes.js"
 import corporateRoutes from "./routes/corporateRoutes.js"
 import pageRoutes from "./routes/pageRoutes.js"
+import dropdownRoutes from "./routes/dropdownRoutes.js"
+import { seedDropdownOptions } from "./controllers/dropdownController.js"
 import { dailyTripGeneration, frequentTripGeneration, hourlyTripGeneration, runImmediateGeneration, corporateTripGeneration } from "./cron/tripGenerationCron.js"
 import { processDailyRenewals, sendDailyRenewalReminders } from "./cron/subscriptionCron.js"
 import { bookingWarningsCron, bookingAutoCancellationCron, runImmediateBookingTimeoutCheck } from "./cron/bookingTimeoutCron.js"
@@ -408,11 +410,26 @@ io.on('connection', (socket) => {
         console.log(`Found ${nearbyDrivers.length} nearby drivers`)
     })
 
-    // Real-time notifications
-    socket.on('join-notification-room', (userId) => {
+    // Real-time notifications - support both event names for compatibility
+    const handleJoinNotificationRoom = (userId) => {
         socket.join(`notifications-${userId}`)
         socket.userId = userId
-        console.log(`User ${userId} joined notification room`)
+        console.log(`[v0] User ${userId} joined notification room: notifications-${userId}`)
+    }
+    socket.on('join-notification-room', handleJoinNotificationRoom)
+    socket.on('join_user_room', handleJoinNotificationRoom) // Alias for frontend compatibility
+    socket.on('join_notification_room', handleJoinNotificationRoom) // Another alias
+
+    // Admin-specific notification room
+    socket.on('join-admin-room', () => {
+        socket.join('admin-notifications')
+        socket.join('admin-wallet-updates')
+        console.log(`[v0] Admin joined admin notification rooms`)
+    })
+    socket.on('join_admin_room', () => {
+        socket.join('admin-notifications')
+        socket.join('admin-wallet-updates')
+        console.log(`[v0] Admin joined admin notification rooms`)
     })
 
     // Handle disconnection
@@ -512,6 +529,7 @@ app.use("/api/corporate-operations", corporateOperationsRoutes)
 app.use("/api/corporate", corporateRoutes)
 app.use("/api/driver", driverLocationRoutes)
 app.use("/api/pages", pageRoutes)
+app.use("/api/dropdowns", dropdownRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -554,5 +572,14 @@ server.listen(PORT, async () => {
         console.log(`[v0] Server startup booking timeout check completed`)
     } catch (error) {
         console.error(`[v0] Error during server startup booking timeout check:`, error.message)
+    }
+
+    // Seed default dropdown options on server start
+    console.log(`[v0] Seeding default dropdown options...`)
+    try {
+        await seedDropdownOptions();
+        console.log(`[v0] Dropdown options seeding completed`)
+    } catch (error) {
+        console.error(`[v0] Error seeding dropdown options:`, error.message)
     }
 })

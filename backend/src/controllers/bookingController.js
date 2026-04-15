@@ -407,9 +407,11 @@ export const createB2CBooking = async (req, res) => {
             vehiclePlate: targetTrip?.vehicleInfo?.licensePlate || vehiclePlate,
             passengerNotes,
 
-            // Commission
-            adminCommissionAmount: paymentMethod === "CASH" ? 0 : commissionData.adminCommission,
-            driverEarnings: paymentMethod === "CASH" ? paymentAmount : commissionData.fleetOwnerAmount,
+            // Commission - always calculate for both CASH and STRIPE
+            // For CASH: B2C Partner collects full amount from Commuter, then pays commission to Admin
+            // For STRIPE: Admin receives full amount, then credits B2C Partner's earnings
+            adminCommissionAmount: commissionData.adminCommission,
+            driverEarnings: commissionData.fleetOwnerAmount,
         })
 
         // Set acceptance deadlines for booking timeout feature
@@ -499,6 +501,7 @@ export const createB2CBooking = async (req, res) => {
         })
     }
 }
+
 
 // Create Corporate Booking
 export const createCorporateBooking = async (req, res) => {
@@ -748,14 +751,26 @@ export const acceptB2CBooking = async (req, res) => {
             })
         }
 
-        // Check wallet balance for cash payment bookings
-        if (booking.paymentMethod === "CASH") {
-            const partnerWallet = await Wallet.findOne({ userId: partnerId })
-            const adminCommission = booking.adminCommissionAmount || 0
+        // Handle wallet transactions based on payment method
+        const adminCommission = booking.adminCommissionAmount || 0
+        const driverEarnings = booking.driverEarnings || (booking.paymentAmount - adminCommission)
 
-            console.log("[acceptB2CBooking] Wallet check:", {
+        // Get Admin user to credit commission
+        const adminUser = await User.findOne({ role: 'ADMIN' })
+        let adminWallet = null
+        if (adminUser) {
+            adminWallet = await Wallet.findOne({ userId: adminUser._id })
+        }
+
+        if (booking.paymentMethod === "CASH") {
+            // CASH Payment: B2C Partner will collect cash from Commuter
+            // Admin commission needs to be deducted from B2C Partner's wallet and added to Admin's wallet
+            const partnerWallet = await Wallet.findOne({ userId: partnerId })
+
+            console.log("[acceptB2CBooking] CASH payment - Wallet check:", {
                 paymentMethod: booking.paymentMethod,
                 adminCommission,
+                driverEarnings,
                 walletBalance: partnerWallet?.balance || 0
             })
 
@@ -772,20 +787,89 @@ export const acceptB2CBooking = async (req, res) => {
                 })
             }
 
-            // Deduct admin commission from wallet (will be refunded if trip cancelled)
+            // Deduct admin commission from B2C Partner's wallet
             partnerWallet.balance -= adminCommission
             partnerWallet.transactions.push({
                 type: 'WITHDRAWAL',
                 amount: adminCommission,
-                description: `Admin commission for booking ${booking._id}`,
+                description: `Admin commission for booking ${booking._id} (Cash payment)`,
                 status: 'COMPLETED'
             })
             await partnerWallet.save()
 
-            console.log("[acceptB2CBooking] Admin commission deducted:", {
+            // Add admin commission to Admin's wallet
+            if (adminWallet && adminCommission > 0) {
+                adminWallet.balance += adminCommission
+                adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + adminCommission
+                adminWallet.transactions.push({
+                    type: 'DEPOSIT',
+                    amount: adminCommission,
+                    description: `Commission from B2C booking ${booking._id} (Cash payment from partner ${booking.b2cPartnerId?.fullName || partnerId})`,
+                    status: 'COMPLETED'
+                })
+                await adminWallet.save()
+
+                console.log("[acceptB2CBooking] Admin commission credited to Admin wallet:", {
+                    adminCommission,
+                    adminWalletNewBalance: adminWallet.balance
+                })
+            }
+
+            console.log("[acceptB2CBooking] CASH booking - Admin commission deducted from partner:", {
                 deductedAmount: adminCommission,
-                newBalance: partnerWallet.balance
+                partnerNewBalance: partnerWallet.balance
             })
+        } else if (booking.paymentMethod === "STRIPE" && booking.paymentStatus === "COMPLETED") {
+            // STRIPE Payment: Payment already received by Admin via Stripe
+            // Now credit the B2C Partner's wallet with their earnings (total - admin commission)
+            let partnerWallet = await Wallet.findOne({ userId: partnerId })
+
+            // Create wallet if it doesn't exist
+            if (!partnerWallet) {
+                partnerWallet = new Wallet({
+                    userId: partnerId,
+                    role: 'B2C_PARTNER',
+                    balance: 0,
+                    currency: booking.currency || 'AED',
+                    transactions: []
+                })
+            }
+
+            // Add driver earnings to B2C Partner's wallet
+            if (driverEarnings > 0) {
+                partnerWallet.balance += driverEarnings
+                partnerWallet.totalEarnings = (partnerWallet.totalEarnings || 0) + driverEarnings
+                partnerWallet.transactions.push({
+                    type: 'DEPOSIT',
+                    amount: driverEarnings,
+                    description: `Earnings from B2C booking ${booking._id} (Stripe payment - after ${adminCommission} ${booking.currency || 'AED'} admin commission)`,
+                    status: 'COMPLETED'
+                })
+                await partnerWallet.save()
+
+                console.log("[acceptB2CBooking] STRIPE booking - Earnings credited to partner wallet:", {
+                    driverEarnings,
+                    adminCommission,
+                    partnerNewBalance: partnerWallet.balance
+                })
+            }
+
+            // Record commission in Admin's wallet for tracking (payment already received via Stripe)
+            if (adminWallet && adminCommission > 0) {
+                adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + adminCommission
+                adminWallet.transactions.push({
+                    type: 'DEPOSIT',
+                    amount: adminCommission,
+                    description: `Commission from B2C booking ${booking._id} (Stripe payment - already received via Stripe)`,
+                    status: 'COMPLETED'
+                })
+                await adminWallet.save()
+
+                console.log("[acceptB2CBooking] Admin commission recorded:", {
+                    adminCommission,
+                    adminWalletTotalEarnings: adminWallet.totalEarnings
+                })
+            }
         }
 
         // Update booking status
@@ -1093,18 +1177,117 @@ export const startB2CTrip = async (req, res) => {
             })
         }
 
+        // Check if trip is started late
+        let isLate = false
+        let lateByMinutes = 0
+        let scheduledStartTime = null
+
+        // Get scheduled time from linked trip if available
+        if (booking.linkedTrip) {
+            const linkedTrip = await B2CPartnerTrip.findById(booking.linkedTrip).select('startTime tripDate')
+            if (linkedTrip && linkedTrip.startTime) {
+                scheduledStartTime = linkedTrip.startTime
+                const tripDate = linkedTrip.tripDate || booking.travelDate
+
+                // Parse scheduled time (format: "HH:MM" or "HH:MM AM/PM")
+                let scheduledHour, scheduledMinute
+                const timeStr = linkedTrip.startTime.trim()
+
+                if (timeStr.includes('AM') || timeStr.includes('PM')) {
+                    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+                    if (match) {
+                        scheduledHour = parseInt(match[1])
+                        scheduledMinute = parseInt(match[2])
+                        const isPM = match[3].toUpperCase() === 'PM'
+                        if (isPM && scheduledHour !== 12) scheduledHour += 12
+                        if (!isPM && scheduledHour === 12) scheduledHour = 0
+                    }
+                } else {
+                    const [h, m] = timeStr.split(':').map(Number)
+                    scheduledHour = h
+                    scheduledMinute = m
+                }
+
+                if (scheduledHour !== undefined && scheduledMinute !== undefined) {
+                    const scheduledDateTime = new Date(tripDate)
+                    scheduledDateTime.setHours(scheduledHour, scheduledMinute, 0, 0)
+
+                    const now = new Date()
+                    const timeDiff = now - scheduledDateTime
+                    lateByMinutes = Math.floor(timeDiff / (1000 * 60))
+
+                    // Consider late if more than 5 minutes past scheduled time
+                    if (lateByMinutes > 5) {
+                        isLate = true
+                    }
+                }
+            }
+        }
+
         // Update booking status to IN_PROGRESS
         booking.bookingStatus = "IN_PROGRESS"
         booking.startedAt = new Date()
         booking.tripStartedBy = userRole
+        booking.isLateStart = isLate
+        booking.lateByMinutes = isLate ? lateByMinutes : 0
         await booking.save()
 
         console.log("[startB2CTrip] Trip started:", {
             bookingId: booking._id,
             status: booking.bookingStatus,
             startedBy: userRole,
-            isSelfDriver: booking.isSelfDriver
+            isSelfDriver: booking.isSelfDriver,
+            isLate,
+            lateByMinutes: isLate ? lateByMinutes : 0
         })
+
+        // If trip started late, notify Admin and B2C Partner owner
+        if (isLate && lateByMinutes > 5) {
+            const driverName = booking.isSelfDriver
+                ? (booking.b2cPartnerId.businessName || booking.b2cPartnerId.name)
+                : booking.driverName || 'Driver'
+            const driverType = booking.isSelfDriver ? 'B2C_PARTNER (Self-Driving)' : 'B2C_PARTNER_DRIVER'
+
+            // Notify Admin
+            await sendAdminNotification(
+                "Late Trip Start Warning",
+                `${driverName} (${driverType}) started B2C trip ${lateByMinutes} minutes late. Booking #${booking._id.toString().slice(-6)}. Route: ${booking.pickupLocation} to ${booking.dropoffLocation}. Scheduled: ${scheduledStartTime}.`,
+                "LATE_TRIP_START",
+                {
+                    bookingId: booking._id,
+                    driverName,
+                    driverType,
+                    isSelfDriver: booking.isSelfDriver,
+                    lateByMinutes,
+                    scheduledTime: scheduledStartTime,
+                    actualStartTime: new Date().toISOString(),
+                    pickupLocation: booking.pickupLocation,
+                    dropoffLocation: booking.dropoffLocation,
+                    b2cPartnerId: booking.b2cPartnerId._id,
+                }
+            )
+
+            // If it's a driver (not self-driving), notify the B2C Partner owner
+            if (!booking.isSelfDriver && booking.assignedDriverId) {
+                const ownerNotification = await createNotification({
+                    userId: booking.b2cPartnerId._id,
+                    type: "LATE_TRIP_START",
+                    title: "Your Driver Started Trip Late",
+                    message: `Your driver ${driverName} started a trip ${lateByMinutes} minutes late. Booking: ${booking.pickupLocation} to ${booking.dropoffLocation}. Scheduled: ${scheduledStartTime}. Please address this with the driver.`,
+                    metadata: {
+                        bookingId: booking._id,
+                        driverId: booking.assignedDriverId,
+                        driverName,
+                        lateByMinutes,
+                        scheduledTime: scheduledStartTime,
+                        actualStartTime: new Date().toISOString(),
+                        pickupLocation: booking.pickupLocation,
+                        dropoffLocation: booking.dropoffLocation,
+                    },
+                })
+                sendRealTimeNotification(booking.b2cPartnerId._id.toString(), ownerNotification)
+            }
+        }
 
         // Create notification for passenger
         const tripStartedNotification = await createNotification({
@@ -1526,121 +1709,168 @@ export const getCorporateOwnerBookings = async (req, res) => {
         const corporateOwnerId = req.userId
         const { status, date } = req.query
 
-        console.log("[v0] Fetching corporate owner bookings from Trip model for:", corporateOwnerId)
+        console.log("[v0] Fetching corporate owner bookings from CorporateBooking model for:", corporateOwnerId)
 
-        // Query Trip model for corporate trips
-        const tripQuery = { corporateId: corporateOwnerId }
+        // Import CorporateBooking model
+        const CorporateBooking = (await import("../models/CorporateBooking.js")).default
+        const CorporateEmployee = (await import("../models/CorporateEmployee.js")).default
 
-        if (status) {
-            tripQuery.status = status
+        // Query CorporateBooking model for bookings
+        const bookingQuery = { corporateOwnerId: corporateOwnerId }
+
+        if (status && status !== "all") {
+            bookingQuery.bookingStatus = status
         }
 
         if (date) {
             const dateObj = new Date(date)
             const startOfDay = new Date(dateObj.setHours(0, 0, 0, 0))
             const endOfDay = new Date(dateObj.setHours(23, 59, 59, 999))
-            tripQuery.tripDate = {
+            bookingQuery.travelDate = {
                 $gte: startOfDay,
                 $lt: endOfDay,
             }
         }
 
-        // Get all trips for this corporate
-        const trips = await Trip.find(tripQuery)
-            .populate("driverId", "name email phone")
-            .populate("vehicleId", "model licensePlate vehicleName registrationNumber")
-            .populate("routeId", "fromLocation toLocation startTime endTime")
+        // Get all bookings for this corporate with populated data
+        const corporateBookings = await CorporateBooking.find(bookingQuery)
+            .populate("passengerId", "fullName email whatsappNumber")
+            .populate("routeId", "fromLocation toLocation startTime endTime totalDistance")
             .populate("contractId", "contractNumber status")
-            .populate("passengers.employeeId", "fullName whatsappNumber email")
-            .sort({ tripDate: -1, createdAt: -1 })
+            .populate("driverId", "name email phone")
+            .populate("linkedSchedule", "scheduleName pickupTime dropTime")
+            .sort({ createdAt: -1 })
 
-        console.log("[v0] Found trips:", trips.length)
+        console.log("[v0] Found corporate bookings:", corporateBookings.length)
 
-        // Transform trips to bookings format for frontend
+        // Transform bookings with employee details and trips
         const bookings = []
 
-        for (const trip of trips) {
+        for (const booking of corporateBookings) {
             try {
-                // Resolve driver name from Driver model or User model
-                let driverName = trip.driverId?.name || "Unknown"
-                let driverInfo = trip.driverId
-
-                // If driverId populated from Driver model, also try to find the user account
-                if (trip.driverId && typeof trip.driverId === 'object' && !trip.driverId.fullName) {
-                    const driverUserAccount = await User.findOne({
-                        driverId: trip.driverId._id,
-                        role: { $in: ["B2B_PARTNER_DRIVER", "CORPORATE_DRIVER"] }
-                    }).select("fullName whatsappNumber email")
-                    if (driverUserAccount) {
-                        driverName = driverUserAccount.fullName
-                        driverInfo = {
-                            _id: trip.driverId._id,
-                            name: driverUserAccount.fullName,
-                            email: driverUserAccount.email,
-                            phone: driverUserAccount.whatsappNumber,
-                        }
-                    }
+                // Get employee details from CorporateEmployee
+                let employeeDetails = null
+                if (booking.passengerId) {
+                    employeeDetails = await CorporateEmployee.findOne({
+                        userId: booking.passengerId._id
+                    }).select("personalInfo employeeId transportDetails")
                 }
 
-                for (const passenger of (trip.passengers || [])) {
-                    // Filter by status if provided
-                    if (status && passenger.bookingStatus !== status) {
-                        continue
-                    }
-
-                    bookings.push({
-                        _id: passenger._id,
-                        tripId: trip._id,
-                        passengerId: passenger.employeeId,
-                        employee: passenger.employeeId,
-                        employeeName: passenger.employeeId?.fullName || passenger.name || "Unknown",
-                        employeeEmail: passenger.employeeId?.email,
-                        employeePhone: passenger.employeeId?.whatsappNumber,
-                        seatNumber: passenger.seatNumber || 1,
-                        pickupPoint: passenger.pickupStop || passenger.pickupPoint || trip.fromLocation,
-                        pickupStop: passenger.pickupStop || passenger.pickupPoint || trip.fromLocation,
-                        dropoffStop: passenger.dropoffStop || trip.toLocation,
-                        pickupTime: passenger.pickupTime || trip.startTime,
-                        bookingStatus: passenger.bookingStatus,
-                        bookedAt: passenger.bookedAt,
-                        travelDate: trip.tripDate,
-                        tripDate: trip.tripDate,
-                        startTime: trip.startTime,
-                        endTime: trip.endTime,
-                        tripType: trip.tripType,
-                        direction: trip.direction,
-                        fromLocation: trip.fromLocation,
-                        toLocation: trip.toLocation,
-                        status: trip.status,
-                        tripStatus: trip.status,
-                        numberOfSeats: 1,
-                        route: trip.routeId,
-                        routeId: trip.routeId,
-                        driver: driverInfo,
-                        driverId: trip.driverId,
-                        driverName: driverName,
-                        vehicle: trip.vehicleId,
-                        vehicleId: trip.vehicleId,
-                        vehicleModel: trip.vehicleId?.model || trip.vehicleId?.vehicleName,
-                        vehiclePlate: trip.vehicleId?.licensePlate || trip.vehicleId?.registrationNumber,
-                        contract: trip.contractId,
-                        contractId: trip.contractId,
-                        currentLocation: trip.currentLocation,
-                        driverLocation: trip.driverLocation,
+                // Get trips for this booking
+                let bookingTrips = []
+                if (booking.monthlyTrips && booking.monthlyTrips.length > 0) {
+                    bookingTrips = await Trip.find({
+                        _id: { $in: booking.monthlyTrips }
                     })
+                        .populate("driverId", "name email phone")
+                        .populate("vehicleId", "model vehicleName licensePlate registrationNumber")
+                        .sort({ tripDate: 1 })
+                        .limit(50) // Limit to prevent huge responses
                 }
-            } catch (tripError) {
-                console.error("[v0] Error processing trip:", trip._id, tripError?.message)
-                // Continue with next trip instead of failing entire request
+
+                // Resolve driver info
+                let driverName = booking.driverName || "Not Assigned"
+                let driverInfo = booking.driverId
+
+                if (booking.driverId && typeof booking.driverId === 'object') {
+                    driverName = booking.driverId.name || "Not Assigned"
+                }
+
+                // Also try to get driver info from first trip if not in booking
+                if (driverName === "Not Assigned" && bookingTrips.length > 0 && bookingTrips[0].driverId) {
+                    const tripDriver = bookingTrips[0].driverId
+                    if (typeof tripDriver === 'object' && tripDriver.name) {
+                        driverName = tripDriver.name
+                        driverInfo = tripDriver
+                    }
+                }
+
+                // Get employee name from multiple sources
+                const employeeName =
+                    employeeDetails?.personalInfo?.firstName && employeeDetails?.personalInfo?.lastName
+                        ? `${employeeDetails.personalInfo.firstName} ${employeeDetails.personalInfo.lastName}`
+                        : booking.passengerId?.fullName || "Unknown Employee"
+
+                const employeeEmail = employeeDetails?.personalInfo?.email || booking.passengerId?.email || ""
+                const employeePhone = employeeDetails?.personalInfo?.phoneNumber || booking.passengerId?.whatsappNumber || ""
+                const employeeIdNumber = employeeDetails?.employeeId || ""
+                const department = employeeDetails?.personalInfo?.department || ""
+
+                // Format trips for frontend
+                const formattedTrips = bookingTrips.map(trip => ({
+                    _id: trip._id,
+                    tripDate: trip.tripDate,
+                    fromLocation: trip.fromLocation,
+                    toLocation: trip.toLocation,
+                    startTime: trip.startTime,
+                    endTime: trip.endTime,
+                    status: trip.status,
+                    tripType: trip.tripType,
+                    direction: trip.direction,
+                    driverName: trip.driverId?.name || driverName,
+                    vehicleModel: trip.vehicleId?.model || trip.vehicleId?.vehicleName || booking.vehicleModel,
+                    vehiclePlate: trip.vehicleId?.licensePlate || trip.vehicleId?.registrationNumber || booking.vehiclePlate,
+                }))
+
+                bookings.push({
+                    _id: booking._id,
+                    bookingId: booking._id,
+                    // Employee Info
+                    passengerId: booking.passengerId,
+                    employeeName: employeeName,
+                    employeeEmail: employeeEmail,
+                    employeePhone: employeePhone,
+                    employeeIdNumber: employeeIdNumber,
+                    department: department,
+                    // Booking Details
+                    pickupLocation: booking.pickupLocation,
+                    dropoffLocation: booking.dropoffLocation,
+                    returnPickupLocation: booking.returnPickupLocation,
+                    returnDropoffLocation: booking.returnDropoffLocation,
+                    travelDate: booking.travelDate,
+                    bookingDate: booking.bookingDate,
+                    numberOfSeats: booking.numberOfSeats || 1,
+                    bookingType: booking.bookingType,
+                    bookingStatus: booking.bookingStatus,
+                    // Pass Info
+                    isMonthlyPass: booking.isMonthlyPass,
+                    passDuration: booking.passDuration,
+                    passStartDate: booking.passStartDate,
+                    passEndDate: booking.passEndDate,
+                    createdTripsCount: booking.createdTripsCount || formattedTrips.length,
+                    totalTripsCount: booking.totalTripsCount || formattedTrips.length,
+                    // Route/Schedule Info
+                    routeId: booking.routeId,
+                    routeName: booking.routeId ? `${booking.routeId.fromLocation} to ${booking.routeId.toLocation}` : "",
+                    linkedSchedule: booking.linkedSchedule,
+                    // Driver/Vehicle Info
+                    driverId: driverInfo,
+                    driverName: driverName,
+                    vehicleModel: booking.vehicleModel,
+                    vehiclePlate: booking.vehiclePlate,
+                    // Contract Info
+                    contractId: booking.contractId,
+                    // Trips
+                    trips: formattedTrips,
+                    // Metadata
+                    createdAt: booking.createdAt,
+                    updatedAt: booking.updatedAt,
+                })
+            } catch (bookingError) {
+                console.error("[v0] Error processing booking:", booking._id, bookingError?.message)
             }
         }
 
-        console.log("[v0] Found corporate owner bookings:", bookings.length)
+        // Count unique employees
+        const uniqueEmployees = new Set(bookings.map(b => b.passengerId?._id?.toString()).filter(Boolean))
+
+        console.log("[v0] Processed corporate bookings:", bookings.length, "Unique employees:", uniqueEmployees.size)
 
         return res.status(200).json({
             success: true,
             bookings,
             totalBookings: bookings.length,
+            totalEmployees: uniqueEmployees.size,
         })
     } catch (error) {
         console.error("[v0] Error fetching corporate owner bookings:", error?.message, error?.stack)

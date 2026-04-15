@@ -56,13 +56,14 @@ function AdminFinance() {
     }
   }
 
-  const formatCurrency = (amount, currency = 'KWD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
+  const formatCurrency = (amount, currency = null) => {
+    const curr = currency || metrics.currency || "AED";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: curr,
       minimumFractionDigits: 2,
-    }).format(amount)
-  }
+    }).format(amount);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {

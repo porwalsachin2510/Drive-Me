@@ -35,7 +35,7 @@ const MyQuotationsContent = () => {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
             withCredentials: true,
-          }
+          },
         );
 
         if (response.data.success) {
@@ -52,7 +52,7 @@ const MyQuotationsContent = () => {
         if (!isSilent) setInitialLoading(false);
       }
     },
-    [filters]
+    [filters],
   );
 
   useEffect(() => {

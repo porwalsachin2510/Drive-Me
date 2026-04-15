@@ -1,0 +1,709 @@
+/* Premium Corporate Routes Tab - Inter Font */
+.corp-routes {
+  padding: 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.corp-routes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.corp-routes-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.corp-routes-filters {
+  display: flex;
+  gap: 12px;
+}
+
+.corp-routes-select {
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+  cursor: pointer;
+}
+
+.corp-routes-loading,
+.corp-routes-error {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+  font-size: 15px;
+}
+
+.corp-routes-error {
+  color: #dc3545;
+}
+
+.corp-routes-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #888;
+}
+
+.corp-routes-empty svg {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.corp-routes-empty p {
+  font-size: 18px;
+  font-weight: 600;
+  color: #555;
+  margin: 0 0 8px 0;
+}
+
+.corp-routes-empty span {
+  font-size: 14px;
+  color: #888;
+}
+
+.corp-routes-empty-small {
+  font-size: 13px;
+  color: #999;
+  padding: 8px 0;
+}
+
+/* Summary Cards */
+.corp-routes-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.corp-routes-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.corp-routes-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.corp-routes-blue-bg {
+  background-color: #e6f0ff;
+  color: #4169e1;
+}
+
+.corp-routes-green-bg {
+  background-color: #e6f9f0;
+  color: #10b981;
+}
+
+.corp-routes-orange-bg {
+  background-color: #fff3e6;
+  color: #f59e0b;
+}
+
+.corp-routes-purple-bg {
+  background-color: #f3e8ff;
+  color: #9333ea;
+}
+
+.corp-routes-card-content {
+  flex: 1;
+}
+
+.corp-routes-card-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.corp-routes-card-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+/* Routes List */
+.corp-routes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.corp-routes-list-item {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.corp-routes-list-item:hover {
+  border-color: #4169e1;
+  box-shadow: 0 4px 12px rgba(65, 105, 225, 0.1);
+}
+
+.corp-routes-list-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.corp-routes-route-path {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.corp-routes-from,
+.corp-routes-to {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.corp-routes-list-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+
+.corp-routes-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.corp-routes-detail svg {
+  color: #999;
+}
+
+.corp-routes-list-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 12px;
+}
+
+.corp-routes-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #555;
+  font-weight: 500;
+}
+
+.corp-routes-stat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.corp-routes-stat-dot.scheduled {
+  background: #2563eb;
+}
+
+.corp-routes-stat-dot.in-progress {
+  background: #f59e0b;
+}
+
+.corp-routes-stat-dot.completed {
+  background: #10b981;
+}
+
+.corp-routes-stat-dot.passengers {
+  background: #9333ea;
+}
+
+.corp-routes-list-days {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.corp-routes-day-mini {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #999;
+  background: #f5f5f5;
+}
+
+.corp-routes-day-mini.active {
+  background: #e6f0ff;
+  color: #4169e1;
+}
+
+.corp-routes-list-arrow {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Status Badges */
+.corp-routes-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.corp-routes-status-active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.corp-routes-status-inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.corp-routes-status-scheduled {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.corp-routes-status-in-progress {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.corp-routes-status-pending {
+  background: #e9ecef;
+  color: #495057;
+}
+
+/* Details View */
+.corp-routes-details-header {
+  margin-bottom: 24px;
+}
+
+.corp-routes-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #4169e1;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 16px;
+}
+
+.corp-routes-back-btn:hover {
+  color: #2563eb;
+}
+
+.corp-routes-details-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.corp-routes-details-title h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+/* Info Grid */
+.corp-routes-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.corp-routes-info-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.corp-routes-info-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.corp-routes-info-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+/* Stats Section */
+.corp-routes-stats-section {
+  margin-bottom: 28px;
+}
+
+.corp-routes-section-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 16px;
+}
+
+.corp-routes-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.corp-routes-stat-box {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.corp-routes-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.corp-routes-stat-value.corp-routes-green {
+  color: #10b981;
+}
+
+.corp-routes-stat-value.corp-routes-blue {
+  color: #4169e1;
+}
+
+.corp-routes-stat-label {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Days Section */
+.corp-routes-days-section {
+  margin-bottom: 28px;
+}
+
+.corp-routes-days-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.corp-routes-day-badge {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.corp-routes-day-badge.active {
+  background: #e6f0ff;
+  color: #4169e1;
+}
+
+.corp-routes-day-badge.inactive {
+  background: #f5f5f5;
+  color: #999;
+}
+
+/* Schedules Grid */
+.corp-routes-section {
+  margin-bottom: 28px;
+}
+
+.corp-routes-schedules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.corp-routes-schedule-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.corp-routes-schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.corp-routes-schedule-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.corp-routes-trip-time {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.corp-routes-trip-number {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4169e1;
+  margin-bottom: 4px;
+}
+
+.corp-routes-trip-type {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.corp-routes-trip-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 13px;
+  color: #555;
+}
+
+.corp-routes-stops {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e0e0e0;
+}
+
+.corp-routes-stops-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.corp-routes-stop {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.corp-routes-stop-time {
+  color: #4169e1;
+  font-weight: 600;
+  min-width: 50px;
+}
+
+.corp-routes-stop-location {
+  color: #555;
+}
+
+.corp-routes-schedule-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #888;
+  margin-top: 8px;
+}
+
+/* Table */
+.corp-routes-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+}
+
+.corp-routes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.corp-routes-table th {
+  background: #f8f9fa;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 1px solid #e8e8e8;
+  white-space: nowrap;
+}
+
+.corp-routes-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.corp-routes-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+.corp-routes-contract-num {
+  font-family: monospace;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+/* Meta Section */
+.corp-routes-meta-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.corp-routes-meta-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.corp-routes-meta-card h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.corp-routes-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 6px 0;
+}
+
+.corp-routes-meta-row span:first-child {
+  color: #888;
+}
+
+.corp-routes-meta-row span:last-child {
+  color: #333;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .corp-routes-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .corp-routes-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .corp-routes-route-path {
+    font-size: 15px;
+  }
+
+  .corp-routes-from,
+  .corp-routes-to {
+    max-width: 120px;
+  }
+
+  .corp-routes-list-details {
+    gap: 12px;
+  }
+
+  .corp-routes-list-stats {
+    gap: 10px;
+  }
+
+  .corp-routes-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .corp-routes-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .corp-routes-details-title h2 {
+    font-size: 20px;
+  }
+
+  .corp-routes-schedules-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .corp-routes-meta-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .corp-routes {
+    padding: 12px;
+  }
+
+  .corp-routes-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .corp-routes-list-item {
+    padding: 16px;
+  }
+
+  .corp-routes-list-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .corp-routes-days-grid {
+    justify-content: center;
+  }
+}

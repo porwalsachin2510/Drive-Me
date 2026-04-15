@@ -1,26 +1,26 @@
-.corporate-employee-management {
+.drivemego-cem-corporate-employee-management {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.management-header {
+.drivemego-cem-management-header {
   margin-bottom: 30px;
 }
 
-.management-header h2 {
+.drivemego-cem-management-header h2 {
   color: #333;
   margin-bottom: 20px;
   font-size: 24px;
   font-weight: 600;
 }
 
-.tab-navigation {
+.drivemego-cem-tab-navigation {
   display: flex;
   border-bottom: 2px solid #e5e7eb;
 }
 
-.tab-btn {
+.drivemego-cem-tab-btn {
   padding: 12px 24px;
   background: none;
   border: none;
@@ -32,16 +32,16 @@
   transition: all 0.3s ease;
 }
 
-.tab-btn:hover {
+.drivemego-cem-tab-btn:hover {
   color: #374151;
 }
 
-.tab-btn.active {
+.drivemego-cem-tab-btn.drivemego-cem-active {
   color: #3b82f6;
   border-bottom-color: #3b82f6;
 }
 
-.management-content {
+.drivemego-cem-management-content {
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -49,7 +49,7 @@
 }
 
 /* Employee List Styles */
-.employee-list .list-header {
+.drivemego-cem-employee-list .drivemego-cem-list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -58,14 +58,14 @@
   gap: 15px;
 }
 
-.search-filters {
+.drivemego-cem-search-filters {
   display: flex;
   gap: 10px;
   flex: 1;
   max-width: 400px;
 }
 
-.search-input {
+.drivemego-cem-search-input {
   flex: 1;
   padding: 10px 15px;
   border: 1px solid #d1d5db;
@@ -73,13 +73,13 @@
   font-size: 14px;
 }
 
-.search-input:focus {
+.drivemego-cem-search-input:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.filter-select {
+.drivemego-cem-filter-select {
   padding: 10px 15px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -87,12 +87,12 @@
   background: white;
 }
 
-.action-buttons {
+.drivemego-cem-action-buttons {
   display: flex;
   gap: 10px;
 }
 
-.btn {
+.drivemego-cem-btn {
   padding: 10px 16px;
   border: none;
   border-radius: 6px;
@@ -106,106 +106,106 @@
   gap: 6px;
 }
 
-.btn-primary {
+.drivemego-cem-btn-primary {
   background: #3b82f6;
   color: white;
 }
 
-.btn-primary:hover {
+.drivemego-cem-btn-primary:hover {
   background: #2563eb;
 }
 
-.btn-secondary {
+.drivemego-cem-btn-secondary {
   background: #6b7280;
   color: white;
 }
 
-.btn-secondary:hover {
+.drivemego-cem-btn-secondary:hover {
   background: #4b5563;
 }
 
-.btn-info {
+.drivemego-cem-btn-info {
   background: #0ea5e9;
   color: white;
 }
 
-.btn-info:hover {
+.drivemego-cem-btn-info:hover {
   background: #0284c7;
 }
 
-.btn-warning {
+.drivemego-cem-btn-warning {
   background: #f59e0b;
   color: white;
 }
 
-.btn-warning:hover {
+.drivemego-cem-btn-warning:hover {
   background: #d97706;
 }
 
-.btn-danger {
+.drivemego-cem-btn-danger {
   background: #ef4444;
   color: white;
 }
 
-.btn-danger:hover {
+.drivemego-cem-btn-danger:hover {
   background: #dc2626;
 }
 
-.btn-success {
+.drivemego-cem-btn-success {
   background: #22c55e;
   color: white;
 }
 
-.btn-success:hover {
+.drivemego-cem-btn-success:hover {
   background: #16a34a;
 }
 
-.btn-sm {
+.drivemego-cem-btn-sm {
   padding: 6px 12px;
   font-size: 12px;
 }
 
-.btn:disabled {
+.drivemego-cem-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.loading {
+.drivemego-cem-loading {
   text-align: center;
   padding: 40px;
   color: #6b7280;
   font-size: 16px;
 }
 
-.employees-table {
+.drivemego-cem-employees-table {
   overflow-x: auto;
 }
 
-.employees-table table {
+.drivemego-cem-employees-table table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.employees-table th,
-.employees-table td {
+.drivemego-cem-employees-table th,
+.drivemego-cem-employees-table td {
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.employees-table th {
+.drivemego-cem-employees-table th {
   background: #f9fafb;
   font-weight: 600;
   color: #374151;
   font-size: 14px;
 }
 
-.employees-table td {
+.drivemego-cem-employees-table td {
   font-size: 14px;
   color: #6b7280;
 }
 
-.trip-assignment-cell {
+.drivemego-cem-trip-assignment-cell {
   max-width: 180px;
   font-size: 12px !important;
   white-space: nowrap;
@@ -213,24 +213,24 @@
   text-overflow: ellipsis;
 }
 
-.status-badge {
+.drivemego-cem-status-badge {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
 }
 
-.status-badge.active {
+.drivemego-cem-status-badge.drivemego-cem-active {
   background: #dcfce7;
   color: #166534;
 }
 
-.status-badge.inactive {
+.drivemego-cem-status-badge.drivemego-cem-inactive {
   background: #fee2e2;
   color: #991b1b;
 }
 
-.pagination {
+.drivemego-cem-pagination {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -238,7 +238,7 @@
   margin-top: 20px;
 }
 
-.pagination button {
+.drivemego-cem-pagination button {
   padding: 8px 16px;
   border: 1px solid #d1d5db;
   background: white;
@@ -247,17 +247,17 @@
   font-size: 14px;
 }
 
-.pagination button:hover:not(:disabled) {
+.drivemego-cem-pagination button:hover:not(:disabled) {
   background: #f3f4f6;
 }
 
-.pagination button:disabled {
+.drivemego-cem-pagination button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* Modal Styles */
-.modal-overlay {
+.drivemego-cem-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -270,7 +270,7 @@
   z-index: 1000;
 }
 
-.modal {
+.drivemego-cem-modal {
   background: white;
   border-radius: 8px;
   width: 90%;
@@ -279,7 +279,11 @@
   overflow-y: auto;
 }
 
-.modal-header {
+.drivemego-cem-modal.drivemego-cem-modal-large {
+  max-width: 800px;
+}
+
+.drivemego-cem-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -287,14 +291,18 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.modal-header h3 {
+.drivemego-cem-modal-header h3 {
   margin: 0;
   color: #333;
   font-size: 18px;
   font-weight: 600;
 }
 
-.close-btn {
+.drivemego-cem-modal-content{
+padding: 12px;
+}
+
+.drivemego-cem-close-btn {
   background: none;
   border: none;
   font-size: 24px;
@@ -308,19 +316,19 @@
   justify-content: center;
 }
 
-.close-btn:hover {
+.drivemego-cem-close-btn:hover {
   color: #374151;
 }
 
-.modal-form {
+.drivemego-cem-modal-form {
   padding: 20px;
 }
 
-.form-section {
+.drivemego-cem-form-section {
   margin-bottom: 30px;
 }
 
-.form-section h4 {
+.drivemego-cem-form-section h4 {
   margin: 0 0 15px 0;
   color: #374151;
   font-size: 16px;
@@ -329,14 +337,14 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.form-row {
+.drivemego-cem-form-row {
   display: flex;
   gap: 15px;
   margin-bottom: 15px;
 }
 
-.form-row input,
-.form-row select {
+.drivemego-cem-form-row input,
+.drivemego-cem-form-row select {
   flex: 1;
   padding: 10px 15px;
   border: 1px solid #d1d5db;
@@ -344,18 +352,18 @@
   font-size: 14px;
 }
 
-.form-row input:focus,
-.form-row select:focus {
+.drivemego-cem-form-row input:focus,
+.drivemego-cem-form-row select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-group {
+.drivemego-cem-form-group {
   margin-bottom: 20px;
 }
 
-.form-group label {
+.drivemego-cem-form-group label {
   display: block;
   margin-bottom: 8px;
   color: #374151;
@@ -363,7 +371,7 @@
   font-size: 14px;
 }
 
-.form-group input[type="file"] {
+.drivemego-cem-form-group input[type="file"] {
   width: 100%;
   padding: 10px;
   border: 1px solid #d1d5db;
@@ -371,49 +379,49 @@
   font-size: 14px;
 }
 
-.modal-actions {
+.drivemego-cem-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding-top: 20px;
+  padding: 8px 5px;
   border-top: 1px solid #e5e7eb;
 }
 
 /* Bulk Upload Styles */
-.bulk-upload-instructions {
+.drivemego-cem-bulk-upload-instructions {
   margin-bottom: 30px;
 }
 
-.bulk-upload-instructions h4 {
+.drivemego-cem-bulk-upload-instructions h4 {
   margin: 0 0 10px 0;
   color: #374151;
   font-size: 16px;
   font-weight: 600;
 }
 
-.bulk-upload-instructions ol {
+.drivemego-cem-bulk-upload-instructions ol {
   margin: 0 0 15px 0;
   padding-left: 20px;
   color: #6b7280;
   font-size: 14px;
 }
 
-.bulk-upload-instructions li {
+.drivemego-cem-bulk-upload-instructions li {
   margin-bottom: 5px;
 }
 
-.upload-preview {
+.drivemego-cem-upload-preview {
   margin: 20px 0;
 }
 
-.upload-preview h4 {
+.drivemego-cem-upload-preview h4 {
   margin: 0 0 10px 0;
   color: #374151;
   font-size: 14px;
   font-weight: 600;
 }
 
-.preview-list {
+.drivemego-cem-preview-list {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
@@ -421,19 +429,19 @@
   overflow-y: auto;
 }
 
-.preview-item {
+.drivemego-cem-preview-item {
   padding: 8px 12px;
   border-bottom: 1px solid #e5e7eb;
   font-size: 13px;
   color: #6b7280;
 }
 
-.preview-item:last-child {
+.drivemego-cem-preview-item:last-child {
   border-bottom: none;
 }
 
 /* Route Schedule Info Styles */
-.route-schedule-loading {
+.drivemego-cem-route-schedule-loading {
   padding: 12px;
   background: #f3f4f6;
   border-radius: 8px;
@@ -442,7 +450,7 @@
   font-size: 13px;
 }
 
-.route-schedule-info {
+.drivemego-cem-route-schedule-info {
   margin: 16px 0;
   padding: 16px;
   background: #f0fdf4;
@@ -450,36 +458,36 @@
   border-radius: 8px;
 }
 
-.route-schedule-info h5 {
+.drivemego-cem-route-schedule-info h5 {
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
   color: #166534;
 }
 
-.schedule-details {
+.drivemego-cem-schedule-details {
   font-size: 13px;
   color: #374151;
 }
 
-.schedule-details p {
+.drivemego-cem-schedule-details p {
   margin: 4px 0;
 }
 
-.trip-times-info {
+.drivemego-cem-trip-times-info {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px dashed #86efac;
 }
 
-.trip-times-info h6 {
+.drivemego-cem-trip-times-info h6 {
   margin: 0 0 8px 0;
   font-size: 13px;
   font-weight: 600;
   color: #166534;
 }
 
-.trip-time-item {
+.drivemego-cem-trip-time-item {
   background: white;
   padding: 10px;
   border-radius: 6px;
@@ -487,48 +495,48 @@
   border: 1px solid #e5e7eb;
 }
 
-.trip-time-item p {
+.drivemego-cem-trip-time-item p {
   margin: 0 0 6px 0;
 }
 
-.stop-points-list-info {
+.drivemego-cem-stop-points-list-info {
   margin-top: 8px;
 }
 
-.stop-points-list-info .stop-label {
+.drivemego-cem-stop-points-list-info .drivemego-cem-stop-label {
   font-size: 12px;
   font-weight: 600;
   display: block;
   margin-bottom: 4px;
 }
 
-.stop-label.outbound {
+.drivemego-cem-stop-label.drivemego-cem-outbound {
   color: #059669;
 }
 
-.stop-label.return {
+.drivemego-cem-stop-label.drivemego-cem-return {
   color: #d97706;
 }
 
-.stop-points-list-info ul {
+.drivemego-cem-stop-points-list-info ul {
   margin: 0;
   padding-left: 16px;
   font-size: 12px;
   color: #6b7280;
 }
 
-.stop-points-list-info li {
+.drivemego-cem-stop-points-list-info li {
   margin: 2px 0;
 }
 
 /* Full width input */
-.full-width-input {
+.drivemego-cem-full-width-input {
   width: 100% !important;
   flex: 1 1 100% !important;
 }
 
 /* Trip Selection Section */
-.trip-selection-section {
+.drivemego-cem-trip-selection-section {
   margin-top: 16px;
   padding: 16px;
   background: #f0f9ff;
@@ -536,14 +544,14 @@
   border-radius: 8px;
 }
 
-.trip-selection-section h5 {
+.drivemego-cem-trip-selection-section h5 {
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
   color: #0369a1;
 }
 
-.trip-select {
+.drivemego-cem-trip-select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
@@ -553,13 +561,13 @@
 }
 
 /* Trip Assignment Section */
-.trip-assignment-section {
+.drivemego-cem-trip-assignment-section {
   margin-top: 16px;
   border-radius: 8px;
   overflow: hidden;
 }
 
-.outbound-trip-section {
+.drivemego-cem-outbound-trip-section {
   padding: 16px;
   background: #f0fdf4;
   border: 1px solid #86efac;
@@ -567,38 +575,38 @@
   margin-bottom: 12px;
 }
 
-.return-trip-section {
+.drivemego-cem-return-trip-section {
   padding: 16px;
   background: #fef3c7;
   border: 1px solid #fcd34d;
   border-radius: 8px;
 }
 
-.trip-section-title {
+.drivemego-cem-trip-section-title {
   margin: 0 0 4px 0;
   font-size: 14px;
   font-weight: 600;
 }
 
-.outbound-title {
+.drivemego-cem-outbound-title {
   color: #166534;
 }
 
-.return-title {
+.drivemego-cem-return-title {
   color: #92400e;
 }
 
-.trip-section-subtitle {
+.drivemego-cem-trip-section-subtitle {
   margin: 0 0 16px 0;
   font-size: 12px;
   color: #6b7280;
 }
 
-.trip-assignment-section .form-group {
+.drivemego-cem-trip-assignment-section .drivemego-cem-form-group {
   flex: 1;
 }
 
-.trip-assignment-section .form-group label {
+.drivemego-cem-trip-assignment-section .drivemego-cem-form-group label {
   display: block;
   margin-bottom: 6px;
   font-size: 12px;
@@ -606,8 +614,8 @@
   color: #374151;
 }
 
-.trip-assignment-section .form-group select,
-.trip-assignment-section .form-group input {
+.drivemego-cem-trip-assignment-section .drivemego-cem-form-group select,
+.drivemego-cem-trip-assignment-section .drivemego-cem-form-group input {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
@@ -616,7 +624,7 @@
   background: white;
 }
 
-.home-address-hint {
+.drivemego-cem-home-address-hint {
   display: block;
   margin-top: 4px;
   font-size: 11px;
@@ -624,7 +632,7 @@
   font-style: italic;
 }
 
-.one-way-notice {
+.drivemego-cem-one-way-notice {
   margin-top: 12px;
   padding: 12px;
   background: #f3f4f6;
@@ -632,20 +640,20 @@
   border-radius: 6px;
 }
 
-.one-way-notice p {
+.drivemego-cem-one-way-notice p {
   margin: 0;
   font-size: 13px;
   color: #6b7280;
 }
 
 /* Pass Duration Section */
-.section-description {
+.drivemego-cem-section-description {
   font-size: 13px;
   color: #6b7280;
   margin: 0 0 16px 0;
 }
 
-.pass-duration-info {
+.drivemego-cem-pass-duration-info {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -656,7 +664,7 @@
   margin-top: 16px;
 }
 
-.pass-duration-info .info-icon {
+.drivemego-cem-pass-duration-info .drivemego-cem-info-icon {
   width: 20px;
   height: 20px;
   min-width: 20px;
@@ -670,7 +678,7 @@
   font-weight: 600;
 }
 
-.pass-duration-info p {
+.drivemego-cem-pass-duration-info p {
   margin: 0;
   font-size: 13px;
   color: #166534;
@@ -678,20 +686,20 @@
 }
 
 /* Employee Details Grid */
-.employee-details-grid {
+.drivemego-cem-employee-details-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
-.detail-section {
+.drivemego-cem-detail-section {
   background: #f9fafb;
   padding: 16px;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
 }
 
-.detail-section h4 {
+.drivemego-cem-detail-section h4 {
   margin: 0 0 12px 0;
   color: #1f2937;
   font-size: 14px;
@@ -700,51 +708,51 @@
   padding-bottom: 8px;
 }
 
-.detail-section p {
+.drivemego-cem-detail-section p {
   margin: 8px 0;
   font-size: 13px;
   color: #374151;
 }
 
-.detail-section strong {
+.drivemego-cem-detail-section strong {
   color: #1f2937;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .corporate-employee-management {
+  .drivemego-cem-corporate-employee-management {
     padding: 15px;
   }
   
-  .employee-list .list-header {
+  .drivemego-cem-employee-list .drivemego-cem-list-header {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .search-filters {
+  .drivemego-cem-search-filters {
     max-width: none;
   }
   
-  .form-row {
+  .drivemego-cem-form-row {
     flex-direction: column;
     gap: 10px;
   }
   
-  .modal {
+  .drivemego-cem-modal {
     width: 95%;
     margin: 20px;
   }
   
-  .employees-table {
+  .drivemego-cem-employees-table {
     font-size: 12px;
   }
   
-  .employees-table th,
-  .employees-table td {
+  .drivemego-cem-employees-table th,
+  .drivemego-cem-employees-table td {
     padding: 8px;
   }
   
-  .action-buttons {
+  .drivemego-cem-action-buttons {
     flex-direction: column;
   }
 }

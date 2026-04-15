@@ -92,13 +92,15 @@ function AdminPassengersReassignments() {
       <div className="ad-dash-pr-header">
         <div>
           <h3 className="ad-dash-pr-title">Passengers & Bookings</h3>
-          <p className="ad-dash-pr-subtitle">Manage B2C passenger bookings, approvals, and route assignments.</p>
+          <p className="ad-dash-pr-subtitle">
+            Manage B2C passenger bookings, approvals, and route assignments.
+          </p>
         </div>
       </div>
 
       <div className="ad-dash-pr-filters">
-        <select 
-          value={statusFilter} 
+        <select
+          value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
           <option value="all">All Status</option>
@@ -135,14 +137,23 @@ function AdminPassengersReassignments() {
               <tr key={booking._id}>
                 <td>
                   <div className="passenger-info">
-                    <span className="passenger-name">{booking.passengerName}</span>
-                    <span className="passenger-email">{booking.passengerEmail}</span>
+                    <span className="passenger-name">
+                      {booking.passengerName}
+                    </span>
+                    <span className="passenger-email">
+                      {booking.passengerEmail}
+                    </span>
                   </div>
                 </td>
                 <td>
                   <div className="route-info">
-                    <div className="route-name">{booking.routeName || `${booking.startPoint} - ${booking.endPoint}`}</div>
-                    <div className="provider-name">{booking.startPoint} to {booking.endPoint}</div>
+                    <div className="route-name">
+                      {booking.routeName ||
+                        `${booking.startPoint} - ${booking.endPoint}`}
+                    </div>
+                    <div className="provider-name">
+                      {booking.startPoint} to {booking.endPoint}
+                    </div>
                   </div>
                 </td>
                 <td>
@@ -150,15 +161,30 @@ function AdminPassengersReassignments() {
                 </td>
                 <td>{booking.seats || 1}</td>
                 <td>
-                  <span className="amount-text">{booking.currency || 'KWD'} {(booking.amount || booking.price || 0).toFixed(booking.currency === 'KWD' || booking.currency === 'BHD' || booking.currency === 'OMR' ? 3 : 2)}</span>
+                  <span className="amount-text">
+                    {booking.currency || "AED"}{" "}
+                    {(booking.amount || booking.price || 0).toFixed(
+                      booking.currency === "KWD" ||
+                        booking.currency === "BHD" ||
+                        booking.currency === "OMR"
+                        ? 3
+                        : 2,
+                    )}
+                  </span>
                 </td>
                 <td>
-                  <span className="payment-badge">{booking.paymentMethod || 'CASH'}</span>
+                  <span className="payment-badge">
+                    {booking.paymentMethod || "CASH"}
+                  </span>
                 </td>
                 <td>
-                  <span 
-                    className="status-badge" 
-                    style={{ backgroundColor: getStatusColor((booking.status || '').toLowerCase()) }}
+                  <span
+                    className="status-badge"
+                    style={{
+                      backgroundColor: getStatusColor(
+                        (booking.status || "").toLowerCase(),
+                      ),
+                    }}
                   >
                     {booking.status}
                   </span>
@@ -166,29 +192,36 @@ function AdminPassengersReassignments() {
                 <td>
                   <div className="date-info">
                     <span className="request-date">
-                      {new Date(booking.bookingDate || booking.createdAt).toLocaleDateString()}
+                      {new Date(
+                        booking.bookingDate || booking.createdAt,
+                      ).toLocaleDateString()}
                     </span>
                   </div>
                 </td>
                 <td>
                   <div className="action-buttons">
-                    <button 
+                    <button
                       className="view-btn"
                       onClick={() => handleViewDetails(booking)}
                     >
                       View Details
                     </button>
-                    {(booking.status === 'PENDING' || booking.status === 'pending') && (
+                    {(booking.status === "PENDING" ||
+                      booking.status === "pending") && (
                       <>
-                        <button 
+                        <button
                           className="approve-btn"
-                          onClick={() => handleProcessReassignment(booking._id, 'approved')}
+                          onClick={() =>
+                            handleProcessReassignment(booking._id, "approved")
+                          }
                         >
                           Approve
                         </button>
-                        <button 
+                        <button
                           className="reject-btn"
-                          onClick={() => handleProcessReassignment(booking._id, 'rejected')}
+                          onClick={() =>
+                            handleProcessReassignment(booking._id, "rejected")
+                          }
                         >
                           Reject
                         </button>
@@ -213,14 +246,14 @@ function AdminPassengersReassignments() {
         <AdminReassignModal
           reassignment={selectedReassignment}
           onClose={() => {
-            setShowReassignModal(false)
-            setSelectedReassignment(null)
+            setShowReassignModal(false);
+            setSelectedReassignment(null);
           }}
           onProcess={handleProcessReassignment}
         />
       )}
     </div>
-  )
+  );
 }
 
 export default AdminPassengersReassignments

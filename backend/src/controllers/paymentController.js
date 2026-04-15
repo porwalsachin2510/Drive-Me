@@ -4,6 +4,8 @@ import Transaction from "../models/Transaction.js"
 import Contract from "../models/Contract.js"
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
 import Notification from "../models/Notification.js"
+import User from "../models/User.js"
+import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js"
 import paymentGatewayService, {
     calculateCommission,
     detectCountryFromCurrency,
@@ -277,6 +279,45 @@ export const createPayment = async (req, res) => {
             await payment.save()
 
             console.log("[v0] Manual payment record created:", payment._id)
+
+            // Get user names for notifications
+            const corporateUser = await User.findById(corporateOwnerId).select('fullName companyName')
+            const corporateName = corporateUser?.companyName || corporateUser?.fullName || 'Corporate'
+
+            // Send notification to B2B Partner about payment submitted
+            const b2bNotification = await createNotification({
+                userId: contract.fleetOwnerId._id,
+                type: "PAYMENT_SUBMITTED",
+                title: "Payment Submitted",
+                message: `${corporateName} has submitted a ${normalizedMethod === 'CASH' ? 'cash' : 'bank transfer'} payment of ${totalPaymentAmount} ${currency} for contract ${contract.contractNumber}. Awaiting admin verification.`,
+                metadata: {
+                    paymentId: payment._id,
+                    contractId: contract._id,
+                    contractNumber: contract.contractNumber,
+                    amount: totalPaymentAmount,
+                    currency,
+                    paymentMethod: normalizedMethod,
+                    paymentType,
+                    reference,
+                },
+            })
+            sendRealTimeNotification(contract.fleetOwnerId._id.toString(), b2bNotification)
+
+            // Send notification to Admin
+            await sendAdminNotification(
+                "New Cash/Bank Payment Requires Verification",
+                `${corporateName} submitted ${normalizedMethod} payment of ${totalPaymentAmount} ${currency} for contract ${contract.contractNumber}. Please verify the payment.`,
+                "PAYMENT_PENDING_VERIFICATION",
+                {
+                    paymentId: payment._id,
+                    contractId: contract._id,
+                    corporateId: corporateOwnerId,
+                    fleetOwnerId: contract.fleetOwnerId._id,
+                    amount: totalPaymentAmount,
+                    currency,
+                    paymentMethod: normalizedMethod,
+                }
+            )
 
             return res.status(200).json({
                 success: true,
@@ -680,7 +721,7 @@ const processPaymentToWallets = async (payment) => {
             currency: payment.currency || "KWD",
         })
     }
-    
+
     // Log currency info for debugging
     console.log("[v0] Fleet Wallet currency:", fleetWallet.currency)
     console.log("[v0] Payment currency:", payment.currency)
@@ -764,6 +805,90 @@ const processPaymentToWallets = async (payment) => {
 
     await contract.save()
     console.log("[v0] Contract updated with payment info")
+
+    // Send real-time notifications for online payment completion
+    const corporateUser = await User.findById(payment.corporateOwnerId).select('fullName companyName')
+    const corporateName = corporateUser?.companyName || corporateUser?.fullName || 'Corporate'
+
+    // Notification for B2B Partner - Payment Received
+    const b2bNotification = await createNotification({
+        userId: payment.fleetOwnerId,
+        type: "PAYMENT_RECEIVED",
+        title: "Payment Received",
+        message: `${corporateName} has completed ${payment.paymentType} payment of ${payment.fleetOwnerAmount} ${payment.currency} (your share: 90% of advance). Payment method: Online (${payment.paymentMethod}). Contract: ${contract.contractNumber}.${contract.status === "ACTIVE" ? " Contract is now ACTIVE!" : ""}`,
+        metadata: {
+            paymentId: payment._id,
+            contractId: contract._id,
+            contractNumber: contract.contractNumber,
+            totalAmount: payment.amount,
+            yourShare: payment.fleetOwnerAmount,
+            adminCommission: payment.adminCommission,
+            currency: payment.currency,
+            paymentMethod: payment.paymentMethod,
+            paymentType: payment.paymentType,
+            contractStatus: contract.status,
+            paidBy: corporateName,
+            paidAt: new Date().toISOString(),
+            // For online payments, immediate credit
+            expectedPayoutDate: new Date().toISOString(),
+        },
+    })
+    sendRealTimeNotification(payment.fleetOwnerId.toString(), b2bNotification)
+
+    // Notification for Corporate - Payment Confirmation
+    const corporateNotification = await createNotification({
+        userId: payment.corporateOwnerId,
+        type: "PAYMENT_COMPLETED",
+        title: "Payment Completed",
+        message: `Your ${payment.paymentType} payment of ${payment.amount} ${payment.currency} for contract ${contract.contractNumber} has been processed successfully.${contract.status === "ACTIVE" ? " Your contract is now ACTIVE!" : ""}`,
+        metadata: {
+            paymentId: payment._id,
+            contractId: contract._id,
+            contractNumber: contract.contractNumber,
+            amount: payment.amount,
+            currency: payment.currency,
+            paymentMethod: payment.paymentMethod,
+            paymentType: payment.paymentType,
+            contractStatus: contract.status,
+        },
+    })
+    sendRealTimeNotification(payment.corporateOwnerId.toString(), corporateNotification)
+
+    // If contract became ACTIVE, send contract activation notifications
+    if (contract.status === "ACTIVE" && payment.paymentType === "advance") {
+        // Notification for Corporate - Contract Activated
+        const corporateActivationNotif = await createNotification({
+            userId: payment.corporateOwnerId,
+            type: "CONTRACT_ACTIVATED",
+            title: "Contract Activated",
+            message: `Your contract ${contract.contractNumber} is now active! You can now use the assigned vehicles.`,
+            metadata: {
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                startDate: contract.rentalPeriod?.startDate,
+                endDate: contract.rentalPeriod?.endDate,
+            },
+        })
+        sendRealTimeNotification(payment.corporateOwnerId.toString(), corporateActivationNotif)
+
+        // Notification for B2B Partner - Contract Activated
+        const b2bActivationNotif = await createNotification({
+            userId: payment.fleetOwnerId,
+            type: "CONTRACT_ACTIVATED",
+            title: "Contract Activated",
+            message: `Contract ${contract.contractNumber} with ${corporateName} is now active! Please ensure vehicles are ready for the client.`,
+            metadata: {
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                corporateName,
+                startDate: contract.rentalPeriod?.startDate,
+                endDate: contract.rentalPeriod?.endDate,
+            },
+        })
+        sendRealTimeNotification(payment.fleetOwnerId.toString(), b2bActivationNotif)
+    }
+
+    console.log("[v0] Payment notifications sent to both parties")
 }
 
 export const createInstallmentPayment = async (req, res) => {

@@ -121,10 +121,10 @@ const SetPassword = () => {
     return (
       <div>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <div className="set-password-container">
-          <div className="set-password-card">
-            <div className="loading-spinner">
-              <div className="spinner"></div>
+        <div className="drivemego-spac-set-password-container">
+          <div className="drivemego-spac-set-password-card">
+            <div className="drivemego-spac-loading-spinner">
+              <div className="drivemego-spac-spinner"></div>
               <p>Validating your invitation...</p>
             </div>
           </div>
@@ -138,10 +138,10 @@ const SetPassword = () => {
     return (
       <div>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <div className="set-password-container">
-          <div className="set-password-card">
-            <div className="success-message">
-              <div className="success-icon">&#10004;</div>
+        <div className="drivemego-spac-set-password-container">
+          <div className="drivemego-spac-set-password-card">
+            <div className="drivemego-spac-success-message">
+              <div className="drivemego-spac-success-icon">&#10004;</div>
               <h2>Password Set Successfully!</h2>
               <p>Your account is now activated. Redirecting to dashboard...</p>
             </div>
@@ -156,13 +156,13 @@ const SetPassword = () => {
     return (
       <div>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <div className="set-password-container">
-          <div className="set-password-card">
-            <div className="error-state">
-              <div className="error-icon">&#10006;</div>
+        <div className="drivemego-spac-set-password-container">
+          <div className="drivemego-spac-set-password-card">
+            <div className="drivemego-spac-error-state">
+              <div className="drivemego-spac-error-icon">&#10006;</div>
               <h2>Invalid Invitation</h2>
               <p>{error}</p>
-              <Link to="/login" className="back-to-login-btn">
+              <Link to="/login" className="drivemego-spac-back-to-login-btn">
                 Go to Login
               </Link>
             </div>
@@ -176,28 +176,39 @@ const SetPassword = () => {
   return (
     <div>
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <div className="set-password-container">
-        <div className="set-password-card">
-          <div className="set-password-header">
-            <div className="set-password-icon">&#128274;</div>
-            <h1 className="set-password-title">Set Your Password</h1>
-            <p className="set-password-subtitle">
-              Welcome, <strong>{userData?.fullName}</strong>! Please create a password for your account.
+      <div className="drivemego-spac-set-password-container">
+        <div className="drivemego-spac-set-password-card">
+          <div className="drivemego-spac-set-password-header">
+            <div className="drivemego-spac-set-password-icon">&#128274;</div>
+            <h1 className="drivemego-spac-set-password-title">
+              Set Your Password
+            </h1>
+            <p className="drivemego-spac-set-password-subtitle">
+              Welcome, <strong>{userData?.fullName}</strong>! Please create a
+              password for your account.
             </p>
           </div>
 
-          <div className="user-info-box">
-            <p><strong>Email:</strong> {userData?.email}</p>
+          <div className="drivemego-spac-user-info-box">
+            <p>
+              <strong>Email:</strong> {userData?.email}
+            </p>
           </div>
 
-          {error && <div className="set-password-error-message">{error}</div>}
+          {error && (
+            <div className="drivemego-spac-set-password-error-message">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
-            <div className="set-password-form-group">
-              <label className="set-password-form-label">New Password</label>
+            <div className="drivemego-spac-set-password-form-group">
+              <label className="drivemego-spac-set-password-form-label">
+                New Password
+              </label>
               <input
                 type="password"
-                className="set-password-form-input"
+                className="drivemego-spac-set-password-form-input"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
@@ -207,11 +218,13 @@ const SetPassword = () => {
               />
             </div>
 
-            <div className="set-password-form-group">
-              <label className="set-password-form-label">Confirm Password</label>
+            <div className="drivemego-spac-set-password-form-group">
+              <label className="drivemego-spac-set-password-form-label">
+                Confirm Password
+              </label>
               <input
                 type="password"
-                className="set-password-form-input"
+                className="drivemego-spac-set-password-form-input"
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
@@ -223,14 +236,14 @@ const SetPassword = () => {
 
             <button
               type="submit"
-              className={`set-password-submit-btn ${submitting ? "loading" : ""}`}
+              className={`drivemego-spac-set-password-submit-btn ${submitting ? "drivemego-spac-loading" : ""}`}
               disabled={submitting}
             >
               {submitting ? "Setting Password..." : "Set Password & Login"}
             </button>
           </form>
 
-          <div className="set-password-login-link">
+          <div className="drivemego-spac-set-password-login-link">
             Already have a password? <Link to="/login">Sign in</Link>
           </div>
         </div>

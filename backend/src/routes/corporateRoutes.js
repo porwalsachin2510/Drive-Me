@@ -1,6 +1,6 @@
 import express from "express";
 import { verifyToken, checkCorporateOwnerRole } from "../middleware/auth.js";
-import { getCorporateStats } from "../controllers/corporateStatsController.js";
+import { getCorporateStats, getCorporateRoutes, getCorporateRouteDetails } from "../controllers/corporateStatsController.js";
 import { getBillingReport, getInvoices } from "../controllers/billingController.js";
 import { getAvailableCorporateDrivers, getAllCorporateDrivers } from "../controllers/driverController.js";
 
@@ -30,5 +30,15 @@ router.get("/corporate-drivers", verifyToken, checkCorporateOwnerRole, getAllCor
 // @desc    Get available corporate drivers (for assignment dropdown)
 // @access  Private (CORPORATE only)
 router.get("/available-corporate-driver", verifyToken, checkCorporateOwnerRole, getAvailableCorporateDrivers);
+
+// @route   GET /api/corporate/routes
+// @desc    Get all corporate routes with schedules and trip details
+// @access  Private (CORPORATE only)
+router.get("/routes", verifyToken, checkCorporateOwnerRole, getCorporateRoutes);
+
+// @route   GET /api/corporate/routes/:routeId
+// @desc    Get single route details with full schedule and trip history
+// @access  Private (CORPORATE only)
+router.get("/routes/:routeId", verifyToken, checkCorporateOwnerRole, getCorporateRouteDetails);
 
 export default router;

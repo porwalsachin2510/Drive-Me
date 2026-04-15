@@ -411,14 +411,14 @@ const CorporateContractDetails = () => {
               <div className="financial-item">
                 <span className="label">Total Amount:</span>
                 <span className="value">
-                  {contract.quotationId?.currency || "KWD"}{" "}
+                  {contract.financials?.currency || "AED"}{" "}
                   {contract.financials?.totalAmount?.toFixed(2) || "0.00"}
                 </span>
               </div>
               <div className="financial-item">
                 <span className="label">Advance Payment (50%):</span>
                 <span className="value">
-                  {contract.quotationId?.currency || "KWD"}{" "}
+                  {contract.financials?.currency || "AED"}{" "}
                   {contract.financials?.advancePayment?.amount?.toFixed(2) ||
                     "0.00"}
                   {contract.financials?.advancePayment?.paidAt && " ✓ Paid"}
@@ -428,7 +428,7 @@ const CorporateContractDetails = () => {
                 <div className="financial-item">
                   <span className="label">Remaining Amount (50%):</span>
                   <span className="value">
-                    {contract.quotationId?.currency || "KWD"}{" "}
+                    {contract.financials?.currency || "AED"}{" "}
                     {contract.financials?.remainingAmount?.toFixed(2) || "0.00"}
                     {contract.financials?.finalPayment?.paidAt && " ✓ Paid"}
                   </span>
@@ -437,7 +437,7 @@ const CorporateContractDetails = () => {
               <div className="financial-item">
                 <span className="label">Security Deposit:</span>
                 <span className="value">
-                  {contract.quotationId?.currency || "KWD"}{" "}
+                  {contract.financials?.currency || "AED"}{" "}
                   {contract.financials?.securityDeposit?.amount?.toFixed(2) ||
                     "0.00"}
                   {contract.financials?.securityDeposit?.paidAt && " ✓ Paid"}

@@ -17,7 +17,7 @@ const B2B_FleetVehicleAssignmentSection = ({
   const isAdvancePaid = !!contract.financials?.advancePayment?.paidAt;
   const isSecurityDepositPaid = !!contract.financials?.securityDeposit?.paidAt;
   const isActive = contract.status === "ACTIVE";
-  const currency = contract.quotationId?.currency || "AED";
+  const currency = contract.financials?.currency || contract.quotationId?.currency || "AED";
 
   // Check if all vehicles are assigned
   const areAllVehiclesAssigned = contract.vehicles?.every(vehicle => 

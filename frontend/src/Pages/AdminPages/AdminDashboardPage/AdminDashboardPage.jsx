@@ -17,6 +17,7 @@ import AdminVehicleApproval from "../../../Components/Admin/AdminVehicleApproval
 import AdminSettlement from "../../../Components/Admin/AdminSettlement/AdminSettlement";
 import AdminContent from "../../../Components/Admin/AdminContent/AdminContent";
 import AdminWalletManagement from "../../../Components/Admin/AdminWalletManagement/AdminWalletManagement";
+import AdminDropdownManagement from "../../../Components/Admin/AdminDropdownManagement/AdminDropdownManagement";
 import "./admindashboardpage.css";
 
 function AdminDashboardPage() {
@@ -55,6 +56,8 @@ const renderContent = () => {
       return <AdminContent />;
     case "wallets":
       return <AdminWalletManagement />;
+    case "dropdowns":
+      return <AdminDropdownManagement />;
     default:
       return <AdminOverview />;
   }

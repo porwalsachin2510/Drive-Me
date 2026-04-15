@@ -10,8 +10,8 @@ import useCurrency from "../../../../hooks/useCurrency";
 function B2C_AddRouteModal({ onClose }) {
   const { formatAmount, getCurrencyDecimals, getCurrencySymbol } =
     useCurrency();
-  const [currency, setCurrency] = useState("KWD");
-  const [decimals, setDecimals] = useState(3);
+  const [currency, setCurrency] = useState("AED");
+  const [decimals, setDecimals] = useState(2);
   const [formData, setFormData] = useState({
     fromLocation: "",
     toLocation: "",
@@ -65,7 +65,7 @@ function B2C_AddRouteModal({ onClose }) {
         QA: "QAR",
       };
 
-      const userCurrency = countryToCurrency[userCountry] || "KWD";
+      const userCurrency = countryToCurrency[userCountry] || "AED";
       const userDecimals = getCurrencyDecimals(userCurrency);
 
       console.log(

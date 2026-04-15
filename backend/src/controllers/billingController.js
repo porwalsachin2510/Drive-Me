@@ -31,7 +31,7 @@ export const getBillingReport = async (req, res) => {
             corporateOwnerId: corporateId,
             travelDate: { $gte: startDate, $lte: endDate }
         }).populate("passengerId", "fullName email")
-          .populate("routeId", "fromLocation toLocation");
+            .populate("routeId", "fromLocation toLocation");
 
         // Get total employees
         const totalEmployees = await CorporateEmployee.countDocuments({
@@ -47,15 +47,54 @@ export const getBillingReport = async (req, res) => {
 
         // Calculate costs from contracts
         let totalMonthlyValue = 0;
+        let totalBilled = 0;
+        let totalPaid = 0;
+
         const contractBreakdown = contracts.map(contract => {
-            const monthlyValue = contract.financials?.monthlyValue || contract.financials?.totalValue || 0;
-            totalMonthlyValue += monthlyValue;
+            const totalAmount = contract.financials?.totalAmount || 0;
+            const monthlyAmount = contract.financials?.monthlyValue || totalAmount;
+            const currency = contract.financials?.currency || "AED";
+
+            totalMonthlyValue += monthlyAmount;
+            totalBilled += totalAmount;
+
+            // Calculate paid amount
+            let paidAmount = 0;
+            if (contract.financials?.advancePayment?.paidAt) {
+                paidAmount += contract.financials.advancePayment.amount || 0;
+            }
+            if (contract.financials?.securityDeposit?.paidAt) {
+                paidAmount += contract.financials.securityDeposit.amount || 0;
+            }
+            if (contract.financials?.finalPayment?.paidAt) {
+                paidAmount += contract.financials.finalPayment.amount || 0;
+            }
+            totalPaid += paidAmount;
+
+            // Get vehicle count
+            let vehicleCount = 0;
+            if (contract.vehicles && Array.isArray(contract.vehicles)) {
+                vehicleCount = contract.vehicles.reduce((sum, v) => sum + (v.quantity || 1), 0);
+            }
+
+            // Determine payment status
+            let paymentStatus = "Pending";
+            if (paidAmount >= totalAmount) {
+                paymentStatus = "Paid";
+            } else if (paidAmount > 0) {
+                paymentStatus = "Partial";
+            }
+
             return {
                 contractId: contract._id,
                 contractNumber: contract.contractNumber,
-                fleetOwner: contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName,
-                monthlyValue,
-                vehicles: contract.assignedVehicles?.length || 0,
+                fleetOwnerName: contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || "N/A",
+                startDate: contract.rentalPeriod?.startDate,
+                endDate: contract.rentalPeriod?.endDate,
+                monthlyAmount: monthlyAmount,
+                currency: currency,
+                vehicleCount: vehicleCount,
+                paymentStatus: paymentStatus,
                 status: contract.status
             };
         });
@@ -97,6 +136,11 @@ export const getBillingReport = async (req, res) => {
                     endDate
                 },
                 summary: {
+                    totalBilled: totalBilled,
+                    totalPaid: totalPaid,
+                    outstanding: totalBilled - totalPaid,
+                    activeContracts: contracts.length,
+                    currency: contracts.length > 0 ? (contracts[0].financials?.currency || "AED") : "AED",
                     totalMonthlyValue,
                     totalEmployees,
                     totalTrips,
@@ -151,6 +195,8 @@ export const getInvoices = async (req, res) => {
                         contractNumber: contract.contractNumber,
                         fleetOwner: contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName,
                         amount: payment.amount,
+                        currency: contract.financials?.currency || "AED",
+                        createdAt: payment.paidDate || payment.createdAt,
                         date: payment.paidDate || payment.createdAt,
                         status: payment.status || "PAID",
                         method: payment.method || "Online",
@@ -163,7 +209,7 @@ export const getInvoices = async (req, res) => {
                 const duration = contract.rentalPeriod?.duration || 1;
                 const monthlyValue = totalAmount > 0 ? Math.round((totalAmount / Math.max(duration, 1)) * 100) / 100 : 0;
                 const invoiceAmount = monthlyValue || totalAmount;
-                
+
                 // Compute billing period
                 const startDate = contract.rentalPeriod?.startDate;
                 const endDate = contract.rentalPeriod?.endDate;
@@ -182,8 +228,10 @@ export const getInvoices = async (req, res) => {
                         contractNumber: contract.contractNumber,
                         fleetOwner: contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName,
                         amount: invoiceAmount,
+                        currency: contract.financials?.currency || "AED",
                         billingPeriod: billingPeriod,
-                        date: new Date(),
+                        createdAt: contract.createdAt || new Date(),
+                        date: contract.createdAt || new Date(),
                         status: contract.status === "ACTIVE" ? "PENDING" : "DRAFT",
                         method: "N/A"
                     });

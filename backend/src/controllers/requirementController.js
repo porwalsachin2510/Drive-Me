@@ -2,11 +2,23 @@ import mongoose from "mongoose";
 import Requirement from "../models/Requirement.js";
 import Quotation from "../models/Quotation.js";
 import User from "../models/User.js";
+import Vehicle from "../models/Vehicle.js";
 import Notification from "../models/Notification.js";
+import { sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js";
+import { sendEmail } from "../Services/emailService.js";
 
 const createNotification = async (userId, type, title, message, relatedEntityId, relatedEntityType) => {
     try {
-        await Notification.create({ userId, type, title, message, relatedEntityId, relatedEntityType });
+        const notification = await Notification.create({ userId, type, title, message, relatedEntityId, relatedEntityType });
+        // Send real-time notification
+        sendRealTimeNotification(userId.toString(), {
+            _id: notification._id,
+            type,
+            title,
+            message,
+            metadata: { relatedEntityId, relatedEntityType },
+        });
+        return notification;
     } catch (error) {
         console.error("Notification creation error:", error);
     }
@@ -22,6 +34,7 @@ export const createRequirement = async (req, res) => {
             ...req.body,
             corporateId,
             createdBy: corporateId,
+            status: "PUBLISHED", // Requirements are automatically published when created
         };
 
         const requirement = new Requirement(requirementData);
@@ -111,9 +124,9 @@ export const getOpenRequirements = async (req, res) => {
 
         const partnerId = req.userId;
         
-        // Build query for open requirements - PUBLIC (PUBLISHED or DRAFT) + INVITE_ONLY where partner is invited
+        // Build query for open requirements - PUBLIC (PUBLISHED, DRAFT, or IN_PROGRESS) + INVITE_ONLY where partner is invited
         let query = {
-            status: { $in: ["PUBLISHED", "DRAFT", "OPEN"] },
+            status: { $in: ["PUBLISHED", "DRAFT", "IN_PROGRESS", "OPEN"] },
             $or: [
                 { visibility: "PUBLIC" },
                 { visibility: { $exists: false } },
@@ -727,6 +740,314 @@ export const getRequirementQuotations = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to fetch quotations"
+        });
+    }
+};
+
+// @desc    B2B Partner responds to a requirement (before formal quotation)
+// @route   POST /api/requirements/:id/respond
+// @access  Private (B2B_PARTNER only)
+export const respondToRequirement = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const partnerId = req.userId;
+        const { responseType, message, estimatedAvailability, vehicleDetails } = req.body;
+
+        // Find the requirement
+        const requirement = await Requirement.findById(id).populate('corporateId', 'companyName email fullName');
+
+        if (!requirement || requirement.isDeleted) {
+            return res.status(404).json({
+                success: false,
+                message: "Requirement not found"
+            });
+        }
+
+        // Check if partner already responded
+        const existingResponse = requirement.partnerResponses?.find(
+            r => r.partnerId.toString() === partnerId
+        );
+
+        if (existingResponse) {
+            return res.status(400).json({
+                success: false,
+                message: "You have already responded to this requirement"
+            });
+        }
+
+        // Get B2B partner info
+        const partner = await User.findById(partnerId).select('fullName companyName businessName email');
+        const partnerName = partner?.companyName || partner?.businessName || partner?.fullName || 'B2B Partner';
+
+        // Add response
+        if (!requirement.partnerResponses) {
+            requirement.partnerResponses = [];
+        }
+
+        requirement.partnerResponses.push({
+            partnerId,
+            responseType,
+            message,
+            estimatedAvailability: estimatedAvailability ? new Date(estimatedAvailability) : null,
+            vehicleDetails,
+            respondedAt: new Date(),
+        });
+
+        // Update status from DRAFT to PUBLISHED when first response is received
+        if (requirement.status === "DRAFT") {
+            requirement.status = "PUBLISHED";
+        }
+
+        await requirement.save();
+
+        // Create notification for Corporate
+        let notificationMessage = "";
+        if (responseType === "INTERESTED") {
+            notificationMessage = `${partnerName} is interested in your requirement "${requirement.title}" and may submit a quotation.`;
+        } else if (responseType === "WILL_ADD_VEHICLE") {
+            notificationMessage = `${partnerName} plans to add a matching vehicle for your requirement "${requirement.title}". ${estimatedAvailability ? `Estimated availability: ${new Date(estimatedAvailability).toLocaleDateString()}.` : ''}`;
+        } else {
+            notificationMessage = `${partnerName} has responded to your requirement "${requirement.title}".`;
+        }
+
+        await createNotification(
+            requirement.corporateId._id,
+            "REQUIREMENT_RESPONSE",
+            "New Response to Your Requirement",
+            notificationMessage,
+            requirement._id,
+            "REQUIREMENT"
+        );
+
+        res.status(201).json({
+            success: true,
+            message: "Response submitted successfully",
+            data: {
+                requirementId: requirement._id,
+                responseType,
+                message,
+            }
+        });
+
+    } catch (error) {
+        console.error("Error responding to requirement:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to submit response"
+        });
+    }
+};
+
+// @desc    Get B2B Partner's responses to requirements
+// @route   GET /api/requirements/my-responses
+// @access  Private (B2B_PARTNER only)
+export const getMyResponses = async (req, res) => {
+    try {
+        const partnerId = req.userId;
+
+        const requirements = await Requirement.find({
+            "partnerResponses.partnerId": partnerId,
+            isDeleted: false
+        })
+            .populate('corporateId', 'companyName companyLogo')
+            .select('title description routeInfo vehicleRequirements contractDetails partnerResponses status quotationDeadline')
+            .sort({ 'partnerResponses.respondedAt': -1 });
+
+        // Filter to only include the partner's own responses
+        const responsesWithDetails = requirements.map(req => {
+            const myResponse = req.partnerResponses.find(r => r.partnerId.toString() === partnerId);
+            return {
+                requirementId: req._id,
+                title: req.title,
+                description: req.description,
+                corporateId: req.corporateId,
+                routeInfo: req.routeInfo,
+                vehicleRequirements: req.vehicleRequirements,
+                contractDetails: req.contractDetails,
+                status: req.status,
+                quotationDeadline: req.quotationDeadline,
+                myResponse,
+            };
+        });
+
+        res.json({
+            success: true,
+            data: responsesWithDetails
+        });
+
+    } catch (error) {
+        console.error("Error fetching my responses:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch responses"
+        });
+    }
+};
+
+// @desc    B2B Partner notifies Corporate that vehicle matching requirement is now available
+// @route   POST /api/requirements/:id/notify-vehicle-added
+// @access  Private (B2B_PARTNER only)
+export const notifyVehicleAdded = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const partnerId = req.userId;
+        const { vehicleId, message } = req.body;
+
+        // Find the requirement
+        const requirement = await Requirement.findById(id).populate('corporateId', 'companyName email fullName');
+
+        if (!requirement || requirement.isDeleted) {
+            return res.status(404).json({
+                success: false,
+                message: "Requirement not found"
+            });
+        }
+
+        // Check if partner has a "WILL_ADD_VEHICLE" response
+        const partnerResponse = requirement.partnerResponses?.find(
+            r => r.partnerId.toString() === partnerId && r.responseType === "WILL_ADD_VEHICLE"
+        );
+
+        if (!partnerResponse) {
+            return res.status(400).json({
+                success: false,
+                message: "You must have previously indicated you will add a vehicle for this requirement"
+            });
+        }
+
+        if (partnerResponse.vehicleAddedNotified) {
+            return res.status(400).json({
+                success: false,
+                message: "You have already notified the corporate about this vehicle"
+            });
+        }
+
+        // Get B2B partner info
+        const partner = await User.findById(partnerId).select('fullName companyName businessName email');
+        const partnerName = partner?.companyName || partner?.businessName || partner?.fullName || 'B2B Partner';
+
+        // Get vehicle info if provided
+        let vehicleInfo = "";
+        if (vehicleId) {
+            const vehicle = await Vehicle.findById(vehicleId).select('vehicleName vehicleCategory registrationNumber');
+            if (vehicle) {
+                vehicleInfo = `${vehicle.vehicleName} (${vehicle.vehicleCategory}) - ${vehicle.registrationNumber}`;
+            }
+        }
+
+        // Update the response
+        partnerResponse.vehicleAddedNotified = true;
+        partnerResponse.linkedVehicleId = vehicleId || null;
+
+        // Update status to IN_PROGRESS when a vehicle is added/notified
+        if (requirement.status === "DRAFT" || requirement.status === "PUBLISHED") {
+            requirement.status = "IN_PROGRESS";
+        }
+        
+        await requirement.save();
+
+        // Create notification for Corporate
+        const notificationMessage = `Great news! ${partnerName} has added the vehicle you were looking for based on your requirement "${requirement.title}". ${vehicleInfo ? `Vehicle: ${vehicleInfo}.` : ''} You can now search for this vehicle and request a quotation.`;
+
+        await createNotification(
+            requirement.corporateId._id,
+            "VEHICLE_ADDED_FOR_REQUIREMENT",
+            "Vehicle Now Available for Your Requirement",
+            notificationMessage,
+            requirement._id,
+            "REQUIREMENT"
+        );
+
+        // Send email notification to Corporate
+        try {
+            const corporateEmail = requirement.corporateId.email;
+            const corporateName = requirement.corporateId.fullName || requirement.corporateId.companyName;
+
+            if (corporateEmail) {
+                const emailSubject = `Vehicle Now Available - ${requirement.title}`;
+                const emailBody = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #1e293b;">Vehicle Now Available!</h2>
+                        <p>Dear ${corporateName},</p>
+                        <p>${partnerName} has added a vehicle matching your requirement:</p>
+                        <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <h3 style="margin: 0 0 10px 0; color: #374151;">${requirement.title}</h3>
+                            <p style="margin: 5px 0; color: #64748b;">Route: ${requirement.routeInfo?.fromLocation} to ${requirement.routeInfo?.toLocation}</p>
+                            ${vehicleInfo ? `<p style="margin: 5px 0; color: #374151;"><strong>Vehicle:</strong> ${vehicleInfo}</p>` : ''}
+                        </div>
+                        ${message ? `<p><strong>Message from ${partnerName}:</strong> ${message}</p>` : ''}
+                        <p>You can now search for this vehicle on the platform and request a quotation from ${partnerName}.</p>
+                        <a href="${process.env.FRONTEND_URL.split(",")[0]}/corporate-profile?tab=requirement-management" || 'http://localhost:5173'}/corporate-profile?tab=requirement-management" 
+                           style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin-top: 20px;">
+                            View Requirements
+                        </a>
+                        <p style="margin-top: 30px; color: #64748b; font-size: 14px;">
+                            Best regards,<br>
+                            DriveMe Go Team
+                        </p>
+                    </div>
+                `;
+                await sendEmail(corporateEmail, emailSubject, emailBody);
+            }
+        } catch (emailError) {
+            console.error("Error sending email notification:", emailError);
+            // Don't fail the request if email fails
+        }
+
+        res.json({
+            success: true,
+            message: "Corporate has been notified that the vehicle is now available",
+            data: {
+                requirementId: requirement._id,
+                notifiedAt: new Date(),
+            }
+        });
+
+    } catch (error) {
+        console.error("Error notifying vehicle added:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to notify corporate"
+        });
+    }
+};
+
+// @desc    Get responses for a requirement (Corporate view)
+// @route   GET /api/requirements/:id/responses
+// @access  Private (CORPORATE only)
+export const getRequirementResponses = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const corporateId = req.userId;
+
+        const requirement = await Requirement.findOne({
+            _id: id,
+            corporateId,
+            isDeleted: false
+        }).populate('partnerResponses.partnerId', 'fullName companyName businessName companyLogo email whatsappNumber');
+
+        if (!requirement) {
+            return res.status(404).json({
+                success: false,
+                message: "Requirement not found"
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                requirementId: id,
+                requirementTitle: requirement.title,
+                totalResponses: requirement.partnerResponses?.length || 0,
+                responses: requirement.partnerResponses || []
+            }
+        });
+
+    } catch (error) {
+        console.error("Error fetching requirement responses:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch responses"
         });
     }
 };

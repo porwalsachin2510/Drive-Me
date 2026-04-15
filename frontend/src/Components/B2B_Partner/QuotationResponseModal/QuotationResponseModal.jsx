@@ -442,7 +442,7 @@ const QuotationResponseModal = ({
               <div className="grand-total-section">
                 <h3>Total Quotation Amount</h3>
                 <p className="grand-total">
-                  KWD {calculateGrandTotal().toFixed(2)}
+                  {currency} {calculateGrandTotal().toFixed(2)}
                 </p>
               </div>
 

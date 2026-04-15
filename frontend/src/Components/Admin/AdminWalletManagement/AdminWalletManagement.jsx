@@ -288,7 +288,7 @@ function AdminWalletManagement() {
     }
   };
 
-  const formatCurrency = (amount, currency = "KWD") => {
+  const formatCurrency = (amount, currency = "AED") => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency,
@@ -333,6 +333,24 @@ function AdminWalletManagement() {
       .slice(0, 2);
   };
 
+  // Get the dominant currency from wallets or default to AED
+  const getDominantCurrency = () => {
+    if (wallets.length === 0) return stats.currency || "AED";
+    // Count currencies from wallets
+    const currencyCounts = wallets.reduce((acc, w) => {
+      const curr = w.currency || "AED";
+      acc[curr] = (acc[curr] || 0) + 1;
+      return acc;
+    }, {});
+    // Return the most common currency
+    return (
+      Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      "AED"
+    );
+  };
+
+  const dominantCurrency = getDominantCurrency();
+
   const renderStats = () => (
     <div className="wallet-stats-grid">
       <div className="wallet-stat-card">
@@ -342,19 +360,28 @@ function AdminWalletManagement() {
       <div className="wallet-stat-card">
         <h4>Total Balance</h4>
         <span className="wallet-stat-value highlight">
-          {formatCurrency(stats.totalBalance)}
+          {formatCurrency(
+            stats.totalBalance,
+            stats.currency || dominantCurrency,
+          )}
         </span>
       </div>
       <div className="wallet-stat-card">
         <h4>Total Deposits</h4>
         <span className="wallet-stat-value">
-          {formatCurrency(stats.totalDeposits)}
+          {formatCurrency(
+            stats.totalDeposits,
+            stats.currency || dominantCurrency,
+          )}
         </span>
       </div>
       <div className="wallet-stat-card">
         <h4>Total Withdrawals</h4>
         <span className="wallet-stat-value">
-          {formatCurrency(stats.totalWithdrawals)}
+          {formatCurrency(
+            stats.totalWithdrawals,
+            stats.currency || dominantCurrency,
+          )}
         </span>
       </div>
       <div className="wallet-stat-card">
@@ -556,7 +583,7 @@ function AdminWalletManagement() {
       <div className="wallet-filters">
         <p style={{ margin: 0, color: "#64748b", fontSize: "14px" }}>
           Showing wallets with balance less than 100{" "}
-          {wallets[0]?.currency || "KWD"}
+          {wallets[0]?.currency || "AED"}
         </p>
         <button
           className="action-btn primary"

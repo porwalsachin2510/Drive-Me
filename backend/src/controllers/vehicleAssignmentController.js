@@ -1,6 +1,8 @@
 import VehicleAssignment from "../models/VehicleAssignment.js";
 import Contract from "../models/Contract.js";
 import Vehicle from "../models/Vehicle.js";
+import User from "../models/User.js";
+import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js";
 
 // Get contract details for vehicle assignment
 export const getContractForAssignment = async (req, res) => {
@@ -394,13 +396,46 @@ export const updateAssignment = async (req, res) => {
             )
         }
 
+        // Get assignment with populated data for notifications
+        const updatedAssignment = await VehicleAssignment.findById(assignmentId)
+            .populate("vehicleId")
+            .populate("driverId", "fullName")
+            .populate("contractId")
+
+        // Get user names for notifications
+        const b2bPartner = await User.findById(req.userId).select('fullName companyName')
+        const b2bName = b2bPartner?.companyName || b2bPartner?.fullName || 'B2B Partner'
+
+        // Send notification to Corporate about vehicle/driver assignment change
+        const corporateNotif = await createNotification({
+            userId: contract.corporateOwnerId,
+            type: "ASSIGNMENT_UPDATED",
+            title: "Vehicle Assignment Updated",
+            message: `${b2bName} has updated the vehicle/driver assignment for contract ${contract.contractNumber}. New vehicle: ${updatedAssignment.vehicleId?.vehicleName || 'N/A'}, Driver: ${updatedAssignment.driverId?.fullName || 'N/A'}`,
+            metadata: {
+                assignmentId: assignmentId,
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                vehicleId: updatedAssignment.vehicleId?._id,
+                vehicleName: updatedAssignment.vehicleId?.vehicleName,
+                driverId: updatedAssignment.driverId?._id,
+                driverName: updatedAssignment.driverId?.fullName,
+            },
+        })
+        sendRealTimeNotification(contract.corporateOwnerId.toString(), corporateNotif)
+
+        // Notify admin about assignment change
+        await sendAdminNotification(
+            "Vehicle Assignment Updated",
+            `${b2bName} updated assignment for contract ${contract.contractNumber}`,
+            "ASSIGNMENT_UPDATED",
+            { assignmentId, contractId: contract._id, contractNumber: contract.contractNumber }
+        )
+
         res.status(200).json({
             success: true,
             message: "Vehicles assigned successfully",
-            assignment: await VehicleAssignment.findById(assignmentId)
-                .populate("vehicleId")
-                .populate("driverId")
-                .populate("contractId"),
+            assignment: updatedAssignment,
         })
     } catch (error) {
         console.error("[v0] Error updating assignment:", error)

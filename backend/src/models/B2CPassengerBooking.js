@@ -182,7 +182,22 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
         cancelledAt: Date,
         cancelledBy: String, // "PASSENGER", "DRIVER", "ADMIN", "SYSTEM"
         completedAt: Date,
+        startedAt: Date, // When the trip actually started
 
+        // Late Trip Tracking
+        isLateStart: {
+            type: Boolean,
+            default: false,
+        },
+        lateByMinutes: {
+            type: Number,
+            default: 0,
+        },
+        tripStartedBy: {
+            type: String, // B2C_PARTNER, B2C_PARTNER_DRIVER
+            default: null,
+        },
+        
         // Booking Timeout Fields - for auto-cancellation feature
         acceptanceDeadline: {
             type: Date, // 24 hours after booking creation
