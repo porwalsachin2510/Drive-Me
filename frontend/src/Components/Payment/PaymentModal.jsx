@@ -4,6 +4,7 @@ import { useState } from "react";
 import api from "../../utils/api";
 import "./PaymentModal.css";
 
+// eslint-disable-next-line no-unused-vars
 function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _onPaymentSuccess }) {
   const [selectedMethod, setSelectedMethod] = useState("card");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -92,24 +93,29 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
 
     try {
       // Create payment session with backend
-      const response = await api.post('/wallet/create-payment-session', {
+      const response = await api.post("/wallet/create-payment-session", {
         amount: parseFloat(amount),
         paymentMethod: selectedMethod,
         currency: currency,
-        paymentDetails: formData
+        paymentDetails: formData,
       });
 
       const data = response.data;
 
-      if (data.success) {
-        // Redirect to payment gateway
-        window.location.href = data.data.paymentSession.paymentUrl;
+      if (data.success && data.data?.paymentUrl) {
+        // Redirect to payment gateway - paymentUrl is directly in data.data
+        window.location.href = data.data.paymentUrl;
       } else {
-        alert("Payment failed: " + data.message);
+        alert(
+          "Payment failed: " +
+            (data.message || "Could not create payment session"),
+        );
       }
     } catch (error) {
       console.error("Payment error:", error);
-      alert("Payment failed. Please try again.");
+      const errorMessage =
+        error.response?.data?.message || "Payment failed. Please try again.";
+      alert(errorMessage);
     } finally {
       setIsProcessing(false);
     }

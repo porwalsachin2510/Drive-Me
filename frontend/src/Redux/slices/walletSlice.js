@@ -65,7 +65,13 @@ export const withdrawFromWallet = createAsyncThunk(
             })
             return response.data
         } catch (error) {
-            return rejectWithValue(error.response?.data?.message || "Failed to withdraw funds")
+            // Include validation errors in the error message
+            const errorData = error.response?.data;
+            let errorMessage = errorData?.message || "Failed to withdraw funds";
+            if (errorData?.errors && errorData.errors.length > 0) {
+                errorMessage = errorData.errors.join(". ");
+            }
+            return rejectWithValue(errorMessage)
         }
     }
 )

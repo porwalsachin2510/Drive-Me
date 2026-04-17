@@ -1,0 +1,550 @@
+.dmg-notifications-page {
+  min-height: calc(100vh - 160px);
+  background-color: #f8fafc;
+  padding: 32px 16px;
+}
+
+.dmg-notifications-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Header */
+.dmg-notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dmg-notifications-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dmg-notifications-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.dmg-notifications-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.dmg-notifications-header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Buttons */
+.dmg-notifications-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.dmg-notifications-btn-primary {
+  background: #e63946;
+  color: white;
+}
+
+.dmg-notifications-btn-primary:hover {
+  background: #d32f3f;
+}
+
+.dmg-notifications-btn-secondary {
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.dmg-notifications-btn-secondary:hover {
+  background: #f3f4f6;
+}
+
+.dmg-notifications-btn-danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.dmg-notifications-btn-danger:hover {
+  background: #fecaca;
+}
+
+/* Filters */
+.dmg-notifications-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dmg-notifications-filter-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+}
+
+.dmg-notifications-filter-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.dmg-notifications-filter-btn.active {
+  background: #1f2937;
+  color: white;
+}
+
+/* Select All */
+.dmg-notifications-select-all {
+  padding: 12px 16px;
+  background: white;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-top: 16px;
+}
+
+.dmg-notifications-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.dmg-notifications-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #e63946;
+}
+
+/* Notifications List */
+.dmg-notifications-list {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.dmg-notifications-select-all + .dmg-notifications-list {
+  border-radius: 0 0 12px 12px;
+}
+
+/* Notification Group */
+.dmg-notifications-group {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dmg-notifications-group:last-child {
+  border-bottom: none;
+}
+
+.dmg-notifications-group-header {
+  padding: 12px 20px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dmg-notifications-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Notification Item */
+.dmg-notification-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s ease;
+  gap: 12px;
+}
+
+.dmg-notification-item:last-child {
+  border-bottom: none;
+}
+
+.dmg-notification-item:hover {
+  background: #f9fafb;
+}
+
+.dmg-notification-item.unread {
+  background: #fef7f7;
+}
+
+.dmg-notification-item.unread:hover {
+  background: #fef3f3;
+}
+
+.dmg-notification-item.selected {
+  background: #eff6ff;
+}
+
+.dmg-notification-checkbox {
+  padding-top: 4px;
+}
+
+.dmg-notification-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #e63946;
+}
+
+.dmg-notification-content {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.dmg-notification-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dmg-notification-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.dmg-notification-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dmg-notification-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.dmg-notification-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e63946;
+  flex-shrink: 0;
+}
+
+.dmg-notification-message {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 6px 0;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.dmg-notification-time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.dmg-notification-actions {
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.dmg-notification-item:hover .dmg-notification-actions {
+  opacity: 1;
+}
+
+.dmg-notification-action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.dmg-notification-action-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Loading State */
+.dmg-notifications-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 20px;
+  gap: 16px;
+}
+
+.dmg-notifications-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #e63946;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dmg-notifications-loading p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Error State */
+.dmg-notifications-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 20px;
+  gap: 16px;
+  text-align: center;
+}
+
+.dmg-notifications-error p {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Empty State */
+.dmg-notifications-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.dmg-notifications-empty h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #374151;
+  margin: 16px 0 8px;
+}
+
+.dmg-notifications-empty p {
+  font-size: 14px;
+  color: #9ca3af;
+  margin: 0;
+  max-width: 300px;
+}
+
+/* Pagination */
+.dmg-notifications-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  margin-top: 16px;
+}
+
+.dmg-notifications-pagination-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+}
+
+.dmg-notifications-pagination-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.dmg-notifications-pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dmg-notifications-pagination-info {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Modal */
+.dmg-notifications-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.dmg-notifications-modal {
+  background: white;
+  border-radius: 16px;
+  max-width: 400px;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.dmg-notifications-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dmg-notifications-modal-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.dmg-notifications-modal-body {
+  padding: 20px 24px;
+}
+
+.dmg-notifications-modal-body p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.dmg-notifications-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #f9fafb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dmg-notifications-page {
+    padding: 16px 12px;
+  }
+
+  .dmg-notifications-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dmg-notifications-header h1 {
+    font-size: 24px;
+  }
+
+  .dmg-notifications-header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .dmg-notifications-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dmg-notifications-filters {
+    padding: 6px;
+    gap: 4px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .dmg-notifications-filter-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .dmg-notification-item {
+    padding: 12px 16px;
+  }
+
+  .dmg-notification-content {
+    gap: 12px;
+  }
+
+  .dmg-notification-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .dmg-notification-title {
+    font-size: 14px;
+  }
+
+  .dmg-notification-message {
+    font-size: 13px;
+  }
+
+  .dmg-notification-actions {
+    opacity: 1;
+  }
+
+  .dmg-notifications-pagination {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .dmg-notifications-pagination-btn {
+    width: 100%;
+    text-align: center;
+  }
+}

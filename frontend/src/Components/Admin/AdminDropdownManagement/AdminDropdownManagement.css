@@ -696,6 +696,41 @@
   margin-top: 6px;
 }
 
+/* Budget Currency Notice */
+.budget-currency-notice {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.budget-currency-notice .notice-icon {
+  color: #f59e0b;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.budget-currency-notice .notice-content {
+  flex: 1;
+}
+
+.budget-currency-notice .notice-content strong {
+  display: block;
+  color: #92400e;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.budget-currency-notice .notice-content p {
+  color: #78350f;
+  font-size: 13px;
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;

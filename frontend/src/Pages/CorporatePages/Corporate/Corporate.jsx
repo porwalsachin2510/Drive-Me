@@ -2,25 +2,96 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import { searchVehicles } from "../../../Redux/slices/vehicleSlice";
 import PriceComparison from "../../../Components/Corporate/PriceComparison/PriceComparison";
 import { isSearchFormComplete } from "../../../utils/searchValidation";
-import { useDropdownOptions, DROPDOWN_CATEGORIES } from "../../../hooks/useDropdownOptions";
+import {
+  useDropdownOptions,
+  DROPDOWN_CATEGORIES,
+} from "../../../hooks/useDropdownOptions";
 import "./corporate.css";
 
 const Corporate = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
   const serviceType = location.state?.serviceType || "passenger";
 
   const [activeTab, setActiveTab] = useState("corporate");
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Get currency based on user's country or selected location
+  const getCurrencyForLocation = (locationName) => {
+    // Kuwait locations
+    const kuwaitLocations = [
+      "Kuwait City",
+      "Hawalli",
+      "Salmiya",
+      "Jahra",
+      "Ahmadi",
+      "Farwaniya",
+    ];
+    // Check if location is in Kuwait
+    if (
+      kuwaitLocations.some((loc) =>
+        locationName?.toLowerCase().includes(loc.toLowerCase()),
+      )
+    ) {
+      return "KWD";
+    }
+    // Check user's country
+    if (user?.country === "KW" || user?.country === "Kuwait") {
+      return "KWD";
+    }
+    // Default to AED for UAE and other locations
+    return "AED";
+  };
+
+  // Format budget label with dynamic currency
+  const formatBudgetLabel = (option, currency) => {
+    if (!option.label) return option.label;
+
+    // Remove existing currency codes from label
+    let label = option.label
+      .replace(/AED/g, "")
+      .replace(/KWD/g, "")
+      .replace(/\/month/g, "")
+      .trim();
+
+    // Extract category type from label (Budget, Economy, Standard, Premium)
+    const categoryMatch = label.match(/\((Budget|Economy|Standard|Premium)\)/);
+    const category = categoryMatch ? categoryMatch[1] : "";
+
+    // Clean up the numeric part
+    label = label.replace(/\((Budget|Economy|Standard|Premium)\)/, "").trim();
+
+    // Add the correct currency
+    if (label.includes("Less than")) {
+      const numMatch = label.match(/Less than ([\d,]+)/);
+      if (numMatch) {
+        return `Less than ${numMatch[1]} ${currency}${category ? ` (${category})` : ""}`;
+      }
+    } else if (label.includes("+")) {
+      const numMatch = label.match(/([\d,]+)\+/);
+      if (numMatch) {
+        return `${numMatch[1]}+ ${currency}${category ? ` (${category})` : ""}`;
+      }
+    } else if (label.includes("-")) {
+      const numMatch = label.match(/([\d,]+)-([\d,]+)/);
+      if (numMatch) {
+        return `${numMatch[1]}-${numMatch[2]} ${currency}${category ? ` (${category})` : ""}`;
+      }
+    }
+
+    return `${label} ${currency}${category ? ` (${category})` : ""}`;
+  };
+
   // Fetch dynamic dropdown options
+  // eslint-disable-next-line no-unused-vars
   const { options: dropdownOptions, loading: dropdownLoading } =
     useDropdownOptions([
       DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_PASSENGER,
@@ -201,34 +272,35 @@ const Corporate = () => {
   //   },
   // ];
 
+  // Budget ranges without currency - currency is added dynamically based on location
   const budgetRanges = {
     daily: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_DAILY]
       ?.options || [
-      { value: "0-1500", label: "Less than 1,500 AED (Budget)" },
-      { value: "1500-3000", label: "1,500-3,000 AED (Economy)" },
-      { value: "3000-6000", label: "3,000-6,000 AED (Standard)" },
-      { value: "6000+", label: "6,000+ AED (Premium)" },
+      { value: "0-1500", label: "Less than 1,500 (Budget)" },
+      { value: "1500-3000", label: "1,500-3,000 (Economy)" },
+      { value: "3000-6000", label: "3,000-6,000 (Standard)" },
+      { value: "6000+", label: "6,000+ (Premium)" },
     ],
     weekly: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_WEEKLY]
       ?.options || [
-      { value: "0-9000", label: "Less than 9,000 AED (Budget)" },
-      { value: "9000-18000", label: "9,000-18,000 AED (Economy)" },
-      { value: "18000-35000", label: "18,000-35,000 AED (Standard)" },
-      { value: "35000+", label: "35,000+ AED (Premium)" },
+      { value: "0-9000", label: "Less than 9,000 (Budget)" },
+      { value: "9000-18000", label: "9,000-18,000 (Economy)" },
+      { value: "18000-35000", label: "18,000-35,000 (Standard)" },
+      { value: "35000+", label: "35,000+ (Premium)" },
     ],
     monthly: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_MONTHLY]
       ?.options || [
-      { value: "0-10000", label: "Less than 10,000 AED (Budget)" },
-      { value: "10000-25000", label: "10,000-25,000 AED (Economy)" },
-      { value: "25000-50000", label: "25,000-50,000 AED (Standard)" },
-      { value: "50000+", label: "50,000+ AED (Premium)" },
+      { value: "0-10000", label: "Less than 10,000 (Budget)" },
+      { value: "10000-25000", label: "10,000-25,000 (Economy)" },
+      { value: "25000-50000", label: "25,000-50,000 (Standard)" },
+      { value: "50000+", label: "50,000+ (Premium)" },
     ],
     "long-term": dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_LONGTERM]
       ?.options || [
-      { value: "0-8000", label: "Less than 8,000 AED/month (Budget)" },
-      { value: "8000-20000", label: "8,000-20,000 AED/month (Economy)" },
-      { value: "20000-40000", label: "20,000-40,000 AED/month (Standard)" },
-      { value: "40000+", label: "40,000+ AED/month (Premium)" },
+      { value: "0-8000", label: "Less than 8,000/month (Budget)" },
+      { value: "8000-20000", label: "8,000-20,000/month (Economy)" },
+      { value: "20000-40000", label: "20,000-40,000/month (Standard)" },
+      { value: "40000+", label: "40,000+/month (Premium)" },
     ],
   };
 
@@ -470,50 +542,7 @@ const Corporate = () => {
               </div>
             )}
 
-            {/* Usage Estimate */}
-            {/* <div className="filter-section">
-            <h3>Per KM Usage Estimate</h3>
-            <div className="usage-options">
-              {usageEstimateOptions.map((option) => (
-                <div
-                  key={option.value}
-                  className={`usage-option ${
-                    filters.usageEstimate === option.value ? "selected" : ""
-                  }`}
-                  onClick={() =>
-                    handleInputChange("usageEstimate", option.value)
-                  }
-                >
-                  <div className="usage-label">{option.label}</div>
-                  <div className="usage-description">{option.description}</div>
-                </div>
-              ))}
-            </div>
-          </div> */}
-            {/* Budget */}
-            <div
-              className={`filter-section ${validationErrors.budget ? "filter-section-error" : ""}`}
-            >
-              <h3>Budget Per Vehicle *</h3>
-              <select
-                value={filters.budget}
-                onChange={(e) => handleInputChange("budget", e.target.value)}
-                className="select-field"
-              >
-                <option value="">Select Budget Range</option>
-                {budgetRanges[filters.rentalDuration].map((range) => (
-                  <option key={range.value} value={range.value}>
-                    {range.label}
-                  </option>
-                ))}
-              </select>
-              {validationErrors.budget && (
-                <span className="validation-error">
-                  {validationErrors.budget}
-                </span>
-              )}
-            </div>
-            {/* Location */}
+            {/* Location - MUST be before Budget so currency can be determined */}
             <div
               className={`filter-section ${validationErrors.location ? "filter-section-error" : ""}`}
             >
@@ -533,6 +562,33 @@ const Corporate = () => {
               {validationErrors.location && (
                 <span className="validation-error">
                   {validationErrors.location}
+                </span>
+              )}
+            </div>
+
+            {/* Budget - Currency is dynamically determined by location */}
+            <div
+              className={`filter-section ${validationErrors.budget ? "filter-section-error" : ""}`}
+            >
+              <h3>Budget Per Vehicle *</h3>
+              <select
+                value={filters.budget}
+                onChange={(e) => handleInputChange("budget", e.target.value)}
+                className="select-field"
+              >
+                <option value="">Select Budget Range</option>
+                {budgetRanges[filters.rentalDuration].map((range) => (
+                  <option key={range.value} value={range.value}>
+                    {formatBudgetLabel(
+                      range,
+                      getCurrencyForLocation(filters.location),
+                    )}
+                  </option>
+                ))}
+              </select>
+              {validationErrors.budget && (
+                <span className="validation-error">
+                  {validationErrors.budget}
                 </span>
               )}
             </div>
@@ -618,6 +674,6 @@ const Corporate = () => {
       <Footer />
     </>
   );
-};;;
+};;
 
 export default Corporate;

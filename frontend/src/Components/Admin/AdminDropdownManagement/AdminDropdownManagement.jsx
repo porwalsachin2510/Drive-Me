@@ -259,33 +259,33 @@ function AdminDropdownManagement() {
     if (cat.includes("BUDGET_RANGES_DAILY")) {
       return {
         value: "e.g., 0-500, 500-1000, 1000+",
-        label: "e.g., Less than 500 AED (Budget)",
+        label: "e.g., Less than 500 (Budget) - NO CURRENCY!",
         icon: "e.g., money",
-        description: "e.g., Budget option for daily rentals",
+        description: "Currency is added automatically based on user location",
       };
     }
     if (cat.includes("BUDGET_RANGES_WEEKLY")) {
       return {
         value: "e.g., 0-3000, 3000-6000, 6000+",
-        label: "e.g., Less than 3,000 AED (Budget)",
+        label: "e.g., Less than 3,000 (Budget) - NO CURRENCY!",
         icon: "e.g., money",
-        description: "e.g., Budget option for weekly rentals",
+        description: "Currency is added automatically based on user location",
       };
     }
     if (cat.includes("BUDGET_RANGES_MONTHLY")) {
       return {
         value: "e.g., 0-10000, 10000-25000, 25000+",
-        label: "e.g., Less than 10,000 AED (Budget)",
+        label: "e.g., Less than 10,000 (Budget) - NO CURRENCY!",
         icon: "e.g., money",
-        description: "e.g., Budget option for monthly rentals",
+        description: "Currency is added automatically based on user location",
       };
     }
     if (cat.includes("BUDGET_RANGES_LONGTERM")) {
       return {
         value: "e.g., 0-8000, 8000-20000, 20000+",
-        label: "e.g., Less than 8,000 AED/month (Budget)",
+        label: "e.g., Less than 8,000/month (Budget) - NO CURRENCY!",
         icon: "e.g., money",
-        description: "e.g., Budget option for long-term rentals",
+        description: "Currency is added automatically based on user location",
       };
     }
     if (cat.includes("VEHICLE_FEATURES") || cat.includes("FEATURES")) {
@@ -613,6 +613,29 @@ function AdminDropdownManagement() {
                 </div>
               </div>
 
+              {/* Budget Range Notice - Don't add currency */}
+              {selectedCategory.category?.includes("BUDGET_RANGES") && (
+                <div className="budget-currency-notice">
+                  <div className="notice-icon">info</div>
+                  <div className="notice-content">
+                    <strong>
+                      Important: Do NOT include currency (AED/KWD) in the label
+                    </strong>
+                    <p>
+                      Currency is automatically added based on user's location.
+                      Just enter the numeric range and category.
+                    </p>
+                    <p>
+                      <strong>Correct:</strong> "Less than 1,500 (Budget)" or
+                      "1,500-3,000 (Economy)"
+                    </p>
+                    <p>
+                      <strong>Wrong:</strong> "Less than 1,500 AED (Budget)"
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               <div className="form-group">
                 <label>Value *</label>
                 <input

@@ -171,21 +171,34 @@ class BankValidationService {
 
         const errors = [];
 
-        // Validate IBAN
-        const ibanValidation = this.validateIBAN(iban, country);
-        if (!ibanValidation.valid) {
-            errors.push(`IBAN: ${ibanValidation.error}`);
+        let bankName = null;
+
+        // Determine actual country code from country input
+        const countryCode = this.normalizeCountryCode(country);
+
+        // Validate IBAN if provided
+        if (iban) {
+            const ibanValidation = this.validateIBAN(iban, countryCode);
+            if (!ibanValidation.valid) {
+                errors.push(`IBAN: ${ibanValidation.error}`);
+            }
         }
 
-        // Validate bank account
-        const accountValidation = this.validateBankAccount(accountNumber, bankCode, country);
-        if (!accountValidation.valid) {
-            errors.push(`Bank Account: ${accountValidation.error}`);
+        // Validate bank code and get bank name
+        const config = this.countryConfigs[countryCode];
+        if (config && bankCode) {
+            if (config.bankCodes[bankCode]) {
+                bankName = config.bankCodes[bankCode];
+            } else {
+                errors.push(`Bank Code: Invalid bank code for ${countryCode}`);
+            }
+        } else if (!bankCode) {
+            errors.push("Bank code is required");
         }
 
         // Validate account holder name
         if (!accountHolderName || accountHolderName.length < 3) {
-            errors.push("Account holder name is required");
+            errors.push("Account holder name is required (minimum 3 characters)");
         }
 
         // Validate amount
@@ -195,15 +208,35 @@ class BankValidationService {
 
         // Validate currency
         const supportedCurrencies = ["AED", "KWD", "SAR", "BHD", "OMR", "QAR"];
-        if (!supportedCurrencies.includes(currency)) {
+        if (currency && !supportedCurrencies.includes(currency)) {
             errors.push("Unsupported currency");
         }
 
         return {
             valid: errors.length === 0,
             errors,
-            bankName: accountValidation.bankName
+            bankName
         };
+    }
+
+    // Normalize country code
+    normalizeCountryCode(country) {
+        const countryMap = {
+            "UAE": "UAE",
+            "AE": "UAE",
+            "UNITED ARAB EMIRATES": "UAE",
+            "KW": "KW",
+            "KUWAIT": "KW",
+            "SA": "SA",
+            "SAUDI ARABIA": "SA",
+            "BH": "BH",
+            "BAHRAIN": "BH",
+            "OM": "OM",
+            "OMAN": "OM",
+            "QA": "QA",
+            "QATAR": "QA"
+        };
+        return countryMap[country?.toUpperCase()] || country?.toUpperCase() || "UAE";
     }
 
     // Generate withdrawal reference

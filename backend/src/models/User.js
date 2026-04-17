@@ -61,6 +61,10 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        countryCode: {
+            type: String,
+            default: "+971", // Default to UAE
+        },
         status: {
             type: String,
             enum: ["ACTIVE", "SUSPENDED", "PENDING"],

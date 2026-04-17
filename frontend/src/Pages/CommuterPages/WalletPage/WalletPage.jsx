@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -52,19 +53,34 @@ function WalletPage() {
   const handleWithdraw = async (e) => {
     e.preventDefault();
     try {
-      await dispatch(withdrawFromWallet(withdrawForm)).unwrap();
+      // Get the appropriate currency based on user's country
+      const currency = user?.country === "KW" ? "KWD" : "AED";
+
+      await dispatch(
+        withdrawFromWallet({
+          ...withdrawForm,
+          amount: parseFloat(withdrawForm.amount),
+          currency,
+          country: user?.country || "UAE",
+        }),
+      ).unwrap();
+
+      alert(
+        "Withdrawal initiated successfully! Your funds will be transferred to your bank account.",
+      );
       setShowWithdrawModal(false);
       setWithdrawForm({
         amount: "",
         iban: "",
         bankCode: "",
         accountHolderName: "",
-        country: user?.country || "UAE"
+        country: user?.country || "UAE",
       });
       dispatch(getWalletBalance());
       dispatch(getWalletTransactions({ page: 1, limit: 20 }));
     } catch (error) {
       console.error("Withdraw error:", error);
+      alert(error || "Withdrawal failed. Please try again.");
     }
   };
 

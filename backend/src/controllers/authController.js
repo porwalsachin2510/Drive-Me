@@ -15,6 +15,7 @@ export const register = async (req, res) => {
             fullName,
             email,
             whatsappNumber,
+            countryCode,
             password,
             companyName,
             companyAddress,
@@ -101,6 +102,7 @@ export const register = async (req, res) => {
             fullName,
             email,
             whatsappNumber,
+            countryCode: countryCode || "+971", // Default to UAE if not provided
             password, // Plain password - User model pre-save hook will hash it
             companyName,
             companyAddress,

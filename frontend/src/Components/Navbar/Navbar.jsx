@@ -223,12 +223,9 @@ export default function Navbar({ activeTab, setActiveTab }) {
             // After Login: Show user avatar with dropdown and notifications
             <div className="drivemego-topbar-nav-user-section">
               {user?.role &&
-                [
-                  "COMMUTER",
-                  "B2C_PARTNER",
-                  "B2B_PARTNER",
-                  "ADMIN",
-                ].includes(user.role) && <WalletIcon />}
+                ["COMMUTER", "B2C_PARTNER", "B2B_PARTNER", "ADMIN"].includes(
+                  user.role,
+                ) && <WalletIcon />}
 
               {/* Notification Icon */}
               <NotificationIcon />
@@ -240,7 +237,23 @@ export default function Navbar({ activeTab, setActiveTab }) {
                 title="Click to go to profile"
                 aria-label="User profile"
               >
-                {userInitial}
+                {user?.profileImage ? (
+                  <img
+                    src={user.profileImage}
+                    alt={user?.name || "User"}
+                    className="drivemego-topbar-user-avatar-img"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "flex";
+                    }}
+                  />
+                ) : null}
+                <span
+                  className="drivemego-topbar-user-avatar-initial"
+                  style={{ display: user?.profileImage ? "none" : "flex" }}
+                >
+                  {userInitial}
+                </span>
               </button>
             </div>
           ) : (

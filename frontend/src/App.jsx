@@ -56,6 +56,7 @@ import Footer from "./Components/Footer/Footer";
 import SetPassword from "./Pages/SetPassword/SetPassword";
 import DynamicPage from "./Pages/DynamicPage/DynamicPage";
 import ForgotPassword from "./Pages/ForgotPassword/ForgotPassword";
+import NotificationsPage from "./Pages/NotificationsPage/NotificationsPage";
 
 function App() {
   return (
@@ -134,6 +135,28 @@ function App() {
                 allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
               >
                 <WalletPaymentCallback />
+              </ProtectedRoleBasedRoute>
+            }
+          />
+
+          {/* Notifications Page - All authenticated users */}
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoleBasedRoute
+                allowedRoles={[
+                  "COMMUTER",
+                  "B2C_PARTNER",
+                  "B2B_PARTNER",
+                  "CORPORATE",
+                  "CORPORATE_EMPLOYEE",
+                  "B2C_PARTNER_DRIVER",
+                  "B2B_PARTNER_DRIVER",
+                  "CORPORATE_DRIVER",
+                  "ADMIN",
+                ]}
+              >
+                <NotificationsPage />
               </ProtectedRoleBasedRoute>
             }
           />
@@ -396,7 +419,7 @@ function App() {
               </ProtectedRoleBasedRoute>
             }
           />
-          
+
           <Route
             path="/driver/b2c-dashboard"
             element={

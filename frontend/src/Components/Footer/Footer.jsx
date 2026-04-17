@@ -208,7 +208,8 @@ const Footer = () => {
       {/* Bottom Section */}
       <div className="footer-bottom">
         <p className="footer-copyright">
-          © {new Date().getFullYear()} DRIVEME GO. All rights reserved.
+          © {new Date().getFullYear()} GOAHEAD MOBILITY SOLUTIONS PVT LTD
+          Bangalore, India. All rights reserved.
         </p>
         <div className="footer-bottom-right">
           <a href="#stripe" className="footer-bottom-link">

@@ -30,7 +30,7 @@ const Register = () => {
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
 
@@ -47,6 +47,7 @@ const Register = () => {
     { id: "CORPORATE", label: "CORPORATE", icon: "🏢" },
     { id: "B2C_PARTNER", label: "B2C PARTNER", icon: "🚗" },
     { id: "B2B_PARTNER", label: "B2B PARTNER", icon: "🏭" },
+    // { id: "CORPORATE_EMPLOYEE", label: "CORPORATE EMPLOYEE", icon: "👔" },
   ];
 
   const roleRedirectMap = {
@@ -57,9 +58,28 @@ const Register = () => {
     CORPORATE_EMPLOYEE: "/",
   };
 
+  // Country codes for UAE, Kuwait and other common countries
+  const countryCodes = [
+    { code: "+971", country: "UAE", flag: "AE" },
+    { code: "+965", country: "Kuwait", flag: "KW" },
+    { code: "+966", country: "Saudi Arabia", flag: "SA" },
+    { code: "+968", country: "Oman", flag: "OM" },
+    { code: "+973", country: "Bahrain", flag: "BH" },
+    { code: "+974", country: "Qatar", flag: "QA" },
+    { code: "+91", country: "India", flag: "IN" },
+    { code: "+92", country: "Pakistan", flag: "PK" },
+    { code: "+63", country: "Philippines", flag: "PH" },
+    { code: "+20", country: "Egypt", flag: "EG" },
+    { code: "+962", country: "Jordan", flag: "JO" },
+    { code: "+961", country: "Lebanon", flag: "LB" },
+    { code: "+1", country: "USA/Canada", flag: "US" },
+    { code: "+44", country: "UK", flag: "GB" },
+  ];
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
+    countryCode: "+971", // Default to UAE
     whatsappNumber: "",
     password: "",
     companyName: "",
@@ -285,7 +305,7 @@ const Register = () => {
           fileName: file.name,
         };
         updatedRoutes[routeIndex].images = imageArray.filter(
-          (img) => img !== undefined
+          (img) => img !== undefined,
         );
         setFormData((prev) => ({
           ...prev,
@@ -299,7 +319,7 @@ const Register = () => {
   const removeRouteImage = (routeIndex, imageIndex) => {
     const updatedRoutes = [...formData.routeListings];
     updatedRoutes[routeIndex].images = updatedRoutes[routeIndex].images.filter(
-      (_, idx) => idx !== imageIndex
+      (_, idx) => idx !== imageIndex,
     );
     setFormData((prev) => ({
       ...prev,
@@ -355,7 +375,6 @@ const Register = () => {
       routeListings: routes,
     }));
   };
-
 
   const addRoute = () => {
     setFormData((prev) => ({
@@ -419,11 +438,12 @@ const Register = () => {
       return false;
     }
 
-    if (
-      selectedRole === "CORPORATE_EMPLOYEE" &&
-      !formData.companyName
-    ) {
-      dispatch(authError("Company name is required for corporate employee registration"));
+    if (selectedRole === "CORPORATE_EMPLOYEE" && !formData.companyName) {
+      dispatch(
+        authError(
+          "Company name is required for corporate employee registration",
+        ),
+      );
       return false;
     }
 
@@ -463,14 +483,13 @@ const Register = () => {
         return false;
       }
     }
-    
+
     return true;
   };
 
   console.log("Frontend formData By User", formData);
 
   const handleSubmit = async (e) => {
-    
     e.preventDefault();
 
     setSuccess("");
@@ -487,7 +506,10 @@ const Register = () => {
       submitData.append("role", selectedRole);
       submitData.append("fullName", formData.fullName);
       submitData.append("email", formData.email);
-      submitData.append("whatsappNumber", formData.whatsappNumber);
+      // Combine country code and phone number
+      const fullWhatsappNumber = `${formData.countryCode}${formData.whatsappNumber.replace(/^0+/, "")}`;
+      submitData.append("whatsappNumber", fullWhatsappNumber);
+      submitData.append("countryCode", formData.countryCode);
       submitData.append("password", formData.password);
 
       if (formData.companyLogo) {
@@ -586,8 +608,8 @@ const Register = () => {
       dispatch(
         authError(
           err.response?.data?.message ||
-            "Registration failed. Please try again."
-        )
+            "Registration failed. Please try again.",
+        ),
       );
       console.error("Registration error:", err);
     }
@@ -602,7 +624,7 @@ const Register = () => {
   const handleOTPVerified = (user) => {
     setShowOTPVerification(false);
     setSuccess("Email verified and registration completed successfully!");
-    
+
     const userRole = user?.role;
     const redirectPath = roleRedirectMap[userRole] || "/dashboard";
 
@@ -684,15 +706,39 @@ const Register = () => {
                   <label className="register-form-label">
                     WhatsApp Number <span className="register-required">*</span>
                   </label>
-                  <input
-                    type="tel"
-                    className="register-form-input"
-                    name="whatsappNumber"
-                    value={formData.whatsappNumber}
-                    onChange={handleInputChange}
-                    placeholder="+1 (555) 000-0000"
-                    required
-                  />
+                  <div className="register-phone-input-container">
+                    <div className="register-country-code-wrapper">
+                      <select
+                        className="register-country-code-select"
+                        name="countryCode"
+                        value={formData.countryCode}
+                        onChange={handleInputChange}
+                        title={
+                          countryCodes.find(
+                            (c) => c.code === formData.countryCode,
+                          )?.country || ""
+                        }
+                      >
+                        {countryCodes.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.code} - {country.country}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="register-country-code-display">
+                        {formData.countryCode}
+                      </span>
+                    </div>
+                    <input
+                      type="tel"
+                      className="register-form-input register-phone-number-input"
+                      name="whatsappNumber"
+                      value={formData.whatsappNumber}
+                      onChange={handleInputChange}
+                      placeholder="50 123 4567"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
