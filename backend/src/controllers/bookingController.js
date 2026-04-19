@@ -2259,26 +2259,31 @@ export const startB2B_PartnerDriverTrip = async (req, res) => {
             // Notify all passengers
             for (const passenger of trip.passengers) {
                 if (passenger.bookingStatus === "CONFIRMED") {
-                    const tripStartNotification = await createNotification({
-                        userId: passenger.employeeId._id || passenger.employeeId,
-                        type: "TRIP_STARTED",
-                        title: "Trip Started",
-                        message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has started`,
-                        relatedUserId: driverId,
-                        bookingId: trip._id,
-                    })
+                    // Use passengerId (which is the userId) for notifications, not employeeId (which is CorporateEmployee record ID)
+                    const passengerUserId = passenger.passengerId?._id || passenger.passengerId
 
-                    await sendRealTimeNotification(passenger.employeeId._id || passenger.employeeId, {
-                        type: "TRIP_STARTED",
-                        title: tripStartNotification.title,
-                        message: tripStartNotification.message,
-                        data: {
-                            tripId: trip._id,
-                            driverId,
-                            status: "IN_PROGRESS",
-                            notification: tripStartNotification
-                        }
-                    })
+                    if (passengerUserId) {
+                        const tripStartNotification = await createNotification({
+                            userId: passengerUserId,
+                            type: "TRIP_STARTED",
+                            title: "Trip Started",
+                            message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has started`,
+                            relatedUserId: driverId,
+                            bookingId: trip._id,
+                        })
+
+                        await sendRealTimeNotification(passengerUserId, {
+                            type: "TRIP_STARTED",
+                            title: tripStartNotification.title,
+                            message: tripStartNotification.message,
+                            data: {
+                                tripId: trip._id,
+                                driverId,
+                                status: "IN_PROGRESS",
+                                notification: tripStartNotification
+                            }
+                        })
+                    }
                 }
             }
 
@@ -2392,26 +2397,31 @@ export const completeB2B_PartnerDriverBooking = async (req, res) => {
             // Notify all passengers
             for (const passenger of trip.passengers) {
                 if (passenger.bookingStatus === "CONFIRMED") {
-                    const tripCompleteNotification = await createNotification({
-                        userId: passenger.employeeId._id || passenger.employeeId,
-                        type: "RIDE_COMPLETED",
-                        title: "Trip Completed",
-                        message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has been completed`,
-                        relatedUserId: driverId,
-                        bookingId: trip._id,
-                    })
+                    // Use passengerId (which is the userId) for notifications, not employeeId (which is CorporateEmployee record ID)
+                    const passengerUserId = passenger.passengerId?._id || passenger.passengerId
 
-                    await sendRealTimeNotification(passenger.employeeId._id || passenger.employeeId, {
-                        type: "RIDE_COMPLETED",
-                        title: tripCompleteNotification.title,
-                        message: tripCompleteNotification.message,
-                        data: {
-                            tripId: trip._id,
-                            driverId,
-                            status: "COMPLETED",
-                            notification: tripCompleteNotification
-                        }
-                    })
+                    if (passengerUserId) {
+                        const tripCompleteNotification = await createNotification({
+                            userId: passengerUserId,
+                            type: "RIDE_COMPLETED",
+                            title: "Trip Completed",
+                            message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has been completed`,
+                            relatedUserId: driverId,
+                            bookingId: trip._id,
+                        })
+
+                        await sendRealTimeNotification(passengerUserId, {
+                            type: "RIDE_COMPLETED",
+                            title: tripCompleteNotification.title,
+                            message: tripCompleteNotification.message,
+                            data: {
+                                tripId: trip._id,
+                                driverId,
+                                status: "COMPLETED",
+                                notification: tripCompleteNotification
+                            }
+                        })
+                    }
                 }
             }
 
@@ -2484,6 +2494,7 @@ export const completeB2B_PartnerDriverBooking = async (req, res) => {
         })
     }
 }
+
 
 // Get corporate driver bookings from Trip model
 export const getCorporateDriverBookings = async (req, res) => {

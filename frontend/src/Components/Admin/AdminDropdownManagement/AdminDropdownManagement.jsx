@@ -562,7 +562,7 @@ function AdminDropdownManagement() {
             </>
           ) : (
             <div className="no-selection">
-              <div className="no-selection-icon">settings-icon</div>
+              <div className="no-selection-icon">⚙️</div>
               <h3>Select a Category</h3>
               <p>
                 Choose a dropdown category from the left panel to view and
@@ -635,7 +635,7 @@ function AdminDropdownManagement() {
                   </div>
                 </div>
               )}
-              
+
               <div className="form-group">
                 <label>Value *</label>
                 <input

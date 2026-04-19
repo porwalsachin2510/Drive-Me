@@ -291,6 +291,29 @@ export const rateTrip = async (req, res) => {
 
         await travelRecord.save();
 
+        // Update driver's rating in B2CPartnerDriver model
+        if (travelRecord.driverId && rating) {
+            try {
+                const driverDoc = await B2CPartnerDriver.findById(travelRecord.driverId);
+
+                if (driverDoc) {
+                    const currentCount = driverDoc.ratings?.count || 0;
+                    const currentAverage = driverDoc.ratings?.average || 0;
+                    const newCount = currentCount + 1;
+                    const newAverage = ((currentAverage * currentCount) + rating) / newCount;
+
+                    await B2CPartnerDriver.findByIdAndUpdate(travelRecord.driverId, {
+                        $set: {
+                            'ratings.average': Math.round(newAverage * 10) / 10,
+                            'ratings.count': newCount
+                        }
+                    });
+                }
+            } catch (driverRatingError) {
+                console.error("Error updating B2C driver rating:", driverRatingError);
+            }
+        }
+
         res.status(200).json({
             success: true,
             message: "Trip rated successfully",

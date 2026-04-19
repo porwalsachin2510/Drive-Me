@@ -320,6 +320,407 @@
     font-weight: 500;
 }
 
+/* Documents Preview in Card */
+.drivemego-adminvehicleapproval-documents-preview,
+.drivemego-adminvehicleapproval-images-preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    background: #f0fdf4;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.drivemego-adminvehicleapproval-docs-label,
+.drivemego-adminvehicleapproval-images-label {
+    color: #166534;
+    font-weight: 500;
+}
+
+.drivemego-adminvehicleapproval-images-preview {
+    background: #eff6ff;
+}
+
+.drivemego-adminvehicleapproval-images-label {
+    color: #1e40af;
+}
+
+/* View Details Button */
+.drivemego-adminvehicleapproval-btn-view-details {
+    flex: 1;
+    padding: 10px 16px;
+    border: 2px solid #667eea;
+    background: white;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #667eea;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.drivemego-adminvehicleapproval-btn-view-details:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* Vehicle Detail Modal */
+.drivemego-adminvehicleapproval-detail-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.drivemego-adminvehicleapproval-detail-modal {
+    background: white;
+    border-radius: 12px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.drivemego-adminvehicleapproval-detail-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.drivemego-adminvehicleapproval-detail-modal-header h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.drivemego-adminvehicleapproval-modal-close {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #e5e7eb;
+    border-radius: 50%;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.drivemego-adminvehicleapproval-modal-close:hover {
+    background: #d1d5db;
+    color: #1f2937;
+}
+
+.drivemego-adminvehicleapproval-detail-modal-content {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Images Section */
+.drivemego-adminvehicleapproval-images-section {
+    margin-bottom: 24px;
+}
+
+.drivemego-adminvehicleapproval-images-section h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 16px 0;
+}
+
+.drivemego-adminvehicleapproval-main-image {
+    width: 100%;
+    height: 300px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    background: #f3f4f6;
+}
+
+.drivemego-adminvehicleapproval-main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.drivemego-adminvehicleapproval-image-thumbnails {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 0;
+}
+
+.drivemego-adminvehicleapproval-image-thumbnails img {
+    width: 80px;
+    height: 60px;
+    border-radius: 6px;
+    object-fit: cover;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.drivemego-adminvehicleapproval-image-thumbnails img:hover {
+    border-color: #667eea;
+}
+
+.drivemego-adminvehicleapproval-image-thumbnails img.active {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+/* Info Section */
+.drivemego-adminvehicleapproval-info-section {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.drivemego-adminvehicleapproval-info-section h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 16px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.drivemego-adminvehicleapproval-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.drivemego-adminvehicleapproval-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.drivemego-adminvehicleapproval-info-item .label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.drivemego-adminvehicleapproval-info-item .value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* Facilities Grid */
+.drivemego-adminvehicleapproval-facilities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.drivemego-adminvehicleapproval-facility-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fee2e2;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.drivemego-adminvehicleapproval-facility-item.active {
+    background: #dcfce7;
+}
+
+.drivemego-adminvehicleapproval-facility-item .facility-icon {
+    font-size: 14px;
+    color: #dc2626;
+}
+
+.drivemego-adminvehicleapproval-facility-item.active .facility-icon {
+    color: #16a34a;
+}
+
+.drivemego-adminvehicleapproval-facility-item .facility-name {
+    color: #374151;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+/* Documents Section */
+.drivemego-adminvehicleapproval-documents-section {
+    margin-bottom: 24px;
+}
+
+.drivemego-adminvehicleapproval-documents-section h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 16px 0;
+}
+
+.drivemego-adminvehicleapproval-documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.drivemego-adminvehicleapproval-document-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.drivemego-adminvehicleapproval-document-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.drivemego-adminvehicleapproval-document-icon {
+    width: 48px;
+    height: 48px;
+    background: #eff6ff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.drivemego-adminvehicleapproval-document-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.drivemego-adminvehicleapproval-document-info .doc-type {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.drivemego-adminvehicleapproval-document-info .doc-link {
+    font-size: 12px;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.drivemego-adminvehicleapproval-document-info .doc-link:hover {
+    text-decoration: underline;
+}
+
+.drivemego-adminvehicleapproval-document-status .status-uploaded {
+    background: #dcfce7;
+    color: #166534;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.drivemego-adminvehicleapproval-no-documents {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background: #fef3c7;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.drivemego-adminvehicleapproval-no-documents span {
+    font-size: 32px;
+    margin-bottom: 12px;
+    color: #d97706;
+}
+
+.drivemego-adminvehicleapproval-no-documents p {
+    font-size: 14px;
+    color: #92400e;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Detail Actions */
+.drivemego-adminvehicleapproval-detail-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 24px;
+}
+
+.drivemego-adminvehicleapproval-btn-approve-large,
+.drivemego-adminvehicleapproval-btn-reject-large {
+    flex: 1;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.drivemego-adminvehicleapproval-btn-approve-large {
+    background: #10b981;
+    color: white;
+}
+
+.drivemego-adminvehicleapproval-btn-approve-large:hover {
+    background: #059669;
+}
+
+.drivemego-adminvehicleapproval-btn-approve-large:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
+}
+
+.drivemego-adminvehicleapproval-btn-reject-large {
+    background: #ef4444;
+    color: white;
+}
+
+.drivemego-adminvehicleapproval-btn-reject-large:hover {
+    background: #dc2626;
+}
+
+.drivemego-adminvehicleapproval-btn-reject-large:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .drivemego-adminvehicleapproval-vehicles-list {

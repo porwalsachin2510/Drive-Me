@@ -245,7 +245,7 @@ const EmployeeFeedback = () => {
             const seatDisplay = trip.seatNumber && trip.seatNumber !== 'N/A' ? trip.seatNumber : null;
             const dateDisplay = trip.tripDate || trip.date || trip.travelDate;
             const timeDisplay = trip.startTime || (trip.pickupTime ? formatTime(trip.pickupTime) : '');
-
+            console.log("driverDisplay", driverDisplay);
             return (
             <div key={trip._id || trip.tripId || index} className="trip-card">
               <div className="trip-info">

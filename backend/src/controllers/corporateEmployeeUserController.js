@@ -6,6 +6,7 @@ import Trip from "../models/Trip.js";
 import Vehicle from "../models/Vehicle.js";
 import Driver from "../models/Driver.js";
 import CorporateDriver from "../models/CorporateDriver.js";
+import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js";
 import MonthlyPass from "../models/MonthlyPass.js";
 import { sendEmail } from "../Services/emailService.js";
 
@@ -176,17 +177,41 @@ export const getEmployeeDashboard = async (req, res) => {
         const resolveDriverInfo = async (trip) => {
             // Get the raw driverId from the trip document (not populated)
             const driverObjectId = trip.driverId;
-
-            if (!driverObjectId) {
-                // Try to get from vehicleInfo (contract-level assignment)
-                return {
-                    driverName: vehicleInfo?.driverName || 'Will be assigned',
-                    driverContact: vehicleInfo?.driverContact || 'Not available'
-                };
-            }
-
             let driverName = null;
             let driverContact = null;
+
+            if (!driverObjectId) {
+                // Try to get from CorporateRouteSchedule first (most reliable source)
+                if (trip.routeId) {
+                    try {
+                        const routeId = typeof trip.routeId === 'object' ? trip.routeId._id : trip.routeId;
+                        const schedule = await CorporateRouteSchedule.findOne({ routeId: routeId }).select('assignedDriver');
+                        if (schedule?.assignedDriver) {
+                            // First try as CorporateDriver model ID
+                            const corpDriver = await CorporateDriver.findById(schedule.assignedDriver).select('name phone email');
+                            if (corpDriver) {
+                                driverName = corpDriver.name;
+                                driverContact = corpDriver.phone || null;
+                            } else {
+                                // Try as User model ID
+                                const scheduleDriver = await User.findById(schedule.assignedDriver).select('fullName whatsappNumber phone');
+                                if (scheduleDriver) {
+                                    driverName = scheduleDriver.fullName;
+                                    driverContact = scheduleDriver.whatsappNumber || scheduleDriver.phone || null;
+                                }
+                            }
+                        }
+                    } catch (e) { }
+                }
+                // If still no driver, fallback to vehicleInfo from contract
+                if (!driverName) {
+                    return {
+                        driverName: vehicleInfo?.driverName || 'Will be assigned',
+                        driverContact: vehicleInfo?.driverContact || 'Not available'
+                    };
+                }
+                return { driverName, driverContact: driverContact || 'Not available' };
+            }
 
             // 1. First try CorporateDriver model (most common for corporate trips)
             try {
@@ -778,6 +803,49 @@ export const rateTrip = async (req, res) => {
 
         await employee.save();
 
+        // Update driver's rating in Driver/CorporateDriver model
+        if (trip.driverId && driverRating) {
+            try {
+                // First try Driver model (B2B Partner drivers)
+                let driverDoc = await Driver.findById(trip.driverId);
+
+                if (driverDoc) {
+                    // Calculate new average rating for Driver model
+                    const currentCount = driverDoc.ratings?.count || 0;
+                    const currentAverage = driverDoc.ratings?.average || 0;
+                    const newCount = currentCount + 1;
+                    const newAverage = ((currentAverage * currentCount) + driverRating) / newCount;
+
+                    await Driver.findByIdAndUpdate(trip.driverId, {
+                        $set: {
+                            'ratings.average': Math.round(newAverage * 10) / 10, // Round to 1 decimal
+                            'ratings.count': newCount
+                        }
+                    });
+                } else {
+                    // Try CorporateDriver model (Corporate's own drivers)
+                    const corpDriver = await CorporateDriver.findById(trip.driverId);
+
+                    if (corpDriver) {
+                        const currentCount = corpDriver.ratings?.count || 0;
+                        const currentAverage = corpDriver.ratings?.average || 0;
+                        const newCount = currentCount + 1;
+                        const newAverage = ((currentAverage * currentCount) + driverRating) / newCount;
+
+                        await CorporateDriver.findByIdAndUpdate(trip.driverId, {
+                            $set: {
+                                'ratings.average': Math.round(newAverage * 10) / 10,
+                                'ratings.count': newCount
+                            }
+                        });
+                    }
+                }
+            } catch (driverRatingError) {
+                console.error("Error updating driver rating:", driverRatingError);
+                // Don't fail the whole request if driver rating update fails
+            }
+        }
+
         res.status(201).json({
             success: true,
             message: "Trip rated successfully",
@@ -855,6 +923,130 @@ export const requestRouteChange = async (req, res) => {
 // Helper functions
 
 // Get employee travel history from trips collection
+// const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
+//     try {
+//         if (!employee?.companyId) return [];
+
+//         const today = new Date();
+//         let startDate;
+
+//         switch (period) {
+//             case 'week':
+//                 startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+//                 break;
+//             case 'month':
+//                 startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+//                 break;
+//             default:
+//                 startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+//         }
+
+//         // Query trips collection for this corporate's trips
+//         const trips = await Trip.find({
+//             corporateId: employee.companyId,
+//             tripDate: { $gte: startDate, $lte: today },
+//             status: { $in: ['COMPLETED', 'CANCELLED', 'SCHEDULED', 'IN_PROGRESS'] }
+//         })
+//             .populate('routeId', 'fromLocation toLocation')
+//             .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory')
+//             .populate('driverId', 'fullName whatsappNumber')
+//             .sort({ tripDate: -1 });
+
+//         // Map trips to display format - resolve driver names properly
+//         const Driver = (await import("../models/Driver.js")).default;
+//         const User = (await import("../models/User.js")).default;
+
+//         return await Promise.all(trips.map(async (trip) => {
+//             // Check if this employee is a passenger in the trip
+//             const passengerEntry = trip.passengers?.find(p =>
+//                 p.employeeId && p.employeeId.toString() === userId.toString()
+//             );
+
+//             // Resolve driver name - try multiple sources
+//             let driverName = null;
+//             let driverContact = null;
+//             const driverDoc = trip.driverId;
+
+//             // 1. Check if populate worked (User model)
+//             if (driverDoc && typeof driverDoc === 'object' && driverDoc._id) {
+//                 driverName = driverDoc.name || driverDoc.fullName || null;
+//                 driverContact = driverDoc.phone || driverDoc.whatsappNumber || null;
+//             }
+
+//             // 2. Check Driver model directly
+//             if (!driverName) {
+//                 const driverObjectId = (driverDoc && typeof driverDoc === 'object') ? driverDoc._id : driverDoc;
+//                 if (driverObjectId) {
+//                     try {
+//                         const driver = await Driver.findById(driverObjectId).select('name phone email');
+//                         if (driver) {
+//                             driverName = driver.name;
+//                             driverContact = driver.phone || driverContact;
+//                         }
+//                     } catch (e) { }
+//                 }
+//             }
+
+//             // 3. Find User account that has this driverId
+//             if (!driverName) {
+//                 const driverObjectId = (driverDoc && typeof driverDoc === 'object') ? driverDoc._id : driverDoc;
+//                 if (driverObjectId) {
+//                     try {
+//                         const driverUser = await User.findOne({ driverId: driverObjectId }).select('fullName whatsappNumber phone');
+//                         if (driverUser) {
+//                             driverName = driverUser.fullName;
+//                             driverContact = driverUser.whatsappNumber || driverUser.phone || driverContact;
+//                         }
+//                     } catch (e) { }
+//                 }
+//             }
+
+//             // 4. Last resort: look up User directly by _id
+//             if (!driverName) {
+//                 const driverObjectId = (driverDoc && typeof driverDoc === 'object') ? driverDoc._id : driverDoc;
+//                 if (driverObjectId) {
+//                     try {
+//                         const userDoc = await User.findById(driverObjectId).select('fullName whatsappNumber phone');
+//                         if (userDoc) {
+//                             driverName = userDoc.fullName;
+//                             driverContact = userDoc.whatsappNumber || userDoc.phone || driverContact;
+//                         }
+//                     } catch (e) { }
+//                 }
+//             }
+
+//             return {
+//                 _id: trip._id,
+//                 date: trip.tripDate,
+//                 travelDate: trip.tripDate,
+//                 tripDate: trip.tripDate,
+//                 fromLocation: trip.fromLocation || trip.routeId?.fromLocation || 'Unknown',
+//                 toLocation: trip.toLocation || trip.routeId?.toLocation || 'Unknown',
+//                 route: `${trip.fromLocation || 'Unknown'} → ${trip.toLocation || 'Unknown'}`,
+//                 status: trip.status,
+//                 tripType: trip.tripType,
+//                 direction: trip.direction,
+//                 startTime: trip.startTime,
+//                 endTime: trip.endTime,
+//                 attendance: passengerEntry ?
+//                     (passengerEntry.bookingStatus === 'NO_SHOW' ? 'ABSENT' : 'PRESENT') :
+//                     (trip.status === 'COMPLETED' ? 'PRESENT' : 'SCHEDULED'),
+//                 vehicleName: trip.vehicleId?.vehicleName || 'Not assigned',
+//                 vehicleNumber: trip.vehicleId?.registrationNumber || 'Not assigned',
+//                 vehicleCategory: trip.vehicleId?.vehicleCategory || '',
+//                 driverName: driverName || 'Not assigned',
+//                 driverContact: driverContact || 'Not available',
+//                 seatNumber: passengerEntry?.seatNumber || passengerEntry?.seat || null
+//             };
+//         }));
+
+//     } catch (error) {
+//         console.error("Error getting employee travel history from trips:", error);
+//         return [];
+//     }
+// };
+
+// Get employee travel history from trips collection
 const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
     try {
         if (!employee?.companyId) return [];
@@ -873,11 +1065,15 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
                 startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
         }
 
-        // Query trips collection for this corporate's trips
+        // Query trips collection for this employee's trips (where they are a passenger)
         const trips = await Trip.find({
             corporateId: employee.companyId,
             tripDate: { $gte: startDate, $lte: today },
-            status: { $in: ['COMPLETED', 'CANCELLED', 'SCHEDULED', 'IN_PROGRESS'] }
+            status: { $in: ['COMPLETED', 'CANCELLED', 'SCHEDULED', 'IN_PROGRESS'] },
+            $or: [
+                { 'passengers.passengerId': userId },
+                { 'passengers.employeeId': employee._id }
+            ]
         })
             .populate('routeId', 'fromLocation toLocation')
             .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory')
@@ -887,11 +1083,14 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
         // Map trips to display format - resolve driver names properly
         const Driver = (await import("../models/Driver.js")).default;
         const User = (await import("../models/User.js")).default;
+        const CorporateDriverModel = (await import("../models/CorporateDriver.js")).default;
 
         return await Promise.all(trips.map(async (trip) => {
             // Check if this employee is a passenger in the trip
+            // userId is the User._id, employee._id is the CorporateEmployee._id
             const passengerEntry = trip.passengers?.find(p =>
-                p.employeeId && p.employeeId.toString() === userId.toString()
+                (p.passengerId && p.passengerId.toString() === userId.toString()) ||
+                (p.employeeId && p.employeeId.toString() === employee._id.toString())
             );
 
             // Resolve driver name - try multiple sources
@@ -899,52 +1098,81 @@ const getEmployeeTravelHistoryFromTrips = async (userId, employee, period) => {
             let driverContact = null;
             const driverDoc = trip.driverId;
 
+            // Get driverObjectId from either populated doc or raw ObjectId
+            const driverObjectId = (driverDoc && typeof driverDoc === 'object' && driverDoc._id) ? driverDoc._id : driverDoc;
+
             // 1. Check if populate worked (User model)
             if (driverDoc && typeof driverDoc === 'object' && driverDoc._id) {
                 driverName = driverDoc.name || driverDoc.fullName || null;
                 driverContact = driverDoc.phone || driverDoc.whatsappNumber || null;
             }
 
-            // 2. Check Driver model directly
-            if (!driverName) {
-                const driverObjectId = (driverDoc && typeof driverDoc === 'object') ? driverDoc._id : driverDoc;
-                if (driverObjectId) {
-                    try {
-                        const driver = await Driver.findById(driverObjectId).select('name phone email');
-                        if (driver) {
-                            driverName = driver.name;
-                            driverContact = driver.phone || driverContact;
-                        }
-                    } catch (e) { }
-                }
+            // 2. Try CorporateDriver model first (most common for corporate trips)
+            if (!driverName && driverObjectId) {
+                try {
+                    const corpDriver = await CorporateDriverModel.findById(driverObjectId).select('name phone email');
+                    if (corpDriver) {
+                        driverName = corpDriver.name;
+                        driverContact = corpDriver.phone || driverContact;
+                    }
+                } catch (e) { }
             }
 
-            // 3. Find User account that has this driverId
-            if (!driverName) {
-                const driverObjectId = (driverDoc && typeof driverDoc === 'object') ? driverDoc._id : driverDoc;
-                if (driverObjectId) {
-                    try {
-                        const driverUser = await User.findOne({ driverId: driverObjectId }).select('fullName whatsappNumber phone');
-                        if (driverUser) {
-                            driverName = driverUser.fullName;
-                            driverContact = driverUser.whatsappNumber || driverUser.phone || driverContact;
-                        }
-                    } catch (e) { }
-                }
+            // 3. Check Driver model (B2B Partner drivers)
+            if (!driverName && driverObjectId) {
+                try {
+                    const driver = await Driver.findById(driverObjectId).select('name phone email');
+                    if (driver) {
+                        driverName = driver.name;
+                        driverContact = driver.phone || driverContact;
+                    }
+                } catch (e) { }
             }
 
-            // 4. Last resort: look up User directly by _id
-            if (!driverName) {
-                const driverObjectId = (driverDoc && typeof driverDoc === 'object') ? driverDoc._id : driverDoc;
-                if (driverObjectId) {
-                    try {
-                        const userDoc = await User.findById(driverObjectId).select('fullName whatsappNumber phone');
-                        if (userDoc) {
-                            driverName = userDoc.fullName;
-                            driverContact = userDoc.whatsappNumber || userDoc.phone || driverContact;
+            // 4. Find User account that has this driverId
+            if (!driverName && driverObjectId) {
+                try {
+                    const driverUser = await User.findOne({ driverId: driverObjectId }).select('fullName whatsappNumber phone');
+                    if (driverUser) {
+                        driverName = driverUser.fullName;
+                        driverContact = driverUser.whatsappNumber || driverUser.phone || driverContact;
+                    }
+                } catch (e) { }
+            }
+
+            // 5. Last resort: look up User directly by _id
+            if (!driverName && driverObjectId) {
+                try {
+                    const userDoc = await User.findById(driverObjectId).select('fullName whatsappNumber phone');
+                    if (userDoc) {
+                        driverName = userDoc.fullName;
+                        driverContact = userDoc.whatsappNumber || userDoc.phone || driverContact;
+                    }
+                } catch (e) { }
+            }
+
+            // 6. If still no driver, get from CorporateRouteSchedule (fallback for trips with null driverId)
+            if (!driverName && trip.routeId) {
+                try {
+                    const CorporateRouteSchedule = (await import('../models/CorporateRouteSchedule.js')).default;
+                    const routeId = typeof trip.routeId === 'object' ? trip.routeId._id : trip.routeId;
+                    const schedule = await CorporateRouteSchedule.findOne({ routeId: routeId }).select('assignedDriver');
+                    if (schedule?.assignedDriver) {
+                        // First try as CorporateDriver model ID
+                        const corpDriver = await CorporateDriverModel.findById(schedule.assignedDriver).select('name phone email');
+                        if (corpDriver) {
+                            driverName = corpDriver.name;
+                            driverContact = corpDriver.phone || driverContact;
+                        } else {
+                            // Try as User model ID
+                            const scheduleDriver = await User.findById(schedule.assignedDriver).select('fullName whatsappNumber phone');
+                            if (scheduleDriver) {
+                                driverName = scheduleDriver.fullName;
+                                driverContact = scheduleDriver.whatsappNumber || scheduleDriver.phone || driverContact;
+                            }
                         }
-                    } catch (e) { }
-                }
+                    }
+                } catch (e) { }
             }
 
             return {

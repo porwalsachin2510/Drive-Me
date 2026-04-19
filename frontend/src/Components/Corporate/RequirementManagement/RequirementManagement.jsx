@@ -1476,7 +1476,7 @@ function RequirementManagement() {
             </div>
             <div className="drivemego-crm-modal-content">
               {/* Requirement Info */}
-              <div style={{ marginBottom: "24px" }}>
+              <div style={{ margin: "24px" }}>
                 <div
                   style={{
                     display: "flex",

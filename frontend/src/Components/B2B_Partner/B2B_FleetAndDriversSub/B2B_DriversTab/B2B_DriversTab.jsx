@@ -111,7 +111,8 @@ function B2B_DriversTab({ drivers }) {
                     Rating
                   </span>
                   <span className="b2b-operator-dashboard-drivers-tab-value">
-                    {driver.ratings?.average || 0} *
+                    {driver.ratings?.average?.toFixed(1) || "0.0"} / 5 (
+                    {driver.ratings?.count || 0} reviews)
                   </span>
                 </div>
                 <div className="b2b-operator-dashboard-drivers-tab-detail-row">

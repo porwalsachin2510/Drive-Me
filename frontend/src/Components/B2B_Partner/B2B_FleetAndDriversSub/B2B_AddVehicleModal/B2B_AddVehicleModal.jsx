@@ -5,7 +5,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { addVehicle, clearError } from "../../../../Redux/slices/vehicleSlice";
 import LoadingSpinner from "../../../LoadingSpinner/LoadingSpinner";
-import { useDropdownOptions, DROPDOWN_CATEGORIES } from "../../../../hooks/useDropdownOptions";
+import {
+  useDropdownOptions,
+  DROPDOWN_CATEGORIES,
+} from "../../../../hooks/useDropdownOptions";
 import "./b2b_addvehiclemodal.css";
 
 const B2B_AddVehicleModal = ({ onClose }) => {
@@ -101,6 +104,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
     insurance: null,
     inspection: null,
   });
+  const [validationErrors, setValidationErrors] = useState({});
 
   // Dynamic dropdown options from backend
   const locations = dropdownOptions[
@@ -207,13 +211,105 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       ...documents,
       [docType]: e.target.files[0],
     });
+    // Clear validation error when document is uploaded
+    if (validationErrors[docType]) {
+      setValidationErrors((prev) => ({ ...prev, [docType]: "" }));
+    }
+  };
+
+  // Comprehensive form validation
+  const validateForm = () => {
+    const errors = {};
+
+    // Basic Information Validations
+    if (!formData.vehicleName.trim()) {
+      errors.vehicleName = "Vehicle name is required";
+    } else if (formData.vehicleName.trim().length < 3) {
+      errors.vehicleName = "Vehicle name must be at least 3 characters";
+    }
+
+    if (!formData.registrationNumber.trim()) {
+      errors.registrationNumber = "Registration number is required";
+    } else if (formData.registrationNumber.trim().length < 4) {
+      errors.registrationNumber =
+        "Registration number must be at least 4 characters";
+    }
+
+    const currentYear = new Date().getFullYear();
+    if (!formData.manufacturingYear) {
+      errors.manufacturingYear = "Manufacturing year is required";
+    } else if (
+      formData.manufacturingYear < 2000 ||
+      formData.manufacturingYear > currentYear + 1
+    ) {
+      errors.manufacturingYear = `Year must be between 2000 and ${currentYear + 1}`;
+    }
+
+    if (!formData.location) {
+      errors.location = "Location is required";
+    }
+
+    // Capacity Validations
+    if (formData.serviceType === "PASSENGER") {
+      if (
+        !formData.capacity.seatingCapacity ||
+        formData.capacity.seatingCapacity < 2
+      ) {
+        errors.seatingCapacity = "Seating capacity must be at least 2";
+      } else if (formData.capacity.seatingCapacity > 60) {
+        errors.seatingCapacity = "Seating capacity cannot exceed 60";
+      }
+    }
+
+    if (formData.serviceType === "GOODS_CARRIER") {
+      if (
+        !formData.capacity.cargoCapacity ||
+        formData.capacity.cargoCapacity <= 0
+      ) {
+        errors.cargoCapacity = "Cargo capacity must be greater than 0";
+      }
+    }
+
+    // Pricing Validations
+    if (formData.pricing.dailyRate <= 0) {
+      errors.dailyRate = "Daily rate must be greater than 0";
+    }
+    if (formData.pricing.weeklyRate <= 0) {
+      errors.weeklyRate = "Weekly rate must be greater than 0";
+    }
+    if (formData.pricing.monthlyRate <= 0) {
+      errors.monthlyRate = "Monthly rate must be greater than 0";
+    }
+
+    // Document Validations - At least registration is required
+    if (!documents.registration) {
+      errors.registration = "Registration certificate is required";
+    }
+    if (!documents.insurance) {
+      errors.insurance = "Insurance certificate is required";
+    }
+
+    // Image Validation
+    if (images.length === 0) {
+      errors.images = "At least one vehicle image is required";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (images.length === 0) {
-      alert("Please upload at least one vehicle image");
+    // Run validation
+    if (!validateForm()) {
+      // Scroll to first error
+      const firstError = document.querySelector(
+        ".b2b-operator-dashboard-add-vehicle-field-error",
+      );
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
@@ -372,16 +468,31 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Basic Information</h2>
               <div className="b2b-operator-dashboard-add-vehicle-form-grid">
-                <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                <div
+                  className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.vehicleName ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                >
                   <label>Vehicle Name *</label>
                   <input
                     type="text"
                     name="vehicleName"
                     value={formData.vehicleName}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      if (validationErrors.vehicleName) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          vehicleName: "",
+                        }));
+                      }
+                    }}
                     placeholder="e.g., Toyota Camry 2023"
                     required
                   />
+                  {validationErrors.vehicleName && (
+                    <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                      {validationErrors.vehicleName}
+                    </span>
+                  )}
                 </div>
 
                 <div className="b2b-operator-dashboard-add-vehicle-form-group">
@@ -402,78 +513,144 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   </select>
                 </div>
 
-                <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                <div
+                  className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.registrationNumber ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                >
                   <label>Registration Number *</label>
                   <input
                     type="text"
                     name="registrationNumber"
                     value={formData.registrationNumber}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      if (validationErrors.registrationNumber) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          registrationNumber: "",
+                        }));
+                      }
+                    }}
                     placeholder="e.g., ABC-1234"
                     required
                   />
+                  {validationErrors.registrationNumber && (
+                    <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                      {validationErrors.registrationNumber}
+                    </span>
+                  )}
                 </div>
 
-                <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                <div
+                  className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.manufacturingYear ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                >
                   <label>Manufacturing Year *</label>
                   <input
                     type="number"
                     name="manufacturingYear"
                     value={formData.manufacturingYear}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      if (validationErrors.manufacturingYear) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          manufacturingYear: "",
+                        }));
+                      }
+                    }}
                     min="2000"
                     max={new Date().getFullYear() + 1}
                     required
                   />
+                  {validationErrors.manufacturingYear && (
+                    <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                      {validationErrors.manufacturingYear}
+                    </span>
+                  )}
                 </div>
 
                 {formData.serviceType === "PASSENGER" && (
-                  <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                  <div
+                    className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.seatingCapacity ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                  >
                     <label>Seating Capacity *</label>
                     <input
                       type="number"
                       value={formData.capacity.seatingCapacity}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         handleNestedChange(
                           "capacity",
                           "seatingCapacity",
                           Number.parseInt(e.target.value),
-                        )
-                      }
+                        );
+                        if (validationErrors.seatingCapacity) {
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            seatingCapacity: "",
+                          }));
+                        }
+                      }}
                       min="2"
                       max="60"
                       required
                     />
+                    {validationErrors.seatingCapacity && (
+                      <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                        {validationErrors.seatingCapacity}
+                      </span>
+                    )}
                   </div>
                 )}
 
                 {formData.serviceType === "GOODS_CARRIER" && (
-                  <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                  <div
+                    className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.cargoCapacity ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                  >
                     <label>Cargo Capacity (tons) *</label>
                     <input
                       type="number"
                       value={formData.capacity.cargoCapacity}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         handleNestedChange(
                           "capacity",
                           "cargoCapacity",
                           Number.parseFloat(e.target.value),
-                        )
-                      }
+                        );
+                        if (validationErrors.cargoCapacity) {
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            cargoCapacity: "",
+                          }));
+                        }
+                      }}
                       min="0"
                       step="0.1"
                       required
                     />
+                    {validationErrors.cargoCapacity && (
+                      <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                        {validationErrors.cargoCapacity}
+                      </span>
+                    )}
                   </div>
                 )}
 
                 {/* Location */}
-                <div className="b2b-operator-dashboard-add-vehicle-form-group">
-                  <h3>Location</h3>
+                <div
+                  className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.location ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                >
+                  <h3>Location *</h3>
                   <select
                     name="location"
                     value={formData.location}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      if (validationErrors.location) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          location: "",
+                        }));
+                      }
+                    }}
                     className="b2b-operator-dashboard-add-vehicle-select-field"
                   >
                     <option value="">Select Location</option>
@@ -483,6 +660,11 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                       </option>
                     ))}
                   </select>
+                  {validationErrors.location && (
+                    <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                      {validationErrors.location}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -659,64 +841,103 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Pricing Details ({formData.pricing.currency})</h2>
               <div className="b2b-operator-dashboard-add-vehicle-form-grid">
-                <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                <div
+                  className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.dailyRate ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                >
                   <label>Daily Rate *</label>
                   <input
                     type="number"
                     value={formData.pricing.dailyRate}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFormData({
                         ...formData,
                         pricing: {
                           ...formData.pricing,
                           dailyRate: Number.parseFloat(e.target.value),
                         },
-                      })
-                    }
+                      });
+                      if (validationErrors.dailyRate) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          dailyRate: "",
+                        }));
+                      }
+                    }}
                     step="0.01"
                     min="0"
                     required
                   />
+                  {validationErrors.dailyRate && (
+                    <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                      {validationErrors.dailyRate}
+                    </span>
+                  )}
                 </div>
 
-                <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                <div
+                  className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.weeklyRate ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                >
                   <label>Weekly Rate *</label>
                   <input
                     type="number"
                     value={formData.pricing.weeklyRate}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFormData({
                         ...formData,
                         pricing: {
                           ...formData.pricing,
                           weeklyRate: Number.parseFloat(e.target.value),
                         },
-                      })
-                    }
+                      });
+                      if (validationErrors.weeklyRate) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          weeklyRate: "",
+                        }));
+                      }
+                    }}
                     step="0.01"
                     min="0"
                     required
                   />
+                  {validationErrors.weeklyRate && (
+                    <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                      {validationErrors.weeklyRate}
+                    </span>
+                  )}
                 </div>
 
-                <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                <div
+                  className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.monthlyRate ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                >
                   <label>Monthly Rate *</label>
                   <input
                     type="number"
                     value={formData.pricing.monthlyRate}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFormData({
                         ...formData,
                         pricing: {
                           ...formData.pricing,
                           monthlyRate: Number.parseFloat(e.target.value),
                         },
-                      })
-                    }
+                      });
+                      if (validationErrors.monthlyRate) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          monthlyRate: "",
+                        }));
+                      }
+                    }}
                     step="0.01"
                     min="0"
                     required
                   />
+                  {validationErrors.monthlyRate && (
+                    <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                      {validationErrors.monthlyRate}
+                    </span>
+                  )}
                 </div>
 
                 <div className="b2b-operator-dashboard-add-vehicle-form-group">
@@ -877,23 +1098,38 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             </div>
 
             {/* Images */}
-            <div className="b2b-operator-dashboard-add-vehicle-form-section">
+            <div
+              className={`b2b-operator-dashboard-add-vehicle-form-section ${validationErrors.images ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+            >
               <h2>Vehicle Images (Max 10) *</h2>
               <div className="b2b-operator-dashboard-add-vehicle-image-upload-section">
                 <label
                   htmlFor="images"
                   className="b2b-operator-dashboard-add-vehicle-upload-button"
                 >
-                  <span>📷 Upload Images</span>
+                  <span>Upload Images</span>
                   <input
                     id="images"
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={handleImageChange}
+                    onChange={(e) => {
+                      handleImageChange(e);
+                      if (validationErrors.images) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          images: "",
+                        }));
+                      }
+                    }}
                     style={{ display: "none" }}
                   />
                 </label>
+                {validationErrors.images && (
+                  <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                    {validationErrors.images}
+                  </span>
+                )}
 
                 {imagePreviews.length > 0 && (
                   <div className="b2b-operator-dashboard-add-vehicle-image-previews">
@@ -923,31 +1159,49 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             {/* Documents */}
             <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Documents</h2>
+              <p className="b2b-operator-dashboard-add-vehicle-section-note">
+                Registration and Insurance certificates are required for vehicle
+                approval
+              </p>
               <div className="b2b-operator-dashboard-add-vehicle-documents-grid">
-                <div className="b2b-operator-dashboard-add-vehicle-form-group">
-                  <label>Registration Certificate</label>
+                <div
+                  className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.registration ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                >
+                  <label>Registration Certificate (RC) *</label>
                   <input
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     onChange={(e) => handleDocumentChange(e, "registration")}
                   />
                   {documents.registration && (
-                    <span className="file-name">
+                    <span className="file-name file-uploaded">
                       {documents.registration.name}
+                    </span>
+                  )}
+                  {validationErrors.registration && (
+                    <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                      {validationErrors.registration}
                     </span>
                   )}
                 </div>
 
-                <div className="b2b-operator-dashboard-add-vehicle-form-group">
-                  <label>Insurance Certificate</label>
+                <div
+                  className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.insurance ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
+                >
+                  <label>Insurance Certificate *</label>
                   <input
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     onChange={(e) => handleDocumentChange(e, "insurance")}
                   />
                   {documents.insurance && (
-                    <span className="file-name">
+                    <span className="file-name file-uploaded">
                       {documents.insurance.name}
+                    </span>
+                  )}
+                  {validationErrors.insurance && (
+                    <span className="b2b-operator-dashboard-add-vehicle-error-text">
+                      {validationErrors.insurance}
                     </span>
                   )}
                 </div>
@@ -960,7 +1214,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                     onChange={(e) => handleDocumentChange(e, "inspection")}
                   />
                   {documents.inspection && (
-                    <span className="file-name">
+                    <span className="file-name file-uploaded">
                       {documents.inspection.name}
                     </span>
                   )}
@@ -990,6 +1244,6 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       </div>
     </>
   );
-};;;
+};
 
 export default B2B_AddVehicleModal;

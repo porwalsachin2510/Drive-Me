@@ -35,6 +35,7 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
   const [activeContracts, setActiveContracts] = useState([]);
   const [assignedVehicles, setAssignedVehicles] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
 
   const daysOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -222,32 +223,98 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
     }));
   };
 
+  // Comprehensive form validation
+  const validateForm = () => {
+    const errors = {};
+
+    // Contract & Vehicle Validation
+    if (!formData.contractId) {
+      errors.contractId = "Please select a contract";
+    }
+    if (!formData.assignedVehicleId) {
+      errors.assignedVehicleId = "Please select a vehicle";
+    }
+
+    // Location Validations
+    if (!formData.fromLocation.trim()) {
+      errors.fromLocation = "From location is required";
+    }
+    if (!formData.toLocation.trim()) {
+      errors.toLocation = "To location is required";
+    }
+
+    // Date Validations
+    if (!formData.routeStartDate) {
+      errors.routeStartDate = "Start date is required";
+    } else {
+      const startDate = new Date(formData.routeStartDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (startDate < today) {
+        errors.routeStartDate = "Start date cannot be in the past";
+      }
+    }
+
+    if (formData.routeEndDate && formData.routeStartDate) {
+      const startDate = new Date(formData.routeStartDate);
+      const endDate = new Date(formData.routeEndDate);
+      if (endDate < startDate) {
+        errors.routeEndDate = "End date must be after start date";
+      }
+    }
+
+    // Available Days Validation
+    if (formData.availableDays.length === 0) {
+      errors.availableDays = "Please select at least one available day";
+    }
+
+    // Trip Times Validation
+    const validTripTimes = formData.tripTimes.filter(
+      (trip) => trip.departureTime,
+    );
+    if (validTripTimes.length === 0) {
+      errors.tripTimes = "Please add at least one departure time";
+    }
+
+    // Round Trip validation - must have return time
+    formData.tripTimes.forEach((trip, index) => {
+      if (trip.tripType === "Round Trip" && !trip.returnTime) {
+        errors[`returnTime_${index}`] =
+          "Return time is required for round trips";
+      }
+    });
+
+    // Distance validation (optional but if provided must be positive)
+    if (formData.totalDistance && parseFloat(formData.totalDistance) <= 0) {
+      errors.totalDistance = "Distance must be greater than 0";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Run validation
+    if (!validateForm()) {
+      // Scroll to first error
+      const firstError = document.querySelector(
+        ".drivemego-btobarm-field-error",
+      );
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (!formData.contractId || !formData.assignedVehicleId) {
-        alert("Please select a contract and vehicle");
-        setLoading(false);
-        return;
-      }
-
-      if (!formData.fromLocation || !formData.toLocation) {
-        alert("Please fill in route locations");
-        setLoading(false);
-        return;
-      }
-
       // Validate trip times
       const validTripTimes = formData.tripTimes.filter(
         (trip) => trip.departureTime,
       );
-      if (validTripTimes.length === 0) {
-        alert("Please add at least one departure time");
-        setLoading(false);
-        return;
-      }
 
       const response = await api.post(
         `/b2b-partner/contracts/${formData.contractId}/assign-route/${formData.assignedVehicleId}`,
@@ -303,12 +370,22 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
               Contract & Vehicle
             </h3>
             <div className="drivemego-btobarm-b2b-form-row">
-              <div className="drivemego-btobarm-b2b-form-group">
+              <div
+                className={`drivemego-btobarm-b2b-form-group ${validationErrors.contractId ? "drivemego-btobarm-field-error" : ""}`}
+              >
                 <label>Select Contract *</label>
                 <select
                   name="contractId"
                   value={formData.contractId}
-                  onChange={handleContractChange}
+                  onChange={(e) => {
+                    handleContractChange(e);
+                    if (validationErrors.contractId) {
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        contractId: "",
+                      }));
+                    }
+                  }}
                   required
                 >
                   <option value="">-- Select Contract --</option>
@@ -319,14 +396,29 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                     </option>
                   ))}
                 </select>
+                {validationErrors.contractId && (
+                  <span className="drivemego-btobarm-error-text">
+                    {validationErrors.contractId}
+                  </span>
+                )}
               </div>
 
-              <div className="drivemego-btobarm-b2b-form-group">
+              <div
+                className={`drivemego-btobarm-b2b-form-group ${validationErrors.assignedVehicleId ? "drivemego-btobarm-field-error" : ""}`}
+              >
                 <label>Select Vehicle *</label>
                 <select
                   name="assignedVehicleId"
                   value={formData.assignedVehicleId}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (validationErrors.assignedVehicleId) {
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        assignedVehicleId: "",
+                      }));
+                    }
+                  }}
                   required
                   disabled={!formData.contractId || loadingVehicles}
                 >
@@ -340,6 +432,11 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                     </option>
                   ))}
                 </select>
+                {validationErrors.assignedVehicleId && (
+                  <span className="drivemego-btobarm-error-text">
+                    {validationErrors.assignedVehicleId}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -350,40 +447,85 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
               Basic Route Information
             </h3>
             <div className="drivemego-btobarm-b2b-form-row">
-              <div className="drivemego-btobarm-b2b-form-group">
+              <div
+                className={`drivemego-btobarm-b2b-form-group ${validationErrors.fromLocation ? "drivemego-btobarm-field-error" : ""}`}
+              >
                 <label>From Location *</label>
                 <input
                   type="text"
                   name="fromLocation"
                   placeholder="e.g., Employee Pickup Area"
                   value={formData.fromLocation}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (validationErrors.fromLocation) {
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        fromLocation: "",
+                      }));
+                    }
+                  }}
                   required
                 />
+                {validationErrors.fromLocation && (
+                  <span className="drivemego-btobarm-error-text">
+                    {validationErrors.fromLocation}
+                  </span>
+                )}
               </div>
-              <div className="drivemego-btobarm-b2b-form-group">
+              <div
+                className={`drivemego-btobarm-b2b-form-group ${validationErrors.toLocation ? "drivemego-btobarm-field-error" : ""}`}
+              >
                 <label>To Location *</label>
                 <input
                   type="text"
                   name="toLocation"
                   placeholder="e.g., Office Building"
                   value={formData.toLocation}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (validationErrors.toLocation) {
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        toLocation: "",
+                      }));
+                    }
+                  }}
                   required
                 />
+                {validationErrors.toLocation && (
+                  <span className="drivemego-btobarm-error-text">
+                    {validationErrors.toLocation}
+                  </span>
+                )}
               </div>
             </div>
 
             <div className="drivemego-btobarm-b2b-form-row">
-              <div className="drivemego-btobarm-b2b-form-group">
+              <div
+                className={`drivemego-btobarm-b2b-form-group ${validationErrors.routeStartDate ? "drivemego-btobarm-field-error" : ""}`}
+              >
                 <label>Route Start Date *</label>
                 <input
                   type="date"
                   name="routeStartDate"
                   value={formData.routeStartDate}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (validationErrors.routeStartDate) {
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        routeStartDate: "",
+                      }));
+                    }
+                  }}
                   required
                 />
+                {validationErrors.routeStartDate && (
+                  <span className="drivemego-btobarm-error-text">
+                    {validationErrors.routeStartDate}
+                  </span>
+                )}
               </div>
               <div className="drivemego-btobarm-b2b-form-group">
                 <label>Route End Date (Optional)</label>
@@ -396,7 +538,9 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
               </div>
             </div>
 
-            <div className="drivemego-btobarm-b2b-form-group">
+            <div
+              className={`drivemego-btobarm-b2b-form-group ${validationErrors.availableDays ? "drivemego-btobarm-field-error" : ""}`}
+            >
               <label>Available Days *</label>
               <div className="drivemego-btobarm-b2b-days-selector">
                 {daysOfWeek.map((day) => (
@@ -404,22 +548,42 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
                     key={day}
                     type="button"
                     className={`drivemego-btobarm-b2b-day-btn ${formData.availableDays.includes(day) ? "drivemego-btobarm-selected" : ""}`}
-                    onClick={() => handleDayChange(day)}
+                    onClick={() => {
+                      handleDayChange(day);
+                      if (validationErrors.availableDays) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          availableDays: "",
+                        }));
+                      }
+                    }}
                   >
                     {day}
                   </button>
                 ))}
               </div>
+              {validationErrors.availableDays && (
+                <span className="drivemego-btobarm-days-error">
+                  {validationErrors.availableDays}
+                </span>
+              )}
             </div>
           </div>
 
           {/* Trip Times */}
-          <div className="drivemego-btobarm-b2b-form-section">
+          <div
+            className={`drivemego-btobarm-b2b-form-section ${validationErrors.tripTimes ? "drivemego-btobarm-field-error" : ""}`}
+          >
             <h3 className="drivemego-btobarm-b2b-section-title">Trip Times</h3>
             <p className="drivemego-btobarm-b2b-section-desc">
               Add multiple departure times for this route. Each time will create
               separate trips for employee transport.
             </p>
+            {validationErrors.tripTimes && (
+              <span className="drivemego-btobarm-error-text">
+                {validationErrors.tripTimes}
+              </span>
+            )}
 
             {formData.tripTimes.map((trip, tripIndex) => (
               <div

@@ -393,6 +393,41 @@
   color: white;
 }
 
+/* Validation Error Styles */
+.b2b-operator-dashboard-add-vehicle-field-error input,
+.b2b-operator-dashboard-add-vehicle-field-error select,
+.b2b-operator-dashboard-add-vehicle-field-error textarea {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.b2b-operator-dashboard-add-vehicle-field-error label {
+  color: #dc2626;
+}
+
+.b2b-operator-dashboard-add-vehicle-error-text {
+  display: block;
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.b2b-operator-dashboard-add-vehicle-section-note {
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #fef3c7;
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+}
+
+.file-uploaded {
+  color: #16a34a !important;
+  font-weight: 500;
+}
+
 @media (max-width: 768px) {
   .b2b-operator-dashboard-add-vehicle-add-vehicle-container {
     padding: 20px;

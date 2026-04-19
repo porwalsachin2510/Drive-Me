@@ -151,6 +151,7 @@
 .drivemego-crm-btn-secondary {
   background: #6b7280;
   color: white;
+  margin-bottom: 16px;
 }
 
 .drivemego-crm-btn-secondary:hover {

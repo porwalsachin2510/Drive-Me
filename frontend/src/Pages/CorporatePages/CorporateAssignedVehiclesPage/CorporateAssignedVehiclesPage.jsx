@@ -1023,24 +1023,22 @@ const CorporateAssignedVehiclesPage = () => {
                       </div>
                     </div>
 
-                    {driver.ratings?.count > 0 && (
-                      <div className="assignment-card">
-                        <div className="assignment-card-header">
-                          <span className="assignment-label">Ratings</span>
-                        </div>
-                        <div className="assignment-details">
-                          <p>
-                            <strong>Average:</strong>{" "}
-                            {driver.ratings.average.toFixed(1)} / 5
-                          </p>
-                          <p>
-                            <strong>Total Reviews:</strong>{" "}
-                            {driver.ratings.count}
-                          </p>
-                        </div>
+                    <div className="assignment-card">
+                      <div className="assignment-card-header">
+                        <span className="assignment-label">Ratings</span>
                       </div>
-                    )}
-                  </div>
+                      <div className="assignment-details">
+                        <p>
+                          <strong>Average:</strong>{" "}
+                          {driver.ratings?.average?.toFixed(1) || "0.0"} / 5
+                        </p>
+                        <p>
+                          <strong>Total Reviews:</strong>{" "}
+                          {driver.ratings?.count || 0}
+                        </p>
+                      </div>
+                    </div>
+                    </div>
                 ))}
               </div>
             )}

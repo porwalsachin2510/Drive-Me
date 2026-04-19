@@ -30,6 +30,8 @@ const notificationSchema = new mongoose.Schema(
                 "CONTRACT_REJECTED",
                 "CONTRACT_COMPLETED",
                 "VEHICLE_ASSIGNED",
+                "VEHICLE_APPROVED",
+                "VEHICLE_REJECTED",
                 "PAYMENT_RECEIVED",
                 "BOOKING_CONFIRMED",
                 "MAINTENANCE_DUE",

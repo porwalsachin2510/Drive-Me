@@ -365,7 +365,7 @@ function B2B_AddDriverModal({ onClose }) {
                 disabled={loading}
               />
               {validationErrors.dateOfBirth && (
-                <span className="error-text">
+                <span className="b2b-operator-dashboard-add-driver-error-text">
                   {validationErrors.dateOfBirth}
                 </span>
               )}

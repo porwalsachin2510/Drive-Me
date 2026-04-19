@@ -390,6 +390,32 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+/* Validation Error Styles */
+.drivemego-btobarm-field-error input,
+.drivemego-btobarm-field-error select,
+.drivemego-btobarm-field-error textarea {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.drivemego-btobarm-field-error label {
+  color: #dc2626;
+}
+
+.drivemego-btobarm-error-text {
+  display: block;
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.drivemego-btobarm-days-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 8px;
+  font-weight: 500;
+}
 
 @media (max-width: 600px) {
   .drivemego-btobarm-b2b-add-route-modal {

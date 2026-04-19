@@ -52,6 +52,15 @@ function B2C_DriverCard({ driver, onEdit, onDelete, onRefresh }) {
     return `${exp} years`;
   };
 
+    const getRating = () => {
+      const avg = driver.ratings?.average;
+      const count = driver.ratings?.count || 0;
+      return {
+        average: avg ? avg.toFixed(1) : "0.0",
+        count: count,
+      };
+  };
+  
   const handleEditClick = () => {
     if (onEdit) {
       onEdit(driver);
@@ -123,6 +132,12 @@ function B2C_DriverCard({ driver, onEdit, onDelete, onRefresh }) {
             <div className="b2c-detail-item">
               <span className="b2c-detail-label">💼 Experience</span>
               <span className="b2c-detail-value">{getExperience()}</span>
+            </div>
+            <div className="b2c-detail-item">
+              <span className="b2c-detail-label">⭐ Rating</span>
+              <span className="b2c-detail-value">
+                {getRating().average} / 5 ({getRating().count} reviews)
+              </span>
             </div>
           </div>
         </div>
