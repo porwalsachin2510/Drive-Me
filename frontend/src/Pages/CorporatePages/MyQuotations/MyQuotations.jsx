@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
+import { useSelector } from "react-redux";
+import { SocketContext } from "../../../context/SocketContext";
 import api from "../../../utils/api";
 import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -6,6 +8,8 @@ import QuotationCard from "../../../Components/QuotationCard/QuotationCard";
 import "./MyQuotations.css";
 
 const MyQuotations = () => {
+  const { socket } = useContext(SocketContext) || {};
+  const { user } = useSelector((state) => state.auth);
   const [quotations, setQuotations] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,7 +22,8 @@ const MyQuotations = () => {
   });
   const [pagination, setPagination] = useState(null);
   const [activeTab, setActiveTab] = useState("commuters");
-
+  // eslint-disable-next-line no-unused-vars
+  const [statusMessage, setStatusMessage] = useState({ type: "", text: "" });
   // Fetch quotations
   // const fetchQuotations = async () => {
   //   try {
@@ -119,6 +124,55 @@ const MyQuotations = () => {
     return () => clearInterval(pollingInterval);
   }, [fetchQuotations]);
 
+  // Listen for real-time negotiation updates
+  useEffect(() => {
+    if (!socket || !user?._id) return;
+
+    const handleNegotiationUpdate = (data) => {
+      console.log(
+        "[v0] Corporate received negotiation/quotation update:",
+        data,
+      );
+      // Refresh quotations when we receive a negotiation update
+      fetchQuotations(true);
+
+      // Show status message
+      if (data.type === "NEGOTIATION_COMPLETED") {
+        setStatusMessage({
+          type: "success",
+          text:
+            data.message ||
+            "Great news! Your price negotiation was successful. Quotation has been updated.",
+        });
+      } else {
+        setStatusMessage({
+          type: "info",
+          text: data.message || "Quotation has been updated.",
+        });
+      }
+      setTimeout(() => setStatusMessage({ type: "", text: "" }), 8000);
+    };
+
+    // Listen for negotiation-related events
+    socket.on("negotiation_completed", handleNegotiationUpdate);
+    socket.on("quotation_accepted", handleNegotiationUpdate);
+    socket.on("quotation_rejected", handleNegotiationUpdate);
+    socket.on("new-notification", (notification) => {
+      if (
+        notification.type?.includes("NEGOTIATION") ||
+        notification.type?.includes("QUOTATION")
+      ) {
+        handleNegotiationUpdate(notification);
+      }
+    });
+
+    return () => {
+      socket.off("negotiation_completed", handleNegotiationUpdate);
+      socket.off("quotation_accepted", handleNegotiationUpdate);
+      socket.off("quotation_rejected", handleNegotiationUpdate);
+    };
+  }, [socket, user?._id, fetchQuotations]);
+  
   // Handle filter change
   const handleFilterChange = (filterValue) => {
     setFilter(filterValue);
@@ -162,16 +216,16 @@ const MyQuotations = () => {
     return countMap[status] || 0;
   };
 
-    if (initialLoading && quotations.length === 0) {
-      return (
-        <div className="my-quotations-container">
-          <div className="quotations-loading">
-            <div className="loading-spinner"></div>
-            <div className="loading-text">Loading quotations...</div>
-          </div>
+  if (initialLoading && quotations.length === 0) {
+    return (
+      <div className="my-quotations-container">
+        <div className="quotations-loading">
+          <div className="loading-spinner"></div>
+          <div className="loading-text">Loading quotations...</div>
         </div>
-      );
-    }
+      </div>
+    );
+  }
   if (error) {
     return (
       <div className="my-quotations-container">
@@ -301,6 +355,6 @@ const MyQuotations = () => {
       <Footer />
     </>
   );
-};;;
+};;
 
 export default MyQuotations;

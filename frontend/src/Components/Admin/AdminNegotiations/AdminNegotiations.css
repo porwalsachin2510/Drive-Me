@@ -1,0 +1,1012 @@
+.drivemego-negotiation-admin-negotiations {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header */
+.drivemego-negotiation-negotiations-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.drivemego-negotiation-header-content h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.drivemego-negotiation-header-content p {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0;
+}
+
+.drivemego-negotiation-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.drivemego-negotiation-refresh-btn:hover {
+  background: #e2e8f0;
+}
+
+.drivemego-negotiation-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.drivemego-negotiation-spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Stats Cards */
+.drivemego-negotiation-negotiations-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.drivemego-negotiation-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.drivemego-negotiation-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.drivemego-negotiation-stat-icon.drivemego-negotiation-total-icon {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+}
+
+.drivemego-negotiation-stat-icon.drivemego-negotiation-pending-icon {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.stat-icon.drivemego-negotiation-progress-icon {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.drivemego-negotiation-stat-icon.savings-icon,
+.drivemego-negotiation-stat-icon.drivemego-negotiation-savings-icon {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.drivemego-negotiation-stat-icon.drivemego-negotiation-commission-icon {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.drivemego-negotiation-stat-icon.progress-icon {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.drivemego-negotiation-stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.drivemego-negotiation-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.drivemego-negotiation-stat-value.commission-value {
+  color: #7c3aed;
+}
+
+.drivemego-negotiation-stat-label {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.drivemego-negotiation-stat-breakdown {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.drivemego-negotiation-stat-breakdown .paid-amount {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.drivemego-negotiation-stat-breakdown .pending-amount {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+/* Message */
+.drivemego-negotiation-negotiations-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.drivemego-negotiation-negotiations-message.drivemego-negotiation-success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.drivemego-negotiation-negotiations-message.drivemego-negotiation-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* Filters */
+.drivemego-negotiation-negotiations-filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.drivemego-negotiation-search-box,
+.drivemego-negotiation-filter-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.drivemego-negotiation-search-box input,
+.drivemego-negotiation-filter-box select {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+  color: #334155;
+}
+
+.drivemego-negotiation-search-box svg,
+.drivemego-negotiation-filter-box svg {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.drivemego-negotiation-filter-box {
+  flex: 0 1 200px;
+}
+
+/* Negotiation Cards */
+.drivemego-negotiation-negotiations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drivemego-negotiation-loading-state,
+.drivemego-negotiation-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #64748b;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.drivemego-negotiation-loading-state span,
+.drivemego-negotiation-empty-state h3 {
+  margin-top: 16px;
+  font-size: 16px;
+}
+
+.drivemego-negotiation-empty-state h3 {
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.drivemego-negotiation-empty-state p {
+  font-size: 14px;
+  margin: 0;
+}
+
+.drivemego-negotiation-negotiation-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+  transition: box-shadow 0.2s;
+}
+
+.drivemego-negotiation-negotiation-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.drivemego-negotiation-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.drivemego-negotiation-card-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drivemego-negotiation-negotiation-number {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.drivemego-negotiation-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.drivemego-negotiation-card-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* Card Parties */
+.drivemego-negotiation-card-parties {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.drivemego-negotiation-party {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.drivemego-negotiation-party svg {
+  color: #64748b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.drivemego-negotiation-party.drivemego-negotiation-corporate svg {
+  color: #3b82f6;
+}
+
+.drivemego-negotiation-party.drivemego-negotiation-b2b svg {
+  color: #10b981;
+}
+
+.drivemego-negotiation-party-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drivemego-negotiation-party-label {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drivemego-negotiation-party-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.drivemego-negotiation-party-company {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.drivemego-negotiation-party-arrow {
+  color: #cbd5e1;
+}
+
+/* Card Prices */
+.drivemego-negotiation-card-prices {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.drivemego-negotiation-price-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drivemego-negotiation-price-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.drivemego-negotiation-price-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.drivemego-negotiation-price-value.drivemego-negotiation-original {
+  color: #64748b;
+}
+
+.drivemego-negotiation-price-value.drivemego-negotiation-negotiated {
+  color: #1e293b;
+}
+
+.drivemego-negotiation-price-item.drivemego-negotiation-savings .drivemego-negotiation-price-value {
+  color: #10b981;
+}
+
+/* Card Footer */
+.drivemego-negotiation-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.drivemego-negotiation-quotation-ref {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.drivemego-negotiation-view-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.drivemego-negotiation-view-btn:hover {
+  background: #1557b0;
+}
+
+/* Modal */
+.drivemego-negotiation-negotiation-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.drivemego-negotiation-negotiation-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 800px;
+  margin: 40px 0;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.drivemego-negotiation-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+  border-radius: 16px 16px 0 0;
+}
+
+.drivemego-negotiation-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.drivemego-negotiation-modal-title h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #1e293b;
+}
+
+.drivemego-negotiation-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.drivemego-negotiation-close-btn:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.drivemego-negotiation-modal-body {
+  padding: 24px;
+  max-height: calc(90vh - 140px);
+  overflow-y: auto;
+}
+
+.drivemego-negotiation-modal-section {
+  margin-bottom: 24px;
+}
+
+.drivemego-negotiation-modal-section h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Parties Grid */
+.drivemego-negotiation-parties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.drivemego-negotiation-party-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.drivemego-negotiation-party-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.drivemego-negotiation-party-icon.drivemego-negotiation-corporate {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.drivemego-negotiation-party-icon.drivemego-negotiation-b2b {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.drivemego-negotiation-party-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drivemego-negotiation-party-type {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drivemego-negotiation-party-details .drivemego-negotiation-party-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.drivemego-negotiation-party-details .drivemego-negotiation-party-company {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.drivemego-negotiation-party-email {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Price Info Grid */
+.drivemego-negotiation-price-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.drivemego-negotiation-price-box {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.drivemego-negotiation-price-box .drivemego-negotiation-price-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.drivemego-negotiation-price-amount {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.drivemego-negotiation-price-amount.drivemego-negotiation-original {
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.drivemego-negotiation-price-amount.drivemego-negotiation-expected {
+  color: #f59e0b;
+}
+
+.drivemego-negotiation-price-amount.drivemego-negotiation-negotiated {
+  color: #1e293b;
+}
+
+.drivemego-negotiation-price-box.drivemego-negotiation-savings {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-color: #6ee7b7;
+}
+
+.drivemego-negotiation-price-box.drivemego-negotiation-savings .drivemego-negotiation-price-amount {
+  color: #059669;
+}
+
+/* Request Message */
+.drivemego-negotiation-request-message {
+  padding: 16px;
+  background: #fef3c7;
+  border-radius: 10px;
+  border: 1px solid #fcd34d;
+}
+
+.drivemego-negotiation-request-message p {
+  margin: 0 0 8px 0;
+  color: #92400e;
+  font-style: italic;
+}
+
+.drivemego-negotiation-request-date {
+  font-size: 12px;
+  color: #b45309;
+}
+
+/* Timeline */
+.drivemego-negotiation-timeline {
+  position: relative;
+  padding-left: 24px;
+}
+
+.drivemego-negotiation-timeline::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.drivemego-negotiation-timeline-item {
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.drivemego-negotiation-timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.drivemego-negotiation-timeline-marker {
+  position: absolute;
+  left: -20px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid #94a3b8;
+}
+
+.drivemego-negotiation-timeline-item.admin .drivemego-negotiation-timeline-marker {
+  border-color: #1a73e8;
+}
+
+.drivemego-negotiation-timeline-item.drivemego-negotiation-b2b .drivemego-negotiation-timeline-marker {
+  border-color: #10b981;
+}
+
+.drivemego-negotiation-timeline-content {
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.drivemego-negotiation-timeline-action {
+  font-weight: 600;
+  color: #334155;
+  font-size: 13px;
+}
+
+.drivemego-negotiation-timeline-message {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #475569;
+}
+
+.drivemego-negotiation-timeline-price {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.drivemego-negotiation-timeline-date {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.drivemego-negotiation-no-activity {
+  padding: 20px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* Action Section */
+.drivemego-negotiation-action-section {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.drivemego-negotiation-action-form {
+  margin-bottom: 24px;
+}
+
+.drivemego-negotiation-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.drivemego-negotiation-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drivemego-negotiation-form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.drivemego-negotiation-form-group input,
+.drivemego-negotiation-form-group select,
+.drivemego-negotiation-form-group textarea {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  background: white;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.drivemego-negotiation-form-group input:focus,
+.drivemego-negotiation-form-group select:focus,
+.drivemego-negotiation-form-group textarea:focus {
+  outline: none;
+  border-color: #1a73e8;
+}
+
+.drivemego-negotiation-form-hint {
+  font-size: 11px;
+  color: #10b981;
+  font-weight: 500;
+}
+
+.drivemego-negotiation-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  margin-top: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.drivemego-negotiation-action-btn.drivemego-negotiation-primary {
+  background: #1a73e8;
+  color: white;
+}
+
+.drivemego-negotiation-action-btn.drivemego-negotiation-primary:hover {
+  background: #1557b0;
+}
+
+.drivemego-negotiation-action-btn.drivemego-negotiation-success {
+  background: #10b981;
+  color: white;
+}
+
+.drivemego-negotiation-action-btn.drivemego-negotiation-success:hover {
+  background: #059669;
+}
+
+.drivemego-negotiation-action-btn.drivemego-negotiation-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.drivemego-negotiation-action-btn.drivemego-negotiation-danger:hover {
+  background: #dc2626;
+}
+
+.drivemego-negotiation-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Complete Section */
+.drivemego-negotiation-complete-section {
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.drivemego-negotiation-complete-section h4 {
+  font-size: 15px;
+  color: #334155;
+  margin: 0 0 8px 0;
+}
+
+.drivemego-negotiation-complete-section > p {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 16px 0;
+}
+
+.drivemego-negotiation-complete-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+/* Commission Section */
+.drivemego-negotiation-commission-section {
+  background: #f0fdf4;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #86efac;
+}
+
+.drivemego-negotiation-commission-info {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.drivemego-negotiation-commission-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drivemego-negotiation-commission-item svg {
+  color: #059669;
+}
+
+.drivemego-negotiation-commission-label {
+  font-size: 13px;
+  color: #166534;
+}
+
+.drivemego-negotiation-commission-value {
+  font-weight: 700;
+  font-size: 16px;
+  color: #059669;
+}
+
+.drivemego-negotiation-commission-status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.drivemego-negotiation-commission-status.drivemego-negotiation-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.drivemego-negotiation-commission-status.drivemego-negotiation-paid {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.drivemego-negotiation-commission-status.drivemego-negotiation-waived {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Modal Footer */
+.drivemego-negotiation-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 0 0 16px 16px;
+}
+
+.drivemego-negotiation-btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  transition: all 0.2s;
+}
+
+.drivemego-negotiation-btn-secondary:hover {
+  background: #f1f5f9;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .drivemego-negotiation-admin-negotiations {
+    padding: 16px;
+  }
+
+  .drivemego-negotiation-negotiations-header {
+    flex-direction: column;
+  }
+
+  .drivemego-negotiation-negotiations-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .drivemego-negotiation-negotiations-filters {
+    flex-direction: column;
+  }
+
+  .drivemego-negotiation-card-parties {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .drivemego-negotiation-party-arrow {
+    transform: rotate(90deg);
+    align-self: center;
+  }
+
+  .drivemego-negotiation-card-prices {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .drivemego-negotiation-modal-body {
+    padding: 16px;
+  }
+
+  .drivemego-negotiation-parties-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .drivemego-negotiation-price-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .drivemego-negotiation-complete-actions {
+    flex-direction: column;
+  }
+
+  .drivemego-negotiation-action-btn {
+    justify-content: center;
+  }
+}

@@ -1,0 +1,798 @@
+.b2b-negotiations-container {
+  width: 100%;
+  padding: 24px;
+  background: #f8f9fa;
+  min-height: 100vh;
+}
+
+.message-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.message-banner.success {
+  background: #D4EDDA;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.message-banner.error {
+  background: #F8D7DA;
+  color: #721C24;
+  border-left: 4px solid #dc3545;
+}
+
+.message-banner button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: auto;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  color: white;
+}
+
+.stat-icon.total {
+  background: #3B82F6;
+}
+
+.stat-icon.pending {
+  background: #F59E0B;
+}
+
+.stat-icon.completed {
+  background: #10B981;
+}
+
+.stat-icon.savings {
+  background: #8B5CF6;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #6B7280;
+  margin-top: 4px;
+}
+
+/* Search and Filter */
+.search-filter-section {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 250px;
+  padding: 0 12px;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  color: #6B7280;
+}
+
+.search-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 10px 0;
+  background: transparent;
+}
+
+.filter-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  color: #6B7280;
+  min-width: 150px;
+}
+
+.filter-dropdown select {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 10px 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #6B7280;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #F3F4F6;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Negotiations List */
+.negotiations-list {
+  display: grid;
+  gap: 16px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  text-align: center;
+  color: #6B7280;
+}
+
+.empty-state svg {
+  color: #D1D5DB;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  margin: 16px 0 8px;
+  color: #1F2937;
+  font-size: 18px;
+}
+
+/* Negotiation Card */
+.negotiation-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.negotiation-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.negotiation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #E5E7EB;
+  background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+}
+
+.negotiation-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.negotiation-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+}
+
+.negotiation-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #6B7280;
+}
+
+.date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.negotiation-body {
+  padding: 20px;
+}
+
+.party-info {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.party {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.party svg {
+  color: #3B82F6;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.party label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.party p {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1F2937;
+}
+
+.price-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #F9FAFB;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.price-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.price-item label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+}
+
+.price-item p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.price-item p.original {
+  color: #9CA3AF;
+  text-decoration: line-through;
+}
+
+.price-item p.proposed {
+  color: #3B82F6;
+}
+
+.price-item p.savings {
+  color: #10B981;
+}
+
+.negotiation-message {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: #F0F9FF;
+  border-left: 3px solid #3B82F6;
+  border-radius: 4px;
+}
+
+.negotiation-message svg {
+  color: #3B82F6;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.negotiation-message p {
+  margin: 0;
+  font-size: 14px;
+  color: #1F2937;
+  line-height: 1.5;
+}
+
+.negotiation-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #E5E7EB;
+  background: #F9FAFB;
+}
+
+.btn-respond,
+.btn-view {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-respond {
+  background: #10B981;
+  color: white;
+  flex: 1;
+}
+
+.btn-respond:hover {
+  background: #059669;
+}
+
+.btn-view {
+  background: #F3F4F6;
+  color: #1F2937;
+  flex: 1;
+  border: 1px solid #E5E7EB;
+}
+
+.btn-view:hover {
+  background: #E5E7EB;
+}
+
+/* Modal */
+.drivemego-negotiations-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.drivemego-negotiations-modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+}
+
+.drivemego-negotiations-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #E5E7EB;
+  background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+}
+
+.drivemego-negotiations-modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #1F2937;
+}
+
+.drivemego-negotiations-modal-header button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drivemego-negotiations-modal-body {
+  padding: 20px;
+}
+
+.drivemego-negotiations-negotiation-details {
+  background: #F9FAFB;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.drivemego-negotiations-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.drivemego-negotiations-detail-row:last-child {
+  border-bottom: none;
+}
+
+.drivemego-negotiations-detail-row span {
+  font-size: 14px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.drivemego-negotiations-detail-row strong {
+  font-size: 14px;
+  color: #1F2937;
+}
+
+.drivemego-negotiations-response-section {
+  background: #F9FAFB;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.drivemego-negotiations-form-group {
+  margin-bottom: 16px;
+}
+
+.drivemego-negotiations-form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 8px;
+}
+
+.drivemego-negotiations-response-type-selector {
+  display: flex;
+  gap: 16px;
+}
+
+.drivemego-negotiations-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.drivemego-negotiations-radio input[type="radio"] {
+  cursor: pointer;
+}
+
+.drivemego-negotiations-radio span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.drivemego-negotiations-agree-label {
+  color: #10B981;
+}
+
+.drivemego-negotiations-reject-label {
+  color: #EF4444;
+}
+
+.drivemego-negotiations-form-group input,
+.drivemego-negotiations-form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.drivemego-negotiations-form-group textarea {
+  min-height: 100px;
+}
+
+.drivemego-negotiations-form-group input:focus,
+.drivemego-negotiations-form-group textarea:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.drivemego-negotiations-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #E5E7EB;
+  background: #F9FAFB;
+}
+
+.drivemego-negotiations-btn-cancel,
+.drivemego-negotiations-btn-submit {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.drivemego-negotiations-btn-cancel {
+  background: #F3F4F6;
+  color: #1F2937;
+  border: 1px solid #E5E7EB;
+}
+
+.drivemego-negotiations-btn-cancel:hover {
+  background: #E5E7EB;
+}
+
+.drivemego-negotiations-btn-submit {
+  background: #3B82F6;
+  color: white;
+}
+
+.drivemego-negotiations-btn-submit:hover:not(:disabled) {
+  background: #2563EB;
+}
+
+.drivemego-negotiations-btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Savings Row */
+.drivemego-negotiations-savings-row strong.drivemego-negotiations-savings-amount {
+  color: #10B981;
+}
+
+/* Activity Timeline in Modal */
+.drivemego-negotiations-activity-timeline {
+  background: #F9FAFB;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.drivemego-negotiations-activity-timeline h4 {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.drivemego-negotiations-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+}
+
+.drivemego-negotiations-timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  border-left: 3px solid #3B82F6;
+}
+
+.drivemego-negotiations-timeline-item.drivemego-negotiations-admin-action {
+  border-left-color: #3B82F6;
+}
+
+.drivemego-negotiations-timeline-item.drivemego-negotiations-b2b-response {
+  border-left-color: #10B981;
+}
+
+.drivemego-negotiations-timeline-marker {
+  display: none;
+}
+
+.drivemego-negotiations-timeline-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drivemego-negotiations-timeline-actor {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1F2937;
+  text-transform: capitalize;
+}
+
+.drivemego-negotiations-timeline-message {
+  font-size: 13px;
+  color: #6B7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.drivemego-negotiations-timeline-price {
+  font-size: 12px;
+  font-weight: 600;
+  color: #10B981;
+  background: #D1FAE5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.drivemego-negotiations-timeline-date {
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+/* Request Content Styles */
+.drivemego-negotiations-request-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drivemego-negotiations-request-content p {
+  margin: 0;
+  color: #EF4444;
+  font-weight: 500;
+}
+
+.drivemego-negotiations-request-content small {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.drivemego-negotiations-loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+.drivemego-negotiations-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #E5E7EB;
+  border-top: 4px solid #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .b2b-negotiations-container {
+    padding: 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .search-filter-section {
+    flex-direction: column;
+  }
+
+  .search-box,
+  .filter-dropdown,
+  .refresh-btn {
+    width: 100%;
+  }
+
+  .negotiation-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .price-info {
+    flex-direction: column;
+  }
+
+  .price-item {
+    width: 100%;
+  }
+
+  .negotiation-footer {
+    flex-direction: column;
+  }
+
+  .btn-respond,
+  .btn-view {
+    width: 100%;
+  }
+
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-content {
+    max-height: none;
+  }
+}

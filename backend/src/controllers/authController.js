@@ -1,8 +1,10 @@
 import User from "../models/User.js"
 import OTP from "../models/OTP.js"
+import TermsAndConditions from "../models/TermsAndConditions.js"
+import CommissionSettings from "../models/CommissionSettings.js"
 import jwt from "jsonwebtoken"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
-import { generateOTP, sendVerificationOTP } from "../Services/emailService.js"
+import { generateOTP, sendVerificationOTP, sendWelcomeEmailWithTerms } from "../Services/emailService.js"
 
 const generateToken = (userId, role) => {
     return jwt.sign({ userId, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE })
@@ -25,6 +27,9 @@ export const register = async (req, res) => {
             serviceType,
             yearsOfExperience,
             serviceDescription,
+            // Terms and Conditions acceptance
+            termsAccepted,
+            termsVersion,
         } = req.body
 
         console.log("[v1] Register request:", { role, fullName, email })
@@ -50,6 +55,15 @@ export const register = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Company name is required for corporate employee registration.",
+            })
+        }
+
+        // Validate T&C acceptance for roles that require it
+        const rolesRequiringTerms = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"]
+        if (rolesRequiringTerms.includes(role) && !termsAccepted) {
+            return res.status(400).json({
+                success: false,
+                message: "You must accept the Terms and Conditions to register.",
             })
         }
 
@@ -95,6 +109,18 @@ export const register = async (req, res) => {
             }
         }
 
+        // Get commission range for T&C disclosure
+        let commissionRange = { min: 0, max: 35 }
+        try {
+            const terms = await TermsAndConditions.getLatest()
+            if (terms && terms.commissionRanges) {
+                const roleKey = role === "B2C_PARTNER" ? "b2cPartner" : role === "B2B_PARTNER" ? "b2bPartner" : "corporate"
+                commissionRange = terms.commissionRanges[roleKey] || commissionRange
+            }
+        } catch (e) {
+            console.log("Could not fetch terms for commission range:", e.message)
+        }
+
         // Store registration data temporarily (you could use Redis or session)
         // For now, we'll store it in the OTP document as metadata
         const registrationData = {
@@ -113,6 +139,11 @@ export const register = async (req, res) => {
             yearsOfExperience,
             serviceDescription,
             profileImage: profileImageUrl,
+            // T&C acceptance data
+            termsAccepted: termsAccepted || false,
+            termsVersion: termsVersion || "1.0.0",
+            termsAcceptedIp: req.ip || req.headers["x-forwarded-for"] || "unknown",
+            disclosedCommissionRange: commissionRange,
         }
 
         // Store registration data in OTP document (in production, use Redis)
@@ -232,6 +263,49 @@ export const login = async (req, res) => {
                 success: false,
                 message: "Invalid Password credentials",
             })
+        }
+
+        // Check if user is suspended
+        if (user.status === "SUSPENDED") {
+            const suspensionEndDate = user.suspensionEndDate ? new Date(user.suspensionEndDate) : null
+            const now = new Date()
+
+            // Check if suspension has expired
+            if (suspensionEndDate && suspensionEndDate < now) {
+                // Auto-reactivate the user
+                user.status = "ACTIVE"
+                user.activatedAt = now
+                user.suspensionEndDate = null
+                user.suspensionReason = null
+                user.suspensionDuration = null
+                await user.save()
+            } else {
+                // Still suspended - calculate remaining days
+                let remainingDays = 0
+                if (suspensionEndDate) {
+                    remainingDays = Math.ceil((suspensionEndDate - now) / (1000 * 60 * 60 * 24))
+                }
+
+                // Get admin email for contact
+                const adminUser = await User.findOne({ role: "ADMIN" }).select("email").lean()
+                const adminEmail = adminUser?.email || "admin@driveme.com"
+
+                return res.status(403).json({
+                    success: false,
+                    isSuspended: true,
+                    message: "Your account has been suspended",
+                    suspensionDetails: {
+                        reason: user.suspensionReason || "Violation of platform terms and conditions",
+                        suspendedAt: user.suspendedAt,
+                        suspensionEndDate: user.suspensionEndDate,
+                        remainingDays: remainingDays > 0 ? remainingDays : null,
+                        durationDays: user.suspensionDuration || 7,
+                        adminEmail: adminEmail,
+                        userName: user.fullName,
+                        userEmail: user.email
+                    }
+                })
+            }
         }
 
         // Update lastLogin timestamp
@@ -412,11 +486,40 @@ export const verifyOTP = async (req, res) => {
             userData.acceptedPaymentMethods = JSON.parse(userData.acceptedPaymentMethods || "[]")
         }
 
+        // Add T&C acceptance data to user
+        if (registrationData.termsAccepted) {
+            userData.termsAndConditions = {
+                accepted: true,
+                acceptedAt: new Date(),
+                version: registrationData.termsVersion || "1.0.0",
+                ipAddress: registrationData.termsAcceptedIp || "unknown",
+                disclosedCommissionRange: registrationData.disclosedCommissionRange || { min: 0, max: 35 },
+            }
+        }
+
         // Create user
         const newUser = new User(userData)
         await newUser.save()
 
         console.log("[v1] User created and verified successfully:", newUser._id)
+
+        // Send welcome email with T&C details for applicable roles
+        const rolesRequiringTerms = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"]
+        if (rolesRequiringTerms.includes(newUser.role) && registrationData.termsAccepted) {
+            try {
+                await sendWelcomeEmailWithTerms({
+                    email: newUser.email,
+                    fullName: newUser.fullName,
+                    role: newUser.role,
+                    termsVersion: registrationData.termsVersion || "1.0.0",
+                    commissionRange: registrationData.disclosedCommissionRange || { min: 0, max: 35 },
+                    companyName: newUser.companyName,
+                })
+            } catch (emailError) {
+                console.error("Failed to send welcome email:", emailError)
+                // Don't fail registration if email fails
+            }
+        }
 
         // Generate token
         const token = generateToken(newUser._id, newUser.role)
@@ -863,6 +966,55 @@ export const getUserById = async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message || "Failed to get user",
+        })
+    }
+}
+
+// Send suspension appeal email to admin
+export const sendSuspensionAppeal = async (req, res) => {
+    try {
+        const { userEmail, userName, message, adminEmail } = req.body
+
+        if (!userEmail || !userName || !message) {
+            return res.status(400).json({
+                success: false,
+                message: "Email, name, and message are required",
+            })
+        }
+
+        // Import the email function
+        const { sendUserAppealEmail } = await import("../Services/emailService.js")
+
+        // Get admin email if not provided
+        let targetAdminEmail = adminEmail
+        if (!targetAdminEmail) {
+            const adminUser = await User.findOne({ role: "ADMIN" }).select("email").lean()
+            targetAdminEmail = adminUser?.email || "admin@driveme.com"
+        }
+
+        const result = await sendUserAppealEmail({
+            userEmail,
+            userName,
+            userMessage: message,
+            adminEmail: targetAdminEmail
+        })
+
+        if (result.success) {
+            res.status(200).json({
+                success: true,
+                message: "Your appeal has been sent to the admin. They will review your request and contact you via email.",
+            })
+        } else {
+            res.status(500).json({
+                success: false,
+                message: "Failed to send appeal email. Please try again later.",
+            })
+        }
+    } catch (error) {
+        console.error("Send suspension appeal error:", error)
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to send appeal",
         })
     }
 }

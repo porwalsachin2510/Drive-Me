@@ -874,7 +874,7 @@ export const sendBookingWarningEmail = async (partnerEmail, partnerName, booking
                         </div>
                         
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="${process.env.FRONTEND_URL}/b2c-partner/bookings" 
+                            <a href="${process.env.FRONTEND_URL.split(",")[0]}/b2c-partner/bookings" 
                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
                                 Accept Booking Now
                             </a>
@@ -1024,7 +1024,7 @@ export const sendBookingAutoCancelledEmail = async (recipientEmail, recipientNam
                         </div>
                         
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="${process.env.FRONTEND_URL}/" 
+                            <a href="${process.env.FRONTEND_URL.split(",")[0]}/" 
                                style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
                                 Find Another Route
                             </a>
@@ -1038,7 +1038,7 @@ export const sendBookingAutoCancelledEmail = async (recipientEmail, recipientNam
                         </div>
                         
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="${process.env.FRONTEND_URL}/b2c-partner/bookings" 
+                            <a href="${process.env.FRONTEND_URL.split(",")[0]}/b2c-partner/bookings" 
                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
                                 View My Bookings
                             </a>
@@ -1069,6 +1069,762 @@ export const sendBookingAutoCancelledEmail = async (recipientEmail, recipientNam
             success: false,
             message: error.message
         };
+    }
+};
+
+// Send Welcome Email with Terms and Conditions
+export const sendWelcomeEmailWithTerms = async ({ email, fullName, role, termsVersion, commissionRange, companyName }) => {
+    try {
+        const transporter = createTransporter();
+
+        const roleDisplayName = {
+            'CORPORATE': 'Corporate User',
+            'B2B_PARTNER': 'B2B Partner',
+            'B2C_PARTNER': 'B2C Partner'
+        }[role] || role;
+
+        const roleDescription = {
+            'CORPORATE': 'request fleet services from B2B Partners and create contracts',
+            'B2B_PARTNER': 'provide fleet services to Corporate clients',
+            'B2C_PARTNER': 'provide transportation services to commuters'
+        }[role] || 'use our platform services';
+
+        const commissionExplanation = {
+            'CORPORATE': `If you use our Admin negotiation service to get better prices from B2B Partners, a commission of ${commissionRange.min}% to ${commissionRange.max}% of the savings achieved may be charged.`,
+            'B2B_PARTNER': `A commission of ${commissionRange.min}% to ${commissionRange.max}% will be charged on each contract you enter with Corporate clients through our platform.`,
+            'B2C_PARTNER': `A commission of ${commissionRange.min}% to ${commissionRange.max}% will be charged on each booking you accept from commuters.`
+        }[role] || `Commission rates range from ${commissionRange.min}% to ${commissionRange.max}%.`;
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to: email,
+            subject: 'Welcome to DriveMe - Your Account is Ready!',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Welcome to DriveMe</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                            <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to DriveMe!</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Your ${roleDisplayName} account is now active</p>
+                        </div>
+                        
+                        <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
+                            <p>Dear ${fullName},</p>
+                            <p>Thank you for joining DriveMe! Your account has been successfully created and verified.</p>
+                            
+                            <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1a73e8;">
+                                <h3 style="color: #1a73e8; margin-top: 0;">Account Details</h3>
+                                <p style="margin: 5px 0;"><strong>Account Type:</strong> ${roleDisplayName}</p>
+                                ${companyName ? `<p style="margin: 5px 0;"><strong>Company:</strong> ${companyName}</p>` : ''}
+                                <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
+                            </div>
+
+                            <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff9800;">
+                                <h3 style="color: #e65100; margin-top: 0;">Commission Terms Accepted</h3>
+                                <p style="margin: 5px 0;"><strong>Terms Version:</strong> ${termsVersion}</p>
+                                <p style="margin: 10px 0 5px 0;"><strong>Commission Disclosure:</strong></p>
+                                <p style="margin: 0; color: #555;">${commissionExplanation}</p>
+                                <p style="margin: 15px 0 0 0; font-size: 13px; color: #666;">
+                                    The exact commission rate applicable to your account will be set by the Admin based on various factors including service area, volume, and partnership level.
+                                </p>
+                            </div>
+
+                            <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4caf50;">
+                                <h3 style="color: #2e7d32; margin-top: 0;">What You Can Do Now</h3>
+                                <ul style="margin: 0; padding-left: 20px;">
+                                    <li>Log in to your dashboard</li>
+                                    <li>${roleDescription}</li>
+                                    <li>View your commission settings in your profile</li>
+                                    <li>Contact support if you have any questions</li>
+                                </ul>
+                            </div>
+
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${process.env.FRONTEND_URL.split(",")[0] || 'https://driveme.com'}/login" style="background: #1a73e8; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                    Go to Dashboard
+                                </a>
+                            </div>
+
+                            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
+                                <p style="color: #666; font-size: 13px; margin: 0;">
+                                    By using our services, you confirm your acceptance of our Terms and Conditions (Version ${termsVersion}).
+                                    You can view the full terms at any time in your account settings.
+                                </p>
+                            </div>
+
+                            <div style="text-align: center; margin-top: 30px; color: #666; font-size: 14px;">
+                                <p>Thank you for choosing DriveMe!</p>
+                                <p>For support, contact us at <a href="mailto:support@driveme.com" style="color: #1a73e8;">support@driveme.com</a></p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Welcome email with T&C sent to: ${email}`);
+
+        return { success: true, message: 'Welcome email sent successfully' };
+    } catch (error) {
+        console.error('[v0] Error sending welcome email:', error);
+        return { success: false, message: error.message };
+    }
+};
+
+// Send Negotiation Request Email to Admin
+export const sendNegotiationRequestEmail = async ({ negotiation, quotation, corporate, b2bPartner }) => {
+    try {
+        const transporter = createTransporter();
+
+        // Get admin emails (in production, you'd fetch admin users)
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to: adminEmail,
+            subject: `New Negotiation Request - ${negotiation.negotiationNumber}`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>New Negotiation Request</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4;">
+                    <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
+                        <h2 style="color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px;">
+                            New Negotiation Request
+                        </h2>
+                        
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <p style="margin: 0;"><strong>Negotiation #:</strong> ${negotiation.negotiationNumber}</p>
+                            <p style="margin: 5px 0 0 0;"><strong>Quotation #:</strong> ${quotation?.quotationNumber || 'N/A'}</p>
+                        </div>
+
+                        <h3 style="color: #333; margin-top: 25px;">Corporate Details</h3>
+                        <p><strong>Name:</strong> ${corporate?.fullName || 'N/A'}</p>
+                        <p><strong>Company:</strong> ${corporate?.companyName || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${corporate?.email || 'N/A'}</p>
+
+                        <h3 style="color: #333; margin-top: 25px;">B2B Partner Details</h3>
+                        <p><strong>Name:</strong> ${b2bPartner?.fullName || 'N/A'}</p>
+                        <p><strong>Company:</strong> ${b2bPartner?.companyName || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${b2bPartner?.email || 'N/A'}</p>
+
+                        <h3 style="color: #333; margin-top: 25px;">Price Information</h3>
+                        <p><strong>Current Price:</strong> ${negotiation.currency} ${negotiation.originalPrice}</p>
+                        ${negotiation.corporateRequest?.expectedPrice ? `<p><strong>Expected Price:</strong> ${negotiation.currency} ${negotiation.corporateRequest.expectedPrice}</p>` : ''}
+                        
+                        ${negotiation.corporateRequest?.message ? `
+                        <h3 style="color: #333; margin-top: 25px;">Corporate's Message</h3>
+                        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; font-style: italic;">
+                            "${negotiation.corporateRequest.message}"
+                        </div>
+                        ` : ''}
+
+                        <div style="text-align: center; margin-top: 30px;">
+                            <a href="${process.env.FRONTEND_URL.split(",")[0] || 'https://driveme.com'}/admin/negotiations/${negotiation._id}" 
+                               style="background: #1a73e8; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                View Negotiation
+                            </a>
+                        </div>
+
+                        <p style="color: #666; font-size: 13px; margin-top: 30px; text-align: center;">
+                            This is an automated message from DriveMe Platform.
+                        </p>
+                    </div>
+                </body>
+                </html>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Negotiation request email sent to admin`);
+
+        return { success: true, message: 'Email sent successfully' };
+    } catch (error) {
+        console.error('[v0] Error sending negotiation request email:', error);
+        return { success: false, message: error.message };
+    }
+};
+
+// Send Negotiation Update Email
+export const sendNegotiationUpdateEmail = async ({ negotiation, recipient, recipientType, action, message, proposedPrice }) => {
+    try {
+        const transporter = createTransporter();
+
+        const actionMessages = {
+            'STARTED': 'Admin has started working on your negotiation request.',
+            'SENT_OFFER': `Admin has sent a new price proposal${proposedPrice ? ` of ${negotiation.currency} ${proposedPrice}` : ''}.`,
+            'SENT_MESSAGE': 'You have received a message regarding the negotiation.',
+            'COMPLETED': 'The negotiation has been completed successfully!',
+            'FAILED': 'Unfortunately, the negotiation could not achieve a better price.',
+            'CANCELLED': 'The negotiation has been cancelled.',
+        };
+
+        const statusColor = {
+            'STARTED': '#1a73e8',
+            'SENT_OFFER': '#ff9800',
+            'SENT_MESSAGE': '#1a73e8',
+            'COMPLETED': '#4caf50',
+            'FAILED': '#f44336',
+            'CANCELLED': '#9e9e9e',
+        }[action] || '#1a73e8';
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to: recipient?.email,
+            subject: `Negotiation Update - ${negotiation.negotiationNumber}`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Negotiation Update</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4;">
+                    <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
+                        <h2 style="color: ${statusColor}; border-bottom: 2px solid ${statusColor}; padding-bottom: 10px;">
+                            Negotiation Update
+                        </h2>
+                        
+                        <p>Dear ${recipient?.fullName || 'User'},</p>
+                        
+                        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${statusColor};">
+                            <p style="margin: 0; font-size: 16px;">${actionMessages[action] || 'There is an update on your negotiation.'}</p>
+                        </div>
+
+                        ${message ? `
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <strong>Message:</strong>
+                            <p style="margin: 10px 0 0 0;">${message}</p>
+                        </div>
+                        ` : ''}
+
+                        <div style="background: #fafafa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <p style="margin: 0;"><strong>Negotiation #:</strong> ${negotiation.negotiationNumber}</p>
+                            <p style="margin: 5px 0;"><strong>Original Price:</strong> ${negotiation.currency} ${negotiation.originalPrice}</p>
+                            ${negotiation.negotiatedPrice ? `<p style="margin: 5px 0;"><strong>Negotiated Price:</strong> ${negotiation.currency} ${negotiation.negotiatedPrice}</p>` : ''}
+                            ${negotiation.priceSaved > 0 ? `<p style="margin: 5px 0; color: #4caf50;"><strong>Savings:</strong> ${negotiation.currency} ${negotiation.priceSaved}</p>` : ''}
+                        </div>
+
+                        <div style="text-align: center; margin-top: 30px;">
+                            <a href="${process.env.FRONTEND_URL.split(",")[0] || 'https://driveme.com'}/b2b-partner-profile?tab=negotiations&id=${negotiation._id}" 
+                               style="background: ${statusColor}; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                View Details
+                            </a>
+                        </div>
+
+                        <p style="color: #666; font-size: 13px; margin-top: 30px; text-align: center;">
+                            This is an automated message from DriveMe Platform.
+                        </p>
+                    </div>
+                </body>
+                </html>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Negotiation update email sent to ${recipientType}: ${recipient?.email}`);
+
+        return { success: true, message: 'Email sent successfully' };
+    } catch (error) {
+        console.error('[v0] Error sending negotiation update email:', error);
+        return { success: false, message: error.message };
+    }
+};
+
+// EMI Payment Reminder Email
+export const sendEMIReminderEmail = async ({ to, corporateName, contractNumber, installmentNumber, amount, currency, dueDate, daysUntilDue }) => {
+    try {
+        const transporter = createTransporter();
+
+        const urgencyColor = daysUntilDue === 0 ? '#dc2626' : daysUntilDue <= 3 ? '#f59e0b' : '#667eea';
+        const urgencyText = daysUntilDue === 0 ? 'Due Today' : `Due in ${daysUntilDue} Days`;
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to,
+            subject: `EMI Payment Reminder - ${urgencyText} | Contract ${contractNumber}`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Segoe UI', Tahoma, sans-serif;">
+                    <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; margin-top: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1 style="color: #111827; margin: 0;">EMI Payment Reminder</h1>
+                            <p style="color: ${urgencyColor}; font-weight: bold; font-size: 18px;">${urgencyText}</p>
+                        </div>
+                        
+                        <p style="color: #374151;">Dear ${corporateName},</p>
+                        
+                        <p style="color: #374151;">This is a reminder that your EMI payment is ${daysUntilDue === 0 ? 'due today' : `due in ${daysUntilDue} days`}.</p>
+                        
+                        <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 25px; border-radius: 12px; margin: 25px 0; border-left: 4px solid ${urgencyColor};">
+                            <h3 style="margin: 0 0 15px 0; color: #111827;">Payment Details</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Contract Number:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">${contractNumber}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Installment #:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">${installmentNumber}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Amount Due:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-weight: 700; text-align: right; font-size: 18px;">${currency} ${amount.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Due Date:</td>
+                                    <td style="padding: 8px 0; color: ${urgencyColor}; font-weight: 600; text-align: right;">${dueDate}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'https://driveme.com'}/corporate/contracts" 
+                               style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px;">
+                                Make Payment Now
+                            </a>
+                        </div>
+                        
+                        <p style="color: #6b7280; font-size: 13px; text-align: center; margin-top: 30px;">
+                            Please ensure timely payment to avoid late fees. Contact us if you have any questions.
+                        </p>
+                    </div>
+                </body>
+                </html>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        return { success: true };
+    } catch (error) {
+        console.error('[v0] Error sending EMI reminder email:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// EMI Overdue Warning Email
+export const sendEMIOverdueEmail = async ({ to, corporateName, contractNumber, overdueCount, totalOverdue, currency, warningLevel, suspensionThreshold }) => {
+    try {
+        const transporter = createTransporter();
+
+        const isCritical = warningLevel === 'CRITICAL';
+        const headerColor = isCritical ? '#dc2626' : '#f59e0b';
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to,
+            subject: isCritical
+                ? `URGENT: Service Suspension Warning - ${overdueCount} Overdue EMIs | Contract ${contractNumber}`
+                : `Payment Overdue Notice - ${overdueCount} Pending EMIs | Contract ${contractNumber}`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Segoe UI', Tahoma, sans-serif;">
+                    <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; margin-top: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                        <div style="background: ${headerColor}; color: white; padding: 20px; border-radius: 12px 12px 0 0; margin: -40px -40px 30px -40px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 24px;">${isCritical ? 'SERVICE SUSPENSION WARNING' : 'PAYMENT OVERDUE NOTICE'}</h1>
+                        </div>
+                        
+                        <p style="color: #374151;">Dear ${corporateName},</p>
+                        
+                        ${isCritical ? `
+                        <div style="background: #fee2e2; border: 1px solid #fecaca; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <p style="margin: 0; color: #991b1b; font-weight: 600;">
+                                Your account has ${overdueCount} overdue EMI payments. This exceeds our threshold of ${suspensionThreshold} and your services may be suspended if payment is not received immediately.
+                            </p>
+                        </div>
+                        ` : `
+                        <p style="color: #374151;">
+                            We noticed that you have ${overdueCount} overdue EMI payment(s) for Contract ${contractNumber}. Please make the payment at your earliest convenience to avoid service disruption.
+                        </p>
+                        `}
+                        
+                        <div style="background: ${isCritical ? '#fef2f2' : '#fef3c7'}; padding: 25px; border-radius: 12px; margin: 25px 0; border-left: 4px solid ${headerColor};">
+                            <h3 style="margin: 0 0 15px 0; color: #111827;">Outstanding Amount</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Contract Number:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">${contractNumber}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Overdue Installments:</td>
+                                    <td style="padding: 8px 0; color: ${headerColor}; font-weight: 700; text-align: right;">${overdueCount}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Total Outstanding:</td>
+                                    <td style="padding: 8px 0; color: ${headerColor}; font-weight: 700; text-align: right; font-size: 20px;">${currency} ${totalOverdue.toFixed(2)}</td>
+                                </tr>
+                            </table>
+                            <p style="margin: 15px 0 0 0; font-size: 13px; color: #6b7280;">
+                                * Amount includes late fees as per your contract terms
+                            </p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'https://driveme.com'}/corporate/contracts" 
+                               style="background: ${headerColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px;">
+                                Pay Now
+                            </a>
+                        </div>
+                        
+                        ${isCritical ? `
+                        <p style="color: #991b1b; font-weight: 600; text-align: center;">
+                            Failure to make payment immediately may result in suspension of all transportation services for your employees.
+                        </p>
+                        ` : ''}
+                        
+                        <p style="color: #6b7280; font-size: 13px; text-align: center; margin-top: 30px;">
+                            If you have already made this payment, please disregard this notice. For assistance, contact our support team.
+                        </p>
+                    </div>
+                </body>
+                </html>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        return { success: true };
+    } catch (error) {
+        console.error('[v0] Error sending EMI overdue email:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// EMI Payment Invoice Email
+export const sendEMIInvoiceEmail = async ({ to, corporateName, contractNumber, installmentNumber, amount, lateFee, totalPaid, currency, paymentMethod, paymentDate, transactionId, remainingInstallments, remainingAmount }) => {
+    try {
+        const transporter = createTransporter();
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to,
+            subject: `Payment Receipt - EMI #${installmentNumber} | Contract ${contractNumber}`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Segoe UI', Tahoma, sans-serif;">
+                    <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; margin-top: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div style="background: #dcfce7; color: #166534; padding: 10px 20px; border-radius: 20px; display: inline-block; font-weight: 600;">
+                                Payment Successful
+                            </div>
+                            <h1 style="color: #111827; margin: 20px 0 10px 0;">EMI Payment Receipt</h1>
+                            <p style="color: #6b7280; margin: 0;">Transaction ID: ${transactionId}</p>
+                        </div>
+                        
+                        <p style="color: #374151;">Dear ${corporateName},</p>
+                        
+                        <p style="color: #374151;">Thank you for your payment. Here is your receipt for EMI installment #${installmentNumber}.</p>
+                        
+                        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #bbf7d0;">
+                            <h3 style="margin: 0 0 20px 0; color: #166534; border-bottom: 1px solid #bbf7d0; padding-bottom: 10px;">Payment Details</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 10px 0; color: #6b7280;">Contract Number:</td>
+                                    <td style="padding: 10px 0; color: #111827; font-weight: 600; text-align: right;">${contractNumber}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0; color: #6b7280;">Installment #:</td>
+                                    <td style="padding: 10px 0; color: #111827; font-weight: 600; text-align: right;">${installmentNumber}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0; color: #6b7280;">EMI Amount:</td>
+                                    <td style="padding: 10px 0; color: #111827; font-weight: 600; text-align: right;">${currency} ${amount.toFixed(2)}</td>
+                                </tr>
+                                ${lateFee > 0 ? `
+                                <tr>
+                                    <td style="padding: 10px 0; color: #dc2626;">Late Fee:</td>
+                                    <td style="padding: 10px 0; color: #dc2626; font-weight: 600; text-align: right;">${currency} ${lateFee.toFixed(2)}</td>
+                                </tr>
+                                ` : ''}
+                                <tr style="border-top: 2px solid #bbf7d0;">
+                                    <td style="padding: 15px 0; color: #111827; font-weight: 700; font-size: 16px;">Total Paid:</td>
+                                    <td style="padding: 15px 0; color: #166534; font-weight: 700; text-align: right; font-size: 20px;">${currency} ${totalPaid.toFixed(2)}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin: 25px 0;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Payment Method:</td>
+                                    <td style="padding: 8px 0; color: #111827; text-align: right;">${paymentMethod}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Payment Date:</td>
+                                    <td style="padding: 8px 0; color: #111827; text-align: right;">${paymentDate}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Remaining Installments:</td>
+                                    <td style="padding: 8px 0; color: #111827; text-align: right;">${remainingInstallments}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Outstanding Balance:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">${currency} ${remainingAmount.toFixed(2)}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'https://driveme.com'}/corporate/contracts" 
+                               style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
+                                View Contract Details
+                            </a>
+                        </div>
+                        
+                        <p style="color: #6b7280; font-size: 13px; text-align: center; margin-top: 30px;">
+                            This is an automated receipt. Please keep it for your records.
+                        </p>
+                    </div>
+                </body>
+                </html>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        return { success: true };
+    } catch (error) {
+        console.error('[v0] Error sending EMI invoice email:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// Send Suspension Email
+export const sendSuspensionEmail = async ({ email, fullName, reason, durationDays, suspensionEndDate }) => {
+    try {
+        const transporter = createTransporter();
+        const formattedEndDate = new Date(suspensionEndDate).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to: email,
+            subject: 'Account Suspended - DriveMe',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Account Suspended</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                            <h1 style="color: white; margin: 0; font-size: 28px;">Account Suspended</h1>
+                        </div>
+                        
+                        <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+                            <h3 style="color: #333; margin-top: 0;">Hello ${fullName},</h3>
+                            
+                            <div style="background: #f8d7da; border: 1px solid #dc3545; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <p style="margin: 0; color: #721c24;"><strong>Your DriveMe account has been suspended.</strong></p>
+                            </div>
+                            
+                            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545; margin: 20px 0;">
+                                <h4 style="color: #333; margin-top: 0;">Suspension Details:</h4>
+                                <p><strong>Reason:</strong> ${reason}</p>
+                                <p><strong>Duration:</strong> ${durationDays} days</p>
+                                <p><strong>Suspension ends:</strong> ${formattedEndDate}</p>
+                            </div>
+                            
+                            <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ffeaa7;">
+                                <p style="margin: 0; color: #856404;"><strong>What can you do?</strong></p>
+                                <ul style="color: #856404; margin: 10px 0 0 0; padding-left: 20px;">
+                                    <li>Review our Terms and Conditions</li>
+                                    <li>Reflect on the reason for suspension</li>
+                                    <li>If you believe this is an error, contact our admin</li>
+                                </ul>
+                            </div>
+                            
+                            <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                                <p style="margin: 0 0 10px 0; color: #1565c0;"><strong>Need to appeal this decision?</strong></p>
+                                <p style="margin: 0; color: #1565c0;">Contact our admin team at:</p>
+                                <p style="margin: 10px 0 0 0;">
+                                    <a href="mailto:admin@driveme.com" style="background: #1565c0; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                        Email Admin Team
+                                    </a>
+                                </p>
+                            </div>
+                            
+                            <div style="text-align: center; margin-top: 30px; color: #666; font-size: 14px;">
+                                <p>DriveMe - Your Trusted Transportation Partner</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Suspension email sent to: ${email}`);
+        return { success: true };
+    } catch (error) {
+        console.error('[v0] Error sending suspension email:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// Send Activation Email
+export const sendActivationEmail = async ({ email, fullName, message, previousReason }) => {
+    try {
+        const transporter = createTransporter();
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to: email,
+            subject: 'Account Reactivated - Welcome Back to DriveMe!',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Account Reactivated</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                            <h1 style="color: white; margin: 0; font-size: 28px;">Welcome Back!</h1>
+                            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Your account has been reactivated</p>
+                        </div>
+                        
+                        <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+                            <h3 style="color: #333; margin-top: 0;">Hello ${fullName},</h3>
+                            
+                            <div style="background: #d4edda; border: 1px solid #28a745; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <p style="margin: 0; color: #155724;"><strong>Great news! Your DriveMe account has been reactivated.</strong></p>
+                            </div>
+                            
+                            ${message ? `
+                            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745; margin: 20px 0;">
+                                <h4 style="color: #333; margin-top: 0;">Message from Admin:</h4>
+                                <p style="color: #666;">${message}</p>
+                            </div>
+                            ` : ''}
+                            
+                            <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ffeaa7;">
+                                <p style="margin: 0; color: #856404;"><strong>Important Reminder:</strong></p>
+                                <p style="margin: 10px 0 0 0; color: #856404;">
+                                    Please ensure you follow our platform guidelines and Terms of Service to avoid future account suspensions.
+                                    ${previousReason ? `<br><br>Previous suspension reason: <em>${previousReason}</em>` : ''}
+                                </p>
+                            </div>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'https://driveme.com'}/login" 
+                                   style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                    Login to Your Account
+                                </a>
+                            </div>
+                            
+                            <div style="text-align: center; margin-top: 30px; color: #666; font-size: 14px;">
+                                <p>Thank you for being part of DriveMe!</p>
+                                <p>DriveMe - Your Trusted Transportation Partner</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Activation email sent to: ${email}`);
+        return { success: true };
+    } catch (error) {
+        console.error('[v0] Error sending activation email:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// Send User Appeal Email to Admin
+export const sendUserAppealEmail = async ({ userEmail, userName, userMessage, adminEmail }) => {
+    try {
+        const transporter = createTransporter();
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            to: adminEmail,
+            replyTo: userEmail,
+            subject: `Account Reactivation Request from ${userName}`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Reactivation Request</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                            <h1 style="color: white; margin: 0; font-size: 28px;">Account Reactivation Request</h1>
+                        </div>
+                        
+                        <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+                            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                                <p style="margin: 0; color: #1565c0;"><strong>Request from:</strong> ${userName}</p>
+                                <p style="margin: 5px 0 0 0; color: #1565c0;"><strong>Email:</strong> ${userEmail}</p>
+                            </div>
+                            
+                            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;">
+                                <h4 style="color: #333; margin-top: 0;">User's Message:</h4>
+                                <p style="color: #666; white-space: pre-wrap;">${userMessage}</p>
+                            </div>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'https://driveme.com'}/admin-login" 
+                                   style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                    Review User in Admin Panel
+                                </a>
+                            </div>
+                            
+                            <p style="color: #666; font-size: 14px; text-align: center;">
+                                You can reply directly to this email to respond to the user.
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] User appeal email sent to admin: ${adminEmail}`);
+        return { success: true };
+    } catch (error) {
+        console.error('[v0] Error sending user appeal email:', error);
+        return { success: false, error: error.message };
     }
 };
 

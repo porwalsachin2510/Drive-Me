@@ -48,10 +48,15 @@ import driverLocationRoutes from "./routes/driverLocationRoutes.js"
 import corporateRoutes from "./routes/corporateRoutes.js"
 import pageRoutes from "./routes/pageRoutes.js"
 import dropdownRoutes from "./routes/dropdownRoutes.js"
+import commissionRoutes from "./routes/commissionRoutes.js"
+import negotiationRoutes from "./routes/negotiationRoutes.js"
+import termsRoutes from "./routes/termsRoutes.js"
+import emiPaymentRoutes from "./routes/emiPaymentRoutes.js"
 import { seedDropdownOptions } from "./controllers/dropdownController.js"
 import { dailyTripGeneration, frequentTripGeneration, hourlyTripGeneration, runImmediateGeneration, corporateTripGeneration } from "./cron/tripGenerationCron.js"
 import { processDailyRenewals, sendDailyRenewalReminders } from "./cron/subscriptionCron.js"
 import { bookingWarningsCron, bookingAutoCancellationCron, runImmediateBookingTimeoutCheck } from "./cron/bookingTimeoutCron.js"
+import { initEMICronJobs } from "./cron/emiCronJobs.js"
 
 dotenv.config()
 
@@ -530,6 +535,10 @@ app.use("/api/corporate", corporateRoutes)
 app.use("/api/driver", driverLocationRoutes)
 app.use("/api/pages", pageRoutes)
 app.use("/api/dropdowns", dropdownRoutes)
+app.use("/api/commission", commissionRoutes)
+app.use("/api/emi-payments", emiPaymentRoutes)
+app.use("/api", negotiationRoutes)
+app.use("/api/terms", termsRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -581,5 +590,14 @@ server.listen(PORT, async () => {
         console.log(`[v0] Dropdown options seeding completed`)
     } catch (error) {
         console.error(`[v0] Error seeding dropdown options:`, error.message)
+    }
+
+    // Initialize EMI cron jobs
+    console.log(`[v0] Initializing EMI cron jobs...`)
+    try {
+        initEMICronJobs();
+        console.log(`[v0] EMI cron jobs initialized successfully`)
+    } catch (error) {
+        console.error(`[v0] Error initializing EMI cron jobs:`, error.message)
     }
 })

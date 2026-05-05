@@ -15,6 +15,7 @@ import {
 } from "../../Redux/selectors/authSelectors";
 import api from "../../utils/api";
 import Navbar from "../../Components/Navbar/Navbar";
+import SuspendedAccountModal from "../../Components/SuspendedAccountModal/SuspendedAccountModal";
 import "./login.css";
 import Footer from "../../Components/Footer/Footer";
 
@@ -29,7 +30,8 @@ const Login = () => {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem("activeTab") || "commuters";
   });
-
+const [showSuspendedModal, setShowSuspendedModal] = useState(false);
+const [suspensionDetails, setSuspensionDetails] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = location.state?.returnTo;
@@ -110,12 +112,26 @@ const Login = () => {
       }
     } catch (err) {
       console.log(err.response?.data);
-      dispatch(
-        authError(
-          err.response?.data?.message || "Login failed. Please try again.",
-        ),
-      );
+      // Check if the error is due to suspension
+      if (
+        err.response?.data?.isSuspended &&
+        err.response?.data?.suspensionDetails
+      ) {
+        setSuspensionDetails(err.response.data.suspensionDetails);
+        setShowSuspendedModal(true);
+      } else {
+        dispatch(
+          authError(
+            err.response?.data?.message || "Login failed. Please try again.",
+          ),
+        );
+      }
     }
+  };
+
+  const handleCloseSuspendedModal = () => {
+    setShowSuspendedModal(false);
+    setSuspensionDetails(null);
   };
 
   return (
@@ -230,12 +246,18 @@ const Login = () => {
           </form>
 
           <div className="login-signup-link">
-            Don't have an account? <Link to="/register">Sign up</Link>
+            Don&apos;t have an account? <Link to="/register">Sign up</Link>
           </div>
         </div>
       </div>
 
       <Footer />
+      {showSuspendedModal && suspensionDetails && (
+        <SuspendedAccountModal
+          suspensionDetails={suspensionDetails}
+          onClose={handleCloseSuspendedModal}
+        />
+      )}
     </div>
   );
 };

@@ -5,6 +5,170 @@ import { io } from "../index.js";
 // In-memory store for driver locations (for quick access)
 const driverLocations = new Map();
 
+// Country-specific components for Google Places API
+const COUNTRY_RESTRICTIONS = {
+    "UAE": "ae",
+    "Kuwait": "kw",
+    "India": "in",
+    "Saudi Arabia": "sa",
+    "Qatar": "qa",
+    "Oman": "om",
+    "Bahrain": "bh",
+};
+
+// Google Places API - Search/Autocomplete
+export const searchPlaces = async (req, res) => {
+    try {
+        const { query, country, sessionToken } = req.query;
+
+        if (!query || query.length < 2) {
+            return res.status(400).json({
+                success: false,
+                message: "Query must be at least 2 characters"
+            });
+        }
+
+        const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+
+        if (!apiKey) {
+            console.error("GOOGLE_PLACES_API_KEY not configured");
+            return res.status(500).json({
+                success: false,
+                message: "Places API not configured"
+            });
+        }
+
+        // Build components for country restriction
+        let components = "";
+        if (country && COUNTRY_RESTRICTIONS[country]) {
+            components = `country:${COUNTRY_RESTRICTIONS[country]}`;
+        } else {
+            // Default to UAE and Kuwait if no country specified
+            components = "country:ae|country:kw";
+        }
+
+        const url = "https://maps.googleapis.com/maps/api/place/autocomplete/json";
+
+        const params = {
+            input: query,
+            key: apiKey,
+            components: components,
+            types: "geocode|establishment",
+            language: "en"
+        };
+
+        // Add session token if provided (for billing optimization)
+        if (sessionToken) {
+            params.sessiontoken = sessionToken;
+        }
+
+        const response = await axios.get(url, { params, timeout: 5000 });
+
+        if (response.data.status === "OK" || response.data.status === "ZERO_RESULTS") {
+            const predictions = (response.data.predictions || []).map(prediction => ({
+                placeId: prediction.place_id,
+                description: prediction.description,
+                mainText: prediction.structured_formatting?.main_text || prediction.description,
+                secondaryText: prediction.structured_formatting?.secondary_text || "",
+                types: prediction.types || []
+            }));
+
+            return res.status(200).json({
+                success: true,
+                predictions
+            });
+        } else {
+            console.error("Google Places API error:", response.data.status, response.data.error_message);
+            return res.status(400).json({
+                success: false,
+                message: response.data.error_message || "Failed to search places"
+            });
+        }
+    } catch (error) {
+        console.error("Error searching places:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to search places"
+        });
+    }
+};
+
+// Google Places API - Get Place Details
+export const getPlaceDetails = async (req, res) => {
+    try {
+        const { placeId } = req.params;
+        const { sessionToken } = req.query;
+
+        if (!placeId) {
+            return res.status(400).json({
+                success: false,
+                message: "Place ID is required"
+            });
+        }
+
+        const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+
+        if (!apiKey) {
+            console.error("GOOGLE_PLACES_API_KEY not configured");
+            return res.status(500).json({
+                success: false,
+                message: "Places API not configured"
+            });
+        }
+
+        const url = "https://maps.googleapis.com/maps/api/place/details/json";
+
+        const params = {
+            place_id: placeId,
+            key: apiKey,
+            fields: "name,formatted_address,geometry,address_components,types",
+            language: "en"
+        };
+
+        if (sessionToken) {
+            params.sessiontoken = sessionToken;
+        }
+
+        const response = await axios.get(url, { params, timeout: 5000 });
+
+        if (response.data.status === "OK") {
+            const result = response.data.result;
+
+            // Extract country from address components
+            const addressComponents = result.address_components || [];
+            const countryComponent = addressComponents.find(c => c.types.includes("country"));
+
+            return res.status(200).json({
+                success: true,
+                place: {
+                    placeId: placeId,
+                    name: result.name,
+                    formattedAddress: result.formatted_address,
+                    location: {
+                        lat: result.geometry?.location?.lat,
+                        lng: result.geometry?.location?.lng
+                    },
+                    country: countryComponent?.long_name || null,
+                    countryCode: countryComponent?.short_name || null,
+                    types: result.types || []
+                }
+            });
+        } else {
+            console.error("Google Places Details API error:", response.data.status);
+            return res.status(400).json({
+                success: false,
+                message: "Failed to get place details"
+            });
+        }
+    } catch (error) {
+        console.error("Error getting place details:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to get place details"
+        });
+    }
+};
+
 // Share driver location - used by B2C_PARTNER and B2C_PARTNER_DRIVER
 export const shareDriverLocation = async (req, res) => {
     try {

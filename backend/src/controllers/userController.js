@@ -54,7 +54,7 @@ export const updateUserProfile = async (req, res) => {
             "address", "city", "country", "profileImage", "companyLogo",
             "website", "tradeLicense", "nationality",
             "contactPerson", "contactEmail", "contactPhone",
-            "notifications", "driverInfo"
+            "notifications", "driverInfo", "uiPreferences"
         ]
 
         const updateData = {}
@@ -152,6 +152,55 @@ export const updateUserProfileLogo = async (req, res) => {
             success: false,
             message: "Failed to upload logo",
             error: error.message,
+        })
+    }
+}
+
+export const updateMenuLayout = async (req, res) => {
+    try {
+        const userId = req.userId
+        const { menuLayout, sidebarCollapsed } = req.body
+
+        // Validate menuLayout
+        if (menuLayout && !["sidebar", "top"].includes(menuLayout)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid menu layout. Must be 'sidebar' or 'top'",
+            })
+        }
+
+        const updateData = {}
+        if (menuLayout !== undefined) {
+            updateData["uiPreferences.menuLayout"] = menuLayout
+        }
+        if (sidebarCollapsed !== undefined) {
+            updateData["uiPreferences.sidebarCollapsed"] = sidebarCollapsed
+        }
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true }
+        ).select("-password")
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            })
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Menu layout updated successfully",
+            user,
+            uiPreferences: user.uiPreferences,
+        })
+    } catch (error) {
+        console.error("Update menu layout error:", error)
+        res.status(500).json({
+            success: false,
+            message: error.message,
         })
     }
 }

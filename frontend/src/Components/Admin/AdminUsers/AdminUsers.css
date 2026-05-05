@@ -163,6 +163,10 @@
   flex-shrink: 0;
 }
 
+img.avatar-circle {
+  object-fit: cover;
+}
+
 .status-indicator {
   width: 10px;
   height: 10px;
@@ -225,6 +229,33 @@
   color: #475569;
   font-style: italic;
   margin: 4px 0 0 0;
+}
+
+.suspension-info-mini {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.suspension-info-mini .suspension-reason {
+  color: #991b1b;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.suspension-info-mini .suspension-duration {
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.suspension-info-mini .suspension-duration svg {
+  width: 12px;
+  height: 12px;
 }
 
 .user-actions {

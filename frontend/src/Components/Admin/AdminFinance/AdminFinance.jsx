@@ -166,7 +166,9 @@ function AdminFinance() {
             <span className="stat-label">Total Transactions</span>
           </div>
           <div className="stat-card">
-            <span className="stat-number">{formatCurrency(metrics.totalRevenue)}</span>
+            <span className="stat-number">
+              {formatCurrency(metrics.totalRevenue)}
+            </span>
             <span className="stat-label">Total Revenue</span>
           </div>
         </div>
@@ -186,20 +188,37 @@ function AdminFinance() {
             </tr>
           </thead>
           <tbody>
-            {transactions.map(transaction => (
+            {transactions.map((transaction) => (
               <tr key={transaction._id}>
-                <td>{transaction._id}</td>
+                <td className="transaction-id">{transaction._id}</td>
                 <td>{new Date(transaction.createdAt).toLocaleDateString()}</td>
-                <td>{transaction.type}</td>
-                <td>{transaction.from}</td>
-                <td>{transaction.to}</td>
-                <td>{formatCurrency(transaction.amount)}</td>
                 <td>
-                  <span 
-                    className="status-badge" 
-                    style={{ backgroundColor: getStatusColor(transaction.status) }}
+                  <span
+                    className={`type-badge type-${transaction.type?.toLowerCase()}`}
                   >
-                    {transaction.status}
+                    {transaction.type}
+                  </span>
+                </td>
+                <td className="from-cell">
+                  {transaction.from ||
+                    transaction.fromName ||
+                    transaction.userId?.fullName ||
+                    "-"}
+                </td>
+                <td className="to-cell">
+                  {transaction.to || transaction.toName || "-"}
+                </td>
+                <td className="amount-cell">
+                  {formatCurrency(transaction.amount, transaction.currency)}
+                </td>
+                <td>
+                  <span
+                    className="status-badge"
+                    style={{
+                      backgroundColor: getStatusColor(transaction.status),
+                    }}
+                  >
+                    {transaction.status || "COMPLETED"}
                   </span>
                 </td>
               </tr>
@@ -208,7 +227,7 @@ function AdminFinance() {
         </table>
       </div>
     </div>
-  )
+  );
 
   const renderMetrics = () => (
     <div className="finance-section">

@@ -63,7 +63,7 @@ const walletSchema = new mongoose.Schema(
         transactions: [{
             type: {
                 type: String,
-                enum: ["DEPOSIT", "WITHDRAWAL", "TRANSFER", "PAYOUT", "COMMISSION_DEDUCTION", "BOOKING_EARNING"],
+                enum: ["DEPOSIT", "WITHDRAWAL", "TRANSFER", "PAYOUT", "COMMISSION_DEDUCTION", "BOOKING_EARNING", "NEGOTIATION_COMMISSION", "EMI_PAYMENT", "SECURITY_DEPOSIT", "SECURITY_DEPOSIT_REFUND"],
                 required: true,
             },
             amount: {

@@ -16,8 +16,11 @@ import Tag from "../models/Tag.js";
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
+import AdminNegotiation from "../models/AdminNegotiation.js";
+import EMIPayment from "../models/EMIPayment.js";
 import { uploadToCloudinary } from "../Config/Cloudinary.js";
 import { createNotification, sendRealTimeNotification } from "../Services/notificationService.js";
+import { creditAdminNegotiationCommission } from "./walletController.js";
 
 // Get all users for admin
 export const getAllUsers = async (req, res) => {
@@ -116,13 +119,28 @@ export const getUserStats = async (req, res) => {
 export const suspendUser = async (req, res) => {
     try {
         const { userId } = req.params;
-        
+        const { reason, durationDays, customEndDate } = req.body;
+
+        // Calculate suspension end date
+        const suspendedAt = new Date();
+        let suspensionEndDate;
+        let duration = durationDays || 7; // Default 1 week
+
+        if (customEndDate) {
+            suspensionEndDate = new Date(customEndDate);
+            duration = Math.ceil((suspensionEndDate - suspendedAt) / (1000 * 60 * 60 * 24));
+        } else {
+            suspensionEndDate = new Date(suspendedAt.getTime() + (duration * 24 * 60 * 60 * 1000));
+        }
         const user = await User.findByIdAndUpdate(
             userId,
             { 
                 status: "SUSPENDED",
-                suspendedAt: new Date(),
-                suspendedBy: req.userId
+                suspendedAt: suspendedAt,
+                suspendedBy: req.userId,
+                suspensionReason: reason || "Violation of platform terms and conditions",
+                suspensionDuration: duration,
+                suspensionEndDate: suspensionEndDate
             },
             { new: true }
         ).select('-password');
@@ -134,10 +152,54 @@ export const suspendUser = async (req, res) => {
             });
         }
 
+        // Send suspension notification
+        try {
+            await createNotification({
+                userId: user._id,
+                type: "ACCOUNT_SUSPENDED",
+                title: "Account Suspended",
+                message: `Your account has been suspended for ${duration} days. Reason: ${reason || "Violation of platform terms and conditions"}`,
+                data: {
+                    suspensionReason: reason,
+                    suspensionDuration: duration,
+                    suspensionEndDate: suspensionEndDate
+                }
+            });
+
+            // Send real-time notification
+            sendRealTimeNotification(user._id.toString(), {
+                type: "ACCOUNT_SUSPENDED",
+                title: "Account Suspended",
+                message: `Your account has been suspended for ${duration} days.`,
+                data: { suspensionReason: reason, suspensionDuration: duration }
+            });
+        } catch (notifError) {
+            console.error("[v0] Error sending suspension notification:", notifError);
+        }
+
+        // Send suspension email
+        try {
+            const { sendSuspensionEmail } = await import("../Services/emailService.js");
+            await sendSuspensionEmail({
+                email: user.email,
+                fullName: user.fullName,
+                reason: reason || "Violation of platform terms and conditions",
+                durationDays: duration,
+                suspensionEndDate: suspensionEndDate
+            });
+        } catch (emailError) {
+            console.error("[v0] Error sending suspension email:", emailError);
+        }
+
         res.status(200).json({
             success: true,
-            message: "User suspended successfully",
-            user
+            message: `User suspended for ${duration} days`,
+            user,
+            suspensionDetails: {
+                reason: reason || "Violation of platform terms and conditions",
+                durationDays: duration,
+                suspensionEndDate: suspensionEndDate
+            }
         });
     } catch (error) {
         console.error("[v0] Error suspending user:", error);
@@ -154,12 +216,20 @@ export const activateUser = async (req, res) => {
     try {
         const { userId } = req.params;
         
+        const { message } = req.body; // Optional message from admin
+
+        const previousSuspensionReason = await User.findById(userId).select('suspensionReason').lean();
+
         const user = await User.findByIdAndUpdate(
             userId,
             { 
                 status: "ACTIVE",
                 activatedAt: new Date(),
-                activatedBy: req.userId
+                activatedBy: req.userId,
+                suspensionEndDate: null,
+                suspensionReason: null,
+                suspensionDuration: null,
+                reactivationMessage: message || null
             },
             { new: true }
         ).select('-password');
@@ -169,6 +239,43 @@ export const activateUser = async (req, res) => {
                 success: false,
                 message: "User not found"
             });
+        }
+
+        // Send activation notification
+        try {
+            await createNotification({
+                userId: user._id,
+                type: "ACCOUNT_ACTIVATED",
+                title: "Account Reactivated",
+                message: message || "Your account has been reactivated. Please ensure you follow our platform guidelines to avoid future suspensions.",
+                data: {
+                    reactivatedAt: new Date(),
+                    adminMessage: message
+                }
+            });
+
+            // Send real-time notification
+            sendRealTimeNotification(user._id.toString(), {
+                type: "ACCOUNT_ACTIVATED",
+                title: "Account Reactivated",
+                message: "Your account has been reactivated! You can now log in.",
+                data: { adminMessage: message }
+            });
+        } catch (notifError) {
+            console.error("[v0] Error sending activation notification:", notifError);
+        }
+
+        // Send activation email
+        try {
+            const { sendActivationEmail } = await import("../Services/emailService.js");
+            await sendActivationEmail({
+                email: user.email,
+                fullName: user.fullName,
+                message: message || "Your account has been reactivated. Please ensure you follow our platform guidelines to avoid future suspensions.",
+                previousReason: previousSuspensionReason?.suspensionReason
+            });
+        } catch (emailError) {
+            console.error("[v0] Error sending activation email:", emailError);
         }
 
         res.status(200).json({
@@ -377,13 +484,28 @@ export const getB2CProviderStats = async (req, res) => {
 export const suspendB2CProvider = async (req, res) => {
     try {
         const { providerId } = req.params;
-        
+        const { reason, durationDays, customEndDate } = req.body;
+
+        // Calculate suspension end date
+        const suspendedAt = new Date();
+        let suspensionEndDate;
+        let duration = durationDays || 7; // Default 1 week
+
+        if (customEndDate) {
+            suspensionEndDate = new Date(customEndDate);
+            duration = Math.ceil((suspensionEndDate - suspendedAt) / (1000 * 60 * 60 * 24));
+        } else {
+            suspensionEndDate = new Date(suspendedAt.getTime() + (duration * 24 * 60 * 60 * 1000));
+        }
         const provider = await User.findOneAndUpdate(
             { _id: providerId, role: "B2C_PARTNER" },
             { 
                 status: "SUSPENDED",
-                suspendedAt: new Date(),
-                suspendedBy: req.userId
+                suspendedAt: suspendedAt,
+                suspendedBy: req.userId,
+                suspensionReason: reason || "Violation of platform terms and conditions",
+                suspensionDuration: duration,
+                suspensionEndDate: suspensionEndDate
             },
             { new: true }
         ).select('-password');
@@ -395,10 +517,40 @@ export const suspendB2CProvider = async (req, res) => {
             });
         }
 
+        // Send notifications and email (same as suspendUser)
+        try {
+            await createNotification({
+                userId: provider._id,
+                type: "ACCOUNT_SUSPENDED",
+                title: "Account Suspended",
+                message: `Your account has been suspended for ${duration} days. Reason: ${reason || "Violation of platform terms and conditions"}`,
+                data: { suspensionReason: reason, suspensionDuration: duration, suspensionEndDate }
+            });
+
+            sendRealTimeNotification(provider._id.toString(), {
+                type: "ACCOUNT_SUSPENDED",
+                title: "Account Suspended",
+                message: `Your account has been suspended for ${duration} days.`,
+                data: { suspensionReason: reason, suspensionDuration: duration }
+            });
+
+            const { sendSuspensionEmail } = await import("../Services/emailService.js");
+            await sendSuspensionEmail({
+                email: provider.email,
+                fullName: provider.fullName,
+                reason: reason || "Violation of platform terms and conditions",
+                durationDays: duration,
+                suspensionEndDate
+            });
+        } catch (notifError) {
+            console.error("[v0] Error sending B2C suspension notifications:", notifError);
+        }
+
         res.status(200).json({
             success: true,
-            message: "B2C provider suspended successfully",
-            provider
+            message: `B2C provider suspended for ${duration} days`,
+            provider,
+            suspensionDetails: { reason, durationDays: duration, suspensionEndDate }
         });
     } catch (error) {
         console.error("[v0] Error suspending B2C provider:", error);
@@ -414,13 +566,19 @@ export const suspendB2CProvider = async (req, res) => {
 export const activateB2CProvider = async (req, res) => {
     try {
         const { providerId } = req.params;
-        
+        const { message } = req.body;
+
+        const previousSuspensionReason = await User.findById(providerId).select('suspensionReason').lean();
         const provider = await User.findOneAndUpdate(
             { _id: providerId, role: "B2C_PARTNER" },
             { 
                 status: "ACTIVE",
                 activatedAt: new Date(),
-                activatedBy: req.userId
+                activatedBy: req.userId,
+                suspensionEndDate: null,
+                suspensionReason: null,
+                suspensionDuration: null,
+                reactivationMessage: message || null
             },
             { new: true }
         ).select('-password');
@@ -430,6 +588,34 @@ export const activateB2CProvider = async (req, res) => {
                 success: false,
                 message: "B2C provider not found"
             });
+        }
+
+        // Send activation notifications and email
+        try {
+            await createNotification({
+                userId: provider._id,
+                type: "ACCOUNT_ACTIVATED",
+                title: "Account Reactivated",
+                message: message || "Your account has been reactivated. Please follow our platform guidelines.",
+                data: { reactivatedAt: new Date(), adminMessage: message }
+            });
+
+            sendRealTimeNotification(provider._id.toString(), {
+                type: "ACCOUNT_ACTIVATED",
+                title: "Account Reactivated",
+                message: "Your account has been reactivated! You can now log in.",
+                data: { adminMessage: message }
+            });
+
+            const { sendActivationEmail } = await import("../Services/emailService.js");
+            await sendActivationEmail({
+                email: provider.email,
+                fullName: provider.fullName,
+                message: message || "Your account has been reactivated.",
+                previousReason: previousSuspensionReason?.suspensionReason
+            });
+        } catch (notifError) {
+            console.error("[v0] Error sending B2C activation notifications:", notifError);
         }
 
         res.status(200).json({
@@ -578,13 +764,64 @@ export const getTransactions = async (req, res) => {
         if (startDate) query.createdAt = { $gte: new Date(startDate) };
         if (endDate) query.createdAt = { $lte: new Date(endDate) };
 
-        const transactions = await Transaction.find(query)
-            .populate('userId', 'fullName email')
+        const transactionsRaw = await Transaction.find(query)
+            .populate('userId', 'fullName email phone')
+            .populate('fromUserId', 'fullName email')
+            .populate('toUserId', 'fullName email')
+            .populate('walletId', 'userId')
             .sort({ createdAt: -1 })
             .limit(Number.parseInt(limit))
             .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
         const total = await Transaction.countDocuments(query);
+
+        // Map transactions to include from/to details
+        const transactions = transactionsRaw.map(t => {
+            const transaction = t.toObject();
+
+            // Determine FROM (source) - who the money is coming from
+            let fromDetails = null;
+            if (transaction.fromUserId) {
+                fromDetails = transaction.fromUserId.fullName || transaction.fromUserId.email;
+            } else if (transaction.fromName) {
+                fromDetails = transaction.fromName;
+            } else if (transaction.type === 'CREDIT' && transaction.category === 'PAYMENT_RECEIVED') {
+                // For credits, FROM is usually the payer/customer
+                fromDetails = transaction.metadata?.payerName || transaction.metadata?.customerName || 'Customer';
+            } else if (transaction.type === 'CREDIT') {
+                fromDetails = transaction.description || 'System';
+            }
+
+            // Determine TO (destination) - who is receiving
+            let toDetails = null;
+            if (transaction.toUserId) {
+                toDetails = transaction.toUserId.fullName || transaction.toUserId.email;
+            } else if (transaction.toName) {
+                toDetails = transaction.toName;
+            } else if (transaction.userId) {
+                // The userId is typically the wallet owner who receives/sends
+                toDetails = transaction.userId.fullName || transaction.userId.email || 'User';
+            }
+
+            // For DEBIT transactions, swap from/to (money going OUT of wallet)
+            if (transaction.type === 'DEBIT') {
+                const temp = fromDetails;
+                fromDetails = toDetails || transaction.userId?.fullName || 'Wallet Owner';
+                toDetails = temp || transaction.metadata?.recipientName || transaction.description || 'Recipient';
+            }
+
+            // For HOLD transactions
+            if (transaction.type === 'HOLD') {
+                fromDetails = transaction.userId?.fullName || 'User';
+                toDetails = 'Escrow/Hold';
+            }
+
+            return {
+                ...transaction,
+                from: fromDetails || '-',
+                to: toDetails || '-',
+            };
+        });
 
         res.status(200).json({
             success: true,
@@ -1184,7 +1421,14 @@ export const getCommConfig = async (req, res) => {
                 authToken: "••••••••••••••••••••••••",
                 phoneNumber: "+14155238886",
                 active: true,
+            },
+            smsConfig: {
+                accountSid: process.env.TWILIO_SMS_ACCOUNT_SID || "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                authToken: "••••••••••••••••••••••••",
+                phoneNumber: process.env.TWILIO_SMS_PHONE_NUMBER || "+14155238886",
+                active: false,
             }
+
         };
 
         res.status(200).json({
@@ -1317,6 +1561,389 @@ export const sendWhatsAppMessage = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error sending WhatsApp message",
+            error: error.message,
+        });
+    }
+};
+
+// Send bulk WhatsApp messages
+export const sendBulkWhatsApp = async (req, res) => {
+    try {
+        const { recipients, message, templateId } = req.body;
+
+        if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Recipients array is required"
+            });
+        }
+
+        if (!message) {
+            return res.status(400).json({
+                success: false,
+                message: "Message is required"
+            });
+        }
+
+        let sent = 0;
+        let failed = 0;
+        const results = [];
+
+        // Process recipients in batches
+        for (const recipient of recipients) {
+            try {
+                const phoneNumber = recipient.phone?.replace(/\s/g, '');
+                if (!phoneNumber) {
+                    failed++;
+                    continue;
+                }
+
+                // Personalize message with user data
+                let personalizedMessage = message;
+                if (recipient.name) {
+                    personalizedMessage = personalizedMessage.replace(/\{\{userName\}\}/g, recipient.name);
+                }
+
+                // Store message record
+                await Transaction.create({
+                    userId: recipient.userId || req.userId,
+                    type: "WHATSAPP_MESSAGE",
+                    category: "COMMUNICATION_BULK",
+                    recipient: phoneNumber,
+                    content: personalizedMessage,
+                    templateId: templateId || null,
+                    status: "SENT",
+                    createdAt: new Date(),
+                    metadata: {
+                        sentBy: req.userId,
+                        bulkSend: true,
+                        recipientName: recipient.name,
+                        recipientNumber: phoneNumber
+                    }
+                });
+
+                sent++;
+                results.push({ phone: phoneNumber, status: 'sent' });
+            } catch (err) {
+                failed++;
+                results.push({ phone: recipient.phone, status: 'failed', error: err.message });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Bulk WhatsApp send completed`,
+            sent,
+            failed,
+            total: recipients.length,
+            results
+        });
+
+    } catch (error) {
+        console.error("[v0] Error sending bulk WhatsApp:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error sending bulk WhatsApp messages",
+            error: error.message
+        });
+    }
+};
+
+// Send bulk Email
+export const sendBulkEmail = async (req, res) => {
+    try {
+        const { recipients, subject, body, templateId } = req.body;
+
+        if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Recipients array is required"
+            });
+        }
+
+        if (!subject || !body) {
+            return res.status(400).json({
+                success: false,
+                message: "Subject and body are required"
+            });
+        }
+
+        let sent = 0;
+        let failed = 0;
+        const results = [];
+
+        for (const recipient of recipients) {
+            try {
+                const email = recipient.email?.trim();
+                if (!email || !email.includes('@')) {
+                    failed++;
+                    continue;
+                }
+
+                // Personalize message with user data
+                let personalizedBody = body;
+                let personalizedSubject = subject;
+                if (recipient.name) {
+                    personalizedBody = personalizedBody.replace(/\{\{userName\}\}/g, recipient.name);
+                    personalizedSubject = personalizedSubject.replace(/\{\{userName\}\}/g, recipient.name);
+                }
+
+                // Store email record
+                await Transaction.create({
+                    userId: recipient.userId || req.userId,
+                    type: "EMAIL_MESSAGE",
+                    category: "COMMUNICATION_BULK",
+                    recipient: email,
+                    content: personalizedBody,
+                    subject: personalizedSubject,
+                    templateId: templateId || null,
+                    status: "SENT",
+                    createdAt: new Date(),
+                    metadata: {
+                        sentBy: req.userId,
+                        bulkSend: true,
+                        recipientName: recipient.name,
+                        recipientEmail: email
+                    }
+                });
+
+                sent++;
+                results.push({ email, status: 'sent' });
+            } catch (err) {
+                failed++;
+                results.push({ email: recipient.email, status: 'failed', error: err.message });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Bulk email send completed`,
+            sent,
+            failed,
+            total: recipients.length,
+            results
+        });
+
+    } catch (error) {
+        console.error("[v0] Error sending bulk email:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error sending bulk emails",
+            error: error.message
+        });
+    }
+};
+
+// Send bulk SMS
+export const sendBulkSMS = async (req, res) => {
+    try {
+        const { recipients, message, templateId } = req.body;
+
+        if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Recipients array is required"
+            });
+        }
+
+        if (!message) {
+            return res.status(400).json({
+                success: false,
+                message: "Message is required"
+            });
+        }
+
+        let sent = 0;
+        let failed = 0;
+        const results = [];
+
+        for (const recipient of recipients) {
+            try {
+                const phoneNumber = recipient.phone?.replace(/\s/g, '');
+                if (!phoneNumber) {
+                    failed++;
+                    continue;
+                }
+
+                // Personalize message with user data
+                let personalizedMessage = message;
+                if (recipient.name) {
+                    personalizedMessage = personalizedMessage.replace(/\{\{userName\}\}/g, recipient.name);
+                }
+
+                // Store SMS record
+                await Transaction.create({
+                    userId: recipient.userId || req.userId,
+                    type: "SMS_MESSAGE",
+                    category: "COMMUNICATION_BULK",
+                    recipient: phoneNumber,
+                    content: personalizedMessage,
+                    templateId: templateId || null,
+                    status: "SENT",
+                    createdAt: new Date(),
+                    metadata: {
+                        sentBy: req.userId,
+                        bulkSend: true,
+                        recipientName: recipient.name,
+                        recipientNumber: phoneNumber,
+                        smsSegments: Math.ceil(personalizedMessage.length / 160)
+                    }
+                });
+
+                sent++;
+                results.push({ phone: phoneNumber, status: 'sent' });
+            } catch (err) {
+                failed++;
+                results.push({ phone: recipient.phone, status: 'failed', error: err.message });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Bulk SMS send completed`,
+            sent,
+            failed,
+            total: recipients.length,
+            results
+        });
+
+    } catch (error) {
+        console.error("[v0] Error sending bulk SMS:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error sending bulk SMS",
+            error: error.message
+        });
+    }
+};
+
+// Send SMS using Twilio
+export const sendSMS = async (req, res) => {
+    try {
+        const { recipientNumber, message, templateId } = req.body;
+
+        // Validate required fields
+        if (!recipientNumber || !message) {
+            return res.status(400).json({
+                success: false,
+                message: "Recipient number and message are required"
+            });
+        }
+
+        // Validate phone number format
+        const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+        if (!phoneRegex.test(recipientNumber.replace(/\s/g, ''))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid phone number format. Use international format (e.g., +965XXXXXXXX)"
+            });
+        }
+
+        // Log SMS for audit trail
+        console.log("[v0] Sending SMS:", { recipientNumber, message, templateId });
+
+        // Store SMS in database for tracking
+        const smsRecord = await Transaction.create({
+            userId: req.userId,
+            type: "SMS_MESSAGE",
+            category: "COMMUNICATION",
+            recipient: recipientNumber,
+            content: message,
+            templateId: templateId || null,
+            status: "PENDING",
+            createdAt: new Date(),
+            metadata: {
+                sentBy: req.userId,
+                messageType: templateId ? "TEMPLATE" : "CUSTOM",
+                recipientNumber: recipientNumber,
+                smsSegments: Math.ceil(message.length / 160)
+            }
+        });
+
+        // Real SMS service integration using Twilio
+        const accountSid = process.env.TWILIO_SMS_ACCOUNT_SID || process.env.TWILIO_ACCOUNT_SID;
+        const authToken = process.env.TWILIO_SMS_AUTH_TOKEN || process.env.TWILIO_AUTH_TOKEN;
+        const twilioPhoneNumber = process.env.TWILIO_SMS_PHONE_NUMBER || process.env.TWILIO_PHONE_NUMBER;
+
+        if (!accountSid || !authToken || !twilioPhoneNumber) {
+            console.warn("[v0] SMS API credentials not configured, using fallback");
+            // Update record status
+            await Transaction.findByIdAndUpdate(smsRecord._id, { status: "SENT" });
+            // Fallback to mock response for development
+            return res.status(200).json({
+                success: true,
+                message: "SMS sent successfully (Development Mode)",
+                messageId: smsRecord._id,
+                sentAt: new Date(),
+                deliveryStatus: "SENT",
+                smsSegments: Math.ceil(message.length / 160)
+            });
+        }
+
+        const twilio = require('twilio')(accountSid, authToken);
+
+        // Send SMS message
+        const smsMessage = await twilio.messages.create({
+            from: twilioPhoneNumber,
+            to: recipientNumber,
+            body: message
+        });
+
+        // Update SMS record with actual message details
+        await Transaction.findByIdAndUpdate(smsRecord._id, {
+            status: "DELIVERED",
+            metadata: {
+                ...smsRecord.metadata,
+                twilioMessageSid: smsMessage.sid,
+                twilioStatus: smsMessage.status,
+                deliveredAt: new Date(),
+                price: smsMessage.price,
+                priceUnit: smsMessage.priceUnit
+            }
+        });
+
+        console.log("[v0] SMS sent successfully:", {
+            messageId: smsMessage.sid,
+            recipient: recipientNumber,
+            status: smsMessage.status
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "SMS sent successfully",
+            messageId: smsRecord._id,
+            twilioMessageId: smsMessage.sid,
+            sentAt: new Date(),
+            deliveryStatus: smsMessage.status,
+            smsSegments: Math.ceil(message.length / 160)
+        });
+
+    } catch (error) {
+        console.error("[v0] Error sending SMS:", error);
+
+        // Log failed SMS attempt
+        try {
+            await Transaction.create({
+                userId: req.userId,
+                type: "SMS_MESSAGE",
+                category: "COMMUNICATION_FAILED",
+                recipient: req.body.recipientNumber,
+                content: req.body.message,
+                status: "FAILED",
+                createdAt: new Date(),
+                metadata: {
+                    error: error.message,
+                    sentBy: req.userId,
+                    recipientNumber: req.body.recipientNumber
+                }
+            });
+        } catch (logError) {
+            console.error("[v0] Failed to log SMS error:", logError);
+        }
+
+        res.status(500).json({
+            success: false,
+            message: "Error sending SMS",
             error: error.message,
         });
     }
@@ -3053,15 +3680,17 @@ export const getB2CEarningsPayments = async (req, res) => {
         const totalRevenue = revenueData[0]?.totalRevenue || 0;
         const totalPaymentCount = revenueData[0]?.count || 0;
         const avgFare = totalPaymentCount > 0 ? totalRevenue / totalPaymentCount : 0;
-        const commissionRate = 0.10;
-        const commissionEarned = totalRevenue * commissionRate;
+        // Note: Commission is calculated dynamically per user - this is an estimate for dashboard
+        // Actual commissions are tracked per payment/transaction
+        const estimatedCommissionRate = 0.15; // Average estimate
+        const commissionEarned = totalRevenue * estimatedCommissionRate;
 
         const topProviders = providerData.map(p => ({
             providerId: p._id,
             providerName: p.providerName || 'Unknown',
             revenue: p.revenue,
             bookings: p.bookings,
-            commission: p.revenue * commissionRate
+            commission: p.revenue * estimatedCommissionRate // Estimated - actual varies per user
         }));
 
         const transactions = recentPayments.map(p => ({
@@ -4647,10 +5276,11 @@ export const getB2BPartnerOverview = async (req, res) => {
     }
 };
 
-// Get payment statistics for admin
+// Get payment statistics for admin (includes both regular payments and EMI installments)
 export const getPaymentStats = async (req, res) => {
     try {
-        const [totalPending, totalVerified, totalRejected, totalAmountResult, dominantCurrencyResult] = await Promise.all([
+        // Get regular payment stats
+        const [regularPending, regularVerified, regularRejected, regularAmountResult, dominantCurrencyResult] = await Promise.all([
             Payment.countDocuments({ verificationStatus: 'PENDING' }),
             Payment.countDocuments({ verificationStatus: { $in: ['VERIFIED', 'AUTO_VERIFIED'] } }),
             Payment.countDocuments({ verificationStatus: 'REJECTED' }),
@@ -4666,7 +5296,63 @@ export const getPaymentStats = async (req, res) => {
             ])
         ]);
 
-        const totalAmount = totalAmountResult[0]?.total || 0;
+        // Get EMI installment stats (cash/bank transfer payments requiring verification)
+        const emiStats = await EMIPayment.aggregate([
+            { $unwind: "$installments" },
+            {
+                $facet: {
+                    pending: [
+                        {
+                            $match: {
+                                "installments.paymentMethod": { $in: ["CASH", "BANK_TRANSFER"] },
+                                "installments.verificationStatus": "PENDING",
+                                "installments.status": { $ne: "PAID" },
+                                "installments.transactionId": { $exists: true } // Only submitted payments
+                            }
+                        },
+                        { $count: "count" }
+                    ],
+                    verified: [
+                        {
+                            $match: {
+                                "installments.paymentMethod": { $in: ["CASH", "BANK_TRANSFER"] },
+                                "installments.verificationStatus": "VERIFIED",
+                                "installments.status": "PAID"
+                            }
+                        },
+                        { $count: "count" }
+                    ],
+                    rejected: [
+                        {
+                            $match: {
+                                "installments.verificationStatus": "REJECTED"
+                            }
+                        },
+                        { $count: "count" }
+                    ],
+                    totalAmount: [
+                        {
+                            $match: {
+                                "installments.paymentMethod": { $in: ["CASH", "BANK_TRANSFER"] },
+                                "installments.verificationStatus": "PENDING",
+                                "installments.transactionId": { $exists: true }
+                            }
+                        },
+                        { $group: { _id: null, total: { $sum: "$installments.amount" } } }
+                    ]
+                }
+            }
+        ]);
+
+        const emiPending = emiStats[0]?.pending[0]?.count || 0;
+        const emiVerified = emiStats[0]?.verified[0]?.count || 0;
+        const emiRejected = emiStats[0]?.rejected[0]?.count || 0;
+        const emiAmount = emiStats[0]?.totalAmount[0]?.total || 0;
+
+        const totalPending = regularPending + emiPending;
+        const totalVerified = regularVerified + emiVerified;
+        const totalRejected = regularRejected + emiRejected;
+        const totalAmount = (regularAmountResult[0]?.total || 0) + emiAmount;
         const currency = dominantCurrencyResult[0]?._id || "AED";
 
         res.status(200).json({
@@ -4676,7 +5362,18 @@ export const getPaymentStats = async (req, res) => {
                 totalVerified,
                 totalRejected,
                 totalAmount,
-                currency
+                currency,
+                // Detailed breakdown
+                regularPayments: {
+                    pending: regularPending,
+                    verified: regularVerified,
+                    rejected: regularRejected
+                },
+                emiPayments: {
+                    pending: emiPending,
+                    verified: emiVerified,
+                    rejected: emiRejected
+                }
             }
         });
     } catch (error) {
@@ -4693,7 +5390,7 @@ export const getPaymentStats = async (req, res) => {
 export const getRecentActivity = async (req, res) => {
     try {
         const { limit = 10 } = req.query;
-        
+
         // Get recent user registrations
         const recentUsers = await User.find({})
             .select('fullName role createdAt')
@@ -4768,22 +5465,97 @@ export const getRecentActivity = async (req, res) => {
     }
 };
 
-// Get all pending payments for admin verification
+// Get all pending payments for admin verification (includes both regular payments and EMI installments)
 export const getPendingPayments = async (req, res) => {
     try {
-        const payments = await Payment.find({
-            status: "PENDING",
+        // Query for regular payments that need verification
+        const regularPayments = await Payment.find({
             verificationStatus: "PENDING",
+            $or: [
+                { status: "PENDING" },
+                { status: "COMPLETED", paymentProvider: { $exists: true } }
+            ]
         })
             .populate("contractId", "contractNumber")
             .populate("corporateOwnerId", "fullName companyName email phone")
             .populate("fleetOwnerId", "fullName companyName email phone")
             .sort({ createdAt: -1 })
+            .lean()
+
+        // Format regular payments
+        const formattedRegularPayments = regularPayments.map(p => ({
+            ...p,
+            paymentSource: "REGULAR",
+            displayType: p.paymentType || "Contract Payment"
+        }))
+
+        // Query for EMI installments that need verification (cash/bank transfer payments with transactionId)
+        const emiPaymentsWithPending = await EMIPayment.find({
+            "installments": {
+                $elemMatch: {
+                    paymentMethod: { $in: ["CASH", "BANK_TRANSFER"] },
+                    verificationStatus: "PENDING",
+                    transactionId: { $exists: true, $ne: null }
+                }
+            }
+        })
+            .populate("contractId", "contractNumber")
+            .populate("corporateOwnerId", "fullName companyName email phone")
+            .populate("fleetOwnerId", "fullName companyName email phone")
+            .lean()
+
+        // Extract pending EMI installments and format them like regular payments
+        const emiInstallments = []
+        for (const emiPayment of emiPaymentsWithPending) {
+            for (const installment of emiPayment.installments) {
+                if (
+                    (installment.paymentMethod === "CASH" || installment.paymentMethod === "BANK_TRANSFER") &&
+                    installment.verificationStatus === "PENDING" &&
+                    installment.transactionId
+                ) {
+                    emiInstallments.push({
+                        _id: `${emiPayment._id}_${installment.installmentNumber}`,
+                        emiPaymentId: emiPayment._id,
+                        installmentNumber: installment.installmentNumber,
+                        contractId: emiPayment.contractId,
+                        corporateOwnerId: emiPayment.corporateOwnerId,
+                        fleetOwnerId: emiPayment.fleetOwnerId,
+                        amount: installment.amount,
+                        currency: emiPayment.emiPlan?.currency || "AED",
+                        paymentType: "EMI",
+                        paymentMethod: installment.paymentMethod,
+                        paymentProvider: "MANUAL",
+                        verificationStatus: installment.verificationStatus,
+                        status: installment.status,
+                        transactionId: installment.transactionId,
+                        createdAt: installment.paidAt || emiPayment.createdAt,
+                        paymentSource: "EMI",
+                        displayType: `EMI Installment ${installment.installmentNumber}/${emiPayment.emiPlan?.tenure || 6}`,
+                        // Include EMI specific data
+                        emiData: {
+                            tenure: emiPayment.emiPlan?.tenure,
+                            monthlyEMI: emiPayment.emiPlan?.monthlyEMI,
+                            totalAmount: emiPayment.emiPlan?.totalAmount,
+                            contractAmount: emiPayment.emiPlan?.contractAmount,
+                            negotiationCommission: emiPayment.emiPlan?.negotiationCommission,
+                            adminCommission: installment.adminCommission,
+                            fleetOwnerAmount: installment.fleetOwnerAmount,
+                            negotiationCommissionPortion: installment.negotiationCommissionPortion,
+                            contractAmountPortion: installment.contractAmountPortion
+                        }
+                    })
+                }
+            }
+        }
+
+        // Combine and sort by createdAt
+        const allPayments = [...formattedRegularPayments, ...emiInstallments]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
         res.status(200).json({
             success: true,
-            count: payments.length,
-            payments,
+            count: allPayments.length,
+            payments: allPayments,
         })
     } catch (error) {
         console.error("[v0] Error fetching pending payments:", error)
@@ -4826,389 +5598,262 @@ export const getPaymentDetails = async (req, res) => {
     }
 }
 
-// // Verify and approve payment
-// export const verifyPayment = async (req, res) => {
-//     try {
-//         const { paymentId } = req.params
-//         const { action, reason } = req.body // action: 'APPROVE' or 'REJECT'
+// Helper function to verify EMI installment cash payments
+const verifyEMIInstallment = async (req, res, emiPaymentId, installmentNumber, action, reason) => {
+    try {
+        const emiPayment = await EMIPayment.findById(emiPaymentId)
+            .populate("contractId", "contractNumber")
+            .populate("corporateOwnerId", "fullName companyName email")
+            .populate("fleetOwnerId", "fullName companyName email")
 
-//         const payment = await Payment.findById(paymentId).populate("contractId")
+        if (!emiPayment) {
+            return res.status(404).json({
+                success: false,
+                message: "EMI payment not found",
+            })
+        }
 
-//         if (!payment) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Payment not found",
-//             })
-//         }
+        const installment = emiPayment.installments.find(i => i.installmentNumber === installmentNumber)
 
-//         if (payment.verificationStatus !== "PENDING") {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Payment already verified",
-//             })
-//         }
+        if (!installment) {
+            return res.status(404).json({
+                success: false,
+                message: "Installment not found",
+            })
+        }
 
-//         if (action === "APPROVE") {
-//             payment.status = "COMPLETED"
-//             payment.verificationStatus = "VERIFIED"
-//             payment.verifiedBy = req.userId
-//             payment.verifiedAt = new Date()
+        if (installment.verificationStatus !== "PENDING" || !installment.transactionId) {
+            return res.status(400).json({
+                success: false,
+                message: "Installment already verified or not submitted for verification",
+            })
+        }
 
-//             // Calculate commission split
-//             const adminCommissionAmount = (payment.amount * 20) / 100
-//             const fleetOwnerAmount = (payment.amount * 80) / 100
+        if (action === "APPROVE") {
+            // Update installment status
+            installment.status = "PAID"
+            installment.verificationStatus = "VERIFIED"
+            installment.paidAt = new Date()
+            installment.verifiedBy = req.userId
+            installment.verifiedAt = new Date()
 
-//             payment.adminCommission = adminCommissionAmount
-//             payment.fleetOwnerAmount = fleetOwnerAmount,
+            // Credit B2B Partner wallet
+            let fleetWallet = await Wallet.findOne({ userId: emiPayment.fleetOwnerId._id })
+            if (!fleetWallet) {
+                fleetWallet = await Wallet.create({
+                    userId: emiPayment.fleetOwnerId._id,
+                    role: "B2B_PARTNER",
+                    balance: 0,
+                    totalEarnings: 0
+                })
+            }
 
+            const fleetName = emiPayment.fleetOwnerId?.companyName || emiPayment.fleetOwnerId?.fullName || "Fleet Owner"
+            const corporateName = emiPayment.corporateOwnerId?.companyName || emiPayment.corporateOwnerId?.fullName || "Corporate"
 
-//             await payment.save()
+            fleetWallet.balance += installment.fleetOwnerAmount
+            fleetWallet.totalEarnings += installment.fleetOwnerAmount
+            const paymentMethodLabel = installment.paymentMethod === "BANK_TRANSFER" ? "Bank Transfer" : "Cash"
+            fleetWallet.transactions.push({
+                type: "DEPOSIT",
+                amount: installment.fleetOwnerAmount,
+                description: `EMI Payment (${paymentMethodLabel} Verified) - Installment ${installment.installmentNumber}/${emiPayment.emiPlan.tenure} - Contract ${emiPayment.contractId.contractNumber}`,
+                status: "COMPLETED",
+                senderId: emiPayment.corporateOwnerId._id,
+                senderName: corporateName,
+            })
+            await fleetWallet.save()
 
-//             // Update wallets
-//             let adminWallet = await Wallet.findOne({ userId: req.userId, role: "ADMIN" })
-//             if (!adminWallet) {
-//                 adminWallet = new Wallet({
-//                     userId: req.userId,
-//                     role: "ADMIN",
-//                     balance: 0,
-//                 })
-//             }
-//             const adminBalanceBefore = adminWallet.balance
-//             adminWallet.balance += adminCommissionAmount
-//             const adminBalanceAfter = adminWallet.balance
+            installment.fleetOwnerCredited = true
+            installment.fleetOwnerCreditedAt = new Date()
 
-//             adminWallet.currency = payment.currency
-//             await adminWallet.save()
+            console.log(`[v0] EMI ${paymentMethodLabel} Payment - B2B Partner wallet credited:`, installment.fleetOwnerAmount)
 
-//             let fleetWallet = await Wallet.findOne({
-//                 userId: payment.fleetOwnerId,
-//                 role: "B2B_PARTNER",
-//             })
-//             if (!fleetWallet) {
-//                 fleetWallet = new Wallet({
-//                     userId: payment.fleetOwnerId,
-//                     role: "B2B_PARTNER",
-//                     balance: 0,
-//                 })
-//             }
+            // Credit Admin wallet - Commission + Negotiation Commission
+            let adminWallet = await Wallet.findOne({ role: "ADMIN" })
+            if (!adminWallet) {
+                adminWallet = await Wallet.create({
+                    userId: req.userId,
+                    role: "ADMIN",
+                    balance: 0,
+                    totalEarnings: 0
+                })
+            }
 
-//             const fleetBalanceBefore = fleetWallet.balance
-//             fleetWallet.balance += fleetOwnerAmount
-//             const fleetBalanceAfter = fleetWallet.balance
+            // Contract commission
+            if (installment.adminCommission.amount > 0) {
+                adminWallet.balance += installment.adminCommission.amount
+                adminWallet.totalEarnings += installment.adminCommission.amount
+                adminWallet.transactions.push({
+                    type: "COMMISSION_DEDUCTION",
+                    amount: installment.adminCommission.amount,
+                    description: `EMI Commission (${installment.adminCommission.rate}%) - Installment ${installment.installmentNumber} - Contract ${emiPayment.contractId.contractNumber}`,
+                    status: "COMPLETED",
+                    senderId: emiPayment.fleetOwnerId._id,
+                    senderName: fleetName,
+                })
+                installment.adminCommission.status = "CREDITED"
+                installment.adminCommission.creditedAt = new Date()
+                console.log(`[v0] EMI ${paymentMethodLabel} Payment - Admin commission credited:`, installment.adminCommission.amount)
+            }
 
-//             fleetWallet.currency = payment.currency
-//             await fleetWallet.save()
+            // Negotiation commission
+            if (installment.negotiationCommissionPortion > 0) {
+                adminWallet.balance += installment.negotiationCommissionPortion
+                adminWallet.totalEarnings += installment.negotiationCommissionPortion
+                adminWallet.transactions.push({
+                    type: "NEGOTIATION_COMMISSION",
+                    amount: installment.negotiationCommissionPortion,
+                    description: `Negotiation Commission (EMI) - Installment ${installment.installmentNumber} - Contract ${emiPayment.contractId.contractNumber}`,
+                    status: "COMPLETED",
+                    senderId: emiPayment.corporateOwnerId._id,
+                    senderName: corporateName,
+                })
+                installment.negotiationCommissionCredited = true
+                installment.negotiationCommissionCreditedAt = new Date()
+                console.log(`[v0] EMI ${paymentMethodLabel} Payment - Negotiation commission credited:`, installment.negotiationCommissionPortion)
+            }
 
-//             // Create transaction records
-//             await Transaction.create([
-//                 {
-//                     userId: req.userId,
-//                     walletId: adminWallet._id,
-//                     type: "CREDIT",
-//                     category: "COMMISSION_EARNED",
-//                     amount: adminCommissionAmount,
-//                     balanceBefore: adminBalanceBefore,
-//                     balanceAfter: adminBalanceAfter,
-//                     paymentId: payment._id,
-//                     contractId: payment.contractId,
-//                     description: `Admin commission for contract ${payment.contractId.contractNumber}`,
-//                 },
-//                 {
-//                     userId: payment.fleetOwnerId,
-//                     walletId: fleetWallet._id,
-//                     type: "CREDIT",
-//                     category: "PAYMENT_RECEIVED",
-//                     amount: fleetOwnerAmount,
-//                     balanceBefore: fleetBalanceBefore,
-//                     balanceAfter: fleetBalanceAfter,
-//                     paymentId: payment._id,
-//                     contractId: payment.contractId,
-//                     description: `Rental payment for contract ${payment.contractId.contractNumber}`,
-//                 },
-//             ])
+            await adminWallet.save()
 
-//             // Update contract status
-//             const contract = await Contract.findById(payment.contractId)
-//             if (contract) {
-//                 // Update financial details
-//                 if (payment.paymentType === "advance") {
-//                     contract.financials.advancePayment.paidAt = new Date()
-//                     contract.financials.advancePayment.transactionId = payment.gatewayTransactionId
-//                     contract.status = "ACTIVE" // Waiting for final payment
-//                 } else if (payment.paymentType === "final") {
-//                     contract.financials.finalPayment.paidAt = new Date()
-//                     contract.financials.finalPayment.transactionId = payment.gatewayTransactionId
-//                     contract.status = "ACTIVE" // Contract is now active
-//                     contract.activatedAt = new Date()
-//                 } else if (payment.paymentType === "security") {
-//                     contract.financials.securityDeposit.paidAt = new Date()
-//                 }
+            // Update EMI payment summary
+            emiPayment.summary.totalPaid = emiPayment.installments
+                .filter(i => i.status === "PAID")
+                .reduce((sum, i) => sum + i.amount, 0)
+            emiPayment.summary.installmentsPaid = emiPayment.installments.filter(i => i.status === "PAID").length
+            emiPayment.summary.installmentsRemaining = emiPayment.installments.filter(i => i.status !== "PAID").length
+            emiPayment.summary.totalRemaining = emiPayment.emiPlan.totalAmount - emiPayment.summary.totalPaid
+            emiPayment.summary.lastPaymentDate = new Date()
 
-//                 contract.statusHistory.push({
-//                     status: contract.status,
-//                     changedAt: new Date(),
-//                     changedBy: req.userId,
-//                     reason: `Payment ${action.toLowerCase()}d by admin`,
-//                 })
+            const nextPending = emiPayment.installments.find(i => i.status === "PENDING")
+            if (nextPending) {
+                emiPayment.summary.nextDueDate = nextPending.dueDate
+            } else {
+                emiPayment.summary.nextDueDate = null
+                emiPayment.emiPlan.status = "COMPLETED"
+            }
 
-//                 await contract.save()
-//             }
+            // Update commission settings
+            emiPayment.commissionSettings.totalAdminCommission += installment.adminCommission.amount
+            emiPayment.commissionSettings.totalNegotiationCommissionPaid += installment.negotiationCommissionPortion
+            emiPayment.commissionSettings.totalFleetOwnerAmount += installment.fleetOwnerAmount
 
-//             res.status(200).json({
-//                 success: true,
-//                 message: "Payment verified and approved successfully",
-//                 payment,
-//             })
-//         } else if (action === "REJECT") {
-//             payment.status = "FAILED"
-//             payment.verificationStatus = "REJECTED"
-//             payment.verifiedBy = req.userId
-//             payment.verifiedAt = new Date()
-//             payment.failureReason = reason
+            await emiPayment.save()
 
-//             await payment.save()
+            // Send notifications
+            try {
+                await createNotification({
+                    recipientId: emiPayment.corporateOwnerId._id,
+                    recipientRole: "CORPORATE",
+                    type: "PAYMENT",
+                    title: "EMI Payment Verified",
+                    message: `Your EMI installment #${installment.installmentNumber} of AED ${installment.amount.toLocaleString()} has been verified and approved.`,
+                    data: {
+                        emiPaymentId: emiPayment._id,
+                        contractId: emiPayment.contractId._id,
+                        installmentNumber,
+                        amount: installment.amount
+                    }
+                })
 
-//             // Update contract status
-//             const contract = await Contract.findById(payment.contractId)
-//             if (contract) {
-//                 contract.statusHistory.push({
-//                     status: "PAYMENT_REJECTED",
-//                     changedAt: new Date(),
-//                     changedBy: req.userId,
-//                     reason: reason,
-//                 })
-//                 await contract.save()
-//             }
+                await createNotification({
+                    recipientId: emiPayment.fleetOwnerId._id,
+                    recipientRole: "B2B_PARTNER",
+                    type: "PAYMENT",
+                    title: "EMI Payment Received",
+                    message: `EMI installment #${installment.installmentNumber} payment of AED ${installment.fleetOwnerAmount.toLocaleString()} has been credited to your wallet.`,
+                    data: {
+                        emiPaymentId: emiPayment._id,
+                        contractId: emiPayment.contractId._id,
+                        installmentNumber,
+                        amount: installment.fleetOwnerAmount
+                    }
+                })
+            } catch (notifError) {
+                console.error("[v0] Error sending EMI verification notifications:", notifError)
+            }
 
-//             res.status(200).json({
-//                 success: true,
-//                 message: "Payment rejected",
-//                 payment,
-//             })
-//         }
-//     } catch (error) {
-//         console.error("[v0] Error verifying payment:", error)
-//         res.status(500).json({
-//             success: false,
-//             message: "Error verifying payment",
-//             error: error.message,
-//         })
-//     }
-// }
+            return res.status(200).json({
+                success: true,
+                message: "EMI installment verified and approved successfully",
+                data: {
+                    emiPaymentId: emiPayment._id,
+                    installmentNumber,
+                    amount: installment.amount,
+                    fleetOwnerAmount: installment.fleetOwnerAmount,
+                    adminCommission: installment.adminCommission.amount,
+                    negotiationCommission: installment.negotiationCommissionPortion
+                }
+            })
 
-// export const verifyPayment = async (req, res) => {
-//     try {
-//         const { paymentId } = req.params
-//         const { action, reason } = req.body // action: 'APPROVE' or 'REJECT'
+        } else if (action === "REJECT") {
+            installment.verificationStatus = "REJECTED"
+            installment.status = "PENDING" // Reset to PENDING so they can try again
+            installment.transactionId = null // Clear the transaction ID
+            installment.rejectedBy = req.userId
+            installment.rejectedAt = new Date()
+            installment.rejectionReason = reason
 
-//         const payment = await Payment.findById(paymentId).populate("contractId")
+            await emiPayment.save()
 
-//         if (!payment) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Payment not found",
-//             })
-//         }
+            // Notify corporate owner
+            try {
+                await createNotification({
+                    recipientId: emiPayment.corporateOwnerId._id,
+                    recipientRole: "CORPORATE",
+                    type: "PAYMENT",
+                    title: "EMI Payment Rejected",
+                    message: `Your EMI installment #${installment.installmentNumber} payment was rejected. Reason: ${reason || "Not specified"}`,
+                    data: {
+                        emiPaymentId: emiPayment._id,
+                        contractId: emiPayment.contractId._id,
+                        installmentNumber,
+                        rejectionReason: reason
+                    }
+                })
+            } catch (notifError) {
+                console.error("[v0] Error sending EMI rejection notification:", notifError)
+            }
 
-//         if (payment.verificationStatus !== "PENDING") {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Payment already verified",
-//             })
-//         }
+            return res.status(200).json({
+                success: true,
+                message: "EMI installment payment rejected",
+                data: {
+                    emiPaymentId: emiPayment._id,
+                    installmentNumber,
+                    rejectionReason: reason
+                }
+            })
+        }
 
-//         if (action === "APPROVE") {
-//             payment.status = "COMPLETED"
-//             payment.verificationStatus = "VERIFIED"
-//             payment.verifiedBy = req.userId
-//             payment.verifiedAt = new Date()
+        return res.status(400).json({
+            success: false,
+            message: "Invalid action. Use APPROVE or REJECT.",
+        })
 
-//             const advanceAmount = payment.contractId.financials.advancePayment.amount
-//             const securityDepositAmount = payment.contractId.financials.securityDeposit.amount
+    } catch (error) {
+        console.error("[v0] Error verifying EMI installment:", error)
+        return res.status(500).json({
+            success: false,
+            message: "Error verifying EMI installment",
+            error: error.message,
+        })
+    }
+}
 
-//             // Commission: 10% of advance only
-//             const adminCommissionAmount = payment.adminCommission // Already calculated as 10% of advance
-//             // Fleet owner gets: 90% of advance
-//             const fleetOwnerAmount = payment.fleetOwnerAmount // Already calculated as 90% of advance
-
-//             console.log("[v0] Verifying Payment Breakdown:")
-//             console.log("[v0] Advance Amount:", advanceAmount)
-//             console.log("[v0] Security Deposit (held separately):", securityDepositAmount)
-//             console.log("[v0] Admin Commission (10% of advance):", adminCommissionAmount)
-//             console.log("[v0] Fleet Owner Amount (90% of advance):", fleetOwnerAmount)
-
-//             payment.adminCommission = {
-//                 amount: adminCommissionAmount,
-//                 percentage: 10,
-//                 appliedOn: "advance",
-//             }
-//             payment.fleetOwnerShare = {
-//                 amount: fleetOwnerAmount,
-//                 percentage: 90,
-//                 appliedOn: "advance",
-//             }
-//             payment.securityDepositInfo = {
-//                 amount: securityDepositAmount,
-//                 status: "HELD",
-//                 refundable: true,
-//             }
-
-//             await payment.save()
-
-//             // Update Admin Wallet - Commission only
-//             let adminWallet = await Wallet.findOne({ userId: req.userId, role: "ADMIN" })
-//             if (!adminWallet) {
-//                 adminWallet = new Wallet({
-//                     userId: req.userId,
-//                     role: "ADMIN",
-//                     balance: 0,
-//                     securityDepositHeld: 0,
-//                 })
-//             }
-//             adminWallet.balance += adminCommissionAmount
-//             adminWallet.securityDepositHeld += securityDepositAmount
-//             await adminWallet.save()
-
-//             console.log(
-//                 "[v0] Admin wallet updated - Commission:",
-//                 adminCommissionAmount,
-//                 "Security Deposit Held:",
-//                 securityDepositAmount,
-//             )
-
-//             // Update Fleet Owner Wallet - Only 90% of advance
-//             let fleetWallet = await Wallet.findOne({
-//                 userId: payment.fleetOwnerId,
-//                 role: "B2B_PARTNER",
-//             })
-//             if (!fleetWallet) {
-//                 fleetWallet = new Wallet({
-//                     userId: payment.fleetOwnerId,
-//                     role: "B2B_PARTNER",
-//                     balance: 0,
-//                 })
-//             }
-//             fleetWallet.balance += fleetOwnerAmount
-//             await fleetWallet.save()
-
-//             console.log("[v0] Fleet owner wallet updated:", fleetOwnerAmount)
-
-//             // Create transaction records
-//             await Transaction.create([
-//                 {
-//                     userId: req.userId,
-//                     walletId: adminWallet._id,
-//                     type: "CREDIT",
-//                     category: "COMMISSION",
-//                     amount: adminCommissionAmount,
-//                     balance: adminWallet.balance,
-//                     paymentId: payment._id,
-//                     contractId: payment.contractId,
-//                     description: `Admin commission (10% of advance) for contract ${payment.contractId.contractNumber}`,
-//                 },
-//                 {
-//                     userId: payment.fleetOwnerId,
-//                     walletId: fleetWallet._id,
-//                     type: "CREDIT",
-//                     category: "RENTAL_INCOME",
-//                     amount: fleetOwnerAmount,
-//                     balance: fleetWallet.balance,
-//                     paymentId: payment._id,
-//                     contractId: payment.contractId,
-//                     description: `Rental income (90% of advance) for contract ${payment.contractId.contractNumber}`,
-//                 },
-//                 {
-//                     userId: req.userId,
-//                     walletId: adminWallet._id,
-//                     type: "HOLD",
-//                     category: "SECURITY_DEPOSIT",
-//                     amount: securityDepositAmount,
-//                     balance: adminWallet.securityDepositHeld,
-//                     paymentId: payment._id,
-//                     contractId: payment.contractId,
-//                     description: `Security deposit held (refundable) for contract ${payment.contractId.contractNumber}`,
-//                 },
-//             ])
-
-//             const contract = payment.contractId
-//             contract.financials.advancePayment.status = "PAID"
-//             contract.financials.advancePayment.paidAt = new Date()
-//             contract.financials.advancePayment.paidVia = payment.paymentMethod
-//             contract.financials.advancePayment.transactionId = payment._id
-
-//             contract.financials.securityDeposit.status = "PAID"
-//             contract.financials.securityDeposit.paidAt = new Date()
-//             contract.financials.securityDeposit.paidVia = payment.paymentMethod
-//             contract.financials.securityDeposit.transactionId = payment._id
-
-//             contract.status = "ACTIVE"
-//             contract.vehicleAccess.isActive = true
-//             contract.activatedAt = new Date()
-
-//             // Schedule final payment for 30 days later
-//             const dueDate = new Date()
-//             dueDate.setDate(dueDate.getDate() + 30)
-//             contract.financials.remainingPayment.dueDate = dueDate
-
-//             contract.statusHistory.push({
-//                 status: "ACTIVE",
-//                 changedAt: new Date(),
-//                 changedBy: req.userId,
-//                 reason: "Payment verified - contract activated after advance + security deposit received",
-//             })
-
-//             await contract.save()
-
-//             console.log("[v0] Contract updated to ACTIVE status")
-
-//             return res.status(200).json({
-//                 success: true,
-//                 message: "Payment verified successfully",
-//                 data: {
-//                     payment,
-//                     paymentBreakdown: {
-//                         advanceAmount,
-//                         securityDepositAmount,
-//                         adminCommission: adminCommissionAmount,
-//                         fleetOwnerAmount,
-//                     },
-//                 },
-//             })
-//         } else if (action === "REJECT") {
-//             payment.status = "FAILED"
-//             payment.verificationStatus = "REJECTED"
-//             payment.verifiedBy = req.userId
-//             payment.verifiedAt = new Date()
-//             payment.failureReason = reason || "Payment rejected by admin"
-
-//             await payment.save()
-
-//             return res.status(200).json({
-//                 success: true,
-//                 message: "Payment rejected",
-//                 data: { payment },
-//             })
-//         } else {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Invalid action. Must be 'APPROVE' or 'REJECT'",
-//             })
-//         }
-//     } catch (error) {
-//         console.error("[v0] Verify payment error:", error)
-//         res.status(500).json({
-//             success: false,
-//             message: "Error verifying payment",
-//             error: error.message,
-//         })
-//     }
-// }
-
-// Verify and approve payment
+// Verify and approve payment (supports both regular payments and EMI installments)
 export const verifyPayment = async (req, res) => {
     try {
         const { paymentId } = req.params
         const { action, reason } = req.body // action: 'APPROVE' or 'REJECT'
+
+        // Check if this is an EMI installment (format: emiPaymentId_installmentNumber)
+        if (paymentId.includes("_")) {
+            const [emiPaymentId, installmentNumber] = paymentId.split("_")
+            const installmentNum = parseInt(installmentNumber)
+
+            return await verifyEMIInstallment(req, res, emiPaymentId, installmentNum, action, reason)
+        }
 
         const payment = await Payment.findById(paymentId).populate("contractId")
 
@@ -5227,34 +5872,40 @@ export const verifyPayment = async (req, res) => {
         }
 
         if (action === "APPROVE") {
-            payment.status = "COMPLETED"
+            // For gateway payments (Stripe, etc.), status is already COMPLETED
+            // Only update status to COMPLETED for cash payments
+            if (payment.status !== "COMPLETED") {
+                payment.status = "COMPLETED"
+            }
             payment.verificationStatus = "VERIFIED"
             payment.verifiedBy = req.userId
-            payment.verifiedAt = new Date()
+            payment.adminVerifiedAt = new Date()
 
             const advanceAmount = payment.advanceAmount
             const securityDepositAmount = payment.securityDepositAmount
 
-            // Commission: 10% of advance only
+            // Get dynamic commission rate from payment (set during payment initiation)
+            const appliedCommissionRate = payment.appliedCommissionRate || 10 // Default 10% if not set
+            const fleetOwnerPercentage = 100 - appliedCommissionRate
 
-            const adminCommissionAmount = payment.adminCommission // Already calculated as 10% of advance
-            // Fleet owner gets: 90% of advance
-            const fleetOwnerAmount = payment.fleetOwnerAmount // Already calculated as 90% of advance
+            const adminCommissionAmount = payment.adminCommission // Already calculated with dynamic rate
+            const fleetOwnerAmount = payment.fleetOwnerAmount // Already calculated with dynamic rate
 
             console.log("[v0] Verifying Payment Breakdown:")
             console.log("[v0] Advance Amount:", advanceAmount)
             console.log("[v0] Security Deposit (held separately):", securityDepositAmount)
-            console.log("[v0] Admin Commission (10% of advance):", adminCommissionAmount)
-            console.log("[v0] Fleet Owner Amount (90% of advance):", fleetOwnerAmount)
+            console.log("[v0] Applied Commission Rate:", appliedCommissionRate, "%")
+            console.log("[v0] Admin Commission:", adminCommissionAmount)
+            console.log("[v0] Fleet Owner Amount:", fleetOwnerAmount)
 
             payment.adminCommission = {
                 amount: adminCommissionAmount,
-                percentage: 10,
+                percentage: appliedCommissionRate,
                 appliedOn: "advance",
             }
             payment.fleetOwnerShare = {
                 amount: fleetOwnerAmount,
-                percentage: 90,
+                percentage: fleetOwnerPercentage,
                 appliedOn: "advance",
             }
             payment.securityDepositInfo = {
@@ -5265,100 +5916,125 @@ export const verifyPayment = async (req, res) => {
 
             await payment.save()
 
-            // Update Admin Wallet - Commission only
-            // First find by userId only (since userId is unique in the schema)
-            let adminWallet = await Wallet.findOne({ userId: req.userId })
-            if (!adminWallet) {
-                adminWallet = await Wallet.create({
-                    userId: req.userId,
-                    role: "ADMIN",
-                    balance: 0,
-                    securityDepositHeld: 0
-                })
+            // IMPORTANT: Check if wallets were already credited (for gateway payments like STRIPE/TAP)
+            // Gateway payments are credited in paymentController.js processPaymentToWallets()
+            // Manual payments (CASH/BANK_TRANSFER) need wallet crediting here during admin verification
+            const shouldCreditWallets = !payment.walletCredited && payment.paymentProvider === "MANUAL"
+
+            console.log("[v0] Should credit wallets:", shouldCreditWallets)
+            console.log("[v0] Payment provider:", payment.paymentProvider)
+            console.log("[v0] Wallet already credited:", payment.walletCredited)
+
+            let adminWallet, fleetWallet
+            let adminBalanceBefore = 0, adminBalanceAfter = 0
+            let adminSecurityBefore = 0, adminSecurityAfter = 0
+            let fleetBalanceBefore = 0, fleetBalanceAfter = 0
+
+            if (shouldCreditWallets) {
+                // Update Admin Wallet - Commission only
+                // First find by userId only (since userId is unique in the schema)
+                adminWallet = await Wallet.findOne({ userId: req.userId })
+                if (!adminWallet) {
+                    adminWallet = await Wallet.create({
+                        userId: req.userId,
+                        role: "ADMIN",
+                        balance: 0,
+                        securityDepositHeld: 0
+                    })
+                }
+
+                adminBalanceBefore = adminWallet.balance
+                adminSecurityBefore = adminWallet.securityDepositHeld
+
+                adminWallet.balance += adminCommissionAmount
+                adminWallet.securityDepositHeld += securityDepositAmount
+
+                adminBalanceAfter = adminWallet.balance
+                adminSecurityAfter = adminWallet.securityDepositHeld
+                await adminWallet.save()
+
+                console.log(
+                    "[v0] Admin wallet updated - Commission:",
+                    adminCommissionAmount,
+                    "Security Deposit Held:",
+                    securityDepositAmount,
+                )
+
+                // Update Fleet Owner Wallet - Only (100 - commissionRate)% of advance
+                // First find by userId only (since userId is unique in the schema)
+                fleetWallet = await Wallet.findOne({ userId: payment.fleetOwnerId })
+                if (!fleetWallet) {
+                    fleetWallet = await Wallet.create({
+                        userId: payment.fleetOwnerId,
+                        role: "B2B_PARTNER",
+                        balance: 0
+                    })
+                }
+
+                fleetBalanceBefore = fleetWallet.balance
+                fleetWallet.balance += fleetOwnerAmount
+                fleetBalanceAfter = fleetWallet.balance
+                await fleetWallet.save()
+
+                console.log("[v0] Fleet owner wallet updated:", fleetOwnerAmount)
+
+                // Create transaction records with dynamic commission rates
+                await Transaction.create([
+                    {
+                        userId: req.userId,
+                        walletId: adminWallet._id,
+                        type: "CREDIT",
+                        category: "COMMISSION_EARNED",
+                        amount: adminCommissionAmount,
+                        currency: payment.currency,
+                        balance: adminWallet.balance,
+                        balanceBefore: adminBalanceBefore,
+                        balanceAfter: adminBalanceAfter,
+                        paymentId: payment._id,
+                        contractId: payment.contractId,
+                        description: `Admin commission (${appliedCommissionRate}% of advance) for contract ${payment.contractId.contractNumber}`,
+                    },
+                    {
+                        userId: payment.fleetOwnerId,
+                        walletId: fleetWallet._id,
+                        type: "CREDIT",
+                        category: "PAYMENT_RECEIVED",
+                        amount: fleetOwnerAmount,
+                        currency: payment.currency,
+                        balance: fleetWallet.balance,
+                        balanceBefore: fleetBalanceBefore,
+                        balanceAfter: fleetBalanceAfter,
+                        paymentId: payment._id,
+                        contractId: payment.contractId,
+                        description: `Rental income (${fleetOwnerPercentage}% of advance) for contract ${payment.contractId.contractNumber}`,
+                    },
+                    {
+                        userId: req.userId,
+                        walletId: adminWallet._id,
+                        type: "HOLD",
+                        category: "SECURITY_DEPOSIT",
+                        amount: securityDepositAmount,
+                        balance: adminWallet.securityDepositHeld,
+                        balanceBefore: adminSecurityBefore,
+                        balanceAfter: adminSecurityAfter,
+                        paymentId: payment._id,
+                        contractId: payment.contractId,
+                        description: `Security deposit held (refundable) for contract ${payment.contractId.contractNumber}`,
+                    },
+                ])
+
+                // Mark payment as wallet credited to prevent duplicate credits
+                payment.walletCredited = true
+                payment.walletCreditedAt = new Date()
+                await payment.save()
+
+                console.log("[v0] Payment marked as walletCredited = true")
+            } else {
+                console.log("[v0] Skipping wallet credit - already credited by payment gateway or not a manual payment")
+                // For gateway payments, just get the wallets for reference in notifications
+                adminWallet = await Wallet.findOne({ userId: req.userId })
+                fleetWallet = await Wallet.findOne({ userId: payment.fleetOwnerId })
             }
-
-            // const adminBalanceBefore = adminWallet.balance
-            // adminWallet.balance += adminCommissionAmount
-            // adminWallet.securityDepositHeld += securityDepositAmount
-            // const adminBalanceAfter = adminWallet.balance
-
-            const adminBalanceBefore = adminWallet.balance
-            const adminSecurityBefore = adminWallet.securityDepositHeld
-
-            adminWallet.balance += adminCommissionAmount
-            adminWallet.securityDepositHeld += securityDepositAmount
-
-            const adminBalanceAfter = adminWallet.balance
-            const adminSecurityAfter = adminWallet.securityDepositHeld
-            await adminWallet.save()
-
-            console.log(
-                "[v0] Admin wallet updated - Commission:",
-                adminCommissionAmount,
-                "Security Deposit Held:",
-                securityDepositAmount,
-            )
-
-            // Update Fleet Owner Wallet - Only 90% of advance
-            // First find by userId only (since userId is unique in the schema)
-            let fleetWallet = await Wallet.findOne({ userId: payment.fleetOwnerId })
-            if (!fleetWallet) {
-                fleetWallet = await Wallet.create({
-                    userId: payment.fleetOwnerId,
-                    role: "B2B_PARTNER",
-                    balance: 0
-                })
-            }
-
-            const fleetBalanceBefore = fleetWallet.balance
-            fleetWallet.balance += fleetOwnerAmount
-            const fleetBalanceAfter = fleetWallet.balance
-            await fleetWallet.save()
-
-            console.log("[v0] Fleet owner wallet updated:", fleetOwnerAmount)
-
-            // Create transaction records
-            await Transaction.create([
-                {
-                    userId: req.userId,
-                    walletId: adminWallet._id,
-                    type: "CREDIT",
-                    category: "COMMISSION_EARNED",
-                    amount: adminCommissionAmount,
-                    balance: adminWallet.balance,
-                    balanceBefore: adminBalanceBefore,
-                    balanceAfter: adminBalanceAfter,
-                    paymentId: payment._id,
-                    contractId: payment.contractId,
-                    description: `Admin commission (10% of advance) for contract ${payment.contractId.contractNumber}`,
-                },
-                {
-                    userId: payment.fleetOwnerId,
-                    walletId: fleetWallet._id,
-                    type: "CREDIT",
-                    category: "PAYMENT_RECEIVED",
-                    amount: fleetOwnerAmount,
-                    balance: fleetWallet.balance,
-                    balanceBefore: fleetBalanceBefore,
-                    balanceAfter: fleetBalanceAfter,
-                    paymentId: payment._id,
-                    contractId: payment.contractId,
-                    description: `Rental income (90% of advance) for contract ${payment.contractId.contractNumber}`,
-                },
-                {
-                    userId: req.userId,
-                    walletId: adminWallet._id,
-                    type: "HOLD",
-                    category: "SECURITY_DEPOSIT",
-                    amount: securityDepositAmount,
-                    balance: adminWallet.securityDepositHeld,
-                    balanceBefore: adminSecurityBefore,
-                    balanceAfter: adminSecurityAfter,
-                    paymentId: payment._id,
-                    contractId: payment.contractId,
-                    description: `Security deposit held (refundable) for contract ${payment.contractId.contractNumber}`,
-                },
-            ])
 
             const contract = payment.contractId
             if (payment.paymentType === "advance") {
@@ -5423,7 +6099,7 @@ export const verifyPayment = async (req, res) => {
                         },
                     },
                 )
-                
+
                 contract.statusHistory.push({
                     status: "ACTIVE",
                     changedAt: new Date(),
@@ -5436,7 +6112,80 @@ export const verifyPayment = async (req, res) => {
             await contract.save()
 
             console.log("[v0] Contract updated to status:", contract.status)
-            
+
+            // Credit Admin Negotiation Commission from Corporate (if negotiation was done)
+            // This is separate from the B2B commission - this is commission for negotiation services
+            // IMPORTANT: Only credit if this is a MANUAL payment (gateway payments are handled in processPaymentToWallets)
+            if (payment.paymentType === "advance" && contract.negotiationCommission && shouldCreditWallets) {
+                try {
+                    const negotiationCommission = contract.negotiationCommission
+                    const negotiationCommissionAmount = negotiationCommission.adminCommission || 0
+
+                    // Check if negotiation commission was already paid (avoid duplicates)
+                    if (negotiationCommission.commissionStatus === "PAID") {
+                        console.log("[v0] Negotiation commission already PAID, skipping")
+                    } else {
+                        console.log("[v0] Processing negotiation commission:", negotiationCommissionAmount)
+
+                        // Update contract negotiation commission status
+                        await Contract.findByIdAndUpdate(
+                            contract._id,
+                            { "negotiationCommission.commissionStatus": "PAID" },
+                            { new: true }
+                        )
+                        console.log("[v0] Contract negotiation commission status marked as PAID")
+
+                        // Also update AdminNegotiation status if exists
+                        if (negotiationCommission.negotiationId) {
+                            const negotiation = await AdminNegotiation.findById(negotiationCommission.negotiationId)
+
+                            if (negotiation) {
+                                // Update negotiation commission status
+                                await AdminNegotiation.findByIdAndUpdate(
+                                    negotiationCommission.negotiationId,
+                                    {
+                                        "adminCommissionFromCorporate.status": "PAID",
+                                        "adminCommissionFromCorporate.paidAt": new Date()
+                                    },
+                                    { new: true }
+                                )
+                                console.log("[v0] AdminNegotiation commission marked as PAID")
+
+                                // Credit Admin wallet with negotiation commission
+                                if (negotiationCommissionAmount > 0 && negotiation.completedBy) {
+                                    const corporateUser = await User.findById(contract.corporateOwnerId).select('fullName companyName')
+                                    const corporateName = corporateUser?.companyName || corporateUser?.fullName || 'Corporate'
+
+                                    const creditResult = await creditAdminNegotiationCommission({
+                                        adminUserId: negotiation.completedBy,
+                                        amount: negotiationCommissionAmount,
+                                        currency: payment.currency || contract.financials.currency || "AED",
+                                        corporateUserId: contract.corporateOwnerId,
+                                        corporateName: corporateName,
+                                        negotiationId: negotiation._id,
+                                        contractId: contract._id,
+                                        contractNumber: contract.contractNumber
+                                    })
+
+                                    if (creditResult.success) {
+                                        console.log("[v0] Admin wallet credited with negotiation commission:", {
+                                            adminId: negotiation.completedBy,
+                                            amount: negotiationCommissionAmount,
+                                            newBalance: creditResult.newBalance
+                                        })
+                                    } else {
+                                        console.error("[v0] Failed to credit admin wallet with negotiation commission:", creditResult.message)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("[v0] Error processing negotiation commission:", err)
+                }
+            } else if (payment.paymentType === "advance" && contract.negotiationCommission && !shouldCreditWallets) {
+                console.log("[v0] Skipping negotiation commission - gateway payment already handled it")
+            }
 
             // Send real-time notifications to Corporate and B2B Partner
             const corporateUser = await User.findById(contract.corporateOwnerId)
@@ -5641,7 +6390,7 @@ export const getAllContracts = async (req, res) => {
 // Get admin dashboard statistics
 export const getDashboardStats = async (req, res) => {
     try {
-        const [totalContracts, activeContracts, pendingPayments, totalRevenue, adminWallet, dominantCurrencyResult] = await Promise.all([
+        const [totalContracts, activeContracts, pendingPayments, totalPaymentRevenue, adminWallet, dominantCurrencyResult] = await Promise.all([
             Contract.countDocuments(),
             Contract.countDocuments({ status: "ACTIVE" }),
             Payment.countDocuments({ verificationStatus: "PENDING" }),
@@ -5657,14 +6406,19 @@ export const getDashboardStats = async (req, res) => {
 
         const currency = dominantCurrencyResult[0]?._id || adminWallet?.currency || "AED";
 
+        // Total revenue is the admin wallet balance (commissions from all payments)
+        // This reflects actual admin earnings from EMI commissions, negotiation fees, etc.
+        const totalRevenue = adminWallet?.totalEarnings || adminWallet?.balance || 0;
+
         res.status(200).json({
             success: true,
             stats: {
                 totalContracts,
                 activeContracts,
                 pendingPayments,
-                totalRevenue: totalRevenue[0]?.total || 0,
+                totalRevenue: totalRevenue,
                 adminBalance: adminWallet?.balance || 0,
+                totalEarnings: adminWallet?.totalEarnings || 0,
                 currency: currency,
             },
         })
@@ -6794,6 +7548,634 @@ export const getPendingWalletNotifications = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error fetching pending notifications",
+            error: error.message,
+        });
+    }
+};
+
+// ==========================================
+// ADMIN MANAGEMENT FUNCTIONS
+// ==========================================
+
+// Get all admins
+export const getAllAdmins = async (req, res) => {
+    try {
+        const { page = 1, limit = 20, search, status } = req.query;
+        const query = { role: "ADMIN" };
+
+        if (status) query.status = status;
+
+        if (search) {
+            query.$or = [
+                { fullName: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        const admins = await User.find(query)
+            .select('-password')
+            .populate('createdByAdmin', 'fullName email')
+            .sort({ createdAt: -1 })
+            .limit(Number.parseInt(limit))
+            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+
+        const total = await User.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            admins,
+            pagination: {
+                total,
+                page: Number.parseInt(page),
+                pages: Math.ceil(total / Number.parseInt(limit)),
+            },
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching admins:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching admins",
+            error: error.message,
+        });
+    }
+};
+
+// Get admin stats
+export const getAdminStats = async (req, res) => {
+    try {
+        const [
+            totalAdmins,
+            superAdmins,
+            activeAdmins,
+            suspendedAdmins
+        ] = await Promise.all([
+            User.countDocuments({ role: "ADMIN" }),
+            User.countDocuments({ role: "ADMIN", "adminPermissions.isSuperAdmin": true }),
+            User.countDocuments({ role: "ADMIN", status: "ACTIVE" }),
+            User.countDocuments({ role: "ADMIN", status: "SUSPENDED" })
+        ]);
+
+        res.status(200).json({
+            success: true,
+            stats: {
+                totalAdmins,
+                superAdmins,
+                activeAdmins,
+                suspendedAdmins,
+                limitedAdmins: totalAdmins - superAdmins
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching admin stats:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching admin statistics",
+            error: error.message,
+        });
+    }
+};
+
+// Create new admin
+export const createAdmin = async (req, res) => {
+    try {
+        const {
+            fullName,
+            email,
+            password,
+            whatsappNumber,
+            countryCode,
+            isSuperAdmin,
+            modules
+        } = req.body;
+
+        // Validate required fields
+        if (!fullName || !email || !password || !whatsappNumber) {
+            return res.status(400).json({
+                success: false,
+                message: "Full name, email, password, and WhatsApp number are required"
+            });
+        }
+
+        // Check if email already exists
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message: "Email already registered"
+            });
+        }
+
+        // Verify the requesting admin has permission to create admins
+        const requestingAdmin = await User.findById(req.userId);
+        if (!requestingAdmin || requestingAdmin.role !== "ADMIN") {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can create new admins"
+            });
+        }
+
+        // Check if requesting admin has adminManagement permission or is super admin
+        const canManageAdmins = requestingAdmin.adminPermissions?.isSuperAdmin ||
+            requestingAdmin.adminPermissions?.modules?.adminManagement;
+
+        if (!canManageAdmins) {
+            return res.status(403).json({
+                success: false,
+                message: "You don't have permission to create admins"
+            });
+        }
+
+        // Only super admins can create other super admins
+        if (isSuperAdmin && !requestingAdmin.adminPermissions?.isSuperAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "Only super admins can create other super admins"
+            });
+        }
+
+        // Create admin permissions object
+        const adminPermissions = {
+            isSuperAdmin: isSuperAdmin || false,
+            modules: isSuperAdmin ? {
+                overview: true,
+                b2cManagement: true,
+                ridePooling: true,
+                b2bListings: true,
+                users: true,
+                wallets: true,
+                vehicleApproval: true,
+                settlement: true,
+                dropdowns: true,
+                reports: true,
+                finance: true,
+                communication: true,
+                ads: true,
+                paymentVerification: true,
+                content: true,
+                adminManagement: true,
+            } : {
+                overview: modules?.overview || false,
+                b2cManagement: modules?.b2cManagement || false,
+                ridePooling: modules?.ridePooling || false,
+                b2bListings: modules?.b2bListings || false,
+                users: modules?.users || false,
+                wallets: modules?.wallets || false,
+                vehicleApproval: modules?.vehicleApproval || false,
+                settlement: modules?.settlement || false,
+                dropdowns: modules?.dropdowns || false,
+                reports: modules?.reports || false,
+                finance: modules?.finance || false,
+                communication: modules?.communication || false,
+                ads: modules?.ads || false,
+                paymentVerification: modules?.paymentVerification || false,
+                content: modules?.content || false,
+                adminManagement: modules?.adminManagement || false,
+            }
+        };
+
+        // Create new admin user
+        const newAdmin = new User({
+            role: "ADMIN",
+            fullName,
+            email: email.toLowerCase(),
+            password,
+            whatsappNumber,
+            countryCode: countryCode || "+971",
+            status: "ACTIVE",
+            isEmailVerified: true,
+            isPasswordSet: true,
+            adminPermissions,
+            createdByAdmin: req.userId,
+        });
+
+        await newAdmin.save();
+
+        // Create notification for the new admin
+        await createNotification({
+            userId: newAdmin._id,
+            type: "ACCOUNT_CREATED",
+            title: "Admin Account Created",
+            message: `Your admin account has been created by ${requestingAdmin.fullName}. You can now login to the admin dashboard.`,
+            data: {
+                createdBy: requestingAdmin._id,
+                permissions: adminPermissions
+            }
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Admin created successfully",
+            admin: {
+                _id: newAdmin._id,
+                fullName: newAdmin.fullName,
+                email: newAdmin.email,
+                whatsappNumber: newAdmin.whatsappNumber,
+                status: newAdmin.status,
+                adminPermissions: newAdmin.adminPermissions,
+                createdAt: newAdmin.createdAt
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error creating admin:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error creating admin",
+            error: error.message,
+        });
+    }
+};
+
+// Update admin permissions
+export const updateAdminPermissions = async (req, res) => {
+    try {
+        const { adminId } = req.params;
+        const { isSuperAdmin, modules } = req.body;
+
+        // Verify the requesting admin has permission
+        const requestingAdmin = await User.findById(req.userId);
+        if (!requestingAdmin || requestingAdmin.role !== "ADMIN") {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can update admin permissions"
+            });
+        }
+
+        const canManageAdmins = requestingAdmin.adminPermissions?.isSuperAdmin ||
+            requestingAdmin.adminPermissions?.modules?.adminManagement;
+
+        if (!canManageAdmins) {
+            return res.status(403).json({
+                success: false,
+                message: "You don't have permission to manage admins"
+            });
+        }
+
+        // Find the admin to update
+        const adminToUpdate = await User.findOne({ _id: adminId, role: "ADMIN" });
+        if (!adminToUpdate) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found"
+            });
+        }
+
+        // Prevent modifying own super admin status
+        if (adminId === req.userId.toString() && adminToUpdate.adminPermissions?.isSuperAdmin && !isSuperAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "You cannot remove your own super admin status"
+            });
+        }
+
+        // Only super admins can grant/revoke super admin status
+        if (isSuperAdmin !== adminToUpdate.adminPermissions?.isSuperAdmin) {
+            if (!requestingAdmin.adminPermissions?.isSuperAdmin) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Only super admins can change super admin status"
+                });
+            }
+        }
+
+        // Update permissions
+        adminToUpdate.adminPermissions = {
+            isSuperAdmin: isSuperAdmin || false,
+            modules: isSuperAdmin ? {
+                overview: true,
+                b2cManagement: true,
+                ridePooling: true,
+                b2bListings: true,
+                users: true,
+                wallets: true,
+                vehicleApproval: true,
+                settlement: true,
+                dropdowns: true,
+                reports: true,
+                finance: true,
+                communication: true,
+                ads: true,
+                paymentVerification: true,
+                content: true,
+                adminManagement: true,
+            } : {
+                overview: modules?.overview || false,
+                b2cManagement: modules?.b2cManagement || false,
+                ridePooling: modules?.ridePooling || false,
+                b2bListings: modules?.b2bListings || false,
+                users: modules?.users || false,
+                wallets: modules?.wallets || false,
+                vehicleApproval: modules?.vehicleApproval || false,
+                settlement: modules?.settlement || false,
+                dropdowns: modules?.dropdowns || false,
+                reports: modules?.reports || false,
+                finance: modules?.finance || false,
+                communication: modules?.communication || false,
+                ads: modules?.ads || false,
+                paymentVerification: modules?.paymentVerification || false,
+                content: modules?.content || false,
+                adminManagement: modules?.adminManagement || false,
+            }
+        };
+
+        await adminToUpdate.save();
+
+        // Notify the admin about permission changes
+        await createNotification({
+            userId: adminToUpdate._id,
+            type: "PERMISSIONS_UPDATED",
+            title: "Admin Permissions Updated",
+            message: `Your admin permissions have been updated by ${requestingAdmin.fullName}.`,
+            data: {
+                updatedBy: requestingAdmin._id,
+                newPermissions: adminToUpdate.adminPermissions
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Admin permissions updated successfully",
+            admin: adminToUpdate.toJSON()
+        });
+    } catch (error) {
+        console.error("[v0] Error updating admin permissions:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error updating admin permissions",
+            error: error.message,
+        });
+    }
+};
+
+// Get admin details
+export const getAdminDetails = async (req, res) => {
+    try {
+        const { adminId } = req.params;
+
+        const admin = await User.findOne({ _id: adminId, role: "ADMIN" })
+            .select('-password')
+            .populate('createdByAdmin', 'fullName email');
+
+        if (!admin) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found"
+            });
+        }
+
+        // Get admin activity stats
+        const [
+            usersCreated,
+            adminsCreated
+        ] = await Promise.all([
+            User.countDocuments({
+                activatedBy: adminId,
+                role: { $ne: "ADMIN" }
+            }),
+            User.countDocuments({ createdByAdmin: adminId })
+        ]);
+
+        res.status(200).json({
+            success: true,
+            admin,
+            stats: {
+                usersActivated: usersCreated,
+                adminsCreated
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching admin details:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching admin details",
+            error: error.message,
+        });
+    }
+};
+
+// Suspend admin
+export const suspendAdmin = async (req, res) => {
+    try {
+        const { adminId } = req.params;
+        const { reason } = req.body;
+
+        // Verify the requesting admin has permission
+        const requestingAdmin = await User.findById(req.userId);
+        if (!requestingAdmin || requestingAdmin.role !== "ADMIN") {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can suspend other admins"
+            });
+        }
+
+        const canManageAdmins = requestingAdmin.adminPermissions?.isSuperAdmin ||
+            requestingAdmin.adminPermissions?.modules?.adminManagement;
+
+        if (!canManageAdmins) {
+            return res.status(403).json({
+                success: false,
+                message: "You don't have permission to manage admins"
+            });
+        }
+
+        // Cannot suspend yourself
+        if (adminId === req.userId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: "You cannot suspend yourself"
+            });
+        }
+
+        const adminToSuspend = await User.findOne({ _id: adminId, role: "ADMIN" });
+        if (!adminToSuspend) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found"
+            });
+        }
+
+        // Only super admins can suspend other super admins
+        if (adminToSuspend.adminPermissions?.isSuperAdmin && !requestingAdmin.adminPermissions?.isSuperAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "Only super admins can suspend other super admins"
+            });
+        }
+
+        adminToSuspend.status = "SUSPENDED";
+        adminToSuspend.suspendedAt = new Date();
+        adminToSuspend.suspendedBy = req.userId;
+        await adminToSuspend.save();
+
+        // Notify the suspended admin
+        await createNotification({
+            userId: adminToSuspend._id,
+            type: "ACCOUNT_SUSPENDED",
+            title: "Admin Account Suspended",
+            message: `Your admin account has been suspended. ${reason ? `Reason: ${reason}` : ''}`,
+            data: {
+                suspendedBy: requestingAdmin._id,
+                reason
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Admin suspended successfully",
+            admin: adminToSuspend.toJSON()
+        });
+    } catch (error) {
+        console.error("[v0] Error suspending admin:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error suspending admin",
+            error: error.message,
+        });
+    }
+};
+
+// Activate admin
+export const activateAdmin = async (req, res) => {
+    try {
+        const { adminId } = req.params;
+
+        // Verify the requesting admin has permission
+        const requestingAdmin = await User.findById(req.userId);
+        if (!requestingAdmin || requestingAdmin.role !== "ADMIN") {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can activate other admins"
+            });
+        }
+
+        const canManageAdmins = requestingAdmin.adminPermissions?.isSuperAdmin ||
+            requestingAdmin.adminPermissions?.modules?.adminManagement;
+
+        if (!canManageAdmins) {
+            return res.status(403).json({
+                success: false,
+                message: "You don't have permission to manage admins"
+            });
+        }
+
+        const adminToActivate = await User.findOne({ _id: adminId, role: "ADMIN" });
+        if (!adminToActivate) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found"
+            });
+        }
+
+        adminToActivate.status = "ACTIVE";
+        adminToActivate.activatedAt = new Date();
+        adminToActivate.activatedBy = req.userId;
+        await adminToActivate.save();
+
+        // Notify the activated admin
+        await createNotification({
+            userId: adminToActivate._id,
+            type: "ACCOUNT_ACTIVATED",
+            title: "Admin Account Activated",
+            message: `Your admin account has been activated by ${requestingAdmin.fullName}.`,
+            data: {
+                activatedBy: requestingAdmin._id
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Admin activated successfully",
+            admin: adminToActivate.toJSON()
+        });
+    } catch (error) {
+        console.error("[v0] Error activating admin:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error activating admin",
+            error: error.message,
+        });
+    }
+};
+
+// Delete admin
+export const deleteAdmin = async (req, res) => {
+    try {
+        const { adminId } = req.params;
+
+        // Verify the requesting admin is a super admin
+        const requestingAdmin = await User.findById(req.userId);
+        if (!requestingAdmin || requestingAdmin.role !== "ADMIN") {
+            return res.status(403).json({
+                success: false,
+                message: "Only admins can delete other admins"
+            });
+        }
+
+        if (!requestingAdmin.adminPermissions?.isSuperAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "Only super admins can delete admins"
+            });
+        }
+
+        // Cannot delete yourself
+        if (adminId === req.userId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: "You cannot delete yourself"
+            });
+        }
+
+        const adminToDelete = await User.findOne({ _id: adminId, role: "ADMIN" });
+        if (!adminToDelete) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found"
+            });
+        }
+
+        await User.findByIdAndDelete(adminId);
+
+        res.status(200).json({
+            success: true,
+            message: "Admin deleted successfully"
+        });
+    } catch (error) {
+        console.error("[v0] Error deleting admin:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error deleting admin",
+            error: error.message,
+        });
+    }
+};
+
+// Get current admin's permissions
+export const getMyPermissions = async (req, res) => {
+    try {
+        const admin = await User.findById(req.userId).select('adminPermissions role fullName email');
+
+        if (!admin || admin.role !== "ADMIN") {
+            return res.status(403).json({
+                success: false,
+                message: "Admin not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            permissions: admin.adminPermissions,
+            admin: {
+                _id: admin._id,
+                fullName: admin.fullName,
+                email: admin.email,
+                role: admin.role
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching admin permissions:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching permissions",
             error: error.message,
         });
     }

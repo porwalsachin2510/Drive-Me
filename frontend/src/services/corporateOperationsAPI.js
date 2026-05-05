@@ -87,11 +87,23 @@ export const getTripDetails = async (tripId) => {
     }
 };
 
+// Sync negotiation commission for existing contracts
+export const syncNegotiationCommission = async (contractId) => {
+    try {
+        const response = await api.post(`/contracts/${contractId}/sync-negotiation-commission`);
+        return response.data;
+    } catch (error) {
+        console.error("Error syncing negotiation commission:", error);
+        throw error;
+    }
+};
+
 export default {
     getDailyTrips,
     getEmployeeAssignedTrips,
     assignRouteToVehicle,
     getAssignedRoutesStatus,
     assignEmployeesToTrip,
-    getTripDetails
+    getTripDetails,
+    syncNegotiationCommission
 };

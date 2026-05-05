@@ -34,8 +34,8 @@
 
 .notification-badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: -12px;
+  right: -12px;
   background: var(--primary-color, #ef3b47);
   color: white;
   font-size: 10px;

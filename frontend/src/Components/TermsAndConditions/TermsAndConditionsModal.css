@@ -1,0 +1,407 @@
+.tac-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+}
+
+.tac-modal-container {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: tacModalSlideIn 0.3s ease-out;
+}
+
+@keyframes tacModalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tac-modal-header {
+    display: flex;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    gap: 16px;
+}
+
+.tac-header-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.tac-header-content {
+    flex: 1;
+}
+
+.tac-header-content h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.tac-version {
+    margin: 4px 0 0 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.tac-close-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: #f3f4f6;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    transition: all 0.2s;
+}
+
+.tac-close-btn:hover {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.tac-commission-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-bottom: 1px solid #fcd34d;
+}
+
+.tac-commission-banner svg {
+    color: #d97706;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.tac-commission-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tac-commission-text strong {
+    color: #92400e;
+    font-size: 0.875rem;
+}
+
+.tac-commission-text span {
+    color: #78350f;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.tac-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    min-height: 300px;
+    max-height: 400px;
+}
+
+.tac-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+}
+
+.tac-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #1a73e8;
+    border-radius: 50%;
+    animation: tacSpin 0.8s linear infinite;
+}
+
+@keyframes tacSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.tac-loading p {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.tac-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+    color: #dc2626;
+}
+
+.tac-error button {
+    padding: 10px 20px;
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.tac-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tac-section {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.tac-section:hover {
+    border-color: #d1d5db;
+}
+
+.tac-section-highlighted {
+    border-color: #fbbf24;
+    background: #fffbeb;
+}
+
+.tac-section-highlighted:hover {
+    border-color: #f59e0b;
+}
+
+.tac-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    cursor: pointer;
+    background: #f9fafb;
+    transition: background 0.2s;
+}
+
+.tac-section-highlighted .tac-section-header {
+    background: #fef3c7;
+}
+
+.tac-section-header:hover {
+    background: #f3f4f6;
+}
+
+.tac-section-highlighted .tac-section-header:hover {
+    background: #fde68a;
+}
+
+.tac-section-header h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.tac-section-header svg {
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.tac-section-content {
+    padding: 16px;
+    border-top: 1px solid #e5e7eb;
+    background: white;
+}
+
+.tac-section-highlighted .tac-section-content {
+    background: #fffbeb;
+    border-top-color: #fcd34d;
+}
+
+.tac-section-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #4b5563;
+    line-height: 1.6;
+}
+
+.tac-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: #f9fafb;
+    border-radius: 0 0 16px 16px;
+}
+
+.tac-scroll-indicator {
+    flex: 1;
+}
+
+.tac-scroll-hint,
+.tac-scroll-complete {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+}
+
+.tac-scroll-hint {
+    color: #9ca3af;
+    animation: tacBounce 1.5s infinite;
+}
+
+@keyframes tacBounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(3px);
+    }
+}
+
+.tac-scroll-complete {
+    color: #059669;
+}
+
+.tac-footer-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.tac-btn-cancel,
+.tac-btn-accept {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tac-btn-cancel {
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+.tac-btn-cancel:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.tac-btn-accept {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    border: none;
+    color: white;
+}
+
+.tac-btn-accept:hover:not(:disabled) {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.tac-btn-accept:disabled,
+.tac-btn-cancel:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.tac-btn-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: tacSpin 0.8s linear infinite;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .tac-modal-overlay {
+        padding: 10px;
+    }
+
+    .tac-modal-container {
+        max-height: 95vh;
+    }
+
+    .tac-modal-header {
+        padding: 16px;
+    }
+
+    .tac-header-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .tac-header-content h2 {
+        font-size: 1.1rem;
+    }
+
+    .tac-commission-banner {
+        padding: 12px 16px;
+    }
+
+    .tac-modal-body {
+        padding: 16px;
+    }
+
+    .tac-modal-footer {
+        flex-direction: column;
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .tac-footer-actions {
+        width: 100%;
+    }
+
+    .tac-btn-cancel,
+    .tac-btn-accept {
+        flex: 1;
+        justify-content: center;
+        padding: 14px 16px;
+    }
+}

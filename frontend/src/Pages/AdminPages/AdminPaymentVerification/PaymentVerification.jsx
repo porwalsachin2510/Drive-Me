@@ -28,7 +28,7 @@ const PaymentVerification = () => {
   const fetchPendingPayments = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/admin/payments/pending');
+      const response = await api.get("/admin/payments/pending");
       setPendingPayments(response.data.payments);
     } catch (error) {
       console.error("Error fetching pending payments:", error);
@@ -39,22 +39,28 @@ const PaymentVerification = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/admin/payments/stats');
+      const response = await api.get("/admin/payments/stats");
       setStats(response.data.stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
     }
   };
 
-  const handleViewDetails = async (paymentId) => {
-    try {
-      const response = await api.get(`/admin/payments/${paymentId}`);
-      setSelectedPayment(response.data.payment);
-      setShowModal(true);
-    } catch (error) {
-      console.error("Error fetching payment details:", error);
-    }
-  };
+    const handleViewDetails = async (payment) => {
+      // For EMI payments, use the payment object directly since it already has all details
+      if (payment.paymentSource === "EMI") {
+        setSelectedPayment(payment);
+        setShowModal(true);
+      } else {
+        try {
+          const response = await api.get(`/admin/payments/${payment._id}`);
+          setSelectedPayment(response.data.payment);
+          setShowModal(true);
+        } catch (error) {
+          console.error("Error fetching payment details:", error);
+        }
+      }
+    };
 
   const handleVerification = async (action) => {
     if (action === "REJECT" && !rejectionReason.trim()) {
@@ -80,15 +86,19 @@ const PaymentVerification = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "PENDING": return "#ffc107";
-      case "VERIFIED": return "#28a745";
-      case "REJECTED": return "#dc3545";
-      default: return "#6c757d"
+      case "PENDING":
+        return "#ffc107";
+      case "VERIFIED":
+        return "#28a745";
+      case "REJECTED":
+        return "#dc3545";
+      default:
+        return "#6c757d";
     }
   };
 
   const formatCurrency = (amount, currency = null) => {
-     const curr = currency || stats.currency || "AED";
+    const curr = currency || stats.currency || "AED";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: curr,
@@ -156,6 +166,7 @@ const PaymentVerification = () => {
               <th>Fleet Owner</th>
               <th>Amount</th>
               <th>Type</th>
+              <th>Method</th>
               <th>Status</th>
               <th>Date</th>
               <th>Actions</th>
@@ -169,7 +180,23 @@ const PaymentVerification = () => {
                 <td>{payment.corporateOwnerId?.fullName || "N/A"}</td>
                 <td>{payment.fleetOwnerId?.fullName || "N/A"}</td>
                 <td>{formatCurrency(payment.amount, payment.currency)}</td>
-                <td>{payment.paymentType}</td>
+                <td>
+                  <span
+                    className={`drivemego-paymentverification-type-badge ${payment.paymentSource?.toLowerCase() || "regular"}`}
+                  >
+                    {payment.displayType || payment.paymentType}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className={`drivemego-paymentverification-method-badge ${payment.paymentMethod?.toLowerCase()?.replace("_", "-") || "cash"}`}
+                  >
+                    {payment.paymentMethod === "BANK_TRANSFER"
+                      ? "Bank Transfer"
+                      : payment.paymentMethod || "CASH"}
+                    {payment.paymentProvider && ` (${payment.paymentProvider})`}
+                  </span>
+                </td>
                 <td>
                   <span
                     className="drivemego-paymentverification-status-badge"
@@ -186,7 +213,7 @@ const PaymentVerification = () => {
                 <td>
                   <button
                     className="drivemego-paymentverification-view-btn"
-                    onClick={() => handleViewDetails(payment._id)}
+                    onClick={() => handleViewDetails(payment)}
                   >
                     View Details
                   </button>
@@ -267,9 +294,10 @@ const PaymentVerification = () => {
                     Type:
                   </span>
                   <span className="drivemego-paymentverification-value">
-                    {selectedPayment.paymentType}
+                    {selectedPayment.displayType || selectedPayment.paymentType}
                   </span>
                 </div>
+
                 <div className="drivemego-paymentverification-info-row">
                   <span className="drivemego-paymentverification-label">
                     Status:
@@ -286,9 +314,72 @@ const PaymentVerification = () => {
                     {new Date(selectedPayment.createdAt).toLocaleString()}
                   </span>
                 </div>
+                <div className="drivemego-paymentverification-info-row">
+                  <span className="drivemego-paymentverification-label">
+                    Payment Method:
+                  </span>
+                  <span className="drivemego-paymentverification-value">
+                    {selectedPayment.paymentMethod || "CASH"}
+                    {selectedPayment.paymentProvider &&
+                      ` via ${selectedPayment.paymentProvider}`}
+                  </span>
+                </div>
+                {/* Gateway Payment Details */}
+                {selectedPayment.paymentProvider && (
+                  <>
+                    <div className="drivemego-paymentverification-info-row">
+                      <span className="drivemego-paymentverification-label">
+                        Payment Status:
+                      </span>
+                      <span
+                        className={`drivemego-paymentverification-value payment-status-${selectedPayment.status?.toLowerCase()}`}
+                      >
+                        {selectedPayment.status}
+                      </span>
+                    </div>
+                    {selectedPayment.gatewayTransactionId && (
+                      <div className="drivemego-paymentverification-info-row">
+                        <span className="drivemego-paymentverification-label">
+                          Transaction ID:
+                        </span>
+                        <span className="drivemego-paymentverification-value">
+                          {selectedPayment.gatewayTransactionId}
+                        </span>
+                      </div>
+                    )}
+                    {selectedPayment.verifiedAt && (
+                      <div className="drivemego-paymentverification-info-row">
+                        <span className="drivemego-paymentverification-label">
+                          Gateway Verified:
+                        </span>
+                        <span className="drivemego-paymentverification-value">
+                          {new Date(
+                            selectedPayment.verifiedAt,
+                          ).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <PaymentBreakdown payment={selectedPayment} />
+
+              {/* Gateway Payment Notice */}
+              {selectedPayment.paymentProvider &&
+                selectedPayment.status === "COMPLETED" && (
+                  <div className="drivemego-paymentverification-gateway-notice">
+                    <div className="gateway-notice-icon">&#10003;</div>
+                    <div className="gateway-notice-content">
+                      <strong>Payment Gateway Verified</strong>
+                      <p>
+                        This payment was completed via{" "}
+                        {selectedPayment.paymentProvider}. Transaction ID:{" "}
+                        {selectedPayment.gatewayTransactionId || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
               <div className="drivemego-paymentverification-verification-actions">
                 <div className="drivemego-paymentverification-action-buttons">

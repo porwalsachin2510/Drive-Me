@@ -220,6 +220,54 @@ export const approveContract = createAsyncThunk(
     },
 )
 
+// Upload signed contract document - Corporate
+export const uploadSignedContractDocument = createAsyncThunk(
+    "contract/uploadSignedDocument",
+    async ({ contractId, formData }, { rejectWithValue }) => {
+        try {
+            const response = await api.post(`/contracts/${contractId}/upload-signed-document`, formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            })
+            return response.data
+        } catch (error) {
+            console.error("Upload signed document error:", error)
+            return rejectWithValue(error.response?.data?.message || "Failed to upload signed contract document")
+        }
+    },
+)
+
+// Verify signed contract document - B2B Partner
+export const verifySignedContractDocument = createAsyncThunk(
+    "contract/verifySignedDocument",
+    async ({ contractId, action, verificationNotes, rejectionReason }, { rejectWithValue }) => {
+        try {
+            const response = await api.post(`/contracts/${contractId}/verify-signed-document`, {
+                action,
+                verificationNotes,
+                rejectionReason,
+            })
+            return response.data
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to verify signed contract document")
+        }
+    },
+)
+
+// Download contract document
+export const downloadContractDocument = createAsyncThunk(
+    "contract/downloadDocument",
+    async ({ contractId, type = "original" }, { rejectWithValue }) => {
+        try {
+            const response = await api.get(`/contracts/${contractId}/download-document?type=${type}`)
+            return response.data
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to download contract document")
+        }
+    },
+)
+
 const contractSlice = createSlice({
     name: "contract",
     initialState,
@@ -426,6 +474,48 @@ const contractSlice = createSlice({
                 state.dueDateRequests = action.payload?.data?.requests || []
             })
             .addCase(getDueDateExtensionRequests.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.payload
+            })
+            // Upload Signed Contract Document
+            .addCase(uploadSignedContractDocument.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(uploadSignedContractDocument.fulfilled, (state, action) => {
+                state.loading = false
+                if (action.payload?.data?.contract) {
+                    state.currentContract = { data: action.payload.data }
+                }
+            })
+            .addCase(uploadSignedContractDocument.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.payload
+            })
+            // Verify Signed Contract Document
+            .addCase(verifySignedContractDocument.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(verifySignedContractDocument.fulfilled, (state, action) => {
+                state.loading = false
+                if (action.payload?.data?.contract) {
+                    state.currentContract = { data: action.payload.data }
+                }
+            })
+            .addCase(verifySignedContractDocument.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.payload
+            })
+            // Download Contract Document
+            .addCase(downloadContractDocument.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(downloadContractDocument.fulfilled, (state) => {
+                state.loading = false
+            })
+            .addCase(downloadContractDocument.rejected, (state, action) => {
                 state.loading = false
                 state.error = action.payload
             })

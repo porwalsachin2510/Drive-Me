@@ -1,0 +1,894 @@
+.emi-section {
+   margin-top: 0;
+}
+
+.emi-section.emi-loading {
+    padding: 40px;
+    text-align: center;
+}
+
+.emi-section.emi-loading .loading-message {
+    color: #6b7280;
+    font-size: 15px;
+}
+/* EMI Option Card */
+.emi-option-card {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #0284c7;
+    border-radius: 16px;
+    padding: 28px;
+}
+
+.emi-option-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.emi-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.emi-icon svg {
+    width: 28px;
+    height: 28px;
+    color: white;
+}
+
+.emi-option-text h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0c4a6e;
+    margin: 0 0 4px 0;
+}
+
+.emi-option-text p {
+    font-size: 14px;
+    color: #0369a1;
+    margin: 0;
+}
+
+.emi-benefits {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.benefit-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.benefit-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.benefit-item span:last-child {
+    font-size: 14px;
+    color: #334155;
+    font-weight: 500;
+}
+
+.emi-amount-preview {
+    text-align: center;
+    padding: 16px;
+    background: white;
+    border-radius: 10px;
+    margin-bottom: 24px;
+}
+
+.emi-amount-preview p {
+    margin: 0;
+    font-size: 15px;
+    color: #475569;
+}
+
+.emi-amount-preview strong {
+    color: #0284c7;
+    font-size: 18px;
+}
+
+.emi-example {
+    margin-top: 8px !important;
+    font-size: 14px !important;
+    color: #64748b !important;
+}
+
+.btn-choose-emi {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-choose-emi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+}
+
+/* Modal Styles */
+.emi-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.emi-modal {
+    background: white;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.emi-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.emi-modal-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.close-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f1f5f9;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: #e2e8f0;
+}
+
+.close-btn svg {
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+}
+
+.emi-modal-content {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.total-amount-display {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.total-amount-display span {
+    display: block;
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.total-amount-display strong {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.tenure-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tenure-option {
+    position: relative;
+    padding: 16px 20px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tenure-option:hover {
+    border-color: #0284c7;
+    background: #f0f9ff;
+}
+
+.tenure-option.selected {
+    border-color: #0284c7;
+    background: #f0f9ff;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
+
+.tenure-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.tenure-months {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.tenure-emi {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0284c7;
+}
+
+.tenure-description {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.selected-check {
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    background: #0284c7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selected-check svg {
+    width: 14px;
+    height: 14px;
+    color: white;
+}
+
+.emi-summary {
+    margin-top: 24px;
+    padding: 20px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+}
+
+.emi-summary h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #166534;
+    margin: 0 0 16px 0;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.summary-row span {
+    color: #166534;
+}
+
+.summary-row strong {
+    color: #15803d;
+}
+
+.summary-note {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #bbf7d0;
+}
+
+.summary-note p {
+    margin: 0;
+    font-size: 13px;
+    color: #65a30d;
+}
+
+.emi-modal-footer {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.btn-cancel,
+.btn-confirm {
+    flex: 1;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel {
+    background: white;
+    color: #64748b;
+    border: 2px solid #e2e8f0;
+}
+
+.btn-cancel:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.btn-confirm {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: white;
+    border: none;
+}
+
+.btn-confirm:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+}
+
+.btn-confirm:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Active EMI Plan Styles */
+.emi-active {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
+}
+
+.emi-plan-header {
+    margin-bottom: 24px;
+}
+
+.emi-plan-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.emi-plan-title h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.emi-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.emi-status.active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.emi-status.completed {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.emi-status.suspended {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.emi-status.defaulted {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.emi-plan-info {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-label {
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* Suspension Warning */
+.suspension-warning {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.warning-icon {
+    width: 40px;
+    height: 40px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.warning-content h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #991b1b;
+    margin: 0 0 8px 0;
+}
+
+.warning-content p {
+    font-size: 14px;
+    color: #b91c1c;
+    margin: 0 0 4px 0;
+}
+
+/* EMI Progress */
+.emi-progress {
+    margin-bottom: 24px;
+}
+
+.progress-stats {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 16px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 24px;
+    border-radius: 10px;
+}
+
+.stat-item.paid {
+    background: #dcfce7;
+}
+
+.stat-item.remaining {
+    background: #fef3c7;
+}
+
+.stat-item.overdue {
+    background: #fef2f2;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.stat-item.paid .stat-value {
+    color: #166534;
+}
+
+.stat-item.remaining .stat-value {
+    color: #854d0e;
+}
+
+.stat-item.overdue .stat-value {
+    color: #991b1b;
+}
+
+.stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-item.paid .stat-label {
+    color: #15803d;
+}
+
+.stat-item.remaining .stat-label {
+    color: #a16207;
+}
+
+.stat-item.overdue .stat-label {
+    color: #b91c1c;
+}
+
+.progress-bar {
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+
+.progress-amounts {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Next Due Card */
+.next-due-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.due-icon {
+    width: 48px;
+    height: 48px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.due-icon svg {
+    width: 24px;
+    height: 24px;
+    color: #854d0e;
+}
+
+.due-label {
+    display: block;
+    font-size: 13px;
+    color: #854d0e;
+}
+
+.due-date {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #78350f;
+}
+
+/* Installments Section */
+.installments-section {
+    margin-top: 24px;
+}
+
+.installments-section h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 16px 0;
+}
+
+.installments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.installment-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.installment-item:hover {
+    border-color: #cbd5e1;
+}
+
+.installment-item.is-overdue {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.installment-number {
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    min-width: 36px;
+}
+
+.installment-details {
+    flex: 1;
+}
+
+.installment-amount {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.late-fee-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: #ef4444;
+    color: white;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.installment-date {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.paid-date {
+    color: #10b981;
+}
+
+.installment-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.status-paid {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.status-pending {
+    background: #fef3c7;
+    color: #854d0e;
+}
+
+.status-badge.status-overdue {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.btn-pay-now {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-pay-now:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+}
+
+/* Payment Modal */
+.pay-modal .payment-amount-display {
+    text-align: center;
+    padding: 24px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.payment-amount-display span:first-child {
+    display: block;
+    font-size: 14px;
+    color: #0369a1;
+    margin-bottom: 8px;
+}
+
+.payment-amount-display strong {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0284c7;
+}
+
+.includes-late-fee {
+    display: block;
+    font-size: 12px;
+    color: #ef4444;
+    margin-top: 8px;
+}
+
+.payment-methods h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.method-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.method-option {
+    position: relative;
+    padding: 16px 20px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.method-option:hover {
+    border-color: #0284c7;
+}
+
+.method-option.selected {
+    border-color: #0284c7;
+    background: #f0f9ff;
+}
+
+.method-icon {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.selected-indicator {
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background: #0284c7;
+    border-radius: 50%;
+}
+
+.selected-indicator::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .emi-plan-info {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .progress-stats {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .installment-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .installment-status {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .tenure-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}

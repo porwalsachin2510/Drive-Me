@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { SocketContext } from "../../../context/SocketContext";
 import {
   getContractById,
   uploadContractDocument,
@@ -10,6 +11,8 @@ import {
   signContract,
   assignVehicles,
   respondToDueDateExtension,
+  verifySignedContractDocument,
+  downloadContractDocument,
 } from "../../../Redux/slices/contractSlice";
 import LoadingSpinner from "../../../Components/LoadingSpinner/LoadingSpinner";
 import PDFViewerModal from "../../../Components/B2B_Partner/PDFViewerModal/PDFViewerModal";
@@ -23,10 +26,12 @@ const B2B_PartnerContractDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { socket } = useContext(SocketContext) || {};
   const { currentContract, loading, error } = useSelector(
-    (state) => state.contract
+    (state) => state.contract,
   );
-
+  // eslint-disable-next-line no-unused-vars
+  const [statusMessage, setStatusMessage] = useState({ type: "", text: "" });
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -38,23 +43,95 @@ const B2B_PartnerContractDetails = () => {
   const [signature, setSignature] = useState("");
   const [userIpAddress, setUserIpAddress] = useState("");
   const [documentUrl, setDocumentUrl] = useState(null);
- const [activeTab, setActiveTab] = useState("commuters");
- const [showVehicleAssignmentForm, setShowVehicleAssignmentForm] =
+  const [activeTab, setActiveTab] = useState("commuters");
+  const [showVehicleAssignmentForm, setShowVehicleAssignmentForm] =
     useState(false);
-  const [showExtensionResponseModal, setShowExtensionResponseModal] = useState(false);
+  const [showExtensionResponseModal, setShowExtensionResponseModal] =
+    useState(false);
   const [extensionResponse, setExtensionResponse] = useState({
     action: "",
     responseNotes: "",
     counterOfferedDate: "",
   });
   const [processingExtension, setProcessingExtension] = useState(false);
-  
+
+  // Signed document verification states
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationAction, setVerificationAction] = useState("");
+  const [verificationNotes, setVerificationNotes] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [processingVerification, setProcessingVerification] = useState(false);
+  const [showSignedDocViewer, setShowSignedDocViewer] = useState(false);
+
   useEffect(() => {
     if (id) {
       dispatch(getContractById({ contractId: id }));
     }
   }, [dispatch, id]);
 
+  // Listen for real-time contract updates via socket
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    const handleContractUpdate = (data) => {
+      console.log("[v0] B2B Partner received contract update:", data);
+      // Refresh contract data
+      dispatch(getContractById({ contractId: id }));
+
+      // Show status message based on notification type
+      if (data.type === "SIGNED_DOCUMENT_UPLOADED") {
+        setStatusMessage({
+          type: "info",
+          text:
+            data.message ||
+            "Corporate has uploaded a signed contract document. Please review and verify.",
+        });
+      } else if (data.type === "CONTRACT_SIGNED") {
+        setStatusMessage({
+          type: "success",
+          text:
+            data.message ||
+            "Corporate has signed the contract. Please review and sign to finalize.",
+        });
+      } else if (data.type === "PAYMENT_RECEIVED") {
+        setStatusMessage({
+          type: "success",
+          text:
+            data.message ||
+            "Payment has been received! Contract is now active.",
+        });
+      } else {
+        setStatusMessage({
+          type: "info",
+          text: data.message || "Contract has been updated.",
+        });
+      }
+      setTimeout(() => setStatusMessage({ type: "", text: "" }), 8000);
+    };
+
+    // Listen for contract-related events
+    socket.on("signed_document_uploaded", handleContractUpdate);
+    socket.on("contract_signed", handleContractUpdate);
+    socket.on("payment_received", handleContractUpdate);
+    socket.on("contract_update", handleContractUpdate);
+    socket.on("new-notification", (notification) => {
+      if (
+        notification.type?.includes("SIGNED_DOCUMENT") ||
+        notification.type?.includes("CONTRACT") ||
+        notification.type?.includes("PAYMENT")
+      ) {
+        handleContractUpdate(notification);
+      }
+    });
+
+    return () => {
+      socket.off("signed_document_uploaded", handleContractUpdate);
+      socket.off("contract_signed", handleContractUpdate);
+      socket.off("payment_received", handleContractUpdate);
+      socket.off("contract_update", handleContractUpdate);
+    };
+  }, [socket, id, dispatch]);
+  
   useEffect(() => {
     if (!id) return;
 
@@ -93,7 +170,7 @@ const B2B_PartnerContractDetails = () => {
     console.log("File type:", file ? file.type : "N/A");
     console.log(
       "File size:",
-      file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "N/A"
+      file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "N/A",
     );
 
     if (!file) {
@@ -180,7 +257,7 @@ const B2B_PartnerContractDetails = () => {
         approveContract({
           contractId: id,
           approvalNotes: approvalNotes,
-        })
+        }),
       ).unwrap();
 
       console.log("Approval result:", result);
@@ -209,7 +286,7 @@ const B2B_PartnerContractDetails = () => {
           contractId: id,
           signature: signature.trim(),
           ipAddress: userIpAddress,
-        })
+        }),
       ).unwrap();
 
       console.log("Sign result:", result);
@@ -253,7 +330,7 @@ const B2B_PartnerContractDetails = () => {
         assignVehicles({
           contractId: id,
           vehicleAssignments: assignmentData,
-        })
+        }),
       ).unwrap();
 
       alert("Vehicles assigned successfully!");
@@ -271,7 +348,10 @@ const B2B_PartnerContractDetails = () => {
       return;
     }
 
-    if (extensionResponse.action === "COUNTER_OFFERED" && !extensionResponse.counterOfferedDate) {
+    if (
+      extensionResponse.action === "COUNTER_OFFERED" &&
+      !extensionResponse.counterOfferedDate
+    ) {
       alert("Please select a counter offered date");
       return;
     }
@@ -284,12 +364,18 @@ const B2B_PartnerContractDetails = () => {
           action: extensionResponse.action,
           responseNotes: extensionResponse.responseNotes,
           counterOfferedDate: extensionResponse.counterOfferedDate || undefined,
-        })
+        }),
       ).unwrap();
 
-      alert(`Due date extension ${extensionResponse.action.toLowerCase().replace("_", " ")} successfully!`);
+      alert(
+        `Due date extension ${extensionResponse.action.toLowerCase().replace("_", " ")} successfully!`,
+      );
       setShowExtensionResponseModal(false);
-      setExtensionResponse({ action: "", responseNotes: "", counterOfferedDate: "" });
+      setExtensionResponse({
+        action: "",
+        responseNotes: "",
+        counterOfferedDate: "",
+      });
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Extension response error:", error);
@@ -297,6 +383,76 @@ const B2B_PartnerContractDetails = () => {
     } finally {
       setProcessingExtension(false);
     }
+  };
+
+  // Handle signed document verification
+  const handleVerifySignedDocument = async () => {
+    if (!verificationAction) {
+      alert("Please select an action");
+      return;
+    }
+
+    if (verificationAction === "REJECT" && !rejectionReason.trim()) {
+      alert("Please provide a rejection reason");
+      return;
+    }
+
+    setProcessingVerification(true);
+    try {
+      await dispatch(
+        verifySignedContractDocument({
+          contractId: id,
+          action: verificationAction,
+          verificationNotes: verificationNotes,
+          rejectionReason:
+            verificationAction === "REJECT" ? rejectionReason : undefined,
+        }),
+      ).unwrap();
+
+      alert(
+        verificationAction === "APPROVE"
+          ? "Signed document verified successfully! You can now sign the contract."
+          : "Signed document rejected. Corporate will be notified to re-upload.",
+      );
+      setShowVerificationModal(false);
+      setVerificationAction("");
+      setVerificationNotes("");
+      setRejectionReason("");
+      dispatch(getContractById({ contractId: id }));
+    } catch (error) {
+      console.error("Verification error:", error);
+      alert(error || "Failed to verify signed document");
+    } finally {
+      setProcessingVerification(false);
+    }
+  };
+
+  // Handle download contract document
+  const handleDownloadDocument = async (type = "original") => {
+    try {
+      const result = await dispatch(
+        downloadContractDocument({ contractId: id, type }),
+      ).unwrap();
+
+      if (result.data?.documentUrl) {
+        const link = document.createElement("a");
+        link.href = result.data.documentUrl;
+        link.download =
+          result.data.fileName || `contract_${contract?.contractNumber}.pdf`;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error("Download error:", error);
+      alert(error || "Failed to download document");
+    }
+  };
+
+  const handleViewSignedDocument = () => {
+    console.log("Opening signed PDF viewer");
+    setShowSignedDocViewer(true);
   };
 
   if (loading && !currentContract) return <LoadingSpinner />;
@@ -338,7 +494,7 @@ const B2B_PartnerContractDetails = () => {
   const totalVehicles = vehicles.reduce((sum, v) => sum + (v.quantity || 0), 0);
   const rentalDays = calculateRentalDays(
     rentalPeriod.startDate,
-    rentalPeriod.endDate
+    rentalPeriod.endDate,
   );
 
   return (
@@ -664,24 +820,160 @@ const B2B_PartnerContractDetails = () => {
                 style={{ marginTop: "16px" }}
               >
                 <p>
-                  <strong>Status:</strong> Waiting for Corporate Client to Sign
+                  <strong>Status:</strong> Waiting for Corporate Client to
+                  Download, Sign, and Upload
                 </p>
                 <p style={{ marginTop: "8px" }}>
                   <strong>Contract Document:</strong>
                 </p>
-                <button
-                  className="b2b-contract-view-btn"
-                  onClick={handleViewDocument}
-                  style={{ marginTop: "12px" }}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    marginTop: "12px",
+                    flexWrap: "wrap",
+                  }}
                 >
-                  📄 View Uploaded Document
-                </button>
+                  <button
+                    className="b2b-contract-view-btn"
+                    onClick={handleViewDocument}
+                  >
+                    View Document
+                  </button>
+                  <button
+                    className="b2b-contract-download-btn"
+                    onClick={() => handleDownloadDocument("original")}
+                  >
+                    Download Document
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Approval Section */}
+        {/* Signed Document Verification Section - B2B Partner reviews signed document */}
+        {status === "PENDING_B2B_VERIFICATION" && (
+          <div className="b2b-contract-section b2b-verification-section">
+            <h2>Verify Signed Contract Document</h2>
+            <div className="b2b-contract-verification-card">
+              <div className="b2b-contract-approval-icon">📝</div>
+              <h3>Corporate Has Uploaded Signed Document</h3>
+              <p>
+                The corporate client has signed the contract document and
+                uploaded it for your verification. Please review the signed
+                document to ensure all signatures are correct.
+              </p>
+
+              {/* Document Comparison Section */}
+              <div
+                className="b2b-document-comparison"
+                style={{ marginTop: "24px" }}
+              >
+                <div className="b2b-document-card">
+                  <h4>Original Contract</h4>
+                  <p className="doc-upload-info">
+                    Uploaded on{" "}
+                    {formatDate(contract.contractDocument?.uploadedAt)}
+                  </p>
+                  <div className="doc-actions">
+                    <button
+                      className="b2b-contract-view-btn"
+                      onClick={handleViewDocument}
+                    >
+                      View Original
+                    </button>
+                    <button
+                      className="b2b-contract-download-btn"
+                      onClick={() => handleDownloadDocument("original")}
+                    >
+                      Download
+                    </button>
+                  </div>
+                </div>
+
+                <div className="b2b-document-card signed-document">
+                  <h4>Signed Contract</h4>
+                  <p className="doc-upload-info">
+                    Uploaded on{" "}
+                    {formatDate(contract.signedContractDocument?.uploadedAt)}
+                  </p>
+                  <div className="doc-actions">
+                    <button
+                      className="b2b-contract-view-btn signed"
+                      onClick={handleViewSignedDocument}
+                    >
+                      View Signed
+                    </button>
+                    <button
+                      className="b2b-contract-download-btn"
+                      onClick={() => handleDownloadDocument("signed")}
+                    >
+                      Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Corporate Signature Info */}
+              {digitalSignatures.corporateOwner?.signed && (
+                <div
+                  className="b2b-corporate-signature-info"
+                  style={{ marginTop: "20px" }}
+                >
+                  <p>
+                    <strong>Corporate signed externally on:</strong>{" "}
+                    {formatDate(digitalSignatures.corporateOwner.signedAt)}
+                  </p>
+                </div>
+              )}
+
+              {/* Verification Actions */}
+              <div
+                className="b2b-verification-actions"
+                style={{ marginTop: "24px" }}
+              >
+                <p style={{ marginBottom: "16px", color: "#6b7280" }}>
+                  After reviewing the signed document, please verify if the
+                  signature is valid and complete:
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "16px",
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <button
+                    className="b2b-contract-approve-btn"
+                    onClick={() => {
+                      setVerificationAction("APPROVE");
+                      setShowVerificationModal(true);
+                    }}
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    }}
+                  >
+                    Approve Signed Document
+                  </button>
+                  <button
+                    className="b2b-contract-reject-btn"
+                    onClick={() => {
+                      setVerificationAction("REJECT");
+                      setShowVerificationModal(true);
+                    }}
+                  >
+                    Reject - Request Re-upload
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Approval Section - Old status for backwards compatibility */}
         {status === "CORPORATE_SIGNED" && (
           <div className="b2b-contract-section">
             <h2>Contract Approval</h2>
@@ -1105,6 +1397,119 @@ const B2B_PartnerContractDetails = () => {
           />
         )}
 
+        {/* Signed PDF Viewer Modal */}
+        {showSignedDocViewer && contract?.signedContractDocument?.url && (
+          <PDFViewerModal
+            contractId={id}
+            pdfUrl={contract.signedContractDocument.url}
+            onClose={() => setShowSignedDocViewer(false)}
+          />
+        )}
+
+        {/* Signed Document Verification Modal */}
+        {showVerificationModal && (
+          <div
+            className="b2b-contract-modal-overlay"
+            onClick={() => setShowVerificationModal(false)}
+          >
+            <div
+              className="b2b-contract-modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2>
+                {verificationAction === "APPROVE"
+                  ? "Approve Signed Document"
+                  : "Reject Signed Document"}
+              </h2>
+
+              {verificationAction === "APPROVE" && (
+                <>
+                  <p style={{ marginBottom: "16px" }}>
+                    By approving, you confirm that the corporate client has
+                    properly signed the contract document. The contract will
+                    then proceed to your digital signature.
+                  </p>
+                  <div className="b2b-contract-form-group">
+                    <label>Verification Notes (Optional)</label>
+                    <textarea
+                      value={verificationNotes}
+                      onChange={(e) => setVerificationNotes(e.target.value)}
+                      placeholder="Add any notes about the verification..."
+                      rows={3}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "2px solid #e5e7eb",
+                        resize: "vertical",
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {verificationAction === "REJECT" && (
+                <>
+                  <p style={{ marginBottom: "16px", color: "#ef4444" }}>
+                    Rejecting will notify the corporate client to re-upload a
+                    properly signed document. Please provide a reason for
+                    rejection.
+                  </p>
+                  <div className="b2b-contract-form-group">
+                    <label>Rejection Reason *</label>
+                    <textarea
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="e.g., Signature is not visible, Wrong pages signed, Missing company stamp..."
+                      rows={4}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "2px solid #ef4444",
+                        resize: "vertical",
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="b2b-contract-modal-actions">
+                <button
+                  className="b2b-contract-btn-secondary"
+                  onClick={() => {
+                    setShowVerificationModal(false);
+                    setVerificationAction("");
+                    setVerificationNotes("");
+                    setRejectionReason("");
+                  }}
+                  disabled={processingVerification}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="b2b-contract-btn-primary"
+                  onClick={handleVerifySignedDocument}
+                  disabled={
+                    processingVerification ||
+                    (verificationAction === "REJECT" && !rejectionReason.trim())
+                  }
+                  style={{
+                    backgroundColor:
+                      verificationAction === "APPROVE" ? "#10b981" : "#ef4444",
+                  }}
+                >
+                  {processingVerification
+                    ? "Processing..."
+                    : verificationAction === "APPROVE"
+                      ? "Confirm Approval"
+                      : "Confirm Rejection"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Due Date Extension Response Modal */}
         {showExtensionResponseModal && (
           <div
@@ -1242,6 +1647,6 @@ const B2B_PartnerContractDetails = () => {
       <Footer />
     </>
   );
-};
+};;;;
 
 export default B2B_PartnerContractDetails;

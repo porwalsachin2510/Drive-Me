@@ -33,7 +33,11 @@ import {
     getCommMessages,
     getCommConfig,
     sendWhatsAppMessage,
+    sendBulkWhatsApp,
     sendEmail,
+    sendBulkEmail,
+    sendSMS,
+    sendBulkSMS,
     updateCommConfig,
     getAdCampaigns,
     getAdStats,
@@ -93,7 +97,17 @@ import {
     markWalletNotificationResponded,
     getWalletUpdatesSubscription,
     adjustWalletBalance,
-    getPendingWalletNotifications
+    getPendingWalletNotifications,
+    // Admin Management APIs
+    getAllAdmins,
+    getAdminStats,
+    createAdmin,
+    updateAdminPermissions,
+    getAdminDetails,
+    suspendAdmin,
+    activateAdmin,
+    deleteAdmin,
+    getMyPermissions
 } from "../controllers/adminController.js";
 import { verifyToken, checkAdminRole } from "../middleware/auth.js"
 
@@ -162,7 +176,11 @@ router.get("/comm/templates", verifyToken, checkAdminRole, getCommTemplates)
 router.get("/comm/messages", verifyToken, checkAdminRole, getCommMessages)
 router.get("/comm/config", verifyToken, checkAdminRole, getCommConfig)
 router.post("/comm/whatsapp/send", verifyToken, checkAdminRole, sendWhatsAppMessage)
+router.post("/comm/whatsapp/send-bulk", verifyToken, checkAdminRole, sendBulkWhatsApp)
 router.post("/comm/email/send", verifyToken, checkAdminRole, sendEmail)
+router.post("/comm/email/send-bulk", verifyToken, checkAdminRole, sendBulkEmail)
+router.post("/comm/sms/send", verifyToken, checkAdminRole, sendSMS)
+router.post("/comm/sms/send-bulk", verifyToken, checkAdminRole, sendBulkSMS)
 router.put("/comm/config/:type", verifyToken, checkAdminRole, updateCommConfig)
 
 // Public Advertisement Routes (no auth required)
@@ -224,5 +242,16 @@ router.post("/wallets/send-notification", verifyToken, checkAdminRole, sendWalle
 router.post("/wallets/send-bulk-notifications", verifyToken, checkAdminRole, sendBulkWalletNotifications)
 router.put("/wallets/:walletId/adjust", verifyToken, checkAdminRole, adjustWalletBalance)
 router.put("/wallets/notifications/:notificationId/responded", verifyToken, markWalletNotificationResponded)
+
+// Admin Management Routes
+router.get("/admins", verifyToken, checkAdminRole, getAllAdmins)
+router.get("/admins/stats", verifyToken, checkAdminRole, getAdminStats)
+router.get("/admins/my-permissions", verifyToken, checkAdminRole, getMyPermissions)
+router.get("/admins/:adminId", verifyToken, checkAdminRole, getAdminDetails)
+router.post("/admins", verifyToken, checkAdminRole, createAdmin)
+router.put("/admins/:adminId/permissions", verifyToken, checkAdminRole, updateAdminPermissions)
+router.put("/admins/:adminId/suspend", verifyToken, checkAdminRole, suspendAdmin)
+router.put("/admins/:adminId/activate", verifyToken, checkAdminRole, activateAdmin)
+router.delete("/admins/:adminId", verifyToken, checkAdminRole, deleteAdmin)
 
 export default router

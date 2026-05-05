@@ -671,6 +671,277 @@ export const SocketProvider = ({ children }) => {
         }
       });
 
+      // ============ NEGOTIATION EVENTS ============
+
+      // For Admin: New negotiation request from Corporate
+      instance.on("negotiation_request", (data) => {
+        console.log("New negotiation request:", data);
+        const notification = {
+          _id: data._id || `negotiation_request_${Date.now()}`,
+          userId: user._id,
+          type: "NEGOTIATION_REQUEST",
+          title: data.title || "New Negotiation Request",
+          message:
+            data.message || "A corporate user has requested price negotiation",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "New Negotiation Request", {
+            body:
+              data.message ||
+              "A corporate user has requested price negotiation",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // For B2B Partner: Admin sent an offer
+      instance.on("negotiation_offer", (data) => {
+        console.log("Negotiation offer received:", data);
+        const notification = {
+          _id: data._id || `negotiation_offer_${Date.now()}`,
+          userId: user._id,
+          type: "NEGOTIATION_OFFER",
+          title: data.title || "New Price Offer Received",
+          message: data.message || "Admin has sent you a price offer",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "New Price Offer Received", {
+            body: data.message || "Admin has sent you a price offer",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // For B2B Partner: Negotiation started
+      instance.on("negotiation_started", (data) => {
+        console.log("Negotiation started:", data);
+        const notification = {
+          _id: data._id || `negotiation_started_${Date.now()}`,
+          userId: user._id,
+          type: "NEGOTIATION_STARTED",
+          title: data.title || "Negotiation Started",
+          message:
+            data.message ||
+            "Admin has started negotiation on behalf of corporate",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Negotiation Started", {
+            body: data.message || "Admin has started negotiation",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // For B2B Partner: Message from Admin
+      instance.on("negotiation_message", (data) => {
+        console.log("Negotiation message:", data);
+        const notification = {
+          _id: data._id || `negotiation_message_${Date.now()}`,
+          userId: user._id,
+          type: "NEGOTIATION_MESSAGE",
+          title: data.title || "New Message from Admin",
+          message: data.message || "Admin has sent you a message",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "New Message from Admin", {
+            body: data.message || "Admin has sent you a message",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // For Admin: B2B Partner accepted offer
+      instance.on("negotiation_accepted", (data) => {
+        console.log("Negotiation accepted:", data);
+        const notification = {
+          _id: data._id || `negotiation_accepted_${Date.now()}`,
+          userId: user._id,
+          type: "NEGOTIATION_ACCEPTED",
+          title: data.title || "Offer Accepted",
+          message:
+            data.message || "B2B Partner has accepted the negotiation offer",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Offer Accepted", {
+            body: data.message || "B2B Partner has accepted the offer",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // For Admin: B2B Partner rejected offer
+      instance.on("negotiation_rejected", (data) => {
+        console.log("Negotiation rejected:", data);
+        const notification = {
+          _id: data._id || `negotiation_rejected_${Date.now()}`,
+          userId: user._id,
+          type: "NEGOTIATION_REJECTED",
+          title: data.title || "Offer Rejected",
+          message:
+            data.message || "B2B Partner has rejected the negotiation offer",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Offer Rejected", {
+            body: data.message || "B2B Partner has rejected the offer",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // For Admin: B2B Partner sent counter offer
+      instance.on("negotiation_counter_offer", (data) => {
+        console.log("Counter offer received:", data);
+        const notification = {
+          _id: data._id || `negotiation_counter_${Date.now()}`,
+          userId: user._id,
+          type: "NEGOTIATION_COUNTER_OFFER",
+          title: data.title || "Counter Offer Received",
+          message: data.message || "B2B Partner has sent a counter offer",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Counter Offer Received", {
+            body: data.message || "B2B Partner has sent a counter offer",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // For Corporate & B2B Partner: Negotiation completed
+      instance.on("negotiation_completed", (data) => {
+        console.log("Negotiation completed:", data);
+        const notification = {
+          _id: data._id || `negotiation_completed_${Date.now()}`,
+          userId: user._id,
+          type: "NEGOTIATION_COMPLETED",
+          title: data.title || "Negotiation Completed",
+          message:
+            data.message ||
+            "The negotiation has been completed and quotation updated",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Negotiation Completed", {
+            body: data.message || "The negotiation has been completed",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // ============ CONTRACT DOCUMENT EVENTS ============
+
+      // For B2B Partner: Corporate uploaded signed contract
+      instance.on("signed_document_uploaded", (data) => {
+        console.log("Signed document uploaded:", data);
+        const notification = {
+          _id: data._id || `signed_doc_uploaded_${Date.now()}`,
+          userId: user._id,
+          type: "SIGNED_DOCUMENT_UPLOADED",
+          title: data.title || "Signed Contract Uploaded",
+          message:
+            data.message ||
+            "Corporate has uploaded the signed contract. Please verify.",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Signed Contract Uploaded", {
+            body: data.message || "Corporate has uploaded the signed contract",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // For Corporate: B2B Partner verified/approved signed document
+      instance.on("signed_document_verified", (data) => {
+        console.log("Signed document verified:", data);
+        const notification = {
+          _id: data._id || `signed_doc_verified_${Date.now()}`,
+          userId: user._id,
+          type: "SIGNED_DOCUMENT_VERIFIED",
+          title: data.title || "Signed Document Approved",
+          message:
+            data.message || "B2B Partner has approved your signed contract",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Signed Document Approved", {
+            body: data.message || "Your signed contract has been approved",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // For Corporate: B2B Partner rejected signed document
+      instance.on("signed_document_rejected", (data) => {
+        console.log("Signed document rejected:", data);
+        const notification = {
+          _id: data._id || `signed_doc_rejected_${Date.now()}`,
+          userId: user._id,
+          type: "SIGNED_DOCUMENT_REJECTED",
+          title: data.title || "Signed Document Rejected",
+          message:
+            data.message ||
+            "B2B Partner has rejected your signed contract. Please re-upload.",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          metadata: data.metadata || data.data,
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Signed Document Rejected", {
+            body: data.message || "Your signed contract was rejected",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
       // Set socket state asynchronously to avoid cascading renders
       setTimeout(() => {
         setSocket(instance);

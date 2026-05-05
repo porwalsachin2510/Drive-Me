@@ -167,10 +167,17 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
         driverImage: String,
         driverPhoneNumber: String,
         driverRating: Number,
-        // Admin Commission (20% from payment)
+        // Admin Commission (dynamic rate from CommissionSettings)
         adminCommissionAmount: {
             type: Number,
             default: 0,
+        },
+        // Applied commission rate (percentage)
+        appliedCommissionRate: {
+            type: Number,
+            default: 20,
+            min: 0,
+            max: 100,
         },
         driverEarnings: {
             type: Number,

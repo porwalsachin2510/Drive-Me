@@ -7,6 +7,7 @@ function B2B_Navigation({ b2bactiveTab, setB2BActiveTab }) {
     { id: "fleet", label: "Fleet & Drivers", icon: "🚗" },
     { id: "contracts", label: "Contracts", icon: "📄" },
     { id: "My Quotation", label: "My Quotation", icon: "📄" },
+    { id: "negotiations", label: "Negotiations", icon: "negotiation" },
     { id: "requirements", label: "Requirements", icon: "📋" },
     { id: "analytics", label: "Analytics", icon: "📈" },
     { id: "invoices", label: "Invoices", icon: "💰" },

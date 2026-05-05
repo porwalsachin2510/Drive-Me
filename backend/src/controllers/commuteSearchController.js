@@ -1038,3 +1038,324 @@ export const getB2CPartnerSubscriptionRenewals = async (req, res) => {
         })
     }
 }
+
+/* ======================================================
+   GET PUBLIC ROUTE DETAILS
+   - For mobile app and unauthenticated users
+   - Returns B2C Partner route details by ID
+====================================================== */
+export const getPublicRouteDetails = async (req, res) => {
+    try {
+        const { routeId } = req.params
+
+        if (!routeId) {
+            return res.status(400).json({
+                success: false,
+                message: "Route ID is required",
+            })
+        }
+
+        // Find the route
+        const route = await B2CPartnerRoute.findById(routeId)
+            .populate('b2cPartnerId', 'fullName companyName email phone profileImage companyLogo')
+            .populate('assignedVehicle')
+            .populate('assignedDriver')
+
+        if (!route) {
+            return res.status(404).json({
+                success: false,
+                message: "Route not found",
+            })
+        }
+
+        // Get schedule for this route
+        const schedule = await B2CPartnerSchedule.findOne({
+            routeId: route._id,
+            isActive: true,
+            status: "Active"
+        })
+
+        // Get upcoming trips
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const upcomingTrips = await B2CPartnerTrip.find({
+            routeId: route._id,
+            tripDate: { $gte: today },
+            status: "Scheduled"
+        }).sort({ tripDate: 1, startTime: 1 }).limit(10)
+
+        const formattedTrips = upcomingTrips.map(trip => ({
+            tripId: trip._id,
+            tripDate: trip.tripDate,
+            startTime: trip.startTime,
+            endTime: trip.endTime,
+            tripType: trip.tripType,
+            fromLocation: trip.fromLocation,
+            toLocation: trip.toLocation,
+            stopPoints: trip.stopPoints || [],
+            totalSeats: trip.totalSeats,
+            availableSeats: trip.availableSeats,
+            pricing: trip.pricing,
+        }))
+
+        // Build response data
+        const routeData = {
+            _id: route._id,
+            routeId: route._id,
+            name: route.routeName || `${route.fromLocation} to ${route.toLocation}`,
+            routeName: route.routeName,
+            fromLocation: route.fromLocation,
+            toLocation: route.toLocation,
+            pickup: { name: route.fromLocation },
+            dropoff: { name: route.toLocation },
+            stopPoints: route.stopPoints || [],
+            stops: route.stopPoints || [],
+
+            // Partner info
+            partner: {
+                _id: route.b2cPartnerId?._id,
+                companyName: route.b2cPartnerId?.companyName || route.b2cPartnerId?.fullName,
+                firstName: route.b2cPartnerId?.fullName,
+                profileImage: route.b2cPartnerId?.profileImage,
+                companyLogo: route.b2cPartnerId?.companyLogo,
+            },
+            operator: route.b2cPartnerId?.fullName || route.b2cPartnerId?.companyName || "Unknown",
+            operatorId: route.b2cPartnerId?._id,
+
+            // Timing
+            departureTime: route.startTime || schedule?.tripTimes?.[0]?.departureTime || "",
+            arrivalTime: route.endTime || schedule?.tripTimes?.[0]?.arrivalTime || "",
+            startTime: route.startTime,
+            endTime: route.endTime,
+
+            // Schedule
+            schedule: schedule?.tripTimes?.map(tt => ({
+                day: tt.day || "Daily",
+                days: tt.days || schedule?.availableDays || [],
+                time: tt.departureTime || tt.startTime,
+                departureTime: tt.departureTime || tt.startTime,
+            })) || [],
+            availableDays: schedule?.availableDays || route.availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+            tripTimes: schedule?.tripTimes || [],
+            upcomingTrips: formattedTrips,
+
+            // Pricing
+            pricing: route.pricing || {},
+            fare: route.pricing?.oneWayPrice || 0,
+            price: route.pricing?.oneWayPrice || 0,
+            oneWayPrice: route.pricing?.oneWayPrice || 0,
+            roundTripPrice: route.pricing?.roundTripPrice || 0,
+            monthlyPassPrice: route.pricing?.monthlyOneWayPrice || route.pricing?.monthlyRoundTripPrice || 0,
+            currency: route.pricing?.currency || "KWD",
+
+            // Seats
+            totalSeats: route.totalSeats || 0,
+            availableSeats: route.availableSeats || 0,
+            capacity: route.totalSeats || 0,
+            seatsAvailable: route.availableSeats || 0,
+
+            // Vehicle info
+            vehicleType: route.assignedVehicle?.vehicleType || route.vehicleType || "Bus",
+            vehicleInfo: route.assignedVehicle ? {
+                model: route.assignedVehicle.model,
+                licensePlate: route.assignedVehicle.licensePlate,
+                vehicleType: route.assignedVehicle.vehicleType,
+                seatingCapacity: route.assignedVehicle.seatingCapacity,
+                images: route.assignedVehicle.images?.map(img => img?.url || img) || [],
+            } : null,
+
+            // Driver info
+            driverInfo: route.assignedDriver ? {
+                name: route.assignedDriver.name,
+                phone: route.assignedDriver.phoneNumber,
+                profileImage: route.assignedDriver.driverImage?.url,
+            } : null,
+
+            // Additional info
+            tripType: route.tripType || "One Way",
+            amenities: route.amenities || [],
+            images: route.images?.map(img => typeof img === 'string' ? img : img?.url) || [],
+            rating: route.rating || null,
+            totalRatings: route.totalRatings || 0,
+            status: route.status,
+            type: "b2c",
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: routeData,
+            route: routeData,
+        })
+    } catch (error) {
+        console.error("getPublicRouteDetails error:", error)
+        return res.status(500).json({
+            success: false,
+            message: "Server error while fetching route details",
+        })
+    }
+}
+
+/* ======================================================
+   GET ROUTE DETAILS (Authenticated)
+   - For authenticated users - includes membership info
+====================================================== */
+export const getRouteDetails = async (req, res) => {
+    try {
+        const { routeId } = req.params
+        const userId = req.userId
+
+        if (!routeId) {
+            return res.status(400).json({
+                success: false,
+                message: "Route ID is required",
+            })
+        }
+
+        // Find the route
+        const route = await B2CPartnerRoute.findById(routeId)
+            .populate('b2cPartnerId', 'fullName companyName email phone profileImage companyLogo')
+            .populate('assignedVehicle')
+            .populate('assignedDriver')
+
+        if (!route) {
+            return res.status(404).json({
+                success: false,
+                message: "Route not found",
+            })
+        }
+
+        // Get schedule for this route
+        const schedule = await B2CPartnerSchedule.findOne({
+            routeId: route._id,
+            isActive: true,
+            status: "Active"
+        })
+
+        // Get upcoming trips
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const upcomingTrips = await B2CPartnerTrip.find({
+            routeId: route._id,
+            tripDate: { $gte: today },
+            status: "Scheduled"
+        }).sort({ tripDate: 1, startTime: 1 }).limit(10)
+
+        const formattedTrips = upcomingTrips.map(trip => ({
+            tripId: trip._id,
+            tripDate: trip.tripDate,
+            startTime: trip.startTime,
+            endTime: trip.endTime,
+            tripType: trip.tripType,
+            fromLocation: trip.fromLocation,
+            toLocation: trip.toLocation,
+            stopPoints: trip.stopPoints || [],
+            totalSeats: trip.totalSeats,
+            availableSeats: trip.availableSeats,
+            pricing: trip.pricing,
+        }))
+
+        // Check if user is a member
+        const isMember = (route.members || []).some(
+            m => m.userId && m.userId.toString() === userId.toString() && m.status === 'ACTIVE'
+        )
+
+        // Build response data
+        const routeData = {
+            _id: route._id,
+            routeId: route._id,
+            name: route.routeName || `${route.fromLocation} to ${route.toLocation}`,
+            routeName: route.routeName,
+            fromLocation: route.fromLocation,
+            toLocation: route.toLocation,
+            pickup: { name: route.fromLocation },
+            dropoff: { name: route.toLocation },
+            stopPoints: route.stopPoints || [],
+            stops: route.stopPoints || [],
+
+            // Partner info
+            partner: {
+                _id: route.b2cPartnerId?._id,
+                companyName: route.b2cPartnerId?.companyName || route.b2cPartnerId?.fullName,
+                firstName: route.b2cPartnerId?.fullName,
+                profileImage: route.b2cPartnerId?.profileImage,
+                companyLogo: route.b2cPartnerId?.companyLogo,
+            },
+            operator: route.b2cPartnerId?.fullName || route.b2cPartnerId?.companyName || "Unknown",
+            operatorId: route.b2cPartnerId?._id,
+
+            // Timing
+            departureTime: route.startTime || schedule?.tripTimes?.[0]?.departureTime || "",
+            arrivalTime: route.endTime || schedule?.tripTimes?.[0]?.arrivalTime || "",
+            startTime: route.startTime,
+            endTime: route.endTime,
+
+            // Schedule
+            schedule: schedule?.tripTimes?.map(tt => ({
+                day: tt.day || "Daily",
+                days: tt.days || schedule?.availableDays || [],
+                time: tt.departureTime || tt.startTime,
+                departureTime: tt.departureTime || tt.startTime,
+            })) || [],
+            availableDays: schedule?.availableDays || route.availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+            tripTimes: schedule?.tripTimes || [],
+            upcomingTrips: formattedTrips,
+
+            // Pricing
+            pricing: route.pricing || {},
+            fare: route.pricing?.oneWayPrice || 0,
+            price: route.pricing?.oneWayPrice || 0,
+            oneWayPrice: route.pricing?.oneWayPrice || 0,
+            roundTripPrice: route.pricing?.roundTripPrice || 0,
+            monthlyPassPrice: route.pricing?.monthlyOneWayPrice || route.pricing?.monthlyRoundTripPrice || 0,
+            currency: route.pricing?.currency || "KWD",
+
+            // Seats
+            totalSeats: route.totalSeats || 0,
+            availableSeats: route.availableSeats || 0,
+            capacity: route.totalSeats || 0,
+            seatsAvailable: route.availableSeats || 0,
+
+            // Vehicle info
+            vehicleType: route.assignedVehicle?.vehicleType || route.vehicleType || "Bus",
+            vehicleInfo: route.assignedVehicle ? {
+                model: route.assignedVehicle.model,
+                licensePlate: route.assignedVehicle.licensePlate,
+                vehicleType: route.assignedVehicle.vehicleType,
+                seatingCapacity: route.assignedVehicle.seatingCapacity,
+                images: route.assignedVehicle.images?.map(img => img?.url || img) || [],
+            } : null,
+
+            // Driver info
+            driverInfo: route.assignedDriver ? {
+                name: route.assignedDriver.name,
+                phone: route.assignedDriver.phoneNumber,
+                profileImage: route.assignedDriver.driverImage?.url,
+            } : null,
+
+            // Membership info
+            isMember,
+            isSaved: isMember,
+
+            // Additional info
+            tripType: route.tripType || "One Way",
+            amenities: route.amenities || [],
+            images: route.images?.map(img => typeof img === 'string' ? img : img?.url) || [],
+            rating: route.rating || null,
+            totalRatings: route.totalRatings || 0,
+            status: route.status,
+            type: "b2c",
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: routeData,
+            route: routeData,
+        })
+    } catch (error) {
+        console.error("getRouteDetails error:", error)
+        return res.status(500).json({
+            success: false,
+            message: "Server error while fetching route details",
+        })
+    }
+}

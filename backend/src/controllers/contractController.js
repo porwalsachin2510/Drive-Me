@@ -1,5 +1,6 @@
 import Contract from "../models/Contract.js"
 import Quotation from "../models/Quotation.js"
+import AdminNegotiation from "../models/AdminNegotiation.js"
 import Route from "../models/Route.js"
 import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
@@ -25,7 +26,7 @@ export const createContractFromQuotation = async (req, res) => {
     try {
 
         console.log("createContractFromQuotation", req.body);
-        
+
         const corporateOwnerId = req.userId
 
         const { quotationId, notes, urgencyLevel, preferredDeliveryDate } = req.body
@@ -69,6 +70,50 @@ export const createContractFromQuotation = async (req, res) => {
         const securityDepositAmount = totalAmount * 0.1 // 10%
         const finalPaymentAmount = totalAmount - advanceAmount
 
+        // Check if there's a completed negotiation for this quotation
+        let negotiationCommission = null
+        console.log("[v0] Checking quotation.adminNegotiation:", JSON.stringify(quotation.adminNegotiation))
+
+        // Check if quotation has negotiation data - either from negotiationId or from saved adminCommission
+        const hasNegotiationId = quotation.adminNegotiation?.negotiationId
+        const hasCompletedNegotiation = quotation.adminNegotiation?.status === "COMPLETED"
+        const hasAdminCommission = quotation.adminNegotiation?.adminCommission > 0
+
+        console.log("[v0] hasNegotiationId:", hasNegotiationId, "hasCompletedNegotiation:", hasCompletedNegotiation, "hasAdminCommission:", hasAdminCommission)
+
+        if (hasNegotiationId || (hasCompletedNegotiation && hasAdminCommission)) {
+            // Try to fetch negotiation details if we have an ID
+            let negotiation = null
+            if (hasNegotiationId) {
+                negotiation = await AdminNegotiation.findById(quotation.adminNegotiation.negotiationId)
+                console.log("[v0] Found negotiation:", negotiation ? negotiation._id : "NOT FOUND")
+            }
+
+            // Create negotiationCommission from negotiation OR from quotation.adminNegotiation data
+            if (negotiation && negotiation.status === "COMPLETED") {
+                negotiationCommission = {
+                    negotiationId: negotiation._id,
+                    adminCommission: negotiation.adminCommissionFromCorporate?.amount || 0,
+                    adminCommissionRate: negotiation.adminCommissionFromCorporate?.rate || 25,
+                    commissionStatus: "PENDING",
+                    priceSavings: negotiation.priceSaved || 0,
+                    originalPrice: negotiation.originalPrice || 0,
+                }
+                console.log("[v0] Created negotiationCommission from negotiation:", JSON.stringify(negotiationCommission))
+            } else if (hasCompletedNegotiation && hasAdminCommission) {
+                // Fallback: use data from quotation.adminNegotiation
+                negotiationCommission = {
+                    negotiationId: quotation.adminNegotiation.negotiationId || null,
+                    adminCommission: quotation.adminNegotiation.adminCommission || 0,
+                    adminCommissionRate: quotation.adminNegotiation.adminCommissionRate || 25,
+                    commissionStatus: "PENDING",
+                    priceSavings: quotation.adminNegotiation.savingsAmount || 0,
+                    originalPrice: quotation.adminNegotiation.originalPrice || 0,
+                }
+                console.log("[v0] Created negotiationCommission from quotation data:", JSON.stringify(negotiationCommission))
+            }
+        }
+
         // Create new contract
         const contract = new Contract({
             quotationId: quotation._id,
@@ -86,15 +131,20 @@ export const createContractFromQuotation = async (req, res) => {
                 currency: contractCurrency,
                 advancePayment: {
                     amount: advanceAmount,
+                    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Due in 7 days from contract creation
                 },
                 finalPayment: {
                     amount: finalPaymentAmount,
+                    dueDate: new Date(quotation.rentalPeriod?.endDate || Date.now() + 30 * 24 * 60 * 60 * 1000), // Due at end of rental period
                 },
                 remainingAmount: totalAmount - advanceAmount,
                 securityDeposit: {
                     amount: securityDepositAmount,
+                    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Due in 7 days from contract creation
+                    status: "PENDING",
                 },
             },
+            ...(negotiationCommission && { negotiationCommission }),
             notes: notesArray, // Array of note objects
             // If you need urgencyLevel and preferredDeliveryDate, add them to your schema
             status: "DRAFT",
@@ -2201,3 +2251,478 @@ export const getDueDateExtensionRequests = async (req, res) => {
     }
 }
 
+// @desc    Sync negotiation commission to existing contract from quotation
+// @route   POST /api/contracts/:contractId/sync-negotiation-commission
+// @access  Private (CORPORATE or B2B_PARTNER)
+export const syncNegotiationCommission = async (req, res) => {
+    try {
+        const { contractId } = req.params
+        const userId = req.userId
+
+        const contract = await Contract.findById(contractId).populate("quotationId")
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found",
+            })
+        }
+
+        // Check if user has access to this contract
+        if (contract.corporateOwnerId.toString() !== userId &&
+            contract.fleetOwnerId.toString() !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: "You don't have access to this contract",
+            })
+        }
+
+        // Check if contract already has negotiationCommission
+        if (contract.negotiationCommission && contract.negotiationCommission.adminCommission > 0) {
+            return res.status(200).json({
+                success: true,
+                message: "Contract already has negotiation commission",
+                data: { contract },
+            })
+        }
+
+        const quotation = contract.quotationId
+
+        if (!quotation) {
+            return res.status(400).json({
+                success: false,
+                message: "Quotation not found for this contract",
+            })
+        }
+
+        // Check if quotation has completed negotiation - check multiple conditions
+        const hasNegotiationId = quotation.adminNegotiation?.negotiationId
+        const hasCompletedStatus = quotation.adminNegotiation?.status === "COMPLETED"
+        const hasAdminCommission = quotation.adminNegotiation?.adminCommission > 0
+
+        console.log("[v0] syncNegotiationCommission - hasNegotiationId:", hasNegotiationId,
+            "hasCompletedStatus:", hasCompletedStatus,
+            "hasAdminCommission:", hasAdminCommission)
+
+        if (!hasNegotiationId && !(hasCompletedStatus && hasAdminCommission)) {
+            return res.status(400).json({
+                success: false,
+                message: "No completed negotiation found for this quotation",
+            })
+        }
+
+        // Find the negotiation if ID exists
+        let negotiation = null
+        if (hasNegotiationId) {
+            negotiation = await AdminNegotiation.findById(quotation.adminNegotiation.negotiationId)
+            console.log("[v0] syncNegotiationCommission - Found negotiation:", negotiation ? negotiation._id : "NOT FOUND")
+        }
+
+        // If negotiation not found or not completed, use quotation data as fallback
+        if (!negotiation || negotiation.status !== "COMPLETED") {
+            if (!(hasCompletedStatus && hasAdminCommission)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Negotiation not found or not completed",
+                })
+            }
+            console.log("[v0] syncNegotiationCommission - Using quotation.adminNegotiation data as fallback")
+        }
+
+        // Create negotiationCommission object - prefer negotiation data, fallback to quotation
+        const negotiationCommission = {
+            negotiationId: negotiation?._id || quotation.adminNegotiation?.negotiationId || null,
+            adminCommission: negotiation?.adminCommissionFromCorporate?.amount || quotation.adminNegotiation?.adminCommission || 0,
+            adminCommissionRate: negotiation?.adminCommissionFromCorporate?.rate || quotation.adminNegotiation?.adminCommissionRate || 25,
+            commissionStatus: negotiation?.adminCommissionFromCorporate?.status || "PENDING",
+            priceSavings: negotiation?.priceSaved || quotation.adminNegotiation?.savingsAmount || 0,
+            originalPrice: negotiation?.originalPrice || quotation.adminNegotiation?.originalPrice || 0,
+        }
+
+        console.log("[v0] syncNegotiationCommission - Created:", JSON.stringify(negotiationCommission))
+
+        // Update the contract
+        contract.negotiationCommission = negotiationCommission
+        await contract.save()
+
+        // Re-populate the contract
+        await contract.populate([
+            { path: "corporateOwnerId", select: "fullName email companyName" },
+            { path: "fleetOwnerId", select: "fullName email companyName" },
+            { path: "quotationId" },
+        ])
+
+        console.log("[v0] Synced negotiation commission to contract:", contract.contractNumber, negotiationCommission)
+
+        res.status(200).json({
+            success: true,
+            message: "Negotiation commission synced successfully",
+            data: { contract, negotiationCommission },
+        })
+    } catch (error) {
+        console.error("[v0] Error syncing negotiation commission:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to sync negotiation commission",
+            error: error.message,
+        })
+    }
+}
+
+// @desc    Corporate uploads signed contract document
+// @route   POST /api/contracts/:contractId/upload-signed-document
+// @access  Private (CORPORATE only)
+export const uploadSignedContractDocument = async (req, res) => {
+    try {
+        const { contractId } = req.params
+        const corporateOwnerId = req.userId
+
+        console.log("[v0] Upload signed contract document request received")
+        console.log("[v0] Contract ID:", contractId)
+        console.log("[v0] Corporate Owner ID:", corporateOwnerId)
+        console.log("[v0] File received:", req.file ? req.file.originalname : "No file")
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: "No document file provided. Please upload a PDF file.",
+            })
+        }
+
+        if (req.file.mimetype !== "application/pdf") {
+            return res.status(400).json({
+                success: false,
+                message: "Only PDF files are allowed for signed contract documents.",
+            })
+        }
+
+        const contract = await Contract.findOne({
+            _id: contractId,
+            corporateOwnerId,
+        })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found or you don't have access to this contract",
+            })
+        }
+
+        // Check if contract is in correct status
+        if (!["PENDING_CORPORATE_SIGNATURE", "PENDING_SIGNED_DOCUMENT_UPLOAD"].includes(contract.status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot upload signed document in current status: ${contract.status}. Contract must be pending corporate signature.`,
+            })
+        }
+
+        // Check if original contract document exists
+        if (!contract.contractDocument?.url) {
+            return res.status(400).json({
+                success: false,
+                message: "Original contract document not found. B2B Partner must upload contract first.",
+            })
+        }
+
+        console.log("[v0] Uploading signed PDF to Cloudinary...")
+        const uploadResult = await uploadToCloudinary(req.file, "driveme/contracts/signed")
+
+        console.log("[v0] Cloudinary upload successful:", uploadResult.secure_url)
+
+        contract.signedContractDocument = {
+            url: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+            uploadedAt: new Date(),
+            uploadedBy: corporateOwnerId,
+            fileName: req.file.originalname,
+            fileSize: req.file.size,
+        }
+
+        // Update digital signature status
+        contract.digitalSignatures.corporateOwner = {
+            signed: true,
+            signedAt: new Date(),
+            signature: "Document Signed Externally",
+            ipAddress: req.ip || "Unknown",
+        }
+
+        contract.status = "PENDING_B2B_VERIFICATION"
+        contract.statusHistory.push({
+            status: "PENDING_B2B_VERIFICATION",
+            changedBy: corporateOwnerId,
+            reason: "Corporate uploaded signed contract document for B2B verification",
+        })
+
+        await contract.save()
+
+        await contract.populate([
+            {
+                path: "corporateOwnerId",
+                select: "fullName email companyName",
+            },
+            {
+                path: "fleetOwnerId",
+                select: "fullName email companyName",
+            },
+        ])
+
+        // Get names for notifications
+        const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
+        const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
+
+        // Notify B2B_PARTNER about signed document upload
+        await createNotification({
+            userId: contract.fleetOwnerId._id,
+            type: "SIGNED_DOCUMENT_UPLOADED",
+            title: "Signed Contract Uploaded",
+            message: `${corporateName} has uploaded the signed contract document. Please review and verify.`,
+            data: { contractId: contract._id, signedDocumentUrl: uploadResult.secure_url }
+        });
+
+        // Notify ADMIN
+        await sendAdminNotification(
+            "Signed Contract Document Uploaded",
+            `${corporateName} (CORPORATE) uploaded signed contract document for ${fleetName} (B2B_PARTNER). Pending verification.`,
+            "SIGNED_DOCUMENT_UPLOADED",
+            { contractId: contract._id, corporateId: corporateOwnerId, fleetOwnerId: contract.fleetOwnerId._id }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "Signed contract document uploaded successfully. Waiting for B2B Partner verification.",
+            data: { contract },
+        })
+    } catch (error) {
+        console.error("[v0] Error uploading signed contract document:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to upload signed contract document",
+            error: error.message,
+        })
+    }
+}
+
+// @desc    B2B Partner verifies signed contract document
+// @route   POST /api/contracts/:contractId/verify-signed-document
+// @access  Private (B2B_PARTNER only)
+export const verifySignedContractDocument = async (req, res) => {
+    try {
+        const { contractId } = req.params
+        const fleetOwnerId = req.userId
+        const { action, verificationNotes, rejectionReason } = req.body
+
+        if (!action || !["APPROVE", "REJECT"].includes(action)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid action. Must be 'APPROVE' or 'REJECT'.",
+            })
+        }
+
+        if (action === "REJECT" && !rejectionReason) {
+            return res.status(400).json({
+                success: false,
+                message: "Rejection reason is required when rejecting signed document.",
+            })
+        }
+
+        const contract = await Contract.findOne({
+            _id: contractId,
+            fleetOwnerId,
+        })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found or you don't have access to this contract",
+            })
+        }
+
+        // Check if contract is in correct status
+        if (contract.status !== "PENDING_B2B_VERIFICATION") {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot verify signed document in current status: ${contract.status}. Contract must be pending B2B verification.`,
+            })
+        }
+
+        // Check if signed document exists
+        if (!contract.signedContractDocument?.url) {
+            return res.status(400).json({
+                success: false,
+                message: "Signed contract document not found. Corporate must upload signed document first.",
+            })
+        }
+
+        await contract.populate([
+            {
+                path: "corporateOwnerId",
+                select: "fullName email companyName",
+            },
+            {
+                path: "fleetOwnerId",
+                select: "fullName email companyName",
+            },
+        ])
+
+        const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
+        const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
+
+        if (action === "APPROVE") {
+            contract.signedDocumentVerification = {
+                isVerified: true,
+                verifiedAt: new Date(),
+                verifiedBy: fleetOwnerId,
+                verificationNotes: verificationNotes || "Signed document verified successfully",
+            }
+
+            contract.status = "PENDING_FLEET_SIGNATURE"
+            contract.statusHistory.push({
+                status: "PENDING_FLEET_SIGNATURE",
+                changedBy: fleetOwnerId,
+                reason: verificationNotes || "B2B Partner verified signed contract document. Ready for B2B signature.",
+            })
+
+            // Notify CORPORATE that document is verified
+            await createNotification({
+                userId: contract.corporateOwnerId._id,
+                type: "SIGNED_DOCUMENT_VERIFIED",
+                title: "Signed Document Verified",
+                message: `${fleetName} has verified your signed contract document. Waiting for their signature.`,
+                data: { contractId: contract._id }
+            });
+
+            // Notify ADMIN
+            await sendAdminNotification(
+                "Signed Document Verified",
+                `${fleetName} (B2B_PARTNER) verified signed contract from ${corporateName} (CORPORATE). Ready for B2B signature.`,
+                "SIGNED_DOCUMENT_VERIFIED",
+                { contractId: contract._id, fleetOwnerId, corporateId: contract.corporateOwnerId._id }
+            );
+
+        } else if (action === "REJECT") {
+            contract.signedDocumentVerification = {
+                isVerified: false,
+                verifiedAt: new Date(),
+                verifiedBy: fleetOwnerId,
+                rejectionReason: rejectionReason,
+            }
+
+            contract.status = "PENDING_CORPORATE_SIGNATURE"
+            contract.statusHistory.push({
+                status: "PENDING_CORPORATE_SIGNATURE",
+                changedBy: fleetOwnerId,
+                reason: `Signed document rejected: ${rejectionReason}`,
+            })
+
+            // Clear the signed document so corporate can re-upload
+            contract.signedContractDocument = undefined
+            contract.digitalSignatures.corporateOwner = {
+                signed: false,
+                signedAt: null,
+                signature: null,
+                ipAddress: null,
+            }
+
+            // Notify CORPORATE that document is rejected
+            await createNotification({
+                userId: contract.corporateOwnerId._id,
+                type: "SIGNED_DOCUMENT_REJECTED",
+                title: "Signed Document Rejected",
+                message: `${fleetName} has rejected your signed contract document. Reason: ${rejectionReason}. Please re-upload a correctly signed document.`,
+                data: { contractId: contract._id, rejectionReason }
+            });
+
+            // Notify ADMIN
+            await sendAdminNotification(
+                "Signed Document Rejected",
+                `${fleetName} (B2B_PARTNER) rejected signed contract from ${corporateName} (CORPORATE). Reason: ${rejectionReason}`,
+                "SIGNED_DOCUMENT_REJECTED",
+                { contractId: contract._id, fleetOwnerId, corporateId: contract.corporateOwnerId._id, rejectionReason }
+            );
+        }
+
+        await contract.save()
+
+        res.status(200).json({
+            success: true,
+            message: action === "APPROVE"
+                ? "Signed document verified successfully. Please sign the contract to finalize."
+                : "Signed document rejected. Corporate will be notified to re-upload.",
+            data: { contract },
+        })
+    } catch (error) {
+        console.error("[v0] Error verifying signed contract document:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to verify signed contract document",
+            error: error.message,
+        })
+    }
+}
+
+// @desc    Download contract document
+// @route   GET /api/contracts/:contractId/download-document
+// @access  Private (CORPORATE or B2B_PARTNER)
+export const downloadContractDocument = async (req, res) => {
+    try {
+        const { contractId } = req.params
+        const { type } = req.query // 'original' or 'signed'
+        const userId = req.userId
+
+        const contract = await Contract.findById(contractId)
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found",
+            })
+        }
+
+        // Check if user has access to this contract
+        if (contract.corporateOwnerId.toString() !== userId &&
+            contract.fleetOwnerId.toString() !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: "You don't have access to this contract",
+            })
+        }
+
+        let documentUrl, fileName
+
+        if (type === "signed") {
+            if (!contract.signedContractDocument?.url) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Signed contract document not found",
+                })
+            }
+            documentUrl = contract.signedContractDocument.url
+            fileName = contract.signedContractDocument.fileName || `signed_contract_${contract.contractNumber}.pdf`
+        } else {
+            if (!contract.contractDocument?.url) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Contract document not found",
+                })
+            }
+            documentUrl = contract.contractDocument.url
+            fileName = contract.contractDocument.fileName || `contract_${contract.contractNumber}.pdf`
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                documentUrl,
+                fileName,
+                contractNumber: contract.contractNumber,
+            },
+        })
+    } catch (error) {
+        console.error("[v0] Error downloading contract document:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to get contract document",
+            error: error.message,
+        })
+    }
+}

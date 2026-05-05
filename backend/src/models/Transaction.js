@@ -29,7 +29,7 @@ const transactionSchema = new mongoose.Schema(
         category: {
             type: String,
             required: true,
-            enum: ["PAYMENT_RECEIVED", "COMMISSION_EARNED", "WITHDRAWAL", "REFUND", "ADJUSTMENT", "SECURITY_DEPOSIT"],
+            enum: ["PAYMENT_RECEIVED", "COMMISSION_EARNED", "WITHDRAWAL", "REFUND", "ADJUSTMENT", "SECURITY_DEPOSIT", "NEGOTIATION_COMMISSION"],
         },
         description: {
             type: String,
@@ -41,7 +41,21 @@ const transactionSchema = new mongoose.Schema(
         },
         referenceModel: {
             type: String,
-            enum: ["Payment", "Payout", "Contract"],
+            enum: ["Payment", "Payout", "Contract", "AdminNegotiation"],
+        },
+        fromUserId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
+        fromName: {
+            type: String,
+        },
+        toUserId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
+        toName: {
+            type: String,
         },
         balanceBefore: {
             type: Number,

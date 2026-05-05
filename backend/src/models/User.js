@@ -78,6 +78,18 @@ const userSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+        suspensionEndDate: {
+            type: Date,
+            default: null,
+        },
+        suspensionReason: {
+            type: String,
+            default: null,
+        },
+        suspensionDuration: {
+            type: Number, // Duration in days
+            default: 7, // Default 1 week
+        },
         activatedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
@@ -86,6 +98,10 @@ const userSchema = new mongoose.Schema(
         suspendedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
+            default: null,
+        },
+        reactivationMessage: {
+            type: String,
             default: null,
         },
         password: {
@@ -274,6 +290,64 @@ const userSchema = new mongoose.Schema(
                 type: Boolean,
                 default: true,
             }
+        },
+        // UI Preferences
+        uiPreferences: {
+            menuLayout: {
+                type: String,
+                enum: ["sidebar", "top"],
+                default: "sidebar",
+            },
+            sidebarCollapsed: {
+                type: Boolean,
+                default: false,
+            },
+        },
+        // Admin specific fields - Module access permissions
+        adminPermissions: {
+            isSuperAdmin: {
+                type: Boolean,
+                default: false,
+            },
+            modules: {
+                overview: { type: Boolean, default: false },
+                b2cManagement: { type: Boolean, default: false },
+                ridePooling: { type: Boolean, default: false },
+                b2bListings: { type: Boolean, default: false },
+                users: { type: Boolean, default: false },
+                wallets: { type: Boolean, default: false },
+                vehicleApproval: { type: Boolean, default: false },
+                settlement: { type: Boolean, default: false },
+                dropdowns: { type: Boolean, default: false },
+                reports: { type: Boolean, default: false },
+                finance: { type: Boolean, default: false },
+                communication: { type: Boolean, default: false },
+                ads: { type: Boolean, default: false },
+                paymentVerification: { type: Boolean, default: false },
+                content: { type: Boolean, default: false },
+                adminManagement: { type: Boolean, default: false },
+            },
+        },
+        // Reference to the admin who created this admin
+        createdByAdmin: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+        // Terms and Conditions acceptance
+        termsAndConditions: {
+            accepted: {
+                type: Boolean,
+                default: false,
+            },
+            acceptedAt: Date,
+            version: String,
+            ipAddress: String,
+            // Store what commission range was disclosed at signup
+            disclosedCommissionRange: {
+                min: Number,
+                max: Number,
+            },
         },
         createdAt: {
             type: Date,

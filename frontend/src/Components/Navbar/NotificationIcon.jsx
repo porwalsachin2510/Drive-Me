@@ -185,10 +185,47 @@ function NotificationIcon() {
         break;
       case "CONTRACT_ACTIVATED":
       case "CONTRACT_UPDATE":
+      case "CONTRACT_CREATED":
+      case "CONTRACT_DOCUMENT_UPLOADED":
+      case "CONTRACT_SIGNED":
+      case "CONTRACT_FULLY_SIGNED":
+      case "CONTRACT_REJECTED":
       case "ASSIGNMENT_UPDATED":
       case "DRIVER_ASSIGNED":
+      case "VEHICLE_ASSIGNED":
       case "VEHICLE_CHANGED":
-        navigate("/corporate/contracts");
+      case "SIGNED_DOCUMENT_UPLOADED":
+      case "SIGNED_DOCUMENT_VERIFIED":
+      case "SIGNED_DOCUMENT_REJECTED":
+        // Navigate to contracts based on user role
+        if (user?.role === "CORPORATE") {
+          navigate("/corporate/contracts");
+        } else if (user?.role === "B2B_PARTNER") {
+          navigate("/b2b/contracts");
+        } else {
+          navigate("/contracts");
+        }
+        break;
+      case "NEGOTIATION_REQUEST":
+      case "NEGOTIATION_UPDATE":
+      case "NEGOTIATION_OFFER":
+      case "NEGOTIATION_STARTED":
+      case "NEGOTIATION_MESSAGE":
+      case "NEGOTIATION_RESPONSE":
+      case "NEGOTIATION_ACCEPTED":
+      case "NEGOTIATION_REJECTED":
+      case "NEGOTIATION_COUNTER_OFFER":
+      case "NEGOTIATION_COMPLETED":
+        // Navigate to negotiations based on user role
+        if (user?.role === "ADMIN") {
+          navigate("/admin/negotiations");
+        } else if (user?.role === "B2B_PARTNER") {
+          navigate("/b2b/negotiations");
+        } else if (user?.role === "CORPORATE") {
+          navigate("/corporate/quotations");
+        } else {
+          navigate("/notifications");
+        }
         break;
       case "EMERGENCY":
         navigate("/commuter/support");
@@ -245,9 +282,30 @@ function NotificationIcon() {
       QUOTATION_REJECTED: "❌",
       CONTRACT_ACTIVATED: "🎉",
       CONTRACT_UPDATE: "📝",
+      CONTRACT_CREATED: "📄",
+      CONTRACT_DOCUMENT_UPLOADED: "📎",
+      CONTRACT_SIGNED: "✍️",
+      CONTRACT_FULLY_SIGNED: "🎉",
+      CONTRACT_REJECTED: "❌",
       ASSIGNMENT_UPDATED: "🔄",
       DRIVER_ASSIGNED: "👤",
+      VEHICLE_ASSIGNED: "🚗",
       VEHICLE_CHANGED: "🚗",
+      // Negotiation notifications
+      NEGOTIATION_REQUEST: "💬",
+      NEGOTIATION_UPDATE: "📝",
+      NEGOTIATION_OFFER: "💰",
+      NEGOTIATION_STARTED: "🚀",
+      NEGOTIATION_MESSAGE: "💬",
+      NEGOTIATION_RESPONSE: "📩",
+      NEGOTIATION_ACCEPTED: "✅",
+      NEGOTIATION_REJECTED: "❌",
+      NEGOTIATION_COUNTER_OFFER: "🔄",
+      NEGOTIATION_COMPLETED: "🎉",
+      // Signed document notifications
+      SIGNED_DOCUMENT_UPLOADED: "📤",
+      SIGNED_DOCUMENT_VERIFIED: "✅",
+      SIGNED_DOCUMENT_REJECTED: "❌",
     };
     return icons[type] || "📢";
   };

@@ -33,6 +33,7 @@ import QuotationDetails from "./Pages/CorporatePages/QuotationDetails/QuotationD
 import CorporateContractDetails from "./Pages/CorporatePages/CorporateContractDetails/CorporateContractDetails";
 import B2B_PartnerContractDetails from "./Pages/B2B_PartnerPages/B2B_PartnerContractDetails/B2B_PartnerContractDetails";
 import PaymentCallback from "./Pages/PaymentCallback/PaymentCallback";
+import EMIPaymentCallback from "./Pages/EMIPaymentCallback/EMIPaymentCallback";
 import B2B_PartnerAssignmentUI from "./Pages/B2B_PartnerPages/B2B_PartnerAssignmentUI/B2B_PartnerAssignmentUI";
 import B2B_PartnerVehicleAssignmentList from "./Pages/B2B_PartnerPages/B2B_PartnerVehicleAssignment/B2B_PartnerVehicleAssignmentList";
 import B2B_PartnerVehicleAssignmentForm from "./Pages/B2B_PartnerPages/B2B_PartnerVehicleAssignmentForm/B2B_PartnerVehicleAssignmentForm";
@@ -464,6 +465,12 @@ function App() {
           <Route path="/payment-success" element={<PaymentCallback />} />
           <Route path="/payment-cancel" element={<PaymentCallback />} />
 
+          {/* EMI Payment Callback Routes */}
+          <Route
+            path="/emi-payment/callback"
+            element={<EMIPaymentCallback />}
+          />
+          
           {/* Dynamic Pages - Terms, Privacy, Refund, Contact etc */}
           <Route path="/page/:slug" element={<DynamicPage />} />
           <Route path="/terms-and-conditions" element={<DynamicPage />} />

@@ -11,7 +11,7 @@ import Notification from "../models/Notification.js"
 import Transaction from "../models/Transaction.js"
 import stripe from "../Config/stripe.js"
 import tapPayments from "../Config/tapPayments.js"
-import { calculateCommission, calculateDriverCommission } from "../Services/HelperUtilities.js"
+import { calculateCommission, calculateDriverCommission, calculateDynamicCommission } from "../Services/HelperUtilities.js"
 import { sendRealTimeNotification, sendBookingUpdate } from "../Services/socketService.js"
 import { createNotification } from "./notificationController.js"
 import { sendAdminNotification } from "../Services/notificationService.js"
@@ -256,7 +256,15 @@ export const createB2CBooking = async (req, res) => {
             console.log("Single day booking (legacy mode)");
         }
 
-        const commissionData = calculateCommission(paymentAmount)
+        // Use dynamic commission based on B2C Partner's settings
+        const commissionData = await calculateDynamicCommission(partnerId, paymentAmount, "BOOKING")
+        console.log("[v0] Dynamic Commission for B2C Partner booking:", {
+            partnerId,
+            paymentAmount,
+            appliedRate: commissionData.appliedRate,
+            adminCommission: commissionData.adminCommission,
+            partnerEarnings: commissionData.partnerAmount
+        })
 
         // NEW LOGIC: Determine driver assignment
         let assignedDriverId = null;
@@ -411,7 +419,8 @@ export const createB2CBooking = async (req, res) => {
             // For CASH: B2C Partner collects full amount from Commuter, then pays commission to Admin
             // For STRIPE: Admin receives full amount, then credits B2C Partner's earnings
             adminCommissionAmount: commissionData.adminCommission,
-            driverEarnings: commissionData.fleetOwnerAmount,
+            appliedCommissionRate: commissionData.appliedRate, // Store dynamic rate
+            driverEarnings: commissionData.partnerAmount,
         })
 
         // Set acceptance deadlines for booking timeout feature
@@ -760,6 +769,21 @@ export const acceptB2CBooking = async (req, res) => {
         let adminWallet = null
         if (adminUser) {
             adminWallet = await Wallet.findOne({ userId: adminUser._id })
+
+            // Create admin wallet if it doesn't exist
+            if (!adminWallet) {
+                adminWallet = new Wallet({
+                    userId: adminUser._id,
+                    role: 'ADMIN',
+                    balance: 0,
+                    currency: booking.currency || 'AED',
+                    transactions: []
+                })
+                await adminWallet.save()
+                console.log("[acceptB2CBooking] Created new admin wallet for admin:", adminUser._id)
+            }
+        } else {
+            console.error("[acceptB2CBooking] No ADMIN user found in the system!")
         }
 
         if (booking.paymentMethod === "CASH") {
@@ -799,6 +823,7 @@ export const acceptB2CBooking = async (req, res) => {
 
             // Add admin commission to Admin's wallet
             if (adminWallet && adminCommission > 0) {
+                const adminBalanceBefore = adminWallet.balance
                 adminWallet.balance += adminCommission
                 adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + adminCommission
                 adminWallet.transactions.push({
@@ -812,6 +837,21 @@ export const acceptB2CBooking = async (req, res) => {
                 console.log("[acceptB2CBooking] Admin commission credited to Admin wallet:", {
                     adminCommission,
                     adminWalletNewBalance: adminWallet.balance
+                })
+
+                // Also create a Transaction record for better tracking
+                await Transaction.create({
+                    userId: adminWallet.userId,
+                    walletId: adminWallet._id,
+                    type: "CREDIT",
+                    category: "COMMISSION_EARNED",
+                    amount: adminCommission,
+                    currency: booking.currency || "AED",
+                    balance: adminWallet.balance,
+                    balanceBefore: adminBalanceBefore,
+                    balanceAfter: adminWallet.balance,
+                    paymentId: booking._id,
+                    description: `B2C booking commission (${booking.appliedCommissionRate || 10}%) from ${booking.b2cPartnerId?.fullName || 'partner'} - Cash payment`,
                 })
             }
 
@@ -854,20 +894,106 @@ export const acceptB2CBooking = async (req, res) => {
                 })
             }
 
-            // Record commission in Admin's wallet for tracking (payment already received via Stripe)
+            // Credit commission to Admin's wallet (Stripe payment received, now record commission)
             if (adminWallet && adminCommission > 0) {
+                // Add commission to admin balance (this is the admin's share from Stripe payment)
+                adminWallet.balance += adminCommission
                 adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + adminCommission
                 adminWallet.transactions.push({
                     type: 'DEPOSIT',
                     amount: adminCommission,
-                    description: `Commission from B2C booking ${booking._id} (Stripe payment - already received via Stripe)`,
+                    description: `Commission from B2C booking ${booking._id} (Stripe payment)`,
                     status: 'COMPLETED'
                 })
                 await adminWallet.save()
 
-                console.log("[acceptB2CBooking] Admin commission recorded:", {
+                console.log("[acceptB2CBooking] STRIPE booking - Admin commission credited to wallet:", {
                     adminCommission,
+                    adminWalletNewBalance: adminWallet.balance,
                     adminWalletTotalEarnings: adminWallet.totalEarnings
+                })
+                // Also create a Transaction record for better tracking
+                await Transaction.create({
+                    userId: adminWallet.userId,
+                    walletId: adminWallet._id,
+                    type: "CREDIT",
+                    category: "COMMISSION_EARNED",
+                    amount: adminCommission,
+                    currency: booking.currency || "AED",
+                    balance: adminWallet.balance,
+                    balanceBefore: adminWallet.balance - adminCommission,
+                    balanceAfter: adminWallet.balance,
+                    paymentId: booking._id,
+                    description: `B2C booking commission (${booking.appliedCommissionRate || 10}%) from ${booking.passengerId?.fullName || 'passenger'} - Stripe payment`,
+                })
+            }
+        } else if (booking.paymentMethod === "TAP" && booking.paymentStatus === "COMPLETED") {
+            // TAP Payment: Same logic as Stripe - payment already received by Admin via Tap
+            // Now credit the B2C Partner's wallet with their earnings (total - admin commission)
+            let partnerWallet = await Wallet.findOne({ userId: partnerId })
+
+            // Create wallet if it doesn't exist
+            if (!partnerWallet) {
+                partnerWallet = new Wallet({
+                    userId: partnerId,
+                    role: 'B2C_PARTNER',
+                    balance: 0,
+                    currency: booking.currency || 'AED',
+                    transactions: []
+                })
+            }
+
+            // Add driver earnings to B2C Partner's wallet
+            if (driverEarnings > 0) {
+                partnerWallet.balance += driverEarnings
+                partnerWallet.totalEarnings = (partnerWallet.totalEarnings || 0) + driverEarnings
+                partnerWallet.transactions.push({
+                    type: 'DEPOSIT',
+                    amount: driverEarnings,
+                    description: `Earnings from B2C booking ${booking._id} (TAP payment - after ${adminCommission} ${booking.currency || 'AED'} admin commission)`,
+                    status: 'COMPLETED'
+                })
+                await partnerWallet.save()
+
+                console.log("[acceptB2CBooking] TAP booking - Earnings credited to partner wallet:", {
+                    driverEarnings,
+                    adminCommission,
+                    partnerNewBalance: partnerWallet.balance
+                })
+            }
+
+            // Credit commission to Admin's wallet (TAP payment received, now record commission)
+            if (adminWallet && adminCommission > 0) {
+                const adminBalanceBefore = adminWallet.balance
+                adminWallet.balance += adminCommission
+                adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + adminCommission
+                adminWallet.transactions.push({
+                    type: 'DEPOSIT',
+                    amount: adminCommission,
+                    description: `Commission from B2C booking ${booking._id} (TAP payment)`,
+                    status: 'COMPLETED'
+                })
+                await adminWallet.save()
+
+                console.log("[acceptB2CBooking] TAP booking - Admin commission credited to wallet:", {
+                    adminCommission,
+                    adminWalletNewBalance: adminWallet.balance,
+                    adminWalletTotalEarnings: adminWallet.totalEarnings
+                })
+
+                // Also create a Transaction record for better tracking
+                await Transaction.create({
+                    userId: adminWallet.userId,
+                    walletId: adminWallet._id,
+                    type: "CREDIT",
+                    category: "COMMISSION_EARNED",
+                    amount: adminCommission,
+                    currency: booking.currency || "AED",
+                    balance: adminWallet.balance,
+                    balanceBefore: adminBalanceBefore,
+                    balanceAfter: adminWallet.balance,
+                    paymentId: booking._id,
+                    description: `B2C booking commission (${booking.appliedCommissionRate || 10}%) from ${booking.passengerId?.fullName || 'passenger'} - TAP payment`,
                 })
             }
         }

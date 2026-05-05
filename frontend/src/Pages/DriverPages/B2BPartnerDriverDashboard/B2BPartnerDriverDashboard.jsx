@@ -1,12 +1,13 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../../Redux/slices/authSlice";
-import { useSelector } from "react-redux";
 import { useSocket } from "../../../hooks/useSocket";
 import api from "../../../utils/api";
+import DashboardLayout from "../../../Components/DashboardLayout/DashboardLayout";
 import "./B2BPartnerDriverDashboard.css";
 
 function B2BPartnerDriverDashboard() {
@@ -18,107 +19,15 @@ function B2BPartnerDriverDashboard() {
 
   const [bookings, setBookings] = useState([]);
   const [liveLocation, setLiveLocation] = useState(null);
-  // eslint-disable-next-line no-unused-vars
   const [notifications, setNotifications] = useState([]);
   const [activeBookingTab, setActiveBookingTab] = useState("confirmed");
   const [activeMainTab, setActiveMainTab] = useState("bookings");
   const [isSharingLocation, setIsSharingLocation] = useState(false);
-  const [formattedLastLogin, setFormattedLastLogin] = useState("");
   const [activeTrip, setActiveTrip] = useState(null);
   const locationIntervalRef = useRef(null);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
-  // Format last login time
-  useEffect(() => {
-    if (user?.lastLogin) {
-      const loginDate = new Date(user.lastLogin);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      let dateString = "";
-
-      if (loginDate.toDateString() === today.toDateString()) {
-        dateString = "Today";
-      } else if (loginDate.toDateString() === yesterday.toDateString()) {
-        dateString = "Yesterday";
-      } else {
-        dateString = loginDate.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
-      }
-
-      const timeString = loginDate.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-
-      setFormattedLastLogin(`${dateString}, ${timeString}`);
-    }
-  }, [user?.lastLogin]);
-
-  const getRoleDisplayName = (role) => {
-    const roleMap = {
-      ADMIN: "Admin",
-      COMMUTER: "Commuter",
-      CORPORATE: "Corporate",
-      B2C_PARTNER: "B2C Partner",
-      B2B_PARTNER: "B2B Partner",
-      CORPORATE_DRIVER: "Corporate Driver",
-      B2B_PARTNER_DRIVER: "B2B Partner Driver",
-      CORPORATE_EMPLOYEE: "Corporate Employee",
-      B2C_PARTNER_DRIVER: "B2C Partner Driver",
-    };
-    return roleMap[role] || role;
-  };
-
-  const handleLogout = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        console.log("No token found, redirecting to login");
-        navigate("/login");
-        return;
-      }
-
-      dispatch(logout());
-
-      // Call backend logout endpoint to clear cookies and session
-      await api.post(
-        "/auth/logout",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          withCredentials: true,
-        },
-      );
-
-      // Clear frontend storage
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
-      console.log("User logged out successfully");
-
-      // Redirect to login page
-      navigate("/login");
-    } catch (err) {
-      console.error("Logout error:", err);
-
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
-      // Redirect to login regardless of error
-      navigate("/login");
-    }
-  };
 
   const updateLocation = useCallback(() => {
     if (navigator.geolocation) {
@@ -137,7 +46,6 @@ function B2BPartnerDriverDashboard() {
           };
 
           if (socket && socket.socket) {
-            // Emit both event formats for compatibility
             socket.socket.emit("update-location", location);
             socket.socket.emit("driver-location-update", {
               ...location,
@@ -176,7 +84,6 @@ function B2BPartnerDriverDashboard() {
 
     if (socket && socket.socket) {
       socket.socket.emit("join-driver-room", effectiveDriverId);
-      // Also join with user._id for compatibility
       if (effectiveDriverId !== user._id) {
         socket.socket.emit("join-driver-room", user._id);
       }
@@ -315,7 +222,6 @@ function B2BPartnerDriverDashboard() {
   }, [user?._id]);
 
   useEffect(() => {
-    // Use setTimeout to avoid cascading renders
     const timer = setTimeout(() => {
       fetchB2BPartnerBookings();
     }, 0);
@@ -330,19 +236,16 @@ function B2BPartnerDriverDashboard() {
   useEffect(() => {
     if (!socket || !socket.socket) return;
 
-    // Listen for new bookings
     socket.socket.on("new-b2b-booking", (booking) => {
       console.log("New B2B booking received:", booking);
       setBookings((prev) => [...prev, booking]);
       fetchNotifications();
 
-      // Start location sharing for new booking
       if (!isSharingLocation) {
         startAutomaticLocationSharing();
       }
     });
 
-    // Listen for location updates
     socket.socket.on("location-update", (location) => {
       console.log("📍 Location update received:", location);
     });
@@ -351,9 +254,13 @@ function B2BPartnerDriverDashboard() {
       socket.socket.off("new-b2b-booking");
       socket.socket.off("location-update");
     };
-  }, [socket, isSharingLocation, startAutomaticLocationSharing]);
+  }, [
+    socket,
+    isSharingLocation,
+    startAutomaticLocationSharing,
+    fetchNotifications,
+  ]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (locationIntervalRef.current) {
@@ -376,7 +283,6 @@ function B2BPartnerDriverDashboard() {
     }
   });
 
-  // Helper functions for Trip data format
   const getPickupLocation = (booking) => {
     return booking.pickupLocation || booking.fromLocation || "";
   };
@@ -402,54 +308,10 @@ function B2BPartnerDriverDashboard() {
     });
   };
 
-  const userName = user?.fullName || "User";
-  const userRole = user?.role || "ADMIN";
-
-  return (
-    <div className="b2b-partner-driver-dashboard">
-      <div className="B2BPartner-driver-dashboard-with-tabs-header">
-        <div>
-          <h1>{getRoleDisplayName(userRole)} Dashboard</h1>
-          <small style={{ color: "#ffffff" }}>
-            Last login: {formattedLastLogin || "Never"}
-          </small>
-        </div>
-        <div className="B2BPartner-driver-dashboard-with-tabs-driver-info">
-          <span>Welcome, {user?.fullName || user?.name}</span>
-          <div
-            className={`B2BPartner-driver-dashboard-with-tabs-location-status ${isSharingLocation ? "active" : ""}`}
-          >
-            📍 {isSharingLocation ? "Sharing Live" : "Not Sharing"}
-          </div>
-        </div>
-        <button className="b2b-logout-btn" onClick={handleLogout}>
-          Log Out
-        </button>
-      </div>
-
-      <div className="B2BPartner-driver-dashboard-with-tabs-tabs">
-        <button
-          className={`B2BPartner-driver-dashboard-with-tabs-tab ${activeMainTab === "bookings" ? "active" : ""}`}
-          onClick={() => setActiveMainTab("bookings")}
-        >
-          Bookings
-        </button>
-        <button
-          className={`B2BPartner-driver-dashboard-with-tabs-tab ${activeMainTab === "notifications" ? "active" : ""}`}
-          onClick={() => setActiveMainTab("notifications")}
-        >
-          Notifications
-        </button>
-        <button
-          className={`B2BPartner-driver-dashboard-with-tabs-tab ${activeMainTab === "location" ? "active" : ""}`}
-          onClick={() => setActiveMainTab("location")}
-        >
-          Live Location
-        </button>
-      </div>
-
-      <div className="B2BPartner-driver-dashboard-with-tabs-content">
-        {activeMainTab === "bookings" && (
+  const renderContent = () => {
+    switch (activeMainTab) {
+      case "bookings":
+        return (
           <div className="B2BPartner-driver-dashboard-with-tabs-bookings-section">
             <div className="B2BPartner-driver-dashboard-with-tabs-booking-tabs">
               <button
@@ -645,9 +507,10 @@ function B2BPartnerDriverDashboard() {
               )}
             </div>
           </div>
-        )}
+        );
 
-        {activeMainTab === "notifications" && (
+      case "notifications":
+        return (
           <div className="B2BPartner-driver-dashboard-with-tabs-notifications-section">
             <h3>Notifications</h3>
             <div className="B2BPartner-driver-dashboard-with-tabs-notification-list">
@@ -671,10 +534,11 @@ function B2BPartnerDriverDashboard() {
               )}
             </div>
           </div>
-        )}
+        );
 
-        {activeMainTab === "location" && (
-          <div className="B2BPartner-driver-dashboard-with-tabs-location-section">
+      case "location":
+        return (
+           <div className="B2BPartner-driver-dashboard-with-tabs-location-section">
             <h3>Live Location Tracking</h3>
             <div className="B2BPartner-driver-dashboard-with-tabs-location-info">
               <p>
@@ -728,9 +592,17 @@ function B2BPartnerDriverDashboard() {
               )}
             </div>
           </div>
-        )}
-      </div>
-    </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <DashboardLayout activeTab={activeMainTab} setActiveTab={setActiveMainTab}>
+      {renderContent()}
+    </DashboardLayout>
   );
 }
 

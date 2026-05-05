@@ -50,6 +50,10 @@ const ContractRequestModal = ({ quotation, onClose, onSuccess }) => {
     }
   };
 
+  const totalVehicles = quotation.vehicles.reduce(
+    (sum, v) => sum + v.quantity,
+    0,
+  ); 
   return (
     <div className="contract-request-modal-overlay" onClick={onClose}>
       <div
@@ -80,12 +84,15 @@ const ContractRequestModal = ({ quotation, onClose, onSuccess }) => {
             <div className="contract-request-summary-item">
               <span>Total Amount:</span>
               <strong>
-                KWD {quotation.quotedPrice?.totalAmount?.toFixed(2)}
+                {quotation.quotedPrice.currency || "AED"}{" "}
+                {quotation.quotedPrice?.totalAmount?.toFixed(2)}
               </strong>
             </div>
             <div className="contract-request-summary-item">
               <span>Total Vehicles:</span>
-              <strong>{quotation.totalVehicles}</strong>
+              <strong>
+                {totalVehicles}
+              </strong>
             </div>
           </div>
 

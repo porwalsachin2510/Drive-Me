@@ -5,10 +5,36 @@ import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import User from "../models/User.js";
+import CommissionSettings from "../models/CommissionSettings.js";
 import { generatePassCertificate } from "../Services/passCertificateService.js";
 import { sendPassEmail } from "../Services/emailService.js";
 import PaymentGatewayService from "../Services/paymentGatewayService.js";
 import { getPaymentGateway, detectCountryFromCurrency } from "../Config/paymentGateways.js";
+
+// Helper function to get B2C Partner commission rate
+const getB2CPartnerCommissionRate = async (partnerId) => {
+    try {
+        const settings = await CommissionSettings.findOne({ userId: partnerId, isActive: true });
+        if (settings) {
+            // Check for custom BOOKING or MONTHLY_PASS rate first
+            const now = new Date();
+            const customRate = settings.customRates?.find(
+                (r) =>
+                    (r.rateType === "BOOKING" || r.rateType === "MONTHLY_PASS") &&
+                    r.effectiveFrom <= now &&
+                    (!r.effectiveUntil || r.effectiveUntil >= now)
+            );
+            if (customRate) {
+                return customRate.rate / 100; // Convert percentage to decimal
+            }
+            return settings.defaultCommissionRate / 100; // Convert percentage to decimal
+        }
+        return 0.20; // Default 20% if no settings found
+    } catch (error) {
+        console.error("[v0] Error fetching B2C commission rate:", error);
+        return 0.20; // Default 20%
+    }
+};
 
 // Create B2C Monthly Pass
 export const createB2CMonthlyPass = async (req, res) => {
@@ -177,9 +203,13 @@ export const createB2CMonthlyPass = async (req, res) => {
             });
         }
 
-        // Calculate commission (20% admin, 80% partner)
-        const adminCommission = totalAmount * 0.2;
-        const partnerEarnings = totalAmount * 0.8;
+        // Get dynamic commission rate for B2C Partner
+        const commissionRate = await getB2CPartnerCommissionRate(route.b2cPartnerId);
+        console.log("[v0] Dynamic Commission Rate for B2C Partner:", commissionRate * 100, "%");
+
+        // Calculate commission based on dynamic rate
+        const adminCommission = totalAmount * commissionRate;
+        const partnerEarnings = totalAmount * (1 - commissionRate);
 
         // Normalize paymentMethod for B2CMonthlyPass model (STRIPE, TAP, CARD, CASH)
         const normalizedPaymentMethod = ["STRIPE", "TAP", "CARD", "CASH"].includes(paymentMethod) ? paymentMethod : "STRIPE";
@@ -856,9 +886,13 @@ export const renewB2CMonthlyPass = async (req, res) => {
             : route.pricing.monthlyOneWayPrice;
         const newTotalAmount = pricePerMonth * durationMonths;
 
-        // Calculate commission
-        const newAdminCommission = newTotalAmount * 0.2;
-        const newPartnerEarnings = newTotalAmount * 0.8;
+        // Get dynamic commission rate for B2C Partner
+        const renewalCommissionRate = await getB2CPartnerCommissionRate(existingPass.partnerId);
+        console.log("[v0] Dynamic Commission Rate for B2C Partner (renewal):", renewalCommissionRate * 100, "%");
+
+        // Calculate commission based on dynamic rate
+        const newAdminCommission = newTotalAmount * renewalCommissionRate;
+        const newPartnerEarnings = newTotalAmount * (1 - renewalCommissionRate);
 
         // Normalize payment method for renewal
         const renewalPaymentMethod = ["STRIPE", "TAP", "CARD", "CASH"].includes(paymentMethod) ? paymentMethod : "STRIPE";

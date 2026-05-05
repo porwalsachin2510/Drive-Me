@@ -282,7 +282,7 @@
 
 .notification-badge {
   position: absolute;
-  top: 2px;
+  top: 12px;
   right: 2px;
   background: #E85D5D;
   color: white;

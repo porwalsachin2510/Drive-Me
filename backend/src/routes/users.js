@@ -1,6 +1,6 @@
 import express from "express"
 import { verifyToken } from "../middleware/auth.js"
-import { getAllUsers, getCurrentUser, updateUserProfile, updateUserProfileLogo, changePassword } from "../controllers/userController.js"
+import { getAllUsers, getCurrentUser, updateUserProfile, updateUserProfileLogo, changePassword, updateMenuLayout } from "../controllers/userController.js"
 import { upload, handleMulterError } from "../Config/multerConfig.js"
 
 const router = express.Router()
@@ -20,5 +20,8 @@ router.put("/profile/logo", verifyToken, upload.single('companyLogo'), handleMul
 
 // Change password
 router.put("/change-password", verifyToken, changePassword)
+
+// Update menu layout preference
+router.put("/menu-layout", verifyToken, updateMenuLayout)
 
 export default router

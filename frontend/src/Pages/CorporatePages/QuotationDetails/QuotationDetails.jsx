@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -16,15 +17,130 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import api from "../../../utils/api";
 import "./QuotationDetails.css";
 
+// Admin Negotiation Request Modal Component
+const AdminNegotiationModal = ({ quotation, onClose, onSuccess }) => {
+  const [message, setMessage] = useState("");
+  const [expectedPrice, setExpectedPrice] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!message.trim()) {
+      setError("Please provide a reason for the negotiation request");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await api.post(`/quotations/${quotation._id}/request-negotiation`, {
+        message,
+        expectedPrice: expectedPrice ? parseFloat(expectedPrice) : null,
+      });
+
+      if (response.data.success) {
+        onSuccess(response.data.negotiation);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to submit negotiation request");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="single-quotation-modal-overlay" onClick={onClose}>
+      <div className="single-quotation-modal admin-negotiation-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="single-quotation-modal-header">
+          <h2>Request Admin Negotiation</h2>
+          <button className="single-quotation-modal-close" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="single-quotation-modal-body">
+          <div className="admin-negotiation-info">
+            <div className="negotiation-info-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+            </div>
+            <div className="negotiation-info-text">
+              <strong>How Admin Negotiation Works:</strong>
+              <ul>
+                <li>Admin will negotiate with the B2B Partner on your behalf</li>
+                <li>If a better price is achieved, the quotation will be updated</li>
+                <li>A commission of 0-35% may apply on the savings achieved</li>
+                <li>You can then accept or reject the updated quotation</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="current-price-display">
+            <span>Current Quoted Price:</span>
+            <strong>{quotation.quotedPrice?.currency || "AED"} {quotation.quotedPrice?.totalAmount?.toFixed(2) || "0.00"}</strong>
+          </div>
+
+          {error && <div className="negotiation-error">{error}</div>}
+
+          <div className="form-group">
+            <label>Expected Price (Optional):</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Enter your expected price..."
+              value={expectedPrice}
+              onChange={(e) => setExpectedPrice(e.target.value)}
+              className="single-quotation-textarea"
+              style={{ height: "auto", padding: "10px" }}
+            />
+            <span className="form-hint">Leave blank if you want Admin to get the best possible price</span>
+          </div>
+
+          <div className="form-group">
+            <label>Why do you want a better price? *</label>
+            <textarea
+              className="single-quotation-textarea"
+              rows="4"
+              placeholder="Explain your reason for requesting negotiation... (e.g., budget constraints, long-term partnership potential, market rates, etc.)"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="single-quotation-modal-footer">
+          <button
+            className="single-quotation-btn single-quotation-btn-secondary"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            className="single-quotation-btn single-quotation-btn-accept admin-negotiate-btn"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? "Submitting..." : "Request Admin Negotiation"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const QuotationDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const [activeTab, setActiveTab] = useState("commuters");
-  
+
   const { currentQuotation, loading, error } = useSelector(
-    (state) => state.quotation
+    (state) => state.quotation,
   );
 
   useEffect(() => {
@@ -44,6 +160,11 @@ const QuotationDetails = () => {
   const [negotiateMessage, setNegotiateMessage] = useState("");
   const [existingContract, setExistingContract] = useState(null);
 
+  // Admin Negotiation states
+  const [showAdminNegotiationModal, setShowAdminNegotiationModal] =
+    useState(false);
+  const [adminNegotiationStatus, setAdminNegotiationStatus] = useState(null);
+
   // Check if contract already exists for this quotation
   useEffect(() => {
     const checkExistingContract = async () => {
@@ -53,7 +174,7 @@ const QuotationDetails = () => {
           if (response.data.success && response.data.contract) {
             setExistingContract(response.data.contract);
           }
-        // eslint-disable-next-line no-unused-vars
+          // eslint-disable-next-line no-unused-vars
         } catch (error) {
           // Contract doesn't exist yet - that's fine
           setExistingContract(null);
@@ -93,7 +214,7 @@ const QuotationDetails = () => {
   const handleAcceptQuotation = async () => {
     if (
       window.confirm(
-        "Are you sure you want to accept this quotation? This will move it forward for contract processing."
+        "Are you sure you want to accept this quotation? This will move it forward for contract processing.",
       )
     ) {
       const data = {
@@ -141,7 +262,7 @@ const QuotationDetails = () => {
         quotationId: id,
         counterOffer: { totalAmount: parseFloat(negotiateAmount) },
         message: negotiateMessage,
-      })
+      }),
     );
 
     if (result.type === "quotation/negotiateQuotation/fulfilled") {
@@ -166,6 +287,15 @@ const QuotationDetails = () => {
     // Or refresh the quotation to show updated status
     // dispatch(getQuotationById(id));
   };
+
+   const handleAdminNegotiationSuccess = (negotiation) => {
+     setShowAdminNegotiationModal(false);
+     setAdminNegotiationStatus("REQUESTED");
+     alert(
+       "Admin Negotiation request submitted successfully! You will be notified when there are updates.",
+     );
+     dispatch(getQuotationById(id)); // Refresh quotation to show updated status
+   };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -412,6 +542,44 @@ const QuotationDetails = () => {
         <div className="single-quotation-section">
           <h2 className="single-quotation-section-title">Pricing Breakdown</h2>
 
+          {/* Negotiation Savings Information - Show if negotiation was applied */}
+          {quotation?.adminNegotiation?.priceReduced &&
+            quotation?.adminNegotiation?.status === "COMPLETED" && (
+              <div className="negotiation-savings-card">
+                <div className="negotiation-savings-header">
+                  <span className="negotiation-savings-icon">✓</span>
+                  <h3>Negotiation Applied - Great Savings!</h3>
+                </div>
+                <div className="negotiation-savings-details">
+                  <div className="savings-detail-row">
+                    <span className="savings-label">Original Price:</span>
+                    <span className="savings-value original-price">
+                      {quotation.quotedPrice?.currency || "AED"}{" "}
+                      {quotation.adminNegotiation.originalPrice?.toFixed(2) ||
+                        "0.00"}
+                    </span>
+                  </div>
+                  <div className="savings-detail-row">
+                    <span className="savings-label">
+                      Price After Negotiation:
+                    </span>
+                    <span className="savings-value new-price">
+                      {quotation.quotedPrice?.currency || "AED"}{" "}
+                      {quotation.quotedPrice?.totalAmount?.toFixed(2) || "0.00"}
+                    </span>
+                  </div>
+                  <div className="savings-detail-row highlight">
+                    <span className="savings-label">Your Savings:</span>
+                    <span className="savings-value savings-amount">
+                      {quotation.quotedPrice?.currency || "AED"}{" "}
+                      {quotation.adminNegotiation.savingsAmount?.toFixed(2) ||
+                        "0.00"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          
           {quotation?.status?.toUpperCase() === "REQUESTED" && (
             <div className="single-quotation-waiting-message">
               <div className="single-quotation-waiting-icon">⏳</div>
@@ -554,6 +722,66 @@ const QuotationDetails = () => {
                   </div>
                 )}
 
+                {/* Admin Negotiation Status Banner */}
+                {quotation?.adminNegotiation?.status &&
+                  quotation.adminNegotiation.status !== "NONE" && (
+                    <div
+                      className={`admin-negotiation-status-banner status-${quotation.adminNegotiation.status.toLowerCase()}`}
+                    >
+                      <div className="banner-icon">
+                        {quotation.adminNegotiation.status === "REQUESTED" &&
+                          "⏳"}
+                        {quotation.adminNegotiation.status === "IN_PROGRESS" &&
+                          "🔄"}
+                        {quotation.adminNegotiation.status === "COMPLETED" &&
+                          "✅"}
+                        {quotation.adminNegotiation.status === "FAILED" && "❌"}
+                      </div>
+                      <div className="banner-content">
+                        <strong>
+                          Admin Negotiation:{" "}
+                          {quotation.adminNegotiation.status.replace("_", " ")}
+                        </strong>
+                        {quotation.adminNegotiation.status === "REQUESTED" && (
+                          <p>
+                            Your negotiation request is being reviewed by Admin.
+                          </p>
+                        )}
+                        {quotation.adminNegotiation.status ===
+                          "IN_PROGRESS" && (
+                          <p>
+                            Admin is actively negotiating with the B2B Partner.
+                            Please wait for updates.
+                          </p>
+                        )}
+                        {quotation.adminNegotiation.status === "COMPLETED" &&
+                          quotation.adminNegotiation.priceReduced && (
+                            <p>
+                              Great news! Price reduced from{" "}
+                              {quotation.quotedPrice?.currency || "AED"}{" "}
+                              {quotation.adminNegotiation.originalPrice?.toFixed(
+                                2,
+                              )}{" "}
+                              to {quotation.quotedPrice?.currency || "AED"}{" "}
+                              {quotation.quotedPrice?.totalAmount?.toFixed(2)}.
+                              You saved{" "}
+                              {quotation.quotedPrice?.currency || "AED"}{" "}
+                              {quotation.adminNegotiation.savingsAmount?.toFixed(
+                                2,
+                              )}
+                              !
+                            </p>
+                          )}
+                        {quotation.adminNegotiation.status === "FAILED" && (
+                          <p>
+                            Unfortunately, the negotiation did not result in a
+                            better price.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                 {/* Action Buttons */}
                 <div className="single-quotation-action-buttons">
                   <button
@@ -562,15 +790,31 @@ const QuotationDetails = () => {
                   >
                     Accept Quotation
                   </button>
-                  {/* NEGOTIATE PRICE button commented out as per requirement
-                  <button
-                    className="single-quotation-btn single-quotation-btn-negotiate"
-                    onClick={() => setShowNegotiateModal(true)}
-                    style={{ backgroundColor: "#f59e0b", color: "#fff" }}
-                  >
-                    Negotiate Price
-                  </button>
-                  */}
+                  {/* Admin Negotiation Button - Only show if not already in negotiation */}
+                  {(!quotation?.adminNegotiation?.status ||
+                    quotation.adminNegotiation.status === "NONE" ||
+                    quotation.adminNegotiation.status === "FAILED") && (
+                    <button
+                      className="single-quotation-btn single-quotation-btn-negotiate admin-negotiate-btn"
+                      onClick={() => setShowAdminNegotiationModal(true)}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        style={{ marginRight: "6px" }}
+                      >
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                      Request Admin to Negotiate
+                    </button>
+                  )}
                   <button
                     className="single-quotation-btn single-quotation-btn-reject"
                     onClick={() => setShowRejectModal(true)}
@@ -825,10 +1069,18 @@ const QuotationDetails = () => {
             </div>
           </div>
         )}
+        {/* Admin Negotiation Modal */}
+        {showAdminNegotiationModal && quotation && (
+          <AdminNegotiationModal
+            quotation={quotation}
+            onClose={() => setShowAdminNegotiationModal(false)}
+            onSuccess={handleAdminNegotiationSuccess}
+          />
+        )}
       </div>
       <Footer />
     </>
   );
-};
+};;
 
 export default QuotationDetails;

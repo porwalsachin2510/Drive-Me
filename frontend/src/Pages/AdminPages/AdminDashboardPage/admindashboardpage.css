@@ -1,35 +1,25 @@
-/* Premium Admin Dashboard - Inter Font */
-html,
-body {
+/* Admin Dashboard - Content Styles */
+/* Note: Layout, header, and sidebar are handled by DashboardLayout component */
+
+.admin-dashboard-content {
   width: 100%;
-  height: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-secondary, #f8f9fa);
-  color: var(--text-primary, #202124);
+  min-height: calc(100vh - 200px);
 }
 
-.ad-dash-dashboard {
-  min-height: 100vh;
-  padding: 0px 40px;
-  margin: 40px 0px;
+/* Ensure admin components fill the available space */
+.admin-dashboard-content > div {
+  width: 100%;
 }
 
-.ad-dash-content {
-  padding: 20px 40px;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
+/* Responsive adjustments */
 @media (max-width: 1024px) {
-  .ad-dash-content {
-    padding: 15px 20px;
+  .admin-dashboard-content {
+    padding: 0;
   }
 }
 
 @media (max-width: 768px) {
-  .ad-dash-content {
-    padding: 10px 15px;
+  .admin-dashboard-content {
+    padding: 0;
   }
 }

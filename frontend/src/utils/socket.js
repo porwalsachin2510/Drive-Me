@@ -333,6 +333,56 @@ const setupCorporateListeners = (dispatch) => {
       }
     });
   });
+
+  // ============ NEGOTIATION EVENTS FOR CORPORATE ============
+
+  // Negotiation completed - price reduced
+  socket.on('negotiation_completed', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `negotiation_completed_${Date.now()}`,
+        type: 'NEGOTIATION_COMPLETED',
+        title: data.title || 'Negotiation Completed - Price Reduced!',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Signed document approved by B2B Partner
+  socket.on('signed_document_verified', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `signed_doc_verified_${Date.now()}`,
+        type: 'SIGNED_DOCUMENT_VERIFIED',
+        title: data.title || 'Signed Document Approved',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Signed document rejected by B2B Partner
+  socket.on('signed_document_rejected', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `signed_doc_rejected_${Date.now()}`,
+        type: 'SIGNED_DOCUMENT_REJECTED',
+        title: data.title || 'Signed Document Rejected',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
 };
 
 const setupB2BPartnerListeners = (dispatch) => {
@@ -344,6 +394,88 @@ const setupB2BPartnerListeners = (dispatch) => {
         _id: data._id || `quotation_request_${Date.now()}`,
         type: 'QUOTATION_REQUEST',
         title: data.title || 'New Quotation Request',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // ============ NEGOTIATION EVENTS FOR B2B PARTNER ============
+
+  // Admin sent price offer
+  socket.on('negotiation_offer', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `negotiation_offer_${Date.now()}`,
+        type: 'NEGOTIATION_OFFER',
+        title: data.title || 'New Price Offer Received',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Admin started negotiation
+  socket.on('negotiation_started', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `negotiation_started_${Date.now()}`,
+        type: 'NEGOTIATION_STARTED',
+        title: data.title || 'Negotiation Started',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Admin sent message
+  socket.on('negotiation_message', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `negotiation_message_${Date.now()}`,
+        type: 'NEGOTIATION_MESSAGE',
+        title: data.title || 'New Message from Admin',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Negotiation completed
+  socket.on('negotiation_completed', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `negotiation_completed_${Date.now()}`,
+        type: 'NEGOTIATION_COMPLETED',
+        title: data.title || 'Negotiation Completed',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Signed document uploaded by Corporate
+  socket.on('signed_document_uploaded', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `signed_doc_uploaded_${Date.now()}`,
+        type: 'SIGNED_DOCUMENT_UPLOADED',
+        title: data.title || 'Signed Contract Uploaded',
         message: data.message,
         metadata: data.metadata,
         isRead: false,
@@ -606,6 +738,72 @@ const setupAdminListeners = (dispatch) => {
         type: 'SYSTEM_UPDATE',
         title: 'System Update',
         message: data.message,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // ============ NEGOTIATION EVENTS FOR ADMIN ============
+
+  // New negotiation request from Corporate
+  socket.on('negotiation_request', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `negotiation_request_${Date.now()}`,
+        type: 'NEGOTIATION_REQUEST',
+        title: data.title || 'New Negotiation Request',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // B2B Partner accepted offer
+  socket.on('negotiation_accepted', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `negotiation_accepted_${Date.now()}`,
+        type: 'NEGOTIATION_ACCEPTED',
+        title: data.title || 'Offer Accepted',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // B2B Partner rejected offer
+  socket.on('negotiation_rejected', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `negotiation_rejected_${Date.now()}`,
+        type: 'NEGOTIATION_REJECTED',
+        title: data.title || 'Offer Rejected',
+        message: data.message,
+        metadata: data.metadata,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // B2B Partner sent counter offer
+  socket.on('negotiation_counter_offer', (data) => {
+    dispatch({
+      type: 'notifications/addRealtimeNotification',
+      payload: {
+        _id: data._id || `negotiation_counter_${Date.now()}`,
+        type: 'NEGOTIATION_COUNTER_OFFER',
+        title: data.title || 'Counter Offer Received',
+        message: data.message,
+        metadata: data.metadata,
         isRead: false,
         createdAt: new Date().toISOString(),
       }

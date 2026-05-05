@@ -121,7 +121,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
     user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U";
 
   if (isLoading) {
-    return <nav className="navbar loading" />; // Prevent layout shift
+    return <nav className="navbar" />; // Prevent layout shift
   }
 
   return (

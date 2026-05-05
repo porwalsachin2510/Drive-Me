@@ -5,11 +5,15 @@ import Contract from "../models/Contract.js"
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
 import Notification from "../models/Notification.js"
 import User from "../models/User.js"
+import AdminNegotiation from "../models/AdminNegotiation.js"
+import EMIPayment from "../models/EMIPayment.js"
+import { creditAdminNegotiationCommission } from "./walletController.js"
 import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js"
 import paymentGatewayService, {
     calculateCommission,
     detectCountryFromCurrency,
     getPaymentGateway,
+    getB2BPartnerCommissionRate,
 } from "../Services/paymentGatewayService.js"
 import crypto from "crypto"
 import stripe from "stripe"
@@ -90,7 +94,7 @@ export const createPayment = async (req, res) => {
         const normalizedAccepted = normalizeAcceptedMethods(fleetOwner.acceptedPaymentMethods)
         console.log("[v0] Fleet owner accepted methods (raw):", fleetOwner.acceptedPaymentMethods)
         console.log("[v0] Fleet owner accepted methods (normalized):", normalizedAccepted)
-        
+
         if (!normalizedAccepted.length || !normalizedAccepted.includes(normalizedMethod)) {
             return res.status(400).json({
                 success: false,
@@ -149,12 +153,34 @@ export const createPayment = async (req, res) => {
         console.log("[v0] Total Payment Amount:", totalPaymentAmount)
         console.log("[v0] Payment Description:", paymentDescription)
 
-        const { adminCommission, fleetOwnerAmount } = calculateCommission(advancePaymentAmount, paymentType)
+        // Get dynamic commission rate for B2B Partner (Fleet Owner)
+        const commissionRate = await getB2BPartnerCommissionRate(contract.fleetOwnerId._id)
+        console.log("[v0] Dynamic Commission Rate for Fleet Owner:", commissionRate * 100, "%")
 
-        console.log("[v0] Admin Commission (10% of advance):", adminCommission)
-        console.log("[v0] Fleet Owner Amount (90% of advance):", fleetOwnerAmount)
+        const { adminCommission, fleetOwnerAmount, appliedRate } = calculateCommission(advancePaymentAmount, paymentType, commissionRate)
+
+        console.log("[v0] Admin Commission (" + appliedRate + "% of advance):", adminCommission)
+        console.log("[v0] Fleet Owner Amount (" + (100 - appliedRate) + "% of advance):", fleetOwnerAmount)
         console.log("[v0] Security Deposit (held separately):", securityDepositAmount)
 
+        // Check if there's negotiation commission to add
+        let negotiationCommissionAmount = 0
+        if (paymentType === "advance" && contract.negotiationCommission && contract.negotiationCommission.commissionStatus === "PENDING") {
+            negotiationCommissionAmount = contract.negotiationCommission.adminCommission || 0
+            console.log("[v0] Adding Negotiation Commission:", negotiationCommissionAmount)
+
+            // Add negotiation commission to total payment amount
+            // Corporate pays: contract amount + negotiation commission for Admin's service
+            totalPaymentAmount = totalPaymentAmount + negotiationCommissionAmount
+            paymentDescription = paymentDescription + ` + Negotiation Service Fee (${negotiationCommissionAmount})`
+
+            console.log("[v0] Updated Total Payment Amount (with negotiation commission):", totalPaymentAmount)
+        }
+
+        // NOTE: adminCommission should ONLY be the regular 10% commission
+        // The negotiation commission is tracked separately in negotiationCommissionAmount
+        // and is credited to admin wallet separately via creditAdminNegotiationCommission
+        // DO NOT add negotiationCommissionAmount to adminCommission to avoid double credit!
         // Check if payment already exists
         const existingPayment = await Payment.findOne({
             contractId,
@@ -192,7 +218,7 @@ export const createPayment = async (req, res) => {
                         phone: contract.corporateOwnerId.phone,
                     },
                     contractId,
-                    redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/payment/verify`,
+                    redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/payment/callback`,
                     metadata: {
                         paymentType,
                         advanceAmount: advancePaymentAmount,
@@ -207,7 +233,8 @@ export const createPayment = async (req, res) => {
                     amount: totalPaymentAmount,
                     advanceAmount: advancePaymentAmount,
                     securityDepositAmount: securityDepositAmount,
-                    adminCommission,
+                    adminCommission, // Only regular 10% commission, NOT including negotiation commission
+                    appliedCommissionRate: appliedRate, // Store dynamic commission rate
                     fleetOwnerAmount,
                     currency,
                     paymentType,
@@ -221,6 +248,7 @@ export const createPayment = async (req, res) => {
                     },
                     status: "PROCESSING",
                     verificationStatus: "PENDING",
+                    negotiationCommissionAmount, // Track negotiation commission separately (credited via creditAdminNegotiationCommission)
                 })
 
                 await payment.save()
@@ -260,7 +288,8 @@ export const createPayment = async (req, res) => {
                 amount: totalPaymentAmount,
                 advanceAmount: advancePaymentAmount,
                 securityDepositAmount: securityDepositAmount,
-                adminCommission,
+                adminCommission, // Only regular 10% commission, NOT including negotiation commission
+                appliedCommissionRate: appliedRate, // Store dynamic commission rate
                 fleetOwnerAmount,
                 currency,
                 paymentType,
@@ -274,6 +303,7 @@ export const createPayment = async (req, res) => {
                     bankName: req.body.bankName || null,
                     accountNumber: req.body.accountNumber || null,
                 },
+                negotiationCommissionAmount, // Track negotiation commission separately (credited via creditAdminNegotiationCommission)
             })
 
             await payment.save()
@@ -472,12 +502,30 @@ export const verifyPayment = async (req, res) => {
             const contract = await Contract.findById(payment.contractId)
             if (payment.paymentType === "advance") {
                 contract.status = "ACTIVE"
-                contract.paymentStatus = "PAID"
+                contract.financials.paymentStatus = "PARTIAL"
                 contract.activationDate = new Date()
+
+                // Update advance payment details
+                contract.financials.advancePayment.paidAt = new Date()
+                contract.financials.advancePayment.dueDate = contract.financials.advancePayment.dueDate || new Date()
+                contract.financials.advancePayment.transactionId = payment.gatewayTransactionId || payment._id.toString()
+
+                // Update security deposit details
+                if (payment.securityDepositAmount > 0) {
+                    contract.financials.securityDeposit.paidAt = new Date()
+                    contract.financials.securityDeposit.dueDate = contract.financials.securityDeposit.dueDate || new Date()
+                    contract.financials.securityDeposit.status = "PAID"
+                }
             } else if (payment.paymentType === "final") {
                 contract.status = "COMPLETED"
-                contract.paymentStatus = "PAID"
+                contract.financials.paymentStatus = "COMPLETED"
                 contract.completedAt = new Date()
+
+                // Update final payment details
+                contract.financials.finalPayment.paidAt = new Date()
+                contract.financials.finalPayment.dueDate = contract.financials.finalPayment.dueDate || new Date()
+                contract.financials.finalPayment.transactionId = payment.gatewayTransactionId || payment._id.toString()
+                contract.financials.remainingAmount = 0
             }
             await contract.save()
 
@@ -615,6 +663,84 @@ export const stripeWebhook = async (req, res) => {
                 return res.json({ received: true })
             }
 
+            // Check if this is an EMI payment
+            if (session.metadata?.paymentType === "EMI") {
+                console.log("[v0] Processing EMI payment from Stripe webhook")
+                const emiPaymentId = session.metadata?.emiPaymentId
+                const installmentNumber = parseInt(session.metadata?.installmentNumber)
+
+                if (emiPaymentId && installmentNumber) {
+                    // IDEMPOTENCY: Use atomic findOneAndUpdate to prevent duplicate processing
+                    // The verify endpoint will handle wallet crediting, webhook is just a backup
+                    const emiPayment = await EMIPayment.findOneAndUpdate(
+                        {
+                            _id: emiPaymentId,
+                            "installments.installmentNumber": installmentNumber,
+                            "installments.status": { $ne: "PAID" },
+                            "installments.verificationStatus": { $nin: ["VERIFIED", "PROCESSING"] }
+                        },
+                        {
+                            $set: {
+                                "installments.$.verificationStatus": "WEBHOOK_PROCESSING"
+                            }
+                        },
+                        { new: true }
+                    )
+                        .populate("contractId")
+                        .populate("corporateOwnerId")
+                        .populate("fleetOwnerId")
+
+                    if (emiPayment) {
+                        const installment = emiPayment.installments.find(
+                            i => i.installmentNumber === installmentNumber
+                        )
+
+                        if (installment) {
+                            // Update installment status (wallet crediting is handled by verify endpoint)
+                            installment.status = "PAID"
+                            installment.paidAt = new Date()
+                            installment.transactionId = session.payment_intent
+                            installment.gatewaySessionId = session.id
+                            installment.verificationStatus = "VERIFIED"
+
+                            // Update EMI summary
+                            emiPayment.paidInstallments = emiPayment.installments.filter(
+                                i => i.status === "PAID"
+                            ).length
+                            emiPayment.totalPaid = emiPayment.installments
+                                .filter(i => i.status === "PAID")
+                                .reduce((sum, i) => sum + i.amount, 0)
+                            emiPayment.remainingAmount = emiPayment.totalAmount - emiPayment.totalPaid
+
+                            // Check if all installments are paid
+                            if (emiPayment.paidInstallments === emiPayment.totalInstallments) {
+                                emiPayment.status = "COMPLETED"
+                            }
+
+                            // Update next due date
+                            const nextPending = emiPayment.installments.find(i => i.status === "PENDING")
+                            if (nextPending) {
+                                emiPayment.nextDueDate = nextPending.dueDate
+                            } else {
+                                emiPayment.nextDueDate = null
+                            }
+
+                            await emiPayment.save()
+
+                            console.log("[v0] EMI payment processed from Stripe webhook:", {
+                                emiPaymentId,
+                                installmentNumber,
+                                transactionId: session.payment_intent
+                            })
+                        }
+                    } else {
+                        console.log("[v0] EMI installment already processed or not found")
+                    }
+                }
+
+                return res.json({ received: true })
+            }
+
             // Handle contract payment
             const payment = await Payment.findOne({ gatewaySessionId: session.id })
 
@@ -629,12 +755,30 @@ export const stripeWebhook = async (req, res) => {
                 const contract = await Contract.findById(payment.contractId)
                 if (payment.paymentType === "advance") {
                     contract.status = "ACTIVE"
-                    contract.paymentStatus = "PAID"
+                    contract.financials.paymentStatus = "PARTIAL"
                     contract.activationDate = new Date()
+
+                    // Update advance payment details
+                    contract.financials.advancePayment.paidAt = new Date()
+                    contract.financials.advancePayment.dueDate = contract.financials.advancePayment.dueDate || new Date()
+                    contract.financials.advancePayment.transactionId = payment.gatewayTransactionId || payment._id.toString()
+
+                    // Update security deposit details
+                    if (payment.securityDepositAmount > 0) {
+                        contract.financials.securityDeposit.paidAt = new Date()
+                        contract.financials.securityDeposit.dueDate = contract.financials.securityDeposit.dueDate || new Date()
+                        contract.financials.securityDeposit.status = "PAID"
+                    }
                 } else if (payment.paymentType === "final") {
                     contract.status = "COMPLETED"
-                    contract.paymentStatus = "PAID"
+                    contract.financials.paymentStatus = "COMPLETED"
                     contract.completedAt = new Date()
+
+                    // Update final payment details
+                    contract.financials.finalPayment.paidAt = new Date()
+                    contract.financials.finalPayment.dueDate = contract.financials.finalPayment.dueDate || new Date()
+                    contract.financials.finalPayment.transactionId = payment.gatewayTransactionId || payment._id.toString()
+                    contract.financials.remainingAmount = 0
                 }
                 await contract.save()
 
@@ -658,6 +802,74 @@ export const tapWebhook = async (req, res) => {
 
         if (payload.object === "charge" && payload.status === "CAPTURED") {
             const chargeId = payload.id
+            const metadata = payload.metadata || {}
+
+            // Check if this is an EMI payment
+            if (metadata.paymentType === "EMI") {
+                console.log("[v0] Processing EMI payment from Tap webhook")
+                const emiPaymentId = metadata.emiPaymentId
+                const installmentNumber = parseInt(metadata.installmentNumber)
+
+                if (emiPaymentId && installmentNumber) {
+                    // IDEMPOTENCY: Use atomic findOneAndUpdate
+                    const emiPayment = await EMIPayment.findOneAndUpdate(
+                        {
+                            _id: emiPaymentId,
+                            "installments.installmentNumber": installmentNumber,
+                            "installments.status": { $ne: "PAID" },
+                            "installments.verificationStatus": { $nin: ["VERIFIED", "PROCESSING"] }
+                        },
+                        {
+                            $set: {
+                                "installments.$.verificationStatus": "WEBHOOK_PROCESSING"
+                            }
+                        },
+                        { new: true }
+                    )
+                        .populate("contractId")
+                        .populate("corporateOwnerId")
+
+                    if (emiPayment) {
+                        const installment = emiPayment.installments.find(
+                            i => i.installmentNumber === installmentNumber
+                        )
+
+                        if (installment) {
+                            installment.status = "PAID"
+                            installment.paidAt = new Date()
+                            installment.transactionId = chargeId
+                            installment.gatewaySessionId = chargeId
+                            installment.verificationStatus = "VERIFIED"
+
+                            emiPayment.paidInstallments = emiPayment.installments.filter(
+                                i => i.status === "PAID"
+                            ).length
+                            emiPayment.totalPaid = emiPayment.installments
+                                .filter(i => i.status === "PAID")
+                                .reduce((sum, i) => sum + i.amount, 0)
+                            emiPayment.remainingAmount = emiPayment.totalAmount - emiPayment.totalPaid
+
+                            if (emiPayment.paidInstallments === emiPayment.totalInstallments) {
+                                emiPayment.status = "COMPLETED"
+                            }
+
+                            const nextPending = emiPayment.installments.find(i => i.status === "PENDING")
+                            if (nextPending) {
+                                emiPayment.nextDueDate = nextPending.dueDate
+                            } else {
+                                emiPayment.nextDueDate = null
+                            }
+
+                            await emiPayment.save()
+                            console.log("[v0] EMI payment processed from Tap webhook:", { emiPaymentId, installmentNumber })
+                        }
+                    } else {
+                        console.log("[v0] EMI payment already processed or not found")
+                    }
+                }
+
+                return res.status(200).json({ status: "success" })
+            }
 
             const payment = await Payment.findOne({ gatewaySessionId: chargeId })
 
@@ -693,9 +905,33 @@ export const tapWebhook = async (req, res) => {
 }
 
 // Process payment to wallets (existing function)
+// IDEMPOTENT: This function checks if wallets were already credited to prevent duplicates
 const processPaymentToWallets = async (payment) => {
     console.log("[v0] Processing payment to wallets:", payment._id)
     console.log("[v0] Payment currency:", payment.currency)
+
+    // IDEMPOTENCY CHECK: Prevent duplicate wallet credits
+    // Re-fetch payment to get latest state (in case webhook and verify endpoint race)
+    const latestPayment = await Payment.findById(payment._id)
+    if (latestPayment.walletCredited) {
+        console.log("[v0] Wallets already credited for payment:", payment._id)
+        console.log("[v0] Wallet credited at:", latestPayment.walletCreditedAt)
+        return { success: true, message: "Wallets already credited", alreadyProcessed: true }
+    }
+
+    // Atomically mark as processing to prevent race conditions
+    const updateResult = await Payment.findOneAndUpdate(
+        { _id: payment._id, walletCredited: { $ne: true } },
+        { $set: { walletCredited: true, walletCreditedAt: new Date() } },
+        { new: true }
+    )
+
+    if (!updateResult) {
+        console.log("[v0] Payment already being processed or credited by another request")
+        return { success: true, message: "Already being processed", alreadyProcessed: true }
+    }
+
+    console.log("[v0] Wallet credit lock acquired for payment:", payment._id)
 
     // Get or create admin wallet
     const adminUserId = process.env.ADMIN_USER_ID
@@ -806,16 +1042,94 @@ const processPaymentToWallets = async (payment) => {
     await contract.save()
     console.log("[v0] Contract updated with payment info")
 
+    // Update negotiation commission status to PAID if payment is advance (first payment)
+    // AND credit the commission to Admin wallet
+    // Check if not already paid to avoid duplicate credits
+    if (payment.paymentType === "advance" && contract.negotiationCommission) {
+        try {
+            const negotiationCommission = contract.negotiationCommission
+
+            // Check if commission is already PAID to avoid double credit
+            if (negotiationCommission.commissionStatus === "PAID") {
+                console.log("[v0] Negotiation commission already PAID, skipping wallet credit")
+            } else {
+                const commissionAmount = negotiationCommission.adminCommission || 0
+
+                // Update contract commission status
+                await Contract.findByIdAndUpdate(
+                    contract._id,
+                    { "negotiationCommission.commissionStatus": "PAID" },
+                    { new: true }
+                )
+                console.log("[v0] Contract negotiation commission status marked as PAID")
+
+                // Also update AdminNegotiation status if exists
+                if (negotiationCommission.negotiationId) {
+                    // Get the negotiation details to find the admin who completed it
+                    const negotiation = await AdminNegotiation.findById(negotiationCommission.negotiationId)
+
+                    if (negotiation) {
+                        // Check if negotiation commission is already paid
+                        if (negotiation.adminCommissionFromCorporate?.status === "PAID") {
+                            console.log("[v0] AdminNegotiation commission already PAID, skipping wallet credit")
+                        } else {
+                            // Update negotiation commission status
+                            await AdminNegotiation.findByIdAndUpdate(
+                                negotiationCommission.negotiationId,
+                                {
+                                    "adminCommissionFromCorporate.status": "PAID",
+                                    "adminCommissionFromCorporate.paidAt": new Date()
+                                },
+                                { new: true }
+                            )
+                            console.log("[v0] AdminNegotiation commission marked as PAID")
+
+                            // Credit Admin wallet if commission amount > 0
+                            if (commissionAmount > 0 && negotiation.completedBy) {
+                                const corporateUser = await User.findById(payment.corporateOwnerId).select('fullName companyName')
+                                const corporateName = corporateUser?.companyName || corporateUser?.fullName || 'Corporate'
+
+                                const creditResult = await creditAdminNegotiationCommission({
+                                    adminUserId: negotiation.completedBy,
+                                    amount: commissionAmount,
+                                    currency: payment.currency || contract.financials.currency || "AED",
+                                    corporateUserId: payment.corporateOwnerId,
+                                    corporateName: corporateName,
+                                    negotiationId: negotiation._id,
+                                    contractId: contract._id,
+                                    contractNumber: contract.contractNumber
+                                })
+
+                                if (creditResult.success) {
+                                    console.log("[v0] Admin wallet credited with negotiation commission:", {
+                                        adminId: negotiation.completedBy,
+                                        amount: commissionAmount,
+                                        newBalance: creditResult.newBalance
+                                    })
+                                } else {
+                                    console.error("[v0] Failed to credit admin wallet:", creditResult.message)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("[v0] Error updating negotiation commission status:", err)
+        }
+    }
+
     // Send real-time notifications for online payment completion
     const corporateUser = await User.findById(payment.corporateOwnerId).select('fullName companyName')
     const corporateName = corporateUser?.companyName || corporateUser?.fullName || 'Corporate'
 
-    // Notification for B2B Partner - Payment Received
+    // Notification for B2B Partner - Payment Received (with dynamic commission rate)
+    const fleetOwnerSharePercent = 100 - (payment.appliedCommissionRate || 10)
     const b2bNotification = await createNotification({
         userId: payment.fleetOwnerId,
         type: "PAYMENT_RECEIVED",
         title: "Payment Received",
-        message: `${corporateName} has completed ${payment.paymentType} payment of ${payment.fleetOwnerAmount} ${payment.currency} (your share: 90% of advance). Payment method: Online (${payment.paymentMethod}). Contract: ${contract.contractNumber}.${contract.status === "ACTIVE" ? " Contract is now ACTIVE!" : ""}`,
+        message: `${corporateName} has completed ${payment.paymentType} payment of ${payment.fleetOwnerAmount} ${payment.currency} (your share: ${fleetOwnerSharePercent}% of advance). Payment method: Online (${payment.paymentMethod}). Contract: ${contract.contractNumber}.${contract.status === "ACTIVE" ? " Contract is now ACTIVE!" : ""}`,
         metadata: {
             paymentId: payment._id,
             contractId: contract._id,
@@ -890,6 +1204,7 @@ const processPaymentToWallets = async (payment) => {
 
     console.log("[v0] Payment notifications sent to both parties")
 }
+
 
 export const createInstallmentPayment = async (req, res) => {
     try {

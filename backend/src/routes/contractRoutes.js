@@ -20,7 +20,11 @@ import {
     requestDueDateExtension,
     respondToDueDateExtension,
     getDueDateExtensionRequests,
-    updateCorporateDriver
+    updateCorporateDriver,
+    syncNegotiationCommission,
+    uploadSignedContractDocument,
+    verifySignedContractDocument,
+    downloadContractDocument
 } from "../controllers/contractController.js"
 import { verifyToken, checkFleetOwnerRole, checkCorporateOwnerRole, requireRole } from "../middleware/auth.js"
 import { upload, handleMulterError } from "../Config/multerConfig.js"
@@ -129,5 +133,32 @@ router.post("/:contractId/respond-due-date-extension", verifyToken, checkFleetOw
 // @desc    Get contracts with pending due date extension requests for B2B Partner
 // @access  Private (B2B_PARTNER only)
 router.get("/fleet/due-date-requests", verifyToken, checkFleetOwnerRole, getDueDateExtensionRequests)
+
+// @route   POST /api/contracts/:contractId/sync-negotiation-commission
+// @desc    Sync negotiation commission from quotation to contract (for existing contracts)
+// @access  Private (CORPORATE or B2B_PARTNER)
+router.post("/:contractId/sync-negotiation-commission", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), syncNegotiationCommission)
+
+// @route   POST /api/contracts/:contractId/upload-signed-document
+// @desc    Corporate uploads signed contract document
+// @access  Private (CORPORATE only)
+router.post(
+    "/:contractId/upload-signed-document",
+    verifyToken,
+    checkCorporateOwnerRole,
+    upload.single("signedDocument"),
+    handleMulterError,
+    uploadSignedContractDocument
+)
+
+// @route   POST /api/contracts/:contractId/verify-signed-document
+// @desc    B2B Partner verifies signed contract document
+// @access  Private (B2B_PARTNER only)
+router.post("/:contractId/verify-signed-document", verifyToken, checkFleetOwnerRole, verifySignedContractDocument)
+
+// @route   GET /api/contracts/:contractId/download-document
+// @desc    Download contract document (original or signed)
+// @access  Private (CORPORATE or B2B_PARTNER)
+router.get("/:contractId/download-document", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), downloadContractDocument)
 
 export default router

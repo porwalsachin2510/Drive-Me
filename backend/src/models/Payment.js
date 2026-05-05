@@ -33,6 +33,13 @@ const paymentSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.Mixed,
             default: null,
         },
+        // Store the applied commission rate for display purposes (percentage)
+        appliedCommissionRate: {
+            type: Number,
+            default: 10, // Default 10%
+            min: 0,
+            max: 100,
+        },
         fleetOwnerAmount: {
             type: Number,
             required: true,
@@ -89,6 +96,18 @@ const paymentSchema = new mongoose.Schema(
             ref: "User",
         },
         verifiedAt: {
+            type: Date,
+        },
+        // Track if wallets have been credited for this payment (prevents duplicate credits)
+        walletCredited: {
+            type: Boolean,
+            default: false,
+        },
+        walletCreditedAt: {
+            type: Date,
+        },
+        // Track admin verification separately from wallet crediting
+        adminVerifiedAt: {
             type: Date,
         },
         paymentMetadata: {

@@ -1,0 +1,144 @@
+.emi-payment-callback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+.emi-payment-callback .callback-card {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.emi-payment-callback .status-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 2.5rem;
+}
+
+.emi-payment-callback .status-icon.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.emi-payment-callback .status-icon.error {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.emi-payment-callback .status-icon.processing {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.emi-payment-callback h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #1a1a1a;
+}
+
+.emi-payment-callback .message {
+  color: #666;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.emi-payment-callback .payment-details {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.emi-payment-callback .payment-details .detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.emi-payment-callback .payment-details .detail-row:last-child {
+  border-bottom: none;
+}
+
+.emi-payment-callback .payment-details .detail-label {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.emi-payment-callback .payment-details .detail-value {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 0.875rem;
+}
+
+.emi-payment-callback .action-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.emi-payment-callback .btn-primary {
+  background: #ffc107;
+  color: #1a1a1a;
+  border: none;
+  padding: 0.875rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.emi-payment-callback .btn-primary:hover {
+  background: #ffca2c;
+  transform: translateY(-1px);
+}
+
+.emi-payment-callback .btn-secondary {
+  background: transparent;
+  color: #666;
+  border: 1px solid #ddd;
+  padding: 0.875rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.emi-payment-callback .btn-secondary:hover {
+  background: #f5f5f5;
+}
+
+.emi-payment-callback .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #ffc107;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

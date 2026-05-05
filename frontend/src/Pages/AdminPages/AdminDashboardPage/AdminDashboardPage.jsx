@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import AdminHeader from "../../../Components/Admin/AdminHeader/AdminHeader";
-import AdminNavigation from "../../../Components/Admin/AdminNavigation/AdminNavigation";
+import DashboardLayout from "../../../Components/DashboardLayout/DashboardLayout";
 import AdminOverview from "../../../Components/Admin/AdminOverview/AdminOverview";
 import AdminB2CManagement from "../../../Components/Admin/AdminB2CManagement/AdminB2CManagement";
 import AdminRidePooling from "../../../Components/Admin/AdminRidePooling/AdminRidePooling";
@@ -18,64 +17,64 @@ import AdminSettlement from "../../../Components/Admin/AdminSettlement/AdminSett
 import AdminContent from "../../../Components/Admin/AdminContent/AdminContent";
 import AdminWalletManagement from "../../../Components/Admin/AdminWalletManagement/AdminWalletManagement";
 import AdminDropdownManagement from "../../../Components/Admin/AdminDropdownManagement/AdminDropdownManagement";
+import AdminManagement from "../../../Components/Admin/AdminManagement/AdminManagement";
+import AdminCommissionSettings from "../../../Components/Admin/AdminCommissionSettings/AdminCommissionSettings";
+import AdminNegotiations from "../../../Components/Admin/AdminNegotiations/AdminNegotiations";
+import AdminTermsManagement from "../../../Components/Admin/AdminTermsManagement/AdminTermsManagement";
 import "./admindashboardpage.css";
 
 function AdminDashboardPage() {
-  
-  // const [activeTab, setActiveTab] = useState("corporate");
-  const [dashboardactiveTab, setDashboardActiveTab] = useState("overview");
-  console.log(dashboardactiveTab);
+  const [activeTab, setActiveTab] = useState("overview");
 
-const renderContent = () => {
-  switch (dashboardactiveTab) {
-    case "overview":
-      return <AdminOverview />;
-    case "b2c":
-      return <AdminB2CManagement />;
-    case "ride-pooling":
-      return <AdminRidePooling />;
-    case "b2b":
-      return <AdminB2BListings />;
-    case "users":
-      return <AdminUsers />;
-    case "reports":
-      return <AdminReports />;
-    case "finance":
-      return <AdminFinance />;
-    case "comm":
-      return <AdminComm />;
-    case "ads":
-      return <AdminAds />;
-    case "Payment Verification":
-      return <PaymentVerification />;
-    case "vehicle-approval":
-      return <AdminVehicleApproval />;
-    case "settlement":
-      return <AdminSettlement />;
-    case "content":
-      return <AdminContent />;
-    case "wallets":
-      return <AdminWalletManagement />;
-    case "dropdowns":
-      return <AdminDropdownManagement />;
-    default:
-      return <AdminOverview />;
-  }
+  const renderContent = () => {
+    switch (activeTab) {
+      case "overview":
+        return <AdminOverview />;
+      case "b2c":
+        return <AdminB2CManagement />;
+      case "ride-pooling":
+        return <AdminRidePooling />;
+      case "b2b":
+        return <AdminB2BListings />;
+      case "users":
+        return <AdminUsers />;
+      case "reports":
+        return <AdminReports />;
+      case "finance":
+        return <AdminFinance />;
+      case "comm":
+        return <AdminComm />;
+      case "ads":
+        return <AdminAds />;
+      case "Payment Verification":
+        return <PaymentVerification />;
+      case "vehicle-approval":
+        return <AdminVehicleApproval />;
+      case "settlement":
+        return <AdminSettlement />;
+      case "content":
+        return <AdminContent />;
+      case "wallets":
+        return <AdminWalletManagement />;
+      case "dropdowns":
+        return <AdminDropdownManagement />;
+      case "admin-management":
+        return <AdminManagement />;
+      case "commission-settings":
+        return <AdminCommissionSettings />;
+      case "negotiations":
+        return <AdminNegotiations />;
+      case "terms-management":
+        return <AdminTermsManagement />;
+      default:
+        return <AdminOverview />;
+    }
   };
-  
-  
-    
+
   return (
-    <div className="ad-dash-profile">
-      <div className="ad-dash-dashboard">
-        <AdminHeader />
-        <AdminNavigation
-          dashboardactiveTab={dashboardactiveTab}
-          setDashboardActiveTab={setDashboardActiveTab}
-        />
-        <div className="ad-dash-content">{renderContent()}</div>
-      </div>
-    </div>
+    <DashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <div className="admin-dashboard-content">{renderContent()}</div>
+    </DashboardLayout>
   );
 }
 

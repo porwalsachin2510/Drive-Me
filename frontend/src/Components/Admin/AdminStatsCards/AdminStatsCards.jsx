@@ -36,11 +36,25 @@ function AdminStatsCards({ stats }) {
     },
     {
       title: "Total Revenue",
-      value: stats?.totalRevenue ? `${stats.currency || 'AED'} ${stats.totalRevenue.toLocaleString()}` : "KWD 0",
+      value:
+        stats?.totalRevenue !== undefined
+          ? `${stats.currency || "AED"} ${Number(stats.totalRevenue).toLocaleString()}`
+          : `${stats.currency || "AED"} 0`,
       change: "+18% this month",
       positive: true,
       icon: "💰",
       color: "#10b981",
+    },
+    {
+      title: "Admin Wallet Balance",
+      value:
+        stats?.adminBalance !== undefined
+          ? `${stats.currency || "AED"} ${Number(stats.adminBalance).toLocaleString()}`
+          : `${stats.currency || "AED"} 0`,
+      change: `Total Earnings: ${stats.currency || "AED"} ${Number(stats?.totalEarnings || 0).toLocaleString()}`,
+      positive: true,
+      icon: "💳",
+      color: "#059669",
     },
     {
       title: "Active Trips",
@@ -58,15 +72,15 @@ function AdminStatsCards({ stats }) {
       icon: "⏳",
       color: "#f59e0b",
     },
-    {
-      title: "Support Tickets",
-      value: stats?.supportTickets || 0,
-      change: "Open tickets",
-      positive: false,
-      icon: "🎫",
-      color: "#6b7280",
-    },
-  ]
+    // {
+    //   title: "Support Tickets",
+    //   value: stats?.supportTickets || 0,
+    //   change: "Open tickets",
+    //   positive: false,
+    //   icon: "🎫",
+    //   color: "#6b7280",
+    // },
+  ];
 
   return (
     <div className="ad-dash-stats-grid">

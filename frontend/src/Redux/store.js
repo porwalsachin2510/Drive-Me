@@ -18,6 +18,7 @@ import adminDashboardReducer from "./slices/adminDashboardSlice"
 import commuterReducer from "./slices/commuterSlice"
 import corporateOperationsReducer from "./slices/corporateOperationsSlice"
 import corporateOperationsEnhancedReducer from "./slices/corporateOperationsSliceEnhanced"
+import emiPaymentReducer from "./slices/emiPaymentSlice"
 
 export const store = configureStore({
     reducer: {
@@ -40,6 +41,7 @@ export const store = configureStore({
         commuter: commuterReducer,
         corporateOperations: corporateOperationsReducer,
         corporateOpsEnhanced: corporateOperationsEnhancedReducer,
+        emiPayment: emiPaymentReducer,
     },
 })
 

@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -14,6 +14,7 @@ import api from "../../utils/api";
 import Navbar from "../../Components/Navbar/Navbar";
 import Footer from "../../Components/Footer/Footer";
 import OTPVerification from "../../Components/OTPVerification/OTPVerification";
+import TermsAndConditionsModal from "../../Components/TermsAndConditions/TermsAndConditionsModal";
 import {
   selectLoading,
   selectError,
@@ -30,6 +31,12 @@ const Register = () => {
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Terms and Conditions state
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsVersion, setTermsVersion] = useState("1.0.0");
+  const [commissionRange, setCommissionRange] = useState({ min: 0, max: 35 });
 
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
@@ -140,10 +147,49 @@ const Register = () => {
   const handleRoleSelect = (role) => {
     setSelectedRole(role);
     dispatch(authError(""));
+    // Reset T&C acceptance when role changes
+    setTermsAccepted(false);
     setFormData((prev) => ({
       ...prev,
       acceptedPaymentMethods: [],
     }));
+  };
+
+  // Roles that require T&C acceptance
+  const rolesRequiringTerms = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"];
+  const requiresTerms = rolesRequiringTerms.includes(selectedRole);
+
+  // Fetch commission range when role changes
+  useEffect(() => {
+    const fetchCommissionRange = async () => {
+      if (requiresTerms) {
+        try {
+          const response = await api.get(`/terms/latest?role=${selectedRole}`);
+          if (response.data.success && response.data.data) {
+            const data = response.data.data;
+            const roleKeyMap = {
+              B2C_PARTNER: "b2cPartner",
+              B2B_PARTNER: "b2bPartner",
+              CORPORATE: "corporate",
+            };
+            const roleKey = roleKeyMap[selectedRole];
+            const range = data.commissionRange ||
+              data.commissionRanges?.[roleKey] || { min: 0, max: 35 };
+            setCommissionRange(range);
+          }
+        } catch (err) {
+          console.error("Error fetching commission range:", err);
+          setCommissionRange({ min: 0, max: 35 });
+        }
+      }
+    };
+    fetchCommissionRange();
+  }, [selectedRole, requiresTerms]);
+
+  const handleTermsAccept = (termsData) => {
+    setTermsAccepted(true);
+    setTermsVersion(termsData.version);
+    setShowTermsModal(false);
   };
 
   const handleInputChange = (e) => {
@@ -484,6 +530,12 @@ const Register = () => {
       }
     }
 
+    // Validate T&C acceptance for roles that require it
+    if (requiresTerms && !termsAccepted) {
+      dispatch(authError("Please accept the Terms and Conditions to continue"));
+      return false;
+    }
+
     return true;
   };
 
@@ -511,6 +563,12 @@ const Register = () => {
       submitData.append("whatsappNumber", fullWhatsappNumber);
       submitData.append("countryCode", formData.countryCode);
       submitData.append("password", formData.password);
+
+      // Add T&C acceptance data for applicable roles
+      if (requiresTerms && termsAccepted) {
+        submitData.append("termsAccepted", "true");
+        submitData.append("termsVersion", termsVersion);
+      }
 
       if (formData.companyLogo) {
         submitData.append("companyLogo", formData.companyLogo.file);
@@ -1133,10 +1191,76 @@ const Register = () => {
                 </>
               )}
 
+              {/* Terms and Conditions for applicable roles */}
+              {requiresTerms && (
+                <div className="register-terms-section">
+                  <div className="register-terms-checkbox-wrapper">
+                    <label className="register-terms-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={() => {
+                          if (!termsAccepted) {
+                            setShowTermsModal(true);
+                          } else {
+                            setTermsAccepted(false);
+                          }
+                        }}
+                        className="register-terms-checkbox"
+                      />
+                      <span className="register-terms-checkmark"></span>
+                      <span className="register-terms-text">
+                        I have read and agree to the{" "}
+                        <button
+                          type="button"
+                          className="register-terms-link"
+                          onClick={() => setShowTermsModal(true)}
+                        >
+                          Terms and Conditions
+                        </button>
+                      </span>
+                    </label>
+                    {termsAccepted && (
+                      <span className="register-terms-accepted-badge">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                        Terms Accepted (v{termsVersion})
+                      </span>
+                    )}
+                  </div>
+                  <p className="register-terms-commission-note">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                    A commission of {commissionRange.min}% to{" "}
+                    {commissionRange.max}% may apply based on your transactions.
+                    Review the terms for complete details.
+                  </p>
+                </div>
+              )}
+
               <button
                 type="submit"
                 className="register-submit-btn"
-                disabled={loading}
+                disabled={loading || (requiresTerms && !termsAccepted)}
               >
                 {loading ? "Creating Account..." : "Create Account"}
               </button>
@@ -1148,9 +1272,17 @@ const Register = () => {
           </div>
         </div>
       )}
+      {/* Terms and Conditions Modal */}
+      <TermsAndConditionsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={handleTermsAccept}
+        userRole={selectedRole}
+      />
+
       <Footer />
     </div>
   );
-};
+};;;
 
 export default Register;

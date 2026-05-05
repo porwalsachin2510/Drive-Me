@@ -1,23 +1,50 @@
 import stripe from "../Config/stripe.js"
 import tapPayments from "../Config/tapPayments.js"
+import CommissionSettings from "../models/CommissionSettings.js"
 
-// Calculate commission split
+// Calculate commission split - now accepts dynamic rate (0-100%)
+// commissionRate should be passed as decimal (e.g., 0.10 for 10%, 0.20 for 20%)
 export const calculateCommission = (amount, paymentType = "advance", commissionRate = 0.1) => {
     if (paymentType === "advance") {
         // Amount here is only the 50% advance (security deposit is handled separately)
         const adminCommission = Math.round(amount * commissionRate * 100) / 100
         const fleetOwnerAmount = Math.round((amount - adminCommission) * 100) / 100
-        return { adminCommission, fleetOwnerAmount }
+        return { adminCommission, fleetOwnerAmount, appliedRate: commissionRate * 100 }
     } else if (paymentType === "security") {
         // Security deposit goes to platform/admin account, not fleet owner
         const adminCommission = 0
         const fleetOwnerAmount = 0
-        return { adminCommission, fleetOwnerAmount }
+        return { adminCommission, fleetOwnerAmount, appliedRate: 0 }
     } else if (paymentType === "final") {
-        // Final payment: 10% commission to admin, 90% to fleet owner
+        // Final payment: commission to admin, rest to fleet owner
         const adminCommission = Math.round(amount * commissionRate * 100) / 100
         const fleetOwnerAmount = Math.round((amount - adminCommission) * 100) / 100
-        return { adminCommission, fleetOwnerAmount }
+        return { adminCommission, fleetOwnerAmount, appliedRate: commissionRate * 100 }
+    }
+}
+
+// Get dynamic commission rate for a B2B Partner (Contract Commission)
+export const getB2BPartnerCommissionRate = async (fleetOwnerId) => {
+    try {
+        const settings = await CommissionSettings.findOne({ userId: fleetOwnerId, isActive: true })
+        if (settings) {
+            // Check for custom CONTRACT rate first
+            const now = new Date()
+            const customRate = settings.customRates?.find(
+                (r) =>
+                    r.rateType === "CONTRACT" &&
+                    r.effectiveFrom <= now &&
+                    (!r.effectiveUntil || r.effectiveUntil >= now)
+            )
+            if (customRate) {
+                return customRate.rate / 100 // Convert percentage to decimal
+            }
+            return settings.defaultCommissionRate / 100 // Convert percentage to decimal
+        }
+        return 0.10 // Default 10% if no settings found
+    } catch (error) {
+        console.error("[v0] Error fetching B2B commission rate:", error)
+        return 0.10 // Default 10%
     }
 }
 
@@ -81,6 +108,10 @@ class PaymentGatewayService {
         try {
             console.log("[v0] Creating Stripe checkout session")
 
+            // Determine URL separator (? or &) based on whether redirectUrl already has query params
+            const urlSeparator = data.redirectUrl.includes('?') ? '&' : '?'
+            const cancelSeparator = data.redirectUrl.includes('?') ? '&' : '?'
+
             const session = await stripe.checkout.sessions.create({
                 payment_method_types: ["card"],
                 line_items: [
@@ -97,8 +128,8 @@ class PaymentGatewayService {
                     },
                 ],
                 mode: "payment",
-                success_url: `${data.redirectUrl}?session_id={CHECKOUT_SESSION_ID}&status=success`,
-                cancel_url: `${data.redirectUrl}?status=cancelled`,
+                success_url: `${data.redirectUrl}${urlSeparator}session_id={CHECKOUT_SESSION_ID}&status=success`,
+                cancel_url: `${data.redirectUrl}${cancelSeparator}status=cancelled`,
                 customer_email: data.customer.email,
                 metadata: {
                     contractId: data.contractId,

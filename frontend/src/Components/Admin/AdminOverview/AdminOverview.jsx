@@ -54,7 +54,10 @@ function AdminOverview() {
 
       // Combine all stats with real data
       const combinedStats = {
-        totalUsers: statsResponse.data.stats?.totalUsers || userStatsResponse.data.stats?.totalUsers || 0,
+        totalUsers:
+          statsResponse.data.stats?.totalUsers ||
+          userStatsResponse.data.stats?.totalUsers ||
+          0,
         totalCorporates: userStatsResponse.data.stats?.totalCorporates || 0,
         totalB2CPartners: userStatsResponse.data.stats?.totalB2CPartners || 0,
         totalB2BPartners: userStatsResponse.data.stats?.totalB2BPartners || 0,
@@ -67,6 +70,8 @@ function AdminOverview() {
         totalDrivers: userStatsResponse.data.stats?.totalDrivers || 0,
         suspendedUsers: userStatsResponse.data.stats?.suspendedUsers || 0,
         adminBalance: statsResponse.data.stats?.adminBalance || 0,
+        totalEarnings: statsResponse.data.stats?.totalEarnings || 0,
+        currency: statsResponse.data.stats?.currency || "AED",
       };
 
       setStats(combinedStats);

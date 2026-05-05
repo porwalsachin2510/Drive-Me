@@ -2,91 +2,49 @@
 
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import Navbar from "../../../Components/Navbar/Navbar";
-import Footer from "../../../Components/Footer/Footer";
-import "./b2b_partnerprofilepage.css";
-import B2B_Navigation from "../../../Components/B2B_Partner/B2B_Navigation/B2B_Navigation";
-
-import B2B_Header from "../../../Components/B2B_Partner/B2B_Header/B2B_Header";
+import DashboardLayout from "../../../Components/DashboardLayout/DashboardLayout";
 import B2B_Overview from "../../../Components/B2B_Partner/B2B_Overview/B2B_Overview";
 import B2B_FleetAndDrivers from "../../../Components/B2B_Partner/B2B_FleetAndDrivers/B2B_FleetAndDrivers";
-import B2B_Contracts from "../../../Components/B2B_Partner/B2B_Contracts/B2B_Contracts";
 import B2B_Quotation from "../../../Components/B2B_Partner/B2B_Quotation/B2B_Quotation";
 import B2B_Analytics from "../../../Components/B2B_Partner/B2B_Analytics/B2B_Analytics";
 import B2B_Settings from "../../../Components/B2B_Partner/B2B_Settings/B2B_Settings";
 import B2B_PartnerContractPage from "../B2B_ParnterContractPage/B2B_PartnerContractPage";
+import B2B_PartnerNegotiations from "../../../Components/B2B_Partner/B2B_PartnerNegotiations/B2B_PartnerNegotiations";
 import RequirementsView from "../../../Components/B2B_Partner/RequirementsView/RequirementsView";
 import B2B_Invoices from "../../../Components/B2B_Partner/B2B_Invoices/B2B_Invoices";
-
+import "./b2b_partnerprofilepage.css";
 
 function B2B_PartnerProfilePage() {
-    const location = useLocation();
+  const location = useLocation();
   const navigate = useNavigate();
-  
-  const auth = useSelector((state) => state.auth);
-  const user = auth.user;
 
-    // Get initial tab from URL query params on mount
-    const getInitialTab = () => {
-      const searchParams = new URLSearchParams(location.search);
-      return searchParams.get("tab") || "overview";
-    };
+  // Get initial tab from URL query params on mount
+  const getInitialTab = () => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get("tab") || "overview";
+  };
 
-    const [b2bactiveTab, setB2BActiveTab] = useState(getInitialTab);
-    const [formattedLastLogin, setFormattedLastLogin] = useState("");
+  const [b2bactiveTab, setB2BActiveTab] = useState(getInitialTab);
 
-    // Format last login time
-    useEffect(() => {
-      if (auth.user?.lastLogin) {
-        const loginDate = new Date(auth.user.lastLogin);
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
+  // When URL changes (e.g., back navigation), update the tab
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabFromUrl = searchParams.get("tab");
+    if (tabFromUrl && tabFromUrl !== b2bactiveTab) {
+      setB2BActiveTab(tabFromUrl);
+      // Clear the URL param after reading it
+      navigate("/b2b-partner-profile", { replace: true });
+    }
+  }, [location.search, b2bactiveTab, navigate]);
 
-        let dateString = "";
-
-        if (loginDate.toDateString() === today.toDateString()) {
-          dateString = "Today";
-        } else if (loginDate.toDateString() === yesterday.toDateString()) {
-          dateString = "Yesterday";
-        } else {
-          dateString = loginDate.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-        }
-
-        const timeString = loginDate.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
-
-        setFormattedLastLogin(`${dateString}, ${timeString}`);
-      }
-    }, [auth.user?.lastLogin]);
-  
-    // When URL changes (e.g., back navigation), update the tab
-    useEffect(() => {
-      const searchParams = new URLSearchParams(location.search);
-      const tabFromUrl = searchParams.get("tab");
-      if (tabFromUrl && tabFromUrl !== b2bactiveTab) {
-        setB2BActiveTab(tabFromUrl);
-        // Clear the URL param after reading it
-        navigate("/b2b-partner/profile", { replace: true });
-      }
-    }, [location.search]);
-
-    // Custom handler to clear URL when user manually clicks a tab
-    const handleTabChange = (tab) => {
-      setB2BActiveTab(tab);
-      // Clear any tab param from URL when manually switching tabs
-      if (location.search.includes("tab=")) {
-        navigate("/", { replace: true });
-      }
-    };
+  // Custom handler to clear URL when user manually clicks a tab
+  const handleTabChange = (tab) => {
+    setB2BActiveTab(tab);
+    // Clear any tab param from URL when manually switching tabs
+    if (location.search.includes("tab=")) {
+      navigate("/b2b-partner-profile", { replace: true });
+    }
+  };
 
   const renderContent = () => {
     switch (b2bactiveTab) {
@@ -98,10 +56,10 @@ function B2B_PartnerProfilePage() {
         return <B2B_PartnerContractPage />;
       case "My Quotation":
         return <B2B_Quotation />;
-
+      case "negotiations":
+        return <B2B_PartnerNegotiations />;
       case "requirements":
         return <RequirementsView />;
-
       case "analytics":
         return <B2B_Analytics />;
       case "invoices":
@@ -114,21 +72,9 @@ function B2B_PartnerProfilePage() {
   };
 
   return (
-    <div className="b2b-my-profile">
-      {/* <Navbar activeTab={activeTab} setActiveTab={setActiveTab} /> */}
-
-      <div className="b2b-fleet-dashboard-container">
-        <div className="b2b-dashboard">
-          <B2B_Header />
-          <B2B_Navigation
-            b2bactiveTab={b2bactiveTab}
-            setB2BActiveTab={handleTabChange}
-          />
-
-          <main className="b2b-dashboard-content">{renderContent()}</main>
-        </div>
-      </div>
-    </div>
+    <DashboardLayout activeTab={b2bactiveTab} setActiveTab={handleTabChange}>
+      {renderContent()}
+    </DashboardLayout>
   );
 }
 

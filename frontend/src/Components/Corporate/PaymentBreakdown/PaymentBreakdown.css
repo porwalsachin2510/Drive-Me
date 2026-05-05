@@ -75,6 +75,43 @@
   color: #10b981;
 }
 
+.breakdown-amount.negotiation-commission {
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+.breakdown-amount.negotiation-paid {
+  color: #10b981;
+}
+
+.breakdown-item.negotiation-fee {
+  background: #f3e8ff;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #c4b5fd;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 8px 0;
+}
+
+.breakdown-item.negotiation-fee .breakdown-label {
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.breakdown-item.negotiation-fee.paid {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.breakdown-item.negotiation-fee.paid .breakdown-label {
+  color: #065f46;
+}
+
+.breakdown-divider.small {
+  margin: 8px 0;
+}
+
 .breakdown-note {
   font-size: 12px;
   color: #6b7280;
@@ -103,6 +140,82 @@
   margin: 16px 0;
 }
 
+* EMI Breakdown Specific Styles */
+.payment-breakdown.emi-breakdown {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #0ea5e9;
+}
+
+.payment-breakdown.emi-breakdown .breakdown-title {
+  border-bottom-color: #0ea5e9;
+}
+
+.breakdown-item.highlight-admin {
+  background: #dbeafe;
+  padding: 14px 12px;
+  border-radius: 8px;
+  border: 2px solid #3b82f6;
+  margin-top: 12px;
+}
+
+.breakdown-amount.total-admin {
+  color: #1d4ed8;
+  font-size: 17px;
+}
+
+.summary-section {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.breakdown-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.summary-row.admin-row {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.summary-row.admin-row .summary-value {
+  color: #1d4ed8;
+}
+
+.summary-row.fleet-row {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+}
+
+.summary-row.fleet-row .summary-value {
+  color: #059669;
+}
+
+.summary-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.summary-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
 @media (max-width: 640px) {
   .payment-breakdown {
     padding: 16px;
@@ -120,5 +233,10 @@
 
   .breakdown-amount {
     margin-top: 4px;
+  }
+  .summary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 }

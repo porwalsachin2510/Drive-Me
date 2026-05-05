@@ -182,7 +182,8 @@ const B2B_Partner_ContractManagement = () => {
                 <div className="b2b-contracts-info-row">
                   <span className="b2b-contracts-label">Total Amount:</span>
                   <span className="b2b-contracts-value contract-amount">
-                    KWD {contract.financials?.totalAmount?.toFixed(2) || "0.00"}
+                    {contract.financials.currency || "AED"}{" "}
+                    {contract.financials?.totalAmount?.toFixed(2) || "0.00"}
                   </span>
                 </div>
 

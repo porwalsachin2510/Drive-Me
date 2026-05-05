@@ -129,6 +129,50 @@
   color: #fff;
 }
 
+/* Payment Method Badge */
+.drivemego-paymentverification-method-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.drivemego-paymentverification-method-badge.cash {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.drivemego-paymentverification-method-badge.card {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.drivemego-paymentverification-method-badge.bank_transfer,
+.drivemego-paymentverification-method-badge.bank-transfer {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.drivemego-paymentverification-method-badge.upi {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+/* Payment Status in Modal */
+.payment-status-completed {
+  color: #10b981 !important;
+}
+
+.payment-status-pending {
+  color: #f59e0b !important;
+}
+
+.payment-status-failed {
+  color: #ef4444 !important;
+}
+
 .drivemego-paymentverification-view-btn {
   padding: 6px 14px;
   background: #0891b2;
@@ -245,6 +289,101 @@
   font-size: 14px;
   color: #1e293b;
   font-weight: 600;
+}
+
+.drivemego-paymentverification-info-row .drivemego-paymentverification-value.highlight-green {
+  color: #10b981;
+}
+
+.drivemego-paymentverification-info-row .drivemego-paymentverification-value.highlight-blue {
+  color: #0891b2;
+}
+
+.drivemego-paymentverification-info-row .drivemego-paymentverification-value.highlight-purple {
+  color: #8b5cf6;
+}
+
+/* Type Badge */
+.drivemego-paymentverification-type-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.drivemego-paymentverification-type-badge.emi {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.drivemego-paymentverification-type-badge.regular {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* EMI Breakdown Section */
+.drivemego-paymentverification-emi-breakdown {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.drivemego-paymentverification-emi-breakdown h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.drivemego-paymentverification-emi-breakdown .drivemego-paymentverification-info-row {
+  border-bottom: none;
+  padding: 6px 0;
+}
+
+/* Gateway Payment Notice */
+.drivemego-paymentverification-gateway-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border: 1px solid #10b981;
+  border-radius: 10px;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.gateway-notice-icon {
+  width: 32px;
+  height: 32px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.gateway-notice-content strong {
+  display: block;
+  font-size: 14px;
+  color: #065f46;
+  margin-bottom: 4px;
+}
+
+.gateway-notice-content p {
+  font-size: 13px;
+  color: #047857;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .drivemego-paymentverification-verification-actions {

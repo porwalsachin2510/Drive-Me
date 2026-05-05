@@ -813,7 +813,7 @@
   transition: all 0.3s ease;
   box-sizing: border-box;
   resize: vertical;
-  min-height: 120px;
+  min-height: 20px;
   line-height: 1.6;
 }
 
@@ -871,5 +871,307 @@
   .single-quotation-modal {
     width: 95%;
     padding: 24px;
+  }
+}
+
+
+/* ===============================================
+   Admin Negotiation Styles
+   =============================================== */
+
+/* Admin Negotiation Status Banner */
+.admin-negotiation-status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  margin: 20px 0px;
+  border: 1px solid;
+}
+
+.admin-negotiation-status-banner.status-requested {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fcd34d;
+}
+
+.admin-negotiation-status-banner.status-in_progress {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-color: #93c5fd;
+}
+
+.admin-negotiation-status-banner.status-completed {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-color: #6ee7b7;
+}
+
+.admin-negotiation-status-banner.status-failed {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-color: #fca5a5;
+}
+
+.admin-negotiation-status-banner .banner-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.admin-negotiation-status-banner .banner-content {
+  flex: 1;
+}
+
+.admin-negotiation-status-banner .banner-content strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 6px;
+  color: #1e293b;
+}
+
+.admin-negotiation-status-banner .banner-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* Admin Negotiate Button */
+.admin-negotiate-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
+  color: white !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-negotiate-btn:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%) !important;
+  transform: translateY(-2px);
+}
+
+/* Admin Negotiation Modal */
+.admin-negotiation-modal {
+  max-width: 550px;
+}
+
+.admin-negotiation-info {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #c4b5fd;
+}
+
+.negotiation-info-icon {
+  flex-shrink: 0;
+  color: #7c3aed;
+}
+
+.negotiation-info-text {
+  flex: 1;
+}
+
+.negotiation-info-text strong {
+  display: block;
+  font-size: 14px;
+  color: #5b21b6;
+  margin-bottom: 10px;
+}
+
+.negotiation-info-text ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #6b21a8;
+  line-height: 1.7;
+}
+
+.negotiation-info-text li {
+  margin-bottom: 4px;
+}
+
+.current-price-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.current-price-display span {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.current-price-display strong {
+  font-size: 20px;
+  color: #1e293b;
+}
+
+.negotiation-error {
+  padding: 12px 16px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  border: 1px solid #fca5a5;
+}
+
+.admin-negotiation-modal .form-group {
+  margin-bottom: 16px;
+}
+
+.admin-negotiation-modal .form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.admin-negotiation-modal .form-hint {
+  display: block;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+@media (max-width: 640px) {
+  .admin-negotiation-status-banner {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .admin-negotiation-info {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .negotiation-info-text ul {
+    text-align: left;
+  }
+
+  .current-price-display {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+
+/* Negotiation Savings Card Styles */
+.negotiation-savings-card {
+  margin-bottom: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+  border-radius: 12px;
+  border-left: 5px solid #2e7d32;
+  box-shadow: 0 4px 16px rgba(46, 125, 50, 0.15);
+}
+
+.negotiation-savings-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.negotiation-savings-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #2e7d32;
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.negotiation-savings-header h3 {
+  margin: 0;
+  color: #1b5e20;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.negotiation-savings-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.savings-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.savings-detail-row:last-child {
+  border-bottom: none;
+}
+
+.savings-detail-row.highlight {
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px 12px;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.savings-label {
+  color: #1b5e20;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.savings-value {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1b5e20;
+}
+
+.savings-value.original-price {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.savings-value.new-price {
+  color: #2e7d32;
+  font-size: 18px;
+}
+
+.savings-value.savings-amount {
+  color: #1b5e20;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .negotiation-savings-card {
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .negotiation-savings-header h3 {
+    font-size: 16px;
+  }
+
+  .savings-detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .savings-value {
+    width: 100%;
+    text-align: right;
   }
 }

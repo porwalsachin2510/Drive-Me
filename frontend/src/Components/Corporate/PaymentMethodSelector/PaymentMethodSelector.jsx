@@ -9,6 +9,7 @@ const PaymentMethodSelector = ({
   onSelectMethod,
   onClose,
   contract,
+  paymentType = "advance", // "advance" or "final"
 }) => {
   const [selectedMethod, setSelectedMethod] = useState(null);
 
@@ -64,7 +65,7 @@ const PaymentMethodSelector = ({
             Choose how you'd like to pay for this contract
           </p>
 
-          <PaymentBreakdown contract={contract} />
+          <PaymentBreakdown contract={contract} paymentType={paymentType} />
 
           <div className="payment-methods-grid">
             {acceptedMethods && acceptedMethods.length > 0 ? (

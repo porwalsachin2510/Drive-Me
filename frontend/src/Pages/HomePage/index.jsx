@@ -57,7 +57,7 @@ export default function HomePage() {
 
   return (
     <>
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* <Navbar activeTab={activeTab} setActiveTab={setActiveTab} /> */}
       {renderContent()}
       <Footer />
     </>

@@ -942,3 +942,130 @@ export const getPaymentConfig = async (req, res) => {
         })
     }
 }
+
+// Credit negotiation commission to Admin wallet
+// This function is called when Corporate pays for a contract that has negotiation commission
+export const creditAdminNegotiationCommission = async ({
+    adminUserId,
+    amount,
+    currency,
+    corporateUserId,
+    corporateName,
+    negotiationId,
+    contractId,
+    contractNumber,
+}) => {
+    try {
+        if (!adminUserId || !amount || amount <= 0) {
+            console.error("[v0] Invalid params for crediting admin commission:", { adminUserId, amount })
+            return { success: false, message: "Invalid parameters" }
+        }
+
+        // Find or create Admin wallet
+        let adminWallet = await Wallet.findOne({ userId: adminUserId })
+        if (!adminWallet) {
+            // Create wallet for admin
+            adminWallet = new Wallet({
+                userId: adminUserId,
+                role: "ADMIN",
+                balance: 0,
+                currency: currency || "AED",
+                transactions: []
+            })
+        }
+
+        const balanceBefore = adminWallet.balance
+
+        // Add transaction to Admin wallet
+        const transaction = {
+            type: "DEPOSIT",
+            amount: amount,
+            description: `Negotiation commission from ${corporateName || 'Corporate'} for contract ${contractNumber || contractId}`,
+            status: "COMPLETED",
+            senderId: corporateUserId,
+            senderName: corporateName,
+            createdAt: new Date()
+        }
+
+        adminWallet.transactions.push(transaction)
+        adminWallet.balance += amount
+        adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + amount
+        await adminWallet.save()
+
+        // Create detailed Transaction record
+        const transactionRecord = new Transaction({
+            walletId: adminWallet._id,
+            userId: adminUserId,
+            type: "CREDIT",
+            amount: amount,
+            currency: currency || "AED",
+            category: "NEGOTIATION_COMMISSION",
+            description: `Negotiation commission from ${corporateName || 'Corporate'} for successful price negotiation`,
+            referenceId: negotiationId,
+            referenceModel: "AdminNegotiation",
+            fromUserId: corporateUserId,
+            fromName: corporateName,
+            toUserId: adminUserId,
+            toName: "Admin",
+            balanceBefore: balanceBefore,
+            balanceAfter: adminWallet.balance,
+            metadata: {
+                negotiationId,
+                contractId,
+                contractNumber,
+                commissionAmount: amount,
+                commissionType: "NEGOTIATION_COMMISSION"
+            }
+        })
+        await transactionRecord.save()
+
+        console.log("[v0] Admin negotiation commission credited:", {
+            adminUserId,
+            amount,
+            currency,
+            newBalance: adminWallet.balance,
+            negotiationId
+        })
+
+        // Send real-time notification to admin
+        await sendRealTimeNotification(adminUserId.toString(), {
+            type: "WALLET_UPDATED",
+            title: "Commission Received",
+            message: `You have received ${amount} ${currency || "AED"} commission from ${corporateName || "Corporate"} for negotiation services`,
+            data: {
+                amount,
+                currency: currency || "AED",
+                newBalance: adminWallet.balance,
+                source: "NEGOTIATION_COMMISSION",
+                negotiationId,
+                contractId
+            }
+        })
+
+        // Create notification record
+        await createNotification({
+            userId: adminUserId,
+            type: "PAYMENT_RECEIVED",
+            title: "Negotiation Commission Received",
+            message: `You have received ${amount} ${currency || "AED"} commission from ${corporateName || "Corporate"} for successful negotiation on contract ${contractNumber || contractId}`,
+            data: {
+                amount,
+                currency: currency || "AED",
+                negotiationId,
+                contractId,
+                contractNumber,
+                corporateName,
+                newBalance: adminWallet.balance
+            }
+        })
+
+        return {
+            success: true,
+            transaction: transactionRecord,
+            newBalance: adminWallet.balance
+        }
+    } catch (error) {
+        console.error("[v0] Error crediting admin negotiation commission:", error)
+        return { success: false, message: error.message }
+    }
+}

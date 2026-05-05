@@ -107,6 +107,49 @@ const quotationSchema = new mongoose.Schema(
         respondedAt: Date, // When fleet owner responded
         acceptedAt: Date, // When corporate owner accepted
         rejectedAt: Date, // When rejected (by either party)
+
+        // Admin Negotiation fields
+        adminNegotiation: {
+            requested: {
+                type: Boolean,
+                default: false,
+            },
+            negotiationId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "AdminNegotiation",
+                default: null,
+            },
+            status: {
+                type: String,
+                enum: ["NONE", "REQUESTED", "IN_PROGRESS", "COMPLETED", "FAILED", "CANCELLED"],
+                default: "NONE",
+            },
+            // Store original price before negotiation
+            originalPrice: {
+                type: Number,
+                default: null,
+            },
+            // Flag indicating price was reduced via negotiation
+            priceReduced: {
+                type: Boolean,
+                default: false,
+            },
+            // Amount saved via negotiation
+            savingsAmount: {
+                type: Number,
+                default: 0,
+            },
+            // Admin commission from corporate for negotiation service
+            adminCommission: {
+                type: Number,
+                default: 0,
+            },
+            // Admin commission rate (percentage of savings)
+            adminCommissionRate: {
+                type: Number,
+                default: 25,
+            },
+        },
     },
         
     {

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import B2C_Partner_Header from "../../../Components/B2C_Partner/B2C_Partner_Header/B2C_Partner_Header";
-import B2C_Navigation from "../../../Components/B2C_Partner/B2C_Navigation/B2C_Navigation";
+import DashboardLayout from "../../../Components/DashboardLayout/DashboardLayout";
 import B2C_PartnerBookingsPage from "../B2C_PartnerBookingsPage/B2C_PartnerBookingsPage";
-import MyTrips from "../../../Components/B2C_Partner/Tabs/MyTrips/MyTrips";
 import Earnings from "../../../Components/B2C_Partner/Tabs/Earnings/Earnings";
 import B2C_FleetAndDrivers from "../../../Components/B2C_Partner/B2C_FleetAndDrivers/B2C_FleetAndDrivers";
 import B2C_Routes from "../../../Components/B2C_Partner/B2C_Routes/B2C_Routes";
@@ -22,9 +20,9 @@ function B2C_PartnerProfilePage() {
       case "overview":
         return <B2CPartnerOverview />;
       case "trips":
-        return <B2C_PartnerBookingsPage/>;
+        return <B2C_PartnerBookingsPage />;
       case "daily-trips":
-        return <B2CDailyTrips/>;
+        return <B2CDailyTrips />;
       case "earnings":
         return <Earnings />;
       case "vehicles":
@@ -41,23 +39,9 @@ function B2C_PartnerProfilePage() {
   };
 
   return (
-    <div className="b2c-my-profile">
-      
-
-      <div className="driver-dashboard-container">
-        <div className="driver-dashboard">
-          <B2C_Partner_Header />
-          <div className="dashboard-container">
-            <B2C_Navigation
-              b2cactiveTab={b2cactiveTab}
-              setB2CActiveTab={setB2CActiveTab}
-            />
-            <div className="dashboard-content">{renderContent()}</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
+    <DashboardLayout activeTab={b2cactiveTab} setActiveTab={setB2CActiveTab}>
+      {renderContent()}
+    </DashboardLayout>
   );
 }
 
