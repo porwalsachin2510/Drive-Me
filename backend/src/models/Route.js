@@ -112,6 +112,11 @@ const routeSchema = new mongoose.Schema(
             type: Date,
             default: Date.now,
         },
+        // Tags for route categorization and search filtering
+        tags: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Tag"
+        }],
     },
     {
         timestamps: true,

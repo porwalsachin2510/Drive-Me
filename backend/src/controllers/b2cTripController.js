@@ -6,6 +6,172 @@ import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import User from "../models/User.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
 
+// Helper function to convert time string to minutes for comparison
+const timeToMinutes = (timeString) => {
+    if (!timeString) return 0;
+
+    // Handle HH:MM AM/PM format
+    const match = timeString.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        const period = match[3]?.toUpperCase();
+
+        if (period === 'PM' && hours !== 12) {
+            hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+            hours = 0;
+        }
+
+        return hours * 60 + minutes;
+    }
+
+    // Handle 24-hour format HH:MM
+    const match24 = timeString.match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+        return parseInt(match24[1]) * 60 + parseInt(match24[2]);
+    }
+
+    return 0;
+};
+
+// Helper function to check if two time ranges overlap
+const doTimesOverlap = (time1, time2, bufferMinutes = 60) => {
+    const time1Minutes = timeToMinutes(time1);
+    const time2Minutes = timeToMinutes(time2);
+
+    // Two trips overlap if they are within bufferMinutes of each other
+    return Math.abs(time1Minutes - time2Minutes) < bufferMinutes;
+};
+
+// Helper function to check if days overlap
+const doDaysOverlap = (days1, days2) => {
+    if (!days1 || !days2 || days1.length === 0 || days2.length === 0) return false;
+    return days1.some(day => days2.includes(day));
+};
+
+// Helper function to check for driver scheduling conflicts
+const checkDriverConflict = async (driverId, b2cPartnerId, proposedSchedule, excludeRouteId = null) => {
+    if (!driverId) return { hasConflict: false };
+
+    console.log("[v0] Checking driver conflict for:", { driverId, b2cPartnerId });
+
+    // Get all existing schedules for this driver
+    const existingSchedules = await B2CPartnerSchedule.find({
+        b2cPartnerId: b2cPartnerId,
+        assignedDriver: driverId,
+        isActive: true,
+        status: "Active"
+    }).populate('routeId', 'fromLocation toLocation');
+
+    console.log("[v0] Found existing schedules for driver:", existingSchedules.length);
+
+    for (const existingSchedule of existingSchedules) {
+        // Skip if this is the same route we're updating
+        if (excludeRouteId && existingSchedule.routeId?._id?.toString() === excludeRouteId.toString()) {
+            continue;
+        }
+
+        // Check if days overlap
+        if (!doDaysOverlap(proposedSchedule.availableDays, existingSchedule.availableDays)) {
+            continue;
+        }
+
+        // Check if any trip times overlap
+        const proposedTime = proposedSchedule.startTime || proposedSchedule.scheduleTime;
+        for (const existingTrip of (existingSchedule.tripTimes || [])) {
+            if (doTimesOverlap(proposedTime, existingTrip.departureTime)) {
+                return {
+                    hasConflict: true,
+                    conflictType: "DRIVER_TIME_CONFLICT",
+                    existingRoute: existingSchedule.routeId ?
+                        `${existingSchedule.routeId.fromLocation} to ${existingSchedule.routeId.toLocation}` :
+                        "Unknown Route",
+                    conflictingTime: existingTrip.departureTime,
+                    proposedTime: proposedTime,
+                    overlappingDays: proposedSchedule.availableDays.filter(d => existingSchedule.availableDays.includes(d))
+                };
+            }
+        }
+
+        // Also check scheduleTime for legacy schedules
+        if (existingSchedule.scheduleTime && doTimesOverlap(proposedTime, existingSchedule.scheduleTime)) {
+            return {
+                hasConflict: true,
+                conflictType: "DRIVER_TIME_CONFLICT",
+                existingRoute: existingSchedule.routeId ?
+                    `${existingSchedule.routeId.fromLocation} to ${existingSchedule.routeId.toLocation}` :
+                    "Unknown Route",
+                conflictingTime: existingSchedule.scheduleTime,
+                proposedTime: proposedTime,
+                overlappingDays: proposedSchedule.availableDays.filter(d => existingSchedule.availableDays.includes(d))
+            };
+        }
+    }
+
+    return { hasConflict: false };
+};
+
+// Helper function to check for vehicle scheduling conflicts
+const checkVehicleConflict = async (vehicleId, b2cPartnerId, proposedSchedule, excludeRouteId = null) => {
+    if (!vehicleId) return { hasConflict: false };
+
+    console.log("[v0] Checking vehicle conflict for:", { vehicleId, b2cPartnerId });
+
+    // Get all existing schedules for this vehicle
+    const existingSchedules = await B2CPartnerSchedule.find({
+        b2cPartnerId: b2cPartnerId,
+        assignedVehicle: vehicleId,
+        isActive: true,
+        status: "Active"
+    }).populate('routeId', 'fromLocation toLocation');
+
+    for (const existingSchedule of existingSchedules) {
+        // Skip if this is the same route we're updating
+        if (excludeRouteId && existingSchedule.routeId?._id?.toString() === excludeRouteId.toString()) {
+            continue;
+        }
+
+        // Check if days overlap
+        if (!doDaysOverlap(proposedSchedule.availableDays, existingSchedule.availableDays)) {
+            continue;
+        }
+
+        // Check if any trip times overlap
+        const proposedTime = proposedSchedule.startTime || proposedSchedule.scheduleTime;
+        for (const existingTrip of (existingSchedule.tripTimes || [])) {
+            if (doTimesOverlap(proposedTime, existingTrip.departureTime)) {
+                return {
+                    hasConflict: true,
+                    conflictType: "VEHICLE_TIME_CONFLICT",
+                    existingRoute: existingSchedule.routeId ?
+                        `${existingSchedule.routeId.fromLocation} to ${existingSchedule.routeId.toLocation}` :
+                        "Unknown Route",
+                    conflictingTime: existingTrip.departureTime,
+                    proposedTime: proposedTime,
+                    overlappingDays: proposedSchedule.availableDays.filter(d => existingSchedule.availableDays.includes(d))
+                };
+            }
+        }
+
+        // Also check scheduleTime for legacy schedules
+        if (existingSchedule.scheduleTime && doTimesOverlap(proposedTime, existingSchedule.scheduleTime)) {
+            return {
+                hasConflict: true,
+                conflictType: "VEHICLE_TIME_CONFLICT",
+                existingRoute: existingSchedule.routeId ?
+                    `${existingSchedule.routeId.fromLocation} to ${existingSchedule.routeId.toLocation}` :
+                    "Unknown Route",
+                conflictingTime: existingSchedule.scheduleTime,
+                proposedTime: proposedTime,
+                overlappingDays: proposedSchedule.availableDays.filter(d => existingSchedule.availableDays.includes(d))
+            };
+        }
+    }
+
+    return { hasConflict: false };
+};
+
 // Helper function to convert time to HH:MM AM/PM format
 const convertToAMPMFormat = (timeString) => {
     if (!timeString) return "";
@@ -71,6 +237,51 @@ export const createB2CPartnerRoute = async (req, res) => {
                 success: false,
                 message: "Missing required fields: fromLocation, toLocation, totalSeats, pricing"
             });
+        }
+
+        // Check for driver and vehicle scheduling conflicts before creating route
+        if (assignedDriver && startTime && availableDays && availableDays.length > 0) {
+            const proposedSchedule = {
+                startTime: convertToAMPMFormat(startTime),
+                availableDays: availableDays
+            };
+
+            const driverConflict = await checkDriverConflict(
+                assignedDriver,
+                req.userId,
+                proposedSchedule
+            );
+
+            if (driverConflict.hasConflict) {
+                console.log("[v0] Driver conflict detected:", driverConflict);
+                return res.status(400).json({
+                    success: false,
+                    message: `Driver scheduling conflict detected! The selected driver is already assigned to route "${driverConflict.existingRoute}" at ${driverConflict.conflictingTime} on ${driverConflict.overlappingDays.join(", ")}. Please choose a different time or driver.`,
+                    conflictDetails: driverConflict
+                });
+            }
+        }
+
+        if (assignedVehicle && startTime && availableDays && availableDays.length > 0) {
+            const proposedSchedule = {
+                startTime: convertToAMPMFormat(startTime),
+                availableDays: availableDays
+            };
+
+            const vehicleConflict = await checkVehicleConflict(
+                assignedVehicle,
+                req.userId,
+                proposedSchedule
+            );
+
+            if (vehicleConflict.hasConflict) {
+                console.log("[v0] Vehicle conflict detected:", vehicleConflict);
+                return res.status(400).json({
+                    success: false,
+                    message: `Vehicle scheduling conflict detected! The selected vehicle is already assigned to route "${vehicleConflict.existingRoute}" at ${vehicleConflict.conflictingTime} on ${vehicleConflict.overlappingDays.join(", ")}. Please choose a different time or vehicle.`,
+                    conflictDetails: vehicleConflict
+                });
+            }
         }
 
         // Create stops array with order
@@ -269,7 +480,7 @@ export const getB2CPartnerRoutes = async (req, res) => {
 export const updateB2CPartnerRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
-        const allowedFields = ['fromLocation', 'toLocation', 'startTime', 'totalSeats', 'availableSeats', 'pricing', 'tripType', 'routeStartDate', 'availableDays', 'assignedVehicle', 'assignedDriver', 'status', 'isActive'];
+        const allowedFields = ['fromLocation', 'toLocation', 'startTime', 'totalSeats', 'availableSeats', 'pricing', 'tripType', 'routeStartDate', 'availableDays', 'assignedVehicle', 'assignedDriver', 'status', 'isActive', 'description', 'tags'];
         
         const updateData = {};
         for (const field of allowedFields) {
@@ -278,13 +489,14 @@ export const updateB2CPartnerRoute = async (req, res) => {
             }
         }
 
-        // Handle pricing as nested object
+        // Handle pricing as nested object - preserve currency field
         if (updateData.pricing) {
             updateData.pricing = {
                 oneWayPrice: parseFloat(updateData.pricing.oneWayPrice || 0),
                 roundTripPrice: parseFloat(updateData.pricing.roundTripPrice || 0),
                 monthlyOneWayPrice: parseFloat(updateData.pricing.monthlyOneWayPrice || 0),
                 monthlyRoundTripPrice: parseFloat(updateData.pricing.monthlyRoundTripPrice || 0),
+                currency: updateData.pricing.currency || "AED",
             };
         }
 

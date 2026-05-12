@@ -158,6 +158,11 @@ const b2cPartnerRouteSchema = new mongoose.Schema(
             type: Date,
             default: Date.now,
         },
+        // Tags for route categorization and search filtering
+        tags: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Tag"
+        }],
         // Pricing metadata for complex monthly calculations
         pricingMetadata: {
             pricingType: {

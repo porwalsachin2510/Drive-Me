@@ -3,9 +3,177 @@ import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
+import B2CMonthlyPass from "../models/B2CMonthlyPass.js";
+import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import User from "../models/User.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
 import { getCountryCurrency, getCurrencyDecimals, validateCountryPrice } from "../Services/countryLocalizationService.js";
+
+// Helper function to convert time string to minutes for comparison
+const timeToMinutes = (timeString) => {
+    if (!timeString) return 0;
+
+    // Handle HH:MM AM/PM format
+    const match = timeString.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        const period = match[3]?.toUpperCase();
+
+        if (period === 'PM' && hours !== 12) {
+            hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+            hours = 0;
+        }
+
+        return hours * 60 + minutes;
+    }
+
+    // Handle 24-hour format HH:MM
+    const match24 = timeString.match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+        return parseInt(match24[1]) * 60 + parseInt(match24[2]);
+    }
+
+    return 0;
+};
+
+// Helper function to check if two time ranges overlap
+const doTimesOverlap = (time1, time2, bufferMinutes = 60) => {
+    const time1Minutes = timeToMinutes(time1);
+    const time2Minutes = timeToMinutes(time2);
+
+    // Two trips overlap if they are within bufferMinutes of each other
+    return Math.abs(time1Minutes - time2Minutes) < bufferMinutes;
+};
+
+// Helper function to check if days overlap
+const doDaysOverlap = (days1, days2) => {
+    if (!days1 || !days2 || days1.length === 0 || days2.length === 0) return false;
+    return days1.some(day => days2.includes(day));
+};
+
+// Helper function to check for driver scheduling conflicts
+const checkDriverConflict = async (driverId, b2cPartnerId, proposedSchedule, excludeRouteId = null) => {
+    if (!driverId) return { hasConflict: false };
+
+    console.log("[v0] Checking driver conflict for:", { driverId, b2cPartnerId, proposedSchedule });
+
+    // Get all existing schedules for this driver
+    const existingSchedules = await B2CPartnerSchedule.find({
+        b2cPartnerId: b2cPartnerId,
+        assignedDriver: driverId,
+        isActive: true,
+        status: "Active"
+    }).populate('routeId', 'fromLocation toLocation');
+
+    console.log("[v0] Found existing schedules for driver:", existingSchedules.length);
+
+    for (const existingSchedule of existingSchedules) {
+        // Skip if this is the same route we're updating
+        if (excludeRouteId && existingSchedule.routeId?._id?.toString() === excludeRouteId.toString()) {
+            continue;
+        }
+
+        // Check if days overlap
+        if (!doDaysOverlap(proposedSchedule.availableDays, existingSchedule.availableDays)) {
+            continue; // No conflict if days don't overlap
+        }
+
+        // Check if any trip times overlap
+        for (const proposedTrip of (proposedSchedule.tripTimes || [])) {
+            for (const existingTrip of (existingSchedule.tripTimes || [])) {
+                // Check outbound times
+                if (doTimesOverlap(proposedTrip.departureTime, existingTrip.departureTime)) {
+                    const conflictInfo = {
+                        hasConflict: true,
+                        conflictType: "DRIVER_TIME_CONFLICT",
+                        existingRoute: existingSchedule.routeId ?
+                            `${existingSchedule.routeId.fromLocation} to ${existingSchedule.routeId.toLocation}` :
+                            "Unknown Route",
+                        conflictingTime: existingTrip.departureTime,
+                        proposedTime: proposedTrip.departureTime,
+                        overlappingDays: proposedSchedule.availableDays.filter(d => existingSchedule.availableDays.includes(d))
+                    };
+                    console.log("[v0] Driver conflict detected:", conflictInfo);
+                    return conflictInfo;
+                }
+
+                // Check return times for round trips
+                if (proposedTrip.tripType === "Round Trip" && existingTrip.tripType === "Round Trip") {
+                    if (doTimesOverlap(proposedTrip.arrivalTime, existingTrip.arrivalTime)) {
+                        const conflictInfo = {
+                            hasConflict: true,
+                            conflictType: "DRIVER_RETURN_TIME_CONFLICT",
+                            existingRoute: existingSchedule.routeId ?
+                                `${existingSchedule.routeId.fromLocation} to ${existingSchedule.routeId.toLocation}` :
+                                "Unknown Route",
+                            conflictingTime: existingTrip.arrivalTime,
+                            proposedTime: proposedTrip.arrivalTime,
+                            overlappingDays: proposedSchedule.availableDays.filter(d => existingSchedule.availableDays.includes(d))
+                        };
+                        console.log("[v0] Driver return time conflict detected:", conflictInfo);
+                        return conflictInfo;
+                    }
+                }
+            }
+        }
+    }
+
+    return { hasConflict: false };
+};
+
+// Helper function to check for vehicle scheduling conflicts
+const checkVehicleConflict = async (vehicleId, b2cPartnerId, proposedSchedule, excludeRouteId = null) => {
+    if (!vehicleId) return { hasConflict: false };
+
+    console.log("[v0] Checking vehicle conflict for:", { vehicleId, b2cPartnerId, proposedSchedule });
+
+    // Get all existing schedules for this vehicle
+    const existingSchedules = await B2CPartnerSchedule.find({
+        b2cPartnerId: b2cPartnerId,
+        assignedVehicle: vehicleId,
+        isActive: true,
+        status: "Active"
+    }).populate('routeId', 'fromLocation toLocation');
+
+    console.log("[v0] Found existing schedules for vehicle:", existingSchedules.length);
+
+    for (const existingSchedule of existingSchedules) {
+        // Skip if this is the same route we're updating
+        if (excludeRouteId && existingSchedule.routeId?._id?.toString() === excludeRouteId.toString()) {
+            continue;
+        }
+
+        // Check if days overlap
+        if (!doDaysOverlap(proposedSchedule.availableDays, existingSchedule.availableDays)) {
+            continue; // No conflict if days don't overlap
+        }
+
+        // Check if any trip times overlap
+        for (const proposedTrip of (proposedSchedule.tripTimes || [])) {
+            for (const existingTrip of (existingSchedule.tripTimes || [])) {
+                // Check outbound times
+                if (doTimesOverlap(proposedTrip.departureTime, existingTrip.departureTime)) {
+                    const conflictInfo = {
+                        hasConflict: true,
+                        conflictType: "VEHICLE_TIME_CONFLICT",
+                        existingRoute: existingSchedule.routeId ?
+                            `${existingSchedule.routeId.fromLocation} to ${existingSchedule.routeId.toLocation}` :
+                            "Unknown Route",
+                        conflictingTime: existingTrip.departureTime,
+                        proposedTime: proposedTrip.departureTime,
+                        overlappingDays: proposedSchedule.availableDays.filter(d => existingSchedule.availableDays.includes(d))
+                    };
+                    console.log("[v0] Vehicle conflict detected:", conflictInfo);
+                    return conflictInfo;
+                }
+            }
+        }
+    }
+
+    return { hasConflict: false };
+};
 
 // Helper function to convert time to HH:MM AM/PM format
 const convertToAMPMFormat = (timeString) => {
@@ -60,6 +228,7 @@ export const createB2CPartnerRoute = async (req, res) => {
             assignedDriver,
             routeStartDate,
             description,
+            tags, // Tag IDs for route categorization
             isActive = true
         } = req.body;
 
@@ -82,8 +251,8 @@ export const createB2CPartnerRoute = async (req, res) => {
 
         console.log("[v0] B2C Partner country:", user.country);
 
-        // Get currency based on user's country
-        const currency = getCountryCurrency(user.country);
+        // Get currency - use frontend-provided currency if available, otherwise auto-determine from user's country
+        const currency = pricing?.currency || getCountryCurrency(user.country);
         const decimals = getCurrencyDecimals(currency);
 
         // Validate and format prices with proper decimals
@@ -113,6 +282,7 @@ export const createB2CPartnerRoute = async (req, res) => {
             assignedDriver: assignedDriver || null,
             routeStartDate: new Date(routeStartDate || Date.now()),
             description: description || "",
+            tags: tags || [], // Tag IDs for categorization and search
             status: "Active",
             isActive: true
         };
@@ -171,6 +341,54 @@ export const createB2CPartnerSchedule = async (req, res) => {
                 success: false,
                 message: "Route not found",
             });
+        }
+
+        // Prepare proposed schedule for conflict checking
+        const proposedSchedule = {
+            tripTimes: tripTimes.map(time => ({
+                departureTime: convertToAMPMFormat(time.departureTime),
+                arrivalTime: time.arrivalTime ? convertToAMPMFormat(time.arrivalTime) : null,
+                tripType: time.tripType || "One Way"
+            })),
+            availableDays: availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+        };
+
+        // Check for driver scheduling conflicts
+        const effectiveDriverId = assignedDriver || route.assignedDriver;
+        if (effectiveDriverId) {
+            const driverConflict = await checkDriverConflict(
+                effectiveDriverId,
+                req.userId,
+                proposedSchedule,
+                routeId // Exclude this route from conflict check
+            );
+
+            if (driverConflict.hasConflict) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Driver scheduling conflict detected! The selected driver is already assigned to route "${driverConflict.existingRoute}" at ${driverConflict.conflictingTime} on ${driverConflict.overlappingDays.join(", ")}. Please choose a different time or driver.`,
+                    conflictDetails: driverConflict
+                });
+            }
+        }
+
+        // Check for vehicle scheduling conflicts
+        const effectiveVehicleId = assignedVehicle || route.assignedVehicle;
+        if (effectiveVehicleId) {
+            const vehicleConflict = await checkVehicleConflict(
+                effectiveVehicleId,
+                req.userId,
+                proposedSchedule,
+                routeId // Exclude this route from conflict check
+            );
+
+            if (vehicleConflict.hasConflict) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Vehicle scheduling conflict detected! The selected vehicle is already assigned to route "${vehicleConflict.existingRoute}" at ${vehicleConflict.conflictingTime} on ${vehicleConflict.overlappingDays.join(", ")}. Please choose a different time or vehicle.`,
+                    conflictDetails: vehicleConflict
+                });
+            }
         }
 
         // Create schedule data
@@ -628,6 +846,7 @@ export const deleteB2CPartnerSchedule = async (req, res) => {
 export const deleteB2CPartnerRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
+        const { forceDelete } = req.query; // Allow force delete if user confirms
 
         // Verify route belongs to this partner
         const route = await B2CPartnerRoute.findOne({
@@ -639,6 +858,100 @@ export const deleteB2CPartnerRoute = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: "Route not found",
+            });
+        }
+
+        // Check for dependencies before deletion
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Check for active monthly passes on this route
+        const activePasses = await B2CMonthlyPass.find({
+            routeId: routeId,
+            status: { $in: ["ACTIVE", "PENDING"] },
+            endDate: { $gte: today }
+        }).populate("passengerId", "fullName email whatsappNumber");
+
+        // Check for upcoming trips with bookings
+        const upcomingTripsWithBookings = await B2CPartnerTrip.find({
+            routeId: routeId,
+            tripDate: { $gte: today },
+            bookedSeats: { $gt: 0 }
+        });
+
+        // Check for pending bookings
+        const pendingBookings = await B2CPassengerBooking.find({
+            routeId: routeId,
+            bookingStatus: { $in: ["PENDING", "ACCEPTED", "CONFIRMED"] },
+            $or: [
+                { travelDate: { $gte: today } },
+                { passEndDate: { $gte: today } }
+            ]
+        }).populate("passengerId", "fullName email whatsappNumber");
+
+        // Count total affected items
+        const totalSchedules = await B2CPartnerSchedule.countDocuments({ routeId: routeId });
+        const totalTrips = await B2CPartnerTrip.countDocuments({ routeId: routeId });
+
+        // If there are active dependencies and forceDelete is not set, return warning
+        if (!forceDelete && (activePasses.length > 0 || upcomingTripsWithBookings.length > 0 || pendingBookings.length > 0)) {
+            return res.status(400).json({
+                success: false,
+                message: "This route has active dependencies. Please review before deleting.",
+                canDelete: false,
+                dependencies: {
+                    activePasses: {
+                        count: activePasses.length,
+                        details: activePasses.map(pass => ({
+                            passId: pass._id,
+                            passengerName: pass.passengerId?.fullName || 'Unknown',
+                            passengerPhone: pass.passengerId?.whatsappNumber || 'N/A',
+                            passType: pass.passType,
+                            startDate: pass.startDate,
+                            endDate: pass.endDate,
+                            totalAmount: pass.totalAmount,
+                            currency: pass.currency,
+                            usedTrips: pass.usedTrips,
+                            totalTrips: pass.totalTrips,
+                            status: pass.status
+                        }))
+                    },
+                    upcomingTripsWithBookings: {
+                        count: upcomingTripsWithBookings.length,
+                        details: upcomingTripsWithBookings.slice(0, 10).map(trip => ({
+                            tripId: trip._id,
+                            tripDate: trip.tripDate,
+                            startTime: trip.startTime,
+                            bookedSeats: trip.bookedSeats,
+                            totalSeats: trip.totalSeats,
+                            status: trip.status
+                        }))
+                    },
+                    pendingBookings: {
+                        count: pendingBookings.length,
+                        details: pendingBookings.slice(0, 10).map(booking => ({
+                            bookingId: booking._id,
+                            passengerName: booking.passengerId?.fullName || 'Unknown',
+                            passengerPhone: booking.passengerId?.whatsappNumber || 'N/A',
+                            bookingType: booking.bookingType,
+                            isMonthlyPass: booking.isMonthlyPass,
+                            paymentAmount: booking.paymentAmount,
+                            currency: booking.currency,
+                            bookingStatus: booking.bookingStatus,
+                            travelDate: booking.travelDate
+                        }))
+                    },
+                    totalSchedules: totalSchedules,
+                    totalTrips: totalTrips
+                },
+                warning: `Deleting this route will affect:
+        - ${activePasses.length} active monthly pass subscription(s)
+        - ${upcomingTripsWithBookings.length} upcoming trip(s) with bookings
+        - ${pendingBookings.length} pending booking(s)
+        - ${totalSchedules} schedule(s)
+        - ${totalTrips} trip record(s)
+        
+        Active pass holders will lose their remaining trips and may need refunds.`
             });
         }
 
@@ -654,17 +967,53 @@ export const deleteB2CPartnerRoute = async (req, res) => {
             await B2CPartnerSchedule.findByIdAndDelete(schedule._id);
         }
 
+        // Also delete any trips directly linked to route (without schedule)
+        await B2CPartnerTrip.deleteMany({ routeId: routeId });
+
+        // Update monthly passes to mark them as CANCELLED if force deleting
+        if (forceDelete === 'true' && activePasses.length > 0) {
+            await B2CMonthlyPass.updateMany(
+                { routeId: routeId, status: { $in: ["ACTIVE", "PENDING"] } },
+                {
+                    $set: {
+                        status: "CANCELLED",
+                        notes: `${new Date().toISOString()} - Route deleted by partner. Pass cancelled.`
+                    }
+                }
+            );
+        }
+
+        // Update bookings to mark them as CANCELLED if force deleting
+        if (forceDelete === 'true' && pendingBookings.length > 0) {
+            await B2CPassengerBooking.updateMany(
+                {
+                    routeId: routeId,
+                    bookingStatus: { $in: ["PENDING", "ACCEPTED", "CONFIRMED"] }
+                },
+                {
+                    $set: {
+                        bookingStatus: "CANCELLED",
+                        autoCancelReason: "Route deleted by partner"
+                    }
+                }
+            );
+        }
+
         // Delete route
         await B2CPartnerRoute.findByIdAndDelete(routeId);
-
-        console.log("[v0] B2C Partner Route deleted successfully:", routeId);
 
         res.status(200).json({
             success: true,
             message: "B2C Partner Route deleted successfully",
+            deletedData: {
+                schedulesDeleted: schedules.length,
+                tripsDeleted: totalTrips,
+                passesCancelled: forceDelete === 'true' ? activePasses.length : 0,
+                bookingsCancelled: forceDelete === 'true' ? pendingBookings.length : 0
+            }
         });
     } catch (error) {
-        console.error("[v0] Error deleting B2C partner route:", error.message);
+        console.error("Error deleting B2C partner route:", error.message);
         res.status(500).json({
             success: false,
             message: "Error deleting B2C partner route",
@@ -795,6 +1144,209 @@ export const createB2CPartnerTrip = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error creating B2C partner trip",
+            error: error.message,
+        });
+    }
+};
+
+// Check route dependencies before deletion (GET endpoint for pre-check)
+export const checkRouteDependencies = async (req, res) => {
+    try {
+        const { routeId } = req.params;
+
+        // Verify route belongs to this partner
+        const route = await B2CPartnerRoute.findOne({
+            _id: routeId,
+            b2cPartnerId: req.userId,
+        });
+
+        if (!route) {
+            return res.status(404).json({
+                success: false,
+                message: "Route not found",
+            });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Check for active monthly passes
+        const activePasses = await B2CMonthlyPass.find({
+            routeId: routeId,
+            status: { $in: ["ACTIVE", "PENDING"] },
+            endDate: { $gte: today }
+        }).populate("passengerId", "fullName email whatsappNumber");
+
+        // Check for upcoming trips with bookings
+        const upcomingTripsWithBookings = await B2CPartnerTrip.find({
+            routeId: routeId,
+            tripDate: { $gte: today },
+            bookedSeats: { $gt: 0 }
+        });
+
+        // Check for pending bookings
+        const pendingBookings = await B2CPassengerBooking.find({
+            routeId: routeId,
+            bookingStatus: { $in: ["PENDING", "ACCEPTED", "CONFIRMED"] },
+            $or: [
+                { travelDate: { $gte: today } },
+                { passEndDate: { $gte: today } }
+            ]
+        }).populate("passengerId", "fullName email whatsappNumber");
+
+        // Count schedules and trips
+        const totalSchedules = await B2CPartnerSchedule.countDocuments({ routeId: routeId });
+        const totalTrips = await B2CPartnerTrip.countDocuments({ routeId: routeId });
+
+        const hasCriticalDependencies = activePasses.length > 0 || upcomingTripsWithBookings.length > 0 || pendingBookings.length > 0;
+
+        res.status(200).json({
+            success: true,
+            routeId: routeId,
+            routeName: `${route.fromLocation} to ${route.toLocation}`,
+            hasCriticalDependencies: hasCriticalDependencies,
+            canSafelyDelete: !hasCriticalDependencies,
+            dependencies: {
+                activePasses: {
+                    count: activePasses.length,
+                    totalValue: activePasses.reduce((sum, p) => sum + (p.totalAmount || 0), 0),
+                    currency: activePasses[0]?.currency || route.pricing?.currency || "AED",
+                    details: activePasses.map(pass => ({
+                        passId: pass._id,
+                        passengerName: pass.passengerId?.fullName || 'Unknown',
+                        passengerPhone: pass.passengerId?.whatsappNumber || 'N/A',
+                        passengerEmail: pass.passengerId?.email || 'N/A',
+                        passType: pass.passType,
+                        startDate: pass.startDate,
+                        endDate: pass.endDate,
+                        totalAmount: pass.totalAmount,
+                        currency: pass.currency,
+                        usedTrips: pass.usedTrips,
+                        totalTrips: pass.totalTrips,
+                        remainingTrips: (pass.totalTrips || 0) - (pass.usedTrips || 0),
+                        status: pass.status
+                    }))
+                },
+                upcomingTripsWithBookings: {
+                    count: upcomingTripsWithBookings.length,
+                    totalBookedSeats: upcomingTripsWithBookings.reduce((sum, t) => sum + (t.bookedSeats || 0), 0),
+                    details: upcomingTripsWithBookings.slice(0, 10).map(trip => ({
+                        tripId: trip._id,
+                        tripDate: trip.tripDate,
+                        startTime: trip.startTime,
+                        bookedSeats: trip.bookedSeats,
+                        totalSeats: trip.totalSeats,
+                        status: trip.status
+                    }))
+                },
+                pendingBookings: {
+                    count: pendingBookings.length,
+                    totalValue: pendingBookings.reduce((sum, b) => sum + (b.paymentAmount || 0), 0),
+                    details: pendingBookings.slice(0, 10).map(booking => ({
+                        bookingId: booking._id,
+                        passengerName: booking.passengerId?.fullName || 'Unknown',
+                        passengerPhone: booking.passengerId?.whatsappNumber || 'N/A',
+                        bookingType: booking.bookingType,
+                        isMonthlyPass: booking.isMonthlyPass,
+                        paymentAmount: booking.paymentAmount,
+                        currency: booking.currency,
+                        bookingStatus: booking.bookingStatus,
+                        travelDate: booking.travelDate
+                    }))
+                },
+                totalSchedules: totalSchedules,
+                totalTrips: totalTrips
+            }
+        });
+    } catch (error) {
+        console.error("Error checking route dependencies:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Error checking route dependencies",
+            error: error.message,
+        });
+    }
+};
+
+// Check for scheduling conflicts before creating a route/schedule
+export const checkSchedulingConflicts = async (req, res) => {
+    try {
+        console.log("[v0] Checking scheduling conflicts:", JSON.stringify(req.body, null, 2));
+
+        const {
+            driverId,
+            vehicleId,
+            tripTimes, // Array of { departureTime, arrivalTime, tripType }
+            availableDays,
+            excludeRouteId // Optional: exclude this route from conflict check (for updates)
+        } = req.body;
+
+        const conflicts = [];
+
+        // Prepare proposed schedule for conflict checking
+        const proposedSchedule = {
+            tripTimes: (tripTimes || []).map(time => ({
+                departureTime: convertToAMPMFormat(time.departureTime),
+                arrivalTime: time.arrivalTime ? convertToAMPMFormat(time.arrivalTime) : null,
+                tripType: time.tripType || "One Way"
+            })),
+            availableDays: availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+        };
+
+        // Check for driver conflicts
+        if (driverId) {
+            const driverConflict = await checkDriverConflict(
+                driverId,
+                req.userId,
+                proposedSchedule,
+                excludeRouteId
+            );
+
+            if (driverConflict.hasConflict) {
+                conflicts.push({
+                    type: "DRIVER",
+                    ...driverConflict
+                });
+            }
+        }
+
+        // Check for vehicle conflicts
+        if (vehicleId) {
+            const vehicleConflict = await checkVehicleConflict(
+                vehicleId,
+                req.userId,
+                proposedSchedule,
+                excludeRouteId
+            );
+
+            if (vehicleConflict.hasConflict) {
+                conflicts.push({
+                    type: "VEHICLE",
+                    ...vehicleConflict
+                });
+            }
+        }
+
+        if (conflicts.length > 0) {
+            return res.status(200).json({
+                success: true,
+                hasConflicts: true,
+                conflicts: conflicts,
+                message: `Found ${conflicts.length} scheduling conflict(s). Please review and resolve before creating the route.`
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            hasConflicts: false,
+            conflicts: [],
+            message: "No scheduling conflicts detected."
+        });
+    } catch (error) {
+        console.error("[v0] Error checking scheduling conflicts:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Error checking scheduling conflicts",
             error: error.message,
         });
     }

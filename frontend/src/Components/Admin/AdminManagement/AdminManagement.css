@@ -1,11 +1,11 @@
-.admin-management {
+.drivemego-admin-management-admin-management {
     padding: 24px;
     max-width: 1400px;
     margin: 0 auto;
 }
 
 /* Header */
-.admin-management-header {
+.drivemego-admin-management-admin-management-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -14,7 +14,7 @@
     gap: 16px;
 }
 
-.header-left h1 {
+.drivemego-admin-management-header-left h1 {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -24,13 +24,13 @@
     margin: 0 0 8px 0;
 }
 
-.header-left p {
+.drivemego-admin-management-header-left p {
     color: #6b7280;
     margin: 0;
     font-size: 14px;
 }
 
-.btn-create-admin {
+.drivemego-admin-management-btn-create-admin {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -46,20 +46,20 @@
     box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
 }
 
-.btn-create-admin:hover {
+.drivemego-admin-management-btn-create-admin:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px -2px rgba(59, 130, 246, 0.4);
 }
 
 /* Stats Grid */
-.stats-grid {
+.drivemego-admin-management-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
     margin-bottom: 24px;
 }
 
-.stat-card {
+.drivemego-admin-management-stat-card {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -70,7 +70,7 @@
     border: 1px solid #e5e7eb;
 }
 
-.stat-icon {
+.drivemego-admin-management-stat-icon {
     width: 48px;
     height: 48px;
     border-radius: 12px;
@@ -80,46 +80,46 @@
     font-size: 20px;
 }
 
-.stat-icon.total {
+.drivemego-admin-management-stat-icon.drivemego-admin-management-total {
     background: #eff6ff;
     color: #3b82f6;
 }
 
-.stat-icon.super {
+.drivemego-admin-management-stat-icon.drivemego-admin-management-super {
     background: #fef3c7;
     color: #d97706;
 }
 
-.stat-icon.active {
+.drivemego-admin-management-stat-icon.drivemego-admin-management-active {
     background: #d1fae5;
     color: #059669;
 }
 
-.stat-icon.limited {
+.drivemego-admin-management-stat-icon.drivemego-admin-management-limited {
     background: #f3e8ff;
     color: #9333ea;
 }
 
-.stat-info {
+.drivemego-admin-management-stat-info {
     display: flex;
     flex-direction: column;
 }
 
-.stat-value {
+.drivemego-admin-management-stat-value {
     font-size: 28px;
     font-weight: 700;
     color: #1a1a2e;
     line-height: 1;
 }
 
-.stat-label {
+.drivemego-admin-management-stat-label {
     font-size: 13px;
     color: #6b7280;
     margin-top: 4px;
 }
 
 /* Filters */
-.filters-section {
+.drivemego-admin-management-filters-section {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -127,7 +127,7 @@
     flex-wrap: wrap;
 }
 
-.search-box {
+.drivemego-admin-management-search-box {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -140,12 +140,12 @@
     max-width: 400px;
 }
 
-.search-box svg {
+.drivemego-admin-management-search-box svg {
     color: #9ca3af;
     font-size: 18px;
 }
 
-.search-box input {
+.drivemego-admin-management-search-box input {
     border: none;
     outline: none;
     width: 100%;
@@ -153,11 +153,11 @@
     color: #1a1a2e;
 }
 
-.search-box input::placeholder {
+.drivemego-admin-management-search-box input::placeholder {
     color: #9ca3af;
 }
 
-.filter-group {
+.drivemego-admin-management-filter-group {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -167,11 +167,11 @@
     border: 1px solid #e5e7eb;
 }
 
-.filter-group svg {
+.drivemego-admin-management-filter-group svg {
     color: #9ca3af;
 }
 
-.filter-group select {
+.drivemego-admin-management-filter-group select {
     border: none;
     outline: none;
     font-size: 14px;
@@ -180,7 +180,7 @@
     cursor: pointer;
 }
 
-.btn-refresh {
+.drivemego-admin-management-btn-refresh {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -194,26 +194,26 @@
     transition: all 0.2s ease;
 }
 
-.btn-refresh:hover {
+.drivemego-admin-management-btn-refresh:hover {
     background: #f9fafb;
     border-color: #d1d5db;
 }
 
 /* Table Container */
-.admins-table-container {
+.drivemego-admin-management-admins-table-container {
     background: white;
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     border: 1px solid #e5e7eb;
-    overflow: hidden;
+     overflow: visible;
 }
 
-.admins-table {
+.drivemego-admin-management-admins-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.admins-table th {
+.drivemego-admin-management-admins-table th {
     text-align: left;
     padding: 14px 16px;
     background: #f9fafb;
@@ -225,29 +225,29 @@
     border-bottom: 1px solid #e5e7eb;
 }
 
-.admins-table td {
+.drivemego-admin-management-admins-table td {
     padding: 16px;
     border-bottom: 1px solid #f3f4f6;
     font-size: 14px;
     color: #374151;
 }
 
-.admins-table tbody tr:hover {
+.drivemego-admin-management-admins-table tbody tr:hover {
     background: #f9fafb;
 }
 
-.admins-table tbody tr:last-child td {
+.drivemego-admin-management-admins-table tbody tr:last-child td {
     border-bottom: none;
 }
 
 /* Admin Info Cell */
-.admin-info {
+.drivemego-admin-management-admin-info {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.admin-avatar {
+.drivemego-admin-management-admin-avatar {
     width: 40px;
     height: 40px;
     border-radius: 10px;
@@ -260,23 +260,23 @@
     font-size: 16px;
 }
 
-.admin-name {
+.drivemego-admin-management-admin-name {
     display: flex;
     flex-direction: column;
 }
 
-.admin-name .name {
+.drivemego-admin-management-admin-name .drivemego-admin-management-name {
     font-weight: 500;
     color: #1a1a2e;
 }
 
-.admin-name .phone {
+.drivemego-admin-management-admin-name .drivemego-admin-management-phone {
     font-size: 12px;
     color: #9ca3af;
 }
 
 /* Role Badge */
-.role-badge {
+.drivemego-admin-management-role-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -286,18 +286,18 @@
     font-weight: 500;
 }
 
-.role-badge.super-admin {
+.drivemego-admin-management-role-badge.drivemego-admin-management-super-admin {
     background: #fef3c7;
     color: #92400e;
 }
 
-.role-badge.limited-admin {
+.drivemego-admin-management-role-badge.drivemego-admin-management-limited-admin {
     background: #f3e8ff;
     color: #7c3aed;
 }
 
 /* Status Badge */
-.status-badge {
+.drivemego-admin-management-status-badge {
     display: inline-block;
     padding: 6px 12px;
     border-radius: 20px;
@@ -305,27 +305,27 @@
     font-weight: 500;
 }
 
-.status-active {
+.drivemego-admin-management-status-active {
     background: #d1fae5;
     color: #065f46;
 }
 
-.status-suspended {
+.drivemego-admin-management-status-suspended {
     background: #fee2e2;
     color: #991b1b;
 }
 
-.status-pending {
+.drivemego-admin-management-status-pending {
     background: #fef3c7;
     color: #92400e;
 }
 
 /* Actions Dropdown */
-.actions-dropdown {
+.drivemego-admin-management-actions-dropdown {
     position: relative;
 }
 
-.actions-trigger {
+.drivemego-admin-management-actions-trigger {
     width: 36px;
     height: 36px;
     border-radius: 8px;
@@ -338,25 +338,36 @@
     transition: all 0.2s ease;
 }
 
-.actions-trigger:hover {
+.drivemego-admin-management-actions-trigger:hover {
     background: #f9fafb;
 }
 
-.dropdown-menu {
+.drivemego-admin-management-dropdown-menu {
     position: absolute;
     right: 0;
-    top: 100%;
-    margin-top: 4px;
+    top: calc(100% + 4px);
     background: white;
     border-radius: 10px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
     border: 1px solid #e5e7eb;
     min-width: 180px;
-    z-index: 100;
-    overflow: hidden;
+    z-index: 9999;
+    overflow: visible;
+    animation: dropdownFadeIn 0.15s ease-out;
 }
 
-.dropdown-menu button {
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.drivemego-admin-management-dropdown-menu button {
     width: 100%;
     display: flex;
     align-items: center;
@@ -370,29 +381,29 @@
     transition: all 0.15s ease;
 }
 
-.dropdown-menu button:hover {
+.drivemego-admin-management-dropdown-menu button:hover {
     background: #f9fafb;
 }
 
-.dropdown-menu button.danger {
+.drivemego-admin-management-dropdown-menu button.drivemego-admin-management-danger {
     color: #dc2626;
 }
 
-.dropdown-menu button.danger:hover {
+.drivemego-admin-management-dropdown-menu button.drivemego-admin-management-danger:hover {
     background: #fef2f2;
 }
 
-.dropdown-menu button.success {
+.drivemego-admin-management-dropdown-menu button.drivemego-admin-management-success {
     color: #059669;
 }
 
-.dropdown-menu button.success:hover {
+.drivemego-admin-management-dropdown-menu button.drivemego-admin-management-success:hover {
     background: #ecfdf5;
 }
 
 /* Loading & Empty State */
-.loading-state,
-.empty-state {
+.drivemego-admin-management-loading-state,
+.drivemego-admin-management-empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -401,7 +412,7 @@
     color: #6b7280;
 }
 
-.loading-state .spinner {
+.drivemego-admin-management-loading-state .drivemego-admin-management-spinner {
     width: 40px;
     height: 40px;
     border: 3px solid #e5e7eb;
@@ -414,24 +425,24 @@
     to { transform: rotate(360deg); }
 }
 
-.empty-state svg {
+.drivemego-admin-management-empty-state svg {
     font-size: 48px;
     color: #d1d5db;
     margin-bottom: 16px;
 }
 
-.empty-state h3 {
+.drivemego-admin-management-empty-state h3 {
     font-size: 18px;
     color: #374151;
     margin: 0 0 8px 0;
 }
 
-.empty-state p {
+.drivemego-admin-management-empty-state p {
     margin: 0 0 20px 0;
     font-size: 14px;
 }
 
-.empty-state button {
+.drivemego-admin-management-empty-state button {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -445,7 +456,7 @@
 }
 
 /* Pagination */
-.pagination {
+.drivemego-admin-management-pagination {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -453,7 +464,7 @@
     padding: 20px;
 }
 
-.pagination button {
+.drivemego-admin-management-pagination button {
     padding: 8px 16px;
     border: 1px solid #e5e7eb;
     background: white;
@@ -463,23 +474,23 @@
     transition: all 0.2s ease;
 }
 
-.pagination button:hover:not(:disabled) {
+.drivemego-admin-management-pagination button:hover:not(:disabled) {
     background: #f9fafb;
     border-color: #d1d5db;
 }
 
-.pagination button:disabled {
+.drivemego-admin-management-pagination button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.pagination span {
+.drivemego-admin-management-pagination span {
     font-size: 14px;
     color: #6b7280;
 }
 
 /* Modal Styles */
-.modal-overlay {
+.drivemego-admin-management-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -494,7 +505,7 @@
     overflow-y: auto;
 }
 
-.modal-content {
+.drivemego-admin-management-modal-content {
     background: white;
     border-radius: 16px;
     width: 100%;
@@ -504,15 +515,15 @@
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
-.modal-content.view-modal {
+.drivemego-admin-management-modal-content.drivemego-admin-management-view-modal {
     max-width: 600px;
 }
 
-.modal-content.delete-modal {
+.drivemego-admin-management-modal-content.drivemego-admin-management-delete-modal {
     max-width: 450px;
 }
 
-.modal-header {
+.drivemego-admin-management-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -520,7 +531,7 @@
     border-bottom: 1px solid #e5e7eb;
 }
 
-.modal-header h2 {
+.drivemego-admin-management-modal-header h2 {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -530,11 +541,11 @@
     margin: 0;
 }
 
-.modal-header.delete h2 {
+.drivemego-admin-management-modal-header.drivemego-admin-management-delete h2 {
     color: #dc2626;
 }
 
-.close-btn {
+.drivemego-admin-management-close-btn {
     width: 36px;
     height: 36px;
     border-radius: 8px;
@@ -547,15 +558,15 @@
     transition: all 0.2s ease;
 }
 
-.close-btn:hover {
+.drivemego-admin-management-close-btn:hover {
     background: #e5e7eb;
 }
 
-.modal-body {
+.drivemego-admin-management-modal-body {
     padding: 24px;
 }
 
-.modal-footer {
+.drivemego-admin-management-modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
@@ -565,7 +576,7 @@
     border-radius: 0 0 16px 16px;
 }
 
-.btn-cancel {
+.drivemego-admin-management-btn-cancel {
     padding: 10px 20px;
     border: 1px solid #e5e7eb;
     background: white;
@@ -576,11 +587,11 @@
     transition: all 0.2s ease;
 }
 
-.btn-cancel:hover {
+.drivemego-admin-management-btn-cancel:hover {
     background: #f9fafb;
 }
 
-.btn-submit {
+.drivemego-admin-management-btn-submit {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -594,16 +605,16 @@
     transition: all 0.2s ease;
 }
 
-.btn-submit:hover:not(:disabled) {
+.drivemego-admin-management-btn-submit:hover:not(:disabled) {
     background: #2563eb;
 }
 
-.btn-submit:disabled {
+.drivemego-admin-management-btn-submit:disabled {
     opacity: 0.7;
     cursor: not-allowed;
 }
 
-.btn-delete {
+.drivemego-admin-management-btn-delete {
     padding: 10px 20px;
     background: #dc2626;
     color: white;
@@ -614,25 +625,25 @@
     transition: all 0.2s ease;
 }
 
-.btn-delete:hover:not(:disabled) {
+.drivemego-admin-management-btn-delete:hover:not(:disabled) {
     background: #b91c1c;
 }
 
-.btn-delete:disabled {
+.drivemego-admin-management-btn-delete:disabled {
     opacity: 0.7;
     cursor: not-allowed;
 }
 
 /* Form Styles */
-.form-section {
+.drivemego-admin-management-form-section {
     margin-bottom: 24px;
 }
 
-.form-section:last-child {
+.drivemego-admin-management-form-section:last-child {
     margin-bottom: 0;
 }
 
-.form-section h3 {
+.drivemego-admin-management-form-section h3 {
     font-size: 14px;
     font-weight: 600;
     color: #374151;
@@ -641,7 +652,7 @@
     border-bottom: 1px solid #e5e7eb;
 }
 
-.section-header {
+.drivemego-admin-management-section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -650,18 +661,18 @@
     border-bottom: 1px solid #e5e7eb;
 }
 
-.section-header h3 {
+.drivemego-admin-management-section-header h3 {
     margin: 0;
     padding: 0;
     border: none;
 }
 
-.bulk-actions {
+.drivemego-admin-management-bulk-actions {
     display: flex;
     gap: 8px;
 }
 
-.bulk-actions button {
+.drivemego-admin-management-bulk-actions button {
     padding: 6px 12px;
     font-size: 12px;
     border: 1px solid #e5e7eb;
@@ -671,29 +682,29 @@
     cursor: pointer;
 }
 
-.bulk-actions button:hover {
+.drivemego-admin-management-bulk-actions button:hover {
     background: #f9fafb;
 }
 
-.form-grid {
+.drivemego-admin-management-form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
 }
 
-.form-group {
+.drivemego-admin-management-form-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.form-group label {
+.drivemego-admin-management-form-group label {
     font-size: 13px;
     font-weight: 500;
     color: #374151;
 }
 
-.form-group input {
+.drivemego-admin-management-form-group input {
     padding: 10px 14px;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
@@ -702,26 +713,26 @@
     transition: all 0.2s ease;
 }
 
-.form-group input:focus {
+.drivemego-admin-management-form-group input:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-group input.error {
+.drivemego-admin-management-form-group input.drivemego-admin-management-error {
     border-color: #dc2626;
 }
 
-.error-text {
+.drivemego-admin-management-error-text {
     font-size: 12px;
     color: #dc2626;
 }
 
-.phone-input {
+.drivemego-admin-management-phone-input {
     display: flex;
     gap: 8px;
 }
 
-.phone-input select {
+.drivemego-admin-management-phone-input select {
     padding: 10px 12px;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
@@ -730,12 +741,49 @@
     cursor: pointer;
 }
 
-.phone-input input {
+.drivemego-admin-management-phone-input input {
     flex: 1;
 }
 
+/* Password Input with Toggle */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper input {
+    flex: 1;
+    padding-right: 44px;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.password-toggle-btn:hover {
+    color: #374151;
+}
+
+.password-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
 /* Super Admin Toggle */
-.super-admin-toggle {
+.drivemego-admin-management-super-admin-toggle {
     display: flex;
     align-items: flex-start;
     gap: 16px;
@@ -745,7 +793,7 @@
     border: 1px solid #e5e7eb;
 }
 
-.toggle-switch {
+.drivemego-admin-management-toggle-switch {
     position: relative;
     display: inline-block;
     width: 48px;
@@ -753,13 +801,13 @@
     flex-shrink: 0;
 }
 
-.toggle-switch input {
+.drivemego-admin-management-toggle-switch input {
     opacity: 0;
     width: 0;
     height: 0;
 }
 
-.toggle-slider {
+.drivemego-admin-management-toggle-slider {
     position: absolute;
     cursor: pointer;
     top: 0;
@@ -771,7 +819,7 @@
     border-radius: 26px;
 }
 
-.toggle-slider:before {
+.drivemego-admin-management-toggle-slider:before {
     position: absolute;
     content: "";
     height: 20px;
@@ -784,38 +832,38 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.toggle-switch input:checked + .toggle-slider {
+.drivemego-admin-management-toggle-switch input:checked + .drivemego-admin-management-toggle-slider {
     background-color: #3b82f6;
 }
 
-.toggle-switch input:checked + .toggle-slider:before {
+.drivemego-admin-management-toggle-switch input:checked + .drivemego-admin-management-toggle-slider:before {
     transform: translateX(22px);
 }
 
-.toggle-info {
+.drivemego-admin-management-toggle-info {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-.toggle-label {
+.drivemego-admin-management-toggle-label {
     font-weight: 600;
     color: #1a1a2e;
 }
 
-.toggle-description {
+.drivemego-admin-management-toggle-description {
     font-size: 13px;
     color: #6b7280;
 }
 
 /* Modules Grid */
-.modules-grid {
+.drivemego-admin-management-modules-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 12px;
 }
 
-.module-card {
+.drivemego-admin-management-module-card {
     display: flex;
     align-items: flex-start;
     gap: 12px;
@@ -827,17 +875,17 @@
     background: white;
 }
 
-.module-card:hover {
+.drivemego-admin-management-module-card:hover {
     border-color: #3b82f6;
     background: #eff6ff;
 }
 
-.module-card.selected {
+.drivemego-admin-management-module-card.drivemego-admin-management-selected {
     border-color: #3b82f6;
     background: #eff6ff;
 }
 
-.module-checkbox {
+.drivemego-admin-management-module-checkbox {
     width: 20px;
     height: 20px;
     border: 2px solid #d1d5db;
@@ -849,31 +897,31 @@
     transition: all 0.2s ease;
 }
 
-.module-card.selected .module-checkbox {
+.drivemego-admin-management-module-card.drivemego-admin-management-selected .drivemego-admin-management-module-checkbox {
     background: #3b82f6;
     border-color: #3b82f6;
     color: white;
 }
 
-.module-info {
+.drivemego-admin-management-module-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-.module-label {
+.drivemego-admin-management-module-label {
     font-size: 13px;
     font-weight: 500;
     color: #1a1a2e;
 }
 
-.module-description {
+.drivemego-admin-management-module-description {
     font-size: 11px;
     color: #9ca3af;
 }
 
 /* View Modal Styles */
-.admin-profile {
+.drivemego-admin-management-admin-profile {
     display: flex;
     align-items: center;
     gap: 20px;
@@ -883,7 +931,7 @@
     margin-bottom: 24px;
 }
 
-.profile-avatar {
+.drivemego-admin-management-profile-avatar {
     width: 64px;
     height: 64px;
     border-radius: 16px;
@@ -896,89 +944,89 @@
     font-size: 24px;
 }
 
-.profile-info h3 {
+.drivemego-admin-management-profile-info h3 {
     margin: 0 0 4px 0;
     font-size: 18px;
     color: #1a1a2e;
 }
 
-.profile-info p {
+.drivemego-admin-management-profile-info p {
     margin: 0 0 8px 0;
     font-size: 14px;
     color: #6b7280;
 }
 
-.details-grid {
+.drivemego-admin-management-details-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
     margin-bottom: 24px;
 }
 
-.detail-item {
+.drivemego-admin-management-detail-item {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-.detail-label {
+.drivemego-admin-management-detail-label {
     font-size: 12px;
     color: #9ca3af;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.detail-value {
+.drivemego-admin-management-detail-value {
     font-size: 14px;
     color: #1a1a2e;
     font-weight: 500;
 }
 
-.stats-section,
-.permissions-section {
+.drivemego-admin-management-stats-section,
+.drivemego-admin-management-permissions-section {
     margin-bottom: 24px;
 }
 
-.stats-section h4,
-.permissions-section h4 {
+.drivemego-admin-management-stats-section h4,
+.drivemego-admin-management-permissions-section h4 {
     font-size: 14px;
     font-weight: 600;
     color: #374151;
     margin: 0 0 12px 0;
 }
 
-.mini-stats {
+.drivemego-admin-management-mini-stats {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
 }
 
-.mini-stat {
+.drivemego-admin-management-mini-stat {
     padding: 16px;
     background: #f9fafb;
     border-radius: 10px;
     text-align: center;
 }
 
-.mini-value {
+.drivemego-admin-management-mini-value {
     display: block;
     font-size: 24px;
     font-weight: 700;
     color: #3b82f6;
 }
 
-.mini-label {
+.drivemego-admin-management-mini-label {
     font-size: 12px;
     color: #6b7280;
 }
 
-.permissions-list {
+.drivemego-admin-management-permissions-list {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
 
-.permission-item {
+.drivemego-admin-management-permission-item {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -987,104 +1035,104 @@
     font-size: 13px;
 }
 
-.permission-item.granted {
+.drivemego-admin-management-permission-item.drivemego-admin-management-granted {
     background: #ecfdf5;
     color: #065f46;
 }
 
-.permission-item.denied {
+.drivemego-admin-management-permission-item.drivemego-admin-management-denied {
     background: #fef2f2;
     color: #991b1b;
 }
 
-.permission-item .icon {
+.drivemego-admin-management-permission-item .drivemego-admin-management-icon {
     font-size: 16px;
 }
 
-.permission-item .icon.granted {
+.drivemego-admin-management-permission-item .drivemego-admin-management-icon.drivemego-admin-management-granted {
     color: #059669;
 }
 
-.permission-item .icon.denied {
+.drivemego-admin-management-permission-item .drivemego-admin-management-icon.drivemego-admin-management-denied {
     color: #dc2626;
 }
 
 /* Delete Modal */
-.delete-warning {
+.drivemego-admin-management-delete-warning {
     text-align: center;
     padding: 20px;
 }
 
-.delete-warning .warning-icon {
+.drivemego-admin-management-delete-warning .drivemego-admin-management-warning-icon {
     font-size: 48px;
     color: #dc2626;
     margin-bottom: 16px;
 }
 
-.delete-warning h3 {
+.drivemegoadmin-management-delete-warning h3 {
     font-size: 18px;
     color: #1a1a2e;
     margin: 0 0 12px 0;
 }
 
-.delete-warning p {
+.drivemego-admin-management-delete-warning p {
     color: #6b7280;
     margin: 0;
     line-height: 1.6;
 }
 
-.delete-warning strong {
+.drivemego-admin-management-delete-warning strong {
     color: #1a1a2e;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-    .admin-management {
+    .drivemego-admin-management-admin-management {
         padding: 16px;
     }
 
-    .admin-management-header {
+    .drivemego-admin-management-admin-management-header {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .btn-create-admin {
+    .drivemego-admin-management-btn-create-admin {
         justify-content: center;
     }
 
-    .stats-grid {
+    .drivemego-admin-management-stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 
-    .filters-section {
+    .drivemego-admin-management-filters-section {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .search-box {
+    .drivemego-admin-management-search-box {
         max-width: none;
     }
 
-    .form-grid {
+    .drivemego-admin-management-form-grid {
         grid-template-columns: 1fr;
     }
 
-    .modules-grid {
+    .drivemego-admin-management-modules-grid {
         grid-template-columns: 1fr;
     }
 
-    .details-grid,
-    .permissions-list,
-    .mini-stats {
+    .drivemego-admin-management-details-grid,
+    .drivemego-admin-management-permissions-list,
+    .drivemego-admin-management-mini-stats {
         grid-template-columns: 1fr;
     }
 
-    .admins-table {
+    .drivemego-admin-management-admins-table {
         font-size: 13px;
     }
 
-    .admins-table th,
-    .admins-table td {
+    .drivemego-admin-management-admins-table th,
+    .drivemego-admin-management-admins-table td {
         padding: 12px 8px;
     }
 }

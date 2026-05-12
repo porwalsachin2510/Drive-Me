@@ -1,5 +1,6 @@
 .ad-dash-tags-badges {
   width: 100%;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .ad-dash-tb-header {
@@ -26,18 +27,19 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background-color: #00a699;
+  background-color: var(--secondary-color, #2DD4BF);
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: background-color 0.2s;
+  transition: var(--transition, all 0.2s ease);
 }
 
 .ad-dash-tb-create-btn:hover {
-  background-color: #008c80;
+  background-color: var(--secondary-hover, #26B8A5);
+  box-shadow: var(--shadow-teal, 0 4px 14px rgba(45, 212, 191, 0.25));
 }
 
 .ad-dash-tb-grid {
@@ -191,6 +193,125 @@
   background-color: #fecaca;
 }
 
+/* Category Badge */
+.ad-dash-tb-category-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* Notification */
+.ad-dash-tb-notification {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ad-dash-tb-notification-success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.ad-dash-tb-notification-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.ad-dash-tb-notification-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.ad-dash-tb-notification-success .ad-dash-tb-notification-icon {
+  background: #065f46;
+  color: white;
+}
+
+.ad-dash-tb-notification-error .ad-dash-tb-notification-icon {
+  background: #991b1b;
+  color: white;
+}
+
+/* Filters Section */
+.ad-dash-tb-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ad-dash-tb-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ad-dash-tb-filter-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.ad-dash-tb-filter-select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #374151;
+  background: white;
+  cursor: pointer;
+}
+
+.ad-dash-tb-filter-select:focus {
+  outline: none;
+  border-color: #00a699;
+}
+
+.ad-dash-tb-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.ad-dash-tb-stat-item {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
 /* No Tags State */
 .no-tags {
   text-align: center;
@@ -206,18 +327,200 @@
   color: #9ca3af;
 }
 
+/* Header Actions */
+.ad-dash-tb-header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.ad-dash-tb-guide-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.ad-dash-tb-guide-btn:hover {
+  background-color: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.ad-dash-tb-guide-btn span {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #6b7280;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Usage Guide Section */
+.ad-dash-tb-usage-guide {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+    transform: translateY(0);
+  }
+}
+
+.ad-dash-tb-guide-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.ad-dash-tb-guide-header h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 6px;
+}
+
+.ad-dash-tb-guide-header p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.ad-dash-tb-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.ad-dash-tb-guide-card {
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  border-left: 4px solid #6b7280;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.ad-dash-tb-guide-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ad-dash-tb-guide-icon {
+  font-size: 24px;
+}
+
+.ad-dash-tb-guide-card-header h5 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.ad-dash-tb-guide-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+}
+
+.ad-dash-tb-guide-section {
+  margin-bottom: 10px;
+}
+
+.ad-dash-tb-guide-section:last-child {
+  margin-bottom: 0;
+}
+
+.ad-dash-tb-guide-section label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.ad-dash-tb-guide-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ad-dash-tb-guide-example {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ad-dash-tb-guide-usage-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ad-dash-tb-guide-usage-list li {
+  font-size: 12px;
+  color: #4b5563;
+  padding: 2px 0;
+  position: relative;
+  padding-left: 14px;
+}
+
+.ad-dash-tb-guide-usage-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #9ca3af;
+}
+
 @media (max-width: 768px) {
   .ad-dash-tb-header {
     flex-direction: column;
     gap: 16px;
   }
 
+    .ad-dash-tb-header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .ad-dash-tb-guide-btn,
   .ad-dash-tb-create-btn {
     width: 100%;
     justify-content: center;
   }
 
   .ad-dash-tb-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .ad-dash-tb-guide-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -52,9 +52,12 @@ const VehicleDetails = () => {
       case "monthly":
         return vehicle.pricing?.monthlyRate || 0;
       case "long-term":
-        return vehicle.pricing?.monthlyRate
-          ? vehicle.pricing.monthlyRate * 0.85
-          : 0;
+        // Use yearlyRate if available, otherwise calculate from monthly rate
+        return vehicle.pricing?.yearlyRate && vehicle.pricing.yearlyRate > 0
+          ? vehicle.pricing.yearlyRate
+          : vehicle.pricing?.monthlyRate
+            ? vehicle.pricing.monthlyRate * 12
+            : 0;
       default:
         return vehicle.pricing?.monthlyRate || 0;
     }

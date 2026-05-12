@@ -2,10 +2,14 @@ import RouteRequest from "../models/RouteRequest.js";
 import User from "../models/User.js";
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
 import { sendEmail } from "../Services/emailService.js";
+import { createNotification } from "../Services/notificationService.js";
 
 // Create new route request
 export const createRouteRequest = async (req, res) => {
     try {
+        console.log("[v0] createRouteRequest called");
+        console.log("[v0] Request body:", req.body);
+        console.log("[v0] User ID:", req.userId);
         const {
             pickupLocation,
             dropoffLocation,
@@ -13,10 +17,18 @@ export const createRouteRequest = async (req, res) => {
             requestType,
             travelDays,
             expectedStartDate,
-            coordinates
+            coordinates,
+            pickupCoordinates,
+            dropoffCoordinates
         } = req.body;
 
         const passengerId = req.userId;
+
+        // Combine coordinates from different formats
+        const finalCoordinates = coordinates || {
+            pickup: pickupCoordinates,
+            dropoff: dropoffCoordinates
+        };
 
         // Validate required fields
         if (!pickupLocation || !dropoffLocation || !preferredTime || !requestType || !expectedStartDate) {
@@ -78,10 +90,12 @@ export const createRouteRequest = async (req, res) => {
             requestType,
             travelDays: travelDays || ["MON", "TUE", "WED", "THU", "FRI"],
             expectedStartDate: new Date(expectedStartDate),
-            coordinates,
+            coordinates: finalCoordinates,
             similarRequests: similarRequests.map(req => req._id),
             demandCount: similarRequests.length + 1
         });
+
+        console.log("[v0] Route request saved:", routeRequest._id);
 
         await routeRequest.save();
 
@@ -92,8 +106,9 @@ export const createRouteRequest = async (req, res) => {
         );
 
         // Notify nearby B2C partners
+        console.log("[v0] Calling notifyNearbyProviders...");
         await notifyNearbyProviders(pickupLocation, dropoffLocation, routeRequest);
-
+        console.log("[v0] notifyNearbyProviders completed");
         res.status(201).json({
             success: true,
             message: "Route request created successfully",
@@ -269,19 +284,57 @@ export const respondToRouteRequest = async (req, res) => {
 // Helper functions
 const notifyNearbyProviders = async (pickupLocation, dropoffLocation, routeRequest) => {
     try {
+        console.log("[v0] notifyNearbyProviders called with:", { pickupLocation, dropoffLocation, routeRequestId: routeRequest._id });
         // Find B2C partners operating in similar areas
+        // Note: User model uses 'status' field, not 'isActive'
         const nearbyProviders = await User.find({
             role: "B2C_PARTNER",
-            isActive: true
-        }).populate('b2cPartnerRoutes');
+            status: "ACTIVE"
+        });
+
+        console.log(`[v0] Found ${nearbyProviders.length} B2C partners with status ACTIVE:`, nearbyProviders.map(p => ({ id: p._id, name: p.fullName, status: p.status })));
+
+        // Get passenger info for the notification
+        const passenger = await User.findById(routeRequest.passengerId);
+        const passengerName = passenger?.fullName || "A passenger";
+
+        console.log("[v0] Passenger info:", { passengerId: routeRequest.passengerId, passengerName });
 
         // Send notifications to relevant providers
         for (const provider of nearbyProviders) {
-            const hasSimilarRoute = provider.b2cPartnerRoutes?.some(route => 
-                route.fromLocation.includes(pickupLocation.split(' ')[0]) ||
-                route.toLocation.includes(dropoffLocation.split(' ')[0])
+            
+            // Fetch B2C partner routes from the separate collection
+            const providerRoutes = await B2CPartnerRoute.find({
+                partnerId: provider._id,
+                isActive: true
+            });
+
+            const hasSimilarRoute = providerRoutes?.some(route =>
+                route.fromLocation?.includes(pickupLocation.split(' ')[0]) ||
+                route.toLocation?.includes(dropoffLocation.split(' ')[0])
             );
 
+            // Send to all B2C partners for now (or filter by hasSimilarRoute if needed)
+            // Real-time notification for all B2C partners
+            const notificationResult = await createNotification({
+                userId: provider._id,
+                type: "NEW_ROUTE_REQUEST",
+                title: "New Route Request!",
+                message: `${passengerName} requested a route from ${pickupLocation} to ${dropoffLocation}`,
+                data: {
+                    requestId: routeRequest._id,
+                    pickupLocation,
+                    dropoffLocation,
+                    preferredTime: routeRequest.preferredTime,
+                    requestType: routeRequest.requestType,
+                    demandCount: routeRequest.demandCount,
+                    passengerId: routeRequest.passengerId,
+                },
+            });
+
+            console.log(`[v0] Notification created for ${provider._id}:`, notificationResult ? notificationResult._id : 'FAILED');
+
+            // Also send email to providers with similar routes
             if (hasSimilarRoute) {
                 await sendEmail({
                     to: provider.email,
@@ -297,7 +350,9 @@ const notifyNearbyProviders = async (pickupLocation, dropoffLocation, routeReque
                 });
             }
         }
+        console.log(`[v0] Route request notifications sent to ${nearbyProviders.length} B2C partners`);
     } catch (error) {
+
         console.error("Error notifying providers:", error);
     }
 };
@@ -305,7 +360,42 @@ const notifyNearbyProviders = async (pickupLocation, dropoffLocation, routeReque
 const notifyPassengerOfResponse = async (routeRequest) => {
     try {
         const passenger = await User.findById(routeRequest.passengerId);
+        const provider = await User.findById(routeRequest.assignedProviderId);
+        const providerName = provider?.fullName || provider?.companyName || "A transport provider";
+
         if (passenger) {
+            // Determine notification message based on status
+            const statusMessages = {
+                APPROVED: `Great news! ${providerName} has approved your route request from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}`,
+                REJECTED: `${providerName} was unable to fulfill your route request from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}`,
+                UNDER_REVIEW: `${providerName} is reviewing your route request from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}`,
+            };
+
+            const statusTitles = {
+                APPROVED: "Route Request Approved!",
+                REJECTED: "Route Request Update",
+                UNDER_REVIEW: "Route Request Under Review",
+            };
+
+            // Send real-time notification to commuter
+            await createNotification({
+                userId: passenger._id,
+                type: "ROUTE_REQUEST_RESPONSE",
+                title: statusTitles[routeRequest.status] || "Route Request Update",
+                message: statusMessages[routeRequest.status] || `Your route request has been updated to ${routeRequest.status}`,
+                data: {
+                    requestId: routeRequest._id,
+                    pickupLocation: routeRequest.pickupLocation,
+                    dropoffLocation: routeRequest.dropoffLocation,
+                    status: routeRequest.status,
+                    providerResponse: routeRequest.providerResponse,
+                    estimatedPrice: routeRequest.estimatedPrice,
+                    providerId: routeRequest.assignedProviderId,
+                    providerName: providerName,
+                },
+            });
+
+            // Also send email
             await sendEmail({
                 to: passenger.email,
                 subject: "Response to Your Route Request",
@@ -319,6 +409,7 @@ const notifyPassengerOfResponse = async (routeRequest) => {
                     status: routeRequest.status
                 }
             });
+            console.log(`[v0] Route request response notification sent to passenger: ${passenger._id}`);
         }
     } catch (error) {
         console.error("Error notifying passenger:", error);
@@ -329,7 +420,7 @@ const getNearbyProviderCount = async (pickupLocation, dropoffLocation) => {
     try {
         const count = await User.countDocuments({
             role: "B2C_PARTNER",
-            isActive: true
+            status: "ACTIVE"
         });
         return count;
     } catch (error) {

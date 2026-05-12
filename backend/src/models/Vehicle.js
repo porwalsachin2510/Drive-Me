@@ -124,6 +124,10 @@ const vehicleSchema = new mongoose.Schema(
                 type: Number,
                 required: true,
             },
+            yearlyRate: {
+                type: Number,
+                default: 0,
+            },
             perKmCharge: {
                 type: Number,
                 required: true,
@@ -154,6 +158,10 @@ const vehicleSchema = new mongoose.Schema(
             monthlyLimit: {
                 type: Number,
                 default: 2000, // KM per month (default)
+            },
+            yearlyLimit: {
+                type: Number,
+                default: 24000, // KM per year (default)
             },
         },
         availability: {

@@ -1,14 +1,38 @@
 /* ============ PASSENGERS & BOOKINGS ============ */
 .ad-dash-passenger-reassignments {
   width: 100%;
+   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Header */
 .ad-dash-pr-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 24px;
+  gap: 16px;
+}
+
+.ad-dash-pr-refresh-btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #374151;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ad-dash-pr-refresh-btn:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.ad-dash-pr-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .ad-dash-pr-title {
@@ -50,8 +74,8 @@
 }
 
 .ad-dash-pr-filters select:focus {
-  border-color: #00a699;
-  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1);
+  border-color: var(--secondary-color, #2DD4BF);
+  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.1));
 }
 
 .ad-dash-pr-filters input[type="text"] {
@@ -69,8 +93,8 @@
 }
 
 .ad-dash-pr-filters input[type="text"]:focus {
-  border-color: #00a699;
-  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1);
+   border-color: var(--secondary-color, #2DD4BF);
+  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.1));
 }
 
 .ad-dash-pr-filters input[type="text"]::placeholder {
@@ -129,6 +153,21 @@
 
 /* Passenger Info */
 .ad-dash-passenger-reassignments .passenger-info {
+   display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ad-dash-passenger-reassignments .passenger-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.ad-dash-passenger-reassignments .passenger-details {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -158,16 +197,62 @@
   font-size: 13px;
 }
 
-.ad-dash-passenger-reassignments .provider-name {
+.ad-dash-passenger-reassignments .route-direction {
   font-size: 12px;
   color: #64748b;
 }
 
-/* Provider Text */
+.ad-dash-passenger-reassignments .monthly-pass-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Provider Info */
+.ad-dash-passenger-reassignments .provider-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .ad-dash-passenger-reassignments .provider-text {
   font-size: 13px;
   color: #374151;
   font-weight: 500;
+}
+
+.ad-dash-passenger-reassignments .vehicle-text {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Payment Info */
+.ad-dash-passenger-reassignments .payment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ad-dash-passenger-reassignments .payment-status {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.ad-dash-passenger-reassignments .payment-status.completed {
+  color: #059669;
+}
+
+.ad-dash-passenger-reassignments .payment-status.pending {
+  color: #d97706;
+}
+
+.ad-dash-passenger-reassignments .payment-status.failed {
+  color: #dc2626;
 }
 
 /* Amount */

@@ -68,6 +68,10 @@ import {
     deleteB2CRoute,
     getB2CTags,
     createB2CTag,
+    updateB2CTag,
+    deleteB2CTag,
+    getTagsByCategory,
+    getPublicTags,
     getB2CPassengerReassignments,
     processPassengerReassignment,
     getB2CEarningsPayments,
@@ -141,6 +145,12 @@ router.delete("/b2c/routes/:routeId", verifyToken, checkAdminRole, deleteB2CRout
 
 router.get("/b2c/tags", verifyToken, checkAdminRole, getB2CTags)
 router.post("/b2c/tags", verifyToken, checkAdminRole, createB2CTag)
+router.put("/b2c/tags/:tagId", verifyToken, checkAdminRole, updateB2CTag)
+router.delete("/b2c/tags/:tagId", verifyToken, checkAdminRole, deleteB2CTag)
+
+// Public tags endpoint (for search filtering) and partner tags endpoint
+router.get("/tags/public", getPublicTags)
+router.get("/tags/by-category", verifyToken, getTagsByCategory)
 
 router.get("/b2c/passenger-reassignments", verifyToken, checkAdminRole, getB2CPassengerReassignments)
 router.put("/b2c/passenger-reassignments/:reassignmentId/process", verifyToken, checkAdminRole, processPassengerReassignment)

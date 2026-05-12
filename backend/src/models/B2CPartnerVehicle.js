@@ -73,6 +73,11 @@ const b2cPartnerVehicleSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "B2CPartnerRoute",
         }],
+        // Tags for vehicle categorization (vehicle, general category tags)
+        tags: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Tag"
+        }],
         createdAt: {
             type: Date,
             default: Date.now,

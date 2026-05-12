@@ -1,6 +1,7 @@
 /* ============ EARNINGS & PAYMENTS ============ */
 .ad-dash-earnings-payments {
   width: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Header */
@@ -50,8 +51,8 @@
 }
 
 .ad-dash-ep-filters select:focus {
-  border-color: #00a699;
-  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1);
+ border-color: var(--secondary-color, #2DD4BF);
+  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.1));
 }
 
 /* Summary Cards */
@@ -307,7 +308,7 @@
 
 .ad-dash-ep-providers .provider-rank {
   font-weight: 700;
-  color: #00a699;
+   color: var(--secondary-color, #2DD4BF);
   font-size: 13px;
 }
 
@@ -327,7 +328,7 @@
 
 .performance-fill {
   height: 100%;
-  background: linear-gradient(90deg, #10b981, #00a699);
+  background: linear-gradient(90deg, var(--success-color, #22c55e), var(--secondary-color, #2DD4BF));
   border-radius: 4px;
   min-width: 4px;
   transition: width 0.3s ease;

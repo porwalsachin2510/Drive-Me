@@ -167,7 +167,11 @@ const SingleVehicleOwnerDetails = () => {
         start.setDate(start.getDate() + value * 7);
       } else if (typeLower === "daily" || typeLower === "day") {
         start.setDate(start.getDate() + value);
-      } else if (typeLower === "yearly" || typeLower === "year") {
+      } else if (
+        typeLower === "long-term" ||
+        typeLower === "yearly" ||
+        typeLower === "year"
+      ) {
         start.setFullYear(start.getFullYear() + value);
       } else {
         // Default to months if not specified
@@ -183,7 +187,12 @@ const SingleVehicleOwnerDetails = () => {
       if (typeLower === "daily" || typeLower === "day") return "DAILY";
       if (typeLower === "weekly" || typeLower === "week") return "WEEKLY";
       if (typeLower === "monthly" || typeLower === "month") return "MONTHLY";
-      if (typeLower === "yearly" || typeLower === "year") return "LONG_TERM";
+       if (
+         typeLower === "long-term" ||
+         typeLower === "yearly" ||
+         typeLower === "year"
+       )
+         return "LONG_TERM";
       return "MONTHLY"; // Default
     };
 
@@ -552,7 +561,10 @@ const SingleVehicleOwnerDetails = () => {
                         Rental Duration
                       </span>
                       <span className="single-owner-vehicle-price-value">
-                        {corporateuserrequirements.rentalDuration}
+                        {corporateuserrequirements.rentalDuration ===
+                        "long-term"
+                          ? "long-term"
+                          : corporateuserrequirements.rentalDuration}
                       </span>
                     </div>
                   </div>

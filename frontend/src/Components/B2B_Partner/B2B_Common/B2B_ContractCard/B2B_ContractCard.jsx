@@ -24,12 +24,18 @@ function B2B_ContractCard({ contract }) {
     if (contract.rentalPeriod?.duration) {
       const duration = contract.rentalPeriod.duration;
       const durationType = contract.rentalPeriod.durationType;
-      if (durationType === "MONTHLY" || durationType === "months") {
+      if (durationType === "DAILY" || durationType === "days") {
+        return `${duration} day${duration > 1 ? "s" : ""}`;
+      } else if (durationType === "WEEKLY" || durationType === "weeks") {
+        return `${duration} week${duration > 1 ? "s" : ""}`;
+      } else if (durationType === "MONTHLY" || durationType === "months") {
         return `${duration} month${duration > 1 ? "s" : ""}`;
-      } else if (durationType === "YEARLY" || durationType === "years") {
+      } else if (
+        durationType === "LONG_TERM" ||
+        durationType === "YEARLY" ||
+        durationType === "years"
+      ) {
         return `${duration} year${duration > 1 ? "s" : ""}`;
-      } else if (durationType === "DAILY" || durationType === "days") {
-        return `${duration} days`;
       }
       return `${duration} days`;
     }

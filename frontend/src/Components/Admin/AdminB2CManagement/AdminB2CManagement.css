@@ -1,16 +1,16 @@
 .ad-dash-b2c-management {
   padding: 24px;
-  background: #f8fafc;
+  background: var(--bg-secondary, #f8fafc);
   min-height: 100vh;
+  font-family: var(--font-family, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
 }
 
 .ad-dash-b2c-header {
-  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
-  border-radius: 16px;
+  background: var(--bg-primary, #ffffff);
   padding: 32px;
   margin-bottom: 32px;
-  box-shadow: 0 10px 30px rgba(232, 93, 93, 0.2);
-  color: white;
+   box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.07));
+  border: 1px solid var(--border-color, #e2e8f0);
 }
 
 .ad-dash-b2c-title-section {
@@ -21,9 +21,9 @@
 }
 
 .ad-dash-b2c-title {
-  font-size: 32px;
-  font-weight: 800;
-  color: white;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -31,16 +31,18 @@
 }
 
 .ad-dash-b2c-icon {
-  font-size: 36px;
-  background: rgba(255, 255, 255, 0.2);
+  font-size: 32px;
+  background: var(--secondary-light, rgba(45, 212, 191, 0.1));
   padding: 12px;
   border-radius: 12px;
-  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ad-dash-b2c-description {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  color: var(--text-secondary, #4b5563);
   line-height: 1.6;
   margin: 0;
   max-width: 600px;
@@ -48,53 +50,52 @@
 
 .ad-dash-b2c-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
 }
 
 .stat-item {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: var(--transition, all 0.2s ease);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .stat-item:hover {
-  background: rgba(255, 255, 255, 0.25);
+  box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.07));
   transform: translateY(-2px);
 }
 
 .stat-icon {
-  font-size: 32px;
-  background: rgba(255, 255, 255, 0.2);
-  width: 60px;
-  height: 60px;
+  font-size: 28px;
+  background: var(--secondary-light, rgba(45, 212, 191, 0.1));
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  color: var(--secondary-color, #2DD4BF);
 }
 
 .stat-number {
   display: block;
-  font-size: 28px;
-  font-weight: 800;
-  color: white;
-  margin-bottom: 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+  margin-bottom: 2px;
   line-height: 1;
 }
 
 .stat-label {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  color: var(--text-muted, #6b7280);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
@@ -103,24 +104,25 @@
 .ad-dash-b2c-tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 32px;
-  background: white;
+   margin-bottom: 24px;
+  background: var(--bg-primary, #ffffff);
   padding: 8px;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--border-color, #e2e8f0);
   overflow-x: auto;
 }
 
 .ad-dash-b2c-tab {
-  padding: 16px 24px;
+  padding: 12px 20px;
   background: transparent;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 600;
-  color: #64748b;
-  transition: all 0.3s ease;
+ font-weight: 500;
+  color: var(--text-muted, #6b7280);
+  transition: var(--transition, all 0.2s ease);
   white-space: nowrap;
   position: relative;
   display: flex;
@@ -129,21 +131,22 @@
 }
 
 .ad-dash-b2c-tab:hover {
-  color: #334155;
-  background: rgba(232, 93, 93, 0.05);
+ color: var(--text-primary, #1f2937);
+  background: var(--bg-secondary, #f8fafc);
 }
 
 .ad-dash-b2c-tab.active {
-  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
+  background: var(--secondary-color, #2DD4BF);
   color: white;
-  box-shadow: 0 4px 12px rgba(232, 93, 93, 0.3);
+  font-weight: 600;
+  box-shadow: var(--shadow-teal, 0 4px 14px rgba(45, 212, 191, 0.25));
 }
 
 .tab-count {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
   color: white;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: 11px;
   font-size: 12px;
   font-weight: 700;
   min-width: 20px;
@@ -151,15 +154,16 @@
 }
 
 .ad-dash-b2c-tab:not(.active) .tab-count {
-  background: #e2e8f0;
-  color: #64748b;
+ background: var(--border-color, #e2e8f0);
+  color: var(--text-muted, #6b7280);
 }
 
 .ad-dash-b2c-content {
-  background: white;
+ background: var(--bg-primary, #ffffff);
   border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 28px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--border-color, #e2e8f0);
   min-height: 500px;
 }
 
@@ -176,8 +180,8 @@
 .ad-dash-b2c-loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #e2e8f0;
-  border-top: 4px solid #E85D5D;
+  border: 4px solid var(--border-color, #e2e8f0);
+  border-top: 4px solid var(--secondary-color, #2DD4BF);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -189,12 +193,12 @@
 
 /* Error State */
 .ad-dash-b2c-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--danger-bg, rgba(239, 68, 68, 0.08));
+  border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: 12px;
   padding: 24px;
   text-align: center;
-  color: #dc2626;
+  color: var(--danger-color, #ef4444);
 }
 
 .ad-dash-b2c-error-icon {
@@ -203,14 +207,14 @@
 }
 
 .ad-dash-b2c-error-title {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
   margin-bottom: 8px;
 }
 
 .ad-dash-b2c-error-message {
   font-size: 14px;
-  color: #7f1d1d;
+  color: var(--danger-hover, #dc2626);
 }
 
 /* Responsive Design */
@@ -231,12 +235,12 @@
   }
   
   .ad-dash-b2c-title {
-    font-size: 24px;
+    font-size: 22px;
   }
   
   .ad-dash-b2c-icon {
-    font-size: 28px;
-    padding: 8px;
+    font-size: 26px;
+    padding: 10px;
   }
   
   .ad-dash-b2c-description {
@@ -244,22 +248,22 @@
   }
   
   .ad-dash-b2c-stats {
-    grid-template-columns: 1fr;
-    gap: 16px;
+     grid-template-columns: 1fr 1fr;
+    gap: 12px;
   }
   
   .stat-item {
-    padding: 20px;
+    padding: 16px;
   }
   
   .stat-icon {
-    font-size: 28px;
-    width: 50px;
-    height: 50px;
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
   }
   
   .stat-number {
-    font-size: 24px;
+    font-size: 20px;
   }
   
   .ad-dash-b2c-tabs {
@@ -267,7 +271,7 @@
   }
   
   .ad-dash-b2c-tab {
-    padding: 12px 16px;
+    padding: 10px 14px;
     font-size: 13px;
   }
   
@@ -282,32 +286,32 @@
   }
   
   .ad-dash-b2c-title {
-    font-size: 20px;
+    font-size: 18px;
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
   
   .ad-dash-b2c-icon {
-    font-size: 24px;
+    font-size: 22px;
   }
   
   .stat-item {
-    padding: 16px;
+    padding: 14px;
   }
   
   .stat-icon {
-    font-size: 24px;
-    width: 40px;
-    height: 40px;
+    font-size: 20px;
+    width: 38px;
+    height: 38px;
   }
   
   .stat-number {
-    font-size: 20px;
+    font-size: 18px;
   }
   
   .ad-dash-b2c-tab {
-    padding: 10px 12px;
+    padding: 8px 10px;
     font-size: 12px;
   }
   

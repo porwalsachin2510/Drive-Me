@@ -190,7 +190,29 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
         cancelledBy: String, // "PASSENGER", "DRIVER", "ADMIN", "SYSTEM"
         completedAt: Date,
         startedAt: Date, // When the trip actually started
-
+        acceptedAt: Date, // When admin/partner accepted the booking
+        acceptedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        },
+        rejectedAt: Date, // When booking was rejected
+        refundStatus: {
+            type: String,
+            enum: ["PENDING", "PROCESSING", "COMPLETED", "FAILED", null],
+            default: null
+        },
+        refundReason: String,
+        // Admin action log
+        adminActions: [{
+            action: String,
+            reason: String,
+            processedAt: Date,
+            processedBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User"
+            }
+        }],
+        
         // Late Trip Tracking
         isLateStart: {
             type: Boolean,

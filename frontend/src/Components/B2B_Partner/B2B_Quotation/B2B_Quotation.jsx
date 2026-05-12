@@ -190,6 +190,8 @@ const B2B_Quotation = () => {
           return duration * 7;
         } else if (durationType === "MONTHLY") {
           return duration * 30;
+        } else if (durationType === "LONG_TERM") {
+          return duration * 365; // Yearly rental
         }
         return duration;
       }
@@ -217,6 +219,7 @@ const B2B_Quotation = () => {
       const dailyRate = Number(pricing.dailyRate) || 0;
       const weeklyRate = Number(pricing.weeklyRate) || 0;
       const monthlyRate = Number(pricing.monthlyRate) || 0;
+      const yearlyRate = Number(pricing.yearlyRate) || 0;
       const driverCharges = Number(pricing.driverCharges) || 0;
       const fuelCharges = Number(pricing.fuelCharges) || 0;
 
@@ -226,6 +229,15 @@ const B2B_Quotation = () => {
         baseRatePerDay = weeklyRate / 7;
       } else if (quotation.rentalPeriod?.durationType === "MONTHLY") {
         baseRatePerDay = monthlyRate / 30;
+      } else if (quotation.rentalPeriod?.durationType === "LONG_TERM") {
+        // For yearly/long-term, use yearlyRate if available, else calculate from monthlyRate
+        if (yearlyRate > 0) {
+          baseRatePerDay = yearlyRate / 365;
+        } else if (monthlyRate > 0) {
+          baseRatePerDay = monthlyRate / 30;
+        } else {
+          baseRatePerDay = dailyRate;
+        }
       }
 
       return {
@@ -636,14 +648,25 @@ const B2B_Quotation = () => {
                           <span className="drivermego-b2b-quotation-rental-duration">
                             {quotation.rentalPeriod?.duration || "N/A"}{" "}
                             {quotation.rentalPeriod?.durationType === "DAILY"
-                              ? "Days"
+                              ? quotation.rentalPeriod?.duration === 1
+                                ? "Day"
+                                : "Days"
                               : quotation.rentalPeriod?.durationType ===
                                   "WEEKLY"
-                                ? "Weeks"
+                                ? quotation.rentalPeriod?.duration === 1
+                                  ? "Week"
+                                  : "Weeks"
                                 : quotation.rentalPeriod?.durationType ===
                                     "MONTHLY"
-                                  ? "Months"
-                                  : ""}
+                                  ? quotation.rentalPeriod?.duration === 1
+                                    ? "Month"
+                                    : "Months"
+                                  : quotation.rentalPeriod?.durationType ===
+                                      "LONG_TERM"
+                                    ? quotation.rentalPeriod?.duration === 1
+                                      ? "Year"
+                                      : "Years"
+                                    : ""}
                           </span>
                           <span className="drivermego-b2b-quotation-rental-dates">
                             {quotation.rentalPeriod?.startDate

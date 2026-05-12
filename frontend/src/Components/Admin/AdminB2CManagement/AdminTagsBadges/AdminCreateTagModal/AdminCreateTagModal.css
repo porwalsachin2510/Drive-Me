@@ -113,8 +113,8 @@ select.ad-dash-form-input {
 }
 
 .ad-dash-form-input:focus {
-  border-color: #00a699;
-  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1);
+ border-color: var(--secondary-color, #2DD4BF);
+  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.1));
 }
 
 .ad-dash-form-input::placeholder {
@@ -148,8 +148,8 @@ select.ad-dash-form-input {
 }
 
 .ad-dash-color-selected {
-  border-color: #00a699 !important;
-  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.15);
+  border-color: var(--secondary-color, #2DD4BF) !important;
+  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.15));
 }
 
 .ad-dash-color-circle {
@@ -208,17 +208,18 @@ select.ad-dash-form-input {
 .ad-dash-btn-primary {
   padding: 10px 24px;
   border: none;
-  background-color: #00a699;
+ background-color: var(--secondary-color, #2DD4BF);
   color: #ffffff;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition, all 0.2s ease);
 }
 
 .ad-dash-btn-primary:hover:not(:disabled) {
-  background-color: #008c80;
+background-color: var(--secondary-hover, #26B8A5);
+  box-shadow: var(--shadow-teal, 0 4px 14px rgba(45, 212, 191, 0.25));
 }
 
 .ad-dash-btn-primary:disabled {

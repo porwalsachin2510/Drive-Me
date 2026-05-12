@@ -62,6 +62,8 @@ const notificationSchema = new mongoose.Schema(
                 "SUBSCRIPTION_RENEWAL",
                 "PAYMENT_REMINDER",
                 "ROUTE_REQUEST",
+                "NEW_ROUTE_REQUEST",
+                "ROUTE_REQUEST_RESPONSE",
                 "CORPORATE_UPDATE",
                 "EMERGENCY",
                 "NEW_QUOTATION",
@@ -97,6 +99,8 @@ const notificationSchema = new mongoose.Schema(
                 "ADMIN_MONITOR_PAYMENT_RECEIVED",
                 "ADMIN_MONITOR_QUOTATION_REQUEST",
                 "ADMIN_MONITOR_QUOTATION_RESPONSE",
+                "ADMIN_MONITOR_NEW_ROUTE_REQUEST",
+                "ADMIN_MONITOR_ROUTE_REQUEST_RESPONSE",
                 // Admin monitoring for booking timeout/auto-cancellation
                 "ADMIN_MONITOR_BOOKING_WARNING",
                 "ADMIN_MONITOR_BOOKING_AUTO_CANCELLED",
@@ -149,8 +153,10 @@ const notificationSchema = new mongoose.Schema(
                 "ADMIN_MONITOR_EMI_PAYMENT_CREDITED",
                 "ADMIN_MONITOR_EMI_PAYMENT_PENDING_VERIFICATION",
                 // Account status notifications
+                "ACCOUNT_CREATED",
                 "ACCOUNT_SUSPENDED",
                 "ACCOUNT_ACTIVATED",
+                "ADMIN_MONITOR_ACCOUNT_CREATED",
                 "ADMIN_MONITOR_ACCOUNT_SUSPENDED",
                 "ADMIN_MONITOR_ACCOUNT_ACTIVATED",
             ],

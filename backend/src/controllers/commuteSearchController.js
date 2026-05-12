@@ -9,6 +9,7 @@ import B2CPartnerTrip from "../models/B2CPartnerTrip.js"
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
 import B2CMonthlyPass from "../models/B2CMonthlyPass.js"
 import RouteRequest from "../models/RouteRequest.js"
+import { createNotification } from "../Services/notificationService.js"
 /* ======================================================
    UTILITY FUNCTIONS
 ====================================================== */
@@ -413,7 +414,7 @@ export const searchCommuteRoutes = async (req, res) => {
         }).populate('b2cPartnerId', 'fullName companyLogo profileImage')
             .populate('assignedVehicle')
             .populate('assignedDriver')
-
+            .populate('tags', 'label color textColor icon category')
         for (const route of b2cRoutes) {
 
             // Get schedule for this route
@@ -557,6 +558,7 @@ export const searchCommuteRoutes = async (req, res) => {
                 stopPoints: route.stopPoints || [],
                 scheduleStops: scheduleStops, // Include schedule stops for display
                 allStops: uniqueStops, // Combined unique stops
+                tags: route.tags || [], // Include tags for filtering and display
                 type: "b2c",
             })
         }
@@ -615,6 +617,7 @@ export const publicSearchRoutes = async (req, res) => {
         }).populate('b2cPartnerId', 'fullName companyLogo profileImage')
           .populate('assignedVehicle')
           .populate('assignedDriver')
+          .populate('tags', 'label color textColor icon category')
 
         for (const route of b2cRoutes) {
 
@@ -734,6 +737,7 @@ export const publicSearchRoutes = async (req, res) => {
                 stopPoints: route.stopPoints || [],
                 scheduleStops: scheduleStops, // Include schedule stops for display
                 allStops: uniqueStops, // Combined unique stops
+                tags: route.tags || [], // Include tags for filtering and display
                 images: (route.images || []).map(img => typeof img === 'string' ? img : img?.url).filter(Boolean),
                 type: "b2c",
             })
@@ -956,6 +960,42 @@ export const respondToRouteRequest = async (req, res) => {
         routeRequest.assignedProviderId = partnerId
         await routeRequest.save()
 
+        // Get partner info for notification
+        const partner = await User.findById(partnerId).select("fullName companyName")
+        const partnerName = partner?.fullName || partner?.companyName || "Transport Provider"
+
+        // Determine notification message based on status
+        const statusMessages = {
+            APPROVED: `Great news! ${partnerName} has approved your route request from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}`,
+            REJECTED: `${partnerName} was unable to fulfill your route request from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}`,
+            UNDER_REVIEW: `${partnerName} is reviewing your route request from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}`,
+        }
+
+        const statusTitles = {
+            APPROVED: "Route Request Approved!",
+            REJECTED: "Route Request Update",
+            UNDER_REVIEW: "Route Request Under Review",
+        }
+
+        // Send real-time notification to commuter
+        await createNotification({
+            userId: routeRequest.passengerId,
+            type: "ROUTE_REQUEST_RESPONSE",
+            title: statusTitles[routeRequest.status] || "Route Request Update",
+            message: statusMessages[routeRequest.status] || `Your route request has been updated to ${routeRequest.status}`,
+            data: {
+                requestId: routeRequest._id,
+                pickupLocation: routeRequest.pickupLocation,
+                dropoffLocation: routeRequest.dropoffLocation,
+                status: routeRequest.status,
+                providerResponse: routeRequest.providerResponse,
+                providerId: partnerId,
+                providerName: partnerName,
+            },
+        })
+
+        console.log(`[v0] Route request response notification sent to commuter: ${routeRequest.passengerId}`)
+        
         return res.status(200).json({
             success: true,
             message: `Route request ${status.toLowerCase()} successfully`,

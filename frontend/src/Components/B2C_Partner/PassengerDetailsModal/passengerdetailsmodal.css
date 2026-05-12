@@ -1,0 +1,429 @@
+.drivemego-passengerdetailsmodal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: drivemego-passengerdetailsmodal-fadeIn 0.2s ease;
+}
+
+@keyframes drivemego-passengerdetailsmodal-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.drivemego-passengerdetailsmodal-modal {
+  background-color: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: drivemego-passengerdetailsmodal-slideUp 0.3s ease;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes drivemego-passengerdetailsmodal-slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.drivemego-passengerdetailsmodal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.drivemego-passengerdetailsmodal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.drivemego-passengerdetailsmodal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background-color: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.drivemego-passengerdetailsmodal-close-btn:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.drivemego-passengerdetailsmodal-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Loading State */
+.drivemego-passengerdetailsmodal-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 16px;
+}
+
+.drivemego-passengerdetailsmodal-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #2DD4BF;
+  border-radius: 50%;
+  animation: drivemego-passengerdetailsmodal-spin 1s linear infinite;
+}
+
+@keyframes drivemego-passengerdetailsmodal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.drivemego-passengerdetailsmodal-loading-state p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Error State */
+.drivemego-passengerdetailsmodal-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 16px;
+  text-align: center;
+}
+
+.drivemego-passengerdetailsmodal-error-state p {
+  color: #ef4444;
+  font-size: 14px;
+}
+
+.drivemego-passengerdetailsmodal-retry-btn {
+  padding: 10px 20px;
+  background-color: #2DD4BF;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drivemego-passengerdetailsmodal-retry-btn:hover {
+  background-color: #14B8A6;
+}
+
+/* Profile Section */
+.drivemego-passengerdetailsmodal-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.drivemego-passengerdetailsmodal-profile-image-container {
+  flex-shrink: 0;
+}
+
+.drivemego-passengerdetailsmodal-profile-image {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e5e7eb;
+}
+
+.drivemego-passengerdetailsmodal-profile-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background-color: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  border: 3px solid #e5e7eb;
+}
+
+.drivemego-passengerdetailsmodal-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drivemego-passengerdetailsmodal-passenger-name {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.drivemego-passengerdetailsmodal-status-badge {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.drivemego-passengerdetailsmodal-status-badge.active {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.drivemego-passengerdetailsmodal-status-badge.pending {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.drivemego-passengerdetailsmodal-status-badge.suspended {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+/* Info Sections */
+.drivemego-passengerdetailsmodal-info-section {
+  margin-bottom: 20px;
+}
+
+.drivemego-passengerdetailsmodal-section-title {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.drivemego-passengerdetailsmodal-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.drivemego-passengerdetailsmodal-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+}
+
+.drivemego-passengerdetailsmodal-info-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e0f2fe;
+  border-radius: 8px;
+  color: #0284c7;
+}
+
+.drivemego-passengerdetailsmodal-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.drivemego-passengerdetailsmodal-info-label {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.drivemego-passengerdetailsmodal-info-value {
+  font-size: 13px;
+  color: #111827;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+/* Booking Summary */
+.drivemego-passengerdetailsmodal-booking-summary {
+  background-color: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.drivemego-passengerdetailsmodal-booking-route {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.drivemego-passengerdetailsmodal-route-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.drivemego-passengerdetailsmodal-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.drivemego-passengerdetailsmodal-dot.pickup {
+  background-color: #10b981;
+}
+
+.drivemego-passengerdetailsmodal-dot.dropoff {
+  background-color: #ef4444;
+}
+
+.drivemego-passengerdetailsmodal-route-label {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.drivemego-passengerdetailsmodal-route-location {
+  margin: 2px 0 0 0;
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.drivemego-passengerdetailsmodal-route-line {
+  width: 2px;
+  height: 20px;
+  background-color: #d1d5db;
+  margin-left: 5px;
+  margin: 4px 0 4px 5px;
+}
+
+.drivemego-passengerdetailsmodal-booking-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.drivemego-passengerdetailsmodal-booking-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drivemego-passengerdetailsmodal-detail-label {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.drivemego-passengerdetailsmodal-detail-value {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.drivemego-passengerdetailsmodal-detail-value.highlight {
+  color: #059669;
+  font-weight: 700;
+}
+
+.drivemego-passengerdetailsmodal-detail-value.status {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  width: fit-content;
+}
+
+.drivemego-passengerdetailsmodal-detail-value.status.completed {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.drivemego-passengerdetailsmodal-detail-value.status.pending {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.drivemego-passengerdetailsmodal-detail-value.status.confirmed,
+.drivemego-passengerdetailsmodal-detail-value.status.accepted {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.drivemego-passengerdetailsmodal-detail-value.status.rejected,
+.drivemego-passengerdetailsmodal-detail-value.status.cancelled,
+.drivemego-passengerdetailsmodal-detail-value.status.failed {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+/* Responsive Styles */
+@media (max-width: 640px) {
+  .drivemego-passengerdetailsmodal-modal {
+    max-height: 95vh;
+  }
+
+  .drivemego-passengerdetailsmodal-content {
+    padding: 16px;
+  }
+
+  .drivemego-passengerdetailsmodal-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .drivemego-passengerdetailsmodal-booking-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .drivemego-passengerdetailsmodal-profile {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .drivemego-passengerdetailsmodal-profile-info {
+    align-items: center;
+  }
+}

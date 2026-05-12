@@ -209,10 +209,26 @@ const QuotationResponseModal = ({
                   <p>
                     <strong>Duration:</strong>{" "}
                     {quotation.rentalPeriod?.duration}{" "}
-                    {quotation.rentalPeriod?.durationType}
+                    {quotation.rentalPeriod?.durationType === "DAILY"
+                      ? quotation.rentalPeriod?.duration === 1
+                        ? "Day"
+                        : "Days"
+                      : quotation.rentalPeriod?.durationType === "WEEKLY"
+                        ? quotation.rentalPeriod?.duration === 1
+                          ? "Week"
+                          : "Weeks"
+                        : quotation.rentalPeriod?.durationType === "MONTHLY"
+                          ? quotation.rentalPeriod?.duration === 1
+                            ? "Month"
+                            : "Months"
+                          : quotation.rentalPeriod?.durationType === "LONG_TERM"
+                            ? quotation.rentalPeriod?.duration === 1
+                              ? "Year"
+                              : "Years"
+                            : quotation.rentalPeriod?.durationType}
                   </p>
                   <p>
-                    <strong>Rental Days:</strong>{" "}
+                    <strong>Total Rental Days:</strong>{" "}
                     {responseData[0]?.rentalDays || 0} days
                   </p>
                   <p>

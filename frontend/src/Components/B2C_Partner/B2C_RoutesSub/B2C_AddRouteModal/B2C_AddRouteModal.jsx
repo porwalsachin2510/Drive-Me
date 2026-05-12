@@ -33,11 +33,16 @@ function B2C_AddRouteModal({ onClose }) {
     driverId: "",
     routeStartDate: "",
     description: "",
+    tags: [], // Selected tag IDs
   });
   const [loading, setLoading] = useState(false);
   const [availableVehicles, setAvailableVehicles] = useState([]);
   const [availableDrivers, setAvailableDrivers] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [groupedTags, setGroupedTags] = useState({});
   const [loadingAssets, setLoadingAssets] = useState(true);
+  const [schedulingConflicts, setSchedulingConflicts] = useState([]);
+  const [checkingConflicts, setCheckingConflicts] = useState(false);
 
   const daysOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const tripTypes = ["One Way", "Round Trip"];
@@ -80,14 +85,19 @@ function B2C_AddRouteModal({ onClose }) {
       setCurrency(userCurrency);
       setDecimals(userDecimals);
 
-      // Fetch vehicles and drivers from B2C partner fleet
-      const [vehiclesResponse, driversResponse] = await Promise.all([
-        api.get("/b2c-partner/fleet"),
-        api.get("/b2c-partner/drivers"),
-      ]);
+      // Fetch vehicles, drivers, and tags from B2C partner fleet
+      // Use context="route" to get route, promo, and general tags
+      const [vehiclesResponse, driversResponse, tagsResponse] =
+        await Promise.all([
+          api.get("/b2c-partner/fleet"),
+          api.get("/b2c-partner/drivers"),
+          api.get("/admin/tags/by-category", { params: { context: "route" } }),
+        ]);
 
       setAvailableVehicles(vehiclesResponse.data.fleet?.vehicles || []);
       setAvailableDrivers(driversResponse.data.drivers || []);
+      setAvailableTags(tagsResponse.data.tags || []);
+      setGroupedTags(tagsResponse.data.groupedTags || {});
     } catch (error) {
       console.error("Error fetching assets:", error);
       // Fallback to empty arrays if API fails
@@ -104,6 +114,16 @@ function B2C_AddRouteModal({ onClose }) {
       ...prev,
       [name]: value,
     }));
+  };
+
+  // Handle tag selection toggle
+  const handleTagToggle = (tagId) => {
+    setFormData((prev) => {
+      const updatedTags = prev.tags.includes(tagId)
+        ? prev.tags.filter((id) => id !== tagId)
+        : [...prev.tags, tagId];
+      return { ...prev, tags: updatedTags };
+    });
   };
 
   const handleDayChange = (day) => {
@@ -127,6 +147,16 @@ function B2C_AddRouteModal({ onClose }) {
         updatedData.monthlyRoundTripPrice = monthlyRoundTrip;
         updatedData.workingDaysPerMonth = workingDaysPerMonth;
       }
+
+      // Check for conflicts when days change
+      setTimeout(() => {
+        checkConflicts(
+          prev.driverId,
+          prev.vehicleId,
+          prev.tripTimes,
+          updatedDays,
+        );
+      }, 300);
 
       return updatedData;
     });
@@ -178,6 +208,18 @@ function B2C_AddRouteModal({ onClose }) {
     setFormData((prev) => {
       const updatedTripTimes = [...prev.tripTimes];
       updatedTripTimes[index] = { ...updatedTripTimes[index], [field]: value };
+      // Check conflicts when departure time changes
+      if (field === "departureTime" && value) {
+        // Use setTimeout to debounce the conflict check
+        setTimeout(() => {
+          checkConflicts(
+            prev.driverId,
+            prev.vehicleId,
+            updatedTripTimes,
+            prev.availableDays,
+          );
+        }, 500);
+      }
       return { ...prev, tripTimes: updatedTripTimes };
     });
   };
@@ -245,6 +287,45 @@ function B2C_AddRouteModal({ onClose }) {
     }));
   };
 
+  // Check for scheduling conflicts
+  const checkConflicts = async (
+    driverId,
+    vehicleId,
+    tripTimes,
+    availableDays,
+  ) => {
+    // Only check if we have driver or vehicle and at least one trip time
+    const validTripTimes = tripTimes.filter((t) => t.departureTime);
+    if ((!driverId && !vehicleId) || validTripTimes.length === 0) {
+      setSchedulingConflicts([]);
+      return;
+    }
+
+    setCheckingConflicts(true);
+    try {
+      const response = await api.post("/b2c-schedules/check-conflicts", {
+        driverId: driverId || null,
+        vehicleId: vehicleId || null,
+        tripTimes: validTripTimes,
+        availableDays:
+          availableDays.length > 0
+            ? availableDays
+            : ["MON", "TUE", "WED", "THU", "FRI"],
+      });
+
+      if (response.data.hasConflicts) {
+        setSchedulingConflicts(response.data.conflicts);
+      } else {
+        setSchedulingConflicts([]);
+      }
+    } catch (error) {
+      console.error("Error checking conflicts:", error);
+      setSchedulingConflicts([]);
+    } finally {
+      setCheckingConflicts(false);
+    }
+  };
+
   // Handle vehicle selection change - update seats automatically
   const handleVehicleChange = (e) => {
     const selectedVehicleId = e.target.value;
@@ -252,13 +333,47 @@ function B2C_AddRouteModal({ onClose }) {
       (v) => v._id === selectedVehicleId,
     );
 
-    setFormData((prev) => ({
-      ...prev,
-      vehicleId: selectedVehicleId,
-      // Auto-populate seats from vehicle
-      totalSeats: selectedVehicle?.seatingCapacity || 0,
-      availableSeats: selectedVehicle?.seatingCapacity || 0,
-    }));
+    setFormData((prev) => {
+      const newFormData = {
+        ...prev,
+        vehicleId: selectedVehicleId,
+        // Auto-populate seats from vehicle
+        totalSeats: selectedVehicle?.seatingCapacity || 0,
+        availableSeats: selectedVehicle?.seatingCapacity || 0,
+      };
+
+      // Check conflicts with new vehicle
+      checkConflicts(
+        prev.driverId,
+        selectedVehicleId,
+        prev.tripTimes,
+        prev.availableDays,
+      );
+
+      return newFormData;
+    });
+  };
+
+  // Handle driver selection change
+  const handleDriverChange = (e) => {
+    const selectedDriverId = e.target.value;
+
+    setFormData((prev) => {
+      const newFormData = {
+        ...prev,
+        driverId: selectedDriverId,
+      };
+
+      // Check conflicts with new driver
+      checkConflicts(
+        selectedDriverId,
+        prev.vehicleId,
+        prev.tripTimes,
+        prev.availableDays,
+      );
+
+      return newFormData;
+    });
   };
 
   // Auto-calculate monthly prices based on reference prices
@@ -332,7 +447,47 @@ function B2C_AddRouteModal({ onClose }) {
         return;
       }
 
-      // First create route
+      // Check for scheduling conflicts before creating
+      if (formData.driverId || formData.vehicleId) {
+        try {
+          const conflictCheckResponse = await api.post(
+            "/b2c-schedules/check-conflicts",
+            {
+              driverId: formData.driverId || null,
+              vehicleId: formData.vehicleId || null,
+              tripTimes: validTripTimes,
+              availableDays:
+                formData.availableDays.length > 0
+                  ? formData.availableDays
+                  : ["MON", "TUE", "WED", "THU", "FRI"],
+            },
+          );
+
+          if (conflictCheckResponse.data.hasConflicts) {
+            const conflicts = conflictCheckResponse.data.conflicts;
+            const conflictMessages = conflicts
+              .map((c) => {
+                const resourceType = c.type === "DRIVER" ? "Driver" : "Vehicle";
+                return `${resourceType} is already assigned to "${c.existingRoute}" at ${c.conflictingTime} on ${c.overlappingDays?.join(", ")}`;
+              })
+              .join("\n\n");
+
+            const confirmCreate = window.confirm(
+              `Scheduling Conflicts Detected!\n\n${conflictMessages}\n\nDo you still want to continue? The driver/vehicle will be double-booked.`,
+            );
+
+            if (!confirmCreate) {
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (conflictError) {
+          console.error("Error checking conflicts:", conflictError);
+          // Continue with route creation even if conflict check fails
+        }
+      }
+
+      // First create route - include currency in pricing
       const routeData = {
         fromLocation: formData.fromLocation,
         toLocation: formData.toLocation,
@@ -344,12 +499,14 @@ function B2C_AddRouteModal({ onClose }) {
           monthlyOneWayPrice: parseFloat(formData.monthlyOneWayPrice) || 0,
           monthlyRoundTripPrice:
             parseFloat(formData.monthlyRoundTripPrice) || 0,
+          currency: currency,
         },
         assignedVehicle: formData.vehicleId || null,
         assignedDriver: formData.driverId || null,
         routeStartDate:
           formData.routeStartDate || new Date().toISOString().split("T")[0],
         description: formData.description,
+        tags: formData.tags || [], // Include selected tags
       };
 
       const routeResponse = await api.post("/b2c-schedules/routes", routeData);
@@ -394,7 +551,20 @@ function B2C_AddRouteModal({ onClose }) {
       }
     } catch (error) {
       console.error("Error creating route:", error);
-      alert("Failed to create route. Please try again.");
+
+      
+      // Handle specific conflict errors from backend
+      if (error.response?.data?.conflictDetails) {
+        const conflict = error.response.data.conflictDetails;
+        const conflictMessage = error.response.data.message || 
+          `Scheduling conflict detected! The selected ${conflict.conflictType.includes('DRIVER') ? 'driver' : 'vehicle'} is already assigned to route "${conflict.existingRoute}" at ${conflict.conflictingTime} on ${conflict.overlappingDays?.join(", ")}. Please choose a different time, ${conflict.conflictType.includes('DRIVER') ? 'driver' : 'vehicle'}, or days.`;
+        alert(conflictMessage);
+      } else if (error.response?.data?.message) {
+        // Handle other backend validation errors
+        alert(error.response.data.message);
+      } else {
+        alert("Failed to create route. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -514,6 +684,60 @@ function B2C_AddRouteModal({ onClose }) {
                 ></textarea>
               </div>
             </div>
+            {/* Route Tags Section - Grouped by Category */}
+            {availableTags.length > 0 && (
+              <div className="b2c-form-row full">
+                <div className="b2c-form-group">
+                  <label className="b2c-form-label">Route Tags</label>
+                  <p className="b2c-form-help-text">
+                    Select tags to help passengers find your route easily. Tags
+                    are organized by category.
+                  </p>
+
+                  {Object.entries(groupedTags).map(([category, tags]) => (
+                    <div key={category} className="b2c-tag-category-group">
+                      <span className="b2c-tag-category-label">
+                        {category === "route"
+                          ? "Route Tags"
+                          : category === "promo"
+                            ? "Promotional Tags"
+                            : category === "general"
+                              ? "General Tags"
+                              : category.charAt(0).toUpperCase() +
+                                category.slice(1) +
+                                " Tags"}
+                        :
+                      </span>
+                      <div className="b2c-tags-selector">
+                        {tags.map((tag) => (
+                          <button
+                            key={tag._id}
+                            type="button"
+                            className={`b2c-tag-btn ${formData.tags.includes(tag._id) ? "selected" : ""}`}
+                            onClick={() => handleTagToggle(tag._id)}
+                            style={{
+                              backgroundColor: formData.tags.includes(tag._id)
+                                ? tag.color
+                                : "#f3f4f6",
+                              color: formData.tags.includes(tag._id)
+                                ? tag.textColor
+                                : "#374151",
+                              borderColor: tag.color,
+                            }}
+                            title={tag.description || tag.label}
+                          >
+                            {tag.icon && (
+                              <span className="b2c-tag-icon">{tag.icon}</span>
+                            )}
+                            {tag.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="b2c-form-section">
@@ -813,7 +1037,7 @@ function B2C_AddRouteModal({ onClose }) {
                   id="driverId"
                   name="driverId"
                   value={formData.driverId}
-                  onChange={handleChange}
+                  onChange={handleDriverChange}
                   required
                   className="b2c-form-input"
                 >
@@ -827,6 +1051,86 @@ function B2C_AddRouteModal({ onClose }) {
               </div>
             </div>
 
+            {/* Scheduling Conflict Warning */}
+            {schedulingConflicts.length > 0 && (
+              <div
+                className="b2c-conflict-warning"
+                style={{
+                  backgroundColor: "#fef2f2",
+                  border: "1px solid #fca5a5",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  marginTop: "16px",
+                  marginBottom: "16px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style={{ marginRight: "8px" }}
+                  >
+                    <path
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      stroke="#dc2626"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span style={{ fontWeight: "600", color: "#dc2626" }}>
+                    Scheduling Conflicts Detected
+                  </span>
+                </div>
+                <ul
+                  style={{ margin: "0", paddingLeft: "20px", color: "#7f1d1d" }}
+                >
+                  {schedulingConflicts.map((conflict, index) => (
+                    <li key={index} style={{ marginBottom: "4px" }}>
+                      <strong>
+                        {conflict.type === "DRIVER" ? "Driver" : "Vehicle"}
+                      </strong>{" "}
+                      is already assigned to{" "}
+                      <strong>{conflict.existingRoute}</strong> at{" "}
+                      <strong>{conflict.conflictingTime}</strong> on{" "}
+                      <strong>{conflict.overlappingDays?.join(", ")}</strong>
+                    </li>
+                  ))}
+                </ul>
+                <p
+                  style={{
+                    marginTop: "8px",
+                    marginBottom: "0",
+                    fontSize: "13px",
+                    color: "#991b1b",
+                  }}
+                >
+                  Please change the time, driver, vehicle, or available days to
+                  avoid double-booking.
+                </p>
+              </div>
+            )}
+
+            {checkingConflicts && (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "8px",
+                  color: "#6b7280",
+                }}
+              >
+                Checking for scheduling conflicts...
+              </div>
+            )}
+            
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="totalSeats" className="b2c-form-label">

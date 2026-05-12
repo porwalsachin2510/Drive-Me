@@ -194,7 +194,7 @@ const CorporateContractDetails = () => {
       socket.off("contract_update", handleContractUpdate);
     };
   }, [socket, id, dispatch]);
-  
+
   useEffect(() => {
     if (!id) return;
 
@@ -473,13 +473,21 @@ const CorporateContractDetails = () => {
     }
   };
 
+  // Check payment mode - EMI mode has different payment flow
+  const isEMIPaymentMode = contract.financials?.paymentMode === "EMI";
+  const isAdvancePaid = !!contract.financials?.advancePayment?.paidAt;
+  const isPaymentConditionMet = isEMIPaymentMode || isAdvancePaid;
+
   const needsPayment =
     contract.status === "PENDING_PAYMENT" &&
     (!currentPayment ||
       currentPayment.status === "FAILED" ||
       currentPayment.status === "PENDING");
 
+  // For EMI mode, there's no "final payment" - payments are done via EMI schedule
+  // For STANDARD mode, final payment is needed after advance payment
   const needsFinalPayment =
+    !isEMIPaymentMode &&
     contract.status === "ACTIVE" &&
     contract.financials?.advancePayment?.paidAt &&
     !contract.financials?.finalPayment?.paidAt;
@@ -489,7 +497,7 @@ const CorporateContractDetails = () => {
 
   const hasAssignedVehicles =
     contract.status === "ACTIVE" &&
-    contract.financials?.advancePayment?.paidAt &&
+    isPaymentConditionMet &&
     contract.vehicles?.some(
       (v) => v.assignedVehicles && v.assignedVehicles.length > 0,
     );
@@ -1350,6 +1358,6 @@ const CorporateContractDetails = () => {
       <Footer />
     </>
   );
-};;;;
+};
 
 export default CorporateContractDetails;

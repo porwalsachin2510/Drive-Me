@@ -54,9 +54,9 @@ const CorporateEmployeeDashboard = () => {
 
   if (loading) {
     return (
-      <div className="corporate-employee-dashboard">
-        <div className="loading-container">
-          <div className="spinner"></div>
+      <div className="drivemego-corporate-employee-dashboard">
+        <div className="drivemego-loading-container">
+          <div className="drivemego-spinner"></div>
           <p>Loading dashboard...</p>
         </div>
       </div>
@@ -64,7 +64,7 @@ const CorporateEmployeeDashboard = () => {
   }
 
   return (
-    <div className="corporate-employee-dashboard">
+    <div className="drivemego-corporate-employee-dashboard">
       <div className="dashboard-header">
         <h2>My Dashboard</h2>
         <p>Welcome back, {dashboardData.employee?.fullName || 'Employee'}!</p>

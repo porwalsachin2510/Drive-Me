@@ -1,9 +1,10 @@
-/* Route Management Container */
+/* Route Management Container - Clean White Design */
 .route-management-container {
   width: 100%;
-  padding: 24px;
-  background: #f8fafc;
+  padding: 0;
+  background: var(--bg-secondary, #f8fafc);
   min-height: 100vh;
+  font-family: var(--font-family, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
 }
 
 /* Loading State */
@@ -19,8 +20,8 @@
 .route-management-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #e2e8f0;
-  border-top: 4px solid #E85D5D;
+  border: 4px solid var(--border-color, #e2e8f0);
+  border-top: 4px solid var(--secondary-color, #2DD4BF);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -35,16 +36,16 @@
   position: fixed;
   top: 20px;
   right: 20px;
-  padding: 16px 20px;
+  padding: 14px 18px;
   border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   z-index: 1001;
   animation: slideInRight 0.3s ease-out;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  min-width: 300px;
-  max-width: 400px;
+  box-shadow: var(--shadow-lg, 0 10px 15px rgba(0, 0, 0, 0.1));
+  min-width: 280px;
+  max-width: 360px;
 }
 
 @keyframes slideInRight {
@@ -59,42 +60,42 @@
 }
 
 .route-management-notification-success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: var(--success-color, #22c55e);
   color: white;
 }
 
 .route-management-notification-error {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: var(--danger-color, #ef4444);
   color: white;
 }
 
 .route-management-notification-info {
-  background: linear-gradient(135deg, #2DD4BF 0%, #26B8A5 100%);
+  background: var(--secondary-color, #2DD4BF);
   color: white;
 }
 
 .route-management-notification-icon {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .route-management-notification-message {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   flex: 1;
 }
 
-/* Header Section */
+/* Header Section - Clean White Design */
 .route-management-header {
-  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
+  background: var(--bg-primary, #ffffff);
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 24px;
-  color: white;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
-  box-shadow: 0 8px 32px rgba(232, 93, 93, 0.2);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--border-color, #e2e8f0);
 }
 
 .route-management-title-section {
@@ -102,21 +103,28 @@
 }
 
 .route-management-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   margin: 0 0 8px 0;
   display: flex;
   align-items: center;
   gap: 12px;
+  color: var(--text-primary, #1f2937);
 }
 
 .route-management-icon {
-  font-size: 28px;
+  font-size: 26px;
+  background: var(--secondary-light, rgba(45, 212, 191, 0.1));
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .route-management-description {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--text-secondary, #4b5563);
   margin: 0;
   line-height: 1.5;
 }
@@ -124,64 +132,68 @@
 /* Stats Section */
 .route-management-stats {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .route-management-stat-item {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 16px;
-  min-width: 120px;
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  padding: 14px 18px;
+  min-width: 100px;
   text-align: center;
+  transition: var(--transition, all 0.2s ease);
+}
+
+.route-management-stat-item:hover {
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
 .route-management-stat-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
+  font-size: 20px;
+  margin-bottom: 6px;
   display: block;
+  color: var(--secondary-color, #2DD4BF);
 }
 
 .route-management-stat-number {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   display: block;
   line-height: 1;
+  color: var(--text-primary, #1f2937);
 }
 
 .route-management-stat-label {
-  font-size: 12px;
-  opacity: 0.9;
+  font-size: 11px;
+  color: var(--text-muted, #6b7280);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   display: block;
   margin-top: 4px;
 }
 
 /* Create Button */
 .route-management-create-btn {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: var(--secondary-color, #2DD4BF);
+  border: none;
   color: white;
-  padding: 12px 24px;
+  padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s ease;
+  transition: var(--transition, all 0.2s ease);
   white-space: nowrap;
 }
 
 .route-management-create-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--secondary-hover, #26B8A5);
+  box-shadow: var(--shadow-teal, 0 4px 14px rgba(45, 212, 191, 0.25));
 }
 
 /* Controls Section */
@@ -191,11 +203,16 @@
   margin-bottom: 24px;
   align-items: center;
   flex-wrap: wrap;
+  background: var(--bg-primary, #ffffff);
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--border-color, #e2e8f0);
 }
 
 .route-management-search {
   flex: 1;
-  min-width: 300px;
+  min-width: 280px;
 }
 
 .route-management-search-container {
@@ -206,47 +223,48 @@
 
 .route-management-search-icon {
   position: absolute;
-  left: 16px;
-  color: #6b7280;
+  left: 14px;
+  color: var(--text-muted, #6b7280);
   font-size: 16px;
   z-index: 1;
 }
 
 .route-management-search-input {
   width: 100%;
-  padding: 12px 16px 12px 44px;
-  border: 2px solid #e2e8f0;
+  padding: 10px 14px 10px 42px;
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
   font-size: 14px;
   outline: none;
-  transition: all 0.3s ease;
-  background: white;
+  transition: var(--transition, all 0.2s ease);
+  background: var(--bg-secondary, #f8fafc);
 }
 
 .route-management-search-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--secondary-color, #2DD4BF);
+  background: var(--bg-primary, #ffffff);
+  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.1));
 }
 
 .route-management-filters {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .route-management-filter-select {
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
   font-size: 14px;
   outline: none;
-  background: white;
+  background: var(--bg-primary, #ffffff);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--transition, all 0.2s ease);
 }
 
 .route-management-filter-select:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--secondary-color, #2DD4BF);
+  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.1));
 }
 
 /* Content Section */
@@ -256,52 +274,53 @@
 
 .route-management-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 20px;
 }
 
 /* Route Cards */
 .route-management-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: var(--bg-primary, #ffffff);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
   overflow: hidden;
-  transition: all 0.3s ease;
-  border: 1px solid #e2e8f0;
+  transition: var(--transition, all 0.2s ease);
+  border: 1px solid var(--border-color, #e2e8f0);
 }
 
 .route-management-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.07));
 }
 
 .route-management-card-header {
-  padding: 20px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: 12px;
 }
 
 .route-management-route-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
   margin: 0;
   line-height: 1.3;
 }
 
 .route-management-featured-badge {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  color: white;
-  padding: 4px 12px;
+  background: var(--warning-bg, rgba(245, 158, 11, 0.1));
+  color: var(--warning-color, #f59e0b);
+  padding: 4px 10px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .route-management-status-badge {
@@ -309,55 +328,55 @@
 }
 
 .route-management-status {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .route-management-status-active {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--success-bg, rgba(34, 197, 94, 0.1));
+  color: var(--success-color, #22c55e);
 }
 
 .route-management-status-inactive {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--danger-bg, rgba(239, 68, 68, 0.1));
+  color: var(--danger-color, #ef4444);
 }
 
 .route-management-status-maintenance {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-bg, rgba(245, 158, 11, 0.1));
+  color: var(--warning-color, #f59e0b);
 }
 
 /* Card Content */
 .route-management-card-content {
-  padding: 20px;
+  padding: 18px 20px;
 }
 
 .route-management-provider {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 16px;
-  padding: 12px;
-  background: #f8fafc;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: var(--bg-secondary, #f8fafc);
   border-radius: 8px;
 }
 
 .route-management-provider-label {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 600;
+  font-size: 11px;
+  color: var(--text-muted, #6b7280);
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .route-management-provider-name {
-  font-size: 14px;
-  color: #1f2937;
+  font-size: 13px;
+  color: var(--text-primary, #1f2937);
   font-weight: 600;
 }
 
@@ -365,11 +384,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #f0f9ff;
+  margin-bottom: 16px;
+  padding: 14px;
+  background: var(--secondary-light, rgba(45, 212, 191, 0.08));
   border-radius: 8px;
-  border: 1px solid #e0f2fe;
+  border: 1px solid rgba(45, 212, 191, 0.15);
 }
 
 .route-management-point {
@@ -380,40 +399,40 @@
 }
 
 .route-management-point-icon {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .route-management-point-text {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: #0c4a6e;
+  color: var(--secondary-dark, #14B8A6);
 }
 
 .route-management-arrow {
-  font-size: 18px;
-  color: #0284c7;
+  font-size: 16px;
+  color: var(--secondary-color, #2DD4BF);
   font-weight: bold;
 }
 
 .route-management-details {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 }
 
 .route-management-detail-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px;
-  background: #fafbfc;
+  padding: 10px 12px;
+  background: var(--bg-secondary, #f8fafc);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-light, #f1f5f9);
 }
 
 .route-management-detail-icon {
-  font-size: 16px;
-  color: #6b7280;
+  font-size: 14px;
+  color: var(--text-muted, #6b7280);
 }
 
 .route-management-detail-content {
@@ -421,133 +440,128 @@
 }
 
 .route-management-detail-label {
-  font-size: 11px;
-  color: #6b7280;
-  font-weight: 600;
+  font-size: 10px;
+  color: var(--text-muted, #6b7280);
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   display: block;
   margin-bottom: 2px;
 }
 
 .route-management-detail-value {
   font-size: 13px;
-  color: #1f2937;
+  color: var(--text-primary, #1f2937);
   font-weight: 600;
   display: block;
 }
 
 /* Card Actions */
 .route-management-card-actions {
-  padding: 20px;
-  border-top: 1px solid #e2e8f0;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-light, #f1f5f9);
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
 .route-management-action-btn {
-  padding: 8px 16px;
+  padding: 8px 14px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
-  font-weight: 600;
-  transition: all 0.3s ease;
+  font-weight: 500;
+  transition: var(--transition, all 0.2s ease);
   display: flex;
   align-items: center;
   gap: 4px;
   flex: 1;
   justify-content: center;
-  min-width: 80px;
+  min-width: 70px;
 }
 
 .route-management-edit-btn {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #dbeafe;
+  background: var(--info-bg, rgba(59, 130, 246, 0.1));
+  color: var(--info-color, #3b82f6);
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .route-management-edit-btn:hover {
-  background: #dbeafe;
-  transform: translateY(-1px);
+  background: rgba(59, 130, 246, 0.15);
 }
 
 .route-management-status-btn {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #dcfce7;
+  background: var(--success-bg, rgba(34, 197, 94, 0.1));
+  color: var(--success-color, #22c55e);
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
 .route-management-status-btn:hover {
-  background: #dcfce7;
-  transform: translateY(-1px);
+  background: rgba(34, 197, 94, 0.15);
 }
 
 .route-management-featured-btn {
-  background: #fefce8;
-  color: #a16207;
-  border: 1px solid #fef3c7;
+  background: var(--warning-bg, rgba(245, 158, 11, 0.1));
+  color: var(--warning-color, #f59e0b);
+  border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .route-management-featured-btn:hover {
-  background: #fef3c7;
-  transform: translateY(-1px);
+  background: rgba(245, 158, 11, 0.15);
 }
 
 .route-management-delete-btn {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fee2e2;
+  background: var(--danger-bg, rgba(239, 68, 68, 0.1));
+  color: var(--danger-color, #ef4444);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .route-management-delete-btn:hover {
-  background: #fee2e2;
-  transform: translateY(-1px);
+  background: rgba(239, 68, 68, 0.15);
 }
 
 /* Empty State */
 .route-management-empty {
   text-align: center;
-  padding: 60px 20px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 48px 20px;
+  background: var(--bg-primary, #ffffff);
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
 }
 
 .route-management-empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+  font-size: 40px;
+  margin-bottom: 12px;
   opacity: 0.5;
 }
 
 .route-management-empty h3 {
-  font-size: 20px;
-  color: #374151;
-  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: var(--text-primary, #1f2937);
+  margin: 0 0 6px 0;
+  font-weight: 600;
 }
 
 .route-management-empty p {
-  color: #6b7280;
+  color: var(--text-muted, #6b7280);
   margin: 0;
+  font-size: 14px;
 }
 
 /* Responsive Design */
 @media (max-width: 1200px) {
   .route-management-grid {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .route-management-container {
-    padding: 16px;
-  }
-  
   .route-management-header {
     flex-direction: column;
     align-items: stretch;
     gap: 20px;
+    padding: 20px;
   }
   
   .route-management-stats {
@@ -555,12 +569,13 @@
   }
   
   .route-management-stat-item {
-    min-width: calc(50% - 8px);
+    min-width: calc(50% - 7px);
   }
   
   .route-management-controls {
     flex-direction: column;
     align-items: stretch;
+    padding: 16px;
   }
   
   .route-management-search {

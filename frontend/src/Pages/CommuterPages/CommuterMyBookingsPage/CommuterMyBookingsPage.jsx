@@ -778,14 +778,20 @@ const CommuterMyBookingsPage = () => {
                         <div className="cmbp-detail-item">
                           <span className="cmbp-detail-label">Vehicle</span>
                           <span className="cmbp-detail-value">
-                            {booking.vehicleInfo?.model ||
-                              booking.vehicleModel ||
-                              booking.routeId?.assignedVehicle?.model ||
-                              "N/A"}
-                            {(booking.vehicleInfo?.licensePlate ||
-                              booking.vehiclePlate ||
-                              booking.routeId?.assignedVehicle?.licensePlate) &&
-                              ` (${booking.vehicleInfo?.licensePlate || booking.vehiclePlate || booking.routeId?.assignedVehicle?.licensePlate})`}
+                            {(() => {
+                              const model =
+                                booking.vehicleInfo?.model ||
+                                booking.vehicleModel ||
+                                booking.routeId?.assignedVehicle?.model;
+                              const plate =
+                                booking.vehicleInfo?.licensePlate ||
+                                booking.vehiclePlate ||
+                                booking.routeId?.assignedVehicle?.licensePlate;
+
+                              if (!model) return "N/A";
+                              return model;
+                              // plate ? `${model} (${plate})` : 
+                            })()}
                           </span>
                         </div>
                         <div className="cmbp-detail-item">
@@ -903,14 +909,27 @@ const CommuterMyBookingsPage = () => {
                       </p>
                       <p>
                         <strong>Vehicle:</strong>{" "}
-                        {booking.vehicleInfo?.model ||
-                          booking.vehicleModel ||
-                          booking.routeId?.assignedVehicle?.model ||
-                          "N/A"}
-                        {(booking.vehicleInfo?.licensePlate ||
-                          booking.vehiclePlate ||
-                          booking.routeId?.assignedVehicle?.licensePlate) &&
-                          ` (${booking.vehicleInfo?.licensePlate || booking.vehiclePlate || booking.routeId?.assignedVehicle?.licensePlate})`}
+                        {(() => {
+                          const model =
+                            booking.vehicleInfo?.model ||
+                            booking.vehicleModel ||
+                            booking.routeId?.assignedVehicle?.model;
+                          const plate =
+                            booking.vehicleInfo?.licensePlate ||
+                            booking.vehiclePlate ||
+                            booking.routeId?.assignedVehicle?.licensePlate;
+                          const type = booking.vehicleInfo?.vehicleType;
+                          const color = booking.vehicleInfo?.vehicleColor;
+
+                          if (!model) return "N/A";
+
+                          let vehicleStr = model;
+                          if (type) vehicleStr = `${type} - ${model}`;
+                          if (color) vehicleStr += ` (${color})`;
+                          // if (plate) vehicleStr += ` [${plate}]`;
+
+                          return vehicleStr;
+                        })()}
                       </p>
                       <p>
                         <strong>Driver:</strong>{" "}

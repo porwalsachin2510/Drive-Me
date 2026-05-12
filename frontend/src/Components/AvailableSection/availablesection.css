@@ -493,6 +493,29 @@
   font-weight: bold;
 }
 
+/* Route Tags Display */
+.drivemego-availablesection-route-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.drivemego-availablesection-route-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.drivemego-availablesection-route-tag .tag-icon {
+  font-size: 10px;
+}
+
 /* Responsive: Tablet layout */
 @media (max-width: 768px) {
   .drivemego-availablesection-available-section {
@@ -801,6 +824,102 @@
   }
 
   .drivemego-availablesection-detail-value {
+    font-size: 12px;
+  }
+}
+
+
+/* Tag Filter Section */
+.drivemego-availablesection-tag-filter-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.drivemego-availablesection-tag-filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.drivemego-availablesection-clear-tags-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drivemego-availablesection-clear-tags-btn:hover {
+  background: #fee2e2;
+}
+
+.drivemego-availablesection-tag-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.drivemego-availablesection-tag-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-width: 1.5px;
+  border-style: solid;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+}
+
+.drivemego-availablesection-tag-filter-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.drivemego-availablesection-tag-filter-btn.selected {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.drivemego-availablesection-tag-filter-btn .tag-filter-icon {
+  font-size: 14px;
+}
+
+.drivemego-availablesection-clear-filters-btn {
+  margin-top: 12px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #17a2b8;
+  background: #ffffff;
+  border: 1px solid #17a2b8;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drivemego-availablesection-clear-filters-btn:hover {
+  background: #17a2b8;
+  color: #ffffff;
+}
+
+/* Responsive adjustments for tag filters */
+@media (max-width: 640px) {
+  .drivemego-availablesection-tag-filter-section {
+    padding: 12px;
+  }
+  
+  .drivemego-availablesection-tag-filter-btn {
+    padding: 5px 10px;
     font-size: 12px;
   }
 }

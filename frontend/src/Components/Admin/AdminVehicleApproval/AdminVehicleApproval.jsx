@@ -415,6 +415,12 @@ function AdminVehicleApproval() {
                     </span>
                   </div>
                   <div className="drivemego-adminvehicleapproval-info-item">
+                    <span className="label">Yearly Rate</span>
+                    <span className="value">
+                      {viewingVehicle.pricing?.yearlyRate || 0}
+                    </span>
+                  </div>
+                  <div className="drivemego-adminvehicleapproval-info-item">
                     <span className="label">Per KM Charge</span>
                     <span className="value">
                       {viewingVehicle.pricing?.perKmCharge || 0}

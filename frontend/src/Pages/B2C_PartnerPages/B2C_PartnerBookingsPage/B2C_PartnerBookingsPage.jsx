@@ -9,6 +9,7 @@ import { getPartnerBookings, acceptBooking, rejectBooking, startB2CTrip, complet
 import DailyTripsInBooking from "../../../Components/DailyTripsInBooking/DailyTripsInBooking";
 import api from "../../../utils/api";
 import WalletRechargeModal from "../../../Components/WalletRechargeModal/WalletRechargeModal";
+import PassengerDetailsModal from "../../../Components/B2C_Partner/PassengerDetailsModal/PassengerDetailsModal";
 import "./b2c_partnerbookingspage.css";
 
 const B2C_PartnerBookingsPage = () => {
@@ -27,7 +28,9 @@ const B2C_PartnerBookingsPage = () => {
   const locationSharingRef = useRef(null);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningData, setWarningData] = useState(null);
-
+  const [showPassengerModal, setShowPassengerModal] = useState(false);
+  const [selectedPassengerBookingId, setSelectedPassengerBookingId] = useState(null);
+  
   const fetchWalletBalance = async () => {
     try {
       const response = await api.get("/wallet/balance");
@@ -225,6 +228,11 @@ const B2C_PartnerBookingsPage = () => {
     } catch (error) {
       console.error("Error starting location sharing:", error);
     }
+  };
+
+  const handleViewPassenger = (bookingId) => {
+    setSelectedPassengerBookingId(bookingId);
+    setShowPassengerModal(true);
   };
 
   const formatDate = (dateString) => {
@@ -492,10 +500,31 @@ const B2C_PartnerBookingsPage = () => {
                   <p>
                     <strong>Phone</strong> {booking.driverPhoneNumber || "N/A"}
                   </p>
-                  <p>
-                    <strong>Passenger</strong>{" "}
-                    {booking.passengerId?.name || "Passenger"}
-                  </p>
+                  <div className="B2C_Partner-bookings-page-passenger-row">
+                    <p>
+                      <strong>Passenger</strong>{" "}
+                      {booking.passengerId?.fullName ||
+                        booking.passengerId?.name ||
+                        "Passenger"}
+                    </p>
+                    <button
+                      className="B2C_Partner-bookings-page-view-passenger-btn"
+                      onClick={() => handleViewPassenger(booking._id)}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+                      </svg>
+                      View Details
+                    </button>
+                  </div>
                 </div>
 
                 <div className="B2C_Partner-bookings-page-booking-info-details">
@@ -911,6 +940,16 @@ const B2C_PartnerBookingsPage = () => {
           </div>
         </div>
       )}
+      
+      {/* Passenger Details Modal */}
+      <PassengerDetailsModal
+        bookingId={selectedPassengerBookingId}
+        isOpen={showPassengerModal}
+        onClose={() => {
+          setShowPassengerModal(false);
+          setSelectedPassengerBookingId(null);
+        }}
+      />
     </div>
   );
 };

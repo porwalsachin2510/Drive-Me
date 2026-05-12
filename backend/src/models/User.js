@@ -317,6 +317,8 @@ const userSchema = new mongoose.Schema(
                 users: { type: Boolean, default: false },
                 wallets: { type: Boolean, default: false },
                 vehicleApproval: { type: Boolean, default: false },
+                commission: { type: Boolean, default: false },
+                negotiations: { type: Boolean, default: false },
                 settlement: { type: Boolean, default: false },
                 dropdowns: { type: Boolean, default: false },
                 reports: { type: Boolean, default: false },
@@ -326,6 +328,7 @@ const userSchema = new mongoose.Schema(
                 paymentVerification: { type: Boolean, default: false },
                 content: { type: Boolean, default: false },
                 adminManagement: { type: Boolean, default: false },
+                termsAndConditions: { type: Boolean, default: false },
             },
         },
         // Reference to the admin who created this admin

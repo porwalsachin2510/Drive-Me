@@ -1,6 +1,7 @@
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CMonthlyPass from "../models/B2CMonthlyPass.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
+import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
 import User from "../models/User.js";
 import NoShow from "../models/NoShow.js";
 import RouteRequest from "../models/RouteRequest.js";
@@ -11,40 +12,93 @@ import mongoose from "mongoose";
 export const getTodayTrips = async (req, res) => {
     try {
         const providerId = req.userId;
-        const { status, page = 1, limit = 20 } = req.query;
+        const { status, page = 1, limit = 20, timezone = 'Asia/Kolkata' } = req.query;
 
-        // Get today's date range
-        const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        // Get today's date in local timezone
+        const now = new Date();
 
-        const query = {
-            b2cPartnerId: providerId,
+        // Calculate start and end of today in local timezone
+        // We need to find trips where tripDate falls within "today" in local time
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+
+        const todayEnd = new Date(now);
+        todayEnd.setHours(23, 59, 59, 999);
+
+        // Build match stage for aggregation
+        const matchStage = {
+            b2cPartnerId: new mongoose.Types.ObjectId(providerId),
+            // Match trips where tripDate falls within today
             tripDate: {
-                $gte: startOfDay,
-                $lt: endOfDay
+                $gte: todayStart,
+                $lte: todayEnd
             }
         };
 
         if (status) {
-            query.status = status.toUpperCase();
+            matchStage.status = status.toUpperCase();
         }
 
-        const trips = await B2CPartnerTrip.find(query)
-            .populate('routeId', 'fromLocation toLocation routeName')
-            .populate('driverId', 'fullName contactNumber')
-            .sort({ startTime: 1 })
-            .limit(limit * 1)
-            .skip((page - 1) * limit);
+        // Use aggregation to filter trips
+        const pipeline = [
+            { $match: matchStage },
+            { $sort: { startTime: 1 } },
+            { $skip: (parseInt(page) - 1) * parseInt(limit) },
+            { $limit: parseInt(limit) }
+        ];
 
-        const total = await B2CPartnerTrip.countDocuments(query);
+        const trips = await B2CPartnerTrip.aggregate(pipeline);
 
-        // Get detailed statistics for each trip
+        // Get total count
+        const total = await B2CPartnerTrip.countDocuments(matchStage);
+
+        // Populate references manually since aggregate doesn't support populate
+        const B2CPartnerRoute = mongoose.model('B2CPartnerRoute');
+        const B2CPartnerVehicle = mongoose.model('B2CPartnerVehicle');
+        const B2CPartnerDriver = mongoose.model('B2CPartnerDriver');
+
+        // Get detailed statistics for each trip and populate references
         const tripsWithStats = await Promise.all(
             trips.map(async (trip) => {
                 const stats = await calculateTripStatistics(trip._id);
+
+                // Populate route
+                if (trip.routeId) {
+                    const route = await B2CPartnerRoute.findById(trip.routeId)
+                        .select('fromLocation toLocation description').lean();
+                    trip.routeId = route;
+                }
+
+                // Populate vehicle
+                if (trip.vehicleId) {
+                    const vehicle = await B2CPartnerVehicle.findById(trip.vehicleId)
+                        .select('vehicleType model licensePlate seatingCapacity year').lean();
+                    trip.vehicleId = vehicle;
+                }
+
+                // Populate driver - could be B2CPartnerDriver or User (self-driving)
+                if (trip.driverId) {
+                    let driver = await B2CPartnerDriver.findById(trip.driverId)
+                        .select('name phoneNumber driverImage').lean();
+
+                    if (!driver) {
+                        // Fallback to User (self-driving case)
+                        const driverUser = await User.findById(trip.driverId)
+                            .select('fullName whatsappNumber profileImage').lean();
+                        if (driverUser) {
+                            driver = {
+                                name: driverUser.fullName || 'Self',
+                                phoneNumber: driverUser.whatsappNumber || '',
+                                driverImage: driverUser.profileImage ? { url: driverUser.profileImage } : null
+                            };
+                        }
+                    }
+
+                    trip.driverId = driver;
+                }
+
                 return {
-                    ...trip.toObject(),
+                    ...trip,
                     ...stats
                 };
             })
@@ -55,13 +109,13 @@ export const getTodayTrips = async (req, res) => {
             data: {
                 trips: tripsWithStats,
                 pagination: {
-                    currentPage: page,
-                    totalPages: Math.ceil(total / limit),
+                    currentPage: parseInt(page),
+                    totalPages: Math.ceil(total / parseInt(limit)),
                     totalTrips: total,
-                    hasNext: page * limit < total,
-                    hasPrev: page > 1
+                    hasNext: parseInt(page) * parseInt(limit) < total,
+                    hasPrev: parseInt(page) > 1
                 },
-                summary: await getTodaySummary(providerId)
+                summary: await getTodaySummary(providerId, todayStart, todayEnd)
             }
         });
 
@@ -75,48 +129,102 @@ export const getTodayTrips = async (req, res) => {
     }
 };
 
-// Get upcoming trips
+// Get upcoming trips (excludes today, only future trips)
 export const getUpcomingTrips = async (req, res) => {
     try {
         const providerId = req.userId;
         const { days = 7, page = 1, limit = 20 } = req.query;
 
-        const today = new Date();
-        const futureDate = new Date(today);
-        futureDate.setDate(today.getDate() + parseInt(days));
+        // Get tomorrow's start date and end of the range
+        const now = new Date();
 
-        const trips = await B2CPartnerTrip.find({
-            b2cPartnerId: providerId,
-            tripDate: {
-                $gte: today,
-                $lte: futureDate
-            },
-            isActive: true
-        })
-        .populate('routeId', 'fromLocation toLocation routeName')
-        .populate('driverId', 'fullName contactNumber')
-        .sort({ tripDate: 1, startTime: 1 })
-        .limit(limit * 1)
-        .skip((page - 1) * limit);
+        // Tomorrow start (excludes today)
+        const tomorrowStart = new Date(now);
+        tomorrowStart.setDate(now.getDate() + 1);
+        tomorrowStart.setHours(0, 0, 0, 0);
 
-        const total = await B2CPartnerTrip.countDocuments({
-            b2cPartnerId: providerId,
+        // End of the range (days from now)
+        const rangeEnd = new Date(now);
+        rangeEnd.setDate(now.getDate() + parseInt(days));
+        rangeEnd.setHours(23, 59, 59, 999);
+
+        const B2CPartnerRoute = mongoose.model('B2CPartnerRoute');
+        const B2CPartnerVehicle = mongoose.model('B2CPartnerVehicle');
+        const B2CPartnerDriver = mongoose.model('B2CPartnerDriver');
+
+        // Match query for upcoming trips
+        const matchQuery = {
+            b2cPartnerId: new mongoose.Types.ObjectId(providerId),
             tripDate: {
-                $gte: today,
-                $lte: futureDate
+                $gte: tomorrowStart,
+                $lte: rangeEnd
             }
-        });
+        };
+
+        // Use aggregation
+        const pipeline = [
+            { $match: matchQuery },
+            { $sort: { tripDate: 1, startTime: 1 } },
+            { $skip: (parseInt(page) - 1) * parseInt(limit) },
+            { $limit: parseInt(limit) }
+        ];
+
+        const trips = await B2CPartnerTrip.aggregate(pipeline);
+
+        // Get total count
+        const total = await B2CPartnerTrip.countDocuments(matchQuery);
+
+        // Populate references for each trip
+        const tripsWithDriver = await Promise.all(
+            trips.map(async (trip) => {
+                // Populate route
+                if (trip.routeId) {
+                    const route = await B2CPartnerRoute.findById(trip.routeId)
+                        .select('fromLocation toLocation description').lean();
+                    trip.routeId = route;
+                }
+
+                // Populate vehicle
+                if (trip.vehicleId) {
+                    const vehicle = await B2CPartnerVehicle.findById(trip.vehicleId)
+                        .select('vehicleType model licensePlate seatingCapacity year').lean();
+                    trip.vehicleId = vehicle;
+                }
+
+                // Populate driver
+                if (trip.driverId) {
+                    let driver = await B2CPartnerDriver.findById(trip.driverId)
+                        .select('name phoneNumber driverImage').lean();
+
+                    if (!driver) {
+                        const driverUser = await User.findById(trip.driverId)
+                            .select('fullName whatsappNumber profileImage').lean();
+                        if (driverUser) {
+                            driver = {
+                                name: driverUser.fullName || 'Self',
+                                phoneNumber: driverUser.whatsappNumber || '',
+                                driverImage: driverUser.profileImage ? { url: driverUser.profileImage } : null
+                            };
+                        }
+                    }
+
+                    trip.driverId = driver;
+                }
+
+                return trip;
+            })
+        );
 
         res.status(200).json({
             success: true,
             data: {
-                trips,
+                trips: tripsWithDriver,
                 pagination: {
-                    currentPage: page,
-                    totalPages: Math.ceil(total / limit),
+                    currentPage: parseInt(page),
+                    totalPages: Math.ceil(total / parseInt(limit)),
                     totalTrips: total,
-                    hasNext: page * limit < total,
-                    hasPrev: page > 1
+                    hasNext: parseInt(page) * parseInt(limit) < total,
+                    hasPrev: parseInt(page) > 1
                 }
             }
         });
@@ -474,23 +582,33 @@ const calculateTripStatistics = async (tripId) => {
     }
 };
 
-const getTodaySummary = async (providerId) => {
+const getTodaySummary = async (providerId, todayStart = null, todayEnd = null) => {
     try {
-        const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        // Use provided date range or calculate today's range
+        if (!todayStart || !todayEnd) {
+            const now = new Date();
+            todayStart = new Date(now);
+            todayStart.setHours(0, 0, 0, 0);
+            todayEnd = new Date(now);
+            todayEnd.setHours(23, 59, 59, 999);
+        }
 
+        // Query trips within today's date range
         const todayTrips = await B2CPartnerTrip.find({
-            b2cPartnerId: providerId,
+            b2cPartnerId: new mongoose.Types.ObjectId(providerId),
             tripDate: {
-                $gte: startOfDay,
-                $lt: endOfDay
+                $gte: todayStart,
+                $lte: todayEnd
             }
-        });
+        }).lean();
 
         const totalTrips = todayTrips.length;
-        const completedTrips = todayTrips.filter(trip => trip.status === 'COMPLETED').length;
-        const cancelledTrips = todayTrips.filter(trip => trip.status === 'CANCELLED').length;
+        const completedTrips = todayTrips.filter(trip =>
+            trip.status === 'COMPLETED' || trip.status === 'Completed'
+        ).length;
+        const cancelledTrips = todayTrips.filter(trip =>
+            trip.status === 'CANCELLED' || trip.status === 'Cancelled'
+        ).length;
         const totalSeats = todayTrips.reduce((sum, trip) => sum + trip.totalSeats, 0);
         const totalBookedSeats = todayTrips.reduce((sum, trip) => sum + trip.bookedSeats, 0);
 

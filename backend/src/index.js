@@ -417,6 +417,11 @@ io.on('connection', (socket) => {
 
     // Real-time notifications - support both event names for compatibility
     const handleJoinNotificationRoom = (userId) => {
+        // Guard against null/undefined userId
+        if (!userId || userId === 'null' || userId === 'undefined') {
+            console.warn(`[v0] Attempted to join notification room with invalid userId: ${userId}`)
+            return
+        }
         socket.join(`notifications-${userId}`)
         socket.userId = userId
         console.log(`[v0] User ${userId} joined notification room: notifications-${userId}`)

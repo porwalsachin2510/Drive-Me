@@ -13,9 +13,9 @@ export const getB2CPartnerBookings = async (req, res) => {
         const bookings = await B2CPassengerBooking.find({
             b2cPartnerId: partnerId
         })
-            .populate('passengerId', 'name email phone')
+            .populate('passengerId', 'fullName email whatsappNumber profileImage country countryCode')
             .populate('routeId', 'fromLocation toLocation routeName')
-            .populate('assignedDriverId', 'name email phone')
+            .populate('assignedDriverId', 'fullName email whatsappNumber')
             .sort({ bookingDate: -1 });
 
         // Filter bookings based on driver assignment
@@ -204,6 +204,91 @@ export const getB2CPartnerDriverBookings = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error fetching driver bookings",
+            error: error.message
+        });
+    }
+};
+
+// Get Passenger Details for a booking (for B2C_PARTNER)
+export const getPassengerDetails = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const userId = req.userId;
+
+        // Find the booking
+        const booking = await B2CPassengerBooking.findById(bookingId)
+            .populate('passengerId', 'fullName email whatsappNumber profileImage country countryCode status createdAt');
+
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: "Booking not found"
+            });
+        }
+
+        // Check if user has permission to view this booking's passenger details
+        // Only B2C Partner who owns this booking can see passenger details
+        const canView = booking.b2cPartnerId?.toString() === userId ||
+            booking.partnerId?.toString() === userId;
+
+        if (!canView) {
+            return res.status(403).json({
+                success: false,
+                message: "Unauthorized to view passenger details"
+            });
+        }
+
+        // Get passenger info
+        const passenger = booking.passengerId;
+
+        if (!passenger) {
+            return res.status(404).json({
+                success: false,
+                message: "Passenger details not found"
+            });
+        }
+
+        // Format passenger details
+        const passengerDetails = {
+            _id: passenger._id,
+            fullName: passenger.fullName || "N/A",
+            email: passenger.email || "N/A",
+            phone: passenger.whatsappNumber || "N/A",
+            countryCode: passenger.countryCode || "+971",
+            profileImage: passenger.profileImage || null,
+            country: passenger.country || "N/A",
+            status: passenger.status || "N/A",
+            memberSince: passenger.createdAt || null,
+        };
+
+        // Include booking summary info
+        const bookingInfo = {
+            bookingId: booking._id,
+            bookingType: booking.bookingType,
+            isMonthlyPass: booking.isMonthlyPass,
+            numberOfSeats: booking.numberOfSeats,
+            pickupLocation: booking.pickupLocation,
+            dropoffLocation: booking.dropoffLocation,
+            paymentAmount: booking.paymentAmount,
+            currency: booking.currency,
+            paymentStatus: booking.paymentStatus,
+            bookingStatus: booking.bookingStatus,
+            travelDate: booking.travelDate,
+            bookingDate: booking.bookingDate,
+        };
+
+        res.status(200).json({
+            success: true,
+            data: {
+                passenger: passengerDetails,
+                booking: bookingInfo
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching passenger details:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching passenger details",
             error: error.message
         });
     }

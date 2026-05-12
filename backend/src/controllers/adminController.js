@@ -3563,46 +3563,353 @@ export const createB2CTag = async (req, res) => {
     }
 };
 
+// Update B2C tag
+export const updateB2CTag = async (req, res) => {
+    try {
+        const { tagId } = req.params;
+        const { label, color, textColor, icon, description, category, status } = req.body;
+
+        const tag = await Tag.findById(tagId);
+        if (!tag) {
+            return res.status(404).json({ success: false, message: "Tag not found" });
+        }
+
+        // Check for duplicate label if label is being changed
+        if (label && label !== tag.label) {
+            const existing = await Tag.findOne({
+                label: { $regex: new RegExp(`^${label}$`, 'i') },
+                _id: { $ne: tagId }
+            });
+            if (existing) {
+                return res.status(400).json({ success: false, message: "A tag with this label already exists" });
+            }
+        }
+
+        // Update fields
+        if (label) tag.label = label;
+        if (color) tag.color = color;
+        if (textColor) tag.textColor = textColor;
+        if (icon !== undefined) tag.icon = icon;
+        if (description !== undefined) tag.description = description;
+        if (category) tag.category = category;
+        if (status) tag.status = status;
+
+        await tag.save();
+
+        // Calculate usage count
+        const routeUsageCount = await B2CPartnerRoute.countDocuments({ tags: tag._id });
+        const vehicleUsageCount = await B2CPartnerVehicle.countDocuments({ tags: tag._id });
+
+        res.status(200).json({
+            success: true,
+            message: "Tag updated successfully",
+            tag: {
+                _id: tag._id,
+                label: tag.label,
+                color: tag.color,
+                textColor: tag.textColor,
+                icon: tag.icon,
+                description: tag.description,
+                category: tag.category,
+                status: tag.status,
+                usageCount: routeUsageCount + vehicleUsageCount,
+                createdAt: tag.createdAt,
+                updatedAt: tag.updatedAt
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error updating B2C tag:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error updating B2C tag",
+            error: error.message,
+        });
+    }
+};
+
+// Delete B2C tag
+export const deleteB2CTag = async (req, res) => {
+    try {
+        const { tagId } = req.params;
+
+        const tag = await Tag.findById(tagId);
+        if (!tag) {
+            return res.status(404).json({ success: false, message: "Tag not found" });
+        }
+
+        // Check if tag is in use
+        const routeUsageCount = await B2CPartnerRoute.countDocuments({ tags: tag._id });
+        const vehicleUsageCount = await B2CPartnerVehicle.countDocuments({ tags: tag._id });
+
+        if (routeUsageCount > 0 || vehicleUsageCount > 0) {
+            // Remove tag from all routes and vehicles before deleting
+            await B2CPartnerRoute.updateMany(
+                { tags: tag._id },
+                { $pull: { tags: tag._id } }
+            );
+            await B2CPartnerVehicle.updateMany(
+                { tags: tag._id },
+                { $pull: { tags: tag._id } }
+            );
+        }
+
+        await Tag.findByIdAndDelete(tagId);
+
+        res.status(200).json({
+            success: true,
+            message: "Tag deleted successfully"
+        });
+    } catch (error) {
+        console.error("[v0] Error deleting B2C tag:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error deleting B2C tag",
+            error: error.message,
+        });
+    }
+};
+
+// Get tags by category (for B2C/B2B partners to use when creating routes/vehicles)
+// Smart filtering based on context:
+// - context="route" -> returns tags with category: route, promo, general
+// - context="vehicle" -> returns tags with category: vehicle, general
+// - context="service" -> returns tags with category: service, general
+// - context="search" -> returns tags with category: route, promo, general (for commuter search)
+// - category="specific" -> returns only that specific category
+export const getTagsByCategory = async (req, res) => {
+    try {
+        const { category, context } = req.query;
+        const query = { status: "active" };
+
+        // Smart context-based filtering
+        if (context) {
+            switch (context) {
+                case "route":
+                    // For route creation: show route, promo, and general tags
+                    query.category = { $in: ["route", "promo", "general"] };
+                    break;
+                case "vehicle":
+                    // For vehicle creation: show vehicle and general tags
+                    query.category = { $in: ["vehicle", "general"] };
+                    break;
+                case "service":
+                    // For service-related: show service and general tags
+                    query.category = { $in: ["service", "general"] };
+                    break;
+                case "search":
+                    // For commuter search filtering: show route, promo, and general tags
+                    query.category = { $in: ["route", "promo", "general"] };
+                    break;
+                default:
+                    // No filter, return all active tags
+                    break;
+            }
+        } else if (category && category !== "all") {
+            // Direct category filter
+            query.category = category;
+        }
+
+        const tags = await Tag.find(query)
+            .select('_id label color textColor icon description category')
+            .sort({ category: 1, label: 1 });
+
+        // Group tags by category for better organization
+        const groupedTags = {};
+        tags.forEach(tag => {
+            const cat = tag.category || "general";
+            if (!groupedTags[cat]) {
+                groupedTags[cat] = [];
+            }
+            groupedTags[cat].push({
+                _id: tag._id,
+                label: tag.label,
+                color: tag.color,
+                textColor: tag.textColor,
+                icon: tag.icon || "",
+                description: tag.description || "",
+                category: tag.category
+            });
+        });
+
+        res.status(200).json({
+            success: true,
+            tags: tags.map(tag => ({
+                _id: tag._id,
+                label: tag.label,
+                color: tag.color,
+                textColor: tag.textColor,
+                icon: tag.icon || "",
+                description: tag.description || "",
+                category: tag.category
+            })),
+            groupedTags // Also provide grouped format for UI flexibility
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching tags by category:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching tags",
+            error: error.message,
+        });
+    }
+};
+
+// Public endpoint to get all active tags for search filtering
+export const getPublicTags = async (req, res) => {
+    try {
+        const { category } = req.query;
+        const query = { status: "active" };
+
+        if (category && category !== "all") {
+            query.category = category;
+        }
+
+        const tags = await Tag.find(query)
+            .select('_id label color textColor icon category')
+            .sort({ label: 1 });
+
+        res.status(200).json({
+            success: true,
+            tags
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching public tags:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching tags",
+            error: error.message,
+        });
+    }
+};
+
 // Get B2C passenger reassignments (real data from bookings)
 export const getB2CPassengerReassignments = async (req, res) => {
     try {
         const { status, page = 1, limit = 20 } = req.query;
         const bookingQuery = {};
 
+        // Map status filter to bookingStatus field
         if (status && status !== 'all') {
-            bookingQuery.status = status.toUpperCase();
+            bookingQuery.bookingStatus = status.toUpperCase();
         }
 
         // Fetch real bookings from B2CPassengerBooking collection
         const bookings = await B2CPassengerBooking.find(bookingQuery)
             .populate('passengerId', 'fullName email whatsappNumber profileImage')
-            .populate('routeId', 'name startPoint endPoint departureTime arrivalTime price')
-            .populate('b2cPartnerId', 'fullName companyName')
+            .populate('routeId', 'fromLocation toLocation description pricing assignedVehicle assignedDriver')
+            .populate('b2cPartnerId', 'fullName companyName profileImage whatsappNumber')
+            .populate('linkedSchedule', 'assignedVehicle assignedDriver tripTimes')
             .sort({ createdAt: -1 })
             .limit(Number.parseInt(limit))
             .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
         const total = await B2CPassengerBooking.countDocuments(bookingQuery);
 
-        const formattedBookings = bookings.map(booking => ({
-            _id: booking._id,
-            passengerName: booking.passengerId?.fullName || 'Unknown',
-            passengerEmail: booking.passengerId?.email || 'N/A',
-            passengerPhone: booking.passengerId?.whatsappNumber || 'N/A',
-            passengerImage: booking.passengerId?.profileImage || '',
-            routeName: booking.routeId?.name || 'N/A',
-            startPoint: booking.routeId?.startPoint || 'N/A',
-            endPoint: booking.routeId?.endPoint || 'N/A',
-            departureTime: booking.routeId?.departureTime || 'N/A',
-            price: booking.routeId?.price || booking.amount || 0,
-            providerName: booking.b2cPartnerId?.companyName || booking.b2cPartnerId?.fullName || 'N/A',
-            status: booking.status || 'PENDING',
-            seats: booking.seats || 1,
-            bookingDate: booking.bookingDate || booking.createdAt,
-            paymentMethod: booking.paymentMethod || 'CASH',
-            amount: booking.amount || 0,
-            createdAt: booking.createdAt
-        }));
+        // Get vehicle and driver info for detailed display
+        const B2CPartnerVehicle = (await import("../models/B2CPartnerVehicle.js")).default;
+        const B2CPartnerDriver = (await import("../models/B2CPartnerDriver.js")).default;
+
+        // Collect vehicle and driver IDs
+        const vehicleIds = bookings
+            .map(b => b.routeId?.assignedVehicle || b.linkedSchedule?.assignedVehicle)
+            .filter(Boolean);
+        const driverIds = bookings
+            .map(b => b.routeId?.assignedDriver || b.linkedSchedule?.assignedDriver || b.assignedDriverId)
+            .filter(Boolean);
+
+        const [vehicles, drivers] = await Promise.all([
+            vehicleIds.length > 0 ? B2CPartnerVehicle.find({ _id: { $in: vehicleIds } }) : [],
+            driverIds.length > 0 ? B2CPartnerDriver.find({ _id: { $in: driverIds } }) : []
+        ]);
+
+        const vehicleMap = {};
+        vehicles.forEach(v => { vehicleMap[v._id.toString()] = v; });
+        const driverMap = {};
+        drivers.forEach(d => { driverMap[d._id.toString()] = d; });
+
+        const formattedBookings = bookings.map(booking => {
+            // Get route info - use correct field names from B2CPartnerRoute
+            const routeFromLocation = booking.routeId?.fromLocation || booking.pickupLocation || 'N/A';
+            const routeToLocation = booking.routeId?.toLocation || booking.dropoffLocation || 'N/A';
+
+            // Get vehicle info
+            const vehicleId = booking.routeId?.assignedVehicle?.toString() || booking.linkedSchedule?.assignedVehicle?.toString();
+            const vehicleInfo = vehicleId ? vehicleMap[vehicleId] : null;
+
+            // Get driver info
+            const driverId = booking.routeId?.assignedDriver?.toString() ||
+                booking.linkedSchedule?.assignedDriver?.toString() ||
+                booking.assignedDriverId?.toString();
+            const driverInfo = driverId ? driverMap[driverId] : null;
+
+            // Get pricing from route or booking
+            const pricing = booking.routeId?.pricing || {};
+
+            return {
+                _id: booking._id,
+                passengerId: booking.passengerId?._id,
+                passengerName: booking.passengerId?.fullName || 'Unknown',
+                passengerEmail: booking.passengerId?.email || 'N/A',
+                passengerPhone: booking.passengerId?.whatsappNumber || 'N/A',
+                passengerImage: booking.passengerId?.profileImage || '',
+                routeId: booking.routeId?._id,
+                routeName: booking.routeId?.description || `${routeFromLocation} - ${routeToLocation}`,
+                startPoint: routeFromLocation,
+                endPoint: routeToLocation,
+                pickupLocation: booking.pickupLocation || routeFromLocation,
+                dropoffLocation: booking.dropoffLocation || routeToLocation,
+                returnPickupLocation: booking.returnPickupLocation,
+                returnDropoffLocation: booking.returnDropoffLocation,
+                bookingType: booking.bookingType || 'ONE_WAY',
+                isMonthlyPass: booking.isMonthlyPass || false,
+                passDuration: booking.passDuration,
+                passStartDate: booking.passStartDate,
+                passEndDate: booking.passEndDate,
+                pricing: {
+                    oneWayPrice: pricing.oneWayPrice || 0,
+                    roundTripPrice: pricing.roundTripPrice || 0,
+                    monthlyOneWayPrice: pricing.monthlyOneWayPrice || 0,
+                    monthlyRoundTripPrice: pricing.monthlyRoundTripPrice || 0,
+                    currency: pricing.currency || booking.currency || 'AED'
+                },
+                providerId: booking.b2cPartnerId?._id,
+                providerName: booking.b2cPartnerId?.companyName || booking.b2cPartnerId?.fullName || 'N/A',
+                providerImage: booking.b2cPartnerId?.profileImage || '',
+                providerPhone: booking.b2cPartnerId?.whatsappNumber || '',
+                vehicleInfo: vehicleInfo ? {
+                    _id: vehicleInfo._id,
+                    model: vehicleInfo.model,
+                    licensePlate: vehicleInfo.licensePlate,
+                    vehicleType: vehicleInfo.vehicleType,
+                    vehicleColor: vehicleInfo.vehicleColor,
+                    seatingCapacity: vehicleInfo.seatingCapacity
+                } : null,
+                driverInfo: driverInfo ? {
+                    _id: driverInfo._id,
+                    name: driverInfo.name,
+                    phoneNumber: driverInfo.phoneNumber,
+                    driverImage: driverInfo.driverImage?.url
+                } : (booking.isSelfDriver ? {
+                    name: 'Self (Partner)',
+                    isSelf: true
+                } : null),
+                status: booking.bookingStatus || 'PENDING',
+                seats: booking.numberOfSeats || 1,
+                bookingDate: booking.bookingDate || booking.createdAt,
+                travelDate: booking.travelDate,
+                paymentMethod: booking.paymentMethod || 'CASH',
+                paymentStatus: booking.paymentStatus || 'PENDING',
+                transactionId: booking.transactionId,
+                amount: booking.paymentAmount || 0,
+                currency: booking.currency || 'AED',
+                adminCommissionAmount: booking.adminCommissionAmount || 0,
+                driverEarnings: booking.driverEarnings || 0,
+                isSelfDriver: booking.isSelfDriver || false,
+                driverName: booking.driverName,
+                createdAt: booking.createdAt,
+                updatedAt: booking.updatedAt
+            };
+        });
 
         res.status(200).json({
             success: true,
@@ -3623,18 +3930,129 @@ export const getB2CPassengerReassignments = async (req, res) => {
     }
 };
 
-// Process passenger reassignment
+// Process passenger reassignment (approve/reject booking)
 export const processPassengerReassignment = async (req, res) => {
     try {
         const { reassignmentId } = req.params;
-        const { action, reason } = req.body;
-        
-        // Here you would process the actual reassignment
-        console.log(`Processing reassignment ${reassignmentId}:`, { action, reason });
-        
+        const { action, reason, newRouteId, newDriverId, newVehicleId } = req.body;
+
+        // Find the booking
+        const booking = await B2CPassengerBooking.findById(reassignmentId);
+
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: "Booking not found"
+            });
+        }
+
+        // Map action to booking status
+        let newStatus;
+        let statusMessage;
+
+        switch (action.toLowerCase()) {
+            case 'approved':
+            case 'approve':
+                newStatus = 'ACCEPTED';
+                statusMessage = 'Booking approved successfully';
+                break;
+            case 'rejected':
+            case 'reject':
+                newStatus = 'REJECTED';
+                statusMessage = 'Booking rejected successfully';
+                break;
+            case 'reassign':
+                newStatus = booking.bookingStatus; // Keep current status
+                statusMessage = 'Passenger reassigned successfully';
+                // Handle route/driver/vehicle reassignment
+                if (newRouteId) {
+                    booking.routeId = newRouteId;
+                    // Update pickup/dropoff from new route
+                    const B2CPartnerRoute = (await import("../models/B2CPartnerRoute.js")).default;
+                    const newRoute = await B2CPartnerRoute.findById(newRouteId);
+                    if (newRoute) {
+                        booking.pickupLocation = newRoute.fromLocation;
+                        booking.dropoffLocation = newRoute.toLocation;
+                    }
+                }
+                if (newDriverId) {
+                    booking.assignedDriverId = newDriverId;
+                    booking.isSelfDriver = false;
+                    // Get driver info
+                    const B2CPartnerDriver = (await import("../models/B2CPartnerDriver.js")).default;
+                    const driver = await B2CPartnerDriver.findById(newDriverId);
+                    if (driver) {
+                        booking.driverName = driver.name;
+                        booking.driverPhoneNumber = driver.phoneNumber;
+                        booking.driverImage = driver.driverImage?.url;
+                    }
+                }
+                break;
+            case 'cancel':
+                newStatus = 'CANCELLED';
+                statusMessage = 'Booking cancelled successfully';
+                break;
+            default:
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid action. Use 'approve', 'reject', 'reassign', or 'cancel'"
+                });
+        }
+
+        // Update booking status
+        booking.bookingStatus = newStatus;
+
+        // Add admin action log
+        if (!booking.adminActions) {
+            booking.adminActions = [];
+        }
+        booking.adminActions.push({
+            action: action,
+            reason: reason || '',
+            processedAt: new Date(),
+            processedBy: req.userId
+        });
+
+        // If rejected or cancelled, handle refund logic if needed
+        if (newStatus === 'REJECTED' || newStatus === 'CANCELLED') {
+            booking.rejectionReason = reason;
+            booking.rejectedAt = new Date();
+
+            // If payment was completed, mark for refund
+            if (booking.paymentStatus === 'COMPLETED') {
+                booking.refundStatus = 'PENDING';
+                booking.refundReason = reason || `Booking ${action.toLowerCase()} by admin`;
+            }
+        }
+
+        // If approved, set acceptance time
+        if (newStatus === 'ACCEPTED') {
+            booking.acceptedAt = new Date();
+            booking.acceptedBy = req.userId;
+        }
+
+        await booking.save();
+
+        // Send notification to passenger (optional)
+        try {
+            const User = (await import("../models/User.js")).default;
+            const passenger = await User.findById(booking.passengerId);
+            if (passenger) {
+                // You can add notification logic here
+                console.log(`Notification: Booking ${booking._id} ${action} for passenger ${passenger.fullName}`);
+            }
+        } catch (notifError) {
+            console.error("Error sending notification:", notifError);
+        }
+
         res.status(200).json({
             success: true,
-            message: `Passenger reassignment ${action} successfully`
+            message: statusMessage,
+            booking: {
+                _id: booking._id,
+                status: booking.bookingStatus,
+                updatedAt: booking.updatedAt
+            }
         });
     } catch (error) {
         console.error("[v0] Error processing passenger reassignment:", error);
@@ -3926,6 +4344,18 @@ export const createB2CPartnerVehicle = async (req, res) => {
             }
         }
         
+        // Parse tags if they're stringified
+        let parsedTags = [];
+        if (vehicleData.tags) {
+            try {
+                parsedTags = typeof vehicleData.tags === 'string'
+                    ? JSON.parse(vehicleData.tags)
+                    : vehicleData.tags;
+            } catch (e) {
+                parsedTags = Array.isArray(vehicleData.tags) ? vehicleData.tags : [];
+            }
+        }
+
         // Create new vehicle with B2CPartnerVehicle model
         const newVehicle = new B2CPartnerVehicle({
             b2cPartnerId: req.userId,
@@ -3943,6 +4373,7 @@ export const createB2CPartnerVehicle = async (req, res) => {
             status: vehicleData.status || "Active",
             insuranceExpiry: vehicleData.insuranceExpiry ? new Date(vehicleData.insuranceExpiry) : undefined,
             registrationExpiry: vehicleData.registrationExpiry ? new Date(vehicleData.registrationExpiry) : undefined,
+            tags: parsedTags, // Add vehicle tags
             isActive: true
         });
         
@@ -7704,6 +8135,8 @@ export const createAdmin = async (req, res) => {
                 users: true,
                 wallets: true,
                 vehicleApproval: true,
+                commission: true,
+                negotiations: true,
                 settlement: true,
                 dropdowns: true,
                 reports: true,
@@ -7713,6 +8146,7 @@ export const createAdmin = async (req, res) => {
                 paymentVerification: true,
                 content: true,
                 adminManagement: true,
+                termsAndConditions: true,
             } : {
                 overview: modules?.overview || false,
                 b2cManagement: modules?.b2cManagement || false,
@@ -7721,6 +8155,8 @@ export const createAdmin = async (req, res) => {
                 users: modules?.users || false,
                 wallets: modules?.wallets || false,
                 vehicleApproval: modules?.vehicleApproval || false,
+                commission: modules?.commission || false,
+                negotiations: modules?.negotiations || false,
                 settlement: modules?.settlement || false,
                 dropdowns: modules?.dropdowns || false,
                 reports: modules?.reports || false,
@@ -7730,6 +8166,7 @@ export const createAdmin = async (req, res) => {
                 paymentVerification: modules?.paymentVerification || false,
                 content: modules?.content || false,
                 adminManagement: modules?.adminManagement || false,
+                termsAndConditions: modules?.termsAndConditions || false,
             }
         };
 
@@ -7848,6 +8285,8 @@ export const updateAdminPermissions = async (req, res) => {
                 users: true,
                 wallets: true,
                 vehicleApproval: true,
+                commission: true,
+                negotiations: true,
                 settlement: true,
                 dropdowns: true,
                 reports: true,
@@ -7857,6 +8296,7 @@ export const updateAdminPermissions = async (req, res) => {
                 paymentVerification: true,
                 content: true,
                 adminManagement: true,
+                termsAndConditions: true,
             } : {
                 overview: modules?.overview || false,
                 b2cManagement: modules?.b2cManagement || false,
@@ -7865,6 +8305,8 @@ export const updateAdminPermissions = async (req, res) => {
                 users: modules?.users || false,
                 wallets: modules?.wallets || false,
                 vehicleApproval: modules?.vehicleApproval || false,
+                commission: modules?.commission || false,
+                negotiations: modules?.negotiations || false,
                 settlement: modules?.settlement || false,
                 dropdowns: modules?.dropdowns || false,
                 reports: modules?.reports || false,
@@ -7874,6 +8316,7 @@ export const updateAdminPermissions = async (req, res) => {
                 paymentVerification: modules?.paymentVerification || false,
                 content: modules?.content || false,
                 adminManagement: modules?.adminManagement || false,
+                termsAndConditions: modules?.termsAndConditions || false,
             }
         };
 

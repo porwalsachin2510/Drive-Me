@@ -44,7 +44,7 @@ const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
     setSelectedVehicles((prev) =>
       prev.includes(vehicleId)
         ? prev.filter((id) => id !== vehicleId)
-        : [...prev, vehicleId]
+        : [...prev, vehicleId],
     );
   };
 
@@ -64,7 +64,7 @@ const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
         `/api/vehicle-assignments/${contractId}/assign`,
         {
           assignments: assignmentData,
-        }
+        },
       );
 
       if (response.data.success) {
@@ -81,19 +81,24 @@ const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
   };
 
   const filteredAvailable = availableVehicles.filter(
-    (v) => v.status === filterStatus
+    (v) => v.status === filterStatus,
   );
 
-  if (
-    contract?.status !== "ACTIVE" ||
-    !contract?.financials?.advancePayment?.paidAt
-  ) {
+  // Check if payment condition is met for vehicle assignment
+  // For EMI mode: contract just needs to be ACTIVE (no advance payment required)
+  // For STANDARD mode: advance payment must be completed
+  const isEMIPaymentMode = contract?.financials?.paymentMode === "EMI";
+  const isAdvancePaid = !!contract?.financials?.advancePayment?.paidAt;
+  const isPaymentConditionMet = isEMIPaymentMode || isAdvancePaid;
+
+  if (contract?.status !== "ACTIVE" || !isPaymentConditionMet) {
     return (
       <div className="fleet-owner-assignment-disabled">
         <FiAlertCircle className="icon" />
         <p>
-          Contract must be active with advance payment completed to assign
-          vehicles.
+          {isEMIPaymentMode
+            ? "Contract must be active with EMI plan activated to assign vehicles."
+            : "Contract must be active with advance payment completed to assign vehicles."}
         </p>
       </div>
     );
@@ -147,7 +152,7 @@ const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
           className="section"
           onClick={() =>
             setExpandedSection(
-              expandedSection === "assigned" ? null : "assigned"
+              expandedSection === "assigned" ? null : "assigned",
             )
           }
         >
@@ -187,7 +192,7 @@ const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
                       <p>
                         <strong>Assigned Date:</strong>{" "}
                         {new Date(
-                          assignment.assignmentDate
+                          assignment.assignmentDate,
                         ).toLocaleDateString()}
                       </p>
                     </div>
@@ -204,7 +209,7 @@ const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
         className="section"
         onClick={() =>
           setExpandedSection(
-            expandedSection === "available" ? null : "available"
+            expandedSection === "available" ? null : "available",
           )
         }
       >
@@ -294,6 +299,6 @@ const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
       </div>
     </div>
   );
-};
+};;
 
 export default B2B_PartnerAssignmentUI;

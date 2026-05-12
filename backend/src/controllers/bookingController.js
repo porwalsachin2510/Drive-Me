@@ -1745,6 +1745,9 @@ export const getPassengerBookings = async (req, res) => {
         const passengerId = req.userId
         const { status } = req.query
 
+        // Import B2CPartnerVehicle model for vehicle lookups
+        const B2CPartnerVehicle = (await import("../models/B2CPartnerVehicle.js")).default
+
         const user = await User.findById(passengerId)
         if (!user) {
             return res.status(404).json({
@@ -1774,14 +1777,109 @@ export const getPassengerBookings = async (req, res) => {
             if (status) query.bookingStatus = status
 
             const b2cBookings = await B2CPassengerBooking.find(query)
-                .populate("b2cPartnerId", "fullName companyLogo whatsappNumber driverName vehicleModel vehiclePlate")
+                .populate("b2cPartnerId", "fullName companyLogo whatsappNumber profileImage")
+                .populate({
+                    path: "routeId",
+                    select: "fromLocation toLocation assignedVehicle assignedDriver pricing"
+                })
+                .populate("linkedSchedule", "assignedVehicle assignedDriver tripTimes")
                 .sort({ createdAt: -1 })
 
-            bookings = b2cBookings.map((b) => ({
-                ...b.toObject(),
-                type: "B2C",
-                userType: "NORMAL_PASSENGER",
-            }))
+            // Collect all route vehicle IDs and partner IDs for efficient lookup
+            const routeVehicleIds = b2cBookings
+                .map(b => b.routeId?.assignedVehicle)
+                .filter(Boolean)
+
+            const scheduleVehicleIds = b2cBookings
+                .map(b => b.linkedSchedule?.assignedVehicle)
+                .filter(Boolean)
+
+            const allVehicleIds = [...new Set([...routeVehicleIds, ...scheduleVehicleIds].map(id => id.toString()))]
+
+            const partnerIds = [...new Set(b2cBookings.map(b =>
+                b.b2cPartnerId?._id?.toString() || b.b2cPartnerId?.toString()
+            ).filter(Boolean))]
+
+            // Fetch all vehicles from route/schedule in one query
+            const routeVehicles = allVehicleIds.length > 0
+                ? await B2CPartnerVehicle.find({ _id: { $in: allVehicleIds } })
+                : []
+
+            // Create vehicle map by ID
+            const vehicleById = {}
+            routeVehicles.forEach(v => {
+                vehicleById[v._id.toString()] = v
+            })
+
+            // Fetch partner vehicles as fallback
+            const partnerVehicles = partnerIds.length > 0
+                ? await B2CPartnerVehicle.find({
+                    b2cPartnerId: { $in: partnerIds },
+                    isActive: true
+                })
+                : []
+
+            // Create vehicle map by partner
+            const vehicleByPartner = {}
+            partnerVehicles.forEach(v => {
+                const pid = v.b2cPartnerId.toString()
+                if (!vehicleByPartner[pid]) {
+                    vehicleByPartner[pid] = v
+                }
+            })
+
+            // Enrich bookings with vehicle info
+            bookings = b2cBookings.map((b) => {
+                const bookingObj = b.toObject()
+                const partnerId = bookingObj.b2cPartnerId?._id?.toString() || bookingObj.b2cPartnerId?.toString()
+
+                // Get vehicle from schedule first (most accurate for monthly passes)
+                const scheduleVehicleId = bookingObj.linkedSchedule?.assignedVehicle?.toString()
+                // Then try route vehicle
+                const routeVehicleId = bookingObj.routeId?.assignedVehicle?.toString()
+
+                // Try to get vehicle info from different sources
+                let vehicleInfo = null
+
+                // Priority 1: Schedule assigned vehicle
+                if (scheduleVehicleId && vehicleById[scheduleVehicleId]) {
+                    vehicleInfo = vehicleById[scheduleVehicleId]
+                }
+                // Priority 2: Route assigned vehicle
+                else if (routeVehicleId && vehicleById[routeVehicleId]) {
+                    vehicleInfo = vehicleById[routeVehicleId]
+                }
+                // Priority 3: Partner's first active vehicle
+                else if (partnerId && vehicleByPartner[partnerId]) {
+                    vehicleInfo = vehicleByPartner[partnerId]
+                }
+
+                // Add vehicle info to booking if found and not already present
+                if (vehicleInfo) {
+                    if (!bookingObj.vehicleModel) {
+                        bookingObj.vehicleModel = vehicleInfo.model
+                    }
+                    if (!bookingObj.vehiclePlate) {
+                        bookingObj.vehiclePlate = vehicleInfo.licensePlate
+                    }
+                    // Add additional vehicle info
+                    bookingObj.vehicleInfo = {
+                        model: vehicleInfo.model,
+                        licensePlate: vehicleInfo.licensePlate,
+                        vehicleType: vehicleInfo.vehicleType,
+                        vehicleColor: vehicleInfo.vehicleColor,
+                        seatingCapacity: vehicleInfo.seatingCapacity,
+                        features: vehicleInfo.features,
+                        images: vehicleInfo.images
+                    }
+                }
+
+                return {
+                    ...bookingObj,
+                    type: "B2C",
+                    userType: "NORMAL_PASSENGER",
+                }
+            })
         }
 
         return res.status(200).json({

@@ -1199,11 +1199,16 @@ export const assignVehicles = async (req, res) => {
         if (contract.status !== "ACTIVE") {
             return res.status(400).json({
                 success: false,
-                message: `Cannot assign vehicles. Contract status is ${contract.status}. Advance payment must be completed first.`,
+                message: `Cannot assign vehicles. Contract status is ${contract.status}. Contract must be active first.`,
             })
         }
 
-        if (!contract.financials?.advancePayment?.paidAt) {
+        // For EMI payment mode, advance payment is not required - contract is activated when EMI plan is created
+        // For STANDARD payment mode, advance payment must be completed before vehicle assignment
+        const isEMIPaymentMode = contract.financials?.paymentMode === "EMI"
+        const isAdvancePaid = !!contract.financials?.advancePayment?.paidAt
+
+        if (!isEMIPaymentMode && !isAdvancePaid) {
             return res.status(400).json({
                 success: false,
                 message: "Advance payment must be completed before vehicle assignment",

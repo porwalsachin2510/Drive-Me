@@ -404,6 +404,29 @@ const QuotationDetails = () => {
           <div className="single-quotation-card">
             <div className="single-quotation-info-grid">
               <div className="single-quotation-info-item">
+                <div className="single-quotation-label">RENTAL DURATION:</div>
+                <div className="single-quotation-value">
+                  {rentalPeriod.duration || "N/A"}{" "}
+                  {rentalPeriod.durationType === "DAILY"
+                    ? rentalPeriod.duration === 1
+                      ? "Day"
+                      : "Days"
+                    : rentalPeriod.durationType === "WEEKLY"
+                      ? rentalPeriod.duration === 1
+                        ? "Week"
+                        : "Weeks"
+                      : rentalPeriod.durationType === "MONTHLY"
+                        ? rentalPeriod.duration === 1
+                          ? "Month"
+                          : "Months"
+                        : rentalPeriod.durationType === "LONG_TERM"
+                          ? rentalPeriod.duration === 1
+                            ? "Year"
+                            : "Years"
+                          : ""}
+                </div>
+              </div>
+              <div className="single-quotation-info-item">
                 <div className="single-quotation-label">START DATE:</div>
                 <div className="single-quotation-value">
                   {formatDate(rentalPeriod.startDate)}
@@ -579,7 +602,7 @@ const QuotationDetails = () => {
                 </div>
               </div>
             )}
-          
+
           {quotation?.status?.toUpperCase() === "REQUESTED" && (
             <div className="single-quotation-waiting-message">
               <div className="single-quotation-waiting-icon">⏳</div>

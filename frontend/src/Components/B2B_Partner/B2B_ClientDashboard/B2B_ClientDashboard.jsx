@@ -71,9 +71,9 @@ const B2B_ClientDashboard = () => {
 
   if (loading) {
     return (
-      <div className="b2b-client-dashboard">
-        <div className="loading-container">
-          <div className="spinner"></div>
+      <div className="drivemego-b2b-client-dashboard">
+        <div className="drivemego-loading-container">
+          <div className="drivemego-spinner"></div>
           <p>Loading dashboard...</p>
         </div>
       </div>
@@ -81,11 +81,14 @@ const B2B_ClientDashboard = () => {
   }
 
   return (
-    <div className="b2b-client-dashboard">
+    <div className="drivemego-b2b-client-dashboard">
       <div className="dashboard-header">
         <h2>B2B Client Dashboard</h2>
         <div className="date-range-selector">
-          <select value={dateRange} onChange={(e) => setDateRange(e.target.value)}>
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+          >
             <option value="7days">Last 7 Days</option>
             <option value="30days">Last 30 Days</option>
             <option value="90days">Last 90 Days</option>
@@ -98,44 +101,51 @@ const B2B_ClientDashboard = () => {
 
       <div className="tab-navigation">
         <button
-          className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
-          onClick={() => setActiveTab('overview')}
+          className={`tab-btn ${activeTab === "overview" ? "active" : ""}`}
+          onClick={() => setActiveTab("overview")}
         >
           Overview
         </button>
         <button
-          className={`tab-btn ${activeTab === 'clients' ? 'active' : ''}`}
-          onClick={() => setActiveTab('clients')}
+          className={`tab-btn ${activeTab === "clients" ? "active" : ""}`}
+          onClick={() => setActiveTab("clients")}
         >
           Client Performance
         </button>
         <button
-          className={`tab-btn ${activeTab === 'vehicles' ? 'active' : ''}`}
-          onClick={() => setActiveTab('vehicles')}
+          className={`tab-btn ${activeTab === "vehicles" ? "active" : ""}`}
+          onClick={() => setActiveTab("vehicles")}
         >
           Vehicle Utilization
         </button>
         <button
-          className={`tab-btn ${activeTab === 'revenue' ? 'active' : ''}`}
-          onClick={() => setActiveTab('revenue')}
+          className={`tab-btn ${activeTab === "revenue" ? "active" : ""}`}
+          onClick={() => setActiveTab("revenue")}
         >
           Revenue Analytics
         </button>
         <button
-          className={`tab-btn ${activeTab === 'renewals' ? 'active' : ''}`}
-          onClick={() => setActiveTab('renewals')}
+          className={`tab-btn ${activeTab === "renewals" ? "active" : ""}`}
+          onClick={() => setActiveTab("renewals")}
         >
           Contract Renewals
         </button>
       </div>
 
       <div className="dashboard-content">
-        {activeTab === 'overview' && (
+        {activeTab === "overview" && (
           <div className="overview-section">
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-icon clients">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                     <circle cx="9" cy="7" r="4"></circle>
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -150,7 +160,14 @@ const B2B_ClientDashboard = () => {
 
               <div className="stat-card">
                 <div className="stat-icon contracts">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                     <polyline points="14 2 14 8 20 8"></polyline>
                     <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -165,7 +182,14 @@ const B2B_ClientDashboard = () => {
 
               <div className="stat-card">
                 <div className="stat-icon revenue">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <line x1="12" y1="1" x2="12" y2="23"></line>
                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                   </svg>
@@ -178,22 +202,45 @@ const B2B_ClientDashboard = () => {
 
               <div className="stat-card">
                 <div className="stat-icon monthly">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <rect
+                      x="3"
+                      y="4"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                    ></rect>
                     <line x1="16" y1="2" x2="16" y2="6"></line>
                     <line x1="8" y1="2" x2="8" y2="6"></line>
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                   </svg>
                 </div>
                 <div className="stat-content">
-                  <h3>{formatCurrency(dashboardData.overview.monthlyRevenue)}</h3>
+                  <h3>
+                    {formatCurrency(dashboardData.overview.monthlyRevenue)}
+                  </h3>
                   <p>Monthly Revenue</p>
                 </div>
               </div>
 
               <div className="stat-card">
                 <div className="stat-icon vehicles">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <rect x="1" y="3" width="15" height="13"></rect>
                     <polygon points="16,8 20,8 23,11 23,16 16,16 16,8"></polygon>
                     <circle cx="5.5" cy="18.5" r="2.5"></circle>
@@ -208,7 +255,14 @@ const B2B_ClientDashboard = () => {
 
               <div className="stat-card">
                 <div className="stat-icon drivers">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                   </svg>
@@ -230,8 +284,12 @@ const B2B_ClientDashboard = () => {
                       <p>{contract.contractType}</p>
                     </div>
                     <div className="contract-details">
-                      <span className="contract-value">{formatCurrency(contract.value)}</span>
-                      <span className="contract-date">{formatDate(contract.startDate)}</span>
+                      <span className="contract-value">
+                        {formatCurrency(contract.value)}
+                      </span>
+                      <span className="contract-date">
+                        {formatDate(contract.startDate)}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -240,7 +298,7 @@ const B2B_ClientDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'clients' && (
+        {activeTab === "clients" && (
           <div className="client-performance-section">
             <h3>Client Performance</h3>
             <div className="client-list">
@@ -263,7 +321,11 @@ const B2B_ClientDashboard = () => {
                     </div>
                     <div className="metric">
                       <label>Vehicle Utilization</label>
-                      <span style={{ color: getUtilizationColor(client.utilization) }}>
+                      <span
+                        style={{
+                          color: getUtilizationColor(client.utilization),
+                        }}
+                      >
                         {client.utilization}%
                       </span>
                     </div>
@@ -278,7 +340,7 @@ const B2B_ClientDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'vehicles' && (
+        {activeTab === "vehicles" && (
           <div className="vehicle-utilization-section">
             <h3>Vehicle Utilization</h3>
             <div className="vehicle-grid">
@@ -291,20 +353,28 @@ const B2B_ClientDashboard = () => {
                     </span>
                   </div>
                   <div className="vehicle-details">
-                    <p><strong>Type:</strong> {vehicle.type}</p>
-                    <p><strong>Capacity:</strong> {vehicle.capacity} seats</p>
-                    <p><strong>Assigned to:</strong> {vehicle.assignedTo}</p>
+                    <p>
+                      <strong>Type:</strong> {vehicle.type}
+                    </p>
+                    <p>
+                      <strong>Capacity:</strong> {vehicle.capacity} seats
+                    </p>
+                    <p>
+                      <strong>Assigned to:</strong> {vehicle.assignedTo}
+                    </p>
                   </div>
                   <div className="utilization-bar">
                     <div className="utilization-label">
                       Utilization: {vehicle.utilization}%
                     </div>
                     <div className="progress-bar">
-                      <div 
+                      <div
                         className="progress-fill"
-                        style={{ 
+                        style={{
                           width: `${vehicle.utilization}%`,
-                          backgroundColor: getUtilizationColor(vehicle.utilization)
+                          backgroundColor: getUtilizationColor(
+                            vehicle.utilization,
+                          ),
                         }}
                       ></div>
                     </div>
@@ -315,7 +385,7 @@ const B2B_ClientDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'revenue' && (
+        {activeTab === "revenue" && (
           <div className="revenue-analytics-section">
             <h3>Revenue Analytics</h3>
             <div className="revenue-chart">
@@ -323,13 +393,17 @@ const B2B_ClientDashboard = () => {
                 {dashboardData.revenueChart.map((item, index) => (
                   <div key={index} className="chart-item">
                     <div className="chart-bar">
-                      <div 
+                      <div
                         className="bar-fill"
-                        style={{ height: `${(item.revenue / Math.max(...dashboardData.revenueChart.map(r => r.revenue))) * 100}%` }}
+                        style={{
+                          height: `${(item.revenue / Math.max(...dashboardData.revenueChart.map((r) => r.revenue))) * 100}%`,
+                        }}
                       ></div>
                     </div>
                     <div className="chart-label">{item.period}</div>
-                    <div className="chart-value">{formatCurrency(item.revenue)}</div>
+                    <div className="chart-value">
+                      {formatCurrency(item.revenue)}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -337,7 +411,7 @@ const B2B_ClientDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'renewals' && (
+        {activeTab === "renewals" && (
           <div className="contract-renewals-section">
             <h3>Upcoming Contract Renewals</h3>
             <div className="renewals-list">
@@ -348,8 +422,12 @@ const B2B_ClientDashboard = () => {
                     <p>{renewal.contractType}</p>
                   </div>
                   <div className="renewal-details">
-                    <span className="renewal-date">Renews: {formatDate(renewal.renewalDate)}</span>
-                    <span className="renewal-value">{formatCurrency(renewal.currentValue)}</span>
+                    <span className="renewal-date">
+                      Renews: {formatDate(renewal.renewalDate)}
+                    </span>
+                    <span className="renewal-value">
+                      {formatCurrency(renewal.currentValue)}
+                    </span>
                     <button className="contact-btn">Contact Client</button>
                   </div>
                 </div>

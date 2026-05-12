@@ -121,23 +121,23 @@ function AdminB2CManagement() {
           <div className="ad-dash-b2c-error-icon">⚠️</div>
           <div className="ad-dash-b2c-error-title">Error Loading Data</div>
           <div className="ad-dash-b2c-error-message">{error}</div>
-          <button 
+          <button
             onClick={fetchB2CStats}
             style={{
-              marginTop: '16px',
-              padding: '8px 16px',
-              background: '#dc2626',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer'
+              marginTop: "16px",
+              padding: "8px 16px",
+              background: "#2DD4BF",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
             }}
           >
             Retry
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (

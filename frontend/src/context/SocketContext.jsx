@@ -20,7 +20,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     let instance = null;
 
-    if (user) {
+    if (user && user._id) {
       // Connect to Socket.io server
       instance = io(import.meta.env.VITE_BACKEND_URL, {
         auth: {
@@ -490,7 +490,7 @@ export const SocketProvider = ({ children }) => {
           _id: `route-request-${Date.now()}`,
           userId: user._id,
           type: "NEW_ROUTE_REQUEST",
-          title: "New Route Request",
+          title: data.title || "New Route Request",
           message: data.message || "You have a new route request",
           isRead: false,
           createdAt: new Date().toISOString(),
@@ -499,8 +499,58 @@ export const SocketProvider = ({ children }) => {
         dispatch(addRealtimeNotification(notification));
         dispatch(getUnreadNotificationCount(user._id));
         if (Notification.permission === "granted") {
-          new Notification("New Route Request", {
+          new Notification(data.title || "New Route Request", {
             body: data.message || "You have a new route request",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // NEW_ROUTE_REQUEST event from backend socketService
+      instance.on("new_route_request", (data) => {
+        console.log("[v0] New route request received:", data);
+        const notification = {
+          _id:
+            data._id ||
+            data.notificationId ||
+            `new-route-request-${Date.now()}`,
+          userId: user._id,
+          type: "NEW_ROUTE_REQUEST",
+          title: data.title || "New Route Request",
+          message: data.message || "You have a new route request",
+          isRead: false,
+          createdAt: data.createdAt || new Date().toISOString(),
+          metadata: data.metadata || data.data || {},
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "New Route Request", {
+            body: data.message || "You have a new route request",
+            icon: "/favicon.ico",
+          });
+        }
+      });
+
+      // ROUTE_REQUEST_RESPONSE event from backend socketService
+      instance.on("route_request_response", (data) => {
+        console.log("[v0] Route request response received:", data);
+        const notification = {
+          _id:
+            data._id || data.notificationId || `route-response-${Date.now()}`,
+          userId: user._id,
+          type: "ROUTE_REQUEST_RESPONSE",
+          title: data.title || "Route Request Update",
+          message: data.message || "Your route request has been updated",
+          isRead: false,
+          createdAt: data.createdAt || new Date().toISOString(),
+          metadata: data.metadata || data.data || {},
+        };
+        dispatch(addRealtimeNotification(notification));
+        dispatch(getUnreadNotificationCount(user._id));
+        if (Notification.permission === "granted") {
+          new Notification(data.title || "Route Request Update", {
+            body: data.message || "Your route request has been updated",
             icon: "/favicon.ico",
           });
         }

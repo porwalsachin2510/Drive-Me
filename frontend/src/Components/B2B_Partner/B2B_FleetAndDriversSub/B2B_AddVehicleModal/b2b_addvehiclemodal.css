@@ -494,3 +494,33 @@
   width: 90%;
   max-width: 700px !important;
 }
+
+/* ===== Button Spinner ===== */
+.b2b-operator-dashboard-add-vehicle-btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: btn-spin 0.8s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.b2b-operator-dashboard-add-vehicle-btn-primary:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.b2b-operator-dashboard-add-vehicle-btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

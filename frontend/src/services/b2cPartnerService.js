@@ -211,6 +211,18 @@ export const getRouteBookings = async (routeId, dateRange = {}) => {
   }
 };
 
+// Get passenger details for a booking
+// Backend: GET /api/b2c-bookings/booking/:bookingId/passenger (b2cBookingRoutes.js)
+export const getPassengerDetails = async (bookingId) => {
+  try {
+    const response = await api.get(`/b2c-bookings/booking/${bookingId}/passenger`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching passenger details:", error);
+    throw error;
+  }
+};
+
 // Get earnings
 // Backend: GET /api/b2c-partner/earnings (b2cPartnerRoutes.js)
 export const getEarnings = async (period = "monthly") => {
@@ -333,6 +345,7 @@ export default {
   assignDriverToRoute,
   getMonthlyPassSubscriptions,
   getRouteBookings,
+  getPassengerDetails,
   getEarnings,
   getEarningsBreakdown,
   getAnalytics,

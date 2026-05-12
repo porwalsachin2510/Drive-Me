@@ -2,7 +2,7 @@
   padding: 24px;
 }
 
-.route-requests-loading {
+.drivemego-route-requests-route-requests-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -12,7 +12,7 @@
   color: #6c757d;
 }
 
-.loading-spinner {
+.drivemego-route-requests-loading-spinner {
   width: 36px;
   height: 36px;
   border: 3px solid #e9ecef;

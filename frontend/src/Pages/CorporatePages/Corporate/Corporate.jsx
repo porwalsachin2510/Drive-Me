@@ -249,58 +249,36 @@ const Corporate = () => {
       placeholder: "e.g. 1",
     },
   ];
-  // const usageEstimateOptions = [
-  //   {
-  //     value: "low",
-  //     label: "Low (< 1000 km/month)",
-  //     description: "Occasional use",
-  //   },
-  //   {
-  //     value: "medium",
-  //     label: "Medium (1000-2500 km/month)",
-  //     description: "Regular use",
-  //   },
-  //   {
-  //     value: "high",
-  //     label: "High (2500-4000 km/month)",
-  //     description: "Heavy use",
-  //   },
-  //   {
-  //     value: "very-high",
-  //     label: "Very High (4000+ km/month)",
-  //     description: "Intensive use",
-  //   },
-  // ];
-
+  
   // Budget ranges without currency - currency is added dynamically based on location
   const budgetRanges = {
     daily: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_DAILY]
       ?.options || [
-      { value: "0-1500", label: "Less than 1,500 (Budget)" },
-      { value: "1500-3000", label: "1,500-3,000 (Economy)" },
-      { value: "3000-6000", label: "3,000-6,000 (Standard)" },
-      { value: "6000+", label: "6,000+ (Premium)" },
+      { value: "0-200", label: "Less than 200/day (Budget)" },
+      { value: "200-500", label: "200-500/day (Economy)" },
+      { value: "500-1000", label: "500-1,000/day (Standard)" },
+      { value: "1000+", label: "1,000+/day (Premium)" },
     ],
     weekly: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_WEEKLY]
       ?.options || [
-      { value: "0-9000", label: "Less than 9,000 (Budget)" },
-      { value: "9000-18000", label: "9,000-18,000 (Economy)" },
-      { value: "18000-35000", label: "18,000-35,000 (Standard)" },
-      { value: "35000+", label: "35,000+ (Premium)" },
+      { value: "0-1000", label: "Less than 1,000/week (Budget)" },
+      { value: "1000-2500", label: "1,000-2,500/week (Economy)" },
+      { value: "2500-5000", label: "2,500-5,000/week (Standard)" },
+      { value: "5000+", label: "5,000+/week (Premium)" },
     ],
     monthly: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_MONTHLY]
       ?.options || [
-      { value: "0-10000", label: "Less than 10,000 (Budget)" },
-      { value: "10000-25000", label: "10,000-25,000 (Economy)" },
-      { value: "25000-50000", label: "25,000-50,000 (Standard)" },
-      { value: "50000+", label: "50,000+ (Premium)" },
+      { value: "0-3000", label: "Less than 3,000/month (Budget)" },
+      { value: "3000-8000", label: "3,000-8,000/month (Economy)" },
+      { value: "8000-15000", label: "8,000-15,000/month (Standard)" },
+      { value: "15000+", label: "15,000+/month (Premium)" },
     ],
     "long-term": dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_LONGTERM]
       ?.options || [
-      { value: "0-8000", label: "Less than 8,000/month (Budget)" },
-      { value: "8000-20000", label: "8,000-20,000/month (Economy)" },
-      { value: "20000-40000", label: "20,000-40,000/month (Standard)" },
-      { value: "40000+", label: "40,000+/month (Premium)" },
+      { value: "0-30000", label: "Less than 30,000/year (Budget)" },
+      { value: "30000-80000", label: "30,000-80,000/year (Economy)" },
+      { value: "80000-150000", label: "80,000-150,000/year (Standard)" },
+      { value: "150000+", label: "150,000+/year (Premium)" },
     ],
   };
 
@@ -333,10 +311,20 @@ const Corporate = () => {
   ];
 
   const handleInputChange = (field, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+   setFilters((prev) => {
+     // If rental duration changes, reset the budget since ranges are different
+     if (field === "rentalDuration" && prev.rentalDuration !== value) {
+       return {
+         ...prev,
+         [field]: value,
+         budget: "", // Reset budget when duration type changes
+       };
+     }
+     return {
+       ...prev,
+       [field]: value,
+     };
+   });
   };
 
   const handleFeatureToggle = (feature) => {

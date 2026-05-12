@@ -299,11 +299,26 @@ const FleetSearchResults = () => {
 
                         <div className="drivemego-searchresults-vehicle-price">
                           <span className="drivemego-searchresults-price-amount">
-                            {formatCurrency(
-                              vehicle.pricing.monthlyRate,
-                              vehicle.pricing.currency || "AED",
+                            {userfilters?.rentalDuration === "long-term" ? (
+                              <>
+                                {formatCurrency(
+                                  vehicle.pricing.yearlyRate &&
+                                    vehicle.pricing.yearlyRate > 0
+                                    ? vehicle.pricing.yearlyRate
+                                    : vehicle.pricing.monthlyRate * 12,
+                                  vehicle.pricing.currency || "AED",
+                                )}
+                                /year
+                              </>
+                            ) : (
+                              <>
+                                {formatCurrency(
+                                  vehicle.pricing.monthlyRate,
+                                  vehicle.pricing.currency || "AED",
+                                )}
+                                /month
+                              </>
                             )}
-                            /month
                           </span>
                           <span className="drivemego-searchresults-price-detail">
                             {formatCurrency(

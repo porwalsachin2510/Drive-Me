@@ -10,7 +10,9 @@ import {
     deleteB2CPartnerSchedule,
     deleteB2CPartnerRoute,
     getTodayTrips,
-    createB2CPartnerTrip
+    createB2CPartnerTrip,
+    checkSchedulingConflicts,
+    checkRouteDependencies
 } from "../controllers/b2cScheduleController.js";
 import { verifyToken, checkB2CPartnerRole } from "../middleware/auth.js";
 
@@ -19,6 +21,12 @@ router.get("/routes", verifyToken, checkB2CPartnerRole, getB2CPartnerRoutes);
 router.get("/routes/by-country", verifyToken, getB2CPartnerRoutesByCountry);
 router.post("/routes", verifyToken, checkB2CPartnerRole, createB2CPartnerRoute);
 router.delete("/routes/:routeId", verifyToken, checkB2CPartnerRole, deleteB2CPartnerRoute);
+
+// Route Dependency Check (call before deleting to get warning info)
+router.get("/routes/:routeId/dependencies", verifyToken, checkB2CPartnerRole, checkRouteDependencies);
+
+// Scheduling Conflict Check (call before creating route/schedule to validate)
+router.post("/check-conflicts", verifyToken, checkB2CPartnerRole, checkSchedulingConflicts);
 
 // B2C Partner Schedules Management
 router.get("/schedules", verifyToken, checkB2CPartnerRole, getB2CPartnerSchedules);

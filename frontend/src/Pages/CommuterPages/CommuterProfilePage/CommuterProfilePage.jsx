@@ -8,6 +8,7 @@ import Settings from "../../../Components/Section/Settings/Settings";
 import TravelHistory from "../../../Components/TravelHistory/TravelHistory";
 import SubscriptionSettings from "../../../Components/SubscriptionSettings/SubscriptionSettings";
 import CommuterMyBookingsPage from "../CommuterMyBookingsPage/CommuterMyBookingsPage";
+import CommuterRouteRequests from "../../../Components/CommuterRouteRequests/CommuterRouteRequests";
 import "./commuterprofilepage.css";
 
 export default function CommuterProfilePage() {
@@ -56,6 +57,8 @@ export default function CommuterProfilePage() {
         return <TravelHistory />;
       case "subscription-settings":
         return <SubscriptionSettings />;
+      case "route-requests":
+        return <CommuterRouteRequests />;
       case "settings":
         return <Settings />;
       default:

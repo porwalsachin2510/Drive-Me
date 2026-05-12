@@ -111,6 +111,11 @@ function NotificationIcon() {
       socket.on("booking-rejected", handleBookingUpdate);
       socket.on("driver-assigned", handleBookingUpdate);
 
+      // Route request events
+      socket.on("new_route_request", handleNewNotification);
+      socket.on("route_request_response", handleNewNotification);
+      socket.on("notification", handleNewNotification);
+
       // Cleanup listeners on unmount
       return () => {
         socket.off("new_notification", handleNewNotification);
@@ -123,6 +128,9 @@ function NotificationIcon() {
         socket.off("booking-accepted", handleBookingUpdate);
         socket.off("booking-rejected", handleBookingUpdate);
         socket.off("driver-assigned", handleBookingUpdate);
+        socket.off("new_route_request", handleNewNotification);
+        socket.off("route_request_response", handleNewNotification);
+        socket.off("notification", handleNewNotification);
       };
     }
   }, [dispatch, user, socketContext?.socket]);
@@ -230,6 +238,23 @@ function NotificationIcon() {
       case "EMERGENCY":
         navigate("/commuter/support");
         break;
+      case "NEW_ROUTE_REQUEST":
+      case "ROUTE_REQUEST":
+        // B2C Partner sees route requests
+        if (user?.role === "B2C_PARTNER") {
+          navigate("/b2c-partner/route-requests");
+        } else {
+          navigate("/notifications");
+        }
+        break;
+      case "ROUTE_REQUEST_RESPONSE":
+        // Commuter sees their route requests
+        if (user?.role === "COMMUTER") {
+          navigate("/commuter/route-requests");
+        } else {
+          navigate("/notifications");
+        }
+        break;
       default:
         navigate("/notifications");
     }
@@ -275,6 +300,8 @@ function NotificationIcon() {
       SUBSCRIPTION_RENEWAL: "🔄",
       EMERGENCY: "🚨",
       ROUTE_REQUEST: "📍",
+      NEW_ROUTE_REQUEST: "🛣️",
+      ROUTE_REQUEST_RESPONSE: "📬",
       CORPORATE_UPDATE: "🏢",
       QUOTATION_REQUEST: "📋",
       QUOTATION_RECEIVED: "📩",

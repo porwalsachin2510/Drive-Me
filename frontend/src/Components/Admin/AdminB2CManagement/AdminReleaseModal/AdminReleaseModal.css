@@ -112,7 +112,7 @@
 
 .ad-dash-release-modal-input:focus,
 .ad-dash-release-modal-textarea:focus {
-  border-color: #0891b2;
+border-color: var(--secondary-color, #2DD4BF);
 }
 
 .ad-dash-release-modal-textarea {
@@ -150,12 +150,13 @@
 }
 
 .ad-dash-release-modal-confirm {
-  background: #10b981;
+ background: var(--secondary-color, #2DD4BF);
   color: white;
 }
 
 .ad-dash-release-modal-confirm:hover {
-  background: #059669;
+  background: var(--secondary-hover, #26B8A5);
+  box-shadow: var(--shadow-teal, 0 4px 14px rgba(45, 212, 191, 0.25));
 }
 
 @media (max-width: 640px) {

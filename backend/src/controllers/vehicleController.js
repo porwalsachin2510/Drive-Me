@@ -300,7 +300,23 @@ export const searchVehicles = async (req, res) => {
 
         // Vehicle Category/Type Filter
         if (vehicleType && vehicleType !== "ANY_TYPE") {
-            vehicleQuery.vehicleCategory = vehicleType.toUpperCase();
+            const upperVehicleType = vehicleType.toUpperCase();
+            // Define valid categories for each service type to ensure correct matching
+            const goodsCarrierCategories = ["PICKUP_1TON", "PICKUP_3TON", "TRUCK_7TON", "REEFER_TRUCK", "FLATBED_TRAILER"];
+            const passengerCategories = ["SEDAN", "SUV", "MINIVAN", "COASTER_BUS", "LUXURY_COACH", "SHUTTLE_BUS"];
+
+            // If searching for goods carrier service type with a goods category
+            if (vehicleQuery.serviceType === "GOODS_CARRIER" && goodsCarrierCategories.includes(upperVehicleType)) {
+                vehicleQuery.vehicleCategory = upperVehicleType;
+            }
+            // If searching for passenger service type with a passenger category
+            else if (vehicleQuery.serviceType === "PASSENGER" && passengerCategories.includes(upperVehicleType)) {
+                vehicleQuery.vehicleCategory = upperVehicleType;
+            }
+            // For other cases, just use the vehicleType as-is
+            else {
+                vehicleQuery.vehicleCategory = upperVehicleType;
+            }
         }
 
         // Minimum Seats/Cargo Capacity Filter (greater than or equal)
@@ -347,23 +363,60 @@ export const searchVehicles = async (req, res) => {
 
         // Budget Range Filter based on rental duration
         if (budget) {
-            const [minBudget, maxBudget] = budget.split("-").map(Number);
+            // Handle "+" suffix for premium ranges (e.g., "150000+")
+            const isPremium = budget.endsWith("+");
+            let minBudget, maxBudget;
+
+            if (isPremium) {
+                minBudget = Number(budget.replace("+", ""));
+                maxBudget = Number.MAX_SAFE_INTEGER; // No upper limit
+            } else {
+                [minBudget, maxBudget] = budget.split("-").map(Number);
+            }
 
             if (rentalDuration === "daily") {
                 vehicleQuery["pricing.dailyRate"] = {
                     $gte: minBudget,
-                    $lte: maxBudget,
+                    ...(maxBudget !== Number.MAX_SAFE_INTEGER && { $lte: maxBudget }),
                 };
             } else if (rentalDuration === "weekly") {
                 vehicleQuery["pricing.weeklyRate"] = {
                     $gte: minBudget,
-                    $lte: maxBudget,
+                    ...(maxBudget !== Number.MAX_SAFE_INTEGER && { $lte: maxBudget }),
                 };
             } else if (rentalDuration === "monthly") {
                 vehicleQuery["pricing.monthlyRate"] = {
                     $gte: minBudget,
-                    $lte: maxBudget,
+                    ...(maxBudget !== Number.MAX_SAFE_INTEGER && { $lte: maxBudget }),
                 };
+            } else if (rentalDuration === "long-term" || rentalDuration === "yearly") {
+                // For long-term/yearly rentals, filter by yearlyRate
+                // If yearlyRate is 0 or not set, fallback to monthlyRate * 12
+                if (maxBudget === Number.MAX_SAFE_INTEGER) {
+                    // Premium tier - no upper limit
+                    vehicleQuery["$or"] = [
+                        { "pricing.yearlyRate": { $gte: minBudget } },
+                        {
+                            "pricing.yearlyRate": { $in: [0, null] },
+                            "$expr": {
+                                "$gte": [{ "$multiply": ["$pricing.monthlyRate", 12] }, minBudget]
+                            }
+                        }
+                    ];
+                } else {
+                    vehicleQuery["$or"] = [
+                        { "pricing.yearlyRate": { $gte: minBudget, $lte: maxBudget } },
+                        {
+                            "pricing.yearlyRate": { $in: [0, null] },
+                            "$expr": {
+                                "$and": [
+                                    { "$gte": [{ "$multiply": ["$pricing.monthlyRate", 12] }, minBudget] },
+                                    { "$lte": [{ "$multiply": ["$pricing.monthlyRate", 12] }, maxBudget] }
+                                ]
+                            }
+                        }
+                    ];
+                }
             }
         }
 
@@ -398,7 +451,7 @@ export const searchVehicles = async (req, res) => {
             };
         }
 
-        console.log("Vehicle Query:", JSON.stringify(vehicleQuery, null, 2));
+        console.log("[v0] Vehicle Query:", JSON.stringify(vehicleQuery, null, 2));
 
         // Step 3: Fetch vehicles with pagination
         const skip = (Number.parseInt(page) - 1) * Number.parseInt(limit);
@@ -410,6 +463,16 @@ export const searchVehicles = async (req, res) => {
 
         const totalVehicles = await Vehicle.countDocuments(vehicleQuery);
 
+        console.log("[v0] Found vehicles:", totalVehicles);
+        console.log("[v0] Vehicles details:", vehicles.map(v => ({
+            name: v.vehicleName,
+            serviceType: v.serviceType,
+            category: v.vehicleCategory,
+            status: v.status,
+            approvalStatus: v.approvalStatus,
+            location: v.location
+        })));
+        
         // Step 4: Group vehicles by fleet owner
         const fleetOwnerMap = {};
 

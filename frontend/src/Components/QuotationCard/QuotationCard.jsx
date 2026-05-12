@@ -87,9 +87,22 @@ const QuotationCard = ({ quotation }) => {
 
   // Extract rental period details
   const rentalPeriod = quotation.rentalPeriod || {};
-  const duration = `${rentalPeriod.duration || 0} ${
-    rentalPeriod.durationType || "MONTHLY"
-  }`.toLowerCase();
+  const getDurationLabel = (durationType, durationValue) => {
+    const value = durationValue || 0;
+    if (durationType === "DAILY")
+      return `${value} ${value === 1 ? "day" : "days"}`;
+    if (durationType === "WEEKLY")
+      return `${value} ${value === 1 ? "week" : "weeks"}`;
+    if (durationType === "MONTHLY")
+      return `${value} ${value === 1 ? "month" : "months"}`;
+    if (durationType === "LONG_TERM")
+      return `${value} ${value === 1 ? "year" : "years"}`;
+    return `${value} ${durationType || "months"}`.toLowerCase();
+  };
+  const duration = getDurationLabel(
+    rentalPeriod.durationType,
+    rentalPeriod.duration,
+  );
 
   return (
     <div className="quotation-card" onClick={handleViewDetails}>

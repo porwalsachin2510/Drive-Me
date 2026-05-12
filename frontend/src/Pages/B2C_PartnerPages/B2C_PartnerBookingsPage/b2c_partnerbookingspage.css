@@ -254,6 +254,63 @@
   margin-bottom: 2px;
 }
 
+/* Passenger Row with View Details Button */
+.B2C_Partner-bookings-page-passenger-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #f7fafc;
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.B2C_Partner-bookings-page-passenger-row p {
+  margin: 0;
+  padding: 0;
+  background: none;
+  font-size: 0.85rem;
+  color: #4a5568;
+  line-height: 1.4;
+}
+
+.B2C_Partner-bookings-page-passenger-row p strong {
+  display: block;
+  font-size: 0.7rem;
+  color: #a0aec0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+.B2C_Partner-bookings-page-view-passenger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.B2C_Partner-bookings-page-view-passenger-btn:hover {
+  background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+  box-shadow: 0 2px 8px rgba(45, 212, 191, 0.3);
+  transform: translateY(-1px);
+}
+
+.B2C_Partner-bookings-page-view-passenger-btn svg {
+  flex-shrink: 0;
+}
+
 /* Action Buttons */
 .B2C_Partner-bookings-page-booking-actions {
   display: flex;

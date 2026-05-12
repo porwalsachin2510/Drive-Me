@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./b2c_addvehiclemodal.css";
 import api from "../../../../utils/api";
 
@@ -16,12 +16,41 @@ function B2C_AddVehicleModal({ onClose }) {
     registrationExpiry: "",
     features: [],
     images: [],
-    status: "Active"
+    status: "Active",
+    tags: [], // Selected tag IDs for vehicle
   });
 
   const [newFeature, setNewFeature] = useState("");
   const [loading, setLoading] = useState(false);
+ const [availableTags, setAvailableTags] = useState([]);
+ const [groupedTags, setGroupedTags] = useState({});
 
+ // Fetch vehicle-related tags on mount
+ useEffect(() => {
+   fetchVehicleTags();
+ }, []);
+
+ const fetchVehicleTags = async () => {
+   try {
+     const response = await api.get("/admin/tags/by-category", {
+       params: { context: "vehicle" },
+     });
+     setAvailableTags(response.data.tags || []);
+     setGroupedTags(response.data.groupedTags || {});
+   } catch (error) {
+     console.error("Error fetching vehicle tags:", error);
+   }
+ };
+
+ const handleTagToggle = (tagId) => {
+   setFormData((prev) => ({
+     ...prev,
+     tags: prev.tags.includes(tagId)
+       ? prev.tags.filter((id) => id !== tagId)
+       : [...prev.tags, tagId],
+   }));
+  };
+  
   const vehicleTypes = [
     "Sedan",
     "SUV",
@@ -105,36 +134,39 @@ function B2C_AddVehicleModal({ onClose }) {
     try {
       // Create FormData for file upload
       const submitFormData = new FormData();
-      
+
       // Add basic vehicle data
-      submitFormData.append('vehicleType', formData.vehicleType);
-      submitFormData.append('model', formData.model);
-      submitFormData.append('year', formData.year);
-      submitFormData.append('seatingCapacity', formData.seatingCapacity);
-      submitFormData.append('licensePlate', formData.licensePlate);
-      submitFormData.append('vehicleColor', formData.vehicleColor);
-      submitFormData.append('insuranceExpiry', formData.insuranceExpiry);
-      submitFormData.append('registrationExpiry', formData.registrationExpiry);
-      submitFormData.append('status', formData.status || "Active");
-      
+      submitFormData.append("vehicleType", formData.vehicleType);
+      submitFormData.append("model", formData.model);
+      submitFormData.append("year", formData.year);
+      submitFormData.append("seatingCapacity", formData.seatingCapacity);
+      submitFormData.append("licensePlate", formData.licensePlate);
+      submitFormData.append("vehicleColor", formData.vehicleColor);
+      submitFormData.append("insuranceExpiry", formData.insuranceExpiry);
+      submitFormData.append("registrationExpiry", formData.registrationExpiry);
+      submitFormData.append("status", formData.status || "Active");
+
       // Add features as JSON string
-      submitFormData.append('features', JSON.stringify(formData.features));
-      
+      submitFormData.append("features", JSON.stringify(formData.features));
+
+      // Add tags as JSON string
+      submitFormData.append("tags", JSON.stringify(formData.tags));
+
       // Add images
       formData.images.forEach((image, index) => {
         if (image.file) {
-          submitFormData.append('images', image.file);
+          submitFormData.append("images", image.file);
         }
       });
-      
+
       console.log("Submitting vehicle data with FormData:", submitFormData);
-      
-      const response = await api.post('/b2c-partner/vehicles', submitFormData, {
+
+      const response = await api.post("/b2c-partner/vehicles", submitFormData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
-      
+
       if (response.data.success) {
         console.log("Vehicle created successfully:", response.data.vehicle);
         alert("Vehicle added successfully!");
@@ -182,7 +214,7 @@ function B2C_AddVehicleModal({ onClose }) {
         <form onSubmit={handleSubmit} className="b2c-modal-form">
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Basic Information</h3>
-            
+
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="vehicleType" className="b2c-form-label">
@@ -296,7 +328,7 @@ function B2C_AddVehicleModal({ onClose }) {
 
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Documents & Expiry</h3>
-            
+
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="insuranceExpiry" className="b2c-form-label">
@@ -330,7 +362,7 @@ function B2C_AddVehicleModal({ onClose }) {
 
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Vehicle Status</h3>
-            
+
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="status" className="b2c-form-label">
@@ -353,7 +385,7 @@ function B2C_AddVehicleModal({ onClose }) {
 
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Features</h3>
-            
+
             <div className="b2c-features-grid">
               {commonFeatures.map((feature) => (
                 <label key={feature} className="b2c-feature-checkbox">
@@ -374,7 +406,10 @@ function B2C_AddVehicleModal({ onClose }) {
                 placeholder="Add custom feature"
                 value={newFeature}
                 onChange={(e) => setNewFeature(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddCustomFeature())}
+                onKeyPress={(e) =>
+                  e.key === "Enter" &&
+                  (e.preventDefault(), handleAddCustomFeature())
+                }
                 className="b2c-form-input"
               />
               <button
@@ -407,9 +442,53 @@ function B2C_AddVehicleModal({ onClose }) {
             )}
           </div>
 
+          {/* Vehicle Tags Section */}
+          {availableTags.length > 0 && (
+            <div className="b2c-form-section">
+              <h3 className="b2c-section-title">Vehicle Tags</h3>
+              <p className="b2c-section-description">
+                Select tags to categorize your vehicle and help with search
+                visibility
+              </p>
+
+              {Object.entries(groupedTags).map(([category, tags]) => (
+                <div key={category} className="b2c-tag-category-group">
+                  <span className="b2c-tag-category-label">
+                    {category.charAt(0).toUpperCase() + category.slice(1)} Tags:
+                  </span>
+                  <div className="b2c-tags-selector">
+                    {tags.map((tag) => (
+                      <button
+                        key={tag._id}
+                        type="button"
+                        className={`b2c-tag-btn ${formData.tags.includes(tag._id) ? "selected" : ""}`}
+                        onClick={() => handleTagToggle(tag._id)}
+                        style={{
+                          backgroundColor: formData.tags.includes(tag._id)
+                            ? tag.color
+                            : "#f3f4f6",
+                          color: formData.tags.includes(tag._id)
+                            ? tag.textColor
+                            : "#374151",
+                          borderColor: tag.color,
+                        }}
+                        title={tag.description || tag.label}
+                      >
+                        {tag.icon && (
+                          <span className="b2c-tag-icon">{tag.icon}</span>
+                        )}
+                        {tag.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Vehicle Images</h3>
-            
+
             <div className="b2c-image-upload">
               {formData.images.length === 0 ? (
                 <label className="b2c-image-upload-box">
@@ -469,10 +548,18 @@ function B2C_AddVehicleModal({ onClose }) {
           </div>
 
           <div className="b2c-modal-actions">
-            <button type="button" className="b2c-btn b2c-btn-cancel" onClick={onClose}>
+            <button
+              type="button"
+              className="b2c-btn b2c-btn-cancel"
+              onClick={onClose}
+            >
               Cancel
             </button>
-            <button type="submit" className="b2c-btn b2c-btn-submit" disabled={loading}>
+            <button
+              type="submit"
+              className="b2c-btn b2c-btn-submit"
+              disabled={loading}
+            >
               {loading ? "Adding Vehicle..." : "Add Vehicle"}
             </button>
           </div>

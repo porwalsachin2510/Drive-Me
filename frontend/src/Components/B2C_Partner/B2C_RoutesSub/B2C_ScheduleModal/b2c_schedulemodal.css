@@ -1,7 +1,26 @@
 .b2c-schedule-modal {
-  max-width: 800px;
+  max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+.b2c-modal-loading {
+  padding: 60px 40px;
+  text-align: center;
+}
+
+.b2c-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #4299e1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .b2c-section-description {
@@ -19,10 +38,10 @@
 }
 
 .b2c-trip-time-item {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-  background: #f9fafb;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  background: #f8fafc;
   position: relative;
 }
 
@@ -30,131 +49,300 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .b2c-trip-time-number {
-  font-weight: 600;
-  color: #374151;
-  font-size: 14px;
+  font-weight: 700;
+  color: #4299e1;
+  font-size: 0.85rem;
+  background: #ebf8ff;
+  padding: 4px 12px;
+  border-radius: 6px;
 }
 
 .b2c-remove-trip-btn {
-  background: #ef4444;
-  color: white;
+  background: #fed7d7;
+  color: #c53030;
   border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.2s;
+  font-size: 1.1rem;
+  font-weight: 700;
+  transition: all 0.2s;
 }
 
 .b2c-remove-trip-btn:hover {
-  background: #dc2626;
+  background: #fc8181;
+  color: white;
 }
 
 .b2c-add-trip-btn {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 10px 16px;
+  padding: 12px 20px;
+  border: 2px dashed #cbd5e0;
+  border-radius: 10px;
+  background: transparent;
+  color: #4a5568;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  align-self: flex-start;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: center;
 }
 
 .b2c-add-trip-btn:hover {
-  background: #2563eb;
+  border-color: #4299e1;
+  color: #4299e1;
+  background: #ebf8ff;
+}
+
+/* Stop Points Section */
+.b2c-trip-stop-points {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.b2c-journey-stop-points {
+  margin-bottom: 16px;
+}
+
+.b2c-stop-points-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.b2c-stop-points-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4a5568;
+  margin: 0;
+}
+
+.b2c-add-stop-btn {
+  padding: 6px 12px;
+  border: 1px solid #4299e1;
+  border-radius: 6px;
+  background: transparent;
+  color: #4299e1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.b2c-add-stop-btn:hover {
+  background: #ebf8ff;
+}
+
+.b2c-no-stops {
+  font-size: 0.8rem;
+  color: #a0aec0;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.b2c-stops-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.b2c-stop-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.b2c-stop-number {
+  width: 24px;
+  height: 24px;
+  background: #4299e1;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.b2c-stop-details {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.b2c-stop-location-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.b2c-stop-time-input {
+  width: 110px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.b2c-stop-location-input:focus,
+.b2c-stop-time-input:focus {
+  outline: none;
+  border-color: #4299e1;
+}
+
+.b2c-remove-stop-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: #fed7d7;
+  color: #c53030;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.b2c-remove-stop-btn:hover {
+  background: #fc8181;
+  color: white;
 }
 
 /* Schedule Preview */
 .b2c-schedule-preview {
-  background: #f0f9ff;
-  border: 1px solid #0ea5e9;
-  border-radius: 8px;
-  padding: 16px;
+  background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+  border: 2px solid #9ae6b4;
+  border-radius: 12px;
+  padding: 18px;
   margin-top: 16px;
 }
 
 .b2c-preview-title {
-  color: #0c4a6e;
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #276749;
+  margin: 0 0 14px 0;
 }
 
 .b2c-preview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  margin-bottom: 16px;
 }
 
 .b2c-preview-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 2px;
   padding: 8px 12px;
   background: white;
-  border-radius: 4px;
-  border: 1px solid #e0f2fe;
+  border-radius: 6px;
+  border: 1px solid #c6f6d5;
 }
 
 .b2c-preview-label {
-  font-weight: 500;
-  color: #64748b;
-  font-size: 13px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #38a169;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .b2c-preview-value {
+  font-size: 0.88rem;
   font-weight: 600;
-  color: #0c4a6e;
-  font-size: 13px;
+  color: #276749;
 }
 
 .b2c-preview-subtitle {
-  color: #0c4a6e;
-  font-size: 14px;
+  font-size: 0.85rem;
   font-weight: 600;
-  margin-bottom: 8px;
+  color: #38a169;
+  margin: 0 0 10px 0;
 }
 
 .b2c-trip-times-preview {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed #9ae6b4;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .b2c-trip-preview {
+  background: white;
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid #c6f6d5;
+}
+
+.b2c-trip-preview-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
-  background: white;
-  border-radius: 4px;
-  border: 1px solid #e0f2fe;
 }
 
 .b2c-trip-time {
-  font-weight: 500;
-  color: #374151;
-  font-size: 13px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #276749;
 }
 
 .b2c-trip-type {
-  background: #3b82f6;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: white;
-  padding: 2px 6px;
+  background: #48bb78;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.b2c-trip-stops-preview {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #c6f6d5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.b2c-stops-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #38a169;
+}
+
+.b2c-stop-preview {
+  font-size: 0.75rem;
+  color: #276749;
+  background: #f0fff4;
+  padding: 3px 8px;
   border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
 }
 
 /* Days Selector */
@@ -165,33 +353,35 @@
 }
 
 .b2c-day-btn {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
+  padding: 8px 14px;
+  border: 2px solid #e2e8f0;
   background: white;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #718096;
   transition: all 0.2s;
 }
 
-.b2c-day-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
+.b2c-day-btn:hover:not(.selected) {
+  border-color: #a0aec0;
+  background: #f7fafc;
 }
 
 .b2c-day-btn.selected {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: #4299e1;
+  border-color: #4299e1;
   color: white;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .b2c-schedule-modal {
-    max-width: 95vw;
-    margin: 20px;
+    max-width: 100%;
+    max-height: 95vh;
+    margin: 10px;
+    border-radius: 12px;
   }
   
   .b2c-preview-grid {
@@ -207,5 +397,14 @@
   .b2c-form-row {
     flex-direction: column;
     gap: 12px;
+  }
+
+  .b2c-stop-details {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .b2c-stop-time-input {
+    width: 100%;
   }
 }

@@ -347,6 +347,58 @@
   background: #14B8A6;
 }
 
+/* Tags Selector Styles */
+.b2c-section-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 16px 0;
+}
+
+.b2c-tag-category-group {
+  margin-bottom: 16px;
+}
+
+.b2c-tag-category-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  text-transform: capitalize;
+}
+
+.b2c-tags-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.b2c-tag-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.b2c-tag-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.b2c-tag-btn.selected {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.b2c-tag-icon {
+  font-size: 14px;
+}
+
 @media (max-width: 640px) {
   .b2c-form-row {
     grid-template-columns: 1fr;
@@ -354,5 +406,9 @@
   
   .b2c-features-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .b2c-tags-selector {
+    justify-content: center;
   }
 }

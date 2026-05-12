@@ -74,8 +74,8 @@ function B2CPartnerOverview() {
 
   if (loading) {
     return (
-      <div className="b2c-overview-loading">
-        <div className="loading-spinner" />
+      <div className="drivemego-b2c-overview-loading">
+        <div className="drivemego-loading-spinner" />
         <p>Loading dashboard...</p>
       </div>
     );

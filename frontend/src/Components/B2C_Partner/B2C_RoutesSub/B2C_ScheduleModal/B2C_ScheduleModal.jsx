@@ -5,14 +5,26 @@ import "./b2c_schedulemodal.css";
 import api from "../../../../utils/api";
 
 function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
+  const [existingSchedule, setExistingSchedule] = useState(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
+
   const [formData, setFormData] = useState({
     routeId: route?._id || "",
     scheduleName: "",
-    tripTimes: [{ departureTime: "", arrivalTime: "", tripType: "One Way" }],
+    tripTimes: [
+      {
+        departureTime: "",
+        arrivalTime: "",
+        tripType: "One Way",
+        outboundStopPoints: [],
+        returnStopPoints: [],
+      },
+    ],
     availableDays: ["MON", "TUE", "WED", "THU", "FRI"],
     assignedVehicle: route?.assignedVehicle?._id || "",
-    assignedDriver: route?.assignedDriver?._id || "",
-    startDate: new Date().toISOString().split('T')[0],
+    assignedDriver: route?.assignedDriver?._id || route?.driverInfo?._id || "",
+    startDate: new Date().toISOString().split("T")[0],
     endDate: "",
     notes: "",
   });
@@ -24,6 +36,106 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
   const daysOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const tripTypes = ["One Way", "Round Trip"];
 
+  // Helper to convert time to 24h format for inputs
+  const convertTo24HourFormat = (timeString) => {
+    if (!timeString) return "";
+
+    // If already in HH:MM format
+    if (/^\d{2}:\d{2}$/.test(timeString)) {
+      return timeString;
+    }
+
+    // Handle AM/PM format
+    const match = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (match) {
+      let [, hours, minutes, period] = match;
+      hours = parseInt(hours);
+
+      if (period) {
+        if (period.toUpperCase() === "PM" && hours !== 12) {
+          hours += 12;
+        } else if (period.toUpperCase() === "AM" && hours === 12) {
+          hours = 0;
+        }
+      }
+
+      return `${hours.toString().padStart(2, "0")}:${minutes}`;
+    }
+
+    return timeString;
+  };
+
+  // Fetch existing schedule for this route
+  useEffect(() => {
+    fetchExistingSchedule();
+  }, [route._id]);
+
+  const fetchExistingSchedule = async () => {
+    try {
+      setLoadingSchedule(true);
+      const response = await api.get(
+        `/b2c-schedules/schedules?routeId=${route._id}`,
+      );
+
+      if (response.data.success && response.data.schedules.length > 0) {
+        const schedule = response.data.schedules[0];
+        setExistingSchedule(schedule);
+        setIsEditMode(true);
+
+        // Parse trip times from existing schedule
+        const parsedTripTimes = schedule.tripTimes?.map((trip) => ({
+          departureTime: convertTo24HourFormat(trip.departureTime),
+          arrivalTime: convertTo24HourFormat(trip.arrivalTime) || "",
+          tripType: trip.tripType || "One Way",
+          outboundStopPoints: (trip.outboundStopPoints || []).map((stop) => ({
+            location: stop.location,
+            time: convertTo24HourFormat(stop.time),
+          })),
+          returnStopPoints: (trip.returnStopPoints || []).map((stop) => ({
+            location: stop.location,
+            time: convertTo24HourFormat(stop.time),
+          })),
+        })) || [
+          {
+            departureTime: "",
+            arrivalTime: "",
+            tripType: "One Way",
+            outboundStopPoints: [],
+            returnStopPoints: [],
+          },
+        ];
+
+        setFormData({
+          routeId: route._id,
+          scheduleName: schedule.scheduleName || "",
+          tripTimes: parsedTripTimes,
+          availableDays: schedule.availableDays || [
+            "MON",
+            "TUE",
+            "WED",
+            "THU",
+            "FRI",
+          ],
+          assignedVehicle:
+            schedule.assignedVehicle?._id || schedule.assignedVehicle || "",
+          assignedDriver:
+            schedule.assignedDriver?._id || schedule.assignedDriver || "",
+          startDate: schedule.startDate
+            ? new Date(schedule.startDate).toISOString().split("T")[0]
+            : new Date().toISOString().split("T")[0],
+          endDate: schedule.endDate
+            ? new Date(schedule.endDate).toISOString().split("T")[0]
+            : "",
+          notes: schedule.notes || "",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching existing schedule:", error);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  };
+
   // Fetch real vehicles and drivers from API
   useEffect(() => {
     fetchAssets();
@@ -32,11 +144,11 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
   const fetchAssets = async () => {
     try {
       setLoadingAssets(true);
-      
+
       // Fetch vehicles and drivers from B2C partner fleet
       const [vehiclesResponse, driversResponse] = await Promise.all([
-        api.get('/b2c-partner/fleet'),
-        api.get('/b2c-partner/drivers')
+        api.get("/b2c-partner/fleet"),
+        api.get("/b2c-partner/drivers"),
       ]);
 
       setAvailableVehicles(vehiclesResponse.data.fleet?.vehicles || []);
@@ -70,7 +182,16 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
   const addTripTime = () => {
     setFormData((prev) => ({
       ...prev,
-      tripTimes: [...prev.tripTimes, { departureTime: "", arrivalTime: "", tripType: "One Way" }],
+      tripTimes: [
+        ...prev.tripTimes,
+        {
+          departureTime: "",
+          arrivalTime: "",
+          tripType: "One Way",
+          outboundStopPoints: [],
+          returnStopPoints: [],
+        },
+      ],
     }));
   };
 
@@ -89,13 +210,71 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
     }));
   };
 
+  // Stop point management
+  const addStopPointToTrip = (tripIndex, journeyType) => {
+    setFormData((prev) => {
+      const updatedTripTimes = [...prev.tripTimes];
+      const stopArray =
+        journeyType === "outbound" ? "outboundStopPoints" : "returnStopPoints";
+      updatedTripTimes[tripIndex] = {
+        ...updatedTripTimes[tripIndex],
+        [stopArray]: [
+          ...updatedTripTimes[tripIndex][stopArray],
+          { location: "", time: "" },
+        ],
+      };
+      return { ...prev, tripTimes: updatedTripTimes };
+    });
+  };
+
+  const updateTripStopPoint = (
+    tripIndex,
+    stopIndex,
+    field,
+    value,
+    journeyType,
+  ) => {
+    setFormData((prev) => {
+      const updatedTripTimes = [...prev.tripTimes];
+      const stopArray =
+        journeyType === "outbound" ? "outboundStopPoints" : "returnStopPoints";
+      const updatedStopPoints = [...updatedTripTimes[tripIndex][stopArray]];
+      updatedStopPoints[stopIndex] = {
+        ...updatedStopPoints[stopIndex],
+        [field]: value,
+      };
+      updatedTripTimes[tripIndex] = {
+        ...updatedTripTimes[tripIndex],
+        [stopArray]: updatedStopPoints,
+      };
+      return { ...prev, tripTimes: updatedTripTimes };
+    });
+  };
+
+  const removeStopPointFromTrip = (tripIndex, stopIndex, journeyType) => {
+    setFormData((prev) => {
+      const updatedTripTimes = [...prev.tripTimes];
+      const stopArray =
+        journeyType === "outbound" ? "outboundStopPoints" : "returnStopPoints";
+      updatedTripTimes[tripIndex] = {
+        ...updatedTripTimes[tripIndex],
+        [stopArray]: updatedTripTimes[tripIndex][stopArray].filter(
+          (_, i) => i !== stopIndex,
+        ),
+      };
+      return { ...prev, tripTimes: updatedTripTimes };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       // Validate at least one trip time is filled
-      const validTripTimes = formData.tripTimes.filter(trip => trip.departureTime);
+      const validTripTimes = formData.tripTimes.filter(
+        (trip) => trip.departureTime,
+      );
       if (validTripTimes.length === 0) {
         alert("Please add at least one departure time");
         setLoading(false);
@@ -106,31 +285,80 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
         ...formData,
         tripTimes: validTripTimes,
       };
-      
-      const response = await api.post('/b2c-schedules/schedules', scheduleData);
-      
+
+      let response;
+      if (isEditMode && existingSchedule) {
+        // Update existing schedule
+        response = await api.put(
+          `/b2c-schedules/schedules/${existingSchedule._id}`,
+          scheduleData,
+        );
+      } else {
+        // Create new schedule
+        response = await api.post("/b2c-schedules/schedules", scheduleData);
+      }
+
       if (response.data.success) {
-        alert("Schedule created successfully! Trips will be generated automatically.");
+        alert(
+          isEditMode
+            ? "Schedule updated successfully!"
+            : "Schedule created successfully! Trips will be generated automatically.",
+        );
         onScheduleCreated && onScheduleCreated();
         onClose();
       }
     } catch (error) {
-      console.error("Error creating schedule:", error);
-      alert("Failed to create schedule. Please try again.");
+      console.error("Error saving schedule:", error);
+      alert(
+        error.response?.data?.message ||
+          "Failed to save schedule. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  if (loadingAssets || loadingSchedule) {
+    return (
+      <div className="b2c-modal-overlay" onClick={onClose}>
+        <div
+          className="b2c-modal-content b2c-schedule-modal"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="b2c-modal-loading">
+            <div className="b2c-loading-spinner"></div>
+            <p>Loading schedule data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="b2c-modal-overlay" onClick={onClose}>
-      <div className="b2c-modal-content b2c-schedule-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="b2c-modal-content b2c-schedule-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="b2c-modal-header">
-          <h2 className="b2c-modal-title">Create Schedule for {route?.fromLocation} → {route?.toLocation}</h2>
+          <h2 className="b2c-modal-title">
+            {isEditMode ? "Edit" : "Create"} Schedule for {route?.fromLocation}{" "}
+            → {route?.toLocation}
+          </h2>
           <button className="b2c-modal-close" onClick={onClose}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" />
-              <path d="M6 6L18 18" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="M18 6L6 18"
+                stroke="#6b7280"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M6 6L18 18"
+                stroke="#6b7280"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -138,7 +366,7 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
         <form onSubmit={handleSubmit} className="b2c-modal-form">
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Schedule Information</h3>
-            
+
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="scheduleName" className="b2c-form-label">
@@ -186,15 +414,15 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
                   min={formData.startDate}
                   className="b2c-form-input"
                 />
-                <small className="b2c-form-help">Leave empty for ongoing schedule</small>
+                <small className="b2c-form-help">
+                  Leave empty for ongoing schedule
+                </small>
               </div>
             </div>
 
             <div className="b2c-form-row">
               <div className="b2c-form-group">
-                <label className="b2c-form-label">
-                  Available Days *
-                </label>
+                <label className="b2c-form-label">Available Days *</label>
                 <div className="b2c-days-selector">
                   {daysOfWeek.map((day) => (
                     <button
@@ -214,16 +442,18 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
           </div>
 
           <div className="b2c-form-section">
-            <h3 className="b2c-section-title">Trip Times</h3>
+            <h3 className="b2c-section-title">Trip Times & Stops</h3>
             <p className="b2c-section-description">
-              Add multiple departure times for this route. Each time will create separate trips that passengers can book.
+              Add departure times and stop points for this route.
             </p>
-            
+
             <div className="b2c-trip-times-container">
               {formData.tripTimes.map((tripTime, index) => (
                 <div key={index} className="b2c-trip-time-item">
                   <div className="b2c-trip-time-header">
-                    <span className="b2c-trip-time-number">Trip {index + 1}</span>
+                    <span className="b2c-trip-time-number">
+                      Trip {index + 1}
+                    </span>
                     {formData.tripTimes.length > 1 && (
                       <button
                         type="button"
@@ -234,35 +464,46 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
                       </button>
                     )}
                   </div>
-                  
+
                   <div className="b2c-form-row">
                     <div className="b2c-form-group">
                       <label className="b2c-form-label">Departure Time *</label>
                       <input
                         type="time"
                         value={tripTime.departureTime}
-                        onChange={(e) => updateTripTime(index, "departureTime", e.target.value)}
+                        onChange={(e) =>
+                          updateTripTime(index, "departureTime", e.target.value)
+                        }
                         required
                         className="b2c-form-input"
                       />
                     </div>
 
-                    <div className="b2c-form-group">
-                      <label className="b2c-form-label">Arrival Time</label>
-                      <input
-                        type="time"
-                        value={tripTime.arrivalTime}
-                        onChange={(e) => updateTripTime(index, "arrivalTime", e.target.value)}
-                        className="b2c-form-input"
-                      />
-                      <small className="b2c-form-help">Optional</small>
-                    </div>
+                    {tripTime.tripType === "Round Trip" && (
+                      <div className="b2c-form-group">
+                        <label className="b2c-form-label">Return Time *</label>
+                        <input
+                          type="time"
+                          value={tripTime.arrivalTime}
+                          onChange={(e) =>
+                            updateTripTime(index, "arrivalTime", e.target.value)
+                          }
+                          required={tripTime.tripType === "Round Trip"}
+                          className="b2c-form-input"
+                        />
+                        <small className="b2c-form-help">
+                          Time when bus returns
+                        </small>
+                      </div>
+                    )}
 
                     <div className="b2c-form-group">
                       <label className="b2c-form-label">Trip Type</label>
                       <select
                         value={tripTime.tripType}
-                        onChange={(e) => updateTripTime(index, "tripType", e.target.value)}
+                        onChange={(e) =>
+                          updateTripTime(index, "tripType", e.target.value)
+                        }
                         className="b2c-form-input"
                       >
                         {tripTypes.map((type) => (
@@ -273,9 +514,172 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
                       </select>
                     </div>
                   </div>
+
+                  {/* Stop Points Section */}
+                  <div className="b2c-trip-stop-points">
+                    {/* Outbound Stop Points */}
+                    <div className="b2c-journey-stop-points">
+                      <div className="b2c-stop-points-header">
+                        <h5 className="b2c-stop-points-title">
+                          🛑 Outbound Stops: {route?.fromLocation} →{" "}
+                          {route?.toLocation}
+                        </h5>
+                        <button
+                          type="button"
+                          onClick={() => addStopPointToTrip(index, "outbound")}
+                          className="b2c-add-stop-btn"
+                        >
+                          + Add Stop
+                        </button>
+                      </div>
+
+                      {tripTime.outboundStopPoints?.length === 0 ? (
+                        <p className="b2c-no-stops">
+                          No outbound stops. Bus will go directly.
+                        </p>
+                      ) : (
+                        <div className="b2c-stops-list">
+                          {tripTime.outboundStopPoints?.map(
+                            (stop, stopIndex) => (
+                              <div key={stopIndex} className="b2c-stop-item">
+                                <div className="b2c-stop-number">
+                                  {stopIndex + 1}
+                                </div>
+                                <div className="b2c-stop-details">
+                                  <input
+                                    type="text"
+                                    placeholder="Stop location"
+                                    value={stop.location}
+                                    onChange={(e) =>
+                                      updateTripStopPoint(
+                                        index,
+                                        stopIndex,
+                                        "location",
+                                        e.target.value,
+                                        "outbound",
+                                      )
+                                    }
+                                    className="b2c-stop-location-input"
+                                  />
+                                  <input
+                                    type="time"
+                                    value={stop.time}
+                                    onChange={(e) =>
+                                      updateTripStopPoint(
+                                        index,
+                                        stopIndex,
+                                        "time",
+                                        e.target.value,
+                                        "outbound",
+                                      )
+                                    }
+                                    className="b2c-stop-time-input"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeStopPointFromTrip(
+                                      index,
+                                      stopIndex,
+                                      "outbound",
+                                    )
+                                  }
+                                  className="b2c-remove-stop-btn"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Return Stop Points (only for Round Trip) */}
+                    {tripTime.tripType === "Round Trip" && (
+                      <div className="b2c-journey-stop-points">
+                        <div className="b2c-stop-points-header">
+                          <h5 className="b2c-stop-points-title">
+                            🔄 Return Stops: {route?.toLocation} →{" "}
+                            {route?.fromLocation}
+                          </h5>
+                          <button
+                            type="button"
+                            onClick={() => addStopPointToTrip(index, "return")}
+                            className="b2c-add-stop-btn"
+                          >
+                            + Add Stop
+                          </button>
+                        </div>
+
+                        {tripTime.returnStopPoints?.length === 0 ? (
+                          <p className="b2c-no-stops">
+                            No return stops. Bus will return directly.
+                          </p>
+                        ) : (
+                          <div className="b2c-stops-list">
+                            {tripTime.returnStopPoints?.map(
+                              (stop, stopIndex) => (
+                                <div key={stopIndex} className="b2c-stop-item">
+                                  <div className="b2c-stop-number">
+                                    {stopIndex + 1}
+                                  </div>
+                                  <div className="b2c-stop-details">
+                                    <input
+                                      type="text"
+                                      placeholder="Stop location"
+                                      value={stop.location}
+                                      onChange={(e) =>
+                                        updateTripStopPoint(
+                                          index,
+                                          stopIndex,
+                                          "location",
+                                          e.target.value,
+                                          "return",
+                                        )
+                                      }
+                                      className="b2c-stop-location-input"
+                                    />
+                                    <input
+                                      type="time"
+                                      value={stop.time}
+                                      onChange={(e) =>
+                                        updateTripStopPoint(
+                                          index,
+                                          stopIndex,
+                                          "time",
+                                          e.target.value,
+                                          "return",
+                                        )
+                                      }
+                                      className="b2c-stop-time-input"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeStopPointFromTrip(
+                                        index,
+                                        stopIndex,
+                                        "return",
+                                      )
+                                    }
+                                    className="b2c-remove-stop-btn"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
-              
+
               <button
                 type="button"
                 onClick={addTripTime}
@@ -288,7 +692,7 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
 
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Vehicle & Driver Assignment</h3>
-            
+
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="assignedVehicle" className="b2c-form-label">
@@ -305,7 +709,8 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
                   <option value="">Select Vehicle</option>
                   {availableVehicles.map((vehicle) => (
                     <option key={vehicle._id} value={vehicle._id}>
-                      {vehicle.model} ({vehicle.licensePlate}) - {vehicle.seatingCapacity} seats
+                      {vehicle.model} ({vehicle.licensePlate}) -{" "}
+                      {vehicle.seatingCapacity} seats
                     </option>
                   ))}
                 </select>
@@ -336,7 +741,7 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
 
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Additional Information</h3>
-            
+
             <div className="b2c-form-row full">
               <div className="b2c-form-group">
                 <label htmlFor="notes" className="b2c-form-label">
@@ -360,45 +765,90 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
             <div className="b2c-preview-grid">
               <div className="b2c-preview-item">
                 <span className="b2c-preview-label">Route:</span>
-                <span className="b2c-preview-value">{route?.fromLocation} → {route?.toLocation}</span>
+                <span className="b2c-preview-value">
+                  {route?.fromLocation} → {route?.toLocation}
+                </span>
               </div>
               <div className="b2c-preview-item">
                 <span className="b2c-preview-label">Days:</span>
-                <span className="b2c-preview-value">{formData.availableDays.join(", ")}</span>
+                <span className="b2c-preview-value">
+                  {formData.availableDays.join(", ")}
+                </span>
               </div>
               <div className="b2c-preview-item">
                 <span className="b2c-preview-label">Trips per Day:</span>
-                <span className="b2c-preview-value">{formData.tripTimes.filter(t => t.departureTime).length}</span>
+                <span className="b2c-preview-value">
+                  {formData.tripTimes.filter((t) => t.departureTime).length}
+                </span>
               </div>
               <div className="b2c-preview-item">
                 <span className="b2c-preview-label">Total Weekly Trips:</span>
                 <span className="b2c-preview-value">
-                  {formData.tripTimes.filter(t => t.departureTime).length * formData.availableDays.length}
+                  {formData.tripTimes.filter((t) => t.departureTime).length *
+                    formData.availableDays.length}
                 </span>
               </div>
             </div>
-            
-            {formData.tripTimes.filter(t => t.departureTime).length > 0 && (
+
+            {formData.tripTimes.filter((t) => t.departureTime).length > 0 && (
               <div className="b2c-trip-times-preview">
                 <h5 className="b2c-preview-subtitle">🕐 Daily Trip Times:</h5>
-                {formData.tripTimes.filter(t => t.departureTime).map((trip, index) => (
-                  <div key={index} className="b2c-trip-preview">
-                    <span className="b2c-trip-time">
-                      {trip.departureTime} {trip.arrivalTime && `- ${trip.arrivalTime}`}
-                    </span>
-                    <span className="b2c-trip-type">{trip.tripType}</span>
-                  </div>
-                ))}
+                {formData.tripTimes
+                  .filter((t) => t.departureTime)
+                  .map((trip, index) => (
+                    <div key={index} className="b2c-trip-preview">
+                      <div className="b2c-trip-preview-header">
+                        <span className="b2c-trip-time">
+                          {trip.departureTime}{" "}
+                          {trip.arrivalTime && `- ${trip.arrivalTime}`}
+                        </span>
+                        <span className="b2c-trip-type">{trip.tripType}</span>
+                      </div>
+                      {trip.outboundStopPoints?.length > 0 && (
+                        <div className="b2c-trip-stops-preview">
+                          <span className="b2c-stops-label">Outbound:</span>
+                          {trip.outboundStopPoints.map((stop, i) => (
+                            <span key={i} className="b2c-stop-preview">
+                              {stop.location} ({stop.time})
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {trip.tripType === "Round Trip" &&
+                        trip.returnStopPoints?.length > 0 && (
+                          <div className="b2c-trip-stops-preview">
+                            <span className="b2c-stops-label">Return:</span>
+                            {trip.returnStopPoints.map((stop, i) => (
+                              <span key={i} className="b2c-stop-preview">
+                                {stop.location} ({stop.time})
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                    </div>
+                  ))}
               </div>
             )}
           </div>
 
           <div className="b2c-modal-actions">
-            <button type="button" className="b2c-btn b2c-btn-cancel" onClick={onClose}>
+            <button
+              type="button"
+              className="b2c-btn b2c-btn-cancel"
+              onClick={onClose}
+            >
               Cancel
             </button>
-            <button type="submit" className="b2c-btn b2c-btn-submit" disabled={loading}>
-              {loading ? "Creating Schedule..." : "Create Schedule"}
+            <button
+              type="submit"
+              className="b2c-btn b2c-btn-submit"
+              disabled={loading}
+            >
+              {loading
+                ? "Saving..."
+                : isEditMode
+                  ? "Update Schedule"
+                  : "Create Schedule"}
             </button>
           </div>
         </form>

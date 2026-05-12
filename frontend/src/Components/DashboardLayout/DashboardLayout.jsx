@@ -23,12 +23,13 @@ const menuConfigs = {
       label: "Subscriptions",
       icon: "subscription",
     },
+    { id: "route-requests", label: "Route Requests", icon: "requests" },
     { id: "settings", label: "Settings", icon: "settings" },
   ],
   B2C_PARTNER: [
     { id: "overview", label: "Overview", icon: "overview" },
     { id: "trips", label: "My Trips", icon: "trips" },
-    { id: "daily-trips", label: "Daily Trips", icon: "calendar" },
+    // { id: "daily-trips", label: "Daily Trips", icon: "calendar" },
     { id: "earnings", label: "Earnings", icon: "earnings" },
     { id: "vehicles", label: "Fleet & Drivers", icon: "vehicles" },
     { id: "routes", label: "Routes", icon: "routes" },
@@ -85,33 +86,85 @@ const menuConfigs = {
     { id: "location", label: "Live Location", icon: "location" },
   ],
   ADMIN: [
-    { id: "overview", label: "Overview", icon: "overview" },
-    { id: "b2c", label: "B2C Management", icon: "b2c" },
-    { id: "ride-pooling", label: "Ride Pooling", icon: "ridepooling" },
-    { id: "b2b", label: "B2B Listings", icon: "b2b" },
-    { id: "users", label: "Users", icon: "users" },
-    { id: "wallets", label: "Wallets", icon: "wallet" },
-    { id: "vehicle-approval", label: "Vehicle Approval", icon: "vehicles" },
-    { id: "commission-settings", label: "Commission", icon: "commission" },
-    { id: "negotiations", label: "Negotiations", icon: "negotiation" },
-    { id: "settlement", label: "Settlement", icon: "settlement" },
-    { id: "dropdowns", label: "Dropdowns", icon: "dropdowns" },
-    { id: "reports", label: "Reports", icon: "reports" },
-    { id: "finance", label: "Finance", icon: "finance" },
-    { id: "comm", label: "Communication", icon: "comm" },
-    { id: "ads", label: "Ads", icon: "ads" },
+    {
+      id: "overview",
+      label: "Overview",
+      icon: "overview",
+      moduleKey: "overview",
+    },
+    {
+      id: "b2c",
+      label: "B2C Management",
+      icon: "b2c",
+      moduleKey: "b2cManagement",
+    },
+    {
+      id: "ride-pooling",
+      label: "Ride Pooling",
+      icon: "ridepooling",
+      moduleKey: "ridePooling",
+    },
+    { id: "b2b", label: "B2B Listings", icon: "b2b", moduleKey: "b2bListings" },
+    { id: "users", label: "Users", icon: "users", moduleKey: "users" },
+    { id: "wallets", label: "Wallets", icon: "wallet", moduleKey: "wallets" },
+    {
+      id: "vehicle-approval",
+      label: "Vehicle Approval",
+      icon: "vehicles",
+      moduleKey: "vehicleApproval",
+    },
+    {
+      id: "commission-settings",
+      label: "Commission",
+      icon: "commission",
+      moduleKey: "commission",
+    },
+    {
+      id: "negotiations",
+      label: "Negotiations",
+      icon: "negotiation",
+      moduleKey: "negotiations",
+    },
+    {
+      id: "settlement",
+      label: "Settlement",
+      icon: "settlement",
+      moduleKey: "settlement",
+    },
+    {
+      id: "dropdowns",
+      label: "Dropdowns",
+      icon: "dropdowns",
+      moduleKey: "dropdowns",
+    },
+    { id: "reports", label: "Reports", icon: "reports", moduleKey: "reports" },
+    { id: "finance", label: "Finance", icon: "finance", moduleKey: "finance" },
+    {
+      id: "comm",
+      label: "Communication",
+      icon: "comm",
+      moduleKey: "communication",
+    },
+    { id: "ads", label: "Ads", icon: "ads", moduleKey: "ads" },
     {
       id: "Payment Verification",
       label: "Payment Verification",
       icon: "payment",
+      moduleKey: "paymentVerification",
     },
-    { id: "content", label: "Content", icon: "content" },
+    { id: "content", label: "Content", icon: "content", moduleKey: "content" },
     {
       id: "admin-management",
       label: "Admin Management",
       icon: "adminManagement",
+      moduleKey: "adminManagement",
     },
-    { id: "terms-management", label: "Terms & Conditions", icon: "terms" },
+    {
+      id: "terms-management",
+      label: "Terms & Conditions",
+      icon: "terms",
+      moduleKey: "termsAndConditions",
+    },
   ],
 };
 
@@ -745,8 +798,28 @@ export default function DashboardLayout({
   const [isUpdatingLayout, setIsUpdatingLayout] = useState(false);
   const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
 
-  // Get menu items based on user role
-  const menuItems = menuConfigs[user?.role] || [];
+  // Get menu items based on user role and filter by admin permissions if applicable
+  const getFilteredMenuItems = () => {
+    const baseMenuItems = menuConfigs[user?.role] || [];
+
+    // If not an admin or is a super admin, return all menu items
+    if (user?.role !== "ADMIN" || user?.adminPermissions?.isSuperAdmin) {
+      return baseMenuItems;
+    }
+
+    // Filter menu items based on admin module permissions
+    const adminModules = user?.adminPermissions?.modules || {};
+    return baseMenuItems.filter((item) => {
+      // If the item has a moduleKey, check if the user has permission
+      if (item.moduleKey) {
+        return adminModules[item.moduleKey] === true;
+      }
+      // If no moduleKey, allow the item (shouldn't happen with proper config)
+      return true;
+    });
+  };
+
+  const menuItems = getFilteredMenuItems();
 
   // Update local state when user preferences change
   useEffect(() => {

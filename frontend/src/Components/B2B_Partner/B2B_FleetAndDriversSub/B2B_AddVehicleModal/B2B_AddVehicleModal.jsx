@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { addVehicle, clearError } from "../../../../Redux/slices/vehicleSlice";
-import LoadingSpinner from "../../../LoadingSpinner/LoadingSpinner";
 import {
   useDropdownOptions,
   DROPDOWN_CATEGORIES,
@@ -60,6 +59,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       dailyRate: 0,
       weeklyRate: 0,
       monthlyRate: 0,
+      yearlyRate: 0,
       perKmCharge: 0,
       driverCharges: 0,
       fuelCharges: 0,
@@ -72,6 +72,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       dailyLimit: 100,
       weeklyLimit: 700,
       monthlyLimit: 2000,
+      yearlyLimit: 24000,
     },
     availability: {
       availableDays: [
@@ -95,8 +96,6 @@ const B2B_AddVehicleModal = ({ onClose }) => {
     status: "AVAILABLE",
   });
 
-  console.log("FormData", formData);
-
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [documents, setDocuments] = useState({
@@ -105,6 +104,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
     inspection: null,
   });
   const [validationErrors, setValidationErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dynamic dropdown options from backend
   const locations = dropdownOptions[
@@ -159,13 +159,29 @@ const B2B_AddVehicleModal = ({ onClose }) => {
     };
   }, [dispatch]);
 
+  // Default vehicle category for each service type
+  const defaultCategoryByServiceType = {
+    PASSENGER: "SEDAN",
+    GOODS_CARRIER: "PICKUP_1TON",
+    MANAGED_SERVICES: "SHUTTLE_BUS",
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
-  };
+    // When service type changes, reset the vehicle category to appropriate default
+    if (name === "serviceType") {
+      setFormData({
+        ...formData,
+        [name]: value,
+        vehicleCategory: defaultCategoryByServiceType[value] || "SEDAN",
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: type === "checkbox" ? checked : value,
+      });
+    }
+  };;
 
   const handleNestedChange = (parent, field, value) => {
     setFormData({
@@ -250,14 +266,18 @@ const B2B_AddVehicleModal = ({ onClose }) => {
     }
 
     // Capacity Validations
-    if (formData.serviceType === "PASSENGER") {
+    // Both PASSENGER and MANAGED_SERVICES need seating capacity (buses, shuttles carry passengers)
+    if (
+      formData.serviceType === "PASSENGER" ||
+      formData.serviceType === "MANAGED_SERVICES"
+    ) {
       if (
         !formData.capacity.seatingCapacity ||
         formData.capacity.seatingCapacity < 2
       ) {
         errors.seatingCapacity = "Seating capacity must be at least 2";
-      } else if (formData.capacity.seatingCapacity > 60) {
-        errors.seatingCapacity = "Seating capacity cannot exceed 60";
+      } else if (formData.capacity.seatingCapacity > 100) {
+        errors.seatingCapacity = "Seating capacity cannot exceed 100";
       }
     }
 
@@ -296,7 +316,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  };
+  };;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -313,58 +333,63 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       return;
     }
 
-    console.log("Preparing form submission...");
-    const submitData = new FormData();
+   // Set submitting state to show loading on button
+    setIsSubmitting(true);
 
-    submitData.append("vehicleName", formData.vehicleName);
-    submitData.append("registrationNumber", formData.registrationNumber);
-    submitData.append("manufacturingYear", formData.manufacturingYear);
-    submitData.append("vehicleCategory", formData.vehicleCategory);
-    submitData.append("serviceType", formData.serviceType);
-    submitData.append("status", formData.status);
-    submitData.append("location", formData.location);
-    submitData.append("capacity", JSON.stringify(formData.capacity));
-    submitData.append(
-      "driverAvailability",
-      JSON.stringify(formData.driverAvailability),
-    );
-    submitData.append("fuelOptions", JSON.stringify(formData.fuelOptions));
-    submitData.append("facilities", JSON.stringify(formData.facilities));
-    submitData.append("pricing", JSON.stringify(formData.pricing));
-    submitData.append("kmLimits", JSON.stringify(formData.kmLimits));
-    submitData.append("availability", JSON.stringify(formData.availability));
+    try {
+      const submitData = new FormData();
 
-    console.log(`Appending ${images.length} images...`);
-    images.forEach((image, index) => {
-      console.log(`Image ${index + 1}:`, image.name, image.type, image.size);
-      submitData.append("images", image);
-    });
+      submitData.append("vehicleName", formData.vehicleName);
+      submitData.append("registrationNumber", formData.registrationNumber);
+      submitData.append("manufacturingYear", formData.manufacturingYear);
+      submitData.append("vehicleCategory", formData.vehicleCategory);
+      submitData.append("serviceType", formData.serviceType);
+      submitData.append("status", formData.status);
+      submitData.append("location", formData.location);
+      submitData.append("capacity", JSON.stringify(formData.capacity));
+      submitData.append(
+        "driverAvailability",
+        JSON.stringify(formData.driverAvailability),
+      );
+      submitData.append("fuelOptions", JSON.stringify(formData.fuelOptions));
+      submitData.append("facilities", JSON.stringify(formData.facilities));
+      submitData.append("pricing", JSON.stringify(formData.pricing));
+      submitData.append("kmLimits", JSON.stringify(formData.kmLimits));
+      submitData.append("availability", JSON.stringify(formData.availability));
 
-    if (documents.registration) {
-      submitData.append("registration", documents.registration);
-    }
-    if (documents.insurance) {
-      submitData.append("insurance", documents.insurance);
-    }
-    if (documents.inspection) {
-      submitData.append("inspection", documents.inspection);
-    }
+      images.forEach((image) => {
+        submitData.append("images", image);
+      });
 
-    console.log("FormData prepared, dispatching...");
+      if (documents.registration) {
+        submitData.append("registration", documents.registration);
+      }
+      if (documents.insurance) {
+        submitData.append("insurance", documents.insurance);
+      }
+      if (documents.inspection) {
+        submitData.append("inspection", documents.inspection);
+      }
 
-    console.log("submitData", submitData);
+      const result = await dispatch(addVehicle(submitData));
 
-    const result = await dispatch(addVehicle(submitData));
-
-    if (addVehicle.fulfilled.match(result)) {
-      console.log("Vehicle added successfully!");
-      alert("Vehicle added successfully!");
-      // Close modal instead of navigating away - stay on current tab
-      onClose();
+      if (addVehicle.fulfilled.match(result)) {
+        // Show success alert
+        alert("Vehicle added successfully! Your vehicle is pending approval.");
+        // Close modal after success
+        onClose();
+      } else {
+        // Show error if submission failed
+        alert(result.payload || "Failed to add vehicle. Please try again.");
+      }
+    // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      alert("An error occurred while adding the vehicle. Please try again.");
+    } finally {
+      // Reset submitting state
+      setIsSubmitting(false);
     }
   };
-
-  if (loading) return <LoadingSpinner />;
 
   const handleCancel = () => {
     onClose();
@@ -568,7 +593,9 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   )}
                 </div>
 
-                {formData.serviceType === "PASSENGER" && (
+                {/* Show Seating Capacity for PASSENGER and MANAGED_SERVICES (buses, shuttles need seats) */}
+                {(formData.serviceType === "PASSENGER" ||
+                  formData.serviceType === "MANAGED_SERVICES") && (
                   <div
                     className={`b2b-operator-dashboard-add-vehicle-form-group ${validationErrors.seatingCapacity ? "b2b-operator-dashboard-add-vehicle-field-error" : ""}`}
                   >
@@ -580,7 +607,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                         handleNestedChange(
                           "capacity",
                           "seatingCapacity",
-                          Number.parseInt(e.target.value),
+                          Number.parseInt(e.target.value) || 0,
                         );
                         if (validationErrors.seatingCapacity) {
                           setValidationErrors((prev) => ({
@@ -590,7 +617,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                         }
                       }}
                       min="2"
-                      max="60"
+                      max="100"
                       required
                     />
                     {validationErrors.seatingCapacity && (
@@ -941,6 +968,29 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                 </div>
 
                 <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                  <label>Yearly Rate (Long-term)</label>
+                  <input
+                    type="number"
+                    value={formData.pricing.yearlyRate}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        pricing: {
+                          ...formData.pricing,
+                          yearlyRate: Number.parseFloat(e.target.value),
+                        },
+                      })
+                    }
+                    step="0.01"
+                    min="0"
+                    placeholder="Optional - for long-term rentals"
+                  />
+                  <small style={{ color: "#666", fontSize: "11px" }}>
+                    Leave 0 to auto-calculate from monthly rate
+                  </small>
+                </div>
+
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Per KM Charge</label>
                   <input
                     type="number"
@@ -1094,6 +1144,22 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                     min="0"
                   />
                 </div>
+
+                <div className="b2b-operator-dashboard-add-vehicle-form-group">
+                  <label>Yearly KM Limit</label>
+                  <input
+                    type="number"
+                    value={formData.kmLimits.yearlyLimit}
+                    onChange={(e) =>
+                      handleNestedChange(
+                        "kmLimits",
+                        "yearlyLimit",
+                        Number.parseInt(e.target.value),
+                      )
+                    }
+                    min="0"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1228,15 +1294,23 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                 type="button"
                 className="b2b-operator-dashboard-add-vehicle-btn-secondary"
                 onClick={handleCancel}
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 className="b2b-operator-dashboard-add-vehicle-btn-primary"
-                disabled={loading}
+                disabled={isSubmitting}
               >
-                {loading ? "Adding Vehicle..." : "Add Vehicle"}
+                {isSubmitting ? (
+                  <>
+                    <span className="b2b-operator-dashboard-add-vehicle-btn-spinner"></span>
+                    Adding Vehicle...
+                  </>
+                ) : (
+                  "Add Vehicle"
+                )}
               </button>
             </div>
           </form>
@@ -1244,6 +1318,6 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       </div>
     </>
   );
-};
+};;
 
 export default B2B_AddVehicleModal;

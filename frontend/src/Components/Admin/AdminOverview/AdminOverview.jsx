@@ -147,7 +147,7 @@ function AdminOverview() {
 
   if (loading) {
     return (
-      <div className="admin-overview">
+      <div className="drivemego-aot-admin-overview">
         <div className="drivemego-aot-loading-container">
           <div className="drivemego-aot-loading-spinner"></div>
           <p>Loading dashboard...</p>
@@ -158,7 +158,7 @@ function AdminOverview() {
 
   if (error) {
     return (
-      <div className="admin-overview">
+      <div className="drivemego-aot-admin-overview">
         <div className="error-container">
           <p>{error}</p>
           <button onClick={fetchDashboardData} className="retry-btn">
@@ -170,7 +170,7 @@ function AdminOverview() {
   }
 
   return (
-    <div className="admin-overview">
+    <div className="drivemego-aot-admin-overview">
       <div className="overview-header">
         <h2>Dashboard Overview</h2>
         <div className="last-updated">
@@ -192,7 +192,7 @@ function AdminOverview() {
               <AdminUserDistribution stats={stats} />
             </div>
           </div>
-          
+
           <div className="chart-container full-width">
             <AdminBookingTrends />
           </div>
@@ -202,35 +202,43 @@ function AdminOverview() {
           <div className="pay-control-section">
             <div className="pay-control-header">
               <h3>💳 Payment Control</h3>
-              <div className={`pay-control-status-badge ${onlinePaymentStatus.enabled ? 'enabled' : 'disabled'}`}>
-                {onlinePaymentStatus.enabled ? '✅ Active' : '❌ Inactive'}
+              <div
+                className={`pay-control-status-badge ${onlinePaymentStatus.enabled ? "enabled" : "disabled"}`}
+              >
+                {onlinePaymentStatus.enabled ? "✅ Active" : "❌ Inactive"}
               </div>
             </div>
             <div className="pay-control-card">
               <div className="pay-control-status-info">
                 <div className="pay-control-status-message">
                   <span className="pay-control-status-icon">
-                    {onlinePaymentStatus.enabled ? '🟢' : '🔴'}
+                    {onlinePaymentStatus.enabled ? "🟢" : "🔴"}
                   </span>
                   <span className="pay-control-status-text">
-                    Online payments are <strong>{onlinePaymentStatus.enabled ? 'ENABLED' : 'DISABLED'}</strong>
+                    Online payments are{" "}
+                    <strong>
+                      {onlinePaymentStatus.enabled ? "ENABLED" : "DISABLED"}
+                    </strong>
                   </span>
                 </div>
                 {onlinePaymentStatus.lastToggled && (
                   <div className="pay-control-last-toggled-info">
                     <small>
-                      Last updated: {new Date(onlinePaymentStatus.lastToggled).toLocaleString()} 
+                      Last updated:{" "}
+                      {new Date(
+                        onlinePaymentStatus.lastToggled,
+                      ).toLocaleString()}
                       by {onlinePaymentStatus.toggledBy}
                     </small>
                   </div>
                 )}
               </div>
               <div className="pay-control-actions">
-                <button 
-                  className={`pay-control-toggle-btn ${onlinePaymentStatus.enabled ? 'disable' : 'enable'}`}
+                <button
+                  className={`pay-control-toggle-btn ${onlinePaymentStatus.enabled ? "disable" : "enable"}`}
                   onClick={toggleOnlinePayments}
                 >
-                  {onlinePaymentStatus.enabled ? '🔴 Disable' : '🟢 Enable'}
+                  {onlinePaymentStatus.enabled ? "🔴 Disable" : "🟢 Enable"}
                 </button>
               </div>
             </div>
@@ -245,8 +253,12 @@ function AdminOverview() {
                     {getActivityIcon(activity.type)}
                   </div>
                   <div className="activity-content">
-                    <p className="activity-title">{activity.action || activity.title}</p>
-                    <p className="activity-description">{activity.details || activity.description}</p>
+                    <p className="activity-title">
+                      {activity.action || activity.title}
+                    </p>
+                    <p className="activity-description">
+                      {activity.details || activity.description}
+                    </p>
                     <span className="activity-time">
                       {formatTime(activity.timestamp)}
                     </span>

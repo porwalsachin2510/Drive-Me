@@ -46,6 +46,17 @@ const FleetPortfolioVehicleCard = ({ vehicle, fleetOwner }) => {
           <div>{formatPrice(vehicle.pricing.dailyRate)} / day</div>
           <div>{formatPrice(vehicle.pricing.weeklyRate)} / week</div>
           <div>{formatPrice(vehicle.pricing.monthlyRate)} / month</div>
+          {(vehicle.pricing.yearlyRate > 0 ||
+            vehicle.pricing.monthlyRate > 0) && (
+            <div>
+              {formatPrice(
+                vehicle.pricing.yearlyRate > 0
+                  ? vehicle.pricing.yearlyRate
+                  : vehicle.pricing.monthlyRate * 12,
+              )}{" "}
+              / year
+            </div>
+          )}
         </div>
 
         <div className="owner">

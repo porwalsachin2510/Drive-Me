@@ -131,7 +131,15 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                   Duration Type:
                 </span>
                 <span className="b2b-quotation-details-detail-value b2b-quotation-details-highlight">
-                  {quotation.rentalPeriod?.durationType || "N/A"}
+                  {quotation.rentalPeriod?.durationType === "DAILY"
+                    ? "Daily Rental"
+                    : quotation.rentalPeriod?.durationType === "WEEKLY"
+                      ? "Weekly Rental"
+                      : quotation.rentalPeriod?.durationType === "MONTHLY"
+                        ? "Monthly Rental"
+                        : quotation.rentalPeriod?.durationType === "LONG_TERM"
+                          ? "Long-term (Yearly)"
+                          : quotation.rentalPeriod?.durationType || "N/A"}
                 </span>
               </div>
               <div className="b2b-quotation-details-detail-item">
@@ -141,12 +149,22 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                 <span className="b2b-quotation-details-detail-value b2b-quotation-details-highlight">
                   {quotation.rentalPeriod?.duration || "N/A"}{" "}
                   {quotation.rentalPeriod?.durationType === "DAILY"
-                    ? "Days"
+                    ? quotation.rentalPeriod?.duration === 1
+                      ? "Day"
+                      : "Days"
                     : quotation.rentalPeriod?.durationType === "WEEKLY"
-                      ? "Weeks"
+                      ? quotation.rentalPeriod?.duration === 1
+                        ? "Week"
+                        : "Weeks"
                       : quotation.rentalPeriod?.durationType === "MONTHLY"
-                        ? "Months"
-                        : ""}
+                        ? quotation.rentalPeriod?.duration === 1
+                          ? "Month"
+                          : "Months"
+                        : quotation.rentalPeriod?.durationType === "LONG_TERM"
+                          ? quotation.rentalPeriod?.duration === 1
+                            ? "Year"
+                            : "Years"
+                          : ""}
                 </span>
               </div>
               <div className="b2b-quotation-details-detail-item">

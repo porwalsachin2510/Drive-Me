@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSocket } from "../../../hooks/useSocket";
 import api from "../../../utils/api";
 import "./b2crouterequests.css";
 
@@ -9,41 +10,78 @@ function B2CRouteRequests() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
-  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, total: 0 });
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    total: 0,
+  });
   const [respondingId, setRespondingId] = useState(null);
   const [responseText, setResponseText] = useState("");
 
-  const fetchRouteRequests = useCallback(async (page = 1) => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      params.append("page", page);
-      if (statusFilter) params.append("status", statusFilter);
+  const socket = useSocket();
 
-      const response = await api.get(`/b2c-partner/route-requests?${params.toString()}`);
-      if (response.data.success) {
-        setRouteRequests(response.data.data.routeRequests || []);
-        setPagination(response.data.data.pagination || { currentPage: 1, totalPages: 1, total: 0 });
+  const fetchRouteRequests = useCallback(
+    async (page = 1) => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams();
+        params.append("page", page);
+        if (statusFilter) params.append("status", statusFilter);
+
+        const response = await api.get(
+          `/b2c-partner/route-requests?${params.toString()}`,
+        );
+        if (response.data.success) {
+          setRouteRequests(response.data.data.routeRequests || []);
+          setPagination(
+            response.data.data.pagination || {
+              currentPage: 1,
+              totalPages: 1,
+              total: 0,
+            },
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching route requests:", err);
+        setError("Failed to load route requests");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Error fetching route requests:", err);
-      setError("Failed to load route requests");
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter]);
+    },
+    [statusFilter],
+  );
 
   useEffect(() => {
     fetchRouteRequests();
   }, [fetchRouteRequests]);
 
+  // Listen for real-time notifications about new route requests
+  useEffect(() => {
+    if (socket.socket) {
+      socket.socket.on("notification", (notification) => {
+        if (notification.type === "NEW_ROUTE_REQUEST") {
+          console.log("New route request notification received:", notification);
+          // Refresh the list when a new route request is submitted
+          fetchRouteRequests(pagination.currentPage);
+        }
+      });
+
+      return () => {
+        socket.socket.off("notification");
+      };
+    }
+  }, [socket, fetchRouteRequests, pagination.currentPage]);
+
   const handleRespond = async (requestId, status) => {
     try {
       setRespondingId(requestId);
-      const response = await api.put(`/b2c-partner/route-requests/${requestId}/respond`, {
-        status,
-        response: responseText,
-      });
+      const response = await api.put(
+        `/b2c-partner/route-requests/${requestId}/respond`,
+        {
+          status,
+          response: responseText,
+        },
+      );
       if (response.data.success) {
         alert(`Request ${status.toLowerCase()} successfully`);
         setResponseText("");
@@ -79,8 +117,8 @@ function B2CRouteRequests() {
 
   if (loading) {
     return (
-      <div className="route-requests-loading">
-        <div className="loading-spinner" />
+      <div className="drivemego-route-requests-route-requests-loading">
+        <div className="drivemego-route-requests-loading-spinner" />
         <p>Loading route requests...</p>
       </div>
     );
@@ -110,13 +148,22 @@ function B2CRouteRequests() {
       {error && (
         <div className="requests-error">
           <p>{error}</p>
-          <button onClick={() => fetchRouteRequests()} className="retry-btn">Retry</button>
+          <button onClick={() => fetchRouteRequests()} className="retry-btn">
+            Retry
+          </button>
         </div>
       )}
 
       {routeRequests.length === 0 ? (
         <div className="empty-requests">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#adb5bd" strokeWidth="1.5">
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#adb5bd"
+            strokeWidth="1.5"
+          >
             <path d="M4 4H20V16H8L4 20V4Z" strokeLinejoin="round" />
             <path d="M8 9H16" strokeLinecap="round" />
             <path d="M8 12H12" strokeLinecap="round" />
@@ -132,12 +179,19 @@ function B2CRouteRequests() {
               <div key={request._id} className="request-card">
                 <div className="request-card-header">
                   <div className="route-info">
-                    <h3>{request.pickupLocation} &rarr; {request.dropoffLocation}</h3>
-                    <p className="request-date">Requested on {formatDate(request.createdAt)}</p>
+                    <h3>
+                      {request.pickupLocation} &rarr; {request.dropoffLocation}
+                    </h3>
+                    <p className="request-date">
+                      Requested on {formatDate(request.createdAt)}
+                    </p>
                   </div>
                   <span
                     className="status-badge"
-                    style={{ backgroundColor: statusBadge.bg, color: statusBadge.color }}
+                    style={{
+                      backgroundColor: statusBadge.bg,
+                      color: statusBadge.color,
+                    }}
                   >
                     {statusBadge.label}
                   </span>
@@ -158,7 +212,9 @@ function B2CRouteRequests() {
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Preferred Time</span>
-                    <span className="detail-value">{request.preferredTime}</span>
+                    <span className="detail-value">
+                      {request.preferredTime}
+                    </span>
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Request Type</span>
@@ -166,16 +222,22 @@ function B2CRouteRequests() {
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Travel Days</span>
-                    <span className="detail-value">{(request.travelDays || []).join(", ")}</span>
+                    <span className="detail-value">
+                      {(request.travelDays || []).join(", ")}
+                    </span>
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Start Date</span>
-                    <span className="detail-value">{formatDate(request.expectedStartDate)}</span>
+                    <span className="detail-value">
+                      {formatDate(request.expectedStartDate)}
+                    </span>
                   </div>
                   {request.demandCount > 1 && (
                     <div className="detail-row">
                       <span className="detail-label">Demand Count</span>
-                      <span className="detail-value demand-badge">{request.demandCount} passengers</span>
+                      <span className="detail-value demand-badge">
+                        {request.demandCount} passengers
+                      </span>
                     </div>
                   )}
                 </div>
@@ -234,7 +296,8 @@ function B2CRouteRequests() {
             Previous
           </button>
           <span className="page-info">
-            Page {pagination.currentPage} of {pagination.totalPages} ({pagination.total} total)
+            Page {pagination.currentPage} of {pagination.totalPages} (
+            {pagination.total} total)
           </span>
           <button
             disabled={!pagination.hasNext}

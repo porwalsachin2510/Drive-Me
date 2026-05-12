@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import BookingModal from "../BookingModal/BookingModal";
 import RoleRestrictionModal from "../RoleRestrictionModal/RoleRestrictionModal";
 import { storeNavigationState } from "../../utils/loginRedirect";
-
+import api from "../../utils/api";
 import "./availablesection.css";
 
 const AvailableSection = ({
@@ -18,6 +18,8 @@ const AvailableSection = ({
 }) => {
   const navigate = useNavigate();
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [selectedTagFilters, setSelectedTagFilters] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
@@ -32,6 +34,54 @@ const AvailableSection = ({
     "Ladies Only",
     "Express",
   ];
+
+  // Fetch available tags for search filtering
+  useEffect(() => {
+    fetchSearchTags();
+  }, []);
+
+  const fetchSearchTags = async () => {
+    try {
+      const response = await api.get("/admin/tags/public", {
+        params: { category: "all" },
+      });
+      // Filter to only show route, promo, and general tags for search
+      const searchableTags = (response.data.tags || []).filter((tag) =>
+        ["route", "promo", "general"].includes(tag.category),
+      );
+      setAvailableTags(searchableTags);
+    } catch (error) {
+      console.error("Error fetching search tags:", error);
+    }
+  };
+
+  // Handle tag filter toggle
+  const handleTagFilterToggle = (tagId) => {
+    setSelectedTagFilters((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId],
+    );
+  };
+
+  // Clear all tag filters
+  const clearTagFilters = () => {
+    setSelectedTagFilters([]);
+  };
+
+  // Filter routes by selected tags (client-side filtering)
+  const getFilteredRoutes = () => {
+    if (selectedTagFilters.length === 0) {
+      return routes;
+    }
+    return routes.filter((route) => {
+      if (!route.tags || route.tags.length === 0) return false;
+      // Check if route has any of the selected tags
+      return route.tags.some((tag) => selectedTagFilters.includes(tag._id));
+    });
+  };
+
+  const filteredRoutes = getFilteredRoutes();
 
   const hasSearchParams =
     searchParams &&
@@ -228,7 +278,9 @@ const AvailableSection = ({
             Available B2C Routes
           </h2>
           <p className="drivemego-availablesection-routes-count">
-            Showing {showNoSearchMessage ? 0 : routes.length} routes
+            Showing {showNoSearchMessage ? 0 : filteredRoutes.length} routes
+            {selectedTagFilters.length > 0 &&
+              ` (filtered by ${selectedTagFilters.length} tag${selectedTagFilters.length > 1 ? "s" : ""})`}
           </p>
         </div>
 
@@ -273,9 +325,53 @@ const AvailableSection = ({
         </div>
       </div>
 
-      {!loading && !showNoSearchMessage && routes.length > 0 && (
+      {/* Tag-based Filters */}
+      {availableTags.length > 0 && (
+        <div className="drivemego-availablesection-tag-filter-section">
+          <div className="drivemego-availablesection-tag-filter-header">
+            <label className="drivemego-availablesection-filter-label">
+              Filter by Tags:
+            </label>
+            {selectedTagFilters.length > 0 && (
+              <button
+                className="drivemego-availablesection-clear-tags-btn"
+                onClick={clearTagFilters}
+              >
+                Clear ({selectedTagFilters.length})
+              </button>
+            )}
+          </div>
+          <div className="drivemego-availablesection-tag-filters">
+            {availableTags.map((tag) => (
+              <button
+                key={tag._id}
+                className={`drivemego-availablesection-tag-filter-btn ${
+                  selectedTagFilters.includes(tag._id) ? "selected" : ""
+                }`}
+                onClick={() => handleTagFilterToggle(tag._id)}
+                style={{
+                  backgroundColor: selectedTagFilters.includes(tag._id)
+                    ? tag.color
+                    : "transparent",
+                  color: selectedTagFilters.includes(tag._id)
+                    ? tag.textColor
+                    : tag.color,
+                  borderColor: tag.color,
+                }}
+              >
+                {tag.icon && (
+                  <span className="tag-filter-icon">{tag.icon}</span>
+                )}
+                {tag.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!loading && !showNoSearchMessage && filteredRoutes.length > 0 && (
         <div className="drivemego-availablesection-routes-list">
-          {routes.map((route, idx) => {
+          {filteredRoutes.map((route, idx) => {
             const isAvailable = isRouteAvailableForBooking(route);
             return (
               <div
@@ -296,6 +392,26 @@ const AvailableSection = ({
                     <span className="drivemego-availablesection-company-badge">
                       {route.vehicleModel}
                     </span>
+                    {/* Route Tags */}
+                    {route.tags && route.tags.length > 0 && (
+                      <div className="drivemego-availablesection-route-tags">
+                        {route.tags.map((tag) => (
+                          <span
+                            key={tag._id}
+                            className="drivemego-availablesection-route-tag"
+                            style={{
+                              backgroundColor: tag.color || "#6b7280",
+                              color: tag.textColor || "#ffffff",
+                            }}
+                          >
+                            {tag.icon && (
+                              <span className="tag-icon">{tag.icon}</span>
+                            )}
+                            {tag.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <h6 className="drivemego-availablesection-availableseats">
@@ -457,9 +573,21 @@ const AvailableSection = ({
         </div>
       )}
 
-      {!loading && routes.length === 0 && !showNoSearchMessage && (
+      {!loading && filteredRoutes.length === 0 && !showNoSearchMessage && (
         <div className="drivemego-availablesection-empty-state">
-          <p>No routes available at the moment</p>
+          <p>
+            {selectedTagFilters.length > 0
+              ? "No routes match the selected tags"
+              : "No routes available at the moment"}
+          </p>
+          {selectedTagFilters.length > 0 && (
+            <button
+              className="drivemego-availablesection-clear-filters-btn"
+              onClick={clearTagFilters}
+            >
+              Clear tag filters
+            </button>
+          )}
         </div>
       )}
 
@@ -495,6 +623,6 @@ const AvailableSection = ({
       />
     </div>
   );
-};;
+};;;
 
 export default AvailableSection;
