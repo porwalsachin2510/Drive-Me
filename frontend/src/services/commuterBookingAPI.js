@@ -89,12 +89,32 @@ export const commuterBookingAPI = {
    * Backend: GET /api/driver/active-trip (driverLocationRoutes.js)
    * Note: Real-time tracking is via Socket.io, this is for initial data
    */
+  // eslint-disable-next-line no-unused-vars
   getTripLiveTracking: async (tripId) => {
     try {
       const response = await api.get(`/b2c-trips/trips/today`);
       return response.data;
     } catch (error) {
       console.error("Error fetching live tracking:", error.message);
+      throw error;
+    }
+  },
+
+  /**
+  * Get driver location by driver ID
+  * Backend: GET /api/driver/location/:driverId (driverLocationRoutes.js)
+  * @param {string} driverId - The driver's user ID
+  * @param {string} bookingId - Optional booking ID to find the correct trip for this booking
+  */
+  getDriverLocation: async (driverId, bookingId = null) => {
+    try {
+      const url = bookingId
+        ? `/driver/location/${driverId}?bookingId=${bookingId}`
+        : `/driver/location/${driverId}`;
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching driver location:", error.message);
       throw error;
     }
   },

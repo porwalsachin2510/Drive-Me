@@ -476,6 +476,184 @@
   margin: 4px 0 0 0;
 }
 
+/* Route Mode Selector */
+.b2c-route-mode-section {
+  margin-bottom: 24px;
+}
+
+.b2c-route-mode-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.b2c-route-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.b2c-route-mode-btn:hover:not(:disabled) {
+  border-color: #E85D5D;
+  background: #fff5f5;
+}
+
+.b2c-route-mode-btn.active {
+  border-color: #E85D5D;
+  background: #E85D5D;
+  color: white;
+}
+
+.b2c-route-mode-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.b2c-no-routes-message {
+  font-size: 13px;
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+  padding: 8px;
+}
+
+/* Existing Route Section */
+.b2c-existing-route-section {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.b2c-section-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin: -8px 0 16px 0;
+}
+
+.b2c-form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.b2c-route-select {
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+/* Selected Route Card */
+.b2c-selected-route-card {
+  background: white;
+  border: 2px solid #2DD4BF;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.b2c-selected-route-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.b2c-selected-route-locations {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.b2c-location-badge {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.b2c-location-badge.from {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.b2c-location-badge.to {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.b2c-route-arrow {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.b2c-status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.b2c-status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.b2c-status-badge.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.b2c-selected-route-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.b2c-selected-route-details .b2c-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.b2c-selected-route-details .b2c-detail-label {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.b2c-selected-route-details .b2c-detail-value {
+  font-size: 13px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.b2c-selected-route-help {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #dcfce7;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #166534;
+  font-weight: 500;
+}
+
 @media (max-width: 640px) {
   .b2c-form-row {
     grid-template-columns: 1fr;
@@ -487,5 +665,18 @@
 
   .b2c-tags-selector {
     justify-content: center;
+  }
+
+  .b2c-route-mode-selector {
+    flex-direction: column;
+  }
+
+  .b2c-selected-route-details {
+    grid-template-columns: 1fr;
+  }
+
+  .b2c-selected-route-locations {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

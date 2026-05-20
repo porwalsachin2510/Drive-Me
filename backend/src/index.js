@@ -53,7 +53,7 @@ import negotiationRoutes from "./routes/negotiationRoutes.js"
 import termsRoutes from "./routes/termsRoutes.js"
 import emiPaymentRoutes from "./routes/emiPaymentRoutes.js"
 import { seedDropdownOptions } from "./controllers/dropdownController.js"
-import { dailyTripGeneration, frequentTripGeneration, hourlyTripGeneration, runImmediateGeneration, corporateTripGeneration } from "./cron/tripGenerationCron.js"
+// import { dailyTripGeneration, frequentTripGeneration, hourlyTripGeneration, runImmediateGeneration, corporateTripGeneration } from "./cron/tripGenerationCron.js"
 import { processDailyRenewals, sendDailyRenewalReminders } from "./cron/subscriptionCron.js"
 import { bookingWarningsCron, bookingAutoCancellationCron, runImmediateBookingTimeoutCheck } from "./cron/bookingTimeoutCron.js"
 import { initEMICronJobs } from "./cron/emiCronJobs.js"
@@ -174,9 +174,9 @@ io.on('connection', (socket) => {
     })
 
     // B2C/B2B Driver updates location (handles both nested and flat formats)
-    socket.on('driver-location-update', (locationData) => {
+    socket.on('driver-location-update', async (locationData) => {
         console.log('🚗 Received driver-location-update:', locationData);
-        
+
         const { driverId, timestamp, bookingId, tripId } = locationData
 
         // Support both formats:
@@ -215,15 +215,57 @@ io.on('connection', (socket) => {
         if (effectiveBookingId) {
             const roomName = `booking-${effectiveBookingId}`
             console.log(`📡 Broadcasting to room: ${roomName}`)
-            
+
             io.to(roomName).emit('driver-location-update', {
                 driverId,
                 location: { lat, lng },
                 timestamp: timestamp || new Date().toISOString(),
                 bookingId: effectiveBookingId
             })
-            
+
             console.log(`✅ Emitted driver-location-update to room ${roomName}`)
+        }
+
+        // If this is a B2C Partner (self-driver), also broadcast to all related booking rooms
+        // by looking up bookings associated with this trip
+        if (tripId && (locationData.driverType === 'B2C_PARTNER' || locationData.isSelfDriver)) {
+            try {
+                const B2CPassengerBooking = mongoose.model('B2CPassengerBooking')
+                const B2CPartnerTrip = mongoose.model('B2CPartnerTrip')
+
+                // Find the trip to get routeId
+                const trip = await B2CPartnerTrip.findById(tripId).select('routeId')
+
+                if (trip) {
+                    // Find all bookings related to this trip
+                    const relatedBookings = await B2CPassengerBooking.find({
+                        $or: [
+                            { monthlyTrips: tripId },
+                            {
+                                routeId: trip.routeId,
+                                bookingStatus: { $in: ['CONFIRMED', 'ACCEPTED', 'IN_PROGRESS'] }
+                            }
+                        ]
+                    }).select('_id')
+
+                    console.log(`[v0] B2C Partner: Broadcasting location to ${relatedBookings.length} booking rooms`)
+
+                    // Broadcast to each booking room
+                    for (const booking of relatedBookings) {
+                        const bookingRoomName = `booking-${booking._id}`
+                        io.to(bookingRoomName).emit('driver-location-update', {
+                            driverId,
+                            location: { lat, lng },
+                            timestamp: timestamp || new Date().toISOString(),
+                            bookingId: booking._id,
+                            tripId,
+                            isOnline: true
+                        })
+                    }
+                }
+            } catch (dbErr) {
+                console.error('[v0] Error broadcasting B2C location to booking rooms:', dbErr.message)
+            }
         }
 
         // Also broadcast general location update (for all listeners including commuter)
@@ -343,49 +385,191 @@ io.on('connection', (socket) => {
     })
 
     // Request driver location - used by passengers to get current driver location
-    socket.on('request-driver-location', (data) => {
+    socket.on('request-driver-location', async (data) => {
         const { driverId, bookingId } = data
-        console.log(`📍 Location request received for driver: ${driverId}, booking: ${bookingId}`)
+        console.log(`[v0] Location request received for driver: ${driverId}, booking: ${bookingId}`)
 
-        // Get stored driver location
-        const driverLocation = activeDrivers.get(driverId)
+        try {
+            const B2CPartnerTrip = mongoose.model('B2CPartnerTrip')
+            const B2CPassengerBooking = mongoose.model('B2CPassengerBooking')
 
-        if (driverLocation) {
-            console.log(`✅ Found driver ${driverId} location:`, driverLocation.lat, driverLocation.lng)
-
-            // Send location back to the requesting socket
-            socket.emit('driver-location-update', {
-                driverId,
-                location: {
-                    lat: driverLocation.lat,
-                    lng: driverLocation.lng
-                },
-                timestamp: driverLocation.lastUpdated || new Date().toISOString(),
-                bookingId,
-                isOnline: true
-            })
-
-            // Also emit to the booking room
+            // If bookingId is provided, use it to find the correct trip for this specific booking
             if (bookingId) {
-                io.to(`booking-${bookingId}`).emit('driver-location-update', {
-                    driverId,
-                    location: {
-                        lat: driverLocation.lat,
-                        lng: driverLocation.lng
-                    },
-                    timestamp: driverLocation.lastUpdated || new Date().toISOString(),
-                    bookingId,
-                    isOnline: true
-                })
+                const booking = await B2CPassengerBooking.findById(bookingId)
+                    .select('monthlyTrips routeId pickupLocation dropoffLocation b2cPartnerId assignedDriverId')
+
+                if (booking && booking.monthlyTrips && booking.monthlyTrips.length > 0) {
+                    console.log(`[v0] Found booking ${bookingId} with ${booking.monthlyTrips.length} monthly trips, route: ${booking.pickupLocation} -> ${booking.dropoffLocation}`)
+
+                    // Get today's date range
+                    const today = new Date()
+                    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0)
+                    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
+
+                    // Find IN_PROGRESS trip matching this booking's route and today
+                    const inProgressTrip = await B2CPartnerTrip.findOne({
+                        _id: { $in: booking.monthlyTrips },
+                        status: { $in: ['In Progress', 'IN_PROGRESS'] },
+                        tripDate: { $gte: startOfDay, $lte: endOfDay },
+                        fromLocation: booking.pickupLocation,
+                        toLocation: booking.dropoffLocation
+                    }).select('currentLocation status fromLocation toLocation')
+
+                    if (inProgressTrip) {
+                        console.log(`[v0] Found IN_PROGRESS trip for booking route: ${inProgressTrip._id}`)
+                        let driverLocation = null
+
+                        if (inProgressTrip.currentLocation) {
+                            driverLocation = {
+                                lat: inProgressTrip.currentLocation.latitude || inProgressTrip.currentLocation.lat,
+                                lng: inProgressTrip.currentLocation.longitude || inProgressTrip.currentLocation.lng,
+                                lastUpdated: inProgressTrip.currentLocation.lastUpdated
+                            }
+                        }
+
+                        if (driverLocation && driverLocation.lat && driverLocation.lng) {
+                            socket.emit('driver-location-update', {
+                                driverId,
+                                location: { lat: driverLocation.lat, lng: driverLocation.lng },
+                                timestamp: driverLocation.lastUpdated || new Date().toISOString(),
+                                bookingId,
+                                isOnline: true,
+                                tripStatus: 'IN_PROGRESS',
+                                isLocationAvailable: true
+                            })
+                            return
+                        } else {
+                            socket.emit('driver-location-update', {
+                                driverId,
+                                location: null,
+                                bookingId,
+                                isOnline: false,
+                                tripStatus: 'IN_PROGRESS',
+                                isLocationAvailable: false,
+                                message: 'Waiting for driver to share location'
+                            })
+                            return
+                        }
+                    }
+
+                    // Check for SCHEDULED trip for this booking's route today
+                    const scheduledTrip = await B2CPartnerTrip.findOne({
+                        _id: { $in: booking.monthlyTrips },
+                        status: { $in: ['Scheduled', 'SCHEDULED'] },
+                        tripDate: { $gte: startOfDay, $lte: endOfDay },
+                        fromLocation: booking.pickupLocation,
+                        toLocation: booking.dropoffLocation
+                    }).select('_id status')
+
+                    if (scheduledTrip) {
+                        console.log(`[v0] Found SCHEDULED trip for booking route: ${scheduledTrip._id}`)
+                        socket.emit('driver-location-update', {
+                            driverId,
+                            location: null,
+                            bookingId,
+                            isOnline: false,
+                            tripStatus: 'SCHEDULED',
+                            isLocationAvailable: false,
+                            message: `Trip for ${booking.pickupLocation} to ${booking.dropoffLocation} has not started yet.`
+                        })
+                        return
+                    }
+
+                    // No trip for this route today
+                    console.log(`[v0] No trip found for booking route today`)
+                    socket.emit('driver-location-update', {
+                        driverId,
+                        location: null,
+                        bookingId,
+                        isOnline: false,
+                        tripStatus: null,
+                        isLocationAvailable: false,
+                        message: `No trip scheduled for ${booking.pickupLocation} to ${booking.dropoffLocation} today.`
+                    })
+                    return
+                }
             }
-        } else {
-            console.log(`❌ No location found for driver: ${driverId}`)
+
+            // Fallback: Generic driver search (for backward compatibility)
+            const inProgressTrip = await B2CPartnerTrip.findOne({
+                $or: [
+                    { driverId: driverId },
+                    { b2cPartnerId: driverId }
+                ],
+                status: { $in: ['In Progress', 'IN_PROGRESS'] }
+            }).select('currentLocation status')
+
+            if (inProgressTrip) {
+                let driverLocation = null
+                if (inProgressTrip.currentLocation) {
+                    driverLocation = {
+                        lat: inProgressTrip.currentLocation.latitude || inProgressTrip.currentLocation.lat,
+                        lng: inProgressTrip.currentLocation.longitude || inProgressTrip.currentLocation.lng,
+                        lastUpdated: inProgressTrip.currentLocation.lastUpdated
+                    }
+                }
+
+                if (driverLocation && driverLocation.lat && driverLocation.lng) {
+                    socket.emit('driver-location-update', {
+                        driverId,
+                        location: { lat: driverLocation.lat, lng: driverLocation.lng },
+                        timestamp: driverLocation.lastUpdated || new Date().toISOString(),
+                        bookingId,
+                        isOnline: true,
+                        tripStatus: 'IN_PROGRESS',
+                        isLocationAvailable: true
+                    })
+                } else {
+                    socket.emit('driver-location-update', {
+                        driverId,
+                        location: null,
+                        bookingId,
+                        isOnline: false,
+                        tripStatus: 'IN_PROGRESS',
+                        isLocationAvailable: false,
+                        message: 'Waiting for driver to share location'
+                    })
+                }
+            } else {
+                const scheduledTrip = await B2CPartnerTrip.findOne({
+                    $or: [
+                        { driverId: driverId },
+                        { b2cPartnerId: driverId }
+                    ],
+                    status: { $in: ['Scheduled', 'SCHEDULED'] }
+                }).select('_id status')
+
+                if (scheduledTrip) {
+                    socket.emit('driver-location-update', {
+                        driverId,
+                        location: null,
+                        bookingId,
+                        isOnline: false,
+                        tripStatus: 'SCHEDULED',
+                        isLocationAvailable: false,
+                        message: 'Trip has not started yet. Driver location will be available once the trip begins.'
+                    })
+                } else {
+                    socket.emit('driver-location-update', {
+                        driverId,
+                        location: null,
+                        bookingId,
+                        isOnline: false,
+                        tripStatus: null,
+                        isLocationAvailable: false,
+                        message: 'No active trip found for this driver'
+                    })
+                }
+            }
+        } catch (dbErr) {
+            console.log(`[v0] Error in request-driver-location:`, dbErr.message)
             socket.emit('driver-location-update', {
                 driverId,
                 location: null,
                 bookingId,
                 isOnline: false,
-                message: 'Driver location not available'
+                isLocationAvailable: false,
+                message: 'Error fetching driver location'
             })
         }
     })
@@ -569,24 +753,15 @@ server.listen(PORT, async () => {
     console.log(`Booking timeout cron jobs ENABLED`)
     console.log(`- Booking warnings: every 15 minutes`)
     console.log(`- Booking auto-cancellations: every 15 minutes`)
-    
-    // Run immediate trip generation on server start
-    console.log(`[v0] Initializing trip generation on server startup...`)
-    try {
-        await runImmediateGeneration();
-        console.log(`[v0] Server startup trip generation completed`)
-    } catch (error) {
-        console.error(`[v0] Error during server startup trip generation:`, error.message)
-    }
 
     // Run immediate booking timeout check on server start
-    console.log(`[v0] Initializing booking timeout check on server startup...`)
-    try {
-        await runImmediateBookingTimeoutCheck();
-        console.log(`[v0] Server startup booking timeout check completed`)
-    } catch (error) {
-        console.error(`[v0] Error during server startup booking timeout check:`, error.message)
-    }
+    // console.log(`[v0] Initializing booking timeout check on server startup...`)
+    // try {
+    //     await runImmediateBookingTimeoutCheck();
+    //     console.log(`[v0] Server startup booking timeout check completed`)
+    // } catch (error) {
+    //     console.error(`[v0] Error during server startup booking timeout check:`, error.message)
+    // }
 
     // Seed default dropdown options on server start
     console.log(`[v0] Seeding default dropdown options...`)

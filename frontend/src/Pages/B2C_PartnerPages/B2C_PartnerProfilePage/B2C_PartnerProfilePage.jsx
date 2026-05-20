@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import DashboardLayout from "../../../Components/DashboardLayout/DashboardLayout";
-import B2C_PartnerBookingsPage from "../B2C_PartnerBookingsPage/B2C_PartnerBookingsPage";
+import MyTrips from "../../../Components/B2C_Partner/Tabs/MyTrips/MyTrips";
 import Earnings from "../../../Components/B2C_Partner/Tabs/Earnings/Earnings";
 import B2C_FleetAndDrivers from "../../../Components/B2C_Partner/B2C_FleetAndDrivers/B2C_FleetAndDrivers";
 import B2C_Routes from "../../../Components/B2C_Partner/B2C_Routes/B2C_Routes";
-import B2CDailyTrips from "../../../Components/B2CDailyTrips/B2CDailyTrips";
+import B2CPartnerDailyTrips from "../../../Components/B2C_Partner/B2CPartnerDailyTrips/B2CPartnerDailyTrips";
 import Account from "../../../Components/B2C_Partner/Tabs/Account/Account";
 import B2CPartnerOverview from "../../../Components/B2C_Partner/B2CPartnerOverview/B2CPartnerOverview";
 import B2CRouteRequests from "../../../Components/B2C_Partner/B2CRouteRequests/B2CRouteRequests";
@@ -20,9 +20,9 @@ function B2C_PartnerProfilePage() {
       case "overview":
         return <B2CPartnerOverview />;
       case "trips":
-        return <B2C_PartnerBookingsPage />;
+        return <MyTrips />;
       case "daily-trips":
-        return <B2CDailyTrips />;
+        return <B2CPartnerDailyTrips />;
       case "earnings":
         return <Earnings />;
       case "vehicles":

@@ -305,10 +305,10 @@ export const createB2CPartnerRoute = async (req, res) => {
     }
 };
 
-// Create Schedule for Route
+// Create Schedule for Route (or ADD trip times to existing schedule)
 export const createB2CPartnerSchedule = async (req, res) => {
     try {
-        console.log("[v0] Creating B2C Partner Schedule with data:", JSON.stringify(req.body, null, 2));
+        console.log("[v0] Creating/Updating B2C Partner Schedule with data:", JSON.stringify(req.body, null, 2));
 
         const {
             routeId,
@@ -343,13 +343,24 @@ export const createB2CPartnerSchedule = async (req, res) => {
             });
         }
 
+        // Format the new trip times
+        const formattedTripTimes = tripTimes.map(time => ({
+            departureTime: convertToAMPMFormat(time.departureTime),
+            arrivalTime: time.arrivalTime ? convertToAMPMFormat(time.arrivalTime) : null,
+            tripType: time.tripType || "One Way",
+            outboundStopPoints: time.outboundStopPoints ? time.outboundStopPoints.map(stop => ({
+                location: stop.location,
+                time: convertToAMPMFormat(stop.time)
+            })) : [],
+            returnStopPoints: time.returnStopPoints ? time.returnStopPoints.map(stop => ({
+                location: stop.location,
+                time: convertToAMPMFormat(stop.time)
+            })) : []
+        }));
+
         // Prepare proposed schedule for conflict checking
         const proposedSchedule = {
-            tripTimes: tripTimes.map(time => ({
-                departureTime: convertToAMPMFormat(time.departureTime),
-                arrivalTime: time.arrivalTime ? convertToAMPMFormat(time.arrivalTime) : null,
-                tripType: time.tripType || "One Way"
-            })),
+            tripTimes: formattedTripTimes,
             availableDays: availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
         };
 
@@ -391,56 +402,103 @@ export const createB2CPartnerSchedule = async (req, res) => {
             }
         }
 
-        // Create schedule data
-        const scheduleData = {
-            b2cPartnerId: req.userId,
+        // Check if schedule already exists for this route - UPDATE instead of CREATE
+        const existingSchedule = await B2CPartnerSchedule.findOne({
             routeId: routeId,
-            scheduleName: scheduleName || `${route.fromLocation} to ${route.toLocation} Schedule`,
-            tripTimes: tripTimes.map(time => ({
-                departureTime: convertToAMPMFormat(time.departureTime),
-                arrivalTime: time.arrivalTime ? convertToAMPMFormat(time.arrivalTime) : null,
-                tripType: time.tripType || "One Way",
-                outboundStopPoints: time.outboundStopPoints ? time.outboundStopPoints.map(stop => ({
-                    location: stop.location,
-                    time: convertToAMPMFormat(stop.time)
-                })) : [],
-                returnStopPoints: time.returnStopPoints ? time.returnStopPoints.map(stop => ({
-                    location: stop.location,
-                    time: convertToAMPMFormat(stop.time)
-                })) : []
-            })),
-            availableDays: availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
-            assignedVehicle: assignedVehicle || route.assignedVehicle,
-            assignedDriver: assignedDriver || route.assignedDriver,
-            startDate: new Date(startDate || Date.now()),
-            endDate: endDate ? new Date(endDate) : null,
-            isActive: isActive,
-            status: "Active",
-            lastTripGenerated: new Date(),
-            nextTripGeneration: new Date()
-        };
+            b2cPartnerId: req.userId,
+            isActive: true,
+            status: "Active"
+        });
 
-        const schedule = await B2CPartnerSchedule.create(scheduleData);
-        console.log("[v0] B2C Partner Schedule created successfully:", schedule._id);
+        let schedule;
+        let isUpdate = false;
+
+        if (existingSchedule) {
+            // UPDATE existing schedule - append new trip times to existing tripTimes array
+            console.log("[v0] Found existing schedule for route:", existingSchedule._id, "- Appending new trip times");
+
+            // Merge new trip times with existing ones (avoid duplicates based on departureTime)
+            const existingDepartureTimes = existingSchedule.tripTimes.map(t => t.departureTime);
+            const uniqueNewTripTimes = formattedTripTimes.filter(newTrip =>
+                !existingDepartureTimes.includes(newTrip.departureTime)
+            );
+
+            if (uniqueNewTripTimes.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "All provided trip times already exist in the schedule. Please add different departure times.",
+                });
+            }
+
+            // Append new trip times to existing schedule
+            const updatedTripTimes = [...existingSchedule.tripTimes, ...uniqueNewTripTimes];
+
+            // Merge available days (union of both)
+            const effectiveAvailableDays = availableDays || existingSchedule.availableDays;
+            const mergedAvailableDays = [...new Set([...existingSchedule.availableDays, ...effectiveAvailableDays])];
+
+            // Update the existing schedule
+            schedule = await B2CPartnerSchedule.findByIdAndUpdate(
+                existingSchedule._id,
+                {
+                    $set: {
+                        tripTimes: updatedTripTimes,
+                        availableDays: mergedAvailableDays,
+                        assignedVehicle: assignedVehicle || existingSchedule.assignedVehicle,
+                        assignedDriver: assignedDriver || existingSchedule.assignedDriver,
+                        updatedAt: new Date()
+                    }
+                },
+                { new: true }
+            );
+
+            isUpdate = true;
+            console.log("[v0] Schedule updated successfully. Total trip times now:", schedule.tripTimes.length);
+        } else {
+            // CREATE new schedule (first schedule for this route)
+            console.log("[v0] No existing schedule found - Creating new schedule for route:", routeId);
+
+            const scheduleData = {
+                b2cPartnerId: req.userId,
+                routeId: routeId,
+                scheduleName: scheduleName || `${route.fromLocation} to ${route.toLocation} Schedule`,
+                tripTimes: formattedTripTimes,
+                availableDays: availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+                assignedVehicle: assignedVehicle || route.assignedVehicle,
+                assignedDriver: assignedDriver || route.assignedDriver,
+                startDate: new Date(startDate || Date.now()),
+                endDate: endDate ? new Date(endDate) : null,
+                isActive: isActive,
+                status: "Active",
+                lastTripGenerated: new Date(),
+                nextTripGeneration: new Date()
+            };
+
+            schedule = await B2CPartnerSchedule.create(scheduleData);
+            console.log("[v0] B2C Partner Schedule created successfully:", schedule._id);
+        }
 
         // Assign vehicle to driver if both are provided
-        if (assignedVehicle && assignedDriver) {
-            console.log("[v0] Assigning vehicle to driver:", assignedVehicle, assignedDriver);
+        const finalVehicle = assignedVehicle || schedule.assignedVehicle;
+        const finalDriver = assignedDriver || schedule.assignedDriver;
+
+        if (finalVehicle && finalDriver) {
+            console.log("[v0] Assigning vehicle to driver:", finalVehicle, finalDriver);
             try {
                 await B2CPartnerDriver.findByIdAndUpdate(
-                    assignedDriver,
-                    { 
-                        $addToSet: { assignedVehicles: assignedVehicle },
+                    finalDriver,
+                    {
+                        $addToSet: { assignedVehicles: finalVehicle },
                         $set: { updatedAt: new Date() }
                     }
                 );
                 console.log("[v0] Vehicle assigned to driver successfully");
-                
+
                 // Also assign driver to vehicle
                 await B2CPartnerVehicle.findByIdAndUpdate(
-                    assignedVehicle,
-                    { 
-                        $addToSet: { assignedDrivers: assignedDriver },
+                    finalVehicle,
+                    {
+                        $addToSet: { assignedDrivers: finalDriver },
                         $set: { updatedAt: new Date() }
                     }
                 );
@@ -451,26 +509,102 @@ export const createB2CPartnerSchedule = async (req, res) => {
             }
         }
 
+        // PROPAGATE DRIVER ASSIGNMENT: Sync route's assignedDriverId and update existing bookings
+        if (finalDriver) {
+            console.log(`[v0] Propagating driver ${finalDriver} to route and existing bookings for schedule ${schedule._id}`);
+
+            // Update route's assignedDriverId to match schedule's driver
+            await B2CPartnerRoute.findByIdAndUpdate(
+                routeId,
+                { $set: { assignedDriverId: finalDriver } }
+            );
+            console.log(`[v0] Updated route ${routeId} with driver ${finalDriver}`);
+
+            // Get driver details for booking updates
+            let driverName = null;
+            let driverImage = null;
+            let driverPhone = null;
+            let isSelfDriver = false;
+
+            // Check if driver is the partner (self-driver)
+            if (finalDriver.toString() === req.userId.toString()) {
+                isSelfDriver = true;
+                const partner = await User.findById(req.userId);
+                if (partner) {
+                    driverName = partner.fullName || partner.name || 'Self';
+                    driverImage = partner.profileImage;
+                    driverPhone = partner.whatsappNumber || partner.phone;
+                }
+            } else {
+                // Get driver details from B2CPartnerDriver
+                const driver = await B2CPartnerDriver.findById(finalDriver);
+                if (driver) {
+                    driverName = driver.name;
+                    driverImage = driver.driverImage?.url;
+                    driverPhone = driver.phoneNumber;
+                    isSelfDriver = false;
+                }
+            }
+
+            // Update all active/pending bookings linked to this schedule
+            if (driverName) {
+                const bookingUpdateResult = await B2CPassengerBooking.updateMany(
+                    {
+                        linkedSchedule: schedule._id,
+                        bookingStatus: { $in: ['PENDING', 'ACCEPTED', 'CONFIRMED', 'IN_PROGRESS'] }
+                    },
+                    {
+                        $set: {
+                            assignedDriverId: finalDriver,
+                            driverName: driverName,
+                            driverImage: driverImage,
+                            driverPhoneNumber: driverPhone,
+                            isSelfDriver: isSelfDriver
+                        }
+                    }
+                );
+                console.log(`[v0] Updated ${bookingUpdateResult.modifiedCount} existing bookings with new driver`);
+            }
+
+            // Update future trips for this schedule
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const tripUpdateResult = await B2CPartnerTrip.updateMany(
+                { scheduleId: schedule._id, tripDate: { $gte: today } },
+                {
+                    $set: {
+                        driverId: finalDriver,
+                        'driverInfo.name': driverName,
+                        'driverInfo.phoneNumber': driverPhone
+                    }
+                }
+            );
+            console.log(`[v0] Updated ${tripUpdateResult.modifiedCount} future trips with new driver`);
+        }
+
         // NOTE: DO NOT generate trips automatically when B2C_PARTNER creates schedule
         // Trips should only be generated when COMMUTER makes booking
         // This prevents creating empty trips that no one has booked
-        console.log("[v0] Schedule created - trips will be generated on passenger booking");
+        console.log("[v0] Schedule", isUpdate ? "updated" : "created", "- trips will be generated on passenger booking");
 
-        res.status(201).json({
+        res.status(isUpdate ? 200 : 201).json({
             success: true,
-            message: "B2C Partner Schedule created successfully",
+            message: isUpdate
+                ? "New trip times added to existing schedule successfully"
+                : "B2C Partner Schedule created successfully",
             schedule,
+            isUpdate: isUpdate
         });
     } catch (error) {
-        console.error("[v0] Error creating B2C partner schedule:", error.message);
+        console.error("[v0] Error creating/updating B2C partner schedule:", error.message);
         res.status(500).json({
             success: false,
-            message: "Error creating B2C partner schedule",
+            message: "Error creating/updating B2C partner schedule",
             error: error.message,
         });
     }
-};
-
+}; 
 // Get B2C Partner Routes with Schedules
 export const getB2CPartnerRoutes = async (req, res) => {
     try {
@@ -671,9 +805,21 @@ export const getB2CPartnerSchedules = async (req, res) => {
     try {
         console.log("[v0] Fetching B2C Partner Schedules for partner:", req.userId);
 
-        const schedules = await B2CPartnerSchedule.find({
+
+        // Support filtering by routeId
+        const { routeId } = req.query;
+
+        // Build query - always filter by partner, optionally by route
+        const query = {
             b2cPartnerId: req.userId,
-        })
+        };
+
+        if (routeId) {
+            query.routeId = routeId;
+            console.log("[v0] Filtering schedules by routeId:", routeId);
+        }
+
+        const schedules = await B2CPartnerSchedule.find(query)
         .populate('routeId', 'fromLocation toLocation tripType')
         .populate('assignedVehicle', 'model licensePlate vehicleType seatingCapacity')
         .sort({ createdAt: -1 });
@@ -784,6 +930,81 @@ export const updateB2CPartnerSchedule = async (req, res) => {
         .populate('assignedDriver', 'name phoneNumber licenseNumber');
 
         console.log("[v0] B2C Partner Schedule updated successfully:", scheduleId);
+
+        // PROPAGATE DRIVER ASSIGNMENT to trips and bookings if driver changed
+        const newDriverId = updateData.assignedDriver;
+        if (newDriverId) {
+            console.log(`[v0] Propagating driver assignment from schedule ${scheduleId} to trips and bookings`);
+
+            // Get driver details for booking updates
+            let driverName = null;
+            let driverImage = null;
+            let driverPhone = null;
+            let isSelfDriver = false;
+
+            // Check if driver is the partner (self-driver)
+            if (newDriverId.toString() === req.userId.toString()) {
+                isSelfDriver = true;
+                const partner = await User.findById(req.userId);
+                if (partner) {
+                    driverName = partner.fullName || partner.name || 'Self';
+                    driverImage = partner.profileImage;
+                    driverPhone = partner.whatsappNumber || partner.phone;
+                }
+            } else {
+                // Get driver details from B2CPartnerDriver
+                const driver = await B2CPartnerDriver.findById(newDriverId);
+                if (driver) {
+                    driverName = driver.name;
+                    driverImage = driver.driverImage?.url;
+                    driverPhone = driver.phoneNumber;
+                    isSelfDriver = false;
+                }
+            }
+
+            // Update all future trips for this schedule
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const tripUpdateResult = await B2CPartnerTrip.updateMany(
+                { scheduleId: scheduleId, tripDate: { $gte: today } },
+                {
+                    $set: {
+                        driverId: newDriverId,
+                        'driverInfo.name': driverName,
+                        'driverInfo.phoneNumber': driverPhone
+                    }
+                }
+            );
+            console.log(`[v0] Updated ${tripUpdateResult.modifiedCount} future trips with new driver`);
+
+            // Update all active/pending bookings for this schedule
+            if (driverName) {
+                const bookingUpdateResult = await B2CPassengerBooking.updateMany(
+                    {
+                        linkedSchedule: scheduleId,
+                        bookingStatus: { $in: ['PENDING', 'ACCEPTED', 'CONFIRMED', 'IN_PROGRESS'] }
+                    },
+                    {
+                        $set: {
+                            assignedDriverId: newDriverId,
+                            driverName: driverName,
+                            driverImage: driverImage,
+                            driverPhoneNumber: driverPhone,
+                            isSelfDriver: isSelfDriver
+                        }
+                    }
+                );
+                console.log(`[v0] Updated ${bookingUpdateResult.modifiedCount} active bookings with new driver`);
+            }
+
+            // Also update the route with the new driver
+            await B2CPartnerRoute.findByIdAndUpdate(
+                schedule.routeId,
+                { $set: { assignedDriverId: newDriverId } }
+            );
+            console.log(`[v0] Updated route ${schedule.routeId} with new driver`);
+        }
 
         res.status(200).json({
             success: true,

@@ -221,9 +221,32 @@
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   transform: translateY(-2px);
   box-shadow: 0 8px 12px rgba(239, 68, 68, 0.3);
+   }
+
+/* Status Dot Styles */
+.pay-control-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
 }
 
-/* Activity List Styles */
+.pay-control-status-dot.enabled {
+  background-color: #22C55E;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.pay-control-status-dot.disabled {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.pay-control-icon {
+  margin-right: 8px;
+}
+  
+  /* Activity List Styles */
 .activity-list {
   background: white;
   border-radius: 12px;

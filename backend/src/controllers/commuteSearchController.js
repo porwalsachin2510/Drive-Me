@@ -22,6 +22,38 @@ const normalize = (val) => {
     return ""
 }
 
+// Helper function to parse time string to minutes for comparison
+const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr || timeStr === "N/A") return Infinity
+
+    // Handle formats like "7:30 AM", "12:00 PM", "6:00 PM"
+    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i)
+    if (!match) return Infinity
+
+    let hours = parseInt(match[1], 10)
+    const minutes = parseInt(match[2], 10)
+    const period = match[3]?.toUpperCase()
+
+    if (period === "PM" && hours !== 12) {
+        hours += 12
+    } else if (period === "AM" && hours === 12) {
+        hours = 0
+    }
+
+    return hours * 60 + minutes
+}
+
+// Sort stops by time (earliest first)
+const sortStopsByTime = (stops) => {
+    if (!stops || !Array.isArray(stops) || stops.length === 0) return []
+
+    return [...stops].sort((a, b) => {
+        const timeA = parseTimeToMinutes(typeof a === 'string' ? null : a.time)
+        const timeB = parseTimeToMinutes(typeof b === 'string' ? null : b.time)
+        return timeA - timeB
+    })
+}
+
 // Check location match (from / to / stops including schedule stops)
 const isLocationMatch = (searchLocation, from, to, stops = [], scheduleStops = []) => {
     if (!searchLocation) return true
@@ -44,7 +76,7 @@ const isLocationMatch = (searchLocation, from, to, stops = [], scheduleStops = [
     })
 }
 
-// Build ordered route path with times
+// Build ordered route path with times - SORTED BY TIME
 const buildFullPathWithTimes = (from, stops = [], to, inboundStart) => {
     const path = []
 
@@ -55,9 +87,12 @@ const buildFullPathWithTimes = (from, stops = [], to, inboundStart) => {
         isFromLocation: true,
     })
 
-    // Add stops with their times
-    if (stops && stops.length > 0) {
-        stops.forEach((stop) => {
+    // Sort stops by time before adding to path
+    const sortedStops = sortStopsByTime(stops)
+
+    // Add stops with their times (now in correct order)
+    if (sortedStops && sortedStops.length > 0) {
+        sortedStops.forEach((stop) => {
             if (typeof stop === "string") {
                 path.push({ location: stop, time: "N/A", isStop: true })
             } else {
@@ -89,7 +124,10 @@ const buildTravelPath = (from, stops, to, startTime) => {
         isFromLocation: true,
     })
 
-    for (const s of stops || []) {
+    // Sort stops by time before adding to path
+    const sortedStops = sortStopsByTime(stops)
+
+    for (const s of sortedStops || []) {
         path.push({
             location: s.location,
             time: s.time || "N/A",
@@ -401,7 +439,7 @@ export const searchCommuteRoutes = async (req, res) => {
                NORMAL / B2C COMMUTER ROUTES
             ====================================================== */
 
-        
+
         // Get B2C Partner Routes directly from B2CPartnerRoute collection
         // Relaxed query to match publicSearchRoutes behavior
         const b2cRoutes = await B2CPartnerRoute.find({
@@ -415,37 +453,65 @@ export const searchCommuteRoutes = async (req, res) => {
             .populate('assignedVehicle')
             .populate('assignedDriver')
             .populate('tags', 'label color textColor icon category')
+
         for (const route of b2cRoutes) {
 
-            // Get schedule for this route
-            console.log("Finding schedule for route:", route._id)
-            const schedule = await B2CPartnerSchedule.findOne({
+            // Get ALL schedules for this route (not just one)
+            console.log("Finding all schedules for route:", route._id)
+            const schedules = await B2CPartnerSchedule.find({
                 routeId: route._id,
                 isActive: true,
                 status: "Active"
             }).populate('routeId')
 
-            // Allow routes without schedule - use route-level data as fallback
-            const routeAvailableDays = schedule?.availableDays || route.availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+            // Use first schedule for backward compatibility, but combine all trip times
+            const schedule = schedules.length > 0 ? schedules[0] : null;
 
-            if (schedule) {
-                console.log("Found schedule:", schedule._id, "with trip times:", schedule.tripTimes?.length || 0)
+            // Combine available days from all schedules
+            let combinedAvailableDays = new Set();
+            for (const sch of schedules) {
+                if (sch.availableDays && Array.isArray(sch.availableDays)) {
+                    sch.availableDays.forEach(day => combinedAvailableDays.add(day));
+                }
+            }
+            const routeAvailableDays = combinedAvailableDays.size > 0
+                ? Array.from(combinedAvailableDays)
+                : (route.availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
+
+            if (schedules.length > 0) {
+                console.log("Found", schedules.length, "schedule(s) for route:", route._id)
+                schedules.forEach((sch, idx) => {
+                    console.log(`  Schedule ${idx + 1}:`, sch._id, "with trip times:", sch.tripTimes?.length || 0)
+                });
             } else {
                 console.log("No schedule found for route:", route._id, "- using route-level data")
             }
 
-            // Extract all stop points from schedule tripTimes (outboundStopPoints and returnStopPoints)
-            const scheduleStops = []
-            if (schedule?.tripTimes && schedule.tripTimes.length > 0) {
-                for (const tripTime of schedule.tripTimes) {
-                    if (tripTime.outboundStopPoints && tripTime.outboundStopPoints.length > 0) {
-                        scheduleStops.push(...tripTime.outboundStopPoints)
-                    }
-                    if (tripTime.returnStopPoints && tripTime.returnStopPoints.length > 0) {
-                        scheduleStops.push(...tripTime.returnStopPoints)
+            // Extract UNIQUE stop points from ALL schedules' tripTimes (by location only, not time)
+            const scheduleStopsMap = new Map();
+            for (const sch of schedules) {
+                if (sch?.tripTimes && sch.tripTimes.length > 0) {
+                    for (const tripTime of sch.tripTimes) {
+                        if (tripTime.outboundStopPoints && tripTime.outboundStopPoints.length > 0) {
+                            for (const stop of tripTime.outboundStopPoints) {
+                                const locationKey = normalize(stop.location || stop);
+                                if (!scheduleStopsMap.has(locationKey)) {
+                                    scheduleStopsMap.set(locationKey, stop);
+                                }
+                            }
+                        }
+                        if (tripTime.returnStopPoints && tripTime.returnStopPoints.length > 0) {
+                            for (const stop of tripTime.returnStopPoints) {
+                                const locationKey = normalize(stop.location || stop);
+                                if (!scheduleStopsMap.has(locationKey)) {
+                                    scheduleStopsMap.set(locationKey, stop);
+                                }
+                            }
+                        }
                     }
                 }
             }
+            const scheduleStops = Array.from(scheduleStopsMap.values());
 
             // Get upcoming trips for this route
             const today = new Date()
@@ -493,11 +559,14 @@ export const searchCommuteRoutes = async (req, res) => {
             // Combine route-level and schedule-level stops for travel path
             const allStopsForPath = [...(route.stopPoints || []), ...scheduleStops]
             // Remove duplicate stops by location (case-insensitive)
-            const uniqueStops = allStopsForPath.filter((stop, index, self) =>
+            const uniqueStopsUnsorted = allStopsForPath.filter((stop, index, self) =>
                 index === self.findIndex(s =>
                     normalize(s.location || s) === normalize(stop.location || stop)
                 )
             )
+
+            // Sort stops by time to ensure correct order
+            const uniqueStops = sortStopsByTime(uniqueStopsUnsorted)
 
             // Create travel path with schedule data (fallback to route-level data)
             const travelData = getTravelPath({
@@ -513,6 +582,12 @@ export const searchCommuteRoutes = async (req, res) => {
 
             if (!travelData) continue
 
+            // Extract intermediate stops from travelPath (excluding from and to locations)
+            // This ensures we only show stops that are actually between pickup and dropoff
+            const intermediateStopsFromPath = travelData.travelPath
+                .filter(stop => !stop.isFromLocation && !stop.isToLocation && stop.isStop)
+                .map(stop => ({ location: stop.location, time: stop.time }))
+            
             routes.push({
                 routeId: route._id,
                 operator: route.b2cPartnerId?.fullName || "Unknown Operator",
@@ -556,8 +631,8 @@ export const searchCommuteRoutes = async (req, res) => {
                 vehiclePlate: route.assignedVehicle?.licensePlate,
                 images: route.assignedVehicle?.images?.map(img => img.url) || [],
                 stopPoints: route.stopPoints || [],
-                scheduleStops: scheduleStops, // Include schedule stops for display
-                allStops: uniqueStops, // Combined unique stops
+                scheduleStops: intermediateStopsFromPath, // Only stops between pickup and dropoff
+                allStops: intermediateStopsFromPath, // Only stops between pickup and dropoff
                 tags: route.tags || [], // Include tags for filtering and display
                 type: "b2c",
             })
@@ -615,9 +690,9 @@ export const publicSearchRoutes = async (req, res) => {
                 { isActive: null }
             ]
         }).populate('b2cPartnerId', 'fullName companyLogo profileImage')
-          .populate('assignedVehicle')
-          .populate('assignedDriver')
-          .populate('tags', 'label color textColor icon category')
+            .populate('assignedVehicle')
+            .populate('assignedDriver')
+            .populate('tags', 'label color textColor icon category')
 
         for (const route of b2cRoutes) {
 
@@ -631,18 +706,29 @@ export const publicSearchRoutes = async (req, res) => {
             // Even without schedule, show the route based on its own data
             const routeAvailableDays = schedule?.availableDays || route.availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
-            // Extract all stop points from schedule tripTimes (outboundStopPoints and returnStopPoints)
-            const scheduleStops = []
+            // Extract UNIQUE stop points from schedule tripTimes (by location only, not time)
+            const scheduleStopsMap = new Map();
             if (schedule?.tripTimes && schedule.tripTimes.length > 0) {
                 for (const tripTime of schedule.tripTimes) {
                     if (tripTime.outboundStopPoints && tripTime.outboundStopPoints.length > 0) {
-                        scheduleStops.push(...tripTime.outboundStopPoints)
+                        for (const stop of tripTime.outboundStopPoints) {
+                            const locationKey = normalize(stop.location || stop);
+                            if (!scheduleStopsMap.has(locationKey)) {
+                                scheduleStopsMap.set(locationKey, stop);
+                            }
+                        }
                     }
                     if (tripTime.returnStopPoints && tripTime.returnStopPoints.length > 0) {
-                        scheduleStops.push(...tripTime.returnStopPoints)
+                        for (const stop of tripTime.returnStopPoints) {
+                            const locationKey = normalize(stop.location || stop);
+                            if (!scheduleStopsMap.has(locationKey)) {
+                                scheduleStopsMap.set(locationKey, stop);
+                            }
+                        }
                     }
                 }
             }
+            const scheduleStops = Array.from(scheduleStopsMap.values());
 
             // Location filtering - now includes schedule stops
             let shouldInclude = true
@@ -656,11 +742,14 @@ export const publicSearchRoutes = async (req, res) => {
             // Combine route-level and schedule-level stops for travel path
             const allStopsForPath = [...(route.stopPoints || []), ...scheduleStops]
             // Remove duplicate stops by location (case-insensitive)
-            const uniqueStops = allStopsForPath.filter((stop, index, self) =>
+            const uniqueStopsUnsorted = allStopsForPath.filter((stop, index, self) =>
                 index === self.findIndex(s =>
                     normalize(s.location || s) === normalize(stop.location || stop)
                 )
             )
+
+            // Sort stops by time to ensure correct order
+            const uniqueStops = sortStopsByTime(uniqueStopsUnsorted)
 
             // Build travel path using route data (with or without schedule)
             const travelData = getTravelPath({
@@ -676,6 +765,12 @@ export const publicSearchRoutes = async (req, res) => {
 
             if (!travelData) continue
 
+            // Extract intermediate stops from travelPath (excluding from and to locations)
+            // This ensures we only show stops that are actually between pickup and dropoff
+            const intermediateStopsFromPath = travelData.travelPath
+                .filter(stop => !stop.isFromLocation && !stop.isToLocation && stop.isStop)
+                .map(stop => ({ location: stop.location, time: stop.time }))
+            
             // Get upcoming trips
             const today = new Date()
             today.setHours(0, 0, 0, 0)
@@ -735,8 +830,8 @@ export const publicSearchRoutes = async (req, res) => {
                 totalSeats: route.totalSeats,
                 dayMatching: travelData.dayMatching,
                 stopPoints: route.stopPoints || [],
-                scheduleStops: scheduleStops, // Include schedule stops for display
-                allStops: uniqueStops, // Combined unique stops
+                scheduleStops: intermediateStopsFromPath, // Only stops between pickup and dropoff
+                allStops: intermediateStopsFromPath, // Only stops between pickup and dropoff
                 tags: route.tags || [], // Include tags for filtering and display
                 images: (route.images || []).map(img => typeof img === 'string' ? img : img?.url).filter(Boolean),
                 type: "b2c",
@@ -1082,7 +1177,7 @@ export const getB2CPartnerSubscriptionRenewals = async (req, res) => {
 /* ======================================================
    GET PUBLIC ROUTE DETAILS
    - For mobile app and unauthenticated users
-   - Returns B2C Partner route details by ID
+  - Returns B2C Partner route details by ID with ALL schedules
 ====================================================== */
 export const getPublicRouteDetails = async (req, res) => {
     try {
@@ -1108,11 +1203,34 @@ export const getPublicRouteDetails = async (req, res) => {
             })
         }
 
-        // Get schedule for this route
-        const schedule = await B2CPartnerSchedule.findOne({
+        // Get ALL active schedules for this route (supports multiple schedules per route)
+        const schedules = await B2CPartnerSchedule.find({
             routeId: route._id,
             isActive: true,
             status: "Active"
+        }).populate('assignedVehicle', 'model licensePlate vehicleType seatingCapacity')
+            .populate('assignedDriver', 'name phoneNumber')
+            .sort({ createdAt: 1 })
+
+        // For backward compatibility, use first schedule where needed
+        const schedule = schedules.length > 0 ? schedules[0] : null
+
+        // Combine all trip times from all schedules into a unified list
+        const allTripTimes = []
+        schedules.forEach(sch => {
+            if (sch.tripTimes && sch.tripTimes.length > 0) {
+                sch.tripTimes.forEach(tt => {
+                    const tripTimeObj = tt.toObject ? tt.toObject() : { ...tt }
+                    allTripTimes.push({
+                        ...tripTimeObj,
+                        scheduleId: sch._id,
+                        scheduleName: sch.scheduleName,
+                        availableDays: sch.availableDays,
+                        scheduleVehicle: sch.assignedVehicle,
+                        scheduleDriver: sch.assignedDriver
+                    })
+                })
+            }
         })
 
         // Get upcoming trips
@@ -1122,7 +1240,7 @@ export const getPublicRouteDetails = async (req, res) => {
             routeId: route._id,
             tripDate: { $gte: today },
             status: "Scheduled"
-        }).sort({ tripDate: 1, startTime: 1 }).limit(10)
+        }).sort({ tripDate: 1, startTime: 1 }).limit(30)
 
         const formattedTrips = upcomingTrips.map(trip => ({
             tripId: trip._id,
@@ -1168,7 +1286,7 @@ export const getPublicRouteDetails = async (req, res) => {
             startTime: route.startTime,
             endTime: route.endTime,
 
-            // Schedule
+            // Schedule (backward compatible - first schedule only)
             schedule: schedule?.tripTimes?.map(tt => ({
                 day: tt.day || "Daily",
                 days: tt.days || schedule?.availableDays || [],
@@ -1177,6 +1295,23 @@ export const getPublicRouteDetails = async (req, res) => {
             })) || [],
             availableDays: schedule?.availableDays || route.availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
             tripTimes: schedule?.tripTimes || [],
+
+            // NEW: All schedules and combined trip times for multi-schedule support
+            schedules: schedules.map(sch => ({
+                _id: sch._id,
+                scheduleName: sch.scheduleName,
+                availableDays: sch.availableDays,
+                tripTimes: sch.tripTimes,
+                isActive: sch.isActive,
+                status: sch.status,
+                assignedVehicle: sch.assignedVehicle,
+                assignedDriver: sch.assignedDriver,
+                startDate: sch.startDate,
+                endDate: sch.endDate
+            })),
+            allTripTimes: allTripTimes, // Combined trip times from ALL schedules
+            totalSchedules: schedules.length,
+
             upcomingTrips: formattedTrips,
 
             // Pricing
@@ -1264,11 +1399,34 @@ export const getRouteDetails = async (req, res) => {
             })
         }
 
-        // Get schedule for this route
-        const schedule = await B2CPartnerSchedule.findOne({
+        // Get ALL active schedules for this route
+        const schedules = await B2CPartnerSchedule.find({
             routeId: route._id,
             isActive: true,
             status: "Active"
+        }).populate('assignedVehicle', 'model licensePlate vehicleType seatingCapacity')
+            .populate('assignedDriver', 'name phoneNumber')
+            .sort({ createdAt: 1 })
+
+        // For backward compatibility, use first schedule where needed
+        const schedule = schedules.length > 0 ? schedules[0] : null
+
+        // Combine all trip times from all schedules
+        const allTripTimes = []
+        schedules.forEach(sch => {
+            if (sch.tripTimes && sch.tripTimes.length > 0) {
+                sch.tripTimes.forEach(tt => {
+                    const tripTimeObj = tt.toObject ? tt.toObject() : { ...tt }
+                    allTripTimes.push({
+                        ...tripTimeObj,
+                        scheduleId: sch._id,
+                        scheduleName: sch.scheduleName,
+                        availableDays: sch.availableDays,
+                        scheduleVehicle: sch.assignedVehicle,
+                        scheduleDriver: sch.assignedDriver
+                    })
+                })
+            }
         })
 
         // Get upcoming trips
@@ -1278,7 +1436,7 @@ export const getRouteDetails = async (req, res) => {
             routeId: route._id,
             tripDate: { $gte: today },
             status: "Scheduled"
-        }).sort({ tripDate: 1, startTime: 1 }).limit(10)
+        }).sort({ tripDate: 1, startTime: 1 }).limit(30)
 
         const formattedTrips = upcomingTrips.map(trip => ({
             tripId: trip._id,
@@ -1329,7 +1487,7 @@ export const getRouteDetails = async (req, res) => {
             startTime: route.startTime,
             endTime: route.endTime,
 
-            // Schedule
+            // Schedule (backward compatible - first schedule only)
             schedule: schedule?.tripTimes?.map(tt => ({
                 day: tt.day || "Daily",
                 days: tt.days || schedule?.availableDays || [],
@@ -1338,6 +1496,22 @@ export const getRouteDetails = async (req, res) => {
             })) || [],
             availableDays: schedule?.availableDays || route.availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
             tripTimes: schedule?.tripTimes || [],
+
+            // All schedules and combined trip times for multi-schedule support
+            schedules: schedules.map(sch => ({
+                _id: sch._id,
+                scheduleName: sch.scheduleName,
+                availableDays: sch.availableDays,
+                tripTimes: sch.tripTimes,
+                isActive: sch.isActive,
+                status: sch.status,
+                assignedVehicle: sch.assignedVehicle,
+                assignedDriver: sch.assignedDriver,
+                startDate: sch.startDate,
+                endDate: sch.endDate
+            })),
+            allTripTimes: allTripTimes, // Combined trip times from ALL schedules
+            totalSchedules: schedules.length,
             upcomingTrips: formattedTrips,
 
             // Pricing

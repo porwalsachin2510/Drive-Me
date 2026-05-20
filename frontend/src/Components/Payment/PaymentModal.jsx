@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../../utils/api";
 import "./PaymentModal.css";
 
 // eslint-disable-next-line no-unused-vars
-function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _onPaymentSuccess }) {
+function PaymentModal({
+  isOpen,
+  onClose,
+  amount,
+  currency,
+  onPaymentSuccess: _onPaymentSuccess,
+}) {
   const [selectedMethod, setSelectedMethod] = useState("card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
@@ -14,53 +20,78 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
     cvv: "",
     holderName: "",
     email: "",
-    phone: ""
+    phone: "",
   });
+
+  // Payment control state
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true);
+  const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(true);
+
+  // Fetch payment settings to check if online payments are enabled
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        setLoadingPaymentSettings(true);
+        const response = await api.get("/pages/public/payment-settings");
+        if (response.data.success) {
+          setOnlinePaymentsEnabled(response.data.data.onlinePaymentsEnabled);
+        }
+      } catch (error) {
+        console.error("Error fetching payment settings:", error);
+        // Default to enabled if fetch fails
+        setOnlinePaymentsEnabled(true);
+      } finally {
+        setLoadingPaymentSettings(false);
+      }
+    };
+
+    fetchPaymentSettings();
+  }, []);
 
   const paymentMethods = [
     {
       id: "card",
       name: "Credit/Debit Card",
       icon: "💳",
-      fields: ["cardNumber", "expiryDate", "cvv", "holderName"]
+      fields: ["cardNumber", "expiryDate", "cvv", "holderName"],
     },
     {
       id: "apple_pay",
       name: "Apple Pay",
       icon: "🍎",
-      fields: []
+      fields: [],
     },
     {
       id: "google_pay",
       name: "Google Pay",
       icon: "🤖",
-      fields: []
+      fields: [],
     },
     {
       id: "knet",
       name: "KNET",
       icon: "🔵",
-      fields: ["cardNumber", "holderName"]
+      fields: ["cardNumber", "holderName"],
     },
     {
       id: "benefit",
       name: "Benefit",
       icon: "🟣",
-      fields: ["cardNumber", "holderName"]
+      fields: ["cardNumber", "holderName"],
     },
     {
       id: "zaincash",
       name: "Zain Cash",
       icon: "🟢",
-      fields: ["phone"]
-    }
+      fields: ["phone"],
+    },
   ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -123,7 +154,9 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
 
   if (!isOpen) return null;
 
-  const selectedPaymentMethod = paymentMethods.find(m => m.id === selectedMethod);
+  const selectedPaymentMethod = paymentMethods.find(
+    (m) => m.id === selectedMethod,
+  );
 
   return (
     <div className="drivemego-wppm-payment-modal-overlay" onClick={onClose}>
@@ -149,23 +182,40 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
         <form onSubmit={handleSubmit} className="drivemego-wppm-payment-form">
           <div className="drivemego-wppm-payment-methods-section">
             <h3>Select Payment Method</h3>
-            <div className="drivemego-wppm-payment-methods-grid">
-              {paymentMethods.map((method) => (
-                <button
-                  key={method.id}
-                  type="button"
-                  className={`drivemego-wppm-payment-method-card ${selectedMethod === method.id ? "drivemego-wppm-selected" : ""}`}
-                  onClick={() => setSelectedMethod(method.id)}
-                >
-                  <div className="drivemego-wppm-method-icon">
-                    {method.icon}
-                  </div>
-                  <div className="drivemego-wppm-method-name">
-                    {method.name}
-                  </div>
-                </button>
-              ))}
-            </div>
+            {loadingPaymentSettings ? (
+              <div className="drivemego-wppm-loading">
+                Loading payment options...
+              </div>
+            ) : !onlinePaymentsEnabled ? (
+              <div className="drivemego-wppm-disabled-notice">
+                <div className="drivemego-wppm-notice-icon">ℹ️</div>
+                <div className="drivemego-wppm-notice-content">
+                  <strong>Online Payments Unavailable</strong>
+                  <p>
+                    Online payment methods are currently disabled by the
+                    administrator.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="drivemego-wppm-payment-methods-grid">
+                {paymentMethods.map((method) => (
+                  <button
+                    key={method.id}
+                    type="button"
+                    className={`drivemego-wppm-payment-method-card ${selectedMethod === method.id ? "drivemego-wppm-selected" : ""}`}
+                    onClick={() => setSelectedMethod(method.id)}
+                  >
+                    <div className="drivemego-wppm-method-icon">
+                      {method.icon}
+                    </div>
+                    <div className="drivemego-wppm-method-name">
+                      {method.name}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {selectedPaymentMethod.fields.length > 0 && (
@@ -269,13 +319,15 @@ function PaymentModal({ isOpen, onClose, amount, currency, onPaymentSuccess: _on
             <button
               type="submit"
               className="drivemego-wppm-btn-pay"
-              disabled={isProcessing}
+              disabled={isProcessing || !onlinePaymentsEnabled}
             >
               {isProcessing ? (
                 <>
                   <span className="drivemego-wppm-spinner"></span>
                   Processing...
                 </>
+              ) : !onlinePaymentsEnabled ? (
+                "Online Payments Disabled"
               ) : (
                 <>
                   Pay {currency === "KWD" ? "KWD" : "AED"}{" "}

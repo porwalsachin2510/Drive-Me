@@ -251,7 +251,23 @@ const userSchema = new mongoose.Schema(
             ref: "User",
             default: null,
         },
-        
+        // Driver ratings for B2C Partners who drive themselves (self-drivers)
+        driverRatings: {
+            average: {
+                type: Number,
+                default: 0,
+                min: 0,
+                max: 5,
+            },
+            count: {
+                type: Number,
+                default: 0,
+            },
+            history: [{
+                rating: Number,
+                date: Date
+            }]
+        },
         driverId: {
             type: mongoose.Schema.Types.ObjectId,
             refPath: "driverModel",

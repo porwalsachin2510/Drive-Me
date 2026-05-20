@@ -28,8 +28,8 @@ const menuConfigs = {
   ],
   B2C_PARTNER: [
     { id: "overview", label: "Overview", icon: "overview" },
-    { id: "trips", label: "My Trips", icon: "trips" },
-    // { id: "daily-trips", label: "Daily Trips", icon: "calendar" },
+    { id: "trips", label: "My Bookings", icon: "trips" },
+    { id: "daily-trips", label: "Daily Trips", icon: "calendar" },
     { id: "earnings", label: "Earnings", icon: "earnings" },
     { id: "vehicles", label: "Fleet & Drivers", icon: "vehicles" },
     { id: "routes", label: "Routes", icon: "routes" },

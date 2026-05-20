@@ -29,6 +29,36 @@ router.get("/public/settings", async (req, res) => {
     }
 });
 
+// Get online payment status (public) - for users to check if online payments are enabled
+router.get("/public/payment-settings", async (req, res) => {
+    try {
+        let settings = await SiteSettings.findOne();
+
+        if (!settings) {
+            settings = await SiteSettings.create({});
+        }
+
+        const paymentControl = settings.paymentControl || {
+            onlinePaymentsEnabled: true,
+            lastToggled: null,
+        };
+
+        res.status(200).json({
+            success: true,
+            data: {
+                onlinePaymentsEnabled: paymentControl.onlinePaymentsEnabled !== false,
+                lastUpdated: paymentControl.lastToggled,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching payment settings",
+            error: error.message,
+        });
+    }
+});
+
 // Get a published page by slug (public)
 router.get("/public/:slug", async (req, res) => {
     try {

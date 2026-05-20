@@ -128,11 +128,12 @@ function AdminOverview() {
       setOnlinePaymentStatus({
         ...onlinePaymentStatus,
         enabled: response.data.enabled,
-        lastToggled: new Date(),
-        toggledBy: 'Current Admin'
-      })
+        lastToggled: response.data.lastToggled || new Date(),
+        toggledBy: response.data.toggledBy || "System Admin",
+      });
     } catch (error) {
       console.error("Error toggling online payments:", error)
+      alert("Failed to toggle online payments. Please try again.");
     }
   }
 
@@ -205,15 +206,15 @@ function AdminOverview() {
               <div
                 className={`pay-control-status-badge ${onlinePaymentStatus.enabled ? "enabled" : "disabled"}`}
               >
-                {onlinePaymentStatus.enabled ? "✅ Active" : "❌ Inactive"}
+                {onlinePaymentStatus.enabled ? "ACTIVE" : "INACTIVE"}
               </div>
             </div>
             <div className="pay-control-card">
               <div className="pay-control-status-info">
                 <div className="pay-control-status-message">
-                  <span className="pay-control-status-icon">
-                    {onlinePaymentStatus.enabled ? "🟢" : "🔴"}
-                  </span>
+                  <span
+                    className={`pay-control-status-dot ${onlinePaymentStatus.enabled ? "enabled" : "disabled"}`}
+                  ></span>
                   <span className="pay-control-status-text">
                     Online payments are{" "}
                     <strong>
@@ -238,7 +239,7 @@ function AdminOverview() {
                   className={`pay-control-toggle-btn ${onlinePaymentStatus.enabled ? "disable" : "enable"}`}
                   onClick={toggleOnlinePayments}
                 >
-                  {onlinePaymentStatus.enabled ? "🔴 Disable" : "🟢 Enable"}
+                  {onlinePaymentStatus.enabled ? "DISABLE" : "ENABLE"}
                 </button>
               </div>
             </div>

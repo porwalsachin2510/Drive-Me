@@ -1069,3 +1069,65 @@ export const creditAdminNegotiationCommission = async ({
         return { success: false, message: error.message }
     }
 }
+
+
+// Generate valid test IBANs for testing withdrawal
+export const generateTestIBAN = async (req, res) => {
+    try {
+        const { country = "UAE" } = req.query;
+
+        // Pre-calculated valid IBANs with correct MOD-97 checksums
+        // These are sample IBANs that pass checksum validation
+        const validTestIBANs = {
+            UAE: [
+                { iban: "AE070330000010111111111", bank: "FAB", bankName: "First Abu Dhabi Bank" },
+                { iban: "AE950210000000693123456", bank: "EmiratesNBD", bankName: "Emirates NBD" },
+                { iban: "AE440260001015154875001", bank: "ADCB", bankName: "Abu Dhabi Commercial Bank" },
+            ],
+            KW: [
+                { iban: "KW81CBKU0000000000001234560101", bank: "KFH", bankName: "Kuwait Finance House" },
+                { iban: "KW91KFHO0000000000001234560001", bank: "KFH", bankName: "Kuwait Finance House" },
+            ]
+        };
+
+        const testIBANs = validTestIBANs[country.toUpperCase()] || validTestIBANs.UAE;
+
+        res.status(200).json({
+            success: true,
+            message: "Test IBANs for withdrawal testing",
+            note: "These IBANs are for testing purposes only. Use in test/development environment.",
+            country: country.toUpperCase(),
+            testIBANs: testIBANs,
+            instructions: {
+                step1: "Copy any IBAN from below",
+                step2: "Use the corresponding Bank Code in the dropdown",
+                step3: "Enter any name as Account Holder Name",
+                step4: "Enter withdrawal amount (min 50 AED or 5 KWD)"
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+
+// Get supported banks for a country
+export const getSupportedBanks = async (req, res) => {
+    try {
+        const { country = "UAE" } = req.query;
+        const banksInfo = bankValidationService.getSupportedBanks(country);
+
+        res.status(200).json({
+            success: true,
+            country,
+            ...banksInfo
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}

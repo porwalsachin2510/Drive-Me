@@ -9,7 +9,9 @@ import {
     requestPayout,
     getUserPayouts,
     createPaymentSession,
-    getPaymentConfig
+    getPaymentConfig,
+    generateTestIBAN,
+    getSupportedBanks
 } from "../controllers/walletController.js"
 import { verifyToken } from "../middleware/auth.js"
 
@@ -47,5 +49,11 @@ router.post("/payout", requestPayout)
 
 // Get user payouts
 router.get("/payouts", getUserPayouts)
+
+// Get test IBANs for withdrawal testing (development only)
+router.get("/test-ibans", generateTestIBAN)
+
+// Get supported banks for a country
+router.get("/supported-banks", getSupportedBanks)
 
 export default router

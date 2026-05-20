@@ -4,6 +4,127 @@ import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
 import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 
+// Get B2C Partner Booking History (COMPLETED and CANCELLED bookings)
+export const getB2CPartnerBookingHistory = async (req, res) => {
+    try {
+        const partnerId = req.userId;
+        const { page = 1, limit = 12, status } = req.query;
+
+        // Build query for history (COMPLETED and CANCELLED)
+        let statusFilter = ['COMPLETED', 'CANCELLED'];
+        if (status && ['COMPLETED', 'CANCELLED'].includes(status.toUpperCase())) {
+            statusFilter = [status.toUpperCase()];
+        }
+
+        const query = {
+            b2cPartnerId: partnerId,
+            bookingStatus: { $in: statusFilter }
+        };
+
+        // Get total count
+        const totalCount = await B2CPassengerBooking.countDocuments(query);
+
+        // Get paginated bookings
+        // Note: B2CPassengerBooking schema doesn't have vehicleId - vehicle info is stored as strings (vehicleModel, vehiclePlate)
+        // or can be obtained from the route's assignedVehicle
+        const bookings = await B2CPassengerBooking.find(query)
+            .populate('passengerId', 'fullName email whatsappNumber profileImage')
+            .populate('routeId', 'fromLocation toLocation routeName assignedVehicle')
+            .populate('assignedDriverId', 'fullName email whatsappNumber')
+            .sort({ updatedAt: -1, bookingDate: -1 })
+            .skip((parseInt(page) - 1) * parseInt(limit))
+            .limit(parseInt(limit));
+
+        // Format bookings for history display
+        // Get vehicle info from route's assignedVehicle if needed
+        const formattedBookingsPromises = bookings.map(async (booking) => {
+            let vehicleInfo = null;
+
+            // Get vehicle info from route's assignedVehicle
+            if (booking.routeId?.assignedVehicle) {
+                try {
+                    const vehicle = await B2CPartnerVehicle.findById(booking.routeId.assignedVehicle);
+                    if (vehicle) {
+                        vehicleInfo = `${vehicle.vehicleType} ${vehicle.model}`;
+                    }
+                } catch (err) {
+                    console.error("[v0] Error fetching vehicle for booking:", err);
+                }
+            }
+
+            // Fallback to inline vehicle info stored in booking
+            if (!vehicleInfo && booking.vehicleModel) {
+                vehicleInfo = `${booking.vehicleModel}`;
+                if (booking.vehiclePlate) {
+                    vehicleInfo += ` (${booking.vehiclePlate})`;
+                }
+            }
+
+            return {
+                _id: booking._id,
+                bookingId: booking._id.toString().slice(-8).toUpperCase(),
+                tripId: `TRP-${booking._id.toString().slice(-6).toUpperCase()}`,
+                status: booking.bookingStatus.toLowerCase(),
+                date: booking.bookingDate || booking.createdAt,
+                time: booking.timeSlot?.departure || '05:30 AM',
+                amount: booking.paymentAmount || booking.totalAmount || booking.fareAmount || 0,
+                currency: booking.currency || 'AED',
+                pickup: booking.routeId?.fromLocation || booking.pickupLocation || 'N/A',
+                dropoff: booking.routeId?.toLocation || booking.dropoffLocation || 'N/A',
+                passengerName: booking.passengerId?.fullName || booking.passengerName || 'N/A',
+                passengerPhone: booking.passengerId?.whatsappNumber || '',
+                passengerEmail: booking.passengerId?.email || '',
+                driverName: booking.assignedDriverId?.fullName || booking.driverName || (booking.isSelfDriver ? 'Self-Driving' : 'N/A'),
+                vehicleInfo: vehicleInfo,
+                numberOfSeats: booking.numberOfSeats || 1,
+                isMonthlyPass: booking.isMonthlyPass || false,
+                isSelfDriver: booking.isSelfDriver || false,
+                completedAt: booking.completedAt,
+                cancelledAt: booking.cancelledAt,
+                cancelReason: booking.cancelReason
+            };
+        });
+
+        const formattedBookings = await Promise.all(formattedBookingsPromises);
+
+        // Get stats
+        const completedCount = await B2CPassengerBooking.countDocuments({
+            b2cPartnerId: partnerId,
+            bookingStatus: 'COMPLETED'
+        });
+        const cancelledCount = await B2CPassengerBooking.countDocuments({
+            b2cPartnerId: partnerId,
+            bookingStatus: 'CANCELLED'
+        });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                bookings: formattedBookings,
+                stats: {
+                    total: totalCount,
+                    completed: completedCount,
+                    cancelled: cancelledCount
+                },
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: Math.ceil(totalCount / parseInt(limit)),
+                    totalItems: totalCount,
+                    hasNext: parseInt(page) * parseInt(limit) < totalCount,
+                    hasPrev: parseInt(page) > 1
+                }
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching B2C partner booking history:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching booking history",
+            error: error.message
+        });
+    }
+};
+
 // Get B2C Partner Bookings (for B2C_PARTNER dashboard)
 export const getB2CPartnerBookings = async (req, res) => {
     try {
@@ -159,7 +280,7 @@ export const getB2CPartnerDriverBookings = async (req, res) => {
     try {
         const userId = req.userId;
 
-
+        console.log("[v0] getB2CPartnerDriverBookings called for userId:", userId);
 
         // First get the B2C_PARTNER_DRIVER user to find their driverId
         const driverUser = await User.findById(userId);
@@ -172,18 +293,88 @@ export const getB2CPartnerDriverBookings = async (req, res) => {
         }
 
         const driverId = driverUser.driverId;
+        const b2cPartnerId = driverUser.b2cPartnerId;
 
+        console.log("[v0] Driver lookup:", { userId, driverId, b2cPartnerId });
 
-        // Get bookings assigned to this specific driver
-        const bookings = await B2CPassengerBooking.find({
+        // APPROACH 1: Direct query by assignedDriverId matching driverId (B2CPartnerDriver document ID)
+        let bookings = await B2CPassengerBooking.find({
             assignedDriverId: driverId
         })
-            .populate('passengerId', 'name email phone')
-            .populate('routeId', 'fromLocation toLocation routeName')
-            .populate('b2cPartnerId', 'name email phone')
+            .populate('passengerId', 'fullName email whatsappNumber profileImage countryCode')
+            .populate('routeId', 'fromLocation toLocation routeName stops')
+            .populate('b2cPartnerId', 'fullName email whatsappNumber profileImage')
             .sort({ bookingDate: -1 });
 
+        console.log("[v0] Bookings found by direct assignedDriverId query:", bookings.length);
 
+        // APPROACH 2: If no bookings found, try to find via schedules that have this driver assigned
+        if (bookings.length === 0 && driverId) {
+            // Import B2CPartnerSchedule model dynamically
+            const B2CPartnerSchedule = (await import('../models/B2CPartnerSchedule.js')).default;
+
+            // Find schedules where this driver is assigned
+            const driverSchedules = await B2CPartnerSchedule.find({
+                assignedDriver: driverId,
+                isActive: true
+            });
+
+            console.log("[v0] Schedules found for driver:", driverSchedules.length);
+
+            if (driverSchedules.length > 0) {
+                const scheduleIds = driverSchedules.map(s => s._id);
+                const routeIds = driverSchedules.map(s => s.routeId);
+
+                // Get bookings linked to these schedules OR routes
+                bookings = await B2CPassengerBooking.find({
+                    $or: [
+                        { linkedSchedule: { $in: scheduleIds } },
+                        { routeId: { $in: routeIds } }
+                    ]
+                })
+                    .populate('passengerId', 'fullName email whatsappNumber profileImage countryCode')
+                    .populate('routeId', 'fromLocation toLocation routeName stops')
+                    .populate('b2cPartnerId', 'fullName email whatsappNumber profileImage')
+                    .sort({ bookingDate: -1 });
+
+                console.log("[v0] Bookings found via schedule/route query:", bookings.length);
+
+                // Update these bookings to have the correct assignedDriverId for future queries
+                if (bookings.length > 0) {
+                    for (const booking of bookings) {
+                        if (booking.assignedDriverId?.toString() !== driverId.toString()) {
+                            await B2CPassengerBooking.findByIdAndUpdate(booking._id, {
+                                assignedDriverId: driverId,
+                                isSelfDriver: false
+                            });
+                            console.log("[v0] Updated booking", booking._id, "with correct driver ID");
+                        }
+                    }
+                }
+            }
+        }
+
+        // APPROACH 3: Also check if there are any bookings for routes where this driver's schedule is active
+        if (bookings.length === 0 && b2cPartnerId) {
+            // Get all bookings for this partner's routes
+            const partnerBookings = await B2CPassengerBooking.find({
+                b2cPartnerId: b2cPartnerId,
+                isSelfDriver: false
+            })
+                .populate('passengerId', 'fullName email whatsappNumber profileImage countryCode')
+                .populate('routeId', 'fromLocation toLocation routeName assignedDriverId stops')
+                .populate('b2cPartnerId', 'fullName email whatsappNumber profileImage')
+                .sort({ bookingDate: -1 });
+
+            // Filter to bookings where route's assignedDriverId matches this driver
+            bookings = partnerBookings.filter(b =>
+                b.routeId?.assignedDriverId?.toString() === driverId?.toString()
+            );
+
+            console.log("[v0] Bookings found via route.assignedDriverId query:", bookings.length);
+        }
+
+        console.log("[v0] Total bookings returning for driver:", bookings.length);
 
         res.status(200).json({
             success: true,
@@ -303,7 +494,8 @@ export const getB2CBookingDetails = async (req, res) => {
             .populate('passengerId', 'name email phone fullName')
             .populate('b2cPartnerId', 'name email fullName phone profileImage')
             .populate('assignedDriverId', 'name email phone driverImage phoneNumber')
-            .populate('routeId');
+            .populate('routeId')
+            .populate('linkedSchedule');
 
         if (!booking) {
             return res.status(404).json({

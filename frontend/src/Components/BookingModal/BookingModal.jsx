@@ -31,9 +31,15 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     useSelector((state) => state.booking);
   const { user } = useSelector((state) => state.auth);
 
-  // State for schedule data
+  // State for schedule data - now supports multiple schedules
   const [scheduleData, setScheduleData] = useState(null);
+  const [allSchedules, setAllSchedules] = useState([]); // Store ALL schedules
+  const [allTripTimes, setAllTripTimes] = useState([]); // Combined trip times from all schedules
   const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  // Payment control state - check if online payments are enabled by admin
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true);
+  const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(true);
 
   const [numberOfSeats, setNumberOfSeats] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -49,9 +55,41 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const [selectedReturnDropoffPoint, setSelectedReturnDropoffPoint] =
     useState("");
   const [passDuration, setPassDuration] = useState(1); // months
+  const [passStartDate, setPassStartDate] = useState(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+  }); // Custom start date
+  const [passEndDate, setPassEndDate] = useState(() => {
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 1);
+    endDate.setHours(0, 0, 0, 0);
+    return endDate.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+  }); // Custom end date
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedDays, setSelectedDays] = useState([]); // Selected travel days (Mon-Sun)
+
+  // Fetch payment settings to check if online payments are enabled
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        setLoadingPaymentSettings(true);
+        const response = await api.get("/pages/public/payment-settings");
+        if (response.data.success) {
+          setOnlinePaymentsEnabled(response.data.data.onlinePaymentsEnabled);
+        }
+      } catch (error) {
+        console.error("Error fetching payment settings:", error);
+        // Default to enabled if fetch fails
+        setOnlinePaymentsEnabled(true);
+      } finally {
+        setLoadingPaymentSettings(false);
+      }
+    };
+
+    fetchPaymentSettings();
+  }, []);
 
   // Set default pickup/dropoff points and selected days when route changes
   useEffect(() => {
@@ -71,15 +109,46 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
         "Saturday",
         "Sunday",
       ];
+
+      // Map short day names (MON, TUE, etc.) to full day names
+      const dayMap = {
+        MON: "Monday",
+        MONDAY: "Monday",
+        Mon: "Monday",
+        TUE: "Tuesday",
+        TUESDAY: "Tuesday",
+        Tue: "Tuesday",
+        WED: "Wednesday",
+        WEDNESDAY: "Wednesday",
+        Wed: "Wednesday",
+        THU: "Thursday",
+        THURSDAY: "Thursday",
+        Thu: "Thursday",
+        FRI: "Friday",
+        FRIDAY: "Friday",
+        Fri: "Friday",
+        SAT: "Saturday",
+        SATURDAY: "Saturday",
+        Sat: "Saturday",
+        SUN: "Sunday",
+        SUNDAY: "Sunday",
+        Sun: "Sunday",
+      };
+
       const routeDays =
         route.availableDays || route.schedule?.availableDays || [];
 
       if (Array.isArray(routeDays) && routeDays.length > 0) {
-        setSelectedDays(
-          routeDays.map(
-            (d) => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase(),
-          ),
-        );
+        // Convert short day names to full day names
+        const convertedDays = routeDays.map((d) => {
+          const upper = d.toUpperCase();
+          return (
+            dayMap[upper] ||
+            dayMap[d] ||
+            d.charAt(0).toUpperCase() + d.slice(1).toLowerCase()
+          );
+        });
+        setSelectedDays(convertedDays);
       } else if (typeof routeDays === "string") {
         if (
           routeDays.toLowerCase() === "daily" ||
@@ -117,15 +186,26 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
         const data = response.data;
 
         if (data.success && data.schedules && data.schedules.length > 0) {
+          // Store ALL schedules
+          setAllSchedules(data.schedules);
+
+          // Store combined trip times from all schedules
+          setAllTripTimes(data.allTripTimes || []);
+
+          // For backward compatibility, set first active schedule as primary
           const activeSchedule =
             data.schedules.find((s) => s.isActive) || data.schedules[0];
           setScheduleData(activeSchedule);
         } else {
           setScheduleData(null);
+          setAllSchedules([]);
+          setAllTripTimes([]);
         }
       } catch (error) {
         console.error("Error fetching schedule:", error);
         setScheduleData(null);
+        setAllSchedules([]);
+        setAllTripTimes([]);
       } finally {
         setLoadingSchedule(false);
       }
@@ -274,15 +354,79 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const perDayPrice = getPerDayPrice();
   const travelDaysPerMonth = getTravelDaysPerMonth();
   const pricePerMonth = perDayPrice * travelDaysPerMonth;
-  const totalAmount = (pricePerMonth * numberOfSeats * passDuration).toFixed(
+
+  // Calculate actual travel days based on selected dates and travel days
+  const calculateActualTravelDays = () => {
+    const start = new Date(passStartDate);
+    const end = new Date(passEndDate);
+    const dayNames = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    let count = 0;
+    const current = new Date(start);
+    while (current <= end) {
+      const dayName = dayNames[current.getDay()];
+      if (
+        selectedDays.map((d) => d.toLowerCase()).includes(dayName.toLowerCase())
+      ) {
+        count++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return count;
+  };
+
+  // Calculate duration in months from custom dates
+  const calculateDurationFromDates = () => {
+    const start = new Date(passStartDate);
+    const end = new Date(passEndDate);
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // Round to nearest 0.5 month
+    return Math.max(0.5, Math.round((diffDays / 30) * 2) / 2);
+  };
+
+  // Use custom date calculation for actual travel days
+  const actualTravelDays = calculateActualTravelDays();
+  const effectiveDuration = calculateDurationFromDates();
+
+  // Calculate total based on per-day price and actual travel days
+  const totalAmount = (perDayPrice * actualTravelDays * numberOfSeats).toFixed(
     currencyDecimals,
   );
   const adminCommission = (totalAmount * 0.2).toFixed(currencyDecimals);
   const driverEarnings = (totalAmount * 0.8).toFixed(currencyDecimals);
 
+  // Update end date when passDuration changes (from dropdown)
+  const handleDurationChange = (months) => {
+    setPassDuration(months);
+    const start = new Date(passStartDate);
+    const newEnd = new Date(start);
+    newEnd.setMonth(newEnd.getMonth() + months);
+    setPassEndDate(newEnd.toISOString().split("T")[0]);
+  };
+
+  // Get min date (today)
+  const getMinDate = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.toISOString().split("T")[0];
+  };
+
   // Get available trips from schedule data
   const availableTrips = route.upcomingTrips || [];
-  const tripTimes = scheduleData?.tripTimes || route.tripTimes || [];
+
+  // Use allTripTimes (combined from ALL schedules) if available, otherwise fallback to single schedule
+  const tripTimes =
+    allTripTimes.length > 0
+      ? allTripTimes
+      : scheduleData?.tripTimes || route.tripTimes || [];
 
   // Create trip options from schedule data
   // For ONE_WAY: Show all One Way trips
@@ -343,6 +487,38 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const returnTrips = allTrips.filter(
     (trip) => trip.direction === "return" && trip.departureTime,
   );
+
+  // Group trips by schedule for grouped display
+  const groupTripsBySchedule = (trips) => {
+    const grouped = {};
+    trips.forEach((trip) => {
+      const scheduleId = trip.scheduleId || "default";
+      const scheduleName = trip.scheduleName || "Default Schedule";
+      if (!grouped[scheduleId]) {
+        grouped[scheduleId] = {
+          scheduleId,
+          scheduleName,
+          availableDays: trip.availableDays || [],
+          trips: [],
+        };
+      }
+      grouped[scheduleId].trips.push(trip);
+    });
+    // Sort trips within each schedule by departure time
+    Object.values(grouped).forEach((group) => {
+      group.trips.sort((a, b) => {
+        const timeA = a.departureTime?.replace(/[^\d:]/g, "") || "00:00";
+        const timeB = b.departureTime?.replace(/[^\d:]/g, "") || "00:00";
+        return timeA.localeCompare(timeB);
+      });
+    });
+    return Object.values(grouped);
+  };
+
+  // Get grouped outbound trips for display
+  const groupedOutboundTrips = groupTripsBySchedule(outboundTrips);
+  const groupedReturnTrips = groupTripsBySchedule(returnTrips);
+  const groupedAllTrips = groupTripsBySchedule(allTrips);
 
   // Get pickup/dropoff points from selected trip - includes all stop points with times
   const getPickupPoints = () => {
@@ -529,12 +705,16 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       returnDropoffLocation:
         selectedReturnDropoffPoint ||
         (selectedPassType === "ROUND_TRIP" ? route.fromLocation : ""),
-      durationMonths: passDuration,
-      numberOfSeats: numberOfSeats, //
+      durationMonths: effectiveDuration,
+      numberOfSeats: numberOfSeats,
       selectedDays: selectedDays, // Days user selected for travel
       totalAmount: Number.parseFloat(totalAmount),
       paymentMethod: method,
       notes: notes,
+      // Custom date range
+      customStartDate: passStartDate, // User selected start date (YYYY-MM-DD)
+      customEndDate: passEndDate, // User selected end date (YYYY-MM-DD)
+      actualTravelDays: actualTravelDays, // Calculated travel days in range
     };
 
     try {
@@ -687,10 +867,30 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
               {/* TRIP SELECTION */}
               <div className="trip-selection-card">
                 <div className="trip-selection-header">
-                  <h3>
+                  <h3
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
                     {selectedPassType === "ROUND_TRIP"
                       ? "Select Outbound Trip (Going)"
                       : "Select Trip Time"}
+                    {allSchedules.length > 1 && (
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          backgroundColor: "#dbeafe",
+                          color: "#1e40af",
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        {allSchedules.length} schedules
+                      </span>
+                    )}
                   </h3>
                 </div>
                 <div className="trip-selection-body">
@@ -702,96 +902,166 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   ) : (
                     <>
                       {(selectedPassType === "ONE_WAY"
-                        ? allTrips
-                        : outboundTrips
+                        ? groupedAllTrips
+                        : groupedOutboundTrips
                       ).length > 0 ? (
                         (selectedPassType === "ONE_WAY"
-                          ? allTrips
-                          : outboundTrips
-                        ).map((trip, index) => (
+                          ? groupedAllTrips
+                          : groupedOutboundTrips
+                        ).map((scheduleGroup, groupIndex) => (
                           <div
-                            key={trip._id || index}
-                            className={`trip-option ${selectedTrip?._id === trip._id ? "selected" : ""}`}
-                            onClick={() => {
-                              setSelectedTrip(trip);
-                              // Use stop points from split trip data
-                              const pickupStop = trip.stopPoints?.[0];
-                              const dropoffStop =
-                                trip.stopPoints?.[trip.stopPoints?.length - 1];
-                              setSelectedPickupPoint(
-                                pickupStop?.location || trip.fromLocation,
-                              );
-                              setSelectedDropoffPoint(
-                                dropoffStop?.location || trip.toLocation,
-                              );
-                            }}
+                            key={scheduleGroup.scheduleId || groupIndex}
+                            className="schedule-group"
+                            style={{ marginBottom: "16px" }}
                           >
-                            <div className="trip-option-header">
-                              <div className="trip-time">
-                                <strong>{trip.departureTime}</strong>
-                                {trip.arrivalTime && (
-                                  <span> - {trip.arrivalTime}</span>
-                                )}
-                              </div>
-                              <span
-                                className={`trip-type ${trip.direction === "return" ? "return-badge" : "outbound-badge"}`}
+                            {/* Schedule Header */}
+                            {allSchedules.length > 1 && (
+                              <div
+                                className="schedule-header"
+                                style={{
+                                  padding: "10px 14px",
+                                  backgroundColor: "#f8fafc",
+                                  borderRadius: "8px",
+                                  marginBottom: "8px",
+                                  borderLeft: "4px solid #3b82f6",
+                                }}
                               >
-                                {trip.direction === "return"
-                                  ? "RETURN"
-                                  : "OUTBOUND"}
-                              </span>
-                            </div>
-                            <div className="trip-option-details">
-                              <div className="trip-route">
-                                {trip.fromLocation} &rarr; {trip.toLocation}
-                              </div>
-                              <div className="trip-stops">
-                                {trip.stopPoints
-                                  ?.slice(0, 3)
-                                  .map((stop, idx) => (
-                                    <span key={idx} className="stop-point">
-                                      {stop.location} ({stop.time})
-                                    </span>
-                                  ))}
-                                {trip.stopPoints?.length > 3 && (
-                                  <span className="more-stops">
-                                    +{trip.stopPoints.length - 3} more
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontWeight: "600",
+                                      color: "#1e40af",
+                                      fontSize: "14px",
+                                    }}
+                                  >
+                                    {scheduleGroup.scheduleName
+                                      ?.replace(/.*to.*-?\s*/, "")
+                                      .trim() || `Schedule ${groupIndex + 1}`}
                                   </span>
+                                  <span
+                                    style={{
+                                      fontSize: "11px",
+                                      backgroundColor: "#dbeafe",
+                                      color: "#1e40af",
+                                      padding: "2px 8px",
+                                      borderRadius: "10px",
+                                    }}
+                                  >
+                                    {scheduleGroup.trips.length} trip
+                                    {scheduleGroup.trips.length > 1 ? "s" : ""}
+                                  </span>
+                                </div>
+                                {scheduleGroup.availableDays?.length > 0 && (
+                                  <div
+                                    style={{
+                                      marginTop: "4px",
+                                      fontSize: "11px",
+                                      color: "#64748b",
+                                    }}
+                                  >
+                                    Days:{" "}
+                                    {Array.isArray(scheduleGroup.availableDays)
+                                      ? scheduleGroup.availableDays
+                                          .slice(0, 3)
+                                          .map((d) => d.substring(0, 3))
+                                          .join(", ")
+                                      : scheduleGroup.availableDays}
+                                    {scheduleGroup.availableDays.length > 3 &&
+                                      ` +${scheduleGroup.availableDays.length - 3} more`}
+                                  </div>
                                 )}
                               </div>
-                            </div>
-                            <div className="trip-seats">
-                              {(() => {
-                                // Get real-time seat availability for this trip time
-                                const tripKey = `${trip.departureTime}_${trip.direction}`;
-                                const seatInfo = tripSeatAvailability[tripKey];
-                                const seatsAvailable =
-                                  seatInfo?.availableSeats ||
-                                  route.availableSeats ||
-                                  route.totalSeats ||
-                                  35;
-
-                                // Check if enough seats are available for selected number
-                                const hasEnoughSeats =
-                                  seatsAvailable >= numberOfSeats;
-                                const seatStatus = hasEnoughSeats
-                                  ? "available"
-                                  : "limited";
-
-                                return (
-                                  <div className={`seat-info ${seatStatus}`}>
-                                    <span className="seat-count">
-                                      {seatsAvailable} seats available
-                                    </span>
-                                    {!hasEnoughSeats && (
-                                      <span className="seat-warning">
-                                        Not enough seats
+                            )}
+                            {/* Trips within this schedule */}
+                            {scheduleGroup.trips.map((trip, index) => (
+                              <div
+                                key={trip._id || index}
+                                className={`trip-option ${selectedTrip?._id === trip._id ? "selected" : ""}`}
+                                onClick={() => {
+                                  setSelectedTrip(trip);
+                                  const pickupStop = trip.stopPoints?.[0];
+                                  const dropoffStop =
+                                    trip.stopPoints?.[
+                                      trip.stopPoints?.length - 1
+                                    ];
+                                  setSelectedPickupPoint(
+                                    pickupStop?.location || trip.fromLocation,
+                                  );
+                                  setSelectedDropoffPoint(
+                                    dropoffStop?.location || trip.toLocation,
+                                  );
+                                }}
+                              >
+                                <div className="trip-option-header">
+                                  <div className="trip-time">
+                                    <strong>{trip.departureTime}</strong>
+                                    {trip.arrivalTime && (
+                                      <span> - {trip.arrivalTime}</span>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`trip-type ${trip.direction === "return" ? "return-badge" : "outbound-badge"}`}
+                                  >
+                                    {trip.direction === "return"
+                                      ? "RETURN"
+                                      : "OUTBOUND"}
+                                  </span>
+                                </div>
+                                <div className="trip-option-details">
+                                  <div className="trip-route">
+                                    {trip.fromLocation} &rarr; {trip.toLocation}
+                                  </div>
+                                  <div className="trip-stops">
+                                    {trip.stopPoints
+                                      ?.slice(0, 3)
+                                      .map((stop, idx) => (
+                                        <span key={idx} className="stop-point">
+                                          {stop.location} ({stop.time})
+                                        </span>
+                                      ))}
+                                    {trip.stopPoints?.length > 3 && (
+                                      <span className="more-stops">
+                                        +{trip.stopPoints.length - 3} more
                                       </span>
                                     )}
                                   </div>
-                                );
-                              })()}
-                            </div>
+                                </div>
+                                <div className="trip-seats">
+                                  {(() => {
+                                    const tripKey = `${trip.departureTime}_${trip.direction}`;
+                                    const seatInfo =
+                                      tripSeatAvailability[tripKey];
+                                    const seatsAvailable =
+                                      seatInfo?.availableSeats ||
+                                      route.availableSeats ||
+                                      route.totalSeats ||
+                                      35;
+                                    const hasEnoughSeats =
+                                      seatsAvailable >= numberOfSeats;
+                                    return (
+                                      <div
+                                        className={`seat-info ${hasEnoughSeats ? "available" : "limited"}`}
+                                      >
+                                        <span className="seat-count">
+                                          {seatsAvailable} seats available
+                                        </span>
+                                        {!hasEnoughSeats && (
+                                          <span className="seat-warning">
+                                            Not enough seats
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ))
                       ) : (
@@ -810,7 +1080,29 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
               {selectedPassType === "ROUND_TRIP" && (
                 <div className="trip-selection-card">
                   <div className="trip-selection-header">
-                    <h3>Select Return Trip (Coming Back)</h3>
+                    <h3
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      Select Return Trip (Coming Back)
+                      {allSchedules.length > 1 && (
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            backgroundColor: "#dbeafe",
+                            color: "#1e40af",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {allSchedules.length} schedules
+                        </span>
+                      )}
+                    </h3>
                   </div>
                   <div className="trip-selection-body">
                     {loadingSchedule ? (
@@ -820,93 +1112,148 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       </div>
                     ) : (
                       <>
-                        {returnTrips.length > 0 ? (
-                          returnTrips.map((trip, index) => (
-                            <div
-                              key={trip._id || index}
-                              className={`trip-option ${selectedReturnTrip?._id === trip._id ? "selected" : ""}`}
-                              onClick={() => {
-                                setSelectedReturnTrip(trip);
-                                // Use stop points from split trip data
-                                const pickupStop = trip.stopPoints?.[0];
-                                const dropoffStop =
-                                  trip.stopPoints?.[
-                                    trip.stopPoints?.length - 1
-                                  ];
-                                setSelectedReturnPickupPoint(
-                                  pickupStop?.location || trip.fromLocation,
-                                );
-                                setSelectedReturnDropoffPoint(
-                                  dropoffStop?.location || trip.toLocation,
-                                );
-                              }}
-                            >
-                              <div className="trip-option-header">
-                                <div className="trip-time">
-                                  <strong>{trip.departureTime}</strong>
-                                </div>
-                                <span
-                                  className={`trip-type ${trip.direction === "return" ? "return-badge" : "outbound-badge"}`}
-                                >
-                                  {trip.direction === "return"
-                                    ? "RETURN"
-                                    : "OUTBOUND"}
-                                </span>
-                              </div>
-                              <div className="trip-option-details">
-                                <div className="trip-route">
-                                  {trip.fromLocation} &rarr; {trip.toLocation}
-                                </div>
-                                <div className="trip-stops">
-                                  {trip.stopPoints
-                                    ?.slice(0, 3)
-                                    .map((stop, idx) => (
-                                      <span key={idx} className="stop-point">
-                                        {stop.location} ({stop.time})
+                        {groupedReturnTrips.length > 0 ? (
+                          groupedReturnTrips.map(
+                            (scheduleGroup, groupIndex) => (
+                              <div
+                                key={scheduleGroup.scheduleId || groupIndex}
+                                className="schedule-group"
+                                style={{ marginBottom: "16px" }}
+                              >
+                                {/* Schedule Header for Return Trips */}
+                                {allSchedules.length > 1 && (
+                                  <div
+                                    className="schedule-header"
+                                    style={{
+                                      padding: "10px 14px",
+                                      backgroundColor: "#fef2f2",
+                                      borderRadius: "8px",
+                                      marginBottom: "8px",
+                                      borderLeft: "4px solid #ef4444",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          fontWeight: "600",
+                                          color: "#b91c1c",
+                                          fontSize: "14px",
+                                        }}
+                                      >
+                                        {scheduleGroup.scheduleName
+                                          ?.replace(/.*to.*-?\s*/, "")
+                                          .trim() ||
+                                          `Schedule ${groupIndex + 1}`}
                                       </span>
-                                    ))}
-                                  {trip.stopPoints?.length > 3 && (
-                                    <span className="more-stops">
-                                      +{trip.stopPoints.length - 3} more
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="trip-seats">
-                                {(() => {
-                                  // Get real-time seat availability for this return trip time
-                                  const tripKey = `${trip.departureTime}_${trip.direction}`;
-                                  const seatInfo =
-                                    tripSeatAvailability[tripKey];
-                                  const seatsAvailable =
-                                    seatInfo?.availableSeats ||
-                                    route.availableSeats ||
-                                    route.totalSeats ||
-                                    35;
-
-                                  // Check if enough seats are available for selected number
-                                  const hasEnoughSeats =
-                                    seatsAvailable >= numberOfSeats;
-                                  const seatStatus = hasEnoughSeats
-                                    ? "available"
-                                    : "limited";
-
-                                  return (
-                                    <div className={`seat-info ${seatStatus}`}>
-                                      <span className="seat-count">
-                                        {seatsAvailable} seats available
+                                      <span
+                                        style={{
+                                          fontSize: "11px",
+                                          backgroundColor: "#fee2e2",
+                                          color: "#b91c1c",
+                                          padding: "2px 8px",
+                                          borderRadius: "10px",
+                                        }}
+                                      >
+                                        {scheduleGroup.trips.length} return trip
+                                        {scheduleGroup.trips.length > 1
+                                          ? "s"
+                                          : ""}
                                       </span>
-                                      {!hasEnoughSeats && (
-                                        <span className="seat-warning">
-                                          Not enough seats
-                                        </span>
-                                      )}
                                     </div>
-                                  );
-                                })()}
+                                  </div>
+                                )}
+                                {/* Return trips within this schedule */}
+                                {scheduleGroup.trips.map((trip, index) => (
+                                  <div
+                                    key={trip._id || index}
+                                    className={`trip-option ${selectedReturnTrip?._id === trip._id ? "selected" : ""}`}
+                                    onClick={() => {
+                                      setSelectedReturnTrip(trip);
+                                      const pickupStop = trip.stopPoints?.[0];
+                                      const dropoffStop =
+                                        trip.stopPoints?.[
+                                          trip.stopPoints?.length - 1
+                                        ];
+                                      setSelectedReturnPickupPoint(
+                                        pickupStop?.location ||
+                                          trip.fromLocation,
+                                      );
+                                      setSelectedReturnDropoffPoint(
+                                        dropoffStop?.location ||
+                                          trip.toLocation,
+                                      );
+                                    }}
+                                  >
+                                    <div className="trip-option-header">
+                                      <div className="trip-time">
+                                        <strong>{trip.departureTime}</strong>
+                                      </div>
+                                      <span className="trip-type return-badge">
+                                        RETURN
+                                      </span>
+                                    </div>
+                                    <div className="trip-option-details">
+                                      <div className="trip-route">
+                                        {trip.fromLocation} &rarr;{" "}
+                                        {trip.toLocation}
+                                      </div>
+                                      <div className="trip-stops">
+                                        {trip.stopPoints
+                                          ?.slice(0, 3)
+                                          .map((stop, idx) => (
+                                            <span
+                                              key={idx}
+                                              className="stop-point"
+                                            >
+                                              {stop.location} ({stop.time})
+                                            </span>
+                                          ))}
+                                        {trip.stopPoints?.length > 3 && (
+                                          <span className="more-stops">
+                                            +{trip.stopPoints.length - 3} more
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="trip-seats">
+                                      {(() => {
+                                        const tripKey = `${trip.departureTime}_${trip.direction}`;
+                                        const seatInfo =
+                                          tripSeatAvailability[tripKey];
+                                        const seatsAvailable =
+                                          seatInfo?.availableSeats ||
+                                          route.availableSeats ||
+                                          route.totalSeats ||
+                                          35;
+                                        const hasEnoughSeats =
+                                          seatsAvailable >= numberOfSeats;
+                                        return (
+                                          <div
+                                            className={`seat-info ${hasEnoughSeats ? "available" : "limited"}`}
+                                          >
+                                            <span className="seat-count">
+                                              {seatsAvailable} seats available
+                                            </span>
+                                            {!hasEnoughSeats && (
+                                              <span className="seat-warning">
+                                                Not enough seats
+                                              </span>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            </div>
-                          ))
+                            ),
+                          )
                         ) : (
                           <div className="no-trips">
                             No return trips available
@@ -1209,23 +1556,182 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
               {/* PASS DURATION */}
               <div className="duration-card">
                 <div className="duration-header">
-                  <h3>Pass Duration</h3>
+                  <h3>
+                    <FaCalendarAlt style={{ marginRight: "8px" }} />
+                    Pass Duration
+                  </h3>
                 </div>
                 <div className="duration-body">
-                  <div className="duration-selector">
-                    <label>Number of Months</label>
-                    <select
-                      value={passDuration}
-                      onChange={(e) =>
-                        setPassDuration(parseInt(e.target.value))
-                      }
-                      className="duration-select"
+                  {/* Quick Duration Presets */}
+                  <div
+                    className="duration-presets"
+                    style={{ marginBottom: "16px" }}
+                  >
+                    <label
+                      style={{
+                        marginBottom: "8px",
+                        display: "block",
+                        fontWeight: "500",
+                      }}
                     >
-                      <option value={1}>1 Month</option>
-                      <option value={3}>3 Months (5% off)</option>
-                      <option value={6}>6 Months (10% off)</option>
-                      <option value={12}>12 Months (15% off)</option>
-                    </select>
+                      Quick Select
+                    </label>
+                    <div
+                      style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
+                    >
+                      {[
+                        { months: 1, label: "1 Month" },
+                        { months: 3, label: "3 Months" },
+                        { months: 6, label: "6 Months" },
+                        { months: 12, label: "12 Months" },
+                      ].map(({ months, label }) => (
+                        <button
+                          key={months}
+                          type="button"
+                          onClick={() => handleDurationChange(months)}
+                          style={{
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            border:
+                              passDuration === months
+                                ? "2px solid #10b981"
+                                : "1px solid #e5e7eb",
+                            backgroundColor:
+                              passDuration === months ? "#ecfdf5" : "#fff",
+                            color:
+                              passDuration === months ? "#059669" : "#374151",
+                            cursor: "pointer",
+                            fontWeight: passDuration === months ? "600" : "400",
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Date Range */}
+                  <div
+                    className="custom-date-range"
+                    style={{
+                      backgroundColor: "#f9fafb",
+                      padding: "16px",
+                      borderRadius: "12px",
+                      border: "1px solid #e5e7eb",
+                    }}
+                  >
+                    <label
+                      style={{
+                        marginBottom: "12px",
+                        display: "block",
+                        fontWeight: "600",
+                        color: "#374151",
+                      }}
+                    >
+                      Custom Date Range
+                    </label>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "16px",
+                      }}
+                    >
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "12px",
+                            color: "#6b7280",
+                            marginBottom: "4px",
+                            display: "block",
+                          }}
+                        >
+                          Start Date
+                        </label>
+                        <input
+                          type="date"
+                          value={passStartDate}
+                          min={getMinDate()}
+                          onChange={(e) => {
+                            setPassStartDate(e.target.value);
+                            // Ensure end date is after start date
+                            if (
+                              new Date(e.target.value) >= new Date(passEndDate)
+                            ) {
+                              const newEnd = new Date(e.target.value);
+                              newEnd.setMonth(newEnd.getMonth() + 1);
+                              setPassEndDate(
+                                newEnd.toISOString().split("T")[0],
+                              );
+                            }
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #d1d5db",
+                            fontSize: "14px",
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "12px",
+                            color: "#6b7280",
+                            marginBottom: "4px",
+                            display: "block",
+                          }}
+                        >
+                          End Date
+                        </label>
+                        <input
+                          type="date"
+                          value={passEndDate}
+                          min={passStartDate}
+                          onChange={(e) => setPassEndDate(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #d1d5db",
+                            fontSize: "14px",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Duration Summary */}
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        padding: "12px",
+                        backgroundColor: "#ecfdf5",
+                        borderRadius: "8px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontSize: "12px", color: "#6b7280" }}>
+                          Duration:{" "}
+                        </span>
+                        <span style={{ fontWeight: "600", color: "#059669" }}>
+                          {effectiveDuration} month
+                          {effectiveDuration !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: "12px", color: "#6b7280" }}>
+                          Travel Days:{" "}
+                        </span>
+                        <span style={{ fontWeight: "600", color: "#059669" }}>
+                          {actualTravelDays} days
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1278,15 +1784,16 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   </span>
                 </div>
                 <div className="price-row">
-                  <span>Travel Days/Month</span>
+                  <span>Pass Period</span>
                   <span>
-                    ~{travelDaysPerMonth} days ({selectedDays.length} days/week)
+                    {new Date(passStartDate).toLocaleDateString()} -{" "}
+                    {new Date(passEndDate).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="price-row">
-                  <span>Monthly Price (per seat)</span>
+                  <span>Total Travel Days</span>
                   <span>
-                    {currency} {pricePerMonth.toFixed(currencyDecimals)}
+                    {actualTravelDays} days ({selectedDays.length} days/week)
                   </span>
                 </div>
                 <div className="price-row">
@@ -1296,7 +1803,8 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 <div className="price-row">
                   <span>Duration</span>
                   <span>
-                    {passDuration} month{passDuration > 1 ? "s" : ""}
+                    {effectiveDuration} month
+                    {effectiveDuration !== 1 ? "s" : ""}
                   </span>
                 </div>
                 {/* {!isCorporate && (
@@ -1312,23 +1820,20 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   </>
                 )} */}
                 <div className="price-row total">
-                  <span>
-                    Total Amount ({passDuration} month
-                    {passDuration > 1 ? "s" : ""})
-                  </span>
+                  <span>Total Amount ({actualTravelDays} days)</span>
                   <span>
                     {currency} {totalAmount}
                   </span>
                 </div>
                 <div className="savings-info">
-                  {passDuration > 1 && (
+                  {effectiveDuration >= 3 && (
                     <span className="savings-text">
-                      💰 Save{" "}
-                      {passDuration === 3
-                        ? "5%"
-                        : passDuration === 6
+                      Save{" "}
+                      {effectiveDuration >= 12
+                        ? "15%"
+                        : effectiveDuration >= 6
                           ? "10%"
-                          : "15%"}{" "}
+                          : "5%"}{" "}
                       with longer duration!
                     </span>
                   )}
@@ -1392,65 +1897,92 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
 
               <div className="payment-methods">
                 <h3>Choose Payment Method</h3>
-                <div className="payment-options">
-                  <div
-                    className={`payment-option ${paymentMethod === "STRIPE" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
-                    onClick={() =>
-                      !isProcessing && handleSelectPaymentMethod("STRIPE")
-                    }
-                  >
-                    <div className="option-icon">
-                      <FaCreditCard />
-                    </div>
-                    <div className="option-info">
-                      <span className="option-title">Credit/Debit Card</span>
-                      <span className="option-desc">
-                        Pay securely with Stripe
-                      </span>
-                    </div>
-                    {paymentMethod === "STRIPE" && isProcessing && (
-                      <FaSpinner className="processing-spinner" />
-                    )}
+                {loadingPaymentSettings ? (
+                  <div className="loading-payment-settings">
+                    <FaSpinner className="spinner" /> Loading payment options...
                   </div>
+                ) : (
+                  <div className="payment-options">
+                    {/* Online Payment Methods - Only show if enabled by admin */}
+                    {onlinePaymentsEnabled && (
+                      <>
+                        <div
+                          className={`payment-option ${paymentMethod === "STRIPE" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
+                          onClick={() =>
+                            !isProcessing && handleSelectPaymentMethod("STRIPE")
+                          }
+                        >
+                          <div className="option-icon">
+                            <FaCreditCard />
+                          </div>
+                          <div className="option-info">
+                            <span className="option-title">
+                              Credit/Debit Card
+                            </span>
+                            <span className="option-desc">
+                              Pay securely with Stripe
+                            </span>
+                          </div>
+                          {paymentMethod === "STRIPE" && isProcessing && (
+                            <FaSpinner className="processing-spinner" />
+                          )}
+                        </div>
 
-                  <div
-                    className={`payment-option ${paymentMethod === "TAP" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
-                    onClick={() =>
-                      !isProcessing && handleSelectPaymentMethod("TAP")
-                    }
-                  >
-                    <div className="option-icon">
-                      <FaUniversity />
-                    </div>
-                    <div className="option-info">
-                      <span className="option-title">Tap Payments</span>
-                      <span className="option-desc">
-                        Card, Apple Pay, Google Pay
-                      </span>
-                    </div>
-                    {paymentMethod === "TAP" && isProcessing && (
-                      <FaSpinner className="processing-spinner" />
+                        <div
+                          className={`payment-option ${paymentMethod === "TAP" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
+                          onClick={() =>
+                            !isProcessing && handleSelectPaymentMethod("TAP")
+                          }
+                        >
+                          <div className="option-icon">
+                            <FaUniversity />
+                          </div>
+                          <div className="option-info">
+                            <span className="option-title">Tap Payments</span>
+                            <span className="option-desc">
+                              Card, Apple Pay, Google Pay
+                            </span>
+                          </div>
+                          {paymentMethod === "TAP" && isProcessing && (
+                            <FaSpinner className="processing-spinner" />
+                          )}
+                        </div>
+                      </>
                     )}
-                  </div>
 
-                  <div
-                    className={`payment-option ${paymentMethod === "CASH" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
-                    onClick={() =>
-                      !isProcessing && handleSelectPaymentMethod("CASH")
-                    }
-                  >
-                    <div className="option-icon">
-                      <FaMoneyBillWave />
+                    {/* Cash Payment - Always available */}
+                    <div
+                      className={`payment-option ${paymentMethod === "CASH" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
+                      onClick={() =>
+                        !isProcessing && handleSelectPaymentMethod("CASH")
+                      }
+                    >
+                      <div className="option-icon">
+                        <FaMoneyBillWave />
+                      </div>
+                      <div className="option-info">
+                        <span className="option-title">Cash Payment</span>
+                        <span className="option-desc">
+                          Pay to driver on ride
+                        </span>
+                      </div>
+                      {paymentMethod === "CASH" && isProcessing && (
+                        <FaSpinner className="processing-spinner" />
+                      )}
                     </div>
-                    <div className="option-info">
-                      <span className="option-title">Cash Payment</span>
-                      <span className="option-desc">Pay to driver on ride</span>
-                    </div>
-                    {paymentMethod === "CASH" && isProcessing && (
-                      <FaSpinner className="processing-spinner" />
+
+                    {/* Message when online payments are disabled */}
+                    {!onlinePaymentsEnabled && (
+                      <div className="payment-disabled-notice">
+                        <span className="notice-icon">ℹ️</span>
+                        <span>
+                          Online payment methods are currently unavailable.
+                          Please use cash payment.
+                        </span>
+                      </div>
                     )}
                   </div>
-                </div>
+                )}
               </div>
 
               {error && <div className="error-message">{error}</div>}

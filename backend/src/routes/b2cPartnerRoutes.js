@@ -24,7 +24,8 @@ import {
     updateB2CPartnerRoute,
     deleteB2CPartnerRoute,
     getRouteTripSeatAvailability,
-    getPublicRouteTripSeatAvailability
+    getPublicRouteTripSeatAvailability,
+    getSchedulesForRoute
 } from "../controllers/b2cTripController.js"
 import {
     getB2CPartnerDashboardStats,
@@ -93,6 +94,9 @@ router.put("/routes/:routeId", verifyToken, checkB2CPartnerRole, updateB2CPartne
 router.delete("/routes/:routeId", verifyToken, checkB2CPartnerRole, deleteB2CPartnerRoute)
 router.get("/routes/:routeId/trips/seat-availability", verifyToken, checkB2CPartnerRole, getRouteTripSeatAvailability)
 router.get("/public/routes/:routeId/trips/seat-availability", getPublicRouteTripSeatAvailability)
+
+// Get all schedules for a route (for commuter booking - returns ALL schedules)
+router.get("/routes/:routeId/schedules", getSchedulesForRoute)
 
 // B2C Partner Assign Driver to Vehicle
 router.post("/vehicles/:vehicleId/assign-driver", verifyToken, checkB2CPartnerRole, assignDriverToB2CVehicle)

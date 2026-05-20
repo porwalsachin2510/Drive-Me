@@ -28,11 +28,28 @@ const CommuterMyBookingsPage = () => {
   const [showNoShowModal, setShowNoShowModal] = useState(false);
   const [noShowBooking, setNoShowBooking] = useState(null);
   const [noShowReason, setNoShowReason] = useState("");
+  const [tripStatusMessage, setTripStatusMessage] = useState(null); // Track trip status for tracking modal
   const [noShowCustomReason, setNoShowCustomReason] = useState("");
   const [noShowLoading, setNoShowLoading] = useState(false);
   const [showAutoCancelModal, setShowAutoCancelModal] = useState(false);
   const [autoCancelData, setAutoCancelData] = useState(null);
+  const [expandedBookings, setExpandedBookings] = useState(new Set()); // Track which booking cards have expanded Daily Trips
 
+   // Toggle Daily Trips expansion for a specific booking
+   const toggleBookingExpansion = useCallback((bookingId) => {
+     setExpandedBookings((prev) => {
+       const newSet = new Set(prev);
+       // Ensure we're using string IDs consistently
+       const id = String(bookingId);
+       if (newSet.has(id)) {
+         newSet.delete(id);
+       } else {
+        newSet.add(id);
+       }
+       return newSet;
+     });
+   }, []);
+  
   // Download monthly pass certificate
   const handleDownloadPassCertificate = useCallback(async (passId) => {
     try {
@@ -90,20 +107,108 @@ const CommuterMyBookingsPage = () => {
 
   // Start real-time tracking for a booking
   const startRealTimeTracking = useCallback(
-    (booking) => {
+    async (booking) => {
       setSelectedBooking(booking);
       setShowTracking(true);
       setIsTrackingActive(true);
 
+      // Determine the correct driver ID based on isSelfDriver flag
+      let driverId;
+      if (booking.isSelfDriver) {
+        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+        console.log("[v0] Tracking self-driver (B2C Partner):", driverId);
+      } else {
+        driverId =
+          booking.assignedDriverId?._id ||
+          booking.assignedDriverId ||
+          booking.driverId;
+        console.log("[v0] Tracking assigned driver:", driverId);
+      }
+
       // Initial map setup
-      const driverLoc = getDriverLocation(booking.driverId);
+      const driverLoc = getDriverLocation(driverId);
       if (driverLoc) {
         updateMapBounds(driverLoc.lat, driverLoc.lng);
       }
 
-      console.log("🗺️ Started real-time tracking for booking:", booking._id);
+      console.log(
+        "[v0] Started real-time tracking for booking:",
+        booking._id,
+        "driverId:",
+        driverId,
+      );
+
+      // Request driver location via socket
+      if (socket?.socket && driverId) {
+        console.log(
+          "[v0] Requesting driver location via socket for:",
+          driverId,
+          "bookingId:",
+          booking._id,
+        );
+        socket.socket.emit("request-driver-location", {
+          driverId,
+          bookingId: booking._id,
+        });
+      }
+
+      // Also fetch driver location from API as fallback
+      try {
+        if (driverId) {
+          // Pass bookingId to ensure we get the correct trip for this specific booking
+          const response = await commuterBookingAPI.getDriverLocation(
+            driverId,
+            booking._id,
+          );
+          console.log("[v0] Driver location API response:", response);
+
+          // Check if trip has not started yet (SCHEDULED status)
+          if (response.success && response.data) {
+            const tripStatus = response.data.tripStatus;
+            const isLocationAvailable = response.data.isLocationAvailable;
+
+            if (
+              !isLocationAvailable &&
+              (tripStatus === "SCHEDULED" || tripStatus === "Scheduled")
+            ) {
+              // Trip has not started yet
+              setTripStatusMessage(
+                response.data.message ||
+                  "Trip has not started yet. Driver location will be available once the trip begins.",
+              );
+              console.log("[v0] Trip not started yet, status:", tripStatus);
+            } else if (response.data.location) {
+              // Trip is in progress and location is available
+              setTripStatusMessage(null);
+              const locationData = response.data.location;
+              const lat = locationData.latitude || locationData.lat;
+              const lng = locationData.longitude || locationData.lng;
+
+              if (lat && lng) {
+                console.log("[v0] Setting driver location from API:", lat, lng);
+                setDriverLocations((prev) => ({
+                  ...prev,
+                  [driverId]: {
+                    lat: lat,
+                    lng: lng,
+                    timestamp: Date.now(),
+                  },
+                }));
+                updateMapBounds(lat, lng);
+              }
+            } else {
+              // No location available
+              setTripStatusMessage(
+                response.data.message || "Driver location not available",
+              );
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[v0] Error fetching driver location from API:", err);
+      }
     },
-    [getDriverLocation, updateMapBounds],
+    [getDriverLocation, updateMapBounds, socket],
   );
 
   // Stop real-time tracking
@@ -113,7 +218,8 @@ const CommuterMyBookingsPage = () => {
     setSelectedBooking(null);
     setMapCenter(null);
     setMapBounds(null);
-    console.log("🛑 Stopped real-time tracking");
+    setTripStatusMessage(null); // Clear trip status message
+    console.log("Stopped real-time tracking");
   }, []);
 
   // Initialize current time and update every second
@@ -263,32 +369,67 @@ const CommuterMyBookingsPage = () => {
 
       // Listen for B2C driver location updates
       socket.socket.on("driver-location-update", (locationData) => {
-        console.log("🚗 B2C Driver location update received:", locationData);
+        console.log("[v0] B2C Driver location update received:", locationData);
 
-        setDriverLocations((prev) => {
-          const updated = {
-            ...prev,
-            [locationData.driverId]: {
-              lat: locationData.location.lat,
-              lng: locationData.location.lng,
-              timestamp: locationData.timestamp,
-            },
-          };
-          console.log("📍 Updated driverLocations:", updated);
-          return updated;
-        });
+        // Check tripStatus to determine if we should show location or message
+        const tripStatus = locationData?.tripStatus;
+        const isLocationAvailable = locationData?.isLocationAvailable;
 
-        // Update map bounds if tracking is active
-        if (
-          isTrackingActive &&
-          selectedBooking &&
-          selectedBooking._id === locationData.bookingId
-        ) {
+        if (tripStatus === "SCHEDULED" || tripStatus === "Scheduled") {
+          // Trip has not started yet - show message, don't update location
           console.log(
-            "🗺️ Updating map bounds for booking:",
-            locationData.bookingId,
+            "[v0] Trip not started yet (socket):",
+            locationData?.message,
           );
-          updateMapBounds(locationData.location.lat, locationData.location.lng);
+          setTripStatusMessage(
+            locationData?.message ||
+              "Trip has not started yet. Driver location will be available once the trip begins.",
+          );
+          return;
+        }
+
+        // Check if location data is available before updating
+        if (locationData?.location?.lat && locationData?.location?.lng) {
+          // Clear any previous trip status message since we have valid location
+          setTripStatusMessage(null);
+
+          setDriverLocations((prev) => {
+            const updated = {
+              ...prev,
+              [locationData.driverId]: {
+                lat: locationData.location.lat,
+                lng: locationData.location.lng,
+                timestamp: locationData.timestamp,
+              },
+            };
+            console.log("[v0] Updated driverLocations:", updated);
+            return updated;
+          });
+
+          // Update map bounds if tracking is active
+          if (
+            isTrackingActive &&
+            selectedBooking &&
+            selectedBooking._id === locationData.bookingId
+          ) {
+            console.log(
+              "[v0] Updating map bounds for booking:",
+              locationData.bookingId,
+            );
+            updateMapBounds(
+              locationData.location.lat,
+              locationData.location.lng,
+            );
+          }
+        } else if (!isLocationAvailable) {
+          // No location available - show message if provided
+          console.log(
+            "[v0] B2C Driver location not available:",
+            locationData?.message,
+          );
+          if (locationData?.message) {
+            setTripStatusMessage(locationData.message);
+          }
         }
       });
 
@@ -356,6 +497,90 @@ const CommuterMyBookingsPage = () => {
       });
     }
   }, [socket, passengerBookings]);
+
+  // Poll driver location via API when tracking is active (as fallback to socket)
+  useEffect(() => {
+    if (!isTrackingActive || !selectedBooking) return;
+
+    const pollDriverLocation = async () => {
+      try {
+        const driverId = selectedBooking.isSelfDriver
+          ? selectedBooking.b2cPartnerId?._id || selectedBooking.b2cPartnerId
+          : selectedBooking.assignedDriverId?._id ||
+            selectedBooking.assignedDriverId ||
+            selectedBooking.driverId;
+
+        if (!driverId) return;
+
+        console.log(
+          "[v0] Polling driver location via API for driverId:",
+          driverId,
+        );
+        // Pass bookingId to ensure we get the correct trip for this specific booking
+        const response = await commuterBookingAPI.getDriverLocation(
+          driverId,
+          selectedBooking._id,
+        );
+        console.log("[v0] Driver location API poll response:", response);
+
+        if (response.success && response.data) {
+          const tripStatus = response.data.tripStatus;
+          const isLocationAvailable = response.data.isLocationAvailable;
+
+          if (
+            !isLocationAvailable &&
+            (tripStatus === "SCHEDULED" || tripStatus === "Scheduled")
+          ) {
+            // Trip has not started yet
+            setTripStatusMessage(
+              response.data.message ||
+                "Trip has not started yet. Driver location will be available once the trip begins.",
+            );
+          } else if (response.data.location) {
+            // Trip is in progress, clear the message and update location
+            setTripStatusMessage(null);
+            const locationData = response.data.location;
+            const lat = locationData.latitude || locationData.lat;
+            const lng = locationData.longitude || locationData.lng;
+
+            if (lat && lng) {
+              console.log("[v0] Got driver location from API poll:", lat, lng);
+              setDriverLocations((prev) => ({
+                ...prev,
+                [driverId]: {
+                  lat: lat,
+                  lng: lng,
+                  timestamp: Date.now(),
+                },
+              }));
+              if (isTrackingActive) {
+                updateMapBounds(lat, lng);
+              }
+            }
+          } else {
+            // No location available
+            setTripStatusMessage(
+              response.data.message || "Driver location not available",
+            );
+          }
+        }
+      } catch (err) {
+        console.error("[v0] Error polling driver location:", err);
+      }
+    };
+
+    // Poll immediately when tracking starts
+    pollDriverLocation();
+
+    // Poll every 5 seconds as a fallback (more frequent for better UX)
+    const pollInterval = setInterval(() => {
+      pollDriverLocation();
+    }, 5000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [isTrackingActive, selectedBooking, driverLocations, updateMapBounds]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -709,307 +934,207 @@ const CommuterMyBookingsPage = () => {
           <div className="cmbp-bookings-grid">
             {passengerBookings.map((booking) => {
               const statusConfig = getStatusBadge(booking.bookingStatus);
+              const statusClass =
+                booking.bookingStatus?.toLowerCase().replace("_", "-") ||
+                "pending";
+
+              // Get driver info
+              const driverId =
+                booking.assignedDriverId ||
+                booking.b2cPartnerId?._id ||
+                booking.b2cPartnerId;
+              const driverName =
+                booking.driverInfo?.name ||
+                booking.driverName ||
+                (booking.isSelfDriver
+                  ? booking.b2cPartnerId?.fullName
+                  : null) ||
+                booking.b2cPartnerId?.fullName ||
+                "Not Assigned";
+              const isOnline = isDriverOnline(driverId);
+
+              // Get vehicle info
+              const vehicleModel =
+                booking.vehicleInfo?.model ||
+                booking.vehicleModel ||
+                booking.routeId?.assignedVehicle?.model ||
+                "N/A";
+              const vehiclePlate =
+                booking.vehicleInfo?.licensePlate ||
+                booking.vehiclePlate ||
+                booking.routeId?.assignedVehicle?.licensePlate;
+
+              // Get route info
+              const fromLocation =
+                booking.type === "CORPORATE"
+                  ? booking.routeId?.fromLocation || booking.pickupLocation
+                  : booking.pickupLocation || "N/A";
+              const toLocation =
+                booking.type === "CORPORATE"
+                  ? booking.routeId?.toLocation || booking.dropoffLocation
+                  : booking.dropoffLocation || "N/A";
+
+              // Get amount
+              const amount =
+                booking.paymentAmount ||
+                booking.totalAmount ||
+                booking.price ||
+                0;
+              const currency = booking.currency || "KWD";
 
               return (
                 <div key={booking._id} className="cmbp-booking-card">
-                  <div className="cmbp-booking-card-header">
-                    <div className="cmbp-booking-meta">
-                      <h3 className="cmbp-booking-title">
-                        {(() => {
-                          const titleRoute =
-                            booking.type === "CORPORATE"
-                              ? `${booking.routeId?.fromLocation || booking.pickupLocation} → ${booking.routeId?.toLocation || booking.dropoffLocation}`
-                              : `${booking.pickupLocation || "N/A"} → ${booking.dropoffLocation || "N/A"}`;
-
-                          return titleRoute;
-                        })()}
-                      </h3>
-                      <p className="cmbp-booking-date">
-                        📅 {formatDate(booking.travelDate || booking.createdAt)}
-                      </p>
+                  {/* Card Header with Gradient */}
+                  <div className="cmbp-card-header">
+                    <div className="cmbp-card-header-content">
+                      <div className="cmbp-route-info">
+                        <div className="cmbp-route-display">
+                          <span
+                            className="cmbp-route-from"
+                            title={fromLocation}
+                          >
+                            {fromLocation}
+                          </span>
+                          <span className="cmbp-route-arrow">
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                          </span>
+                          <span className="cmbp-route-to" title={toLocation}>
+                            {toLocation}
+                          </span>
+                        </div>
+                        <div className="cmbp-booking-date-badge">
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <rect
+                              x="3"
+                              y="4"
+                              width="18"
+                              height="18"
+                              rx="2"
+                              ry="2"
+                            />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                          </svg>
+                          {formatDate(booking.travelDate || booking.createdAt)}
+                        </div>
+                      </div>
+                      <span className={`cmbp-status-chip ${statusClass}`}>
+                        {statusConfig.label}
+                      </span>
                     </div>
-                    <span
-                      className="cmbp-status-badge"
-                      style={{ backgroundColor: statusConfig.color }}
-                    >
-                      {statusConfig.label}
-                    </span>
                   </div>
 
-                  <div className="cmbp-booking-details">
-                    {booking.type === "B2C" ? (
-                      <>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Driver</span>
-                          <span className="cmbp-detail-value">
-                            {booking.b2cPartnerId?.fullName || "N/A"}
-                          </span>
+                  {/* Card Body */}
+                  <div className="cmbp-card-body">
+                    {/* Quick Info Row */}
+                    <div className="cmbp-quick-info">
+                      <div className="cmbp-info-item">
+                        <div className="cmbp-info-icon driver">
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                          </svg>
                         </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">
-                            Driver Status
-                          </span>
-                          <span className="cmbp-detail-value">
-                            {(() => {
-                              // For B2C bookings, use assignedDriverId as driverId
-                              const driverId =
-                                booking.assignedDriverId ||
-                                booking.b2cPartnerId?._id ||
-                                booking.b2cPartnerId;
-
-                              return driverId ? (
-                                isDriverOnline(driverId) ? (
-                                  <span style={{ color: "#28a745" }}>
-                                    🟢 Online
-                                  </span>
-                                ) : (
-                                  <span style={{ color: "#ffc107" }}>
-                                    🟡 Offline
-                                  </span>
-                                )
-                              ) : (
-                                <span style={{ color: "#dc3545" }}>
-                                  🔴 Not Assigned
-                                </span>
-                              );
-                            })()}
-                          </span>
-                        </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Vehicle</span>
-                          <span className="cmbp-detail-value">
-                            {(() => {
-                              const model =
-                                booking.vehicleInfo?.model ||
-                                booking.vehicleModel ||
-                                booking.routeId?.assignedVehicle?.model;
-                              const plate =
-                                booking.vehicleInfo?.licensePlate ||
-                                booking.vehiclePlate ||
-                                booking.routeId?.assignedVehicle?.licensePlate;
-
-                              if (!model) return "N/A";
-                              return model;
-                              // plate ? `${model} (${plate})` : 
-                            })()}
-                          </span>
-                        </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Seats</span>
-                          <span className="cmbp-detail-value">
-                            {booking.numberOfSeats}
-                          </span>
-                        </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Amount</span>
-                          <span className="cmbp-detail-value">
-                            {booking.paymentAmount?.toFixed(2) || "N/A"} KWD
-                          </span>
-                        </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">
-                            Payment Method
-                          </span>
-                          <span className="cmbp-detail-value">
-                            {booking.paymentMethod || "N/A"}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Company</span>
-                          <span className="cmbp-detail-value">
-                            {booking.corporateOwnerId?.companyName || "N/A"}
-                          </span>
-                        </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Driver</span>
-                          <span className="cmbp-detail-value">
-                            {booking.driverName || "N/A"}
-                          </span>
-                        </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">
-                            Driver Status
-                          </span>
-                          <span className="cmbp-detail-value">
-                            {booking.driverId ? (
-                              isDriverOnline(booking.driverId) ? (
-                                <span style={{ color: "#28a745" }}>
-                                  🟢 Online
-                                </span>
-                              ) : (
-                                <span style={{ color: "#ffc107" }}>
-                                  🟡 Offline
-                                </span>
-                              )
-                            ) : booking.b2cPartnerId ? (
-                              isDriverOnline(
-                                booking.b2cPartnerId._id ||
-                                  booking.b2cPartnerId,
-                              ) ? (
-                                <span style={{ color: "#28a745" }}>
-                                  🟢 Online
-                                </span>
-                              ) : (
-                                <span style={{ color: "#ffc107" }}>
-                                  🟡 Offline
-                                </span>
-                              )
-                            ) : (
-                              <span style={{ color: "#dc3545" }}>
-                                🔴 Not Assigned
+                        <div className="cmbp-info-text">
+                          <span className="cmbp-info-label">Driver</span>
+                          <span
+                            className={`cmbp-info-value ${isOnline ? "online" : "offline"}`}
+                          >
+                            {driverName}
+                            {driverId && (
+                              <span style={{ marginLeft: 6, fontSize: 10 }}>
+                                {isOnline ? "●" : "○"}
                               </span>
                             )}
                           </span>
                         </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Route</span>
-                          <span className="cmbp-detail-value">
-                            {(() => {
-                              const route = `${booking.routeId?.fromLocation || booking.pickupLocation} → ${booking.routeId?.toLocation || booking.dropoffLocation}`;
+                      </div>
+                      <div className="cmbp-info-item">
+                        <div className="cmbp-info-icon vehicle">
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10H8s-2.7.6-4.5 1.1C2.7 11.3 2 12.1 2 13v3c0 .6.4 1 1 1h2" />
+                            <circle cx="7" cy="17" r="2" />
+                            <circle cx="17" cy="17" r="2" />
+                          </svg>
+                        </div>
+                        <div className="cmbp-info-text">
+                          <span className="cmbp-info-label">Vehicle</span>
+                          <span className="cmbp-info-value">
+                            {vehicleModel}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                              return route;
-                            })()}
-                          </span>
-                        </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Departure</span>
-                          <span className="cmbp-detail-value">
-                            {booking.routeId?.departureTime ||
-                              booking.travelPath?.[0]?.time ||
-                              "N/A"}
-                          </span>
-                        </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Seat</span>
-                          <span className="cmbp-detail-value">
-                            {booking.numberOfSeats || 1}
-                          </span>
-                        </div>
-                        <div className="cmbp-detail-item">
-                          <span className="cmbp-detail-label">Cost</span>
-                          <span className="cmbp-detail-value">
-                            {booking.price || "N/A"}{" "}
-                            {booking.currency || "KWD"}{" "}
-                          </span>
-                        </div>
-                      </>
-                    )}
+                    {/* Compact Details Row */}
+                    <div className="cmbp-compact-details">
+                      <div className="cmbp-detail-chip">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <rect x="2" y="4" width="20" height="16" rx="2" />
+                          <path d="M7 15h0M2 9h20" />
+                        </svg>
+                        <strong>{booking.paymentMethod || "Wallet"}</strong>
+                      </div>
+                      <div className="cmbp-detail-chip">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                          <circle cx="9" cy="7" r="4" />
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <strong>{booking.numberOfSeats || 1}</strong> seat
+                        {(booking.numberOfSeats || 1) > 1 ? "s" : ""}
+                      </div>
+                      <div className="cmbp-amount-display">
+                        {amount.toFixed(2)}
+                        <span className="cmbp-amount-currency">{currency}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  {booking.type === "B2C" && booking.b2cPartnerId && (
-                    <div className="cmbp-partner-info">
-                      <p>
-                        <strong>Partner:</strong>{" "}
-                        {booking.b2cPartnerId?.fullName ||
-                          booking.b2cPartnerId?.name ||
-                          "N/A"}
-                      </p>
-                      <p>
-                        <strong>Vehicle:</strong>{" "}
-                        {(() => {
-                          const model =
-                            booking.vehicleInfo?.model ||
-                            booking.vehicleModel ||
-                            booking.routeId?.assignedVehicle?.model;
-                          const plate =
-                            booking.vehicleInfo?.licensePlate ||
-                            booking.vehiclePlate ||
-                            booking.routeId?.assignedVehicle?.licensePlate;
-                          const type = booking.vehicleInfo?.vehicleType;
-                          const color = booking.vehicleInfo?.vehicleColor;
-
-                          if (!model) return "N/A";
-
-                          let vehicleStr = model;
-                          if (type) vehicleStr = `${type} - ${model}`;
-                          if (color) vehicleStr += ` (${color})`;
-                          // if (plate) vehicleStr += ` [${plate}]`;
-
-                          return vehicleStr;
-                        })()}
-                      </p>
-                      <p>
-                        <strong>Driver:</strong>{" "}
-                        {booking.driverInfo?.name ||
-                          booking.driverName ||
-                          (booking.isSelfDriver ? "Self" : "Not Assigned")}
-                      </p>
-                    </div>
-                  )}
-
-                  {booking.type === "CORPORATE" && (
-                    <div className="cmbp-partner-info">
-                      <p>
-                        <strong>Company:</strong>{" "}
-                        {booking.companyName || "Corporate Partner"}
-                      </p>
-                      <p>
-                        <strong>Vehicle:</strong>{" "}
-                        {booking.vehicleModel || "Bus"} (
-                        {booking.vehiclePlate || "N/A"})
-                      </p>
-                      <p>
-                        <strong>Driver:</strong>{" "}
-                        {booking.driverName || "Assigned Driver"}
-                      </p>
-                    </div>
-                  )}
-
-                  {(() => {
-                    // For B2C bookings, use assignedDriverId as driverId
-                    const driverId =
-                      booking.type === "B2C"
-                        ? booking.assignedDriverId ||
-                          booking.b2cPartnerId?._id ||
-                          booking.b2cPartnerId
-                        : booking.driverId;
-
-                    return (
-                      getDriverLocation(driverId) && (
-                        <div className="cmbp-driver-info">
-                          <p>
-                            <strong>Driver:</strong> {booking.driverName}
-                          </p>
-                          <p>
-                            <strong>Last Location:</strong> 📍
-                            {(() => {
-                              const driverLoc = getDriverLocation(driverId);
-                              const locationStr = `${driverLoc.lat?.toFixed(4)},${driverLoc.lng?.toFixed(4)}`;
-                              const formattedLoc =
-                                getFormattedLocation(locationStr);
-                              return formattedLoc || locationStr;
-                            })()}
-                          </p>
-                          <p>
-                            <strong>Status:</strong>
-                            <span
-                              className={`badge ${
-                                isDriverOnline(driverId)
-                                  ? "bg-success"
-                                  : "bg-secondary"
-                              }`}
-                              style={{
-                                marginLeft: "10px",
-                                padding: "4px 8px",
-                                borderRadius: "4px",
-                                color: "white",
-                                fontSize: "12px",
-                              }}
-                            >
-                              {isDriverOnline(driverId)
-                                ? "Online 🟢"
-                                : "Offline 🔴"}
-                            </span>
-                          </p>
-                        </div>
-                      )
-                    );
-                  })()}
-
-                  <div className="cmbp-booking-actions">
+                  {/* Card Actions */}
+                  <div className="cmbp-card-actions">
                     {[
                       "CONFIRMED",
                       "ACCEPTED",
@@ -1017,106 +1142,59 @@ const CommuterMyBookingsPage = () => {
                       "IN_PROGRESS",
                     ].includes(booking.bookingStatus) && (
                       <button
-                        className="cmbp-btn-track"
+                        className="cmbp-action-btn track"
                         onClick={() => handleTrackingClick(booking)}
-                        disabled={booking.bookingStatus === "COMPLETED"}
-                      >
-                        Track Driver
-                      </button>
-                    )}
-                    {booking.bookingStatus === "PENDING" &&
-                      booking.type === "B2C" && (
-                        <button className="cmbp-btn-cancel">
-                          Cancel Booking
-                        </button>
-                      )}
-                    {(booking.bookingStatus === "CONFIRMED" ||
-                      booking.bookingStatus === "ACTIVE" ||
-                      booking.bookingStatus === "ACCEPTED") &&
-                      booking.type === "B2C" && (
-                        <button
-                          className="cmbp-btn-noshow"
-                          onClick={() => handleNoShowClick(booking)}
-                        >
-                          Mark No-Show
-                        </button>
-                      )}
-                    {booking.monthlyPassId && (
-                      <button
-                        className="cmbp-btn-download-pass"
-                        onClick={() =>
-                          handleDownloadPassCertificate(booking.monthlyPassId)
-                        }
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
-                          color: "#fff",
-                          border: "none",
-                          padding: "8px 16px",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          fontSize: "13px",
-                          fontWeight: "600",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                        }}
                       >
                         <svg
-                          width="14"
-                          height="14"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                        </svg>
+                        Track
+                      </button>
+                    )}
+                    {booking.monthlyPassId && (
+                      <button
+                        className="cmbp-action-btn download"
+                        onClick={() =>
+                          handleDownloadPassCertificate(booking.monthlyPassId)
+                        }
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
                         >
                           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                           <polyline points="7 10 12 15 17 10" />
                           <line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
-                        Download Pass
+                        Pass
                       </button>
                     )}
-                    {/* View Details Button */}
                     <button
-                      className="cmbp-btn-details"
+                      className="cmbp-action-btn primary"
                       onClick={() => handleViewDetails(booking)}
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-                        color: "#fff",
-                        border: "none",
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        transition: "all 0.2s ease",
-                      }}
                     >
                       <svg
-                        width="14"
-                        height="14"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
                       >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
                       </svg>
-                      View Details
+                      Details
                     </button>
                   </div>
 
-                  {/* Daily Trips for this Booking */}
+                  {/* Daily Trips Toggle (Collapsible) */}
                   {(booking.bookingStatus === "CONFIRMED" ||
                     booking.bookingStatus === "IN_PROGRESS" ||
                     booking.bookingStatus === "ACTIVE" ||
@@ -1124,8 +1202,9 @@ const CommuterMyBookingsPage = () => {
                     <DailyTripsInBooking
                       booking={booking}
                       userRole={userType}
+                      isExpanded={expandedBookings.has(String(booking._id))}
+                      onToggleExpand={() => toggleBookingExpansion(booking._id)}
                       onTripStatusChange={(status, tripId) => {
-                        // Refresh bookings after trip status change
                         dispatch(getPassengerBookings());
                       }}
                     />
@@ -1404,9 +1483,13 @@ const CommuterMyBookingsPage = () => {
                       ����️
                     </div>
                     <h3 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>
-                      {driverId
-                        ? "Waiting for Driver Location..."
-                        : "No Driver Assigned Yet"}
+                      {tripStatusMessage
+                        ? "Trip Not Started Yet"
+                        : driverId
+                          ? selectedBooking.bookingStatus === "ACCEPTED"
+                            ? "Trip Not Started Yet"
+                            : "Waiting for Driver Location..."
+                          : "No Driver Assigned Yet"}
                     </h3>
                     <p
                       style={{
@@ -1417,9 +1500,13 @@ const CommuterMyBookingsPage = () => {
                         maxWidth: "300px",
                       }}
                     >
-                      {driverId
-                        ? "Your driver will appear here once they start sharing their location"
-                        : "Driver assignment information will appear here once confirmed"}
+                      {tripStatusMessage
+                        ? tripStatusMessage
+                        : driverId
+                          ? selectedBooking.bookingStatus === "ACCEPTED"
+                            ? "The driver has not started the trip yet. Location tracking will be available once the driver starts the trip."
+                            : "Your driver will appear here once they start sharing their location"
+                          : "Driver assignment information will appear here once confirmed"}
                     </p>
                   </div>
                 );
@@ -1427,12 +1514,22 @@ const CommuterMyBookingsPage = () => {
 
               {/* Map Info Overlay */}
               {(() => {
-                // For B2C bookings, use b2cPartnerId._id as driverId
-                const driverId =
-                  selectedBooking.type === "B2C"
-                    ? selectedBooking.b2cPartnerId?._id ||
-                      selectedBooking.b2cPartnerId
-                    : selectedBooking.driverId;
+                // For B2C bookings, determine driverId based on isSelfDriver flag
+                let driverId;
+                if (selectedBooking.type === "B2C") {
+                  if (selectedBooking.isSelfDriver) {
+                    driverId =
+                      selectedBooking.b2cPartnerId?._id ||
+                      selectedBooking.b2cPartnerId;
+                  } else {
+                    driverId =
+                      selectedBooking.assignedDriverId ||
+                      selectedBooking.b2cPartnerId?._id ||
+                      selectedBooking.b2cPartnerId;
+                  }
+                } else {
+                  driverId = selectedBooking.driverId;
+                }
 
                 return (
                   driverId &&
@@ -2057,6 +2154,6 @@ const CommuterMyBookingsPage = () => {
       )}
     </div>
   );
-};;
+};
 
 export default CommuterMyBookingsPage;

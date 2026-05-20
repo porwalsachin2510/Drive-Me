@@ -3105,21 +3105,37 @@ export const updatePassengerInterestStatus = async (req, res) => {
 export const toggleOnlinePayments = async (req, res) => {
     try {
         const { enabled } = req.body;
-        
-        // Here you would update the actual payment system configuration
-        // For demo, we'll just log the change and return success
-        console.log(`Online payments ${enabled ? 'enabled' : 'disabled'} by admin ${req.userId}`);
-        
-        // In a real implementation, you would:
-        // 1. Update a system configuration table
-        // 2. Notify all payment gateways
-        // 3. Log the action for audit
-        // 4. Possibly broadcast to connected clients
-        
+
+        // Import SiteSettings model
+        const SiteSettings = (await import("../models/SiteSettings.js")).default;
+
+        // Get current admin user info
+        const admin = await User.findById(req.userId).select('fullName');
+
+        // Find or create site settings
+        let settings = await SiteSettings.findOne();
+        if (!settings) {
+            settings = new SiteSettings();
+        }
+
+        // Update payment control settings
+        settings.paymentControl = {
+            onlinePaymentsEnabled: enabled,
+            lastToggled: new Date(),
+            toggledBy: req.userId,
+            toggledByName: admin?.fullName || 'System Admin',
+        };
+
+        await settings.save();
+
+        console.log(`[v0] Online payments ${enabled ? 'enabled' : 'disabled'} by admin ${req.userId} (${admin?.fullName})`);
+
         res.status(200).json({
             success: true,
             message: `Online payments ${enabled ? 'enabled' : 'disabled'} successfully`,
-            enabled
+            enabled,
+            lastToggled: settings.paymentControl.lastToggled,
+            toggledBy: settings.paymentControl.toggledByName
         });
     } catch (error) {
         console.error("[v0] Error toggling online payments:", error);
@@ -3134,21 +3150,34 @@ export const toggleOnlinePayments = async (req, res) => {
 // Get online payment status
 export const getOnlinePaymentStatus = async (req, res) => {
     try {
-        // Here you would fetch the actual payment system status
-        // For demo, we'll return a default status
+        // Import SiteSettings model
+        const SiteSettings = (await import("../models/SiteSettings.js")).default;
+
+        // Find or create site settings
+        let settings = await SiteSettings.findOne();
+        if (!settings) {
+            settings = await SiteSettings.create({});
+        }
+
+        const paymentControl = settings.paymentControl || {
+            onlinePaymentsEnabled: true,
+            lastToggled: null,
+            toggledByName: null
+        };
+
         const status = {
-            enabled: true,
-            lastToggled: new Date(),
-            toggledBy: 'System Admin',
+            enabled: paymentControl.onlinePaymentsEnabled !== false,
+            lastToggled: paymentControl.lastToggled,
+            toggledBy: paymentControl.toggledByName || 'System Admin',
             paymentGateways: {
-                stripe: true,
-                tap: true,
-                upi: true
+                stripe: paymentControl.onlinePaymentsEnabled !== false,
+                tap: paymentControl.onlinePaymentsEnabled !== false,
+                upi: paymentControl.onlinePaymentsEnabled !== false
             },
             restrictions: {
                 minAmount: 0.5,
                 maxAmount: 10000,
-                allowedCurrencies: ['KWD', 'USD', 'EUR']
+                allowedCurrencies: ['KWD', 'USD', 'EUR', 'AED']
             }
         };
 

@@ -1364,3 +1364,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Payment Disabled Notice Styles */
+.payment-disabled-notice,
+.online-payments-disabled-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background-color: #fff8e6;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #856404;
+}
+
+.payment-disabled-notice .notice-icon,
+.online-payments-disabled-notice .notice-icon {
+  font-size: 18px;
+}
+
+.loading-payment-settings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.loading-payment-settings .spinner {
+  animation: spin 1s linear infinite;
+}

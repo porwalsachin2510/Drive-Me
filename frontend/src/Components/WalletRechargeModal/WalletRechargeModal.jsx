@@ -15,6 +15,31 @@ const WalletRechargeModal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
 
+  // Payment control state
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true);
+  const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(true);
+
+  // Fetch payment settings to check if online payments are enabled
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        setLoadingPaymentSettings(true);
+        const response = await api.get("/pages/public/payment-settings");
+        if (response.data.success) {
+          setOnlinePaymentsEnabled(response.data.data.onlinePaymentsEnabled);
+        }
+      } catch (error) {
+        console.error("Error fetching payment settings:", error);
+        // Default to enabled if fetch fails
+        setOnlinePaymentsEnabled(true);
+      } finally {
+        setLoadingPaymentSettings(false);
+      }
+    };
+
+    fetchPaymentSettings();
+  }, []);
+
   // Available payment methods based on country
   useEffect(() => {
     const methods =
@@ -174,29 +199,47 @@ const WalletRechargeModal = ({
           {/* Payment Method Selection */}
           <div className="payment-method-section">
             <label className="section-title">Select Payment Method</label>
-            <div className="payment-methods">
-              {paymentMethods.map((method) => (
-                <div
-                  key={method.id}
-                  className={`payment-method-option ${selectedPaymentMethod === method.id ? "selected" : ""}`}
-                  onClick={() => setSelectedPaymentMethod(method.id)}
-                >
-                  <span className="payment-icon">{method.icon}</span>
-                  <span className="payment-name">{method.name}</span>
-                  <div className="payment-radio">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={method.id}
-                      checked={selectedPaymentMethod === method.id}
-                      onChange={() => setSelectedPaymentMethod(method.id)}
-                      disabled={isProcessing}
-                    />
-                    <span className="radio-custom"></span>
-                  </div>
+            {loadingPaymentSettings ? (
+              <div className="payment-methods-loading">
+                Loading payment options...
+              </div>
+            ) : !onlinePaymentsEnabled ? (
+              <div className="online-payments-disabled-notice">
+                <div className="notice-icon">ℹ️</div>
+                <div className="notice-content">
+                  <strong>Online Payments Unavailable</strong>
+                  <p>
+                    Online payment methods are currently disabled by the
+                    administrator. Wallet recharge is not available at this
+                    time.
+                  </p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="payment-methods">
+                {paymentMethods.map((method) => (
+                  <div
+                    key={method.id}
+                    className={`payment-method-option ${selectedPaymentMethod === method.id ? "selected" : ""}`}
+                    onClick={() => setSelectedPaymentMethod(method.id)}
+                  >
+                    <span className="payment-icon">{method.icon}</span>
+                    <span className="payment-name">{method.name}</span>
+                    <div className="payment-radio">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value={method.id}
+                        checked={selectedPaymentMethod === method.id}
+                        onChange={() => setSelectedPaymentMethod(method.id)}
+                        disabled={isProcessing}
+                      />
+                      <span className="radio-custom"></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Transaction Summary */}
@@ -234,11 +277,18 @@ const WalletRechargeModal = ({
           <button
             className="recharge-btn"
             onClick={handleRecharge}
-            disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
+            disabled={
+              !amount ||
+              parseFloat(amount) <= 0 ||
+              isProcessing ||
+              !onlinePaymentsEnabled
+            }
           >
             {isProcessing
               ? "Processing..."
-              : `Add ${currency === "AED" ? "د.إ" : "د.ك"}${amount || "0.00"}`}
+              : !onlinePaymentsEnabled
+                ? "Online Payments Disabled"
+                : `Add ${currency === "AED" ? "د.إ" : "د.ك"}${amount || "0.00"}`}
           </button>
         </div>
 

@@ -153,6 +153,37 @@ const AvailableSection = ({
     return d.toLocaleDateString("en-GB");
   };
 
+  // Helper function to parse time string to minutes for sorting
+  const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr || timeStr === "N/A") return Infinity;
+
+    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!match) return Infinity;
+
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const period = match[3]?.toUpperCase();
+
+    if (period === "PM" && hours !== 12) {
+      hours += 12;
+    } else if (period === "AM" && hours === 12) {
+      hours = 0;
+    }
+
+    return hours * 60 + minutes;
+  };
+
+  // Sort stops by time
+  const sortStopsByTime = (stops) => {
+    if (!stops || !Array.isArray(stops) || stops.length === 0) return [];
+
+    return [...stops].sort((a, b) => {
+      const timeA = parseTimeToMinutes(typeof a === "string" ? null : a.time);
+      const timeB = parseTimeToMinutes(typeof b === "string" ? null : b.time);
+      return timeA - timeB;
+    });
+  };
+
   // Calculate monthly price from one-way price if not available
   // const calculateMonthlyPrice = (route) => {
   //   // If route already has monthlyPrice, use it
@@ -535,23 +566,43 @@ const AvailableSection = ({
                           )}
                       </div>
 
-                      {/* Intermediate Stops */}
-                      {(
+                      {/* Intermediate Stops - sorted by time and filtered to exclude from/to locations */}
+                      {sortStopsByTime(
                         route.allStops ||
-                        route.scheduleStops ||
-                        route.stopPoints ||
-                        []
-                      ).map((stop, stopIdx) => (
-                        <div key={stopIdx} className="route-stop-item">
-                          <span className="stop-dot"></span>
-                          <span className="stop-name">
-                            {typeof stop === "string" ? stop : stop.location}
-                          </span>
-                          {stop.time && stop.time !== "N/A" && (
-                            <span className="stop-time">{stop.time}</span>
-                          )}
-                        </div>
-                      ))}
+                          route.scheduleStops ||
+                          route.stopPoints ||
+                          [],
+                      )
+                        .filter((stop) => {
+                          const stopLocation = (
+                            typeof stop === "string"
+                              ? stop
+                              : stop.location || ""
+                          )
+                            .toLowerCase()
+                            .trim();
+                          const fromLoc = (route.fromLocation || "")
+                            .toLowerCase()
+                            .trim();
+                          const toLoc = (route.toLocation || "")
+                            .toLowerCase()
+                            .trim();
+                          // Exclude stops that match fromLocation or toLocation
+                          return (
+                            stopLocation !== fromLoc && stopLocation !== toLoc
+                          );
+                        })
+                        .map((stop, stopIdx) => (
+                          <div key={stopIdx} className="route-stop-item">
+                            <span className="stop-dot"></span>
+                            <span className="stop-name">
+                              {typeof stop === "string" ? stop : stop.location}
+                            </span>
+                            {stop.time && stop.time !== "N/A" && (
+                              <span className="stop-time">{stop.time}</span>
+                            )}
+                          </div>
+                        ))}
 
                       {/* End Point */}
                       <div className="route-stop-item end-point">
@@ -623,6 +674,6 @@ const AvailableSection = ({
       />
     </div>
   );
-};;;
+};;;;
 
 export default AvailableSection;

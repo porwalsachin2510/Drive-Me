@@ -75,6 +75,15 @@ const b2cPartnerDriverSchema = new mongoose.Schema(
                 type: Number,
                 default: 0,
             },
+            history: [{
+                rating: Number,
+                date: Date,
+                tripId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "B2CPartnerTrip"
+                },
+                feedback: String
+            }]
         },
         documents: {
             license: String,

@@ -46,8 +46,11 @@ const TYPE_TO_EVENT_MAP = {
     'VEHICLE_CHANGED': 'vehicle_changed',
     // Trip events
     'LATE_TRIP_START': 'late_trip_start',
-    'TRIP_STARTED': 'trip_started',
-    'TRIP_COMPLETED': 'trip_completed',
+    'TRIP_STARTED': 'trip-started',
+    'TRIP_COMPLETED': 'trip-completed',
+    'TRIP_STATUS_UPDATE': 'trip-status-update',
+    'TRIP_CANCELLED': 'trip-cancelled',
+    'TRIP_DELAYED': 'trip-delayed',
 }
 
 // Send real-time notification to user

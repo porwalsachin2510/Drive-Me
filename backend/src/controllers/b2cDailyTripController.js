@@ -6,6 +6,8 @@ import User from "../models/User.js";
 import NoShow from "../models/NoShow.js";
 import RouteRequest from "../models/RouteRequest.js";
 import { sendEmail } from "../Services/emailService.js";
+import { createNotification } from "../Services/notificationService.js";
+import { sendRealTimeNotification, sendBookingUpdate, sendLocationUpdate } from "../Services/socketService.js";
 import mongoose from "mongoose";
 
 // Get today's trips for B2C partner
@@ -249,7 +251,7 @@ export const updateTripStatus = async (req, res) => {
 
         // Find trip - allow both B2C_PARTNER and B2C_PARTNER_DRIVER
         let trip = null;
-        
+
         if (userRole === "B2C_PARTNER") {
             trip = await B2CPartnerTrip.findOne({
                 _id: tripId,
@@ -258,7 +260,7 @@ export const updateTripStatus = async (req, res) => {
         } else if (userRole === "B2C_PARTNER_DRIVER") {
             // Driver needs to find trip via their driverId or userId
             const driverUser = await User.findById(userId).lean();
-            
+
             // Try multiple ways to match driver to trip
             if (driverUser?.driverId) {
                 trip = await B2CPartnerTrip.findOne({
@@ -269,7 +271,7 @@ export const updateTripStatus = async (req, res) => {
                     ]
                 });
             }
-            
+
             // Fallback: try matching by userId directly
             if (!trip) {
                 trip = await B2CPartnerTrip.findOne({
@@ -277,7 +279,7 @@ export const updateTripStatus = async (req, res) => {
                     driverId: userId
                 });
             }
-            
+
             // Fallback: try matching by assignedDriverId
             if (!trip) {
                 trip = await B2CPartnerTrip.findById(tripId);
@@ -301,12 +303,12 @@ export const updateTripStatus = async (req, res) => {
             "delayed": "Delayed",
             "scheduled": "Scheduled"
         };
-        
+
         trip.status = statusMap[status.toLowerCase()] || status;
         if (reason) trip.delayReason = reason;
         if (actualStartTime) trip.actualStartTime = new Date(actualStartTime);
         if (actualEndTime) trip.actualEndTime = new Date(actualEndTime);
-        
+
         // Auto-set times based on status
         if (status.toLowerCase() === "started" || status.toLowerCase() === "in_progress" || status.toLowerCase() === "in progress") {
             if (!trip.actualStartTime) trip.actualStartTime = new Date();
@@ -317,12 +319,34 @@ export const updateTripStatus = async (req, res) => {
 
         await trip.save();
 
-        // Notify passengers of status change
-        await notifyPassengersOfStatusChange(trip, status);
+        // Also update related bookings status
+        const relatedBookings = await B2CPassengerBooking.find({
+            $or: [
+                { monthlyTrips: tripId },
+                { monthlyTrips: new mongoose.Types.ObjectId(tripId) },
+                { routeId: trip.routeId, bookingStatus: { $in: ['CONFIRMED', 'ACCEPTED', 'IN_PROGRESS'] } }
+            ]
+        });
+
+        // Update booking statuses based on trip status
+        const bookingStatusMap = {
+            'In Progress': 'IN_PROGRESS',
+            'Completed': 'COMPLETED'
+        };
+
+        if (bookingStatusMap[trip.status]) {
+            for (const booking of relatedBookings) {
+                booking.bookingStatus = bookingStatusMap[trip.status];
+                await booking.save();
+            }
+        }
+
+        // Notify passengers of status change (use mapped status)
+        await notifyPassengersOfStatusChange(trip, trip.status);
 
         res.status(200).json({
             success: true,
-            message: `Trip status updated to ${status.toUpperCase()}`,
+            message: `Trip status updated to ${trip.status}`,
             data: {
                 tripId: trip._id,
                 status: trip.status,
@@ -750,7 +774,7 @@ const calculateProviderRevenue = async (providerId, dateFilter) => {
 const calculateTripRevenue = async (tripId) => {
     try {
         const trip = await B2CPartnerTrip.findById(tripId).populate('routeId');
-        
+
         if (!trip) return 0;
 
         // Get monthly pass revenue
@@ -758,7 +782,7 @@ const calculateTripRevenue = async (tripId) => {
             'monthlyTrips.tripId': tripId,
             status: 'ACTIVE'
         });
-        
+
         const monthlyRevenue = monthlyPasses.reduce((sum, pass) => {
             return sum + (pass.pricing?.monthlyPrice || 0);
         }, 0);
@@ -781,34 +805,1356 @@ const calculateTripRevenue = async (tripId) => {
     }
 };
 
+// Get Driver Daily Trips - Route-centric view with all passengers for each trip
+// This groups trips by route+schedule+time, showing ALL passengers on each trip
+export const getDriverDailyTrips = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const userRole = req.userRole;
+        const { filter = 'today', page = 1, limit = 50 } = req.query;
+
+        console.log("[v0] getDriverDailyTrips - userId:", userId, "userRole:", userRole);
+
+        // Get driver info
+        const driverUser = await User.findById(userId);
+        if (!driverUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Driver not found"
+            });
+        }
+
+        console.log("[v0] Driver user found:", {
+            _id: driverUser._id,
+            role: driverUser.role,
+            driverId: driverUser.driverId,
+            b2cPartnerId: driverUser.b2cPartnerId,
+            fullName: driverUser.fullName
+        });
+
+        // Get driver ID and b2cPartnerId - driver might be linked via driverId or b2cPartnerId
+        const driverId = driverUser.driverId || userId;
+        const b2cPartnerId = driverUser.b2cPartnerId || null;
+
+        // Calculate date range based on filter
+        const now = new Date();
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(now);
+        todayEnd.setHours(23, 59, 59, 999);
+
+        let dateFilter = {};
+        if (filter === 'today') {
+            dateFilter = { $gte: todayStart, $lte: todayEnd };
+        } else if (filter === 'upcoming') {
+            dateFilter = { $gte: todayStart };
+        } else {
+            // 'all' - no date filter
+            dateFilter = { $gte: new Date('2020-01-01') };
+        }
+
+        // Get model references
+        const B2CPartnerSchedule = mongoose.model('B2CPartnerSchedule');
+        const B2CPartnerVehicle = mongoose.model('B2CPartnerVehicle');
+        const B2CPartnerDriver = mongoose.model('B2CPartnerDriver');
+
+        // APPROACH 1: Find trips via bookings assigned to this driver
+        // Get ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings assigned to this driver
+        // CRITICAL: Do NOT include CONFIRMED (not yet accepted) bookings
+        const bookingQuery = {
+            $or: [
+                { assignedDriverId: driverId },
+                { assignedDriverId: userId },
+                { assignedDriverId: new mongoose.Types.ObjectId(driverId) },
+                { assignedDriverId: new mongoose.Types.ObjectId(userId) }
+            ],
+            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
+        };
+
+        console.log("[v0] Booking query:", JSON.stringify(bookingQuery));
+
+        const driverBookings = await B2CPassengerBooking.find(bookingQuery).lean();
+
+        console.log("[v0] Found driver bookings:", driverBookings.length);
+
+        // Collect all trip IDs from bookings' monthlyTrips array
+        const tripIdsFromBookings = new Set();
+        driverBookings.forEach(booking => {
+            if (booking.monthlyTrips && Array.isArray(booking.monthlyTrips)) {
+                booking.monthlyTrips.forEach(tripId => {
+                    tripIdsFromBookings.add(tripId.toString());
+                });
+            }
+        });
+
+        console.log("[v0] Trip IDs from bookings:", tripIdsFromBookings.size);
+
+        // APPROACH 2: Find trips via schedules assigned to this driver
+        const scheduleQuery = {
+            $or: [
+                { assignedDriver: driverId },
+                { assignedDriver: userId },
+                { assignedDriver: new mongoose.Types.ObjectId(driverId) },
+                { assignedDriver: new mongoose.Types.ObjectId(userId) }
+            ],
+            isActive: true
+        };
+
+        const driverSchedules = await B2CPartnerSchedule.find(scheduleQuery).lean();
+
+        console.log("[v0] Found driver schedules:", driverSchedules.length);
+
+        // Get route IDs from schedules
+        const scheduleRouteIds = driverSchedules.map(s => s.routeId);
+
+        // APPROACH 3: Find trips directly linked via driverId
+        // Build comprehensive query for trips
+        const tripQueryConditions = [
+            // Direct driver assignment on trip (both driverId formats)
+            { driverId: driverId },
+            { driverId: userId },
+            { driverId: new mongoose.Types.ObjectId(driverId) },
+            { driverId: new mongoose.Types.ObjectId(userId) }
+        ];
+
+        // Add trip IDs from bookings
+        if (tripIdsFromBookings.size > 0) {
+            tripQueryConditions.push({
+                _id: { $in: Array.from(tripIdsFromBookings).map(id => new mongoose.Types.ObjectId(id)) }
+            });
+        }
+
+        // Add trips from routes with assigned schedules
+        if (scheduleRouteIds.length > 0) {
+            tripQueryConditions.push({ routeId: { $in: scheduleRouteIds } });
+        }
+
+        // If this driver is the B2C_PARTNER themselves (self-driver scenario)
+        // they should see trips where they are the b2cPartnerId AND driverId matches their userId
+        if (driverUser.role === 'B2C_PARTNER') {
+            tripQueryConditions.push({ b2cPartnerId: userId });
+        }
+
+        const tripQuery = {
+            tripDate: dateFilter,
+            $or: tripQueryConditions
+        };
+
+        console.log("[v0] Trip query conditions count:", tripQueryConditions.length);
+
+        const trips = await B2CPartnerTrip.find(tripQuery)
+            .sort({ tripDate: 1, startTime: 1 })
+            .skip((parseInt(page) - 1) * parseInt(limit))
+            .limit(parseInt(limit))
+            .lean();
+
+        // For each trip, get all passengers (from ACCEPTED bookings that reference this trip)
+        const tripsWithPassengers = await Promise.all(
+            trips.map(async (trip) => {
+                const passengerMap = new Map();
+
+                // Find ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings that have this trip ID in their monthlyTrips array
+                // CRITICAL: Do NOT include CONFIRMED (not yet accepted) bookings
+                const bookingsWithThisTrip = await B2CPassengerBooking.find({
+                    monthlyTrips: trip._id,
+                    bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
+                })
+                    .populate('passengerId', 'fullName email whatsappNumber profileImage')
+                    .lean();
+
+                bookingsWithThisTrip.forEach(booking => {
+                    if (booking.passengerId) {
+                        const passengerId = booking.passengerId._id.toString();
+                        if (!passengerMap.has(passengerId)) {
+                            passengerMap.set(passengerId, {
+                                _id: booking.passengerId._id,
+                                fullName: booking.passengerId.fullName || booking.passengerName || 'N/A',
+                                email: booking.passengerId.email,
+                                phone: booking.passengerId.whatsappNumber,
+                                profileImage: booking.passengerId.profileImage,
+                                bookingType: booking.isMonthlyPass ? 'Monthly Pass' : 'One Time',
+                                seats: booking.numberOfSeats || 1,
+                                bookingId: booking._id,
+                                bookingStatus: booking.bookingStatus
+                            });
+                        }
+                    }
+                });
+
+                // NOTE: Removed route-based matching as it causes wrong passengers to appear
+                // Passengers should only show on trips that are in their monthlyTrips array
+
+                const passengers = Array.from(passengerMap.values());
+                const totalSeatsBooked = passengers.reduce((sum, p) => sum + (p.seats || 1), 0);
+
+                // Populate route info
+                let routeInfo = null;
+                if (trip.routeId) {
+                    const route = await B2CPartnerRoute.findById(trip.routeId)
+                        .select('fromLocation toLocation routeName')
+                        .lean();
+                    routeInfo = route;
+                }
+
+                // Populate vehicle info
+                let vehicleInfo = null;
+                if (trip.vehicleId) {
+                    const vehicle = await B2CPartnerVehicle.findById(trip.vehicleId)
+                        .select('vehicleType model licensePlate seatingCapacity')
+                        .lean();
+                    vehicleInfo = vehicle;
+                }
+
+                return {
+                    _id: trip._id,
+                    tripDate: trip.tripDate,
+                    startTime: trip.startTime,
+                    status: trip.status,
+                    fromLocation: trip.fromLocation || routeInfo?.fromLocation,
+                    toLocation: trip.toLocation || routeInfo?.toLocation,
+                    tripType: trip.tripType,
+                    routeId: trip.routeId,
+                    routeInfo,
+                    vehicleInfo,
+                    totalSeats: trip.totalSeats,
+                    bookedSeats: totalSeatsBooked,
+                    availableSeats: trip.totalSeats - totalSeatsBooked,
+                    passengers,
+                    passengerCount: passengers.length,
+                    actualStartTime: trip.actualStartTime,
+                    actualEndTime: trip.actualEndTime
+                };
+            })
+        );
+
+        // Get counts for stats
+        const totalCount = await B2CPartnerTrip.countDocuments(tripQuery);
+
+        const todayQuery = {
+            ...tripQuery,
+            tripDate: { $gte: todayStart, $lte: todayEnd }
+        };
+        const todayCount = await B2CPartnerTrip.countDocuments(todayQuery);
+
+        const completedTodayQuery = {
+            ...todayQuery,
+            status: 'Completed'
+        };
+        const completedToday = await B2CPartnerTrip.countDocuments(completedTodayQuery);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                trips: tripsWithPassengers,
+                stats: {
+                    todayTrips: todayCount,
+                    completedToday,
+                    totalTrips: totalCount,
+                    inProgressTrips: tripsWithPassengers.filter(t => t.status === 'In Progress').length
+                },
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: Math.ceil(totalCount / parseInt(limit)),
+                    totalTrips: totalCount,
+                    hasNext: parseInt(page) * parseInt(limit) < totalCount,
+                    hasPrev: parseInt(page) > 1
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Error getting driver daily trips:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error retrieving driver trips",
+            error: error.message
+        });
+    }
+};
+
+// Start trip and update all related bookings
+export const startDriverTrip = async (req, res) => {
+    try {
+        const { tripId } = req.params;
+        const userId = req.userId;
+        const userRole = req.userRole;
+
+        console.log("[v0] startDriverTrip - tripId:", tripId, "userId:", userId, "userRole:", userRole);
+
+        // Get user info to check authorization
+        const driverUser = await User.findById(userId);
+        if (!driverUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const driverId = driverUser.driverId || userId;
+
+        // Find the trip
+        const trip = await B2CPartnerTrip.findById(tripId);
+        if (!trip) {
+            return res.status(404).json({
+                success: false,
+                message: "Trip not found"
+            });
+        }
+
+        // Check authorization - verify driver is assigned to this trip or is the B2C Partner
+        const isAuthorized =
+            trip.driverId?.toString() === driverId?.toString() ||
+            trip.driverId?.toString() === userId.toString() ||
+            trip.b2cPartnerId?.toString() === userId.toString() ||
+            (driverUser.b2cPartnerId && trip.b2cPartnerId?.toString() === driverUser.b2cPartnerId?.toString());
+
+        if (!isAuthorized) {
+            console.log("[v0] Unauthorized - trip.driverId:", trip.driverId, "driverId:", driverId, "userId:", userId);
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to start this trip"
+            });
+        }
+
+        console.log("[v0] Starting trip:", tripId, "current status:", trip.status);
+
+        // Update trip status
+        trip.status = 'In Progress';
+        trip.actualStartTime = new Date();
+        await trip.save();
+
+        // Update ONLY bookings that have this trip in their monthlyTrips array
+        // CRITICAL: Do NOT use route-based matching as it affects wrong bookings
+        const relatedBookings = await B2CPassengerBooking.find({
+            $or: [
+                { monthlyTrips: tripId },
+                { monthlyTrips: new mongoose.Types.ObjectId(tripId) }
+            ],
+            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS'] }
+        });
+
+        console.log("[v0] Found related bookings:", relatedBookings.length);
+
+        // Update each booking status and emit socket events
+        for (const booking of relatedBookings) {
+            booking.bookingStatus = 'IN_PROGRESS';
+            booking.startedAt = new Date();
+            booking.tripStartedBy = userRole || 'B2C_PARTNER_DRIVER';
+            await booking.save();
+
+            // Emit socket event to each booking room so passengers can track
+            try {
+                sendBookingUpdate(booking._id.toString(), 'b2c-trip-started', {
+                    bookingId: booking._id,
+                    tripId: trip._id,
+                    driverId: userId,
+                    status: 'IN_PROGRESS',
+                    message: 'Your trip has started! You can now track the driver.',
+                    tripInfo: {
+                        fromLocation: trip.fromLocation,
+                        toLocation: trip.toLocation,
+                        startTime: trip.startTime
+                    }
+                });
+                console.log(`[v0] Emitted b2c-trip-started to booking ${booking._id}`);
+            } catch (socketErr) {
+                console.error("[v0] Error emitting trip started socket event:", socketErr);
+            }
+        }
+
+        // Notify passengers
+        await notifyPassengersOfStatusChange(trip, 'In Progress');
+
+        res.status(200).json({
+            success: true,
+            message: "Trip started successfully",
+            data: {
+                tripId: trip._id,
+                status: trip.status,
+                actualStartTime: trip.actualStartTime,
+                bookingsUpdated: relatedBookings.length
+            }
+        });
+
+    } catch (error) {
+        console.error("Error starting driver trip:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error starting trip",
+            error: error.message
+        });
+    }
+};
+
+// Complete trip and update all related bookings
+export const completeDriverTrip = async (req, res) => {
+    try {
+        const { tripId } = req.params;
+        const userId = req.userId;
+        const userRole = req.userRole;
+
+        console.log("[v0] completeDriverTrip - tripId:", tripId, "userId:", userId, "userRole:", userRole);
+
+        // Get user info to check authorization
+        const driverUser = await User.findById(userId);
+        if (!driverUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const driverId = driverUser.driverId || userId;
+
+        // Find the trip
+        const trip = await B2CPartnerTrip.findById(tripId);
+        if (!trip) {
+            return res.status(404).json({
+                success: false,
+                message: "Trip not found"
+            });
+        }
+
+        // Check authorization - verify driver is assigned to this trip or is the B2C Partner
+        const isAuthorized =
+            trip.driverId?.toString() === driverId?.toString() ||
+            trip.driverId?.toString() === userId.toString() ||
+            trip.b2cPartnerId?.toString() === userId.toString() ||
+            (driverUser.b2cPartnerId && trip.b2cPartnerId?.toString() === driverUser.b2cPartnerId?.toString());
+
+        if (!isAuthorized) {
+            console.log("[v0] Unauthorized - trip.driverId:", trip.driverId, "driverId:", driverId, "userId:", userId);
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to complete this trip"
+            });
+        }
+
+        console.log("[v0] Completing trip:", tripId, "current status:", trip.status);
+
+        // Update trip status
+        trip.status = 'Completed';
+        trip.actualEndTime = new Date();
+        await trip.save();
+
+        // Update ONLY bookings that have this trip in their monthlyTrips array
+        // CRITICAL: Do NOT use route-based matching as it affects wrong bookings
+        const relatedBookings = await B2CPassengerBooking.find({
+            $or: [
+                { monthlyTrips: tripId },
+                { monthlyTrips: new mongoose.Types.ObjectId(tripId) }
+            ],
+            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS'] }
+        });
+
+        console.log("[v0] Found related bookings:", relatedBookings.length);
+
+        // Update each booking status
+        for (const booking of relatedBookings) {
+            booking.bookingStatus = 'COMPLETED';
+            booking.completedAt = new Date();
+            await booking.save();
+        }
+
+        // Update monthly pass trip statuses
+        await B2CMonthlyPass.updateMany(
+            { 'monthlyTrips.tripId': tripId },
+            { $set: { 'monthlyTrips.$.status': 'Completed' } }
+        );
+
+        // Notify passengers
+        await notifyPassengersOfStatusChange(trip, 'Completed');
+
+        res.status(200).json({
+            success: true,
+            message: "Trip completed successfully",
+            data: {
+                tripId: trip._id,
+                status: trip.status,
+                actualEndTime: trip.actualEndTime,
+                bookingsUpdated: relatedBookings.length
+            }
+        });
+
+    } catch (error) {
+        console.error("Error completing driver trip:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error completing trip",
+            error: error.message
+        });
+    }
+};
+
 // Helper function to notify passengers of trip status changes
 const notifyPassengersOfStatusChange = async (trip, status) => {
     try {
-        // Get passengers for this trip
-        const monthlyPasses = await B2CMonthlyPass.find({
-            'monthlyTrips.tripId': trip._id,
-            status: 'ACTIVE'
-        }).populate('passengerId', 'email fullName');
+        // Get passengers via bookings that have this trip in their monthlyTrips array
+        const bookingsWithTrip = await B2CPassengerBooking.find({
+            $or: [
+                { monthlyTrips: trip._id },
+                { monthlyTrips: new mongoose.Types.ObjectId(trip._id) },
+                { routeId: trip.routeId }
+            ],
+            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'CONFIRMED'] }
+        }).populate('passengerId', 'email fullName whatsappNumber');
 
-        // Send notifications to all passengers
-        for (const pass of monthlyPasses) {
-            if (pass.passengerId) {
-                await sendEmail({
-                    to: pass.passengerId.email,
-                    subject: `Trip Status Update: ${trip.fromLocation} → ${trip.toLocation}`,
-                    template: "tripStatusUpdate",
-                    data: {
-                        passengerName: pass.passengerId.fullName,
-                        route: `${trip.fromLocation} → ${trip.toLocation}`,
+        // Get passengers from monthly passes for this route
+        const monthlyPasses = await B2CMonthlyPass.find({
+            routeId: trip.routeId,
+            status: 'ACTIVE'
+        }).populate('passengerId', 'email fullName whatsappNumber');
+
+        // Track notified user IDs to avoid duplicates
+        const notifiedUserIds = new Set();
+
+        // Determine notification type and message based on status
+        const statusLower = status.toLowerCase();
+        let notificationType = 'TRIP_STATUS_UPDATE';
+        let notificationTitle = 'Trip Status Update';
+        let notificationMessage = `Your trip from ${trip.fromLocation || 'pickup'} to ${trip.toLocation || 'destination'} status has been updated to ${status}.`;
+
+        if (statusLower === 'in progress' || statusLower === 'started') {
+            notificationType = 'TRIP_STARTED';
+            notificationTitle = 'Trip Started!';
+            notificationMessage = `Your trip from ${trip.fromLocation || 'pickup'} to ${trip.toLocation || 'destination'} has started. The driver is on the way!`;
+        } else if (statusLower === 'completed') {
+            notificationType = 'TRIP_COMPLETED';
+            notificationTitle = 'Trip Completed!';
+            notificationMessage = `Your trip from ${trip.fromLocation || 'pickup'} to ${trip.toLocation || 'destination'} has been completed. Thank you for traveling with us!`;
+        } else if (statusLower === 'cancelled') {
+            notificationType = 'TRIP_CANCELLED';
+            notificationTitle = 'Trip Cancelled';
+            notificationMessage = `Your trip from ${trip.fromLocation || 'pickup'} to ${trip.toLocation || 'destination'} has been cancelled. ${trip.cancellationReason || ''}`;
+        } else if (statusLower === 'delayed') {
+            notificationType = 'TRIP_DELAYED';
+            notificationTitle = 'Trip Delayed';
+            notificationMessage = `Your trip from ${trip.fromLocation || 'pickup'} to ${trip.toLocation || 'destination'} has been delayed. ${trip.delayReason || 'Please check for updates.'}`;
+        }
+
+        // Send notifications to passengers from bookings
+        for (const booking of bookingsWithTrip) {
+            if (booking.passengerId && booking.passengerId._id) {
+                const passengerId = booking.passengerId._id.toString();
+
+                if (!notifiedUserIds.has(passengerId)) {
+                    notifiedUserIds.add(passengerId);
+
+                    const notificationData = {
+                        tripId: trip._id,
+                        routeId: trip.routeId,
+                        bookingId: booking._id,
+                        fromLocation: trip.fromLocation || '',
+                        toLocation: trip.toLocation || '',
                         tripDate: trip.tripDate,
                         tripTime: trip.startTime,
                         newStatus: status,
-                        reason: trip.cancellationReason
+                        driverInfo: trip.driverInfo || {},
+                        vehicleInfo: trip.vehicleInfo || {}
+                    };
+
+                    // Send real-time socket notification
+                    try {
+                        sendRealTimeNotification(booking.passengerId._id, {
+                            type: notificationType,
+                            title: notificationTitle,
+                            message: notificationMessage,
+                            data: notificationData,
+                            createdAt: new Date().toISOString()
+                        });
+                        console.log(`[v0] Real-time notification sent to passenger ${passengerId} for trip ${trip._id}`);
+                    } catch (socketErr) {
+                        console.error("[v0] Error sending socket notification:", socketErr);
                     }
-                });
+
+                    // Create persistent notification in database
+                    try {
+                        await createNotification({
+                            userId: booking.passengerId._id,
+                            type: notificationType,
+                            title: notificationTitle,
+                            message: notificationMessage,
+                            data: notificationData,
+                            skipAdminBroadcast: true
+                        });
+                    } catch (notifErr) {
+                        console.error("[v0] Error creating notification:", notifErr);
+                    }
+
+                    // Send email notification
+                    if (booking.passengerId.email) {
+                        try {
+                            await sendEmail({
+                                to: booking.passengerId.email,
+                                subject: `${notificationTitle}: ${trip.fromLocation || ''} to ${trip.toLocation || ''}`,
+                                template: "tripStatusUpdate",
+                                data: {
+                                    passengerName: booking.passengerId.fullName || 'Valued Customer',
+                                    route: `${trip.fromLocation || 'Pickup'} to ${trip.toLocation || 'Destination'}`,
+                                    tripDate: trip.tripDate,
+                                    tripTime: trip.startTime,
+                                    newStatus: status,
+                                    reason: trip.cancellationReason || trip.delayReason || ''
+                                }
+                            });
+                        } catch (emailErr) {
+                            console.error("[v0] Error sending trip status email:", emailErr);
+                        }
+                    }
+                }
             }
         }
+
+        // Send notifications to monthly pass passengers
+        for (const pass of monthlyPasses) {
+            if (pass.passengerId && pass.passengerId._id) {
+                const passengerId = pass.passengerId._id.toString();
+
+                if (!notifiedUserIds.has(passengerId)) {
+                    notifiedUserIds.add(passengerId);
+
+                    const notificationData = {
+                        tripId: trip._id,
+                        routeId: trip.routeId,
+                        monthlyPassId: pass._id,
+                        fromLocation: trip.fromLocation || '',
+                        toLocation: trip.toLocation || '',
+                        tripDate: trip.tripDate,
+                        tripTime: trip.startTime,
+                        newStatus: status,
+                        driverInfo: trip.driverInfo || {},
+                        vehicleInfo: trip.vehicleInfo || {}
+                    };
+
+                    // Send real-time socket notification
+                    try {
+                        sendRealTimeNotification(pass.passengerId._id, {
+                            type: notificationType,
+                            title: notificationTitle,
+                            message: notificationMessage,
+                            data: notificationData,
+                            createdAt: new Date().toISOString()
+                        });
+                        console.log(`[v0] Real-time notification sent to monthly pass holder ${passengerId} for trip ${trip._id}`);
+                    } catch (socketErr) {
+                        console.error("[v0] Error sending socket notification:", socketErr);
+                    }
+
+                    // Create persistent notification in database
+                    try {
+                        await createNotification({
+                            userId: pass.passengerId._id,
+                            type: notificationType,
+                            title: notificationTitle,
+                            message: notificationMessage,
+                            data: notificationData,
+                            skipAdminBroadcast: true
+                        });
+                    } catch (notifErr) {
+                        console.error("[v0] Error creating notification:", notifErr);
+                    }
+
+                    // Send email notification
+                    if (pass.passengerId.email) {
+                        try {
+                            await sendEmail({
+                                to: pass.passengerId.email,
+                                subject: `${notificationTitle}: ${trip.fromLocation || ''} to ${trip.toLocation || ''}`,
+                                template: "tripStatusUpdate",
+                                data: {
+                                    passengerName: pass.passengerId.fullName || 'Valued Customer',
+                                    route: `${trip.fromLocation || 'Pickup'} to ${trip.toLocation || 'Destination'}`,
+                                    tripDate: trip.tripDate,
+                                    tripTime: trip.startTime,
+                                    newStatus: status,
+                                    reason: trip.cancellationReason || trip.delayReason || ''
+                                }
+                            });
+                        } catch (emailErr) {
+                            console.error("[v0] Error sending trip status email:", emailErr);
+                        }
+                    }
+                }
+            }
+        }
+
+        console.log(`[v0] Trip status notifications sent to ${notifiedUserIds.size} passengers for trip ${trip._id}, status: ${status}`);
     } catch (error) {
-        console.error("Error notifying passengers of status change:", error);
+        console.error("[v0] Error notifying passengers of status change:", error);
+    }
+};
+
+
+// Get B2C Partner Self-Driver Trips - For B2C_PARTNER who is driving themselves
+// Shows trips where isSelfDriver is true on bookings OR where driverId matches the b2cPartnerId
+// IMPORTANT: Only shows trips for ACCEPTED/IN_PROGRESS/COMPLETED bookings
+export const getPartnerSelfDriverTrips = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const userRole = req.userRole;
+        const { filter = 'today', page = 1, limit = 50 } = req.query;
+
+        console.log("[v0] getPartnerSelfDriverTrips - userId:", userId, "filter:", filter);
+
+        // Only B2C_PARTNER can access this endpoint
+        if (userRole !== 'B2C_PARTNER') {
+            return res.status(403).json({
+                success: false,
+                message: "Only B2C Partners can access self-driver trips"
+            });
+        }
+
+        // Get partner info
+        const partnerUser = await User.findById(userId);
+        if (!partnerUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Partner not found"
+            });
+        }
+
+        // Calculate date range based on filter
+        const now = new Date();
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(now);
+        todayEnd.setHours(23, 59, 59, 999);
+
+        let dateFilter = {};
+        if (filter === 'today') {
+            dateFilter = { $gte: todayStart, $lte: todayEnd };
+        } else if (filter === 'upcoming') {
+            dateFilter = { $gte: todayStart };
+        } else {
+            // 'all' - no date filter
+            dateFilter = { $gte: new Date('2020-01-01') };
+        }
+
+        // Get model references
+        const B2CPartnerVehicle = mongoose.model('B2CPartnerVehicle');
+
+        // CRITICAL FIX: First, get ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings for this partner
+        // We should NOT show trips for bookings that haven't been accepted yet
+        const acceptedBookings = await B2CPassengerBooking.find({
+            b2cPartnerId: userId,
+            isSelfDriver: true,
+            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
+        }).lean();
+
+        console.log("[v0] Found accepted self-driver bookings:", acceptedBookings.length);
+
+        // Collect trip IDs ONLY from ACCEPTED bookings
+        const tripIdsFromAcceptedBookings = new Set();
+        acceptedBookings.forEach(booking => {
+            if (booking.monthlyTrips && Array.isArray(booking.monthlyTrips)) {
+                booking.monthlyTrips.forEach(tripId => {
+                    tripIdsFromAcceptedBookings.add(tripId.toString());
+                });
+            }
+        });
+
+        console.log("[v0] Trip IDs from accepted bookings:", tripIdsFromAcceptedBookings.size);
+
+        // If no accepted bookings with trips, return empty result
+        if (tripIdsFromAcceptedBookings.size === 0) {
+            return res.status(200).json({
+                success: true,
+                data: {
+                    trips: [],
+                    stats: {
+                        todayTrips: 0,
+                        completedToday: 0,
+                        totalTrips: 0,
+                        inProgressTrips: 0
+                    },
+                    pagination: {
+                        currentPage: parseInt(page),
+                        totalPages: 0,
+                        totalTrips: 0,
+                        hasNext: false,
+                        hasPrev: false
+                    }
+                }
+            });
+        }
+
+        // Build query for trips - ONLY from accepted bookings
+        // This ensures we don't show trips for passengers who haven't had their booking accepted
+        const tripQuery = {
+            tripDate: dateFilter,
+            _id: { $in: Array.from(tripIdsFromAcceptedBookings).map(id => new mongoose.Types.ObjectId(id)) }
+        };
+
+        const trips = await B2CPartnerTrip.find(tripQuery)
+            .sort({ tripDate: 1, startTime: 1 })
+            .skip((parseInt(page) - 1) * parseInt(limit))
+            .limit(parseInt(limit))
+            .lean();
+
+        // For each trip, get passengers ONLY from ACCEPTED bookings
+        // CRITICAL: Do not include passengers from CONFIRMED (not yet accepted) bookings
+        const tripsWithPassengers = await Promise.all(
+            trips.map(async (trip) => {
+                const passengerMap = new Map();
+
+                // Find ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings that have this trip in their monthlyTrips array
+                // Do NOT use route matching as it causes wrong passengers to show
+                const bookingsWithThisTrip = await B2CPassengerBooking.find({
+                    monthlyTrips: trip._id,
+                    bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
+                })
+                    .populate('passengerId', 'fullName email whatsappNumber profileImage')
+                    .lean();
+
+                console.log(`[v0] Trip ${trip._id} (${trip.startTime}): Found ${bookingsWithThisTrip.length} accepted bookings`);
+
+                bookingsWithThisTrip.forEach(booking => {
+                    if (booking.passengerId) {
+                        const passengerId = booking.passengerId._id.toString();
+                        if (!passengerMap.has(passengerId)) {
+                            passengerMap.set(passengerId, {
+                                _id: booking.passengerId._id,
+                                fullName: booking.passengerId.fullName || booking.passengerName || 'N/A',
+                                email: booking.passengerId.email,
+                                phone: booking.passengerId.whatsappNumber,
+                                profileImage: booking.passengerId.profileImage,
+                                bookingType: booking.isMonthlyPass ? 'Monthly Pass' : 'One Time',
+                                seats: booking.numberOfSeats || 1,
+                                bookingId: booking._id,
+                                bookingStatus: booking.bookingStatus
+                            });
+                        }
+                    }
+                });
+
+                // NOTE: Removed route-based monthly pass matching as it causes duplicate/wrong passengers
+                // Passengers should only show up on trips that are explicitly in their monthlyTrips array
+
+                const passengers = Array.from(passengerMap.values());
+                const totalSeatsBooked = passengers.reduce((sum, p) => sum + (p.seats || 1), 0);
+
+                // Populate route info
+                let routeInfo = null;
+                if (trip.routeId) {
+                    const route = await B2CPartnerRoute.findById(trip.routeId)
+                        .select('fromLocation toLocation routeName')
+                        .lean();
+                    routeInfo = route;
+                }
+
+                // Populate vehicle info
+                let vehicleInfo = null;
+                if (trip.vehicleId) {
+                    const vehicle = await B2CPartnerVehicle.findById(trip.vehicleId)
+                        .select('vehicleType model licensePlate seatingCapacity')
+                        .lean();
+                    vehicleInfo = vehicle;
+                }
+
+                return {
+                    _id: trip._id,
+                    tripDate: trip.tripDate,
+                    startTime: trip.startTime,
+                    status: trip.status || 'Scheduled',
+                    fromLocation: trip.fromLocation || routeInfo?.fromLocation,
+                    toLocation: trip.toLocation || routeInfo?.toLocation,
+                    tripType: trip.tripType,
+                    routeId: trip.routeId,
+                    routeInfo,
+                    vehicleInfo,
+                    totalSeats: trip.totalSeats || 7,
+                    bookedSeats: totalSeatsBooked,
+                    availableSeats: (trip.totalSeats || 7) - totalSeatsBooked,
+                    passengers,
+                    passengerCount: passengers.length,
+                    actualStartTime: trip.actualStartTime,
+                    actualEndTime: trip.actualEndTime,
+                    isSelfDriver: true
+                };
+            })
+        );
+
+        // Get counts for stats
+        const totalCount = await B2CPartnerTrip.countDocuments(tripQuery);
+
+        const todayQuery = {
+            ...tripQuery,
+            tripDate: { $gte: todayStart, $lte: todayEnd }
+        };
+        const todayCount = await B2CPartnerTrip.countDocuments(todayQuery);
+
+        const completedTodayQuery = {
+            ...todayQuery,
+            status: 'Completed'
+        };
+        const completedToday = await B2CPartnerTrip.countDocuments(completedTodayQuery);
+
+        const inProgressQuery = {
+            ...todayQuery,
+            status: 'In Progress'
+        };
+        const inProgressCount = await B2CPartnerTrip.countDocuments(inProgressQuery);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                trips: tripsWithPassengers,
+                stats: {
+                    todayTrips: todayCount,
+                    completedToday,
+                    totalTrips: totalCount,
+                    inProgressTrips: inProgressCount
+                },
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: Math.ceil(totalCount / parseInt(limit)),
+                    totalTrips: totalCount,
+                    hasNext: parseInt(page) * parseInt(limit) < totalCount,
+                    hasPrev: parseInt(page) > 1
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Error getting partner self-driver trips:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error retrieving self-driver trips",
+            error: error.message
+        });
+    }
+};
+
+// Start trip for B2C Partner (self-driver)
+export const startPartnerTrip = async (req, res) => {
+    try {
+        const { tripId } = req.params;
+        const userId = req.userId;
+        const userRole = req.userRole;
+
+        // Only B2C_PARTNER can start their own trips
+        if (userRole !== 'B2C_PARTNER') {
+            return res.status(403).json({
+                success: false,
+                message: "Only B2C Partners can start self-driver trips"
+            });
+        }
+
+        // Find the trip
+        const trip = await B2CPartnerTrip.findById(tripId);
+        if (!trip) {
+            return res.status(404).json({
+                success: false,
+                message: "Trip not found"
+            });
+        }
+
+        // Verify trip belongs to this partner
+        if (trip.b2cPartnerId?.toString() !== userId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to start this trip"
+            });
+        }
+
+        // Update trip status
+        trip.status = 'In Progress';
+        trip.actualStartTime = new Date();
+        await trip.save();
+
+        console.log("[v0] Trip started - tripId:", tripId, "userId:", userId);
+
+        // Update ONLY bookings that have this trip in their monthlyTrips array
+        // CRITICAL: Do NOT use route-based matching as it affects wrong bookings
+        const relatedBookings = await B2CPassengerBooking.find({
+            $or: [
+                { monthlyTrips: tripId },
+                { monthlyTrips: new mongoose.Types.ObjectId(tripId) }
+            ],
+            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS'] }
+        }).populate('passengerId', '_id fullName');
+
+        console.log("[v0] Found", relatedBookings.length, "related bookings to update");
+
+        for (const booking of relatedBookings) {
+            booking.bookingStatus = 'IN_PROGRESS';
+            booking.startedAt = new Date();
+            await booking.save();
+
+            // Emit socket event to each booking room so passengers can track
+            try {
+                sendBookingUpdate(booking._id.toString(), 'b2c-trip-started', {
+                    bookingId: booking._id,
+                    tripId: trip._id,
+                    driverId: userId,
+                    status: 'IN_PROGRESS',
+                    message: 'Your trip has started! You can now track the driver.',
+                    tripInfo: {
+                        fromLocation: trip.fromLocation,
+                        toLocation: trip.toLocation,
+                        startTime: trip.startTime
+                    }
+                });
+                console.log(`[v0] Emitted b2c-trip-started to booking ${booking._id} (self-driver)`);
+
+                // Also send a real-time notification to the passenger
+                if (booking.passengerId?._id) {
+                    sendRealTimeNotification(booking.passengerId._id.toString(), {
+                        type: "TRIP_STARTED",
+                        title: "Trip Started",
+                        message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has started. You can now track the driver.`,
+                        data: {
+                            bookingId: booking._id,
+                            tripId: trip._id,
+                            driverId: userId,
+                            isSelfDriver: true
+                        }
+                    });
+                }
+            } catch (socketErr) {
+                console.error("[v0] Error emitting trip started socket event:", socketErr);
+            }
+        }
+
+        // Notify passengers
+        await notifyPassengersOfStatusChange(trip, 'In Progress');
+
+        res.status(200).json({
+            success: true,
+            message: "Trip started successfully",
+            data: {
+                tripId: trip._id,
+                status: trip.status,
+                actualStartTime: trip.actualStartTime,
+                bookingsUpdated: relatedBookings.length,
+                isSelfDriver: true
+            }
+        });
+
+    } catch (error) {
+        console.error("Error starting partner trip:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error starting trip",
+            error: error.message
+        });
+    }
+};
+
+// Complete trip for B2C Partner (self-driver)
+export const completePartnerTrip = async (req, res) => {
+    try {
+        const { tripId } = req.params;
+        const userId = req.userId;
+        const userRole = req.userRole;
+
+        // Only B2C_PARTNER can complete their own trips
+        if (userRole !== 'B2C_PARTNER') {
+            return res.status(403).json({
+                success: false,
+                message: "Only B2C Partners can complete self-driver trips"
+            });
+        }
+
+        // Find the trip
+        const trip = await B2CPartnerTrip.findById(tripId);
+        if (!trip) {
+            return res.status(404).json({
+                success: false,
+                message: "Trip not found"
+            });
+        }
+
+        // Verify trip belongs to this partner
+        if (trip.b2cPartnerId?.toString() !== userId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to complete this trip"
+            });
+        }
+
+        // Update trip status
+        trip.status = 'Completed';
+        trip.actualEndTime = new Date();
+        await trip.save();
+
+        // Update ONLY bookings that have this trip in their monthlyTrips array
+        // CRITICAL: Do NOT use route-based matching as it affects wrong bookings
+        const relatedBookings = await B2CPassengerBooking.find({
+            $or: [
+                { monthlyTrips: tripId },
+                { monthlyTrips: new mongoose.Types.ObjectId(tripId) }
+            ],
+            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS'] }
+        });
+
+        for (const booking of relatedBookings) {
+            booking.bookingStatus = 'COMPLETED';
+            booking.completedAt = new Date();
+            await booking.save();
+        }
+
+        // Update monthly pass trip statuses
+        await B2CMonthlyPass.updateMany(
+            { 'monthlyTrips.tripId': tripId },
+            { $set: { 'monthlyTrips.$.status': 'Completed' } }
+        );
+
+        // Notify passengers
+        await notifyPassengersOfStatusChange(trip, 'Completed');
+
+        res.status(200).json({
+            success: true,
+            message: "Trip completed successfully",
+            data: {
+                tripId: trip._id,
+                status: trip.status,
+                actualEndTime: trip.actualEndTime,
+                bookingsUpdated: relatedBookings.length
+            }
+        });
+
+    } catch (error) {
+        console.error("Error completing partner trip:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error completing trip",
+            error: error.message
+        });
+    }
+};
+
+// Update B2C Driver Location - Updates trip location and broadcasts to passengers
+export const updateB2CDriverLocation = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { latitude, longitude, address, tripId } = req.body;
+
+        // Parse and validate latitude/longitude as numbers
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+
+        if (isNaN(lat) || isNaN(lng)) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid latitude and longitude are required"
+            });
+        }
+
+        console.log("[v0] updateB2CDriverLocation - userId:", userId, "tripId:", tripId, "lat:", lat, "lng:", lng);
+
+        // Get user info
+        const driverUser = await User.findById(userId);
+        if (!driverUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const driverId = driverUser.driverId || userId;
+        const isSelfDriver = driverUser.role === 'B2C_PARTNER';
+
+        console.log("[v0] Driver info - driverId:", driverId, "isSelfDriver:", isSelfDriver, "role:", driverUser.role);
+
+        // Find the active trip - prioritize In Progress over Scheduled
+        let trip = null;
+        if (tripId) {
+            trip = await B2CPartnerTrip.findById(tripId);
+        } else {
+            // Find active trip for this driver - include b2cPartnerId for self-drivers
+            // First try to find In Progress trip (most relevant for location updates)
+            trip = await B2CPartnerTrip.findOne({
+                $or: [
+                    { driverId: driverId },
+                    { driverId: userId },
+                    { b2cPartnerId: userId }  // Important for self-driving partners
+                ],
+                status: 'In Progress'
+            }).sort({ actualStartTime: -1 });  // Get most recently started
+
+            // If no In Progress trip, try Scheduled
+            if (!trip) {
+                trip = await B2CPartnerTrip.findOne({
+                    $or: [
+                        { driverId: driverId },
+                        { driverId: userId },
+                        { b2cPartnerId: userId }
+                    ],
+                    status: 'Scheduled'
+                }).sort({ tripDate: 1, startTime: 1 });  // Get soonest scheduled
+            }
+        }
+
+        console.log("[v0] Found trip:", trip ? trip._id : "none", "status:", trip?.status);
+
+        if (trip) {
+            // Update the trip's currentLocation with parsed values
+            trip.currentLocation = {
+                latitude: lat,
+                longitude: lng,
+                address: address || '',
+                lastUpdated: new Date()
+            };
+
+
+            // Also add to locationHistory for tracking
+            if (!trip.locationHistory) {
+                trip.locationHistory = [];
+            }
+            trip.locationHistory.push({
+                latitude: lat,
+                longitude: lng,
+                timestamp: new Date()
+            });
+            // Keep only the last 100 location entries to prevent unbounded growth
+            if (trip.locationHistory.length > 100) {
+                trip.locationHistory = trip.locationHistory.slice(-100);
+            }
+            await trip.save();
+            console.log("[v0] Updated trip currentLocation:", trip._id, "lat:", lat, "lng:", lng);
+
+            // Find all related bookings and broadcast location to their rooms
+            const relatedBookings = await B2CPassengerBooking.find({
+                $or: [
+                    { monthlyTrips: trip._id },
+                    { monthlyTrips: new mongoose.Types.ObjectId(trip._id) },
+                    {
+                        routeId: trip.routeId,
+                        bookingStatus: { $in: ['CONFIRMED', 'ACCEPTED', 'IN_PROGRESS'] }
+                    }
+                ]
+            }).populate('passengerId', '_id');
+
+            console.log("[v0] Broadcasting location to", relatedBookings.length, "bookings");
+
+            // Broadcast location to each booking room
+            for (const booking of relatedBookings) {
+                try {
+                    // Send via socket service to booking room
+                    sendLocationUpdate(booking._id.toString(), {
+                        driverId: userId,
+                        location: { lat: lat, lng: lng },
+                        address: address || '',
+                        timestamp: new Date().toISOString(),
+                        tripId: trip._id,
+                        bookingId: booking._id
+                    });
+                    console.log("[v0] Sent location update to booking room:", booking._id);
+
+                    // Also send notification to passenger directly for real-time updates
+                    if (booking.passengerId?._id) {
+                        sendRealTimeNotification(booking.passengerId._id.toString(), {
+                            type: "LOCATION_UPDATE",
+                            title: "Driver Location Update",
+                            message: "Driver location updated",
+                            data: {
+                                driverId: userId,
+                                location: { lat: lat, lng: lng },
+                                tripId: trip._id,
+                                bookingId: booking._id,
+                                timestamp: new Date().toISOString()
+                            }
+                        });
+                    }
+                } catch (socketErr) {
+                    console.error("[v0] Error broadcasting location to booking:", booking._id, socketErr);
+                }
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Location updated successfully",
+            data: {
+                tripId: trip?._id,
+                location: { latitude: lat, longitude: lng, address },
+                lastUpdated: new Date(),
+                broadcastedToBookings: trip ? true : false
+            }
+        });
+
+    } catch (error) {
+        console.error("Error updating B2C driver location:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error updating location",
+            error: error.message
+        });
+    }
+};
+
+// Get active trip for B2C driver (both partner self-driver and partner driver)
+export const getActiveB2CTrip = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const userRole = req.userRole;
+
+        console.log("[v0] getActiveB2CTrip - userId:", userId, "userRole:", userRole);
+
+        // Get user info
+        const driverUser = await User.findById(userId);
+        if (!driverUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const driverId = driverUser.driverId || userId;
+
+        // Find active trip for this driver
+        const trip = await B2CPartnerTrip.findOne({
+            $or: [
+                { driverId: driverId },
+                { driverId: userId },
+                { b2cPartnerId: userId }
+            ],
+            status: { $in: ['In Progress', 'Scheduled'] }
+        })
+            .populate('routeId', 'fromLocation toLocation')
+            .populate('vehicleId', 'vehicleType model licensePlate');
+
+        if (!trip) {
+            return res.json({
+                success: true,
+                trip: null,
+                message: "No active trip found"
+            });
+        }
+
+        // Get related bookings for passenger info
+        const relatedBookings = await B2CPassengerBooking.find({
+            $or: [
+                { monthlyTrips: trip._id },
+                {
+                    routeId: trip.routeId,
+                    bookingStatus: { $in: ['CONFIRMED', 'ACCEPTED', 'IN_PROGRESS'] }
+                }
+            ]
+        })
+            .populate('passengerId', 'fullName whatsappNumber')
+            .lean();
+
+        res.json({
+            success: true,
+            trip: {
+                ...trip.toObject(),
+                passengers: relatedBookings.map(b => ({
+                    bookingId: b._id,
+                    name: b.passengerId?.fullName || b.passengerName || 'N/A',
+                    phone: b.passengerId?.whatsappNumber || '',
+                    seats: b.numberOfSeats || 1
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error("Error getting active B2C trip:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error getting active trip",
+            error: error.message
+        });
     }
 };

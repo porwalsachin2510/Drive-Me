@@ -12,6 +12,13 @@ function B2C_AddRouteModal({ onClose }) {
     useCurrency();
   const [currency, setCurrency] = useState("AED");
   const [decimals, setDecimals] = useState(2);
+
+  // New: Toggle between creating new route or adding schedule to existing route
+  const [routeMode, setRouteMode] = useState("new"); // "new" or "existing"
+  const [existingRoutes, setExistingRoutes] = useState([]);
+  const [selectedExistingRoute, setSelectedExistingRoute] = useState(null);
+  const [loadingExistingRoutes, setLoadingExistingRoutes] = useState(false);
+
   const [formData, setFormData] = useState({
     fromLocation: "",
     toLocation: "",
@@ -50,7 +57,106 @@ function B2C_AddRouteModal({ onClose }) {
   // Fetch user's country and currency, then fetch vehicles and drivers
   useEffect(() => {
     fetchUserCountryAndAssets();
+    fetchExistingRoutes();
   }, []);
+
+  // Fetch existing routes for the "Add Schedule to Existing Route" mode
+  const fetchExistingRoutes = async () => {
+    try {
+      setLoadingExistingRoutes(true);
+      const response = await api.get("/b2c-schedules/routes");
+      setExistingRoutes(response.data.routes || []);
+    } catch (error) {
+      console.error("Error fetching existing routes:", error);
+      setExistingRoutes([]);
+    } finally {
+      setLoadingExistingRoutes(false);
+    }
+  };
+
+  // Handle selecting an existing route - auto-populate form data
+  const handleSelectExistingRoute = (routeId) => {
+    const route = existingRoutes.find((r) => r._id === routeId);
+    if (route) {
+      setSelectedExistingRoute(route);
+
+      // Auto-populate form data from the selected route
+      setFormData((prev) => ({
+        ...prev,
+        fromLocation: route.fromLocation || "",
+        toLocation: route.toLocation || "",
+        availableDays: route.schedules?.[0]?.availableDays ||
+          route.availableDays || ["MON", "TUE", "WED", "THU", "FRI"],
+        oneWayPrice: route.pricing?.oneWayPrice?.toString() || "",
+        roundTripPrice: route.pricing?.roundTripPrice?.toString() || "",
+        monthlyOneWayPrice: route.pricing?.monthlyOneWayPrice?.toString() || "",
+        monthlyRoundTripPrice:
+          route.pricing?.monthlyRoundTripPrice?.toString() || "",
+        vehicleId: route.assignedVehicle?._id || route.assignedVehicle || "",
+        driverId:
+          route.assignedDriver?._id ||
+          route.driverInfo?._id ||
+          route.assignedDriver ||
+          "",
+        routeStartDate: route.routeStartDate
+          ? new Date(route.routeStartDate).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0],
+        description: route.description || "",
+        tags: route.tags?.map((t) => t._id || t) || [],
+        totalSeats: route.totalSeats || 0,
+        availableSeats: route.availableSeats || 0,
+        // Reset trip times for new schedule
+        tripTimes: [
+          {
+            departureTime: "",
+            arrivalTime: "",
+            tripType: "One Way",
+            outboundStopPoints: [],
+            returnStopPoints: [],
+          },
+        ],
+      }));
+
+      // Set currency from route
+      if (route.pricing?.currency) {
+        setCurrency(route.pricing.currency);
+      }
+    } else {
+      setSelectedExistingRoute(null);
+    }
+  };
+
+  // Handle route mode change
+  const handleRouteModeChange = (mode) => {
+    setRouteMode(mode);
+    if (mode === "new") {
+      // Reset form to blank state
+      setSelectedExistingRoute(null);
+      setFormData({
+        fromLocation: "",
+        toLocation: "",
+        availableDays: ["MON", "TUE", "WED", "THU", "FRI"],
+        oneWayPrice: "",
+        roundTripPrice: "",
+        monthlyOneWayPrice: "",
+        monthlyRoundTripPrice: "",
+        tripTimes: [
+          {
+            departureTime: "",
+            arrivalTime: "",
+            tripType: "One Way",
+            outboundStopPoints: [],
+            returnStopPoints: [],
+          },
+        ],
+        vehicleId: "",
+        driverId: "",
+        routeStartDate: "",
+        description: "",
+        tags: [],
+      });
+    }
+  };
 
   const fetchUserCountryAndAssets = async () => {
     try {
@@ -208,6 +314,7 @@ function B2C_AddRouteModal({ onClose }) {
     setFormData((prev) => {
       const updatedTripTimes = [...prev.tripTimes];
       updatedTripTimes[index] = { ...updatedTripTimes[index], [field]: value };
+
       // Check conflicts when departure time changes
       if (field === "departureTime" && value) {
         // Use setTimeout to debounce the conflict check
@@ -220,6 +327,7 @@ function B2C_AddRouteModal({ onClose }) {
           );
         }, 500);
       }
+
       return { ...prev, tripTimes: updatedTripTimes };
     });
   };
@@ -487,7 +595,52 @@ function B2C_AddRouteModal({ onClose }) {
         }
       }
 
-      // First create route - include currency in pricing
+      // Handle "existing route" mode - just add new schedule to existing route
+      if (routeMode === "existing" && selectedExistingRoute) {
+        // For existing route, we just add a new schedule
+        const scheduleData = {
+          routeId: selectedExistingRoute._id,
+          scheduleName: `${selectedExistingRoute.fromLocation} to ${selectedExistingRoute.toLocation} - New Schedule`,
+          tripTimes: validTripTimes,
+          availableDays:
+            formData.availableDays.length > 0
+              ? formData.availableDays
+              : ["MON", "TUE", "WED", "THU", "FRI"],
+          assignedVehicle:
+            formData.vehicleId ||
+            selectedExistingRoute.assignedVehicle?._id ||
+            selectedExistingRoute.assignedVehicle,
+          assignedDriver:
+            formData.driverId ||
+            selectedExistingRoute.assignedDriver?._id ||
+            selectedExistingRoute.driverInfo?._id ||
+            selectedExistingRoute.assignedDriver,
+          startDate:
+            formData.routeStartDate || new Date().toISOString().split("T")[0],
+          notes: `Additional schedule for ${selectedExistingRoute.fromLocation} → ${selectedExistingRoute.toLocation}`,
+        };
+
+        const scheduleResponse = await api.post(
+          "/b2c-schedules/schedules",
+          scheduleData,
+        );
+
+        if (scheduleResponse.data.success) {
+          alert(
+            "New schedule added to existing route! Trips will be generated automatically.",
+          );
+          onClose();
+          // Trigger parent refresh
+          if (window.onRouteCreated) {
+            window.onRouteCreated();
+          } else {
+            window.location.reload();
+          }
+        }
+        return;
+      }
+
+      // Handle "new route" mode - create new route first
       const routeData = {
         fromLocation: formData.fromLocation,
         toLocation: formData.toLocation,
@@ -552,12 +705,12 @@ function B2C_AddRouteModal({ onClose }) {
     } catch (error) {
       console.error("Error creating route:", error);
 
-      
       // Handle specific conflict errors from backend
       if (error.response?.data?.conflictDetails) {
         const conflict = error.response.data.conflictDetails;
-        const conflictMessage = error.response.data.message || 
-          `Scheduling conflict detected! The selected ${conflict.conflictType.includes('DRIVER') ? 'driver' : 'vehicle'} is already assigned to route "${conflict.existingRoute}" at ${conflict.conflictingTime} on ${conflict.overlappingDays?.join(", ")}. Please choose a different time, ${conflict.conflictType.includes('DRIVER') ? 'driver' : 'vehicle'}, or days.`;
+        const conflictMessage =
+          error.response.data.message ||
+          `Scheduling conflict detected! The selected ${conflict.conflictType.includes("DRIVER") ? "driver" : "vehicle"} is already assigned to route "${conflict.existingRoute}" at ${conflict.conflictingTime} on ${conflict.overlappingDays?.join(", ")}. Please choose a different time, ${conflict.conflictType.includes("DRIVER") ? "driver" : "vehicle"}, or days.`;
         alert(conflictMessage);
       } else if (error.response?.data?.message) {
         // Handle other backend validation errors
@@ -574,7 +727,11 @@ function B2C_AddRouteModal({ onClose }) {
     <div className="b2c-modal-overlay" onClick={onClose}>
       <div className="b2c-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="b2c-modal-header">
-          <h2 className="b2c-modal-title">Add New Route</h2>
+          <h2 className="b2c-modal-title">
+            {routeMode === "existing"
+              ? "Add Schedule to Existing Route"
+              : "Add New Route"}
+          </h2>
           <button className="b2c-modal-close" onClick={onClose}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
@@ -594,157 +751,317 @@ function B2C_AddRouteModal({ onClose }) {
         </div>
 
         <form onSubmit={handleSubmit} className="b2c-modal-form">
-          <div className="b2c-form-section">
-            <h3 className="b2c-section-title">Basic Route Information</h3>
-
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label htmlFor="fromLocation" className="b2c-form-label">
-                  From Location *
-                </label>
-                <input
-                  type="text"
-                  id="fromLocation"
-                  name="fromLocation"
-                  placeholder="e.g. Dubai Marina"
-                  value={formData.fromLocation}
-                  onChange={handleChange}
-                  required
-                  className="b2c-form-input"
-                />
-              </div>
-
-              <div className="b2c-form-group">
-                <label htmlFor="toLocation" className="b2c-form-label">
-                  To Location *
-                </label>
-                <input
-                  type="text"
-                  id="toLocation"
-                  name="toLocation"
-                  placeholder="e.g. Abu Dhabi City"
-                  value={formData.toLocation}
-                  onChange={handleChange}
-                  required
-                  className="b2c-form-input"
-                />
-              </div>
+          {/* Route Mode Selector */}
+          <div className="b2c-form-section b2c-route-mode-section">
+            <div className="b2c-route-mode-selector">
+              <button
+                type="button"
+                className={`b2c-route-mode-btn ${routeMode === "new" ? "active" : ""}`}
+                onClick={() => handleRouteModeChange("new")}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    d="M12 5v14M5 12h14"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Create New Route
+              </button>
+              <button
+                type="button"
+                className={`b2c-route-mode-btn ${routeMode === "existing" ? "active" : ""}`}
+                onClick={() => handleRouteModeChange("existing")}
+                disabled={existingRoutes.length === 0}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Add to Existing Route ({existingRoutes.length})
+              </button>
             </div>
-
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label htmlFor="routeStartDate" className="b2c-form-label">
-                  Route Start Date *
-                </label>
-                <input
-                  type="date"
-                  id="routeStartDate"
-                  name="routeStartDate"
-                  value={formData.routeStartDate}
-                  onChange={handleChange}
-                  required
-                  className="b2c-form-input"
-                />
-              </div>
-            </div>
-
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label className="b2c-form-label">Available Days *</label>
-                <div className="b2c-days-selector">
-                  {daysOfWeek.map((day) => (
-                    <button
-                      key={day}
-                      type="button"
-                      className={`b2c-day-btn ${
-                        formData.availableDays.includes(day) ? "selected" : ""
-                      }`}
-                      onClick={() => handleDayChange(day)}
-                    >
-                      {day}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="b2c-form-row full">
-              <div className="b2c-form-group">
-                <label htmlFor="description" className="b2c-form-label">
-                  Route Description
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  placeholder="Describe your route, landmarks, etc."
-                  value={formData.description}
-                  onChange={handleChange}
-                  rows="3"
-                  className="b2c-form-input"
-                ></textarea>
-              </div>
-            </div>
-            {/* Route Tags Section - Grouped by Category */}
-            {availableTags.length > 0 && (
-              <div className="b2c-form-row full">
-                <div className="b2c-form-group">
-                  <label className="b2c-form-label">Route Tags</label>
-                  <p className="b2c-form-help-text">
-                    Select tags to help passengers find your route easily. Tags
-                    are organized by category.
-                  </p>
-
-                  {Object.entries(groupedTags).map(([category, tags]) => (
-                    <div key={category} className="b2c-tag-category-group">
-                      <span className="b2c-tag-category-label">
-                        {category === "route"
-                          ? "Route Tags"
-                          : category === "promo"
-                            ? "Promotional Tags"
-                            : category === "general"
-                              ? "General Tags"
-                              : category.charAt(0).toUpperCase() +
-                                category.slice(1) +
-                                " Tags"}
-                        :
-                      </span>
-                      <div className="b2c-tags-selector">
-                        {tags.map((tag) => (
-                          <button
-                            key={tag._id}
-                            type="button"
-                            className={`b2c-tag-btn ${formData.tags.includes(tag._id) ? "selected" : ""}`}
-                            onClick={() => handleTagToggle(tag._id)}
-                            style={{
-                              backgroundColor: formData.tags.includes(tag._id)
-                                ? tag.color
-                                : "#f3f4f6",
-                              color: formData.tags.includes(tag._id)
-                                ? tag.textColor
-                                : "#374151",
-                              borderColor: tag.color,
-                            }}
-                            title={tag.description || tag.label}
-                          >
-                            {tag.icon && (
-                              <span className="b2c-tag-icon">{tag.icon}</span>
-                            )}
-                            {tag.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {routeMode === "existing" && existingRoutes.length === 0 && (
+              <p className="b2c-no-routes-message">
+                No existing routes found. Please create a new route first.
+              </p>
             )}
           </div>
 
+          {/* Existing Route Selector - Only show when in "existing" mode */}
+          {routeMode === "existing" && existingRoutes.length > 0 && (
+            <div className="b2c-form-section b2c-existing-route-section">
+              <h3 className="b2c-section-title">Select Existing Route</h3>
+              <p className="b2c-section-description">
+                Choose an existing route to add a new schedule/trip time. Route
+                details will be auto-filled.
+              </p>
+
+              <div className="b2c-form-row">
+                <div className="b2c-form-group full-width">
+                  <label className="b2c-form-label">Select Route *</label>
+                  <select
+                    value={selectedExistingRoute?._id || ""}
+                    onChange={(e) => handleSelectExistingRoute(e.target.value)}
+                    required={routeMode === "existing"}
+                    className="b2c-form-input b2c-route-select"
+                  >
+                    <option value="">-- Select an existing route --</option>
+                    {existingRoutes.map((route) => (
+                      <option key={route._id} value={route._id}>
+                        {route.fromLocation} → {route.toLocation}
+                        {route.status !== "Active" ? ` (${route.status})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Selected Route Info Card */}
+              {selectedExistingRoute && (
+                <div className="b2c-selected-route-card">
+                  <div className="b2c-selected-route-header">
+                    <div className="b2c-selected-route-locations">
+                      <span className="b2c-location-badge from">
+                        {selectedExistingRoute.fromLocation}
+                      </span>
+                      <span className="b2c-route-arrow">→</span>
+                      <span className="b2c-location-badge to">
+                        {selectedExistingRoute.toLocation}
+                      </span>
+                    </div>
+                    <span
+                      className={`b2c-status-badge ${selectedExistingRoute.status?.toLowerCase()}`}
+                    >
+                      {selectedExistingRoute.status}
+                    </span>
+                  </div>
+                  <div className="b2c-selected-route-details">
+                    <div className="b2c-detail-item">
+                      <span className="b2c-detail-label">Vehicle:</span>
+                      <span className="b2c-detail-value">
+                        {selectedExistingRoute.assignedVehicle?.model ||
+                          "Not assigned"}
+                      </span>
+                    </div>
+                    <div className="b2c-detail-item">
+                      <span className="b2c-detail-label">Driver:</span>
+                      <span className="b2c-detail-value">
+                        {selectedExistingRoute.driverInfo?.name ||
+                          selectedExistingRoute.assignedDriver?.name ||
+                          "Self"}
+                      </span>
+                    </div>
+                    <div className="b2c-detail-item">
+                      <span className="b2c-detail-label">Price:</span>
+                      <span className="b2c-detail-value">
+                        {selectedExistingRoute.pricing?.currency || "AED"}{" "}
+                        {selectedExistingRoute.pricing?.oneWayPrice || 0} (One
+                        Way)
+                        {selectedExistingRoute.pricing?.roundTripPrice > 0 &&
+                          ` / ${selectedExistingRoute.pricing?.currency || "AED"} ${selectedExistingRoute.pricing?.roundTripPrice} (Round Trip)`}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="b2c-selected-route-help">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2"
+                    >
+                      <path
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span>
+                      Route selected. Now add a new trip time/schedule below.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Basic Route Information - Only show for new routes */}
+          {routeMode === "new" && (
+            <div className="b2c-form-section">
+              <h3 className="b2c-section-title">Basic Route Information</h3>
+
+              <div className="b2c-form-row">
+                <div className="b2c-form-group">
+                  <label htmlFor="fromLocation" className="b2c-form-label">
+                    From Location *
+                  </label>
+                  <input
+                    type="text"
+                    id="fromLocation"
+                    name="fromLocation"
+                    placeholder="e.g. Dubai Marina"
+                    value={formData.fromLocation}
+                    onChange={handleChange}
+                    required
+                    className="b2c-form-input"
+                  />
+                </div>
+
+                <div className="b2c-form-group">
+                  <label htmlFor="toLocation" className="b2c-form-label">
+                    To Location *
+                  </label>
+                  <input
+                    type="text"
+                    id="toLocation"
+                    name="toLocation"
+                    placeholder="e.g. Abu Dhabi City"
+                    value={formData.toLocation}
+                    onChange={handleChange}
+                    required
+                    className="b2c-form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="b2c-form-row">
+                <div className="b2c-form-group">
+                  <label htmlFor="routeStartDate" className="b2c-form-label">
+                    Route Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    id="routeStartDate"
+                    name="routeStartDate"
+                    value={formData.routeStartDate}
+                    onChange={handleChange}
+                    required
+                    className="b2c-form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="b2c-form-row">
+                <div className="b2c-form-group">
+                  <label className="b2c-form-label">Available Days *</label>
+                  <div className="b2c-days-selector">
+                    {daysOfWeek.map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        className={`b2c-day-btn ${
+                          formData.availableDays.includes(day) ? "selected" : ""
+                        }`}
+                        onClick={() => handleDayChange(day)}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="b2c-form-row full">
+                <div className="b2c-form-group">
+                  <label htmlFor="description" className="b2c-form-label">
+                    Route Description
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    placeholder="Describe your route, landmarks, etc."
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows="3"
+                    className="b2c-form-input"
+                  ></textarea>
+                </div>
+              </div>
+
+              {/* Route Tags Section - Grouped by Category */}
+              {availableTags.length > 0 && (
+                <div className="b2c-form-row full">
+                  <div className="b2c-form-group">
+                    <label className="b2c-form-label">Route Tags</label>
+                    <p className="b2c-form-help-text">
+                      Select tags to help passengers find your route easily.
+                      Tags are organized by category.
+                    </p>
+
+                    {Object.entries(groupedTags).map(([category, tags]) => (
+                      <div key={category} className="b2c-tag-category-group">
+                        <span className="b2c-tag-category-label">
+                          {category === "route"
+                            ? "Route Tags"
+                            : category === "promo"
+                              ? "Promotional Tags"
+                              : category === "general"
+                                ? "General Tags"
+                                : category.charAt(0).toUpperCase() +
+                                  category.slice(1) +
+                                  " Tags"}
+                          :
+                        </span>
+                        <div className="b2c-tags-selector">
+                          {tags.map((tag) => (
+                            <button
+                              key={tag._id}
+                              type="button"
+                              className={`b2c-tag-btn ${formData.tags.includes(tag._id) ? "selected" : ""}`}
+                              onClick={() => handleTagToggle(tag._id)}
+                              style={{
+                                backgroundColor: formData.tags.includes(tag._id)
+                                  ? tag.color
+                                  : "#f3f4f6",
+                                color: formData.tags.includes(tag._id)
+                                  ? tag.textColor
+                                  : "#374151",
+                                borderColor: tag.color,
+                              }}
+                              title={tag.description || tag.label}
+                            >
+                              {tag.icon && (
+                                <span className="b2c-tag-icon">{tag.icon}</span>
+                              )}
+                              {tag.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="b2c-form-section">
-            <h3 className="b2c-section-title">Trip Times</h3>
+            <h3 className="b2c-section-title">
+              {routeMode === "existing" ? "New Trip Times" : "Trip Times"}
+            </h3>
             <p className="b2c-section-description">
-              Add multiple departure times for this route. Each time will create
-              separate trips that passengers can book.
+              {routeMode === "existing"
+                ? "Add new departure times for this existing route. These will create additional trips that passengers can book."
+                : "Add multiple departure times for this route. Each time will create separate trips that passengers can book."}
             </p>
 
             <div className="b2c-trip-times-container">
@@ -994,24 +1311,39 @@ function B2C_AddRouteModal({ onClose }) {
             </div>
           </div>
 
+          {/* Vehicle & Driver Assignment - Show for both new and existing routes */}
           <div className="b2c-form-section">
-            <h3 className="b2c-section-title">Pricing & Capacity</h3>
+            <h3 className="b2c-section-title">
+              {routeMode === "existing"
+                ? "Schedule Assignment"
+                : "Pricing & Capacity"}
+            </h3>
+            {routeMode === "existing" && (
+              <p className="b2c-section-description">
+                Optionally assign a different vehicle or driver for this
+                schedule (uses route defaults if not changed).
+              </p>
+            )}
 
             {/* Vehicle Assignment Section */}
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="vehicleId" className="b2c-form-label">
-                  Assign Vehicle *
+                  Assign Vehicle {routeMode === "new" ? "*" : "(Optional)"}
                 </label>
                 <select
                   id="vehicleId"
                   name="vehicleId"
                   value={formData.vehicleId}
                   onChange={handleVehicleChange}
-                  required
+                  required={routeMode === "new"}
                   className="b2c-form-input"
                 >
-                  <option value="">Select Vehicle</option>
+                  <option value="">
+                    {routeMode === "existing"
+                      ? "Use route default"
+                      : "Select Vehicle"}
+                  </option>
                   {availableVehicles.map((vehicle) => (
                     <option key={vehicle._id} value={vehicle._id}>
                       {vehicle.model} ({vehicle.licensePlate}) -{" "}
@@ -1031,17 +1363,21 @@ function B2C_AddRouteModal({ onClose }) {
 
               <div className="b2c-form-group">
                 <label htmlFor="driverId" className="b2c-form-label">
-                  Assign Driver *
+                  Assign Driver {routeMode === "new" ? "*" : "(Optional)"}
                 </label>
                 <select
                   id="driverId"
                   name="driverId"
                   value={formData.driverId}
                   onChange={handleDriverChange}
-                  required
+                  required={routeMode === "new"}
                   className="b2c-form-input"
                 >
-                  <option value="">Select Driver</option>
+                  <option value="">
+                    {routeMode === "existing"
+                      ? "Use route default"
+                      : "Select Driver"}
+                  </option>
                   {availableDrivers.map((driver) => (
                     <option key={driver._id} value={driver._id}>
                       {driver.name} ({driver.phoneNumber})
@@ -1130,142 +1466,158 @@ function B2C_AddRouteModal({ onClose }) {
                 Checking for scheduling conflicts...
               </div>
             )}
-            
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label htmlFor="totalSeats" className="b2c-form-label">
-                  Total Seats *
-                </label>
-                <input
-                  type="number"
-                  id="totalSeats"
-                  name="totalSeats"
-                  placeholder="20"
-                  value={formData.totalSeats}
-                  onChange={handleChange}
-                  required
-                  min="1"
-                  max="50"
-                  className="b2c-form-input"
-                />
-              </div>
 
-              <div className="b2c-form-group">
-                <label htmlFor="availableSeats" className="b2c-form-label">
-                  Available Seats *
-                </label>
-                <input
-                  type="number"
-                  id="availableSeats"
-                  name="availableSeats"
-                  placeholder="20"
-                  value={formData.availableSeats}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  max={formData.totalSeats}
-                  className="b2c-form-input"
-                />
-              </div>
-            </div>
+            {/* Seats and Pricing - Only for new routes */}
+            {routeMode === "new" && (
+              <>
+                <div className="b2c-form-row">
+                  <div className="b2c-form-group">
+                    <label htmlFor="totalSeats" className="b2c-form-label">
+                      Total Seats *
+                    </label>
+                    <input
+                      type="number"
+                      id="totalSeats"
+                      name="totalSeats"
+                      placeholder="20"
+                      value={formData.totalSeats}
+                      onChange={handleChange}
+                      required
+                      min="1"
+                      max="50"
+                      className="b2c-form-input"
+                    />
+                  </div>
 
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label htmlFor="oneWayPrice" className="b2c-form-label">
-                  One Way Price ({getCurrencySymbol(currency)}) *
-                </label>
-                <input
-                  type="number"
-                  id="oneWayPrice"
-                  name="oneWayPrice"
-                  placeholder="50.00"
-                  value={formData.oneWayPrice}
-                  onChange={handlePriceChange}
-                  required
-                  min="0"
-                  step={decimals === 3 ? "0.001" : "0.01"}
-                  className="b2c-form-input"
-                />
-                <small className="b2c-form-help">
-                  Daily price per trip (used for monthly calculation)
-                </small>
-              </div>
+                  <div className="b2c-form-group">
+                    <label htmlFor="availableSeats" className="b2c-form-label">
+                      Available Seats *
+                    </label>
+                    <input
+                      type="number"
+                      id="availableSeats"
+                      name="availableSeats"
+                      placeholder="20"
+                      value={formData.availableSeats}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      max={formData.totalSeats}
+                      className="b2c-form-input"
+                    />
+                  </div>
+                </div>
 
-              <div className="b2c-form-group">
-                <label htmlFor="roundTripPrice" className="b2c-form-label">
-                  Round Trip Price ({getCurrencySymbol(currency)}) *
-                </label>
-                <input
-                  type="number"
-                  id="roundTripPrice"
-                  name="roundTripPrice"
-                  placeholder="80.00"
-                  value={formData.roundTripPrice}
-                  onChange={handlePriceChange}
-                  required
-                  min="0"
-                  step={decimals === 3 ? "0.001" : "0.01"}
-                  className="b2c-form-input"
-                />
-                <small className="b2c-form-help">
-                  Daily price per round trip (used for monthly calculation)
-                </small>
-              </div>
-            </div>
+                <div className="b2c-form-row">
+                  <div className="b2c-form-group">
+                    <label htmlFor="oneWayPrice" className="b2c-form-label">
+                      One Way Price ({getCurrencySymbol(currency)}) *
+                    </label>
+                    <input
+                      type="number"
+                      id="oneWayPrice"
+                      name="oneWayPrice"
+                      placeholder="50.00"
+                      value={formData.oneWayPrice}
+                      onChange={handlePriceChange}
+                      required
+                      min="0"
+                      step={decimals === 3 ? "0.001" : "0.01"}
+                      className="b2c-form-input"
+                    />
+                    <small className="b2c-form-help">
+                      Daily price per trip (used for monthly calculation)
+                    </small>
+                  </div>
 
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label htmlFor="monthlyOneWayPrice" className="b2c-form-label">
-                  Monthly Pass (One Way) ({getCurrencySymbol(currency)}) *
-                </label>
-                <input
-                  type="number"
-                  id="monthlyOneWayPrice"
-                  name="monthlyOneWayPrice"
-                  placeholder="Auto-calculated"
-                  value={formData.monthlyOneWayPrice}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  step="0.01"
-                  className="b2c-form-input"
-                  readonly
-                />
-                <small className="b2c-form-help">
-                  Auto-calculated based on daily price and available days
-                </small>
-              </div>
+                  <div className="b2c-form-group">
+                    <label htmlFor="roundTripPrice" className="b2c-form-label">
+                      Round Trip Price ({getCurrencySymbol(currency)}) *
+                    </label>
+                    <input
+                      type="number"
+                      id="roundTripPrice"
+                      name="roundTripPrice"
+                      placeholder="80.00"
+                      value={formData.roundTripPrice}
+                      onChange={handlePriceChange}
+                      required
+                      min="0"
+                      step={decimals === 3 ? "0.001" : "0.01"}
+                      className="b2c-form-input"
+                    />
+                    <small className="b2c-form-help">
+                      Daily price per round trip (used for monthly calculation)
+                    </small>
+                  </div>
+                </div>
 
-              <div className="b2c-form-group">
-                <label className="b2c-form-label">
-                  Monthly Pass (Round Trip) ({getCurrencySymbol(currency)}) *
-                </label>
-                <input
-                  type="number"
-                  id="monthlyRoundTripPrice"
-                  name="monthlyRoundTripPrice"
-                  placeholder="Auto-calculated"
-                  value={formData.monthlyRoundTripPrice}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  step={decimals === 3 ? "0.001" : "0.01"}
-                  className="b2c-form-input"
-                  readonly
-                />
-                <small className="b2c-form-help">
-                  Auto-calculated based on daily price and available days
-                </small>
-              </div>
-            </div>
+                <div className="b2c-form-row">
+                  <div className="b2c-form-group">
+                    <label
+                      htmlFor="monthlyOneWayPrice"
+                      className="b2c-form-label"
+                    >
+                      Monthly Pass (One Way) ({getCurrencySymbol(currency)}) *
+                    </label>
+                    <input
+                      type="number"
+                      id="monthlyOneWayPrice"
+                      name="monthlyOneWayPrice"
+                      placeholder="Auto-calculated"
+                      value={formData.monthlyOneWayPrice}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      step="0.01"
+                      className="b2c-form-input"
+                      readonly
+                    />
+                    <small className="b2c-form-help">
+                      Auto-calculated based on daily price and available days
+                    </small>
+                  </div>
+
+                  <div className="b2c-form-group">
+                    <label className="b2c-form-label">
+                      Monthly Pass (Round Trip) ({getCurrencySymbol(currency)})
+                      *
+                    </label>
+                    <input
+                      type="number"
+                      id="monthlyRoundTripPrice"
+                      name="monthlyRoundTripPrice"
+                      placeholder="Auto-calculated"
+                      value={formData.monthlyRoundTripPrice}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      step={decimals === 3 ? "0.001" : "0.01"}
+                      className="b2c-form-input"
+                      readonly
+                    />
+                    <small className="b2c-form-help">
+                      Auto-calculated based on daily price and available days
+                    </small>
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="b2c-pricing-preview">
-              <h4 className="b2c-preview-title">🎫 Monthly Pass Pricing</h4>
+              <h4 className="b2c-preview-title">
+                🎫{" "}
+                {routeMode === "existing"
+                  ? "New Schedule Summary"
+                  : "Monthly Pass Pricing"}
+              </h4>
               <div className="b2c-preview-grid">
                 <div className="b2c-preview-item">
                   <span className="b2c-preview-label">Route:</span>
                   <span className="b2c-preview-value">
-                    {formData.fromLocation} → {formData.toLocation}
+                    {routeMode === "existing" && selectedExistingRoute
+                      ? `${selectedExistingRoute.fromLocation} → ${selectedExistingRoute.toLocation}`
+                      : `${formData.fromLocation} → ${formData.toLocation}`}
                   </span>
                 </div>
                 <div className="b2c-preview-item">
@@ -1370,9 +1722,17 @@ function B2C_AddRouteModal({ onClose }) {
             <button
               type="submit"
               className="b2c-btn b2c-btn-submit"
-              disabled={loading}
+              disabled={
+                loading || (routeMode === "existing" && !selectedExistingRoute)
+              }
             >
-              {loading ? "Adding Route..." : "Add Route"}
+              {loading
+                ? routeMode === "existing"
+                  ? "Adding Schedule..."
+                  : "Adding Route..."
+                : routeMode === "existing"
+                  ? "Add Schedule"
+                  : "Add Route"}
             </button>
           </div>
         </form>

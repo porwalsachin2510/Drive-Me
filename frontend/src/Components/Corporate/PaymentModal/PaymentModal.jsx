@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import api from "../../../utils/api";
 import "./PaymentModal.css";
 
 const PaymentModal = ({ contract, onClose, onSubmit }) => {
@@ -14,6 +15,35 @@ const PaymentModal = ({ contract, onClose, onSubmit }) => {
     accountNumber: "",
     walletType: "applepay",
   });
+
+  // Payment control state
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true);
+  const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(true);
+
+  // Fetch payment settings to check if online payments are enabled
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        setLoadingPaymentSettings(true);
+        const response = await api.get("/pages/public/payment-settings");
+        if (response.data.success) {
+          setOnlinePaymentsEnabled(response.data.data.onlinePaymentsEnabled);
+          // If online payments disabled, default to no payment method
+          if (!response.data.data.onlinePaymentsEnabled) {
+            setPaymentMethod("");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching payment settings:", error);
+        // Default to enabled if fetch fails
+        setOnlinePaymentsEnabled(true);
+      } finally {
+        setLoadingPaymentSettings(false);
+      }
+    };
+
+    fetchPaymentSettings();
+  }, []);
 
   const handleChange = (e) => {
     setPaymentData({
@@ -73,55 +103,73 @@ const PaymentModal = ({ contract, onClose, onSubmit }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="payment-form">
-          <div className="payment-methods">
-            <label
-              className={`method-option ${
-                paymentMethod === "card" ? "active" : ""
-              }`}
-            >
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="card"
-                checked={paymentMethod === "card"}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-              />
-              <span className="method-icon">💳</span>
-              <span>Credit/Debit Card</span>
-            </label>
+          {loadingPaymentSettings ? (
+            <div className="payment-methods-loading">
+              Loading payment options...
+            </div>
+          ) : !onlinePaymentsEnabled ? (
+            <div className="online-payments-disabled-notice">
+              <div className="notice-icon">ℹ️</div>
+              <div className="notice-content">
+                <strong>Online Payments Unavailable</strong>
+                <p>
+                  Online payment methods are currently disabled by the
+                  administrator. Please contact support for alternative payment
+                  options.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="payment-methods">
+              <label
+                className={`method-option ${
+                  paymentMethod === "card" ? "active" : ""
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="card"
+                  checked={paymentMethod === "card"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                />
+                <span className="method-icon">💳</span>
+                <span>Credit/Debit Card</span>
+              </label>
 
-            <label
-              className={`method-option ${
-                paymentMethod === "wallet" ? "active" : ""
-              }`}
-            >
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="wallet"
-                checked={paymentMethod === "wallet"}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-              />
-              <span className="method-icon">📱</span>
-              <span>Mobile Wallet</span>
-            </label>
+              <label
+                className={`method-option ${
+                  paymentMethod === "wallet" ? "active" : ""
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="wallet"
+                  checked={paymentMethod === "wallet"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                />
+                <span className="method-icon">📱</span>
+                <span>Mobile Wallet</span>
+              </label>
 
-            <label
-              className={`method-option ${
-                paymentMethod === "bank" ? "active" : ""
-              }`}
-            >
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="bank"
-                checked={paymentMethod === "bank"}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-              />
-              <span className="method-icon">🏦</span>
-              <span>Bank Transfer</span>
-            </label>
-          </div>
+              <label
+                className={`method-option ${
+                  paymentMethod === "bank" ? "active" : ""
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="bank"
+                  checked={paymentMethod === "bank"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                />
+                <span className="method-icon">🏦</span>
+                <span>Bank Transfer</span>
+              </label>
+            </div>
+          )}
 
           {paymentMethod === "card" && (
             <div className="payment-fields">
@@ -235,8 +283,14 @@ const PaymentModal = ({ contract, onClose, onSubmit }) => {
             <button type="button" className="cancel-btn" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="pay-btn">
-              Pay {formatCurrency(contract.totalAmount * 1.02)}
+            <button
+              type="submit"
+              className="pay-btn"
+              disabled={!onlinePaymentsEnabled}
+            >
+              {!onlinePaymentsEnabled
+                ? "Online Payments Disabled"
+                : `Pay ${formatCurrency(contract.totalAmount * 1.02)}`}
             </button>
           </div>
         </form>

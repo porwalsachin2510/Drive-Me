@@ -13,6 +13,8 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
   const [showTripModal, setShowTripModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [hasSchedule, setHasSchedule] = useState(false);
+  const [scheduleCount, setScheduleCount] = useState(0); // Track number of schedules
+  const [allSchedules, setAllSchedules] = useState([]); // Store all schedules
   const [upcomingTrips, setUpcomingTrips] = useState([]);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -26,11 +28,13 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
         const scheduleResponse = await api.get(
           `/b2c-schedules/schedules?routeId=${route._id}`,
         );
+        const schedules = scheduleResponse.data.schedules || [];
         const hasScheduleData =
-          scheduleResponse.data.success &&
-          scheduleResponse.data.schedules.length > 0;
+          scheduleResponse.data.success && schedules.length > 0;
         if (cancelled) return;
         setHasSchedule(hasScheduleData);
+        setScheduleCount(schedules.length);
+        setAllSchedules(schedules);
 
         if (hasScheduleData) {
           const tripsResponse = await api.get(
@@ -164,24 +168,79 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
       </div>
 
       <div className="b2c-route-details">
-        <div className="b2c-detail-row">
-          <div className="b2c-detail-item">
-            <span className="b2c-detail-label">Start Time:</span>
-            <span className="b2c-detail-value">
-              {route.startTime ||
-                route.schedules?.[0]?.tripTimes?.[0]?.departureTime ||
-                "N/A"}
-            </span>
+        {/* Show all schedule times when multiple schedules exist */}
+        {scheduleCount > 1 ? (
+          <div
+            className="b2c-detail-row"
+            style={{ flexDirection: "column", gap: "8px" }}
+          >
+            <div className="b2c-detail-item" style={{ width: "100%" }}>
+              <span className="b2c-detail-label">
+                Schedules ({scheduleCount}):
+              </span>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "6px",
+                  marginTop: "4px",
+                }}
+              >
+                {allSchedules.map((sch, idx) => (
+                  <span
+                    key={sch._id || idx}
+                    style={{
+                      padding: "4px 8px",
+                      backgroundColor: "#eff6ff",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      color: "#1e40af",
+                      border: "1px solid #bfdbfe",
+                    }}
+                  >
+                    {sch.tripTimes?.[0]?.departureTime || "N/A"}
+                    {sch.tripTimes?.[0]?.tripType === "Round Trip" &&
+                      sch.tripTimes?.[0]?.arrivalTime && (
+                        <span style={{ color: "#6b7280" }}>
+                          {" "}
+                          / {sch.tripTimes?.[0]?.arrivalTime}
+                        </span>
+                      )}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="b2c-detail-item">
+              <span className="b2c-detail-label">Available Days:</span>
+              <span className="b2c-detail-value">
+                {allSchedules[0]?.availableDays?.join(", ") ||
+                  route.availableDays?.join(", ") ||
+                  "Daily"}
+              </span>
+            </div>
           </div>
-          <div className="b2c-detail-item">
-            <span className="b2c-detail-label">Available Days:</span>
-            <span className="b2c-detail-value">
-              {(route.availableDays?.length > 0
-                ? route.availableDays.join(", ")
-                : route.schedules?.[0]?.availableDays?.join(", ")) || "Daily"}
-            </span>
+        ) : (
+          <div className="b2c-detail-row">
+            <div className="b2c-detail-item">
+              <span className="b2c-detail-label">Start Time:</span>
+              <span className="b2c-detail-value">
+                {route.startTime ||
+                  allSchedules[0]?.tripTimes?.[0]?.departureTime ||
+                  route.schedules?.[0]?.tripTimes?.[0]?.departureTime ||
+                  "N/A"}
+              </span>
+            </div>
+            <div className="b2c-detail-item">
+              <span className="b2c-detail-label">Available Days:</span>
+              <span className="b2c-detail-value">
+                {(route.availableDays?.length > 0
+                  ? route.availableDays.join(", ")
+                  : allSchedules[0]?.availableDays?.join(", ") ||
+                    route.schedules?.[0]?.availableDays?.join(", ")) || "Daily"}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
         <div className="b2c-detail-row">
           <div className="b2c-detail-item">
             <span className="b2c-detail-label">Total Seats:</span>
@@ -267,13 +326,15 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
         >
           Edit
         </button>
-        <button
+        {/* <button
           className="b2c-action-btn b2c-schedule-btn"
           onClick={() => onAddSchedule && onAddSchedule(route)}
         >
-          {hasSchedule ? "Manage Schedule" : "Add Schedule"}
-        </button>
-        {hasSchedule ? (
+          {hasSchedule
+            ? `Manage Schedule${scheduleCount > 1 ? ` (${scheduleCount})` : ""}`
+            : "Add Schedule"}
+        </button> */}
+        {/* {hasSchedule ? (
           <button
             className="b2c-action-btn b2c-view-trips-btn"
             onClick={() => setShowTripModal(true)}
@@ -287,7 +348,16 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
           >
             Create Trip
           </button>
+        )} */}
+        {hasSchedule && (
+          <button
+            className="b2c-action-btn b2c-view-trips-btn"
+            onClick={() => setShowTripModal(true)}
+          >
+            View Trips ({upcomingTrips.length})
+          </button>
         )}
+
         <button
           className="b2c-action-btn b2c-delete-btn"
           onClick={handleDeleteClick}

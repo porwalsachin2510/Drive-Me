@@ -306,3 +306,52 @@
     padding: 20px;
   }
 }
+
+/* Payment Loading and Disabled Notice Styles */
+.drivemego-wppm-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.drivemego-wppm-disabled-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  background-color: #fff8e6;
+  border: 1px solid #ffc107;
+  border-radius: 12px;
+  margin: 16px 0;
+}
+
+.drivemego-wppm-notice-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.drivemego-wppm-notice-content {
+  flex: 1;
+}
+
+.drivemego-wppm-notice-content strong {
+  display: block;
+  font-size: 15px;
+  color: #856404;
+  margin-bottom: 6px;
+}
+
+.drivemego-wppm-notice-content p {
+  margin: 0;
+  font-size: 13px;
+  color: #856404;
+  line-height: 1.5;
+}
+
+.drivemego-wppm-btn-pay:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}

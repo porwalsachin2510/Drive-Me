@@ -288,8 +288,21 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
         },
         monthlyTrips: [{
             type: mongoose.Schema.Types.ObjectId,
-            ref: "B2CPassengerBooking",
-        }], // Array of all monthly trip bookings
+            ref: "B2CPartnerTrip",
+        }], // Array of all monthly trip IDs (B2CPartnerTrip references)
+        tripRatings: [{
+            tripId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "B2CPartnerTrip"
+            },
+            rating: {
+                type: Number,
+                min: 1,
+                max: 5
+            },
+            feedback: String,
+            ratedAt: Date
+        }], // Ratings given by passenger for trips in this booking
         isReturnTrip: {
             type: Boolean,
             default: false,

@@ -57,7 +57,11 @@ export const createB2CMonthlyPass = async (req, res) => {
             paymentMethod,
             notes,
             paymentDate,
-            currency
+            currency,
+            // NEW: Custom date range from frontend
+            customStartDate,
+            customEndDate,
+            actualTravelDays
         } = req.body;
 
         // Get route and schedule details FIRST
@@ -146,53 +150,66 @@ export const createB2CMonthlyPass = async (req, res) => {
             });
         }
 
-        // Calculate dates - SMART START DATE LOGIC
-        // If today's trip time has already passed, start from next day
-        let startDate = paymentDate ? new Date(paymentDate) : new Date();
-        
-        // Parse outboundTripTime (e.g., "8:00 AM", "10:00 AM") and compare with current time
-        if (outboundTripTime) {
-            const now = new Date();
-            const todayTripTime = new Date(now);
-            
-            // Parse time string like "8:00 AM" or "10:00 AM"
-            const timeParts = outboundTripTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-            if (timeParts) {
-                let hours = parseInt(timeParts[1]);
-                const minutes = parseInt(timeParts[2]);
-                const ampm = timeParts[3].toUpperCase();
-                
-                if (ampm === 'PM' && hours !== 12) hours += 12;
-                if (ampm === 'AM' && hours === 12) hours = 0;
-                
-                todayTripTime.setHours(hours, minutes, 0, 0);
-                
-                // If current time is past today's trip time, start from tomorrow
-                if (now >= todayTripTime) {
-                    startDate = new Date(now);
-                    startDate.setDate(startDate.getDate() + 1);
-                    startDate.setHours(0, 0, 0, 0);
-                    console.log("[v0] Trip time already passed today, starting from next day:", startDate);
+        // Calculate dates - USE CUSTOM DATES FROM FRONTEND if provided
+        let startDate;
+        let endDate;
+
+        // Define travelDays at the outer scope so it's available for the monthly pass creation
+        const travelDays = Array.isArray(selectedDays) && selectedDays.length > 0 ? selectedDays : null;
+
+        // PRIORITY: Use custom dates from frontend date picker
+        if (customStartDate && customEndDate) {
+            startDate = new Date(customStartDate);
+            endDate = new Date(customEndDate);
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            console.log("[v0] Using custom dates from frontend:", { startDate, endDate, actualTravelDays, travelDays });
+        } else {
+            // FALLBACK: Legacy calculation if custom dates not provided
+            startDate = paymentDate ? new Date(paymentDate) : new Date();
+
+            // Parse outboundTripTime to check if today's trip already passed
+            if (outboundTripTime) {
+                const now = new Date();
+                const todayTripTime = new Date(now);
+
+                const timeParts = outboundTripTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                if (timeParts) {
+                    let hours = parseInt(timeParts[1]);
+                    const minutes = parseInt(timeParts[2]);
+                    const ampm = timeParts[3].toUpperCase();
+
+                    if (ampm === 'PM' && hours !== 12) hours += 12;
+                    if (ampm === 'AM' && hours === 12) hours = 0;
+
+                    todayTripTime.setHours(hours, minutes, 0, 0);
+
+                    // If current time is past today's trip time, start from tomorrow
+                    if (now >= todayTripTime) {
+                        startDate = new Date(now);
+                        startDate.setDate(startDate.getDate() + 1);
+                        startDate.setHours(0, 0, 0, 0);
+                        console.log("[v0] Trip time already passed today, starting from next day:", startDate);
+                    }
                 }
             }
-        }
-        
-        // Also ensure startDate falls on one of the selected travel days
-        const travelDays = Array.isArray(selectedDays) && selectedDays.length > 0 ? selectedDays : null;
-        if (travelDays) {
-            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            let maxSkip = 7;
-            while (maxSkip > 0) {
-                const dayName = dayNames[startDate.getDay()];
-                if (travelDays.map(d => d.toLowerCase()).includes(dayName.toLowerCase())) break;
-                startDate.setDate(startDate.getDate() + 1);
-                maxSkip--;
+
+            // Ensure startDate falls on one of the selected travel days (travelDays defined above)
+            if (travelDays) {
+                const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                let maxSkip = 7;
+                while (maxSkip > 0) {
+                    const dayName = dayNames[startDate.getDay()];
+                    if (travelDays.map(d => d.toLowerCase()).includes(dayName.toLowerCase())) break;
+                    startDate.setDate(startDate.getDate() + 1);
+                    maxSkip--;
+                }
+                console.log("[v0] Adjusted startDate to next selected travel day:", startDate, "Selected days:", travelDays);
             }
-            console.log("[v0] Adjusted startDate to next selected travel day:", startDate, "Selected days:", travelDays);
+
+            endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + durationMonths);
         }
-        
-        const endDate = new Date(startDate);
-        endDate.setMonth(endDate.getMonth() + durationMonths);
 
         // Validate dates
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
@@ -249,61 +266,71 @@ export const createB2CMonthlyPass = async (req, res) => {
         await updateTripSeats(monthlyPass);
 
         // NEW LOGIC: Determine driver assignment for booking
+        // PRIORITY: Schedule's assignedDriver > Route's assignedDriverId > Route's assignedDriver
         let assignedDriverId = null;
         let assignedDriverName = null;
         let assignedDriverImage = null;
         let assignedDriverPhone = null;
         let isSelfDriver = false;
 
-        // Check if route has assigned driver (handle both field names)
+        // Get driver ID - prioritize schedule's driver over route's driver
+        const scheduleDriverId = schedule?.assignedDriver;
         const routeDriverId = route.assignedDriverId || route.assignedDriver;
-        
+        const effectiveDriverId = scheduleDriverId || routeDriverId;
+
         console.log("[v0] Monthly Pass Driver Assignment Debug:", {
             routeId: route._id,
-            assignedDriverId: route.assignedDriverId,
-            assignedDriver: route.assignedDriver,
-            routeDriverId,
+            scheduleId: schedule?._id,
+            scheduleDriverId,
+            routeAssignedDriverId: route.assignedDriverId,
+            routeAssignedDriver: route.assignedDriver,
+            effectiveDriverId,
             b2cPartnerId: route.b2cPartnerId
         });
-        
-        if (routeDriverId) {
-            assignedDriverId = routeDriverId;
-            
+
+        if (effectiveDriverId) {
+            assignedDriverId = effectiveDriverId;
+
             // Check if assigned driver is the partner themselves (self-driver)
-            if (routeDriverId.toString() === route.b2cPartnerId.toString()) {
+            if (effectiveDriverId.toString() === route.b2cPartnerId.toString()) {
                 isSelfDriver = true;
-                assignedDriverName = b2cPartner.name || b2cPartner.businessName || 'Self';
+                assignedDriverName = b2cPartner.fullName || b2cPartner.name || b2cPartner.businessName || 'Self';
                 assignedDriverImage = b2cPartner.profileImage || null;
-                assignedDriverPhone = b2cPartner.phone || b2cPartner.whatsappNumber;
+                assignedDriverPhone = b2cPartner.whatsappNumber || b2cPartner.phone;
                 console.log("[v0] Monthly Pass Self-driver detected:", assignedDriverName);
             } else {
-                // Get assigned driver details
-                const assignedDriver = await User.findById(routeDriverId);
-                if (assignedDriver) {
-                    assignedDriverName = assignedDriver.name || assignedDriver.fullName;
-                    assignedDriverImage = assignedDriver.profileImage || null;
-                    assignedDriverPhone = assignedDriver.phone || assignedDriver.whatsappNumber;
-                    console.log("[v0] Monthly Pass Professional driver found (User table):", assignedDriverName);
+                // First try to get from B2CPartnerDriver table (most common case for assigned drivers)
+                const b2cDriver = await B2CPartnerDriver.findById(effectiveDriverId);
+                if (b2cDriver) {
+                    assignedDriverName = b2cDriver.name;
+                    assignedDriverImage = b2cDriver.driverImage?.url;
+                    assignedDriverPhone = b2cDriver.phoneNumber;
+                    isSelfDriver = false;
+                    console.log("[v0] Monthly Pass Professional driver found (B2CPartnerDriver table):", assignedDriverName);
                 } else {
-                    // Try to get from B2CPartnerDriver table
-                    const b2cDriver = await B2CPartnerDriver.findById(routeDriverId);
-                    if (b2cDriver) {
-                        assignedDriverName = b2cDriver.name;
-                        assignedDriverImage = b2cDriver.driverImage?.url;
-                        assignedDriverPhone = b2cDriver.phoneNumber;
-                        console.log("[v0] Monthly Pass Professional driver found (B2CPartnerDriver table):", assignedDriverName);
+                    // Fallback: Try to find in User table
+                    const assignedDriver = await User.findById(effectiveDriverId);
+                    if (assignedDriver) {
+                        assignedDriverName = assignedDriver.fullName || assignedDriver.name;
+                        assignedDriverImage = assignedDriver.profileImage || null;
+                        assignedDriverPhone = assignedDriver.whatsappNumber || assignedDriver.phone;
+                        isSelfDriver = false;
+                        console.log("[v0] Monthly Pass Professional driver found (User table):", assignedDriverName);
                     } else {
-                        console.log("[v0] Monthly Pass Driver not found in any table for ID:", routeDriverId);
+                        // Driver ID exists but driver not found - still use the ID
+                        console.log("[v0] Monthly Pass Driver not found in any table for ID:", effectiveDriverId, "- using ID anyway");
+                        assignedDriverName = "Assigned Driver";
+                        isSelfDriver = false;
                     }
                 }
             }
         } else {
-            // No driver assigned to route, use partner as default
+            // No driver assigned to schedule or route, use partner as default
             isSelfDriver = true;
             assignedDriverId = route.b2cPartnerId;
-            assignedDriverName = b2cPartner.name || b2cPartner.businessName || 'Self';
+            assignedDriverName = b2cPartner.fullName || b2cPartner.name || b2cPartner.businessName || 'Self';
             assignedDriverImage = b2cPartner.profileImage || null;
-            assignedDriverPhone = b2cPartner.phone || b2cPartner.whatsappNumber;
+            assignedDriverPhone = b2cPartner.whatsappNumber || b2cPartner.phone;
             console.log("[v0] Monthly Pass No driver assigned, using partner as default:", assignedDriverName);
         }
 
@@ -368,16 +395,120 @@ export const createB2CMonthlyPass = async (req, res) => {
             console.log("[v0] Schedule not found, using default times");
         }
 
+        // CRITICAL FIX: Determine if this is a return-direction ONE_WAY pass
+        // For ONE_WAY passes, we need to check if the user selected the return direction
+        // 
+        // The most reliable way to detect return direction:
+        // 1. Compare outboundTripTime with schedule's arrivalTime (return trip time)
+        // 2. Check if pickup/dropoff are in returnStopPoints (not outboundStopPoints)
+        // 3. Check if returnPickupLocation/returnDropoffLocation match route's toLocation/fromLocation
+        //
+        // Route: fromLocation (ISBT Sector 43) → toLocation (ISBT Sector 17)
+        // Schedule: 
+        //   - departureTime (5:00 AM) = outbound direction (fromLocation → toLocation)
+        //   - arrivalTime (2:00 PM) = return direction (toLocation → fromLocation)
+        //   - outboundStopPoints: stops along outbound (Sector 42 → Sector 36)
+        //   - returnStopPoints: stops along return (Sector 36 → Sector 42)
+
+        let isReturnDirectionOneWay = false;
+
+        if (passType === 'ONE_WAY' && schedule) {
+            // Get the schedule's trip time configuration
+            const tripTimeConfig = schedule.tripTimes?.[0];
+
+            if (tripTimeConfig) {
+                // Method 1: Check if selected time matches return trip time (arrivalTime)
+                // If outboundTripTime === schedule's arrivalTime, it's return direction
+                const scheduleReturnTime = tripTimeConfig.arrivalTime;
+                const scheduleOutboundTime = tripTimeConfig.departureTime;
+
+                if (outboundTripTime === scheduleReturnTime) {
+                    isReturnDirectionOneWay = true;
+                    console.log("[v0] ONE_WAY direction detection: outboundTripTime matches schedule arrivalTime (return time)");
+                }
+
+                // Method 2: Check if pickup is in returnStopPoints (not outboundStopPoints)
+                if (!isReturnDirectionOneWay) {
+                    const returnStopLocations = (tripTimeConfig.returnStopPoints || []).map(sp => sp.location);
+                    const outboundStopLocations = (tripTimeConfig.outboundStopPoints || []).map(sp => sp.location);
+
+                    const pickupInReturn = returnStopLocations.includes(pickupLocation);
+                    const pickupInOutbound = outboundStopLocations.includes(pickupLocation);
+
+                    if (pickupInReturn && !pickupInOutbound) {
+                        isReturnDirectionOneWay = true;
+                        console.log("[v0] ONE_WAY direction detection: pickup location found in returnStopPoints");
+                    }
+                }
+
+                // Method 3: Check returnPickupLocation/returnDropoffLocation pattern
+                // If returnPickupLocation matches route.toLocation, this indicates return direction
+                if (!isReturnDirectionOneWay && returnPickupLocation && returnDropoffLocation) {
+                    if (returnPickupLocation === route.toLocation || returnDropoffLocation === route.fromLocation) {
+                        isReturnDirectionOneWay = true;
+                        console.log("[v0] ONE_WAY direction detection: returnPickup/returnDropoff match route's reversed locations");
+                    }
+                }
+
+                console.log("[v0] ONE_WAY direction detection result:", {
+                    isReturnDirectionOneWay,
+                    outboundTripTime,
+                    scheduleOutboundTime,
+                    scheduleReturnTime,
+                    pickupLocation,
+                    dropoffLocation,
+                    returnPickupLocation,
+                    returnDropoffLocation,
+                    routeFromLocation: route.fromLocation,
+                    routeToLocation: route.toLocation
+                });
+            }
+        }
+
+        // Legacy fallback if schedule is not available
+        if (passType === 'ONE_WAY' && !schedule) {
+            isReturnDirectionOneWay = dropoffLocation === route.fromLocation ||
+                (returnPickupLocation === route.toLocation) ||
+                (returnDropoffLocation === route.fromLocation);
+            console.log("[v0] ONE_WAY direction detection (legacy fallback):", isReturnDirectionOneWay);
+        }
+
+        // For ONE_WAY passes, determine the correct from/to locations based on direction
+        let oneWayFromLocation, oneWayToLocation;
+        if (passType === 'ONE_WAY') {
+            if (isReturnDirectionOneWay) {
+                // Return direction: use reversed route locations
+                oneWayFromLocation = route.toLocation;
+                oneWayToLocation = route.fromLocation;
+                console.log("[v0] ONE_WAY pass in RETURN direction - using reversed route:", {
+                    oneWayFromLocation,
+                    oneWayToLocation,
+                    userPickup: pickupLocation,
+                    userDropoff: dropoffLocation
+                });
+            } else {
+                // Outbound direction: use normal route locations
+                oneWayFromLocation = route.fromLocation;
+                oneWayToLocation = route.toLocation;
+                console.log("[v0] ONE_WAY pass in OUTBOUND direction - using normal route:", {
+                    oneWayFromLocation,
+                    oneWayToLocation,
+                    userPickup: pickupLocation,
+                    userDropoff: dropoffLocation
+                });
+            }
+        }
+
         while (currentDate <= endDateObj) {
             // Skip weekends if not weekend pass
             const dayOfWeek = currentDate.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
-            
+
             if (passType === 'WEEKDAY' && isWeekend) {
                 currentDate.setDate(currentDate.getDate() + 1);
                 continue;
             }
-            
+
             if (passType === 'WEEKEND' && !isWeekend) {
                 currentDate.setDate(currentDate.getDate() + 1);
                 continue;
@@ -389,7 +520,15 @@ export const createB2CMonthlyPass = async (req, res) => {
             const tripDateEnd = new Date(currentDate);
             tripDateEnd.setHours(23, 59, 59, 999);
 
-            // Check for existing outbound trip
+            // Determine trip from/to locations based on pass type
+            // For ROUND_TRIP: outbound uses route.fromLocation → route.toLocation
+            // For ONE_WAY: use the determined direction (could be outbound OR return)
+            const tripFromLocation = passType === 'ONE_WAY' ? oneWayFromLocation : route.fromLocation;
+            const tripToLocation = passType === 'ONE_WAY' ? oneWayToLocation : route.toLocation;
+
+            // Check for existing outbound trip (or ONE_WAY trip in the correct direction)
+            // IMPORTANT: Must include startTime in the query to distinguish between outbound and return trips
+            // on the same day (e.g., 4:00 AM outbound vs 1:00 PM return)
             const existingOutboundTrip = await B2CPartnerTrip.findOne({
                 routeId: routeId,
                 b2cPartnerId: route.b2cPartnerId,
@@ -397,39 +536,42 @@ export const createB2CMonthlyPass = async (req, res) => {
                     $gte: tripDateStart,
                     $lt: tripDateEnd
                 },
-                fromLocation: route.fromLocation,
-                toLocation: route.toLocation,
+                startTime: outboundTripTime,  // Filter by exact time to find the correct trip
+                fromLocation: tripFromLocation,
+                toLocation: tripToLocation,
                 tripType: "One Way"
             });
 
             if (existingOutboundTrip) {
-                console.log(`[v0] Found existing outbound trip for ${currentDate.toDateString()}:`, existingOutboundTrip._id);
-                
+                console.log(`[v0] Found existing trip for ${currentDate.toDateString()} at ${outboundTripTime}:`, existingOutboundTrip._id);
+
                 // CHECK SEAT AVAILABILITY FOR EXISTING TRIP
                 if (existingOutboundTrip.availableSeats >= numberOfSeats) {
-                    console.log(`[v0] Seats available: ${existingOutboundTrip.availableSeats}, Required: ${numberOfSeats}`);
+                    console.log(`[v0] Trip seats available: ${existingOutboundTrip.availableSeats}, Required: ${numberOfSeats}`);
                     existingTrips.push(existingOutboundTrip);
                 } else {
-                    console.log(`[v0] Not enough seats available: ${existingOutboundTrip.availableSeats}, Required: ${numberOfSeats}`);
+                    console.log(`[v0] Trip - Not enough seats available: ${existingOutboundTrip.availableSeats}, Required: ${numberOfSeats}`);
                     // Skip this trip - not enough seats
+                    currentDate.setDate(currentDate.getDate() + 1);
                     continue;
                 }
             } else {
-                // CREATE NEW OUTBOUND TRIP
-                console.log(`[v0] Creating outbound trip for ${currentDate.toDateString()}:`, {
+                // CREATE NEW TRIP (outbound for ROUND_TRIP, or directional for ONE_WAY)
+                console.log(`[v0] No existing trip at ${outboundTripTime}, creating new trip for ${currentDate.toDateString()}:`, {
                     routeId,
                     b2cPartnerId: route.b2cPartnerId,
                     vehicleId: route.assignedVehicle,
                     driverId: route.assignedDriver,
                     tripDate: new Date(currentDate),
                     startTime: outboundTripTime,
-                    fromLocation: route.fromLocation,
-                    toLocation: route.toLocation,
+                    fromLocation: tripFromLocation,
+                    toLocation: tripToLocation,
                     totalSeats: route.totalSeats,
                     availableSeats: (route.availableSeats || route.totalSeats || 35) - numberOfSeats,
-                    bookedSeats: numberOfSeats
+                    bookedSeats: numberOfSeats,
+                    isReturnDirectionOneWay: isReturnDirectionOneWay
                 });
-                
+
                 const outboundTrip = new B2CPartnerTrip({
                     routeId,
                     b2cPartnerId: route.b2cPartnerId,
@@ -438,8 +580,8 @@ export const createB2CMonthlyPass = async (req, res) => {
                     tripDate: new Date(currentDate),
                     startTime: outboundTripTime,
                     tripType: "One Way",
-                    fromLocation: route.fromLocation,
-                    toLocation: route.toLocation,
+                    fromLocation: tripFromLocation,
+                    toLocation: tripToLocation,
                     totalSeats: route.totalSeats || 35, // Use route.totalSeats, fallback to 35
                     availableSeats: (route.availableSeats || route.totalSeats || 35) - numberOfSeats, // Reserve seats for this booking
                     bookedSeats: numberOfSeats, // Book seats immediately
@@ -450,12 +592,14 @@ export const createB2CMonthlyPass = async (req, res) => {
 
                 await outboundTrip.save();
                 createdTrips.push(outboundTrip);
-                console.log(`[v0] Created new outbound trip for ${currentDate.toDateString()} with ${numberOfSeats} seats booked:`, outboundTrip._id);
+                console.log(`[v0] Created new trip for ${currentDate.toDateString()} with ${numberOfSeats} seats booked:`, outboundTrip._id);
             }
 
             // Create return trip if round trip
             if (passType === 'ROUND_TRIP' && returnTripTime && returnPickupLocation && returnDropoffLocation) {
                 // Check for existing return trip
+                // IMPORTANT: Must include startTime in the query to find the correct return trip
+                // that matches the returnTripTime (e.g., 1:00 PM) and not the outbound trip (4:00 AM)
                 const existingReturnTrip = await B2CPartnerTrip.findOne({
                     routeId: routeId,
                     b2cPartnerId: route.b2cPartnerId,
@@ -463,6 +607,7 @@ export const createB2CMonthlyPass = async (req, res) => {
                         $gte: tripDateStart,
                         $lt: tripDateEnd
                     },
+                    startTime: returnTripTime,  // Filter by exact time to find the correct return trip
                     fromLocation: route.toLocation,
                     toLocation: route.fromLocation,
                     tripType: "One Way"
@@ -470,7 +615,7 @@ export const createB2CMonthlyPass = async (req, res) => {
 
                 if (existingReturnTrip) {
                     console.log(`[v0] Found existing return trip for ${currentDate.toDateString()}:`, existingReturnTrip._id);
-                    
+
                     // CHECK SEAT AVAILABILITY FOR EXISTING RETURN TRIP
                     if (existingReturnTrip.availableSeats >= numberOfSeats) {
                         console.log(`[v0] Return trip seats available: ${existingReturnTrip.availableSeats}, Required: ${numberOfSeats}`);
@@ -508,7 +653,39 @@ export const createB2CMonthlyPass = async (req, res) => {
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
+        // Log detailed trip summary for debugging
+        const outboundTripsCreated = createdTrips.filter(t => t.fromLocation === route.fromLocation).length;
+        const returnTripsCreated = createdTrips.filter(t => t.fromLocation === route.toLocation).length;
+        const outboundTripsExisting = existingTrips.filter(t => t.fromLocation === route.fromLocation).length;
+        const returnTripsExisting = existingTrips.filter(t => t.fromLocation === route.toLocation).length;
+
         console.log(`[v0] Trip Summary - Created: ${createdTrips.length}, Found Existing: ${existingTrips.length}`);
+        console.log(`[v0] Detailed Trip Summary:`, {
+            passType,
+            isReturnDirectionOneWay: passType === 'ONE_WAY' ? isReturnDirectionOneWay : 'N/A',
+            tripDirection: passType === 'ONE_WAY' ? (isReturnDirectionOneWay ? 'RETURN' : 'OUTBOUND') : 'BOTH',
+            outboundTripTime,
+            returnTripTime: returnTripTime || 'N/A',
+            createdTrips: {
+                total: createdTrips.length,
+                outbound: outboundTripsCreated,
+                return: returnTripsCreated
+            },
+            existingTrips: {
+                total: existingTrips.length,
+                outbound: outboundTripsExisting,
+                return: returnTripsExisting
+            },
+            tripLocations: passType === 'ONE_WAY' ? {
+                from: oneWayFromLocation,
+                to: oneWayToLocation
+            } : {
+                outboundFrom: route.fromLocation,
+                outboundTo: route.toLocation,
+                returnFrom: route.toLocation,
+                returnTo: route.fromLocation
+            }
+        });
 
         // COMBINE ALL TRIPS FOR VALIDATION
         const allTrips = [...createdTrips, ...existingTrips];
@@ -537,7 +714,7 @@ export const createB2CMonthlyPass = async (req, res) => {
         }
 
         // UPDATE SEATS FOR EXISTING TRIPS AND CREATE MAIN MONTHLY PASS BOOKING
-        
+
         // Update existing trips with new bookings
         for (const existingTrip of existingTrips) {
             await B2CPartnerTrip.findByIdAndUpdate(existingTrip._id, {
@@ -546,7 +723,7 @@ export const createB2CMonthlyPass = async (req, res) => {
             });
             console.log(`[v0] Updated existing trip ${existingTrip._id}: bookedSeats += ${numberOfSeats}, availableSeats = ${existingTrip.availableSeats - numberOfSeats}`);
         }
-        
+
         // Update main monthly pass booking with all trip references
         passengerBooking.monthlyTrips = allTrips.map(trip => trip._id);
         passengerBooking.totalTripsCount = allTrips.length;
@@ -687,6 +864,7 @@ export const createB2CMonthlyPass = async (req, res) => {
         });
     }
 };
+
 
 // Update Trip Seats for Monthly Pass
 const updateTripSeats = async (monthlyPass) => {
@@ -887,7 +1065,7 @@ export const renewB2CMonthlyPass = async (req, res) => {
         const newTotalAmount = pricePerMonth * durationMonths;
 
         // Get dynamic commission rate for B2C Partner
-        const renewalCommissionRate = await getB2CPartnerCommissionRate(existingPass.partnerId);
+        const renewalCommissionRate = await getB2CPartnerCommissionRate(monthlyPass.partnerId);
         console.log("[v0] Dynamic Commission Rate for B2C Partner (renewal):", renewalCommissionRate * 100, "%");
 
         // Calculate commission based on dynamic rate

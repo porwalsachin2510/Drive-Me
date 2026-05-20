@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import React, {
@@ -20,7 +21,7 @@ import {
   rejectBooking,
   completeBooking,
 } from "../../../Redux/slices/bookingSlice";
-import DailyTripsInBooking from "../../../Components/DailyTripsInBooking/DailyTripsInBooking";
+import DriverDailyTrips from "../../../Components/DriverDailyTrips/DriverDailyTrips";
 import DashboardLayout from "../../../Components/DashboardLayout/DashboardLayout";
 import api from "../../../utils/api";
 import "./B2CPartnerDriverDashboard.css";
@@ -43,6 +44,13 @@ function B2CPartnerDriverDashboard() {
   const [isSharingLocation, setIsSharingLocation] = useState(false);
   const [activeTrip, setActiveTrip] = useState(null);
   const locationIntervalRef = useRef(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   const navigate = useNavigate();
 
@@ -121,7 +129,7 @@ function B2CPartnerDriverDashboard() {
   const updateLocation = useCallback(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
@@ -130,6 +138,7 @@ function B2CPartnerDriverDashboard() {
             driverType: user?.role,
           };
 
+          // Emit via socket for real-time updates
           if (socket && socket.socket) {
             const locationData = {
               bookingId: activeTrip?._id,
@@ -143,8 +152,19 @@ function B2CPartnerDriverDashboard() {
               driverType: user?.role,
             };
 
-            console.log("🚗 Emitting driver-location-update:", locationData);
             socket.socket.emit("driver-location-update", locationData);
+          }
+
+          // Also update via API to store in database and broadcast to booking rooms
+          try {
+            await api.post("/b2c-daily-trips/driver/update-location", {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              tripId: activeTrip?._id,
+            });
+            console.log("[v0] B2C Partner Driver location updated via API");
+          } catch (err) {
+            console.error("[v0] Error updating location via API:", err);
           }
 
           setLiveLocation(location);
@@ -165,9 +185,6 @@ function B2CPartnerDriverDashboard() {
     if (isSharingLocation) return;
 
     setIsSharingLocation(true);
-    console.log(
-      "🚗 Starting automatic location sharing for B2C Partner Driver",
-    );
 
     updateLocation();
 
@@ -184,7 +201,6 @@ function B2CPartnerDriverDashboard() {
     if (!isSharingLocation) return;
 
     setIsSharingLocation(false);
-    console.log("🛑 Stopping automatic location sharing");
 
     if (locationIntervalRef.current) {
       clearInterval(locationIntervalRef.current);
@@ -196,9 +212,7 @@ function B2CPartnerDriverDashboard() {
 
   const startTrip = async (bookingId) => {
     try {
-      console.log("🚀 Starting trip for booking:", bookingId);
       const result = await dispatch(startB2CTrip(bookingId)).unwrap();
-      console.log("📊 Start trip response:", result);
 
       await dispatch(getPartnerDriverBookings({ status: filterStatus }));
 
@@ -207,18 +221,14 @@ function B2CPartnerDriverDashboard() {
       if (!isSharingLocation) {
         startAutomaticLocationSharing();
       }
-
-      console.log("✅ Trip started successfully:", bookingId);
     } catch (error) {
-      console.error("❌ Error starting trip:", error);
+      console.error("Error starting trip:", error);
     }
   };
 
   const completeTrip = async (bookingId) => {
     try {
-      console.log("🏁 Completing trip for booking:", bookingId);
       const result = await dispatch(completeB2CTrip(bookingId)).unwrap();
-      console.log("📊 Complete trip response:", result);
 
       await dispatch(getPartnerDriverBookings({ status: filterStatus }));
 
@@ -234,10 +244,8 @@ function B2CPartnerDriverDashboard() {
       } else {
         setActiveTrip(remainingTrips[0]);
       }
-
-      console.log("✅ Trip completed successfully:", bookingId);
     } catch (error) {
-      console.error("❌ Error completing trip:", error);
+      console.error("Error completing trip:", error);
     }
   };
 
@@ -245,7 +253,6 @@ function B2CPartnerDriverDashboard() {
     if (!socket || !socket.socket) return;
 
     socket.socket.on("new-b2c-booking", (booking) => {
-      console.log("📱 New B2C booking received:", booking);
       dispatch(getPartnerBookings({ status: filterStatus }));
 
       if (!isSharingLocation) {
@@ -254,7 +261,7 @@ function B2CPartnerDriverDashboard() {
     });
 
     socket.socket.on("location-update", (location) => {
-      console.log("📍 Location update received:", location);
+      // Handle location update
     });
 
     return () => {
@@ -277,12 +284,114 @@ function B2CPartnerDriverDashboard() {
     };
   }, []);
 
-  const filteredBookings = Array.isArray(driverBookings)
-    ? driverBookings.filter((booking) => {
-        if (filterStatus === "ALL") return true;
-        return booking.bookingStatus === filterStatus;
-      })
-    : [];
+  // Helper function to get passenger name from booking
+  const getPassengerName = (booking) => {
+    // Check populated passengerId object first
+    if (booking.passengerId?.fullName) return booking.passengerId.fullName;
+    if (booking.passengerId?.name) return booking.passengerId.name;
+    // Fallback to booking level fields
+    if (booking.passengerName) return booking.passengerName;
+    if (booking.driverName) return booking.driverName;
+    return "Unknown Passenger";
+  };
+
+  // Helper function to get passenger phone from booking
+  const getPassengerPhone = (booking) => {
+    // Check populated passengerId object first
+    if (booking.passengerId?.whatsappNumber)
+      return booking.passengerId.whatsappNumber;
+    if (booking.passengerId?.phone) return booking.passengerId.phone;
+    // Fallback to booking level fields
+    if (booking.driverPhoneNumber) return booking.driverPhoneNumber;
+    return "No phone";
+  };
+
+  // Filter, search, and sort bookings
+  const filteredBookings = useMemo(() => {
+    let bookings = Array.isArray(driverBookings) ? [...driverBookings] : [];
+
+    // Filter by status
+    if (filterStatus !== "ALL") {
+      bookings = bookings.filter(
+        (booking) => booking.bookingStatus === filterStatus,
+      );
+    }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      bookings = bookings.filter((booking) => {
+        const passengerName = getPassengerName(booking).toLowerCase();
+        const pickup = (booking.pickupLocation || "").toLowerCase();
+        const dropoff = (booking.dropoffLocation || "").toLowerCase();
+        const bookingId = (booking._id || "").toLowerCase();
+        return (
+          passengerName.includes(query) ||
+          pickup.includes(query) ||
+          dropoff.includes(query) ||
+          bookingId.includes(query)
+        );
+      });
+    }
+
+    // Sort
+    bookings.sort((a, b) => {
+      let aVal, bVal;
+      switch (sortField) {
+        case "createdAt":
+          aVal = new Date(a.createdAt);
+          bVal = new Date(b.createdAt);
+          break;
+        case "passengerName":
+          aVal = getPassengerName(a).toLowerCase();
+          bVal = getPassengerName(b).toLowerCase();
+          break;
+        case "pickupLocation":
+          aVal = (a.pickupLocation || "").toLowerCase();
+          bVal = (b.pickupLocation || "").toLowerCase();
+          break;
+        case "paymentAmount":
+          aVal = a.paymentAmount || 0;
+          bVal = b.paymentAmount || 0;
+          break;
+        default:
+          aVal = new Date(a.createdAt);
+          bVal = new Date(b.createdAt);
+      }
+      if (sortOrder === "asc") {
+        return aVal > bVal ? 1 : -1;
+      }
+      return aVal < bVal ? 1 : -1;
+    });
+
+    return bookings;
+  }, [driverBookings, filterStatus, searchQuery, sortField, sortOrder]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const paginatedBookings = filteredBookings.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchQuery, itemsPerPage]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("desc");
+    }
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return "sort";
+    return sortOrder === "asc" ? "sort-up" : "sort-down";
+  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -309,31 +418,33 @@ function B2CPartnerDriverDashboard() {
     }
   };
 
-  const driverStats = useMemo(() => {
+  const bookingStats = useMemo(() => {
     const bookingsArr = Array.isArray(driverBookings) ? driverBookings : [];
-    const totalTrips = bookingsArr.length;
-    const completedTrips = bookingsArr.filter(
+    const totalBookings = bookingsArr.length;
+    const completedBookings = bookingsArr.filter(
       (b) => b.bookingStatus === "COMPLETED",
     ).length;
-    const acceptedTrips = bookingsArr.filter((b) =>
+    const acceptedBookings = bookingsArr.filter((b) =>
       ["ACCEPTED", "IN_PROGRESS", "COMPLETED"].includes(b.bookingStatus),
     ).length;
-    const rejectedTrips = bookingsArr.filter(
+    const pendingBookings = bookingsArr.filter(
+      (b) => b.bookingStatus === "PENDING",
+    ).length;
+    const rejectedBookings = bookingsArr.filter(
       (b) => b.bookingStatus === "REJECTED",
     ).length;
-    const totalDecisions = acceptedTrips + rejectedTrips;
+    const totalDecisions = acceptedBookings + rejectedBookings;
     const acceptanceRate =
       totalDecisions > 0
-        ? Math.round((acceptedTrips / totalDecisions) * 100)
+        ? Math.round((acceptedBookings / totalDecisions) * 100)
         : 100;
-    const ratedTrips = bookingsArr.filter((b) => b.rating && b.rating > 0);
-    const avgRating =
-      ratedTrips.length > 0
-        ? (
-            ratedTrips.reduce((sum, b) => sum + b.rating, 0) / ratedTrips.length
-          ).toFixed(1)
-        : "N/A";
-    return { totalTrips, completedTrips, acceptanceRate, avgRating };
+    return {
+      totalBookings,
+      completedBookings,
+      acceptanceRate,
+      pendingBookings,
+      acceptedBookings,
+    };
   }, [driverBookings]);
 
   if (loading) {
@@ -342,7 +453,7 @@ function B2CPartnerDriverDashboard() {
         activeTab={activeMainTab}
         setActiveTab={setActiveMainTab}
       >
-        <div className="b2c-driver-loading">Loading bookings...</div>
+        <div className="drivemego-btoc-dd-loading">Loading bookings...</div>
       </DashboardLayout>
     );
   }
@@ -351,194 +462,339 @@ function B2CPartnerDriverDashboard() {
     switch (activeMainTab) {
       case "bookings":
         return (
-          <div className="b2c-driver-tab-content">
-            <div className="b2c-driver-tab-header">
+          <div className="drivemego-btoc-dd-tab-content">
+            <div className="drivemego-btoc-dd-tab-header">
               <h2>Booking Management</h2>
-              <div
-                className={`b2c-driver-location-badge ${isSharingLocation ? "active" : ""}`}
-              >
-                {isSharingLocation ? "Sharing Live Location" : "Location Off"}
+            </div>
+
+            <div className="drivemego-btoc-dd-stats-row">
+              <div className="drivemego-btoc-dd-stat-card">
+                <span className="drivemego-btoc-dd-stat-value">
+                  {bookingStats.totalBookings}
+                </span>
+                <span className="drivemego-btoc-dd-stat-label">
+                  Total Bookings
+                </span>
+              </div>
+              <div className="drivemego-btoc-dd-stat-card">
+                <span className="drivemego-btoc-dd-stat-value">
+                  {bookingStats.acceptedBookings}
+                </span>
+                <span className="drivemego-btoc-dd-stat-label">Accepted</span>
+              </div>
+              <div className="drivemego-btoc-dd-stat-card">
+                <span className="drivemego-btoc-dd-stat-value">
+                  {bookingStats.completedBookings}
+                </span>
+                <span className="drivemego-btoc-dd-stat-label">Completed</span>
               </div>
             </div>
 
-            <div className="b2c-driver-stats-row">
-              <div className="b2c-driver-stat-card">
-                <span className="b2c-driver-stat-value">
-                  {driverStats.avgRating}
-                  {driverStats.avgRating !== "N/A" ? "★" : ""}
-                </span>
-                <span className="b2c-driver-stat-label">Rating</span>
+            {/* Filters and Search Section */}
+            <div className="drivemego-btoc-dd-table-controls">
+              <div className="drivemego-btoc-dd-search-box">
+                <svg
+                  className="drivemego-btoc-dd-search-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by passenger, location, or booking ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="drivemego-btoc-dd-search-input"
+                />
+                {searchQuery && (
+                  <button
+                    className="drivemego-btoc-dd-search-clear"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    x
+                  </button>
+                )}
               </div>
-              <div className="b2c-driver-stat-card">
-                <span className="b2c-driver-stat-value">
-                  {driverStats.totalTrips}
-                </span>
-                <span className="b2c-driver-stat-label">Total Trips</span>
-              </div>
-              <div className="b2c-driver-stat-card">
-                <span className="b2c-driver-stat-value">
-                  {driverStats.acceptanceRate}%
-                </span>
-                <span className="b2c-driver-stat-label">Acceptance</span>
-              </div>
-              <div className="b2c-driver-stat-card">
-                <span className="b2c-driver-stat-value">
-                  {driverStats.completedTrips}
-                </span>
-                <span className="b2c-driver-stat-label">Completed</span>
+
+              <div className="drivemego-btoc-dd-filter-group">
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="drivemego-btoc-dd-status-filter"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="ACCEPTED">Accepted</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="REJECTED">Rejected</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                  className="drivemego-btoc-dd-per-page-select"
+                >
+                  <option value={5}>5 per page</option>
+                  <option value={10}>10 per page</option>
+                  <option value={25}>25 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
               </div>
             </div>
 
-            <div className="b2c-driver-filter-row">
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="b2c-driver-status-filter"
-              >
-                <option value="PENDING">Pending</option>
-                <option value="ACCEPTED">Accepted</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="REJECTED">Rejected</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="ALL">All Bookings</option>
-              </select>
-            </div>
-
-            <div className="b2c-driver-bookings-list">
-              {filteredBookings.length === 0 ? (
-                <div className="b2c-driver-empty-state">
-                  <span className="b2c-driver-empty-icon">📋</span>
-                  <h3>No bookings found</h3>
-                  <p>No bookings found for the selected status</p>
-                </div>
-              ) : (
-                filteredBookings.map((booking) => (
-                  <div key={booking._id} className="b2c-driver-booking-card">
-                    <div className="b2c-driver-booking-header">
-                      <div className="b2c-driver-booking-id">
-                        <h4>Booking #{booking._id.slice(-8)}</h4>
-                        <span
-                          className="b2c-driver-status-badge"
-                          style={{
-                            backgroundColor: getStatusColor(
-                              booking.bookingStatus,
-                            ),
-                          }}
-                        >
-                          {booking.bookingStatus}
-                        </span>
-                      </div>
-                      <span className="b2c-driver-booking-date">
-                        {formatDate(booking.createdAt)}
-                      </span>
-                    </div>
-
-                    <div className="b2c-driver-booking-route">
-                      <div className="b2c-driver-route-point">
-                        <span className="b2c-driver-route-label">From:</span>
-                        <span>{booking.pickupLocation}</span>
-                      </div>
-                      <span className="b2c-driver-route-arrow">→</span>
-                      <div className="b2c-driver-route-point">
-                        <span className="b2c-driver-route-label">To:</span>
-                        <span>{booking.dropoffLocation}</span>
-                      </div>
-                    </div>
-
-                    <div className="b2c-driver-booking-details">
-                      <div className="b2c-driver-detail-item">
-                        <span className="b2c-driver-detail-label">
-                          Passenger
-                        </span>
-                        <span className="b2c-driver-detail-value">
-                          {booking.passengerId?.name ||
-                            booking.passengerName ||
-                            "N/A"}
-                        </span>
-                      </div>
-                      <div className="b2c-driver-detail-item">
-                        <span className="b2c-driver-detail-label">Phone</span>
-                        <span className="b2c-driver-detail-value">
-                          {booking.passengerId?.phone || "N/A"}
-                        </span>
-                      </div>
-                      <div className="b2c-driver-detail-item">
-                        <span className="b2c-driver-detail-label">Seats</span>
-                        <span className="b2c-driver-detail-value">
-                          {booking.numberOfSeats}
-                        </span>
-                      </div>
-                      <div className="b2c-driver-detail-item">
-                        <span className="b2c-driver-detail-label">Price</span>
-                        <span className="b2c-driver-detail-value b2c-driver-price">
-                          {booking.paymentAmount?.toLocaleString()}{" "}
-                          {booking.currency || "KWD"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {booking.bookingStatus === "PENDING" && (
-                      <div className="b2c-driver-booking-actions">
-                        <button
-                          className="b2c-driver-action-btn accept"
-                          onClick={() => handleAccept(booking._id)}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          className="b2c-driver-action-btn reject"
-                          onClick={() => handleRejectClick(booking)}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
-
-                    {(booking.bookingStatus === "ACCEPTED" ||
-                      booking.bookingStatus === "IN_PROGRESS") && (
-                      <DailyTripsInBooking
-                        booking={booking}
-                        userRole={user?.role}
-                        currentUserId={user?._id}
-                        currentDriverId={user?.driverId}
-                        onTripStatusChange={(status, tripId) => {
-                          dispatch(getPartnerDriverBookings({ status: "ALL" }));
-                        }}
-                        onTripStart={(tripId) => {
-                          setActiveTrip(booking);
-                          if (!isSharingLocation) {
-                            startAutomaticLocationSharing();
-                          }
-                        }}
-                        onTripComplete={(tripId) => {
-                          stopAutomaticLocationSharing();
-                        }}
-                      />
-                    )}
-                  </div>
-                ))
+            {/* Results Summary */}
+            <div className="drivemego-btoc-dd-results-summary">
+              Showing {paginatedBookings.length} of {filteredBookings.length}{" "}
+              bookings
+              {searchQuery && (
+                <span className="drivemego-btoc-dd-search-term">
+                  {" "}
+                  matching &quot;{searchQuery}&quot;
+                </span>
               )}
             </div>
 
+            {/* Bookings Table */}
+            <div className="drivemego-btoc-dd-table-wrapper">
+              {paginatedBookings.length === 0 ? (
+                <div className="drivemego-btoc-dd-empty-state">
+                  <svg
+                    className="drivemego-btoc-dd-empty-icon-svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+                    <path d="M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    <path d="M9 12h6M9 16h6" />
+                  </svg>
+                  <h3>No bookings found</h3>
+                  <p>No bookings match your current filters</p>
+                </div>
+              ) : (
+                <table className="drivemego-btoc-dd-bookings-table">
+                  <thead>
+                    <tr>
+                      <th
+                        onClick={() => handleSort("createdAt")}
+                        className="drivemego-btoc-dd-th-sortable"
+                      >
+                        <span>Booking ID</span>
+                        <span
+                          className={`drivemego-btoc-dd-sort-icon ${getSortIcon("createdAt")}`}
+                        ></span>
+                      </th>
+                      <th
+                        onClick={() => handleSort("passengerName")}
+                        className="drivemego-btoc-dd-th-sortable"
+                      >
+                        <span>Passenger</span>
+                        <span
+                          className={`drivemego-btoc-dd-sort-icon ${getSortIcon("passengerName")}`}
+                        ></span>
+                      </th>
+                      <th
+                        onClick={() => handleSort("pickupLocation")}
+                        className="drivemego-btoc-dd-th-sortable"
+                      >
+                        <span>Route</span>
+                        <span
+                          className={`drivemego-btoc-dd-sort-icon ${getSortIcon("pickupLocation")}`}
+                        ></span>
+                      </th>
+                      <th>Seats</th>
+                      <th
+                        onClick={() => handleSort("paymentAmount")}
+                        className="drivemego-btoc-dd-th-sortable"
+                      >
+                        <span>Amount</span>
+                        <span
+                          className={`drivemego-btoc-dd-sort-icon ${getSortIcon("paymentAmount")}`}
+                        ></span>
+                      </th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      {filterStatus === "PENDING" && <th>Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedBookings.map((booking) => (
+                      <tr
+                        key={booking._id}
+                        className="drivemego-btoc-dd-table-row"
+                      >
+                        <td className="drivemego-btoc-dd-td-id">
+                          <span className="drivemego-btoc-dd-booking-id-text">
+                            #{booking._id.slice(-8)}
+                          </span>
+                        </td>
+                        <td className="drivemego-btoc-dd-td-passenger">
+                          <div className="drivemego-btoc-dd-passenger-info">
+                            <span className="drivemego-btoc-dd-passenger-name">
+                              {getPassengerName(booking)}
+                            </span>
+                            <span className="drivemego-btoc-dd-passenger-phone">
+                              {getPassengerPhone(booking)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="drivemego-btoc-dd-td-route">
+                          <div className="drivemego-btoc-dd-route-cell">
+                            <span className="drivemego-btoc-dd-route-from">
+                              {booking.pickupLocation || "N/A"}
+                            </span>
+                            <span className="drivemego-btoc-dd-route-arrow-cell">
+                              -
+                            </span>
+                            <span className="drivemego-btoc-dd-route-to">
+                              {booking.dropoffLocation || "N/A"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="drivemego-btoc-dd-td-seats">
+                          <span className="drivemego-btoc-dd-seats-badge">
+                            {booking.numberOfSeats || 1}
+                          </span>
+                        </td>
+                        <td className="drivemego-btoc-dd-td-amount">
+                          <span className="drivemego-btoc-dd-amount-text">
+                            {booking.paymentAmount?.toLocaleString() || "0"}{" "}
+                            {booking.currency || "AED"}
+                          </span>
+                        </td>
+                        <td className="drivemego-btoc-dd-td-status">
+                          <span
+                            className={`drivemego-btoc-dd-status-pill status-${booking.bookingStatus?.toLowerCase()}`}
+                          >
+                            {booking.bookingStatus}
+                          </span>
+                        </td>
+                        <td className="drivemego-btoc-dd-td-date">
+                          <span className="drivemego-btoc-dd-date-text">
+                            {formatDate(booking.createdAt)}
+                          </span>
+                        </td>
+                        {filterStatus === "PENDING" && (
+                          <td className="drivemego-btoc-dd-td-actions">
+                            {booking.bookingStatus === "PENDING" && (
+                              <div className="drivemego-btoc-dd-action-buttons">
+                                <button
+                                  className="drivemego-btoc-dd-btn-accept"
+                                  onClick={() => handleAccept(booking._id)}
+                                  title="Accept Booking"
+                                >
+                                  Accept
+                                </button>
+                                <button
+                                  className="drivemego-btoc-dd-btn-reject"
+                                  onClick={() => handleRejectClick(booking)}
+                                  title="Reject Booking"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="drivemego-btoc-dd-pagination">
+                <button
+                  className="drivemego-btoc-dd-page-btn"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  First
+                </button>
+                <button
+                  className="drivemego-btoc-dd-page-btn"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
+                  disabled={currentPage === 1}
+                >
+                  Prev
+                </button>
+
+                <div className="drivemego-btoc-dd-page-numbers">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        className={`drivemego-btoc-dd-page-num ${currentPage === pageNum ? "active" : ""}`}
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  className="drivemego-btoc-dd-page-btn"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </button>
+                <button
+                  className="drivemego-btoc-dd-page-btn"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  Last
+                </button>
+
+                <span className="drivemego-btoc-dd-page-info">
+                  Page {currentPage} of {totalPages}
+                </span>
+              </div>
+            )}
+
             {showRejectModal && selectedBooking && (
-              <div className="b2c-driver-modal-overlay">
-                <div className="b2c-driver-modal">
-                  <div className="b2c-driver-modal-header">
+              <div className="drivemego-btoc-dd-modal-overlay">
+                <div className="drivemego-btoc-dd-modal">
+                  <div className="drivemego-btoc-dd-modal-header">
                     <h3>Reject Booking</h3>
                     <button
-                      className="b2c-driver-modal-close"
+                      className="drivemego-btoc-dd-modal-close"
                       onClick={() => {
                         setShowRejectModal(false);
                         setSelectedBooking(null);
                         setRejectionReason("");
                       }}
                     >
-                      ×
+                      x
                     </button>
                   </div>
-                  <div className="b2c-driver-modal-body">
+                  <div className="drivemego-btoc-dd-modal-body">
                     <p>Are you sure you want to reject this booking?</p>
-                    <div className="b2c-driver-form-group">
+                    <div className="drivemego-btoc-dd-form-group">
                       <label>Reason for rejection:</label>
                       <textarea
                         value={rejectionReason}
@@ -548,9 +804,9 @@ function B2CPartnerDriverDashboard() {
                       />
                     </div>
                   </div>
-                  <div className="b2c-driver-modal-actions">
+                  <div className="drivemego-btoc-dd-modal-actions">
                     <button
-                      className="b2c-driver-action-btn cancel"
+                      className="drivemego-btoc-dd-action-btn cancel"
                       onClick={() => {
                         setShowRejectModal(false);
                         setSelectedBooking(null);
@@ -560,7 +816,7 @@ function B2CPartnerDriverDashboard() {
                       Cancel
                     </button>
                     <button
-                      className="b2c-driver-action-btn reject"
+                      className="drivemego-btoc-dd-action-btn reject"
                       onClick={handleRejectSubmit}
                       disabled={!rejectionReason.trim()}
                     >
@@ -575,74 +831,34 @@ function B2CPartnerDriverDashboard() {
 
       case "daily-trips":
         return (
-          <div className="b2c-driver-tab-content">
-            <h2>Daily Trip Management</h2>
-            <p className="b2c-driver-description">
-              View and manage your daily trips. Start and complete individual
-              trips for each booking.
-            </p>
-            {Array.isArray(driverBookings) &&
-            driverBookings.filter(
-              (b) =>
-                b.bookingStatus === "ACCEPTED" ||
-                b.bookingStatus === "IN_PROGRESS",
-            ).length > 0 ? (
-              driverBookings
-                .filter(
-                  (b) =>
-                    b.bookingStatus === "ACCEPTED" ||
-                    b.bookingStatus === "IN_PROGRESS",
-                )
-                .map((booking) => (
-                  <div key={booking._id} className="b2c-driver-daily-trip-card">
-                    <div className="b2c-driver-daily-trip-header">
-                      <strong>Booking #{booking._id.slice(-8)}</strong>
-                      <span>
-                        {booking.pickupLocation} → {booking.dropoffLocation}
-                      </span>
-                    </div>
-                    <DailyTripsInBooking
-                      booking={booking}
-                      userRole={user?.role}
-                      currentUserId={user?._id}
-                      currentDriverId={user?.driverId}
-                      onTripStatusChange={() => {
-                        dispatch(getPartnerDriverBookings({ status: "ALL" }));
-                      }}
-                      onTripStart={() => {
-                        setActiveTrip(booking);
-                        if (!isSharingLocation) {
-                          startAutomaticLocationSharing();
-                        }
-                      }}
-                      onTripComplete={() => {
-                        stopAutomaticLocationSharing();
-                      }}
-                    />
-                  </div>
-                ))
-            ) : (
-              <div className="b2c-driver-empty-state">
-                <span className="b2c-driver-empty-icon">📅</span>
-                <h3>No active trips</h3>
-                <p>
-                  You have no accepted or in-progress bookings with daily trips
-                </p>
-              </div>
-            )}
-          </div>
+          <DriverDailyTrips
+            isSharingLocation={isSharingLocation}
+            onTripStatusChange={(status, tripId) => {
+              dispatch(getPartnerDriverBookings({ status: "ALL" }));
+            }}
+            onTripStart={(tripId) => {
+              if (!isSharingLocation) {
+                startAutomaticLocationSharing();
+              }
+            }}
+            onTripComplete={(tripId) => {
+              stopAutomaticLocationSharing();
+            }}
+          />
         );
 
       case "location":
         return (
-          <div className="b2c-driver-tab-content">
+          <div className="drivemego-btoc-dd-tab-content">
             <h2>Live Location Tracking</h2>
-            <div className="b2c-driver-location-section">
-              <div className="b2c-driver-location-status-card">
+            <div className="drivemego-btoc-dd-location-section">
+              <div className="drivemego-btoc-dd-location-status-card">
                 <div
-                  className={`b2c-driver-location-indicator ${isSharingLocation ? "active" : ""}`}
+                  className={`drivemego-btoc-dd-location-indicator ${isSharingLocation ? "active" : ""}`}
                 >
-                  <span className="b2c-driver-location-icon">📍</span>
+                  <span className="drivemego-btoc-dd-location-icon">
+                    Location
+                  </span>
                   <span>
                     {isSharingLocation
                       ? "Actively sharing location"
@@ -650,7 +866,7 @@ function B2CPartnerDriverDashboard() {
                   </span>
                 </div>
                 {liveLocation && (
-                  <div className="b2c-driver-location-coords">
+                  <div className="drivemego-btoc-dd-location-coords">
                     <p>
                       <strong>Latitude:</strong> {liveLocation.lat?.toFixed(6)}
                     </p>
@@ -664,18 +880,18 @@ function B2CPartnerDriverDashboard() {
                   </div>
                 )}
                 {activeTrip && (
-                  <div className="b2c-driver-active-trip">
-                    <strong>Active Trip:</strong> {activeTrip.pickupLocation} →{" "}
+                  <div className="drivemego-btoc-dd-active-trip">
+                    <strong>Active Trip:</strong> {activeTrip.pickupLocation} -{" "}
                     {activeTrip.dropoffLocation}
                   </div>
                 )}
               </div>
 
-              <div className="b2c-driver-location-map">
+              <div className="drivemego-btoc-dd-location-map">
                 {liveLocation ? (
                   <iframe
                     src={`https://www.openstreetmap.org/export/embed.html?bbox=${liveLocation.lng - 0.01},${liveLocation.lat - 0.01},${liveLocation.lng + 0.01},${liveLocation.lat + 0.01}&layer=mapnik&marker=${liveLocation.lat},${liveLocation.lng}`}
-                    className="b2c-driver-map-iframe"
+                    className="drivemego-btoc-dd-map-iframe"
                     width="100%"
                     height="400"
                     frameBorder="0"
@@ -683,7 +899,7 @@ function B2CPartnerDriverDashboard() {
                     title="Driver Live Location"
                   />
                 ) : (
-                  <div className="b2c-driver-no-location">
+                  <div className="drivemego-btoc-dd-no-location">
                     <p>No location data available</p>
                   </div>
                 )}

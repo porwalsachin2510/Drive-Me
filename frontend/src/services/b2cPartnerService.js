@@ -328,6 +328,30 @@ export const getTransactionHistory = async (filters = {}) => {
   }
 };
 
+// Update B2C driver location (for both self-driver and partner driver)
+// Backend: POST /api/b2c-daily-trips/driver/update-location (b2cDailyTripRoutes.js)
+export const updateB2CDriverLocation = async (locationData) => {
+  try {
+    const response = await api.post("/b2c-daily-trips/driver/update-location", locationData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating B2C driver location:", error);
+    throw error;
+  }
+};
+
+// Get active trip for B2C driver
+// Backend: GET /api/b2c-daily-trips/driver/active-trip (b2cDailyTripRoutes.js)
+export const getActiveB2CTrip = async () => {
+  try {
+    const response = await api.get("/b2c-daily-trips/driver/active-trip");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching active B2C trip:", error);
+    throw error;
+  }
+};
+
 export default {
   getDailyTrips,
   getTripDetails,
@@ -353,5 +377,7 @@ export default {
   updateProfile,
   getAccountDetails,
   getSettlement,
-  getTransactionHistory
+  getTransactionHistory,
+  updateB2CDriverLocation,
+  getActiveB2CTrip
 };

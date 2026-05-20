@@ -93,6 +93,44 @@ const CommuterBookingDetailsPage = () => {
     return `${currency} ${parseFloat(amount || 0).toFixed(2)}`;
   };
 
+  // Get travel time from booking or schedule data
+  const getTravelTime = (bookingData) => {
+    // Check if booking has direct travel time
+    if (bookingData?.travelTime) return bookingData.travelTime;
+    if (bookingData?.outboundTripTime) return bookingData.outboundTripTime;
+    if (bookingData?.tripTime) return bookingData.tripTime;
+
+    // Try to get from linkedSchedule
+    const schedule = bookingData?.linkedSchedule;
+    if (schedule?.tripTimes?.[0]) {
+      const tripTime = schedule.tripTimes[0];
+      const pickupLocation = bookingData?.pickupLocation;
+
+      // Check outbound stop points for matching pickup location
+      const outboundStop = tripTime.outboundStopPoints?.find(
+        (stop) => stop.location === pickupLocation,
+      );
+      if (outboundStop?.time) return outboundStop.time;
+
+      // Check return stop points for matching pickup location
+      const returnStop = tripTime.returnStopPoints?.find(
+        (stop) => stop.location === pickupLocation,
+      );
+      if (returnStop?.time) return returnStop.time;
+
+      // Default to departure time if no matching stop found
+      return tripTime.departureTime;
+    }
+
+    // Try to get from schedule object directly on booking
+    if (bookingData?.schedule?.tripTimes?.[0]) {
+      const tripTime = bookingData.schedule.tripTimes[0];
+      return tripTime.departureTime;
+    }
+
+    return "N/A";
+  };
+
   const handleBackClick = () => {
     navigate("/commuter-profile?tab=my-rides");
   };
@@ -102,14 +140,34 @@ const CommuterBookingDetailsPage = () => {
     if (socket?.socket && booking && showTracking) {
       // Join booking room for this specific booking
       socket.socket.emit("join_booking_room", booking._id);
+      socket.socket.emit("join-booking-room", booking._id);
 
       // Also join notification room
-      if (auth?.user?.id) {
-        socket.socket.emit("join-notification-room", auth.user.id);
+      if (auth?.user?._id) {
+        socket.socket.emit("join-notification-room", auth.user._id);
       }
+
+      // Get the driver ID based on isSelfDriver flag
+      let driverId;
+      if (booking.isSelfDriver) {
+        // When isSelfDriver is true, the partner is driving, use b2cPartnerId
+        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+      } else {
+        // When isSelfDriver is false, use assignedDriverId (from b2cpartnerdrivers table)
+        driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
+      }
+
+      console.log(
+        "[v0] Setting up tracking for driverId:",
+        driverId,
+        "isSelfDriver:",
+        booking.isSelfDriver,
+      );
 
       // Listen for driver location updates
       const handleLocationUpdate = (locationData) => {
+        console.log("[v0] Location update received:", locationData);
+
         // Extract location - handle both nested and flat formats
         const lat =
           locationData.location?.lat ||
@@ -121,23 +179,26 @@ const CommuterBookingDetailsPage = () => {
           locationData.longitude;
 
         if (!lat || !lng) {
+          console.log("[v0] Invalid location data received - no coordinates");
           return;
         }
 
-        // Get the driver ID to match - could be assignedDriverId, b2cPartnerId (when isSelfDriver), or from driverInfo
-        const bookingDriverId =
-          booking.assignedDriverId?._id ||
-          booking.assignedDriverId ||
-          (booking.isSelfDriver
-            ? booking.b2cPartnerId?._id || booking.b2cPartnerId
-            : null);
-
         // Check if this location update is for our booking's driver
         const isOurDriver =
-          locationData.driverId === bookingDriverId ||
+          locationData.driverId === driverId ||
           locationData.driverId === booking.b2cPartnerId?._id ||
           locationData.driverId === booking.b2cPartnerId ||
-          locationData.bookingId === booking._id;
+          locationData.bookingId === booking._id ||
+          locationData.tripId === booking.linkedTrip;
+
+        console.log(
+          "[v0] Is our driver:",
+          isOurDriver,
+          "locationData.driverId:",
+          locationData.driverId,
+          "our driverId:",
+          driverId,
+        );
 
         if (isOurDriver || !locationData.driverId) {
           setDriverLocation({
@@ -146,6 +207,7 @@ const CommuterBookingDetailsPage = () => {
             lastUpdate: Date.now(),
           });
           setIsDriverOnline(true);
+          console.log("[v0] Updated driver location:", lat, lng);
         }
       };
 
@@ -159,34 +221,136 @@ const CommuterBookingDetailsPage = () => {
         socket.socket.off("location-update", handleLocationUpdate);
       };
     }
-  }, [socket, booking, showTracking, auth?.user?.id]);
+  }, [socket, booking, showTracking, auth?.user?._id]);
 
   // Handle track driver click
-  const handleTrackDriver = () => {
+  const handleTrackDriver = async () => {
     setShowTracking(true);
     if (socket?.socket && booking) {
       // Join the booking room to receive location updates
       socket.socket.emit("join_booking_room", booking._id);
+      socket.socket.emit("join-booking-room", booking._id);
 
       // Get the driver ID based on isSelfDriver flag
       let driverId;
       if (booking.isSelfDriver) {
         // When isSelfDriver is true, the partner is driving, use b2cPartnerId
         driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+        console.log(
+          "[v0] Tracking self-driver (B2C Partner) with ID:",
+          driverId,
+        );
       } else {
         // When isSelfDriver is false, use assignedDriverId (from b2cpartnerdrivers table)
         driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
+        console.log("[v0] Tracking assigned driver with ID:", driverId);
       }
 
-      // Request current driver location
+      // Request current driver location via socket
       if (driverId) {
         socket.socket.emit("request-driver-location", {
           driverId,
           bookingId: booking._id,
         });
+        console.log("[v0] Requested driver location for:", driverId);
       }
     }
+
+    // Also fetch current location from API as fallback
+    await fetchDriverLocationFromAPI();
   };
+
+  // Fetch driver location from API (fallback when socket doesn't provide updates)
+  const fetchDriverLocationFromAPI = async () => {
+    if (!booking) return;
+
+    // Get the driver ID based on isSelfDriver flag
+    let driverId;
+    if (booking.isSelfDriver) {
+      driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+      console.log(
+        "[v0] fetchDriverLocationFromAPI - self-driver mode, using b2cPartnerId:",
+        driverId,
+      );
+    } else {
+      driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
+      console.log(
+        "[v0] fetchDriverLocationFromAPI - assigned driver mode, using assignedDriverId:",
+        driverId,
+      );
+    }
+
+    if (!driverId) {
+      console.log("[v0] No driver ID found for tracking");
+      return;
+    }
+
+    try {
+      console.log(
+        "[v0] Fetching driver location from API for driverId:",
+        driverId,
+        "bookingId:",
+        booking._id,
+      );
+      // Pass bookingId to ensure we get the correct trip for this specific booking
+      const response = await commuterBookingAPI.getDriverLocation(
+        driverId,
+        booking._id,
+      );
+      console.log("[v0] Driver location API response:", response);
+
+      if (response.success && response.data?.location) {
+        const locationData = response.data.location;
+        const lat = locationData.latitude || locationData.lat;
+        const lng = locationData.longitude || locationData.lng;
+
+        if (lat && lng) {
+          console.log("[v0] Setting driver location from API:", lat, lng);
+          setDriverLocation({
+            lat: lat,
+            lng: lng,
+            lastUpdate: Date.now(),
+          });
+          setIsDriverOnline(true);
+        } else {
+          console.log(
+            "[v0] API returned location without valid coordinates:",
+            locationData,
+          );
+        }
+      } else {
+        console.log(
+          "[v0] API response indicates no location available:",
+          response.data?.message,
+        );
+      }
+    } catch (err) {
+      console.error("[v0] Error fetching driver location from API:", err);
+    }
+  };
+
+  // Poll driver location via API when tracking is active (as fallback to socket)
+  useEffect(() => {
+    if (!showTracking || !booking) return;
+
+    // Fetch immediately when tracking starts
+    fetchDriverLocationFromAPI();
+
+    // Poll every 10 seconds as a fallback when socket updates don't arrive
+    const pollInterval = setInterval(() => {
+      // Only poll if we haven't received a recent socket update
+      if (
+        !driverLocation ||
+        Date.now() - (driverLocation.lastUpdate || 0) > 8000
+      ) {
+        fetchDriverLocationFromAPI();
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [showTracking, booking]);
 
   // Handle close tracking
   const handleCloseTracking = () => {
@@ -396,9 +560,7 @@ const CommuterBookingDetailsPage = () => {
               <div className="cbdp-detail-item">
                 <span className="cbdp-detail-label">Travel Time</span>
                 <span className="cbdp-detail-value">
-                  {booking.travelTime ||
-                    formatTime(booking.travelDate) ||
-                    "N/A"}
+                  {getTravelTime(booking)}
                 </span>
               </div>
               <div className="cbdp-detail-item">
@@ -976,6 +1138,6 @@ const CommuterBookingDetailsPage = () => {
       <Footer />
     </div>
   );
-};
+};;
 
 export default CommuterBookingDetailsPage;

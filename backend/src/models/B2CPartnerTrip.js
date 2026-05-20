@@ -86,6 +86,13 @@ const b2cPartnerTripSchema = new mongoose.Schema(
                 default: "Confirmed",
             },
             boardedAt: Date,
+            rating: {
+                type: Number,
+                min: 1,
+                max: 5
+            },
+            feedback: String,
+            ratedAt: Date
         }],
         // Trip status
         status: {
@@ -100,6 +107,11 @@ const b2cPartnerTripSchema = new mongoose.Schema(
             address: String,
             lastUpdated: Date,
         },
+        locationHistory: [{
+            latitude: Number,
+            longitude: Number,
+            timestamp: Date,
+        }],
         // Notifications
         notificationsSent: {
             reminder30Min: {

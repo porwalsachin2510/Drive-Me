@@ -36,6 +36,26 @@ const siteSettingsSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
+        // Payment Control Settings
+        paymentControl: {
+            onlinePaymentsEnabled: {
+                type: Boolean,
+                default: true,
+            },
+            lastToggled: {
+                type: Date,
+                default: null,
+            },
+            toggledBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+                default: null,
+            },
+            toggledByName: {
+                type: String,
+                default: null,
+            },
+        },
     },
     {
         timestamps: true,

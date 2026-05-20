@@ -5,9 +5,12 @@ import "./b2c_schedulemodal.css";
 import api from "../../../../utils/api";
 
 function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
-  const [existingSchedule, setExistingSchedule] = useState(null);
+  const [existingSchedules, setExistingSchedules] = useState([]); // Store ALL schedules
+  const [existingSchedule, setExistingSchedule] = useState(null); // Currently selected schedule for editing
+  const [selectedScheduleIndex, setSelectedScheduleIndex] = useState(0); // Index of selected schedule
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isAddingNewSchedule, setIsAddingNewSchedule] = useState(false); // Flag for adding new schedule to existing route
 
   const [formData, setFormData] = useState({
     routeId: route?._id || "",
@@ -78,62 +81,107 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
       );
 
       if (response.data.success && response.data.schedules.length > 0) {
-        const schedule = response.data.schedules[0];
+        const schedules = response.data.schedules;
+        setExistingSchedules(schedules);
+
+        // Select first schedule by default
+        const schedule = schedules[selectedScheduleIndex] || schedules[0];
         setExistingSchedule(schedule);
         setIsEditMode(true);
 
         // Parse trip times from existing schedule
-        const parsedTripTimes = schedule.tripTimes?.map((trip) => ({
-          departureTime: convertTo24HourFormat(trip.departureTime),
-          arrivalTime: convertTo24HourFormat(trip.arrivalTime) || "",
-          tripType: trip.tripType || "One Way",
-          outboundStopPoints: (trip.outboundStopPoints || []).map((stop) => ({
-            location: stop.location,
-            time: convertTo24HourFormat(stop.time),
-          })),
-          returnStopPoints: (trip.returnStopPoints || []).map((stop) => ({
-            location: stop.location,
-            time: convertTo24HourFormat(stop.time),
-          })),
-        })) || [
-          {
-            departureTime: "",
-            arrivalTime: "",
-            tripType: "One Way",
-            outboundStopPoints: [],
-            returnStopPoints: [],
-          },
-        ];
-
-        setFormData({
-          routeId: route._id,
-          scheduleName: schedule.scheduleName || "",
-          tripTimes: parsedTripTimes,
-          availableDays: schedule.availableDays || [
-            "MON",
-            "TUE",
-            "WED",
-            "THU",
-            "FRI",
-          ],
-          assignedVehicle:
-            schedule.assignedVehicle?._id || schedule.assignedVehicle || "",
-          assignedDriver:
-            schedule.assignedDriver?._id || schedule.assignedDriver || "",
-          startDate: schedule.startDate
-            ? new Date(schedule.startDate).toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0],
-          endDate: schedule.endDate
-            ? new Date(schedule.endDate).toISOString().split("T")[0]
-            : "",
-          notes: schedule.notes || "",
-        });
+        loadScheduleIntoForm(schedule);
       }
     } catch (error) {
       console.error("Error fetching existing schedule:", error);
     } finally {
       setLoadingSchedule(false);
     }
+  };
+
+  // Load a specific schedule into the form
+  const loadScheduleIntoForm = (schedule) => {
+    const parsedTripTimes = schedule.tripTimes?.map((trip) => ({
+      departureTime: convertTo24HourFormat(trip.departureTime),
+      arrivalTime: convertTo24HourFormat(trip.arrivalTime) || "",
+      tripType: trip.tripType || "One Way",
+      outboundStopPoints: (trip.outboundStopPoints || []).map((stop) => ({
+        location: stop.location,
+        time: convertTo24HourFormat(stop.time),
+      })),
+      returnStopPoints: (trip.returnStopPoints || []).map((stop) => ({
+        location: stop.location,
+        time: convertTo24HourFormat(stop.time),
+      })),
+    })) || [
+      {
+        departureTime: "",
+        arrivalTime: "",
+        tripType: "One Way",
+        outboundStopPoints: [],
+        returnStopPoints: [],
+      },
+    ];
+
+    setFormData({
+      routeId: route._id,
+      scheduleName: schedule.scheduleName || "",
+      tripTimes: parsedTripTimes,
+      availableDays: schedule.availableDays || [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+      ],
+      assignedVehicle:
+        schedule.assignedVehicle?._id || schedule.assignedVehicle || "",
+      assignedDriver:
+        schedule.assignedDriver?._id || schedule.assignedDriver || "",
+      startDate: schedule.startDate
+        ? new Date(schedule.startDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      endDate: schedule.endDate
+        ? new Date(schedule.endDate).toISOString().split("T")[0]
+        : "",
+      notes: schedule.notes || "",
+    });
+  };
+
+  // Handle selecting a different schedule to edit
+  const handleSelectSchedule = (index) => {
+    setSelectedScheduleIndex(index);
+    setExistingSchedule(existingSchedules[index]);
+    setIsAddingNewSchedule(false);
+    loadScheduleIntoForm(existingSchedules[index]);
+  };
+
+  // Handle adding a new schedule to the route
+  const handleAddNewSchedule = () => {
+    setIsAddingNewSchedule(true);
+    setIsEditMode(false);
+    setExistingSchedule(null);
+    // Reset form for new schedule
+    setFormData({
+      routeId: route?._id || "",
+      scheduleName: "",
+      tripTimes: [
+        {
+          departureTime: "",
+          arrivalTime: "",
+          tripType: "One Way",
+          outboundStopPoints: [],
+          returnStopPoints: [],
+        },
+      ],
+      availableDays: ["MON", "TUE", "WED", "THU", "FRI"],
+      assignedVehicle: route?.assignedVehicle?._id || "",
+      assignedDriver:
+        route?.assignedDriver?._id || route?.driverInfo?._id || "",
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: "",
+      notes: "",
+    });
   };
 
   // Fetch real vehicles and drivers from API
@@ -287,23 +335,24 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
       };
 
       let response;
-      if (isEditMode && existingSchedule) {
+      if (isEditMode && existingSchedule && !isAddingNewSchedule) {
         // Update existing schedule
         response = await api.put(
           `/b2c-schedules/schedules/${existingSchedule._id}`,
           scheduleData,
         );
       } else {
-        // Create new schedule
+        // Create new schedule (either first schedule or adding another schedule to existing route)
         response = await api.post("/b2c-schedules/schedules", scheduleData);
       }
 
       if (response.data.success) {
-        alert(
-          isEditMode
+        const message = isAddingNewSchedule
+          ? "New schedule added successfully!"
+          : isEditMode
             ? "Schedule updated successfully!"
-            : "Schedule created successfully! Trips will be generated automatically.",
-        );
+            : "Schedule created successfully!";
+        alert(message);
         onScheduleCreated && onScheduleCreated();
         onClose();
       }
@@ -342,8 +391,8 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
       >
         <div className="b2c-modal-header">
           <h2 className="b2c-modal-title">
-            {isEditMode ? "Edit" : "Create"} Schedule for {route?.fromLocation}{" "}
-            → {route?.toLocation}
+            {isAddingNewSchedule ? "Add New" : isEditMode ? "Edit" : "Create"}{" "}
+            Schedule for {route?.fromLocation} → {route?.toLocation}
           </h2>
           <button className="b2c-modal-close" onClick={onClose}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -362,6 +411,102 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
             </svg>
           </button>
         </div>
+
+        {/* Schedule Selector - Show when multiple schedules exist */}
+        {existingSchedules.length > 0 && (
+          <div
+            className="b2c-schedule-selector"
+            style={{
+              padding: "16px",
+              backgroundColor: "#f8fafc",
+              borderBottom: "1px solid #e5e7eb",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "8px",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{
+                fontWeight: "600",
+                color: "#374151",
+                marginRight: "8px",
+              }}
+            >
+              Schedules ({existingSchedules.length}):
+            </span>
+            {existingSchedules.map((sch, index) => (
+              <button
+                key={sch._id}
+                type="button"
+                onClick={() => handleSelectSchedule(index)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  border:
+                    selectedScheduleIndex === index && !isAddingNewSchedule
+                      ? "2px solid #3b82f6"
+                      : "1px solid #d1d5db",
+                  backgroundColor:
+                    selectedScheduleIndex === index && !isAddingNewSchedule
+                      ? "#eff6ff"
+                      : "#fff",
+                  color:
+                    selectedScheduleIndex === index && !isAddingNewSchedule
+                      ? "#1d4ed8"
+                      : "#374151",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontWeight:
+                    selectedScheduleIndex === index && !isAddingNewSchedule
+                      ? "600"
+                      : "400",
+                }}
+              >
+                {sch.scheduleName || `Schedule ${index + 1}`}
+                <span
+                  style={{
+                    marginLeft: "6px",
+                    fontSize: "11px",
+                    color: "#6b7280",
+                    fontWeight: "400",
+                  }}
+                >
+                  ({sch.tripTimes?.[0]?.departureTime || "No time"})
+                </span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={handleAddNewSchedule}
+              style={{
+                padding: "6px 12px",
+                borderRadius: "6px",
+                border: isAddingNewSchedule
+                  ? "2px solid #10b981"
+                  : "1px dashed #10b981",
+                backgroundColor: isAddingNewSchedule ? "#ecfdf5" : "#fff",
+                color: "#059669",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontWeight: isAddingNewSchedule ? "600" : "400",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 5v14M5 12h14"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Add New Schedule
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="b2c-modal-form">
           <div className="b2c-form-section">

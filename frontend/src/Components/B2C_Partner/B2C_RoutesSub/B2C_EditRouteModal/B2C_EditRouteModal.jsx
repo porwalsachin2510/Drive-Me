@@ -11,7 +11,9 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
     useCurrency();
   const [currency, setCurrency] = useState(route?.pricing?.currency || "AED");
   const [decimals, setDecimals] = useState(2);
-  const [existingSchedule, setExistingSchedule] = useState(null);
+  const [existingSchedules, setExistingSchedules] = useState([]); // Store ALL schedules
+  const [existingSchedule, setExistingSchedule] = useState(null); // Currently selected schedule for editing
+  const [selectedScheduleIndex, setSelectedScheduleIndex] = useState(0);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
 
   const [formData, setFormData] = useState({
@@ -104,45 +106,59 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
       );
 
       if (response.data.success && response.data.schedules.length > 0) {
-        const schedule = response.data.schedules[0];
+        const schedules = response.data.schedules;
+        setExistingSchedules(schedules);
+
+        // Load first schedule by default
+        const schedule = schedules[0];
         setExistingSchedule(schedule);
-
-        // Parse trip times from schedule
-        if (schedule.tripTimes && schedule.tripTimes.length > 0) {
-          const parsedTripTimes = schedule.tripTimes.map((trip) => ({
-            departureTime: convertTo24HourFormat(trip.departureTime),
-            arrivalTime: convertTo24HourFormat(trip.arrivalTime) || "",
-            tripType: trip.tripType || "One Way",
-            outboundStopPoints: (trip.outboundStopPoints || []).map((stop) => ({
-              location: stop.location,
-              time: convertTo24HourFormat(stop.time),
-            })),
-            returnStopPoints: (trip.returnStopPoints || []).map((stop) => ({
-              location: stop.location,
-              time: convertTo24HourFormat(stop.time),
-            })),
-          }));
-
-          setFormData((prev) => ({
-            ...prev,
-            tripTimes: parsedTripTimes,
-            availableDays: schedule.availableDays || prev.availableDays,
-            vehicleId:
-              schedule.assignedVehicle?._id ||
-              schedule.assignedVehicle ||
-              prev.vehicleId,
-            driverId:
-              schedule.assignedDriver?._id ||
-              schedule.assignedDriver ||
-              prev.driverId,
-          }));
-        }
+        loadScheduleIntoForm(schedule);
       }
     } catch (error) {
       console.error("Error fetching existing schedule:", error);
     } finally {
       setLoadingSchedule(false);
     }
+  };
+
+  // Load a specific schedule into the form
+  const loadScheduleIntoForm = (schedule) => {
+    if (schedule.tripTimes && schedule.tripTimes.length > 0) {
+      const parsedTripTimes = schedule.tripTimes.map((trip) => ({
+        departureTime: convertTo24HourFormat(trip.departureTime),
+        arrivalTime: convertTo24HourFormat(trip.arrivalTime) || "",
+        tripType: trip.tripType || "One Way",
+        outboundStopPoints: (trip.outboundStopPoints || []).map((stop) => ({
+          location: stop.location,
+          time: convertTo24HourFormat(stop.time),
+        })),
+        returnStopPoints: (trip.returnStopPoints || []).map((stop) => ({
+          location: stop.location,
+          time: convertTo24HourFormat(stop.time),
+        })),
+      }));
+
+      setFormData((prev) => ({
+        ...prev,
+        tripTimes: parsedTripTimes,
+        availableDays: schedule.availableDays || prev.availableDays,
+        vehicleId:
+          schedule.assignedVehicle?._id ||
+          schedule.assignedVehicle ||
+          prev.vehicleId,
+        driverId:
+          schedule.assignedDriver?._id ||
+          schedule.assignedDriver ||
+          prev.driverId,
+      }));
+    }
+  };
+
+  // Handle selecting a different schedule to edit
+  const handleSelectSchedule = (index) => {
+    setSelectedScheduleIndex(index);
+    setExistingSchedule(existingSchedules[index]);
+    loadScheduleIntoForm(existingSchedules[index]);
   };
 
   const fetchUserCountryAndAssets = async () => {
@@ -679,11 +695,114 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
             )}
           </div>
 
+          {/* Schedule Selector - Show when multiple schedules exist */}
+          {existingSchedules.length > 1 && (
+            <div
+              className="b2c-form-section b2c-schedule-selector-section"
+              style={{
+                backgroundColor: "#f0f9ff",
+                border: "1px solid #0ea5e9",
+                borderRadius: "8px",
+                padding: "16px",
+                marginBottom: "16px",
+              }}
+            >
+              <h3
+                className="b2c-section-title"
+                style={{ color: "#0369a1", marginBottom: "12px" }}
+              >
+                Select Schedule to Edit ({existingSchedules.length} schedules)
+              </h3>
+              <p
+                className="b2c-section-description"
+                style={{ marginBottom: "12px", color: "#0c4a6e" }}
+              >
+                This route has multiple schedules. Select one to edit its trip
+                times and settings.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {existingSchedules.map((sch, index) => (
+                  <button
+                    key={sch._id}
+                    type="button"
+                    onClick={() => handleSelectSchedule(index)}
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      border:
+                        selectedScheduleIndex === index
+                          ? "2px solid #0ea5e9"
+                          : "1px solid #cbd5e1",
+                      backgroundColor:
+                        selectedScheduleIndex === index ? "#e0f2fe" : "#fff",
+                      color:
+                        selectedScheduleIndex === index ? "#0369a1" : "#374151",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      fontWeight:
+                        selectedScheduleIndex === index ? "600" : "400",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      gap: "4px",
+                      minWidth: "180px",
+                    }}
+                  >
+                    <span style={{ fontWeight: "600" }}>
+                      {sch.scheduleName || `Schedule ${index + 1}`}
+                    </span>
+                    <span style={{ fontSize: "12px", color: "#6b7280" }}>
+                      {sch.tripTimes?.[0]?.departureTime || "No time set"}
+                      {sch.tripTimes?.[0]?.tripType === "Round Trip" &&
+                        sch.tripTimes?.[0]?.arrivalTime && (
+                          <> - Return: {sch.tripTimes?.[0]?.arrivalTime}</>
+                        )}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        color:
+                          selectedScheduleIndex === index
+                            ? "#0284c7"
+                            : "#9ca3af",
+                        backgroundColor:
+                          selectedScheduleIndex === index
+                            ? "#bae6fd"
+                            : "#f3f4f6",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      {sch.availableDays?.join(", ") || "No days"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Trip Times Section */}
           <div className="b2c-form-section">
-            <h3 className="b2c-section-title">Trip Times</h3>
+            <h3 className="b2c-section-title">
+              Trip Times
+              {existingSchedules.length > 1 && existingSchedule && (
+                <span
+                  style={{
+                    fontWeight: "400",
+                    fontSize: "14px",
+                    color: "#6b7280",
+                    marginLeft: "8px",
+                  }}
+                >
+                  - Editing:{" "}
+                  {existingSchedule.scheduleName ||
+                    `Schedule ${selectedScheduleIndex + 1}`}
+                </span>
+              )}
+            </h3>
             <p className="b2c-section-description">
-              Configure departure times and stop points for this route.
+              Configure departure times and stop points for this{" "}
+              {existingSchedules.length > 1 ? "schedule" : "route"}.
             </p>
 
             <div className="b2c-trip-times-container">
@@ -1128,13 +1247,30 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
                   </span>
                 </div>
                 <div className="b2c-preview-item">
-                  <span className="b2c-preview-label">Trips per Day:</span>
+                  <span className="b2c-preview-label">Total Schedules:</span>
+                  <span
+                    className="b2c-preview-value"
+                    style={{
+                      color:
+                        existingSchedules.length > 1 ? "#0ea5e9" : "inherit",
+                      fontWeight: existingSchedules.length > 1 ? "600" : "400",
+                    }}
+                  >
+                    {existingSchedules.length || 1}
+                  </span>
+                </div>
+                <div className="b2c-preview-item">
+                  <span className="b2c-preview-label">
+                    Trips per Day (this schedule):
+                  </span>
                   <span className="b2c-preview-value">
                     {formData.tripTimes.filter((t) => t.departureTime).length}
                   </span>
                 </div>
                 <div className="b2c-preview-item">
-                  <span className="b2c-preview-label">Total Weekly Trips:</span>
+                  <span className="b2c-preview-label">
+                    Total Weekly Trips (this schedule):
+                  </span>
                   <span className="b2c-preview-value">
                     {formData.tripTimes.filter((t) => t.departureTime).length *
                       formData.availableDays.length}
@@ -1142,9 +1278,118 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
                 </div>
               </div>
 
+              {/* Show all schedules summary when multiple exist */}
+              {existingSchedules.length > 1 && (
+                <div
+                  style={{
+                    marginTop: "16px",
+                    padding: "12px",
+                    backgroundColor: "#f0f9ff",
+                    borderRadius: "8px",
+                    border: "1px solid #bae6fd",
+                  }}
+                >
+                  <h5
+                    style={{
+                      margin: "0 0 8px 0",
+                      color: "#0369a1",
+                      fontSize: "14px",
+                    }}
+                  >
+                    All Schedules Overview:
+                  </h5>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                    }}
+                  >
+                    {existingSchedules.map((sch, idx) => (
+                      <div
+                        key={sch._id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "6px 10px",
+                          backgroundColor:
+                            selectedScheduleIndex === idx ? "#e0f2fe" : "#fff",
+                          borderRadius: "6px",
+                          border:
+                            selectedScheduleIndex === idx
+                              ? "1px solid #0ea5e9"
+                              : "1px solid #e5e7eb",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "24px",
+                            height: "24px",
+                            borderRadius: "50%",
+                            backgroundColor:
+                              selectedScheduleIndex === idx
+                                ? "#0ea5e9"
+                                : "#94a3b8",
+                            color: "#fff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                          }}
+                        >
+                          {idx + 1}
+                        </span>
+                        <span style={{ fontWeight: "500", color: "#334155" }}>
+                          {sch.tripTimes?.[0]?.departureTime || "N/A"}
+                        </span>
+                        {sch.tripTimes?.[0]?.tripType === "Round Trip" &&
+                          sch.tripTimes?.[0]?.arrivalTime && (
+                            <span style={{ color: "#64748b" }}>
+                              - Return: {sch.tripTimes?.[0]?.arrivalTime}
+                            </span>
+                          )}
+                        <span
+                          style={{
+                            marginLeft: "auto",
+                            fontSize: "11px",
+                            backgroundColor: "#f1f5f9",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            color: "#64748b",
+                          }}
+                        >
+                          {sch.tripTimes?.[0]?.tripType || "One Way"}
+                        </span>
+                        {selectedScheduleIndex === idx && (
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              backgroundColor: "#0ea5e9",
+                              color: "#fff",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            Editing
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {formData.tripTimes.filter((t) => t.departureTime).length > 0 && (
                 <div className="b2c-trip-times-preview">
-                  <h5 className="b2c-preview-subtitle">🕐 Daily Trip Times:</h5>
+                  <h5 className="b2c-preview-subtitle">
+                    🕐 Daily Trip Times
+                    {existingSchedules.length > 1
+                      ? ` (Schedule ${selectedScheduleIndex + 1})`
+                      : ""}
+                    :
+                  </h5>
                   {formData.tripTimes
                     .filter((t) => t.departureTime)
                     .map((trip, index) => (

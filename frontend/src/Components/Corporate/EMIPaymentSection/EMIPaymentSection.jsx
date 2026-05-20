@@ -4,17 +4,24 @@ import {
   getEMIPlanByContract,
   payEMIInstallment,
 } from "../../../Redux/slices/emiPaymentSlice";
+import api from "../../../utils/api";
 import "./EMIPaymentSection.css";
 
 const EMIPaymentSection = ({ contract, onRefresh }) => {
   const dispatch = useDispatch();
-  // eslint-disable-next-line no-unused-vars
   const { currentEMIPlan, loading } = useSelector((state) => state.emiPayment);
 
   const [showPayModal, setShowPayModal] = useState(false);
   const [selectedInstallment, setSelectedInstallment] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [processingPayment, setProcessingPayment] = useState(false);
+
+  // Payment control state
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true);
+  const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(true);
+
+  // Define which methods are online payment methods
+  const onlinePaymentMethods = ["CARD", "BANK_TRANSFER"];
 
   const currency = contract?.financials?.currency || "AED";
   const paymentMode = contract?.financials?.paymentMode;
@@ -24,6 +31,27 @@ const EMIPaymentSection = ({ contract, onRefresh }) => {
       dispatch(getEMIPlanByContract({ contractId: contract._id }));
     }
   }, [contract?._id, paymentMode, dispatch]);
+
+  // Fetch payment settings to check if online payments are enabled
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        setLoadingPaymentSettings(true);
+        const response = await api.get("/pages/public/payment-settings");
+        if (response.data.success) {
+          setOnlinePaymentsEnabled(response.data.data.onlinePaymentsEnabled);
+        }
+      } catch (error) {
+        console.error("Error fetching payment settings:", error);
+        // Default to enabled if fetch fails
+        setOnlinePaymentsEnabled(true);
+      } finally {
+        setLoadingPaymentSettings(false);
+      }
+    };
+
+    fetchPaymentSettings();
+  }, []);
 
   const handlePayInstallment = async () => {
     if (!selectedPaymentMethod) {
@@ -317,24 +345,53 @@ const EMIPaymentSection = ({ contract, onRefresh }) => {
 
                 <div className="payment-methods">
                   <h4>Select Payment Method</h4>
-                  <div className="method-options">
-                    {["CARD", "BANK_TRANSFER", "CASH"].map((method) => (
-                      <div
-                        key={method}
-                        className={`method-option ${selectedPaymentMethod === method ? "selected" : ""}`}
-                        onClick={() => setSelectedPaymentMethod(method)}
-                      >
-                        <div className="method-icon">
-                          {method === "CARD" && "Card/Wallet"}
-                          {method === "BANK_TRANSFER" && "Bank Transfer"}
-                          {method === "CASH" && "Cash"}
-                        </div>
-                        {selectedPaymentMethod === method && (
-                          <div className="selected-indicator" />
-                        )}
+                  {loadingPaymentSettings ? (
+                    <div className="loading-payment-methods">
+                      Loading payment options...
+                    </div>
+                  ) : (
+                    <>
+                      <div className="method-options">
+                        {["CARD", "BANK_TRANSFER", "CASH"]
+                          .filter((method) => {
+                            // Hide online payment methods if disabled
+                            if (
+                              !onlinePaymentsEnabled &&
+                              onlinePaymentMethods.includes(method)
+                            ) {
+                              return false;
+                            }
+                            return true;
+                          })
+                          .map((method) => (
+                            <div
+                              key={method}
+                              className={`method-option ${selectedPaymentMethod === method ? "selected" : ""}`}
+                              onClick={() => setSelectedPaymentMethod(method)}
+                            >
+                              <div className="method-icon">
+                                {method === "CARD" && "Card/Wallet"}
+                                {method === "BANK_TRANSFER" && "Bank Transfer"}
+                                {method === "CASH" && "Cash"}
+                              </div>
+                              {selectedPaymentMethod === method && (
+                                <div className="selected-indicator" />
+                              )}
+                            </div>
+                          ))}
                       </div>
-                    ))}
-                  </div>
+
+                      {/* Notice when online payments are disabled */}
+                      {!onlinePaymentsEnabled && (
+                        <div className="online-payments-disabled-notice">
+                          <span>
+                            Online payment methods are currently unavailable.
+                            Please use cash payment.
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
