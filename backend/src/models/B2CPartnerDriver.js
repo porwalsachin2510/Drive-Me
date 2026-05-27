@@ -60,6 +60,47 @@ const b2cPartnerDriverSchema = new mongoose.Schema(
             enum: ["Active", "On Leave", "Inactive"],
             default: "Active",
         },
+        // Driver availability for schedule assignment
+        availabilityStatus: {
+            type: String,
+            enum: ["available", "busy", "offline"],
+            default: "available",
+        },
+        // Track which schedules this driver is currently assigned to
+        assignedSchedules: [{
+            scheduleId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "B2CPartnerSchedule",
+            },
+            tripTimeIndex: Number, // Which trip time within the schedule
+            assignedAt: {
+                type: Date,
+                default: Date.now,
+            }
+        }],
+        // Driver can set their available time slots
+        availableTimeSlots: [{
+            day: {
+                type: String,
+                enum: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+            },
+            startTime: String, // "09:00 AM"
+            endTime: String,   // "06:00 PM"
+        }],
+        // Last time driver updated their availability
+        lastAvailabilityUpdate: {
+            type: Date,
+            default: Date.now,
+        },
+        // Availability window - when driver is available until (for between-trips availability)
+        availableUntil: {
+            type: Date,
+            default: null,
+        },
+        nextScheduledTripTime: {
+            type: String,
+            default: null,
+        },
         isActive: {
             type: Boolean,
             default: true,
@@ -91,6 +132,7 @@ const b2cPartnerDriverSchema = new mongoose.Schema(
             visa: String,
             medicalCertificate: String,
         },
+        
         createdAt: {
             type: Date,
             default: Date.now,

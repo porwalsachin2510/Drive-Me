@@ -9,6 +9,9 @@ import B2CPartnerTrip from "../models/B2CPartnerTrip.js"
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
 import B2CMonthlyPass from "../models/B2CMonthlyPass.js"
 import RouteRequest from "../models/RouteRequest.js"
+import B2CPartnerDriver from "../models/B2CPartnerDriver.js"
+import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js"
+import mongoose from "mongoose"
 import { createNotification } from "../Services/notificationService.js"
 /* ======================================================
    UTILITY FUNCTIONS
@@ -487,6 +490,97 @@ export const searchCommuteRoutes = async (req, res) => {
                 console.log("No schedule found for route:", route._id, "- using route-level data")
             }
 
+            // Collect all driver and vehicle IDs from tripTimes for batch lookup
+            const driverIds = new Set();
+            const vehicleIds = new Set();
+            for (const sch of schedules) {
+                if (sch?.tripTimes && sch.tripTimes.length > 0) {
+                    for (const tt of sch.tripTimes) {
+                        if (tt.assignedDriver) driverIds.add(tt.assignedDriver.toString());
+                        if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                    }
+                }
+            }
+
+            // Convert to ObjectIds for MongoDB query
+            const driverObjectIds = Array.from(driverIds).map(id => {
+                try { return new mongoose.Types.ObjectId(id); } catch (e) { return null; }
+            }).filter(Boolean);
+            const vehicleObjectIds = Array.from(vehicleIds).map(id => {
+                try { return new mongoose.Types.ObjectId(id); } catch (e) { return null; }
+            }).filter(Boolean);
+
+            // Batch fetch drivers from B2CPartnerDriver collection
+            const b2cDrivers = driverObjectIds.length > 0
+                ? await B2CPartnerDriver.find({ _id: { $in: driverObjectIds } }).select('name phoneNumber driverImage email')
+                : [];
+
+            // Batch fetch drivers from User collection (self-driving B2C Partners)
+            const userDrivers = driverObjectIds.length > 0
+                ? await User.find({ _id: { $in: driverObjectIds } }).select('fullName whatsappNumber profileImage email')
+                : [];
+
+            // Batch fetch vehicles
+            const vehicles = vehicleObjectIds.length > 0
+                ? await B2CPartnerVehicle.find({ _id: { $in: vehicleObjectIds } }).select('model licensePlate vehicleType seatingCapacity vehicleColor images')
+                : [];
+
+            // Create lookup maps
+            const driverMap = {};
+            b2cDrivers.forEach(d => {
+                driverMap[d._id.toString()] = {
+                    _id: d._id,
+                    name: d.name,
+                    phoneNumber: d.phoneNumber,
+                    image: d.driverImage?.url || null,
+                    email: d.email
+                };
+            });
+            userDrivers.forEach(u => {
+                if (!driverMap[u._id.toString()]) {
+                    driverMap[u._id.toString()] = {
+                        _id: u._id,
+                        name: u.fullName,
+                        phoneNumber: u.whatsappNumber,
+                        image: u.profileImage || null,
+                        email: u.email
+                    };
+                }
+            });
+
+            const vehicleMap = {};
+            vehicles.forEach(v => {
+                vehicleMap[v._id.toString()] = {
+                    _id: v._id,
+                    model: v.model,
+                    licensePlate: v.licensePlate,
+                    vehicleType: v.vehicleType,
+                    seatingCapacity: v.seatingCapacity,
+                    vehicleColor: v.vehicleColor,
+                    image: v.images?.[0]?.url || null
+                };
+            });
+
+            // Build populated tripTimes with effectiveDriver and effectiveVehicle
+            const populatedTripTimes = [];
+            for (const sch of schedules) {
+                if (sch?.tripTimes && sch.tripTimes.length > 0) {
+                    for (const tt of sch.tripTimes) {
+                        const tripTimeObj = tt.toObject ? tt.toObject() : { ...tt };
+                        const tripDriverId = tt.assignedDriver?.toString();
+                        const tripVehicleId = tt.assignedVehicle?.toString();
+
+                        populatedTripTimes.push({
+                            ...tripTimeObj,
+                            scheduleId: sch._id,
+                            scheduleName: sch.scheduleName,
+                            effectiveDriver: tripDriverId && driverMap[tripDriverId] ? driverMap[tripDriverId] : null,
+                            effectiveVehicle: tripVehicleId && vehicleMap[tripVehicleId] ? vehicleMap[tripVehicleId] : null
+                        });
+                    }
+                }
+            }
+
             // Extract UNIQUE stop points from ALL schedules' tripTimes (by location only, not time)
             const scheduleStopsMap = new Map();
             for (const sch of schedules) {
@@ -602,7 +696,7 @@ export const searchCommuteRoutes = async (req, res) => {
                 scheduleId: schedule?._id || null,
                 scheduleName: schedule?.scheduleName || "Default Schedule",
                 availableDays: routeAvailableDays,
-                tripTimes: schedule?.tripTimes || [],
+                tripTimes: populatedTripTimes,
                 upcomingTrips: formattedTrips,
 
                 // Route data
@@ -730,6 +824,72 @@ export const publicSearchRoutes = async (req, res) => {
             }
             const scheduleStops = Array.from(scheduleStopsMap.values());
 
+            // Populate driver/vehicle data for tripTimes
+            let populatedTripTimes = [];
+            if (schedule?.tripTimes && schedule.tripTimes.length > 0) {
+                const driverIds = new Set();
+                const vehicleIds = new Set();
+                for (const tt of schedule.tripTimes) {
+                    if (tt.assignedDriver) driverIds.add(tt.assignedDriver.toString());
+                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                }
+
+                const driverObjectIds = Array.from(driverIds).map(id => {
+                    try { return new mongoose.Types.ObjectId(id); } catch (e) { return null; }
+                }).filter(Boolean);
+                const vehicleObjectIds = Array.from(vehicleIds).map(id => {
+                    try { return new mongoose.Types.ObjectId(id); } catch (e) { return null; }
+                }).filter(Boolean);
+
+                const b2cDrivers = driverObjectIds.length > 0
+                    ? await B2CPartnerDriver.find({ _id: { $in: driverObjectIds } }).select('name phoneNumber driverImage email')
+                    : [];
+                const userDrivers = driverObjectIds.length > 0
+                    ? await User.find({ _id: { $in: driverObjectIds } }).select('fullName whatsappNumber profileImage email')
+                    : [];
+                const vehicles = vehicleObjectIds.length > 0
+                    ? await B2CPartnerVehicle.find({ _id: { $in: vehicleObjectIds } }).select('model licensePlate vehicleType seatingCapacity vehicleColor images')
+                    : [];
+
+                const driverMap = {};
+                b2cDrivers.forEach(d => {
+                    driverMap[d._id.toString()] = {
+                        _id: d._id, name: d.name, phoneNumber: d.phoneNumber,
+                        image: d.driverImage?.url || null, email: d.email
+                    };
+                });
+                userDrivers.forEach(u => {
+                    if (!driverMap[u._id.toString()]) {
+                        driverMap[u._id.toString()] = {
+                            _id: u._id, name: u.fullName, phoneNumber: u.whatsappNumber,
+                            image: u.profileImage || null, email: u.email
+                        };
+                    }
+                });
+
+                const vehicleMap = {};
+                vehicles.forEach(v => {
+                    vehicleMap[v._id.toString()] = {
+                        _id: v._id, model: v.model, licensePlate: v.licensePlate,
+                        vehicleType: v.vehicleType, seatingCapacity: v.seatingCapacity,
+                        vehicleColor: v.vehicleColor, image: v.images?.[0]?.url || null
+                    };
+                });
+
+                for (const tt of schedule.tripTimes) {
+                    const tripTimeObj = tt.toObject ? tt.toObject() : { ...tt };
+                    const tripDriverId = tt.assignedDriver?.toString();
+                    const tripVehicleId = tt.assignedVehicle?.toString();
+                    populatedTripTimes.push({
+                        ...tripTimeObj,
+                        scheduleId: schedule._id,
+                        scheduleName: schedule.scheduleName,
+                        effectiveDriver: tripDriverId && driverMap[tripDriverId] ? driverMap[tripDriverId] : null,
+                        effectiveVehicle: tripVehicleId && vehicleMap[tripVehicleId] ? vehicleMap[tripVehicleId] : null
+                    });
+                }
+            }
+
             // Location filtering - now includes schedule stops
             let shouldInclude = true
             if (filterType === "matched" && (pickupLocation || dropoffLocation)) {
@@ -807,7 +967,7 @@ export const publicSearchRoutes = async (req, res) => {
                 scheduleId: schedule?._id || null,
                 scheduleName: schedule?.scheduleName || "Default Schedule",
                 availableDays: routeAvailableDays,
-                tripTimes: schedule?.tripTimes || [],
+                tripTimes: populatedTripTimes,
                 upcomingTrips: formattedTrips,
 
                 pickupArrivalTime: travelData.pickupArrivalTime,
@@ -1215,7 +1375,64 @@ export const getPublicRouteDetails = async (req, res) => {
         // For backward compatibility, use first schedule where needed
         const schedule = schedules.length > 0 ? schedules[0] : null
 
-        // Combine all trip times from all schedules into a unified list
+        // Collect all driver and vehicle IDs from tripTimes for batch lookup
+        const driverIds = new Set();
+        const vehicleIds = new Set();
+        for (const sch of schedules) {
+            if (sch?.tripTimes && sch.tripTimes.length > 0) {
+                for (const tt of sch.tripTimes) {
+                    if (tt.assignedDriver) driverIds.add(tt.assignedDriver.toString());
+                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                }
+            }
+        }
+
+        // Convert to ObjectIds for MongoDB query
+        const driverObjectIds = Array.from(driverIds).map(id => {
+            try { return new mongoose.Types.ObjectId(id); } catch (e) { return null; }
+        }).filter(Boolean);
+        const vehicleObjectIds = Array.from(vehicleIds).map(id => {
+            try { return new mongoose.Types.ObjectId(id); } catch (e) { return null; }
+        }).filter(Boolean);
+
+        // Batch fetch drivers
+        const b2cDrivers = driverObjectIds.length > 0
+            ? await B2CPartnerDriver.find({ _id: { $in: driverObjectIds } }).select('name phoneNumber driverImage email')
+            : [];
+        const userDrivers = driverObjectIds.length > 0
+            ? await User.find({ _id: { $in: driverObjectIds } }).select('fullName whatsappNumber profileImage email')
+            : [];
+        const vehiclesData = vehicleObjectIds.length > 0
+            ? await B2CPartnerVehicle.find({ _id: { $in: vehicleObjectIds } }).select('model licensePlate vehicleType seatingCapacity vehicleColor images')
+            : [];
+
+        // Create lookup maps
+        const driverMap = {};
+        b2cDrivers.forEach(d => {
+            driverMap[d._id.toString()] = {
+                _id: d._id, name: d.name, phoneNumber: d.phoneNumber,
+                image: d.driverImage?.url || null, email: d.email
+            };
+        });
+        userDrivers.forEach(u => {
+            if (!driverMap[u._id.toString()]) {
+                driverMap[u._id.toString()] = {
+                    _id: u._id, name: u.fullName, phoneNumber: u.whatsappNumber,
+                    image: u.profileImage || null, email: u.email
+                };
+            }
+        });
+
+        const vehicleMap = {};
+        vehiclesData.forEach(v => {
+            vehicleMap[v._id.toString()] = {
+                _id: v._id, model: v.model, licensePlate: v.licensePlate,
+                vehicleType: v.vehicleType, seatingCapacity: v.seatingCapacity,
+                vehicleColor: v.vehicleColor, image: v.images?.[0]?.url || null
+            };
+        });
+
+        // Combine all trip times from all schedules into a unified list with populated driver/vehicle
         const allTripTimes = []
         schedules.forEach(sch => {
             if (sch.tripTimes && sch.tripTimes.length > 0) {
@@ -1227,7 +1444,9 @@ export const getPublicRouteDetails = async (req, res) => {
                         scheduleName: sch.scheduleName,
                         availableDays: sch.availableDays,
                         scheduleVehicle: sch.assignedVehicle,
-                        scheduleDriver: sch.assignedDriver
+                        scheduleDriver: sch.assignedDriver,
+                        effectiveDriver: tripDriverId && driverMap[tripDriverId] ? driverMap[tripDriverId] : null,
+                        effectiveVehicle: tripVehicleId && vehicleMap[tripVehicleId] ? vehicleMap[tripVehicleId] : null
                     })
                 })
             }
@@ -1411,19 +1630,80 @@ export const getRouteDetails = async (req, res) => {
         // For backward compatibility, use first schedule where needed
         const schedule = schedules.length > 0 ? schedules[0] : null
 
-        // Combine all trip times from all schedules
+        // Collect all driver and vehicle IDs from tripTimes for batch lookup
+        const driverIds = new Set();
+        const vehicleIds = new Set();
+        for (const sch of schedules) {
+            if (sch?.tripTimes && sch.tripTimes.length > 0) {
+                for (const tt of sch.tripTimes) {
+                    if (tt.assignedDriver) driverIds.add(tt.assignedDriver.toString());
+                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                }
+            }
+        }
+
+        // Convert to ObjectIds for MongoDB query
+        const driverObjectIds = Array.from(driverIds).map(id => {
+            try { return new mongoose.Types.ObjectId(id); } catch (e) { return null; }
+        }).filter(Boolean);
+        const vehicleObjectIds = Array.from(vehicleIds).map(id => {
+            try { return new mongoose.Types.ObjectId(id); } catch (e) { return null; }
+        }).filter(Boolean);
+
+        // Batch fetch drivers
+        const b2cDrivers = driverObjectIds.length > 0
+            ? await B2CPartnerDriver.find({ _id: { $in: driverObjectIds } }).select('name phoneNumber driverImage email')
+            : [];
+        const userDrivers = driverObjectIds.length > 0
+            ? await User.find({ _id: { $in: driverObjectIds } }).select('fullName whatsappNumber profileImage email')
+            : [];
+        const vehiclesData = vehicleObjectIds.length > 0
+            ? await B2CPartnerVehicle.find({ _id: { $in: vehicleObjectIds } }).select('model licensePlate vehicleType seatingCapacity vehicleColor images')
+            : [];
+
+        // Create lookup maps
+        const driverMap = {};
+        b2cDrivers.forEach(d => {
+            driverMap[d._id.toString()] = {
+                _id: d._id, name: d.name, phoneNumber: d.phoneNumber,
+                image: d.driverImage?.url || null, email: d.email
+            };
+        });
+        userDrivers.forEach(u => {
+            if (!driverMap[u._id.toString()]) {
+                driverMap[u._id.toString()] = {
+                    _id: u._id, name: u.fullName, phoneNumber: u.whatsappNumber,
+                    image: u.profileImage || null, email: u.email
+                };
+            }
+        });
+
+        const vehicleMap = {};
+        vehiclesData.forEach(v => {
+            vehicleMap[v._id.toString()] = {
+                _id: v._id, model: v.model, licensePlate: v.licensePlate,
+                vehicleType: v.vehicleType, seatingCapacity: v.seatingCapacity,
+                vehicleColor: v.vehicleColor, image: v.images?.[0]?.url || null
+            };
+        });
+
+        // Combine all trip times from all schedules with populated driver/vehicle
         const allTripTimes = []
         schedules.forEach(sch => {
             if (sch.tripTimes && sch.tripTimes.length > 0) {
                 sch.tripTimes.forEach(tt => {
                     const tripTimeObj = tt.toObject ? tt.toObject() : { ...tt }
+                    const tripDriverId = tt.assignedDriver?.toString();
+                    const tripVehicleId = tt.assignedVehicle?.toString();
                     allTripTimes.push({
                         ...tripTimeObj,
                         scheduleId: sch._id,
                         scheduleName: sch.scheduleName,
                         availableDays: sch.availableDays,
                         scheduleVehicle: sch.assignedVehicle,
-                        scheduleDriver: sch.assignedDriver
+                        scheduleDriver: sch.assignedDriver,
+                        effectiveDriver: tripDriverId && driverMap[tripDriverId] ? driverMap[tripDriverId] : null,
+                        effectiveVehicle: tripVehicleId && vehicleMap[tripVehicleId] ? vehicleMap[tripVehicleId] : null
                     })
                 })
             }

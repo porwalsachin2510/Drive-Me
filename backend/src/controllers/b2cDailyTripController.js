@@ -2,15 +2,18 @@ import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CMonthlyPass from "../models/B2CMonthlyPass.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
+import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
+import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import User from "../models/User.js";
 import NoShow from "../models/NoShow.js";
 import RouteRequest from "../models/RouteRequest.js";
 import { sendEmail } from "../Services/emailService.js";
 import { createNotification } from "../Services/notificationService.js";
-import { sendRealTimeNotification, sendBookingUpdate, sendLocationUpdate } from "../Services/socketService.js";
+import { sendRealTimeNotification, sendBookingUpdate, sendLocationUpdate, broadcastDriverAvailabilityChange, broadcastSelfDriverAvailabilityChange, broadcastVehicleAvailabilityChange } from "../Services/socketService.js";
 import mongoose from "mongoose";
 
-// Get today's trips for B2C partner
+// Get today's trips for B2C partner - Shows ALL trips with any bookings (including CONFIRMED)
+// NOTE: For Daily Trip Management UI that only shows ACCEPTED bookings, use getPartnerSelfDriverTrips or getDriverDailyTrips
 export const getTodayTrips = async (req, res) => {
     try {
         const providerId = req.userId;
@@ -28,13 +31,16 @@ export const getTodayTrips = async (req, res) => {
         todayEnd.setHours(23, 59, 59, 999);
 
         // Build match stage for aggregation
+        // Only include trips that have actual bookings (bookedSeats > 0)
         const matchStage = {
             b2cPartnerId: new mongoose.Types.ObjectId(providerId),
             // Match trips where tripDate falls within today
             tripDate: {
                 $gte: todayStart,
                 $lte: todayEnd
-            }
+            },
+            // IMPORTANT: Only show trips with actual bookings (bookedSeats > 0)
+            bookedSeats: { $gt: 0 }
         };
 
         if (status) {
@@ -131,7 +137,8 @@ export const getTodayTrips = async (req, res) => {
     }
 };
 
-// Get upcoming trips (excludes today, only future trips)
+// Get upcoming trips (excludes today, only future trips) - Shows ALL trips with any bookings (including CONFIRMED)
+// NOTE: For Daily Trip Management UI that only shows ACCEPTED bookings, use getPartnerSelfDriverTrips or getDriverDailyTrips
 export const getUpcomingTrips = async (req, res) => {
     try {
         const providerId = req.userId;
@@ -154,13 +161,15 @@ export const getUpcomingTrips = async (req, res) => {
         const B2CPartnerVehicle = mongoose.model('B2CPartnerVehicle');
         const B2CPartnerDriver = mongoose.model('B2CPartnerDriver');
 
-        // Match query for upcoming trips
+        // Match query for upcoming trips - ONLY include trips with actual bookings
         const matchQuery = {
             b2cPartnerId: new mongoose.Types.ObjectId(providerId),
             tripDate: {
                 $gte: tomorrowStart,
                 $lte: rangeEnd
-            }
+            },
+            // IMPORTANT: Only show trips with actual bookings (bookedSeats > 0)
+            bookedSeats: { $gt: 0 }
         };
 
         // Use aggregation
@@ -319,26 +328,63 @@ export const updateTripStatus = async (req, res) => {
 
         await trip.save();
 
-        // Also update related bookings status
+        // Also update related bookings' TRIP statuses (NOT bookingStatus)
+        // CRITICAL FIX: Only update outboundTripStatus/returnTripStatus, NOT bookingStatus
+        // bookingStatus should only change when ALL trips in a booking are complete
         const relatedBookings = await B2CPassengerBooking.find({
             $or: [
                 { monthlyTrips: tripId },
-                { monthlyTrips: new mongoose.Types.ObjectId(tripId) },
-                { routeId: trip.routeId, bookingStatus: { $in: ['CONFIRMED', 'ACCEPTED', 'IN_PROGRESS'] } }
-            ]
+                { monthlyTrips: new mongoose.Types.ObjectId(tripId) }
+            ],
+            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS'] }
         });
 
-        // Update booking statuses based on trip status
-        const bookingStatusMap = {
-            'In Progress': 'IN_PROGRESS',
-            'Completed': 'COMPLETED'
-        };
+        // Update booking's trip-level statuses based on trip status
+        for (const booking of relatedBookings) {
+            // Determine if this is outbound or return trip
+            const isReturnTrip = (trip.fromLocation === booking.returnPickupLocation ||
+                trip.fromLocation === booking.dropoffLocation) &&
+                (trip.toLocation === booking.returnDropoffLocation ||
+                    trip.toLocation === booking.pickupLocation);
 
-        if (bookingStatusMap[trip.status]) {
-            for (const booking of relatedBookings) {
-                booking.bookingStatus = bookingStatusMap[trip.status];
-                await booking.save();
+            if (trip.status === 'In Progress') {
+                // Trip started - update trip-level status only
+                if (booking.bookingType === 'ROUND_TRIP') {
+                    if (isReturnTrip) {
+                        booking.returnTripStatus = 'IN_PROGRESS';
+                    } else {
+                        booking.outboundTripStatus = 'IN_PROGRESS';
+                    }
+                } else {
+                    booking.outboundTripStatus = 'IN_PROGRESS';
+                }
+                // DO NOT change bookingStatus - keep as ACCEPTED
+            } else if (trip.status === 'Completed') {
+                // Trip completed - update trip-level status
+                if (booking.bookingType === 'ROUND_TRIP') {
+                    if (isReturnTrip) {
+                        booking.returnTripStatus = 'COMPLETED';
+                        // Only mark booking COMPLETED if outbound is also done
+                        if (booking.outboundTripStatus === 'COMPLETED') {
+                            booking.bookingStatus = 'COMPLETED';
+                            booking.completedAt = new Date();
+                        }
+                    } else {
+                        booking.outboundTripStatus = 'COMPLETED';
+                        // Only mark booking COMPLETED if return is also done
+                        if (booking.returnTripStatus === 'COMPLETED') {
+                            booking.bookingStatus = 'COMPLETED';
+                            booking.completedAt = new Date();
+                        }
+                    }
+                } else {
+                    // ONE_WAY trip - mark everything as completed
+                    booking.outboundTripStatus = 'COMPLETED';
+                    booking.bookingStatus = 'COMPLETED';
+                    booking.completedAt = new Date();
+                }
             }
+            await booking.save();
         }
 
         // Notify passengers of status change (use mapped status)
@@ -617,18 +663,23 @@ const getTodaySummary = async (providerId, todayStart = null, todayEnd = null) =
             todayEnd.setHours(23, 59, 59, 999);
         }
 
-        // Query trips within today's date range
+        // Query trips within today's date range - ONLY trips with actual bookings
         const todayTrips = await B2CPartnerTrip.find({
             b2cPartnerId: new mongoose.Types.ObjectId(providerId),
             tripDate: {
                 $gte: todayStart,
                 $lte: todayEnd
-            }
+            },
+            // IMPORTANT: Only count trips with actual bookings (bookedSeats > 0)
+            bookedSeats: { $gt: 0 }
         }).lean();
 
         const totalTrips = todayTrips.length;
         const completedTrips = todayTrips.filter(trip =>
             trip.status === 'COMPLETED' || trip.status === 'Completed'
+        ).length;
+        const inProgressTrips = todayTrips.filter(trip =>
+            trip.status === 'IN_PROGRESS' || trip.status === 'STARTED' || trip.status === 'In Progress'
         ).length;
         const cancelledTrips = todayTrips.filter(trip =>
             trip.status === 'CANCELLED' || trip.status === 'Cancelled'
@@ -639,6 +690,7 @@ const getTodaySummary = async (providerId, todayStart = null, todayEnd = null) =
         return {
             totalTrips,
             completedTrips,
+            inProgressTrips,
             cancelledTrips,
             totalSeats,
             totalBookedSeats,
@@ -807,13 +859,277 @@ const calculateTripRevenue = async (tripId) => {
 
 // Get Driver Daily Trips - Route-centric view with all passengers for each trip
 // This groups trips by route+schedule+time, showing ALL passengers on each trip
+// export const getDriverDailyTrips = async (req, res) => {
+//     try {
+//         const userId = req.userId;
+//         const userRole = req.userRole;
+//         const { filter = 'today', page = 1, limit = 50 } = req.query;
+
+//         console.log("[v0] getDriverDailyTrips - userId:", userId, "userRole:", userRole);
+
+//         // Get driver info
+//         const driverUser = await User.findById(userId);
+//         if (!driverUser) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Driver not found"
+//             });
+//         }
+
+//         console.log("[v0] Driver user found:", {
+//             _id: driverUser._id,
+//             role: driverUser.role,
+//             driverId: driverUser.driverId,
+//             b2cPartnerId: driverUser.b2cPartnerId,
+//             fullName: driverUser.fullName
+//         });
+
+//         // Get driver ID and b2cPartnerId - driver might be linked via driverId or b2cPartnerId
+//         const driverId = driverUser.driverId || userId;
+//         const b2cPartnerId = driverUser.b2cPartnerId || null;
+
+//         // Calculate date range based on filter
+//         const now = new Date();
+//         const todayStart = new Date(now);
+//         todayStart.setHours(0, 0, 0, 0);
+//         const todayEnd = new Date(now);
+//         todayEnd.setHours(23, 59, 59, 999);
+
+//         let dateFilter = {};
+//         if (filter === 'today') {
+//             dateFilter = { $gte: todayStart, $lte: todayEnd };
+//         } else if (filter === 'upcoming') {
+//             dateFilter = { $gte: todayStart };
+//         } else {
+//             // 'all' - no date filter
+//             dateFilter = { $gte: new Date('2020-01-01') };
+//         }
+
+//         // Get model references
+//         const B2CPartnerSchedule = mongoose.model('B2CPartnerSchedule');
+//         const B2CPartnerVehicle = mongoose.model('B2CPartnerVehicle');
+//         const B2CPartnerDriver = mongoose.model('B2CPartnerDriver');
+
+//         // APPROACH 1: Find trips via bookings assigned to this driver
+//         // Get ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings assigned to this driver
+//         // CRITICAL: Do NOT include CONFIRMED (not yet accepted) bookings
+//         const bookingQuery = {
+//             $or: [
+//                 { assignedDriverId: driverId },
+//                 { assignedDriverId: userId },
+//                 { assignedDriverId: new mongoose.Types.ObjectId(driverId) },
+//                 { assignedDriverId: new mongoose.Types.ObjectId(userId) }
+//             ],
+//             bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
+//         };
+
+//         console.log("[v0] Booking query:", JSON.stringify(bookingQuery));
+
+//         const driverBookings = await B2CPassengerBooking.find(bookingQuery).lean();
+
+//         console.log("[v0] Found driver bookings:", driverBookings.length);
+
+//         // Collect all trip IDs from bookings' monthlyTrips array
+//         const tripIdsFromBookings = new Set();
+//         driverBookings.forEach(booking => {
+//             if (booking.monthlyTrips && Array.isArray(booking.monthlyTrips)) {
+//                 booking.monthlyTrips.forEach(tripId => {
+//                     tripIdsFromBookings.add(tripId.toString());
+//                 });
+//             }
+//         });
+
+//         console.log("[v0] Trip IDs from bookings:", tripIdsFromBookings.size);
+
+//         // APPROACH 2: Find trips via schedules assigned to this driver
+//         const scheduleQuery = {
+//             $or: [
+//                 { assignedDriver: driverId },
+//                 { assignedDriver: userId },
+//                 { assignedDriver: new mongoose.Types.ObjectId(driverId) },
+//                 { assignedDriver: new mongoose.Types.ObjectId(userId) }
+//             ],
+//             isActive: true
+//         };
+
+//         const driverSchedules = await B2CPartnerSchedule.find(scheduleQuery).lean();
+
+//         console.log("[v0] Found driver schedules:", driverSchedules.length);
+
+//         // Get route IDs from schedules
+//         const scheduleRouteIds = driverSchedules.map(s => s.routeId);
+
+//         // APPROACH 3: Find trips directly linked via driverId
+//         // Build comprehensive query for trips
+//         const tripQueryConditions = [
+//             // Direct driver assignment on trip (both driverId formats)
+//             { driverId: driverId },
+//             { driverId: userId },
+//             { driverId: new mongoose.Types.ObjectId(driverId) },
+//             { driverId: new mongoose.Types.ObjectId(userId) }
+//         ];
+
+//         // Add trip IDs from bookings
+//         if (tripIdsFromBookings.size > 0) {
+//             tripQueryConditions.push({
+//                 _id: { $in: Array.from(tripIdsFromBookings).map(id => new mongoose.Types.ObjectId(id)) }
+//             });
+//         }
+
+//         // Add trips from routes with assigned schedules
+//         if (scheduleRouteIds.length > 0) {
+//             tripQueryConditions.push({ routeId: { $in: scheduleRouteIds } });
+//         }
+
+//         // If this driver is the B2C_PARTNER themselves (self-driver scenario)
+//         // they should see trips where they are the b2cPartnerId AND driverId matches their userId
+//         if (driverUser.role === 'B2C_PARTNER') {
+//             tripQueryConditions.push({ b2cPartnerId: userId });
+//         }
+
+//         const tripQuery = {
+//             tripDate: dateFilter,
+//             $or: tripQueryConditions
+//         };
+
+//         console.log("[v0] Trip query conditions count:", tripQueryConditions.length);
+
+//         const trips = await B2CPartnerTrip.find(tripQuery)
+//             .sort({ tripDate: 1, startTime: 1 })
+//             .skip((parseInt(page) - 1) * parseInt(limit))
+//             .limit(parseInt(limit))
+//             .lean();
+
+//         // For each trip, get all passengers (from ACCEPTED bookings that reference this trip)
+//         const tripsWithPassengers = await Promise.all(
+//             trips.map(async (trip) => {
+//                 const passengerMap = new Map();
+
+//                 // Find ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings that have this trip ID in their monthlyTrips array
+//                 // CRITICAL: Do NOT include CONFIRMED (not yet accepted) bookings
+//                 const bookingsWithThisTrip = await B2CPassengerBooking.find({
+//                     monthlyTrips: trip._id,
+//                     bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
+//                 })
+//                     .populate('passengerId', 'fullName email whatsappNumber profileImage')
+//                     .lean();
+
+//                 bookingsWithThisTrip.forEach(booking => {
+//                     if (booking.passengerId) {
+//                         const passengerId = booking.passengerId._id.toString();
+//                         if (!passengerMap.has(passengerId)) {
+//                             passengerMap.set(passengerId, {
+//                                 _id: booking.passengerId._id,
+//                                 fullName: booking.passengerId.fullName || booking.passengerName || 'N/A',
+//                                 email: booking.passengerId.email,
+//                                 phone: booking.passengerId.whatsappNumber,
+//                                 profileImage: booking.passengerId.profileImage,
+//                                 bookingType: booking.isMonthlyPass ? 'Monthly Pass' : 'One Time',
+//                                 seats: booking.numberOfSeats || 1,
+//                                 bookingId: booking._id,
+//                                 bookingStatus: booking.bookingStatus
+//                             });
+//                         }
+//                     }
+//                 });
+
+//                 // NOTE: Removed route-based matching as it causes wrong passengers to appear
+//                 // Passengers should only show on trips that are in their monthlyTrips array
+
+//                 const passengers = Array.from(passengerMap.values());
+//                 const totalSeatsBooked = passengers.reduce((sum, p) => sum + (p.seats || 1), 0);
+
+//                 // Populate route info
+//                 let routeInfo = null;
+//                 if (trip.routeId) {
+//                     const route = await B2CPartnerRoute.findById(trip.routeId)
+//                         .select('fromLocation toLocation routeName')
+//                         .lean();
+//                     routeInfo = route;
+//                 }
+
+//                 // Populate vehicle info
+//                 let vehicleInfo = null;
+//                 if (trip.vehicleId) {
+//                     const vehicle = await B2CPartnerVehicle.findById(trip.vehicleId)
+//                         .select('vehicleType model licensePlate seatingCapacity')
+//                         .lean();
+//                     vehicleInfo = vehicle;
+//                 }
+
+//                 return {
+//                     _id: trip._id,
+//                     tripDate: trip.tripDate,
+//                     startTime: trip.startTime,
+//                     status: trip.status,
+//                     fromLocation: trip.fromLocation || routeInfo?.fromLocation,
+//                     toLocation: trip.toLocation || routeInfo?.toLocation,
+//                     tripType: trip.tripType,
+//                     routeId: trip.routeId,
+//                     routeInfo,
+//                     vehicleInfo,
+//                     totalSeats: trip.totalSeats,
+//                     bookedSeats: totalSeatsBooked,
+//                     availableSeats: trip.totalSeats - totalSeatsBooked,
+//                     passengers,
+//                     passengerCount: passengers.length,
+//                     actualStartTime: trip.actualStartTime,
+//                     actualEndTime: trip.actualEndTime
+//                 };
+//             })
+//         );
+
+//         // Get counts for stats
+//         const totalCount = await B2CPartnerTrip.countDocuments(tripQuery);
+
+//         const todayQuery = {
+//             ...tripQuery,
+//             tripDate: { $gte: todayStart, $lte: todayEnd }
+//         };
+//         const todayCount = await B2CPartnerTrip.countDocuments(todayQuery);
+
+//         const completedTodayQuery = {
+//             ...todayQuery,
+//             status: 'Completed'
+//         };
+//         const completedToday = await B2CPartnerTrip.countDocuments(completedTodayQuery);
+
+//         res.status(200).json({
+//             success: true,
+//             data: {
+//                 trips: tripsWithPassengers,
+//                 stats: {
+//                     todayTrips: todayCount,
+//                     completedToday,
+//                     totalTrips: totalCount,
+//                     inProgressTrips: tripsWithPassengers.filter(t => t.status === 'In Progress').length
+//                 },
+//                 pagination: {
+//                     currentPage: parseInt(page),
+//                     totalPages: Math.ceil(totalCount / parseInt(limit)),
+//                     totalTrips: totalCount,
+//                     hasNext: parseInt(page) * parseInt(limit) < totalCount,
+//                     hasPrev: parseInt(page) > 1
+//                 }
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error("Error getting driver daily trips:", error);
+//         res.status(500).json({
+//             success: false,
+//             message: "Error retrieving driver trips",
+//             error: error.message
+//         });
+//     }
+// };
+
+// Get Driver Daily Trips - Route-centric view with all passengers for each trip
+// This groups trips by route+schedule+time, showing ALL passengers on each trip
 export const getDriverDailyTrips = async (req, res) => {
     try {
         const userId = req.userId;
-        const userRole = req.userRole;
         const { filter = 'today', page = 1, limit = 50 } = req.query;
-
-        console.log("[v0] getDriverDailyTrips - userId:", userId, "userRole:", userRole);
 
         // Get driver info
         const driverUser = await User.findById(userId);
@@ -824,17 +1140,14 @@ export const getDriverDailyTrips = async (req, res) => {
             });
         }
 
-        console.log("[v0] Driver user found:", {
-            _id: driverUser._id,
-            role: driverUser.role,
-            driverId: driverUser.driverId,
-            b2cPartnerId: driverUser.b2cPartnerId,
-            fullName: driverUser.fullName
-        });
-
-        // Get driver ID and b2cPartnerId - driver might be linked via driverId or b2cPartnerId
+        // Get driver ID - driver might be linked via driverId field
         const driverId = driverUser.driverId || userId;
-        const b2cPartnerId = driverUser.b2cPartnerId || null;
+
+        console.log("[v0] Driver lookup:", {
+            userId: userId?.toString(),
+            driverId: driverId?.toString(),
+            b2cPartnerId: driverUser.b2cPartnerId?.toString()
+        });
 
         // Calculate date range based on filter
         const now = new Date();
@@ -854,203 +1167,174 @@ export const getDriverDailyTrips = async (req, res) => {
         }
 
         // Get model references
-        const B2CPartnerSchedule = mongoose.model('B2CPartnerSchedule');
         const B2CPartnerVehicle = mongoose.model('B2CPartnerVehicle');
-        const B2CPartnerDriver = mongoose.model('B2CPartnerDriver');
 
-        // APPROACH 1: Find trips via bookings assigned to this driver
-        // Get ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings assigned to this driver
-        // CRITICAL: Do NOT include CONFIRMED (not yet accepted) bookings
-        const bookingQuery = {
-            $or: [
-                { assignedDriverId: driverId },
-                { assignedDriverId: userId },
-                { assignedDriverId: new mongoose.Types.ObjectId(driverId) },
-                { assignedDriverId: new mongoose.Types.ObjectId(userId) }
-            ],
-            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
-        };
+        // CRITICAL FIX: Driver should ONLY see trips where they are the DRIVER
+        // Not trips via bookings or schedules - only trips where trip.driverId matches
+        // This ensures B2C Partner Driver sees only their assigned trips (5:00 AM and 2:00 PM)
+        // and NOT trips assigned to the partner owner (4:00 AM and 1:00 PM)
+        //
+        // IMPORTANT: We don't filter by bookedSeats > 0 anymore because bookedSeats 
+        // is incremented on booking creation (CONFIRMED), not on ACCEPTANCE.
+        // Instead, we'll filter trips after checking if they have ACCEPTED bookings.
 
-        console.log("[v0] Booking query:", JSON.stringify(bookingQuery));
-
-        const driverBookings = await B2CPassengerBooking.find(bookingQuery).lean();
-
-        console.log("[v0] Found driver bookings:", driverBookings.length);
-
-        // Collect all trip IDs from bookings' monthlyTrips array
-        const tripIdsFromBookings = new Set();
-        driverBookings.forEach(booking => {
-            if (booking.monthlyTrips && Array.isArray(booking.monthlyTrips)) {
-                booking.monthlyTrips.forEach(tripId => {
-                    tripIdsFromBookings.add(tripId.toString());
-                });
-            }
-        });
-
-        console.log("[v0] Trip IDs from bookings:", tripIdsFromBookings.size);
-
-        // APPROACH 2: Find trips via schedules assigned to this driver
-        const scheduleQuery = {
-            $or: [
-                { assignedDriver: driverId },
-                { assignedDriver: userId },
-                { assignedDriver: new mongoose.Types.ObjectId(driverId) },
-                { assignedDriver: new mongoose.Types.ObjectId(userId) }
-            ],
-            isActive: true
-        };
-
-        const driverSchedules = await B2CPartnerSchedule.find(scheduleQuery).lean();
-
-        console.log("[v0] Found driver schedules:", driverSchedules.length);
-
-        // Get route IDs from schedules
-        const scheduleRouteIds = driverSchedules.map(s => s.routeId);
-
-        // APPROACH 3: Find trips directly linked via driverId
-        // Build comprehensive query for trips
-        const tripQueryConditions = [
-            // Direct driver assignment on trip (both driverId formats)
-            { driverId: driverId },
-            { driverId: userId },
-            { driverId: new mongoose.Types.ObjectId(driverId) },
-            { driverId: new mongoose.Types.ObjectId(userId) }
-        ];
-
-        // Add trip IDs from bookings
-        if (tripIdsFromBookings.size > 0) {
-            tripQueryConditions.push({
-                _id: { $in: Array.from(tripIdsFromBookings).map(id => new mongoose.Types.ObjectId(id)) }
-            });
-        }
-
-        // Add trips from routes with assigned schedules
-        if (scheduleRouteIds.length > 0) {
-            tripQueryConditions.push({ routeId: { $in: scheduleRouteIds } });
-        }
-
-        // If this driver is the B2C_PARTNER themselves (self-driver scenario)
-        // they should see trips where they are the b2cPartnerId AND driverId matches their userId
-        if (driverUser.role === 'B2C_PARTNER') {
-            tripQueryConditions.push({ b2cPartnerId: userId });
-        }
+        // Convert IDs to ObjectId for proper comparison
+        const driverIdObj = mongoose.Types.ObjectId.isValid(driverId) ? new mongoose.Types.ObjectId(driverId) : driverId;
+        const userIdObj = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId;
 
         const tripQuery = {
             tripDate: dateFilter,
-            $or: tripQueryConditions
+            $or: [
+                // Direct driver assignment on trip - match both driverId variations
+                { driverId: driverIdObj },
+                { driverId: userIdObj },
+                // Also match string versions for safety
+                { driverId: driverId?.toString?.() || driverId },
+                { driverId: userId?.toString?.() || userId }
+            ]
         };
 
-        console.log("[v0] Trip query conditions count:", tripQueryConditions.length);
+        console.log("[v0] Trip query for driver:", JSON.stringify({
+            tripDate: 'today',
+            driverIdObj: driverIdObj?.toString(),
+            userIdObj: userIdObj?.toString()
+        }));
 
-        const trips = await B2CPartnerTrip.find(tripQuery)
+        const allTrips = await B2CPartnerTrip.find(tripQuery)
             .sort({ tripDate: 1, startTime: 1 })
-            .skip((parseInt(page) - 1) * parseInt(limit))
-            .limit(parseInt(limit))
             .lean();
 
         // For each trip, get all passengers (from ACCEPTED bookings that reference this trip)
-        const tripsWithPassengers = await Promise.all(
-            trips.map(async (trip) => {
-                const passengerMap = new Map();
+        // Only include trips that have at least one ACCEPTED booking
+        const tripsWithPassengers = [];
 
-                // Find ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings that have this trip ID in their monthlyTrips array
-                // CRITICAL: Do NOT include CONFIRMED (not yet accepted) bookings
-                const bookingsWithThisTrip = await B2CPassengerBooking.find({
-                    monthlyTrips: trip._id,
-                    bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
-                })
-                    .populate('passengerId', 'fullName email whatsappNumber profileImage')
-                    .lean();
+        for (const trip of allTrips) {
+            const passengerMap = new Map();
 
-                bookingsWithThisTrip.forEach(booking => {
-                    if (booking.passengerId) {
-                        const passengerId = booking.passengerId._id.toString();
-                        if (!passengerMap.has(passengerId)) {
-                            passengerMap.set(passengerId, {
-                                _id: booking.passengerId._id,
-                                fullName: booking.passengerId.fullName || booking.passengerName || 'N/A',
-                                email: booking.passengerId.email,
-                                phone: booking.passengerId.whatsappNumber,
-                                profileImage: booking.passengerId.profileImage,
-                                bookingType: booking.isMonthlyPass ? 'Monthly Pass' : 'One Time',
-                                seats: booking.numberOfSeats || 1,
-                                bookingId: booking._id,
-                                bookingStatus: booking.bookingStatus
-                            });
-                        }
-                    }
-                });
-
-                // NOTE: Removed route-based matching as it causes wrong passengers to appear
-                // Passengers should only show on trips that are in their monthlyTrips array
-
-                const passengers = Array.from(passengerMap.values());
-                const totalSeatsBooked = passengers.reduce((sum, p) => sum + (p.seats || 1), 0);
-
-                // Populate route info
-                let routeInfo = null;
-                if (trip.routeId) {
-                    const route = await B2CPartnerRoute.findById(trip.routeId)
-                        .select('fromLocation toLocation routeName')
-                        .lean();
-                    routeInfo = route;
-                }
-
-                // Populate vehicle info
-                let vehicleInfo = null;
-                if (trip.vehicleId) {
-                    const vehicle = await B2CPartnerVehicle.findById(trip.vehicleId)
-                        .select('vehicleType model licensePlate seatingCapacity')
-                        .lean();
-                    vehicleInfo = vehicle;
-                }
-
-                return {
-                    _id: trip._id,
-                    tripDate: trip.tripDate,
-                    startTime: trip.startTime,
-                    status: trip.status,
-                    fromLocation: trip.fromLocation || routeInfo?.fromLocation,
-                    toLocation: trip.toLocation || routeInfo?.toLocation,
-                    tripType: trip.tripType,
-                    routeId: trip.routeId,
-                    routeInfo,
-                    vehicleInfo,
-                    totalSeats: trip.totalSeats,
-                    bookedSeats: totalSeatsBooked,
-                    availableSeats: trip.totalSeats - totalSeatsBooked,
-                    passengers,
-                    passengerCount: passengers.length,
-                    actualStartTime: trip.actualStartTime,
-                    actualEndTime: trip.actualEndTime
-                };
+            // METHOD 1: Find bookings that have this trip ID in their monthlyTrips array
+            // This is the ONLY correct method - it shows passengers who booked THIS specific trip
+            // CRITICAL: Only show passengers from ACCEPTED bookings - NOT CONFIRMED
+            // CONFIRMED bookings are waiting for partner acceptance and should NOT appear in Daily Trips
+            const bookingsWithThisTrip = await B2CPassengerBooking.find({
+                monthlyTrips: trip._id,
+                bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
             })
-        );
+                .populate('passengerId', 'fullName email whatsappNumber profileImage')
+                .lean();
 
-        // Get counts for stats
-        const totalCount = await B2CPartnerTrip.countDocuments(tripQuery);
+            // CRITICAL: Skip trips with NO accepted bookings
+            // This prevents showing trips before bookings are accepted
+            if (bookingsWithThisTrip.length === 0) {
+                continue;
+            }
 
-        const todayQuery = {
-            ...tripQuery,
-            tripDate: { $gte: todayStart, $lte: todayEnd }
-        };
-        const todayCount = await B2CPartnerTrip.countDocuments(todayQuery);
+            bookingsWithThisTrip.forEach(booking => {
+                if (booking.passengerId) {
+                    const passengerId = booking.passengerId._id.toString();
+                    if (!passengerMap.has(passengerId)) {
+                        passengerMap.set(passengerId, {
+                            _id: booking.passengerId._id,
+                            fullName: booking.passengerId.fullName || booking.passengerName || 'N/A',
+                            email: booking.passengerId.email,
+                            phone: booking.passengerId.whatsappNumber,
+                            profileImage: booking.passengerId.profileImage,
+                            bookingType: booking.isMonthlyPass ? 'Monthly Pass' : 'One Time',
+                            seats: booking.numberOfSeats || 1,
+                            bookingId: booking._id
+                        });
+                    }
+                }
+            });
 
-        const completedTodayQuery = {
-            ...todayQuery,
-            status: 'Completed'
-        };
-        const completedToday = await B2CPartnerTrip.countDocuments(completedTodayQuery);
+            // METHOD 2 and METHOD 3 REMOVED - They used route-based matching which showed 
+            // ALL passengers on a route regardless of their specific trip time booking.
+            // This caused the bug where every trip showed 2 passengers instead of 1.
+            // 
+            // The monthlyTrips array in B2CPassengerBooking is the single source of truth
+            // for which passengers are on which trips.
+
+            const passengers = Array.from(passengerMap.values());
+            const totalSeatsBooked = passengers.reduce((sum, p) => sum + (p.seats || 1), 0);
+
+            // Populate route info
+            let routeInfo = null;
+            if (trip.routeId) {
+                const route = await B2CPartnerRoute.findById(trip.routeId)
+                    .select('fromLocation toLocation routeName')
+                    .lean();
+                routeInfo = route;
+            }
+
+            // Populate vehicle info
+            let vehicleInfo = null;
+            if (trip.vehicleId) {
+                const vehicle = await B2CPartnerVehicle.findById(trip.vehicleId)
+                    .select('vehicleType model licensePlate seatingCapacity')
+                    .lean();
+                vehicleInfo = vehicle;
+            }
+
+            tripsWithPassengers.push({
+                _id: trip._id,
+                tripDate: trip.tripDate,
+                startTime: trip.startTime,
+                status: trip.status,
+                fromLocation: trip.fromLocation || routeInfo?.fromLocation,
+                toLocation: trip.toLocation || routeInfo?.toLocation,
+                tripType: trip.tripType,
+                routeId: trip.routeId,
+                routeInfo,
+                vehicleInfo,
+                totalSeats: trip.totalSeats,
+                bookedSeats: totalSeatsBooked,
+                availableSeats: trip.totalSeats - totalSeatsBooked,
+                passengers,
+                passengerCount: passengers.length,
+                actualStartTime: trip.actualStartTime,
+                actualEndTime: trip.actualEndTime
+            });
+        }
+
+        // Apply pagination after filtering
+        const totalCount = tripsWithPassengers.length;
+        const paginatedTrips = tripsWithPassengers
+            .slice((parseInt(page) - 1) * parseInt(limit), parseInt(page) * parseInt(limit));
+
+        // Get counts for stats - need to count trips with ACCEPTED bookings for today
+        const todayTripIds = allTrips
+            .filter(t => {
+                const tripDate = new Date(t.tripDate);
+                return tripDate >= todayStart && tripDate <= todayEnd;
+            })
+            .map(t => t._id);
+
+        // Count trips that actually have accepted bookings for today
+        let todayCount = 0;
+        let completedToday = 0;
+        let inProgressCount = 0;
+
+        for (const tripId of todayTripIds) {
+            const acceptedBookingCount = await B2CPassengerBooking.countDocuments({
+                monthlyTrips: tripId,
+                bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
+            });
+            if (acceptedBookingCount > 0) {
+                todayCount++;
+                const tripData = allTrips.find(t => t._id.toString() === tripId.toString());
+                if (tripData?.status === 'Completed') completedToday++;
+                if (tripData?.status === 'In Progress') inProgressCount++;
+            }
+        }
 
         res.status(200).json({
             success: true,
             data: {
-                trips: tripsWithPassengers,
+                trips: paginatedTrips,
                 stats: {
                     todayTrips: todayCount,
                     completedToday,
                     totalTrips: totalCount,
-                    inProgressTrips: tripsWithPassengers.filter(t => t.status === 'In Progress').length
+                    inProgressTrips: inProgressCount
                 },
                 pagination: {
                     currentPage: parseInt(page),
@@ -1135,11 +1419,36 @@ export const startDriverTrip = async (req, res) => {
 
         console.log("[v0] Found related bookings:", relatedBookings.length);
 
-        // Update each booking status and emit socket events
+        // Update each booking's trip status (NOT bookingStatus)
+        // CRITICAL FIX: Only update outboundTripStatus/returnTripStatus, NOT bookingStatus
+        // bookingStatus should remain as ACCEPTED until trip is completed
+        // This is because "trip start" is a trip-level action, not a booking-level action
         for (const booking of relatedBookings) {
-            booking.bookingStatus = 'IN_PROGRESS';
+            // DO NOT change bookingStatus to IN_PROGRESS - it should remain ACCEPTED
+            // Only update trip-specific fields
             booking.startedAt = new Date();
             booking.tripStartedBy = userRole || 'B2C_PARTNER_DRIVER';
+
+            // CRITICAL: Update outboundTripStatus or returnTripStatus based on trip direction
+            // Check if this trip is the outbound or return trip for this booking
+            const isReturnTrip = (trip.fromLocation === booking.returnPickupLocation ||
+                trip.fromLocation === booking.dropoffLocation) &&
+                (trip.toLocation === booking.returnDropoffLocation ||
+                    trip.toLocation === booking.pickupLocation);
+
+            if (booking.bookingType === 'ROUND_TRIP') {
+                if (isReturnTrip) {
+                    booking.returnTripStatus = 'IN_PROGRESS';
+                    console.log("[v0] Setting returnTripStatus=IN_PROGRESS for booking:", booking._id);
+                } else {
+                    booking.outboundTripStatus = 'IN_PROGRESS';
+                    console.log("[v0] Setting outboundTripStatus=IN_PROGRESS for booking:", booking._id);
+                }
+            } else {
+                // ONE_WAY trip - use outboundTripStatus
+                booking.outboundTripStatus = 'IN_PROGRESS';
+            }
+
             await booking.save();
 
             // Emit socket event to each booking room so passengers can track
@@ -1249,10 +1558,53 @@ export const completeDriverTrip = async (req, res) => {
 
         console.log("[v0] Found related bookings:", relatedBookings.length);
 
-        // Update each booking status
+        // Update each booking's trip status (NOT bookingStatus until both trips are done for ROUND_TRIP)
+        // CRITICAL: Do NOT use route-based matching as it affects wrong bookings
         for (const booking of relatedBookings) {
-            booking.bookingStatus = 'COMPLETED';
-            booking.completedAt = new Date();
+            // CRITICAL: For ROUND_TRIP bookings, determine if this is outbound or return trip
+            // and only mark booking as COMPLETED when BOTH trips are done
+            const isReturnTrip = (trip.fromLocation === booking.returnPickupLocation ||
+                trip.fromLocation === booking.dropoffLocation) &&
+                (trip.toLocation === booking.returnDropoffLocation ||
+                    trip.toLocation === booking.pickupLocation);
+
+            if (booking.bookingType === 'ROUND_TRIP') {
+                if (isReturnTrip) {
+                    booking.returnTripStatus = 'COMPLETED';
+                    console.log("[v0] Setting returnTripStatus=COMPLETED for booking:", booking._id);
+
+                    // Only mark booking COMPLETED if outbound is also done
+                    if (booking.outboundTripStatus === 'COMPLETED') {
+                        booking.bookingStatus = 'COMPLETED';
+                        booking.completedAt = new Date();
+                        console.log("[v0] BOTH trips completed - setting bookingStatus=COMPLETED for booking:", booking._id);
+                    } else {
+                        // Keep booking status as ACCEPTED - outbound not done yet
+                        // DO NOT change to IN_PROGRESS or COMPLETED prematurely
+                        console.log("[v0] Return trip done but outbound still:", booking.outboundTripStatus);
+                    }
+                } else {
+                    booking.outboundTripStatus = 'COMPLETED';
+                    console.log("[v0] Setting outboundTripStatus=COMPLETED for booking:", booking._id);
+
+                    // Only mark booking COMPLETED if return is also done
+                    if (booking.returnTripStatus === 'COMPLETED') {
+                        booking.bookingStatus = 'COMPLETED';
+                        booking.completedAt = new Date();
+                        console.log("[v0] BOTH trips completed - setting bookingStatus=COMPLETED for booking:", booking._id);
+                    } else {
+                        // Keep booking as ACCEPTED - return trip still pending
+                        // DO NOT change bookingStatus - passenger still needs to track return trip
+                        console.log("[v0] Outbound trip done but return still:", booking.returnTripStatus);
+                    }
+                }
+            } else {
+                // ONE_WAY trip - mark everything as completed
+                booking.outboundTripStatus = 'COMPLETED';
+                booking.bookingStatus = 'COMPLETED';
+                booking.completedAt = new Date();
+            }
+
             await booking.save();
         }
 
@@ -1261,6 +1613,91 @@ export const completeDriverTrip = async (req, res) => {
             { 'monthlyTrips.tripId': tripId },
             { $set: { 'monthlyTrips.$.status': 'Completed' } }
         );
+
+        // Check if driver has any more incomplete trips today - if not, mark as offline
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const remainingDriverTrips = await B2CPartnerTrip.countDocuments({
+            driverId: driverId,
+            tripDate: { $gte: todayStart, $lte: todayEnd },
+            status: { $in: ['SCHEDULED', 'Scheduled', 'IN_PROGRESS', 'In Progress', 'STARTED', 'Started'] },
+            _id: { $ne: tripId }
+        });
+
+        if (remainingDriverTrips === 0) {
+            // No more trips today - set driver to offline
+            if (driverUser.role === 'B2C_PARTNER') {
+                // Self-driver
+                driverUser.selfDriverAvailability = driverUser.selfDriverAvailability || {};
+                driverUser.selfDriverAvailability.status = 'offline';
+                driverUser.selfDriverAvailability.lastUpdate = new Date();
+                await driverUser.save();
+
+                broadcastSelfDriverAvailabilityChange(userId, {
+                    driverName: driverUser.fullName || 'Self',
+                    status: 'offline'
+                });
+            } else if (driverUser.role === 'B2C_PARTNER_DRIVER') {
+                // Update B2CPartnerDriver
+                const driver = await B2CPartnerDriver.findByIdAndUpdate(
+                    driverId,
+                    {
+                        $set: {
+                            availabilityStatus: 'offline',
+                            lastAvailabilityUpdate: new Date()
+                        }
+                    },
+                    { new: true }
+                );
+
+                if (driver && driverUser.b2cPartnerId) {
+                    broadcastDriverAvailabilityChange(driverUser.b2cPartnerId.toString(), {
+                        driverId: driver._id.toString(),
+                        driverName: driver.name,
+                        availabilityStatus: 'offline',
+                        isSelfDriver: false
+                    });
+                }
+            }
+            console.log("[v0] Driver has no more trips today - set to offline:", driverId);
+        }
+
+        // Check if vehicle has any more incomplete trips today - if not, mark as available
+        if (trip.vehicleId) {
+            const remainingVehicleTrips = await B2CPartnerTrip.countDocuments({
+                vehicleId: trip.vehicleId,
+                tripDate: { $gte: todayStart, $lte: todayEnd },
+                status: { $in: ['SCHEDULED', 'Scheduled', 'IN_PROGRESS', 'In Progress', 'STARTED', 'Started'] },
+                _id: { $ne: tripId }
+            });
+
+            if (remainingVehicleTrips === 0) {
+                const vehicle = await B2CPartnerVehicle.findByIdAndUpdate(
+                    trip.vehicleId,
+                    {
+                        $set: {
+                            availabilityStatus: 'available',
+                            lastAvailabilityUpdate: new Date()
+                        }
+                    },
+                    { new: true }
+                );
+
+                if (vehicle) {
+                    broadcastVehicleAvailabilityChange(trip.b2cPartnerId?.toString(), {
+                        vehicleId: vehicle._id.toString(),
+                        vehicleModel: vehicle.model,
+                        licensePlate: vehicle.licensePlate,
+                        availabilityStatus: 'available',
+                        status: vehicle.status
+                    });
+                    console.log("[v0] Vehicle has no more trips today - set to available:", trip.vehicleId);
+                }
+            }
+        }
 
         // Notify passengers
         await notifyPassengersOfStatusChange(trip, 'Completed');
@@ -1533,172 +1970,147 @@ export const getPartnerSelfDriverTrips = async (req, res) => {
         // Get model references
         const B2CPartnerVehicle = mongoose.model('B2CPartnerVehicle');
 
-        // CRITICAL FIX: First, get ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings for this partner
-        // We should NOT show trips for bookings that haven't been accepted yet
-        const acceptedBookings = await B2CPassengerBooking.find({
-            b2cPartnerId: userId,
-            isSelfDriver: true,
-            bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
-        }).lean();
-
-        console.log("[v0] Found accepted self-driver bookings:", acceptedBookings.length);
-
-        // Collect trip IDs ONLY from ACCEPTED bookings
-        const tripIdsFromAcceptedBookings = new Set();
-        acceptedBookings.forEach(booking => {
-            if (booking.monthlyTrips && Array.isArray(booking.monthlyTrips)) {
-                booking.monthlyTrips.forEach(tripId => {
-                    tripIdsFromAcceptedBookings.add(tripId.toString());
-                });
-            }
-        });
-
-        console.log("[v0] Trip IDs from accepted bookings:", tripIdsFromAcceptedBookings.size);
-
-        // If no accepted bookings with trips, return empty result
-        if (tripIdsFromAcceptedBookings.size === 0) {
-            return res.status(200).json({
-                success: true,
-                data: {
-                    trips: [],
-                    stats: {
-                        todayTrips: 0,
-                        completedToday: 0,
-                        totalTrips: 0,
-                        inProgressTrips: 0
-                    },
-                    pagination: {
-                        currentPage: parseInt(page),
-                        totalPages: 0,
-                        totalTrips: 0,
-                        hasNext: false,
-                        hasPrev: false
-                    }
-                }
-            });
-        }
-
-        // Build query for trips - ONLY from accepted bookings
-        // This ensures we don't show trips for passengers who haven't had their booking accepted
+        // CRITICAL FIX: Partner should ONLY see trips where they are the DRIVER
+        // Not just trips from their bookings - only trips where trip.driverId === partner's userId
+        // This ensures B2C Partner sees only self-driving trips (4:00 AM and 1:00 PM)
+        // and NOT trips assigned to their employed drivers (5:00 AM and 2:00 PM)
+        // 
+        // IMPORTANT: We don't filter by bookedSeats > 0 anymore because bookedSeats 
+        // is incremented on booking creation (CONFIRMED), not on ACCEPTANCE.
+        // Instead, we'll filter trips after checking if they have ACCEPTED bookings.
         const tripQuery = {
             tripDate: dateFilter,
-            _id: { $in: Array.from(tripIdsFromAcceptedBookings).map(id => new mongoose.Types.ObjectId(id)) }
+            driverId: new mongoose.Types.ObjectId(userId)  // ONLY trips where this user is the driver
         };
 
-        const trips = await B2CPartnerTrip.find(tripQuery)
+        const allTrips = await B2CPartnerTrip.find(tripQuery)
             .sort({ tripDate: 1, startTime: 1 })
-            .skip((parseInt(page) - 1) * parseInt(limit))
-            .limit(parseInt(limit))
             .lean();
 
         // For each trip, get passengers ONLY from ACCEPTED bookings
         // CRITICAL: Do not include passengers from CONFIRMED (not yet accepted) bookings
-        const tripsWithPassengers = await Promise.all(
-            trips.map(async (trip) => {
-                const passengerMap = new Map();
+        // Only include trips that have at least one ACCEPTED booking
+        const tripsWithPassengers = [];
 
-                // Find ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings that have this trip in their monthlyTrips array
-                // Do NOT use route matching as it causes wrong passengers to show
-                const bookingsWithThisTrip = await B2CPassengerBooking.find({
-                    monthlyTrips: trip._id,
-                    bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
-                })
-                    .populate('passengerId', 'fullName email whatsappNumber profileImage')
-                    .lean();
+        for (const trip of allTrips) {
+            const passengerMap = new Map();
 
-                console.log(`[v0] Trip ${trip._id} (${trip.startTime}): Found ${bookingsWithThisTrip.length} accepted bookings`);
-
-                bookingsWithThisTrip.forEach(booking => {
-                    if (booking.passengerId) {
-                        const passengerId = booking.passengerId._id.toString();
-                        if (!passengerMap.has(passengerId)) {
-                            passengerMap.set(passengerId, {
-                                _id: booking.passengerId._id,
-                                fullName: booking.passengerId.fullName || booking.passengerName || 'N/A',
-                                email: booking.passengerId.email,
-                                phone: booking.passengerId.whatsappNumber,
-                                profileImage: booking.passengerId.profileImage,
-                                bookingType: booking.isMonthlyPass ? 'Monthly Pass' : 'One Time',
-                                seats: booking.numberOfSeats || 1,
-                                bookingId: booking._id,
-                                bookingStatus: booking.bookingStatus
-                            });
-                        }
-                    }
-                });
-
-                // NOTE: Removed route-based monthly pass matching as it causes duplicate/wrong passengers
-                // Passengers should only show up on trips that are explicitly in their monthlyTrips array
-
-                const passengers = Array.from(passengerMap.values());
-                const totalSeatsBooked = passengers.reduce((sum, p) => sum + (p.seats || 1), 0);
-
-                // Populate route info
-                let routeInfo = null;
-                if (trip.routeId) {
-                    const route = await B2CPartnerRoute.findById(trip.routeId)
-                        .select('fromLocation toLocation routeName')
-                        .lean();
-                    routeInfo = route;
-                }
-
-                // Populate vehicle info
-                let vehicleInfo = null;
-                if (trip.vehicleId) {
-                    const vehicle = await B2CPartnerVehicle.findById(trip.vehicleId)
-                        .select('vehicleType model licensePlate seatingCapacity')
-                        .lean();
-                    vehicleInfo = vehicle;
-                }
-
-                return {
-                    _id: trip._id,
-                    tripDate: trip.tripDate,
-                    startTime: trip.startTime,
-                    status: trip.status || 'Scheduled',
-                    fromLocation: trip.fromLocation || routeInfo?.fromLocation,
-                    toLocation: trip.toLocation || routeInfo?.toLocation,
-                    tripType: trip.tripType,
-                    routeId: trip.routeId,
-                    routeInfo,
-                    vehicleInfo,
-                    totalSeats: trip.totalSeats || 7,
-                    bookedSeats: totalSeatsBooked,
-                    availableSeats: (trip.totalSeats || 7) - totalSeatsBooked,
-                    passengers,
-                    passengerCount: passengers.length,
-                    actualStartTime: trip.actualStartTime,
-                    actualEndTime: trip.actualEndTime,
-                    isSelfDriver: true
-                };
+            // Find ONLY ACCEPTED/IN_PROGRESS/COMPLETED bookings that have this trip in their monthlyTrips array
+            // Do NOT use route matching as it causes wrong passengers to show
+            // CRITICAL: CONFIRMED bookings are NOT included - they are waiting for partner acceptance
+            const bookingsWithThisTrip = await B2CPassengerBooking.find({
+                monthlyTrips: trip._id,
+                bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
             })
-        );
+                .populate('passengerId', 'fullName email whatsappNumber profileImage')
+                .lean();
 
-        // Get counts for stats
-        const totalCount = await B2CPartnerTrip.countDocuments(tripQuery);
+            // CRITICAL: Skip trips with NO accepted bookings
+            // This prevents showing trips before bookings are accepted
+            if (bookingsWithThisTrip.length === 0) {
+                continue;
+            }
 
-        const todayQuery = {
-            ...tripQuery,
-            tripDate: { $gte: todayStart, $lte: todayEnd }
-        };
-        const todayCount = await B2CPartnerTrip.countDocuments(todayQuery);
+            bookingsWithThisTrip.forEach(booking => {
+                if (booking.passengerId) {
+                    const passengerId = booking.passengerId._id.toString();
+                    if (!passengerMap.has(passengerId)) {
+                        passengerMap.set(passengerId, {
+                            _id: booking.passengerId._id,
+                            fullName: booking.passengerId.fullName || booking.passengerName || 'N/A',
+                            email: booking.passengerId.email,
+                            phone: booking.passengerId.whatsappNumber,
+                            profileImage: booking.passengerId.profileImage,
+                            bookingType: booking.isMonthlyPass ? 'Monthly Pass' : 'One Time',
+                            seats: booking.numberOfSeats || 1,
+                            bookingId: booking._id,
+                            bookingStatus: booking.bookingStatus
+                        });
+                    }
+                }
+            });
 
-        const completedTodayQuery = {
-            ...todayQuery,
-            status: 'Completed'
-        };
-        const completedToday = await B2CPartnerTrip.countDocuments(completedTodayQuery);
+            // NOTE: Removed route-based monthly pass matching as it causes duplicate/wrong passengers
+            // Passengers should only show up on trips that are explicitly in their monthlyTrips array
 
-        const inProgressQuery = {
-            ...todayQuery,
-            status: 'In Progress'
-        };
-        const inProgressCount = await B2CPartnerTrip.countDocuments(inProgressQuery);
+            const passengers = Array.from(passengerMap.values());
+            const totalSeatsBooked = passengers.reduce((sum, p) => sum + (p.seats || 1), 0);
+
+            // Populate route info
+            let routeInfo = null;
+            if (trip.routeId) {
+                const route = await B2CPartnerRoute.findById(trip.routeId)
+                    .select('fromLocation toLocation routeName')
+                    .lean();
+                routeInfo = route;
+            }
+
+            // Populate vehicle info
+            let vehicleInfo = null;
+            if (trip.vehicleId) {
+                const vehicle = await B2CPartnerVehicle.findById(trip.vehicleId)
+                    .select('vehicleType model licensePlate seatingCapacity')
+                    .lean();
+                vehicleInfo = vehicle;
+            }
+
+            tripsWithPassengers.push({
+                _id: trip._id,
+                tripDate: trip.tripDate,
+                startTime: trip.startTime,
+                status: trip.status || 'Scheduled',
+                fromLocation: trip.fromLocation || routeInfo?.fromLocation,
+                toLocation: trip.toLocation || routeInfo?.toLocation,
+                tripType: trip.tripType,
+                routeId: trip.routeId,
+                routeInfo,
+                vehicleInfo,
+                totalSeats: trip.totalSeats || 7,
+                bookedSeats: totalSeatsBooked,
+                availableSeats: (trip.totalSeats || 7) - totalSeatsBooked,
+                passengers,
+                passengerCount: passengers.length,
+                actualStartTime: trip.actualStartTime,
+                actualEndTime: trip.actualEndTime,
+                isSelfDriver: true
+            });
+        }
+
+        // Apply pagination after filtering
+        const totalCount = tripsWithPassengers.length;
+        const paginatedTrips = tripsWithPassengers
+            .slice((parseInt(page) - 1) * parseInt(limit), parseInt(page) * parseInt(limit));
+
+        // Get counts for stats - need to count trips with ACCEPTED bookings for today
+        const todayTripIds = allTrips
+            .filter(t => {
+                const tripDate = new Date(t.tripDate);
+                return tripDate >= todayStart && tripDate <= todayEnd;
+            })
+            .map(t => t._id);
+
+        // Count trips that actually have accepted bookings for today
+        let todayCount = 0;
+        let completedToday = 0;
+        let inProgressCount = 0;
+
+        for (const tripId of todayTripIds) {
+            const acceptedBookingCount = await B2CPassengerBooking.countDocuments({
+                monthlyTrips: tripId,
+                bookingStatus: { $in: ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
+            });
+            if (acceptedBookingCount > 0) {
+                todayCount++;
+                const tripData = allTrips.find(t => t._id.toString() === tripId.toString());
+                if (tripData?.status === 'Completed') completedToday++;
+                if (tripData?.status === 'In Progress') inProgressCount++;
+            }
+        }
 
         res.status(200).json({
             success: true,
             data: {
-                trips: tripsWithPassengers,
+                trips: paginatedTrips,
                 stats: {
                     todayTrips: todayCount,
                     completedToday,
@@ -1764,6 +2176,49 @@ export const startPartnerTrip = async (req, res) => {
 
         console.log("[v0] Trip started - tripId:", tripId, "userId:", userId);
 
+        // ENHANCEMENT: Set driver/partner to busy when trip starts
+        const user = await User.findById(userId);
+        if (user && user.role === 'B2C_PARTNER') {
+            if (!user.selfDriverAvailability) {
+                user.selfDriverAvailability = {};
+            }
+            user.selfDriverAvailability.status = 'busy';
+            user.selfDriverAvailability.lastUpdate = new Date();
+            await user.save();
+
+            // Broadcast self-driver availability change
+            broadcastSelfDriverAvailabilityChange(userId, {
+                driverName: user.fullName || 'Self',
+                status: 'busy'
+            });
+            console.log("[v0] Self-driver set to busy on trip start:", userId);
+        }
+
+        // ENHANCEMENT: Set vehicle to busy when trip starts
+        if (trip.vehicleId) {
+            const vehicle = await B2CPartnerVehicle.findByIdAndUpdate(
+                trip.vehicleId,
+                {
+                    $set: {
+                        availabilityStatus: 'busy',
+                        lastAvailabilityUpdate: new Date()
+                    }
+                },
+                { new: true }
+            );
+
+            if (vehicle) {
+                broadcastVehicleAvailabilityChange(trip.b2cPartnerId?.toString(), {
+                    vehicleId: vehicle._id.toString(),
+                    vehicleModel: vehicle.model,
+                    licensePlate: vehicle.licensePlate,
+                    availabilityStatus: 'busy',
+                    status: vehicle.status
+                });
+                console.log("[v0] Vehicle set to busy on trip start:", trip.vehicleId);
+            }
+        }
+
         // Update ONLY bookings that have this trip in their monthlyTrips array
         // CRITICAL: Do NOT use route-based matching as it affects wrong bookings
         const relatedBookings = await B2CPassengerBooking.find({
@@ -1777,8 +2232,30 @@ export const startPartnerTrip = async (req, res) => {
         console.log("[v0] Found", relatedBookings.length, "related bookings to update");
 
         for (const booking of relatedBookings) {
-            booking.bookingStatus = 'IN_PROGRESS';
+            // CRITICAL FIX: Do NOT change bookingStatus to IN_PROGRESS when trip starts
+            // bookingStatus should remain as ACCEPTED - only trip-level statuses should change
+            // Only update startedAt timestamp and trip-level statuses
             booking.startedAt = new Date();
+            booking.tripStartedBy = 'B2C_PARTNER';
+
+            // CRITICAL: Update outboundTripStatus or returnTripStatus based on trip direction
+            const isReturnTrip = (trip.fromLocation === booking.returnPickupLocation ||
+                trip.fromLocation === booking.dropoffLocation) &&
+                (trip.toLocation === booking.returnDropoffLocation ||
+                    trip.toLocation === booking.pickupLocation);
+
+            if (booking.bookingType === 'ROUND_TRIP') {
+                if (isReturnTrip) {
+                    booking.returnTripStatus = 'IN_PROGRESS';
+                    console.log("[v0] Setting returnTripStatus=IN_PROGRESS for booking:", booking._id);
+                } else {
+                    booking.outboundTripStatus = 'IN_PROGRESS';
+                    console.log("[v0] Setting outboundTripStatus=IN_PROGRESS for booking:", booking._id);
+                }
+            } else {
+                booking.outboundTripStatus = 'IN_PROGRESS';
+            }
+
             await booking.save();
 
             // Emit socket event to each booking room so passengers can track
@@ -1889,8 +2366,47 @@ export const completePartnerTrip = async (req, res) => {
         });
 
         for (const booking of relatedBookings) {
-            booking.bookingStatus = 'COMPLETED';
-            booking.completedAt = new Date();
+            // CRITICAL: For ROUND_TRIP bookings, determine if this is outbound or return trip
+            const isReturnTrip = (trip.fromLocation === booking.returnPickupLocation ||
+                trip.fromLocation === booking.dropoffLocation) &&
+                (trip.toLocation === booking.returnDropoffLocation ||
+                    trip.toLocation === booking.pickupLocation);
+
+            if (booking.bookingType === 'ROUND_TRIP') {
+                if (isReturnTrip) {
+                    booking.returnTripStatus = 'COMPLETED';
+                    console.log("[v0] Setting returnTripStatus=COMPLETED for booking:", booking._id);
+
+                    if (booking.outboundTripStatus === 'COMPLETED') {
+                        booking.bookingStatus = 'COMPLETED';
+                        booking.completedAt = new Date();
+                        console.log("[v0] BOTH trips completed - setting bookingStatus=COMPLETED for booking:", booking._id);
+                    } else {
+                        // CRITICAL FIX: Keep booking as ACCEPTED - outbound not done yet
+                        // DO NOT mark booking as COMPLETED prematurely
+                        console.log("[v0] Return trip done but outbound still:", booking.outboundTripStatus, "- keeping booking as ACCEPTED");
+                    }
+                } else {
+                    booking.outboundTripStatus = 'COMPLETED';
+                    console.log("[v0] Setting outboundTripStatus=COMPLETED for booking:", booking._id);
+
+                    if (booking.returnTripStatus === 'COMPLETED') {
+                        booking.bookingStatus = 'COMPLETED';
+                        booking.completedAt = new Date();
+                        console.log("[v0] BOTH trips completed - setting bookingStatus=COMPLETED for booking:", booking._id);
+                    } else {
+                        // CRITICAL FIX: Keep booking as ACCEPTED - return trip still pending
+                        // DO NOT mark booking as COMPLETED prematurely
+                        // Passenger still needs to track the return trip later
+                        console.log("[v0] Outbound trip done but return still:", booking.returnTripStatus, "- keeping booking as ACCEPTED");
+                    }
+                }
+            } else {
+                booking.outboundTripStatus = 'COMPLETED';
+                booking.bookingStatus = 'COMPLETED';
+                booking.completedAt = new Date();
+            }
+
             await booking.save();
         }
 
@@ -1899,6 +2415,154 @@ export const completePartnerTrip = async (req, res) => {
             { 'monthlyTrips.tripId': tripId },
             { $set: { 'monthlyTrips.$.status': 'Completed' } }
         );
+
+        // ENHANCED: Check driver availability after trip completion
+        // Driver should be set to:
+        // - 'offline' if no more trips today (all done)
+        // - 'available' if there are still scheduled trips later (between trips window)
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const remainingDriverTrips = await B2CPartnerTrip.find({
+            driverId: trip.driverId,
+            tripDate: { $gte: todayStart, $lte: todayEnd },
+            status: { $in: ['SCHEDULED', 'Scheduled', 'IN_PROGRESS', 'In Progress', 'STARTED', 'Started'] },
+            _id: { $ne: tripId }
+        }).sort({ startTime: 1 });
+
+        // Helper to convert time to 24h format
+        const convertDriverTo24h = (timeStr) => {
+            if (!timeStr) return '23:59';
+            const cleanTime = timeStr.replace(/\s*(AM|PM)/gi, (match, p1) => p1.toUpperCase()).trim();
+            const parts = cleanTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+            if (!parts) return '23:59';
+            let hour = parseInt(parts[1]);
+            const min = parts[2];
+            const meridian = parts[3]?.toUpperCase();
+            if (meridian === 'PM' && hour < 12) hour += 12;
+            if (meridian === 'AM' && hour === 12) hour = 0;
+            return `${String(hour).padStart(2, '0')}:${min}`;
+        };
+
+        const nowTime = new Date();
+        const driverCurrentHours = String(nowTime.getHours()).padStart(2, '0');
+        const driverCurrentMinutes = String(nowTime.getMinutes()).padStart(2, '0');
+        const driverCurrentTimeStr = `${driverCurrentHours}:${driverCurrentMinutes}`;
+
+        // Find next scheduled trip for this driver
+        const nextDriverTrip = remainingDriverTrips.find(t => {
+            const tripTime24h = convertDriverTo24h(t.startTime);
+            return tripTime24h > driverCurrentTimeStr && ['SCHEDULED', 'Scheduled'].includes(t.status);
+        });
+
+        // Check for any in-progress trip
+        const driverInProgressTrip = remainingDriverTrips.find(t =>
+            ['IN_PROGRESS', 'In Progress', 'STARTED', 'Started'].includes(t.status)
+        );
+
+        const user = await User.findById(userId);
+        if (user) {
+            let newStatus = 'offline';
+
+            if (driverInProgressTrip) {
+                // Still have in-progress trip - stay busy
+                newStatus = 'busy';
+            } else if (nextDriverTrip) {
+                // Have upcoming scheduled trip - can be available until then
+                newStatus = 'available';
+            } else {
+                // No more trips today - set to offline
+                newStatus = 'offline';
+            }
+
+            user.selfDriverAvailability = user.selfDriverAvailability || {};
+            user.selfDriverAvailability.status = newStatus;
+            user.selfDriverAvailability.lastUpdate = new Date();
+            await user.save();
+
+            // Broadcast self-driver availability change
+            broadcastSelfDriverAvailabilityChange(userId, {
+                driverName: user.fullName || 'Self',
+                status: newStatus
+            });
+            console.log("[v0] Self-driver status after trip completion:", newStatus, "userId:", userId);
+        }
+
+        // ENHANCED: Check if vehicle has any more incomplete trips today
+        // Vehicle should be marked as available if:
+        // 1. No more trips today, OR
+        // 2. There's a gap before the next scheduled trip (between trips availability)
+        if (trip.vehicleId) {
+            const remainingVehicleTrips = await B2CPartnerTrip.find({
+                vehicleId: trip.vehicleId,
+                tripDate: { $gte: todayStart, $lte: todayEnd },
+                status: { $in: ['SCHEDULED', 'Scheduled', 'IN_PROGRESS', 'In Progress', 'STARTED', 'Started'] },
+                _id: { $ne: tripId }
+            }).sort({ startTime: 1 });
+
+            // Helper to convert time to 24h format
+            const convertTo24h = (timeStr) => {
+                if (!timeStr) return '23:59';
+                const cleanTime = timeStr.replace(/\s*(AM|PM)/gi, (match, p1) => p1.toUpperCase()).trim();
+                const parts = cleanTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+                if (!parts) return '23:59';
+                let hour = parseInt(parts[1]);
+                const min = parts[2];
+                const meridian = parts[3]?.toUpperCase();
+                if (meridian === 'PM' && hour < 12) hour += 12;
+                if (meridian === 'AM' && hour === 12) hour = 0;
+                return `${String(hour).padStart(2, '0')}:${min}`;
+            };
+
+            const now = new Date();
+            const currentHours = String(now.getHours()).padStart(2, '0');
+            const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+            const currentTimeStr = `${currentHours}:${currentMinutes}`;
+
+            // Find next scheduled trip for this vehicle
+            const nextVehicleTrip = remainingVehicleTrips.find(t => {
+                const tripTime24h = convertTo24h(t.startTime);
+                return tripTime24h > currentTimeStr && ['SCHEDULED', 'Scheduled'].includes(t.status);
+            });
+
+            // Check for any in-progress trip
+            const vehicleInProgressTrip = remainingVehicleTrips.find(t =>
+                ['IN_PROGRESS', 'In Progress', 'STARTED', 'Started'].includes(t.status)
+            );
+
+            // Set vehicle available if:
+            // - No trips remaining (all done for today), OR
+            // - No in-progress trip AND next trip is in the future (between trips)
+            const shouldBeAvailable = remainingVehicleTrips.length === 0 ||
+                (!vehicleInProgressTrip && nextVehicleTrip);
+
+            if (shouldBeAvailable) {
+                const vehicle = await B2CPartnerVehicle.findByIdAndUpdate(
+                    trip.vehicleId,
+                    {
+                        $set: {
+                            availabilityStatus: 'available',
+                            lastAvailabilityUpdate: new Date()
+                        }
+                    },
+                    { new: true }
+                );
+
+                if (vehicle) {
+                    // Broadcast vehicle availability change
+                    broadcastVehicleAvailabilityChange(trip.b2cPartnerId?.toString(), {
+                        vehicleId: vehicle._id.toString(),
+                        vehicleModel: vehicle.model,
+                        licensePlate: vehicle.licensePlate,
+                        availabilityStatus: 'available',
+                        status: vehicle.status
+                    });
+                    console.log("[v0] Vehicle set to available (between trips or all done):", trip.vehicleId);
+                }
+            }
+        }
 
         // Notify passengers
         await notifyPassengersOfStatusChange(trip, 'Completed');
@@ -2154,6 +2818,129 @@ export const getActiveB2CTrip = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error getting active trip",
+            error: error.message
+        });
+    }
+};
+
+// Check and update availability status based on today's scheduled trips
+// This endpoint should be called when a driver/partner logs in or loads the dashboard
+export const checkAndUpdateAvailability = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const userRole = req.userRole;
+
+        console.log("[v0] checkAndUpdateAvailability - userId:", userId, "userRole:", userRole);
+
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        let driverId = userId;
+        let isSelfDriver = userRole === 'B2C_PARTNER';
+
+        // Get user info
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        if (userRole === 'B2C_PARTNER_DRIVER' && user.driverId) {
+            driverId = user.driverId;
+        }
+
+        // Check if driver has any scheduled or in-progress trips today with bookings
+        const tripCount = await B2CPartnerTrip.countDocuments({
+            $or: [
+                { driverId: driverId },
+                { driverId: userId },
+                { b2cPartnerId: userId }
+            ],
+            tripDate: { $gte: todayStart, $lte: todayEnd },
+            bookedSeats: { $gt: 0 },
+            status: { $in: ['SCHEDULED', 'Scheduled', 'IN_PROGRESS', 'In Progress'] }
+        });
+
+        console.log("[v0] Trips with bookings today:", tripCount);
+
+        let currentStatus = 'available';
+        let newStatus = tripCount > 0 ? 'busy' : 'available';
+        let statusUpdated = false;
+
+        if (isSelfDriver) {
+            // Get current status
+            currentStatus = user.selfDriverAvailability?.status || 'available';
+
+            // Only update if transitioning to busy from available
+            // Don't override if manually set to offline
+            if (tripCount > 0 && currentStatus === 'available') {
+                user.selfDriverAvailability = user.selfDriverAvailability || {};
+                user.selfDriverAvailability.status = 'busy';
+                user.selfDriverAvailability.lastUpdate = new Date();
+                await user.save();
+                statusUpdated = true;
+                newStatus = 'busy';
+                console.log("[v0] Updated B2C Partner to busy - has scheduled trips");
+
+                // Broadcast the change
+                broadcastSelfDriverAvailabilityChange(userId, {
+                    driverName: user.fullName || 'Self',
+                    status: 'busy'
+                });
+            } else {
+                newStatus = currentStatus;
+            }
+        } else if (userRole === 'B2C_PARTNER_DRIVER') {
+            const driver = await B2CPartnerDriver.findById(driverId);
+            if (driver) {
+                currentStatus = driver.availabilityStatus || 'available';
+
+                // Only update if transitioning to busy from available
+                if (tripCount > 0 && currentStatus === 'available') {
+                    driver.availabilityStatus = 'busy';
+                    driver.lastAvailabilityUpdate = new Date();
+                    await driver.save();
+                    statusUpdated = true;
+                    newStatus = 'busy';
+                    console.log("[v0] Updated B2C Partner Driver to busy - has scheduled trips");
+
+                    // Broadcast the change
+                    if (user.b2cPartnerId) {
+                        broadcastDriverAvailabilityChange(user.b2cPartnerId.toString(), {
+                            driverId: driver._id.toString(),
+                            driverName: driver.name,
+                            availabilityStatus: 'busy',
+                            isSelfDriver: false
+                        });
+                    }
+                } else {
+                    newStatus = currentStatus;
+                }
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                previousStatus: currentStatus,
+                currentStatus: newStatus,
+                statusUpdated,
+                scheduledTripsToday: tripCount,
+                message: statusUpdated
+                    ? `Status updated to ${newStatus} because you have ${tripCount} scheduled trip(s) today`
+                    : `Status is ${newStatus}. You have ${tripCount} scheduled trip(s) today.`
+            }
+        });
+
+    } catch (error) {
+        console.error("Error checking/updating availability:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error checking availability status",
             error: error.message
         });
     }

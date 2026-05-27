@@ -147,27 +147,63 @@ const CommuterBookingDetailsPage = () => {
         socket.socket.emit("join-notification-room", auth.user._id);
       }
 
-      // Get the driver ID based on isSelfDriver flag
-      let driverId;
-      if (booking.isSelfDriver) {
-        // When isSelfDriver is true, the partner is driving, use b2cPartnerId
-        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+      // CRITICAL: For ROUND_TRIP bookings, build a list of all possible driver IDs
+      // This ensures we receive location updates for either outbound or return driver
+      const possibleDriverIds = [];
+
+      if (booking.bookingType === "ROUND_TRIP") {
+        // Add outbound driver IDs
+        if (booking.outboundDriverId) {
+          possibleDriverIds.push(
+            booking.outboundDriverId?._id || booking.outboundDriverId,
+          );
+        }
+        if (booking.outboundIsSelfDriver && booking.b2cPartnerId) {
+          possibleDriverIds.push(
+            booking.b2cPartnerId?._id || booking.b2cPartnerId,
+          );
+        }
+
+        // Add return driver IDs
+        if (booking.returnDriverId) {
+          possibleDriverIds.push(
+            booking.returnDriverId?._id || booking.returnDriverId,
+          );
+        }
+        if (booking.returnIsSelfDriver && booking.b2cPartnerId) {
+          possibleDriverIds.push(
+            booking.b2cPartnerId?._id || booking.b2cPartnerId,
+          );
+        }
       } else {
-        // When isSelfDriver is false, use assignedDriverId (from b2cpartnerdrivers table)
-        driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
+        // ONE_WAY trip
+        if (booking.isSelfDriver) {
+          possibleDriverIds.push(
+            booking.b2cPartnerId?._id || booking.b2cPartnerId,
+          );
+        } else {
+          possibleDriverIds.push(
+            booking.assignedDriverId?._id || booking.assignedDriverId,
+          );
+        }
       }
 
-      console.log(
-        "[v0] Setting up tracking for driverId:",
-        driverId,
-        "isSelfDriver:",
-        booking.isSelfDriver,
+      // Add b2cPartnerId as fallback
+      if (booking.b2cPartnerId) {
+        possibleDriverIds.push(
+          booking.b2cPartnerId?._id || booking.b2cPartnerId,
+        );
+      }
+
+      // Filter out nulls/undefined and convert to strings for comparison
+      const driverIdSet = new Set(
+        possibleDriverIds
+          .filter(Boolean)
+          .map((id) => (id?.toString ? id.toString() : id)),
       );
 
       // Listen for driver location updates
       const handleLocationUpdate = (locationData) => {
-        console.log("[v0] Location update received:", locationData);
-
         // Extract location - handle both nested and flat formats
         const lat =
           locationData.location?.lat ||
@@ -179,26 +215,18 @@ const CommuterBookingDetailsPage = () => {
           locationData.longitude;
 
         if (!lat || !lng) {
-          console.log("[v0] Invalid location data received - no coordinates");
           return;
         }
 
-        // Check if this location update is for our booking's driver
+        // Check if this location update is for any of our booking's drivers
+        const locationDriverId = locationData.driverId?.toString
+          ? locationData.driverId.toString()
+          : locationData.driverId;
         const isOurDriver =
-          locationData.driverId === driverId ||
-          locationData.driverId === booking.b2cPartnerId?._id ||
-          locationData.driverId === booking.b2cPartnerId ||
+          driverIdSet.has(locationDriverId) ||
           locationData.bookingId === booking._id ||
-          locationData.tripId === booking.linkedTrip;
-
-        console.log(
-          "[v0] Is our driver:",
-          isOurDriver,
-          "locationData.driverId:",
-          locationData.driverId,
-          "our driverId:",
-          driverId,
-        );
+          locationData.tripId === booking.linkedTrip ||
+          locationData.tripId === booking.linkedReturnTrip;
 
         if (isOurDriver || !locationData.driverId) {
           setDriverLocation({
@@ -207,7 +235,6 @@ const CommuterBookingDetailsPage = () => {
             lastUpdate: Date.now(),
           });
           setIsDriverOnline(true);
-          console.log("[v0] Updated driver location:", lat, lng);
         }
       };
 
@@ -231,19 +258,37 @@ const CommuterBookingDetailsPage = () => {
       socket.socket.emit("join_booking_room", booking._id);
       socket.socket.emit("join-booking-room", booking._id);
 
-      // Get the driver ID based on isSelfDriver flag
+      // CRITICAL: For ROUND_TRIP bookings, determine which driver to track
+      // The correct driver depends on which trip (outbound or return) is currently active
       let driverId;
-      if (booking.isSelfDriver) {
-        // When isSelfDriver is true, the partner is driving, use b2cPartnerId
-        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
-        console.log(
-          "[v0] Tracking self-driver (B2C Partner) with ID:",
-          driverId,
-        );
+
+      if (booking.bookingType === "ROUND_TRIP") {
+        // For ROUND_TRIP, use the most relevant driver ID
+        // The API will determine which trip is actually in progress
+        if (booking.returnDriverId && !booking.returnIsSelfDriver) {
+          driverId = booking.returnDriverId?._id || booking.returnDriverId;
+        } else if (booking.returnIsSelfDriver && booking.b2cPartnerId) {
+          driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+        } else if (booking.outboundIsSelfDriver && booking.b2cPartnerId) {
+          driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+        } else if (booking.outboundDriverId) {
+          driverId = booking.outboundDriverId?._id || booking.outboundDriverId;
+        } else {
+          driverId =
+            booking.assignedDriverId?._id ||
+            booking.assignedDriverId ||
+            booking.b2cPartnerId?._id ||
+            booking.b2cPartnerId;
+        }
       } else {
-        // When isSelfDriver is false, use assignedDriverId (from b2cpartnerdrivers table)
-        driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
-        console.log("[v0] Tracking assigned driver with ID:", driverId);
+        // ONE_WAY trip - use the standard logic
+        if (booking.isSelfDriver) {
+          // When isSelfDriver is true, the partner is driving, use b2cPartnerId
+          driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+        } else {
+          // When isSelfDriver is false, use assignedDriverId (from b2cpartnerdrivers table)
+          driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
+        }
       }
 
       // Request current driver location via socket
@@ -252,7 +297,6 @@ const CommuterBookingDetailsPage = () => {
           driverId,
           bookingId: booking._id,
         });
-        console.log("[v0] Requested driver location for:", driverId);
       }
     }
 
@@ -264,68 +308,71 @@ const CommuterBookingDetailsPage = () => {
   const fetchDriverLocationFromAPI = async () => {
     if (!booking) return;
 
-    // Get the driver ID based on isSelfDriver flag
+    // CRITICAL: For ROUND_TRIP bookings, determine which driver to track
     let driverId;
-    if (booking.isSelfDriver) {
-      driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
-      console.log(
-        "[v0] fetchDriverLocationFromAPI - self-driver mode, using b2cPartnerId:",
-        driverId,
-      );
+
+    if (booking.bookingType === "ROUND_TRIP") {
+      // For ROUND_TRIP, use the most relevant driver ID
+      if (booking.returnDriverId && !booking.returnIsSelfDriver) {
+        driverId = booking.returnDriverId?._id || booking.returnDriverId;
+      } else if (booking.returnIsSelfDriver && booking.b2cPartnerId) {
+        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+      } else if (booking.outboundIsSelfDriver && booking.b2cPartnerId) {
+        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+      } else if (booking.outboundDriverId) {
+        driverId = booking.outboundDriverId?._id || booking.outboundDriverId;
+      } else {
+        driverId =
+          booking.assignedDriverId?._id ||
+          booking.assignedDriverId ||
+          booking.b2cPartnerId?._id ||
+          booking.b2cPartnerId;
+      }
     } else {
-      driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
-      console.log(
-        "[v0] fetchDriverLocationFromAPI - assigned driver mode, using assignedDriverId:",
-        driverId,
-      );
+      // ONE_WAY trip
+      if (booking.isSelfDriver) {
+        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
+      } else {
+        driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
+      }
     }
 
     if (!driverId) {
-      console.log("[v0] No driver ID found for tracking");
       return;
     }
 
     try {
-      console.log(
-        "[v0] Fetching driver location from API for driverId:",
-        driverId,
-        "bookingId:",
-        booking._id,
-      );
       // Pass bookingId to ensure we get the correct trip for this specific booking
       const response = await commuterBookingAPI.getDriverLocation(
         driverId,
         booking._id,
       );
-      console.log("[v0] Driver location API response:", response);
 
-      if (response.success && response.data?.location) {
-        const locationData = response.data.location;
-        const lat = locationData.latitude || locationData.lat;
-        const lng = locationData.longitude || locationData.lng;
-
-        if (lat && lng) {
-          console.log("[v0] Setting driver location from API:", lat, lng);
-          setDriverLocation({
-            lat: lat,
-            lng: lng,
-            lastUpdate: Date.now(),
-          });
-          setIsDriverOnline(true);
-        } else {
-          console.log(
-            "[v0] API returned location without valid coordinates:",
-            locationData,
-          );
+      if (response.success && response.data) {
+        // CRITICAL: Check if tracking is allowed based on booking status
+        // If trackingAllowed is false, booking is not ACCEPTED yet
+        if (response.data.trackingAllowed === false) {
+          setIsDriverOnline(false);
+          return;
         }
-      } else {
-        console.log(
-          "[v0] API response indicates no location available:",
-          response.data?.message,
-        );
+
+        if (response.data.location) {
+          const locationData = response.data.location;
+          const lat = locationData.latitude || locationData.lat;
+          const lng = locationData.longitude || locationData.lng;
+
+          if (lat && lng) {
+            setDriverLocation({
+              lat: lat,
+              lng: lng,
+              lastUpdate: Date.now(),
+            });
+            setIsDriverOnline(true);
+          }
+        }
       }
     } catch (err) {
-      console.error("[v0] Error fetching driver location from API:", err);
+      console.error("Error fetching driver location from API:", err);
     }
   };
 
@@ -829,24 +876,61 @@ const CommuterBookingDetailsPage = () => {
 
         {/* Action Buttons */}
         <div className="cbdp-actions">
-          {["CONFIRMED", "ACCEPTED", "ACTIVE", "IN_PROGRESS"].includes(
-            booking.bookingStatus,
-          ) && (
-            <button className="cbdp-btn-track" onClick={handleTrackDriver}>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              {showTracking ? "Tracking Active..." : "Track Driver"}
-            </button>
-          )}
+          {/* CRITICAL: Track Driver button visibility:
+                      1. Booking must be ACCEPTED or IN_PROGRESS (not PENDING, CONFIRMED, or COMPLETED)
+                      2. Trip must be IN_PROGRESS - checked via multiple sources:
+                         - outboundTripStatus/returnTripStatus fields
+                         - hasActiveTripInProgress flag (computed by backend from actual trip data)
+                      - For ONE_WAY: Show only if outboundTripStatus is IN_PROGRESS
+                      - For ROUND_TRIP: Show if outboundTripStatus OR returnTripStatus is IN_PROGRESS */}
+          {(() => {
+            // First check: Booking must be ACCEPTED or IN_PROGRESS status
+            // PENDING/CONFIRMED means waiting for partner acceptance - no tracking yet
+            // COMPLETED means all trips done - no tracking needed
+            const bookingIsTrackable = ["ACCEPTED", "IN_PROGRESS"].includes(
+              booking.bookingStatus,
+            );
+
+            if (!bookingIsTrackable) {
+              return null; // Don't show track button if booking not accepted/in_progress
+            }
+
+            // Second check: At least one trip must be IN_PROGRESS
+            // Check via booking-level fields AND backend-computed hasActiveTripInProgress
+            const outboundStatus = booking.outboundTripStatus || "SCHEDULED";
+            const returnStatus = booking.returnTripStatus || "SCHEDULED";
+            const isRoundTrip = booking.bookingType === "ROUND_TRIP";
+
+            // Show track button ONLY when trip is IN_PROGRESS
+            // NOT before trip starts (SCHEDULED) and NOT after trip completes (COMPLETED)
+            const outboundInProgress = outboundStatus === "IN_PROGRESS";
+            const returnInProgress =
+              isRoundTrip && returnStatus === "IN_PROGRESS";
+
+            // CRITICAL: Also check hasActiveTripInProgress which is computed by backend
+            // from the actual trip data (more reliable than booking-level fields)
+            const showTrack =
+              outboundInProgress ||
+              returnInProgress ||
+              booking.hasActiveTripInProgress;
+
+            return showTrack ? (
+              <button className="cbdp-btn-track" onClick={handleTrackDriver}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {showTracking ? "Tracking Active..." : "Track Driver"}
+              </button>
+            ) : null;
+          })()}
           {["PENDING", "CONFIRMED", "ACCEPTED"].includes(
             booking.bookingStatus,
           ) && (
@@ -1138,6 +1222,6 @@ const CommuterBookingDetailsPage = () => {
       <Footer />
     </div>
   );
-};;
+};
 
 export default CommuterBookingDetailsPage;

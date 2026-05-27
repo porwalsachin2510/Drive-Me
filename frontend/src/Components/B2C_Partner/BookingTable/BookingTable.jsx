@@ -62,13 +62,73 @@ function BookingTable() {
   };
 
   const getDriverInfo = (booking) => {
-    if (booking.isSelfDriver) {
-      return { name: "Self-Driving", badge: "self-driver" };
+    // For ROUND_TRIP bookings, return both outbound and return driver info
+    if (booking.bookingType === "ROUND_TRIP") {
+      // Get outbound driver name - check populated field, then fallback to name fields
+      let outboundDriver = "Not Assigned";
+      if (booking.outboundIsSelfDriver) {
+        outboundDriver = "Self-Driving";
+      } else if (booking.outboundDriverName) {
+        outboundDriver = booking.outboundDriverName;
+      } else if (
+        booking.outboundDriverId?.name ||
+        booking.outboundDriverId?.fullName
+      ) {
+        outboundDriver =
+          booking.outboundDriverId?.name || booking.outboundDriverId?.fullName;
+      } else if (booking.driverName) {
+        outboundDriver = booking.driverName;
+      }
+
+      // Get return driver name - check populated field, then fallback to name fields
+      let returnDriver = "Not Assigned";
+      if (booking.returnIsSelfDriver) {
+        returnDriver = "Self-Driving";
+      } else if (booking.returnDriverName) {
+        returnDriver = booking.returnDriverName;
+      } else if (
+        booking.returnDriverId?.name ||
+        booking.returnDriverId?.fullName
+      ) {
+        returnDriver =
+          booking.returnDriverId?.name || booking.returnDriverId?.fullName;
+      }
+
+      return {
+        isRoundTrip: true,
+        outbound: {
+          name: outboundDriver,
+          badge: booking.outboundIsSelfDriver
+            ? "self-driver"
+            : outboundDriver !== "Not Assigned"
+              ? "assigned-driver"
+              : "",
+          time: booking.outboundTripTime || "N/A",
+        },
+        return: {
+          name: returnDriver,
+          badge: booking.returnIsSelfDriver
+            ? "self-driver"
+            : returnDriver !== "Not Assigned"
+              ? "assigned-driver"
+              : "",
+          time: booking.returnTripTime || "N/A",
+        },
+      };
     }
-    if (booking.driverName) {
-      return { name: booking.driverName, badge: "assigned-driver" };
+
+    // For ONE_WAY bookings, return single driver info
+    if (booking.isSelfDriver || booking.outboundIsSelfDriver) {
+      return { isRoundTrip: false, name: "Self-Driving", badge: "self-driver" };
     }
-    return { name: "Not Assigned", badge: "" };
+    if (booking.outboundDriverName || booking.driverName) {
+      return {
+        isRoundTrip: false,
+        name: booking.outboundDriverName || booking.driverName,
+        badge: "assigned-driver",
+      };
+    }
+    return { isRoundTrip: false, name: "Not Assigned", badge: "" };
   };
 
   const formatDate = (dateString) => {
@@ -450,20 +510,55 @@ function BookingTable() {
                       </div>
                     </td>
                     <td className="b2c-td-driver">
-                      <div className="b2c-driver-info">
-                        <span className="b2c-driver-name">
-                          {driverInfo.name}
-                        </span>
-                        {driverInfo.badge && (
-                          <span
-                            className={`b2c-driver-badge ${driverInfo.badge}`}
-                          >
-                            {driverInfo.badge === "self-driver"
-                              ? "Self-Driving"
-                              : "Assigned Driver"}
+                      {driverInfo.isRoundTrip ? (
+                        <div className="b2c-driver-info b2c-driver-roundtrip">
+                          <div className="b2c-driver-trip-section">
+                            <span className="b2c-trip-label">
+                              Outbound ({driverInfo.outbound.time}):
+                            </span>
+                            <span className="b2c-driver-name">
+                              {driverInfo.outbound.name}
+                            </span>
+                            <span
+                              className={`b2c-driver-badge ${driverInfo.outbound.badge}`}
+                            >
+                              {driverInfo.outbound.badge === "self-driver"
+                                ? "Self-Driving"
+                                : "Assigned Driver"}
+                            </span>
+                          </div>
+                          <div className="b2c-driver-trip-section b2c-driver-return">
+                            <span className="b2c-trip-label">
+                              Return ({driverInfo.return.time}):
+                            </span>
+                            <span className="b2c-driver-name">
+                              {driverInfo.return.name}
+                            </span>
+                            <span
+                              className={`b2c-driver-badge ${driverInfo.return.badge}`}
+                            >
+                              {driverInfo.return.badge === "self-driver"
+                                ? "Self-Driving"
+                                : "Assigned Driver"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="b2c-driver-info">
+                          <span className="b2c-driver-name">
+                            {driverInfo.name}
                           </span>
-                        )}
-                      </div>
+                          {driverInfo.badge && (
+                            <span
+                              className={`b2c-driver-badge ${driverInfo.badge}`}
+                            >
+                              {driverInfo.badge === "self-driver"
+                                ? "Self-Driving"
+                                : "Assigned Driver"}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td className="b2c-td-seats">
                       <span className="b2c-seats-badge">

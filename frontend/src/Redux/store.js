@@ -13,6 +13,7 @@ import bookingReducer from "./slices/bookingSlice"
 import notificationReducer from "./slices/notificationSlice"
 import corporateEmployeeReducer from "./slices/corporateEmployeeSlice"
 import b2bPartnerReducer from "./slices/b2bPartnerSlice"
+import b2cPartnerReducer from "./slices/b2cPartnerSlice"
 import commuterBookingReducer from "./slices/commuterBookingSlice"
 import adminDashboardReducer from "./slices/adminDashboardSlice"
 import commuterReducer from "./slices/commuterSlice"
@@ -36,6 +37,7 @@ export const store = configureStore({
         notifications: notificationReducer,
         corporateEmployee: corporateEmployeeReducer,
         b2bPartner: b2bPartnerReducer,
+        b2cPartner: b2cPartnerReducer,
         commuterBooking: commuterBookingReducer,
         adminDashboard: adminDashboardReducer,
         commuter: commuterReducer,

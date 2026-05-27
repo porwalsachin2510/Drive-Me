@@ -20,6 +20,7 @@ import AdminNegotiation from "../models/AdminNegotiation.js";
 import EMIPayment from "../models/EMIPayment.js";
 import { uploadToCloudinary } from "../Config/Cloudinary.js";
 import { createNotification, sendRealTimeNotification } from "../Services/notificationService.js";
+import { broadcastVehicleAvailabilityChange } from "../Services/socketService.js";
 import { creditAdminNegotiationCommission } from "./walletController.js";
 
 // Get all users for admin
@@ -30,7 +31,7 @@ export const getAllUsers = async (req, res) => {
 
         if (role) query.role = role;
         if (status) query.status = status;
-        
+
         if (search) {
             query.$or = [
                 { fullName: { $regex: search, $options: 'i' } },
@@ -134,7 +135,7 @@ export const suspendUser = async (req, res) => {
         }
         const user = await User.findByIdAndUpdate(
             userId,
-            { 
+            {
                 status: "SUSPENDED",
                 suspendedAt: suspendedAt,
                 suspendedBy: req.userId,
@@ -215,14 +216,14 @@ export const suspendUser = async (req, res) => {
 export const activateUser = async (req, res) => {
     try {
         const { userId } = req.params;
-        
+
         const { message } = req.body; // Optional message from admin
 
         const previousSuspensionReason = await User.findById(userId).select('suspensionReason').lean();
 
         const user = await User.findByIdAndUpdate(
             userId,
-            { 
+            {
                 status: "ACTIVE",
                 activatedAt: new Date(),
                 activatedBy: req.userId,
@@ -297,7 +298,7 @@ export const activateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
     try {
         const { userId } = req.params;
-        
+
         const user = await User.findByIdAndDelete(userId);
 
         if (!user) {
@@ -366,7 +367,7 @@ export const editUser = async (req, res) => {
 export const getUserDetails = async (req, res) => {
     try {
         const { userId } = req.params;
-        
+
         const user = await User.findById(userId)
             .select('-password')
             .populate('companyId', 'fullName companyName email');
@@ -400,7 +401,7 @@ export const getUserDetails = async (req, res) => {
             error: error.message,
         });
     }
-}; 
+};
 
 // Get B2C providers for admin
 export const getB2CProviders = async (req, res) => {
@@ -409,7 +410,7 @@ export const getB2CProviders = async (req, res) => {
         const query = { role: "B2C_PARTNER" };
 
         if (status) query.status = status;
-        
+
         if (search) {
             query.$or = [
                 { fullName: { $regex: search, $options: 'i' } },
@@ -499,7 +500,7 @@ export const suspendB2CProvider = async (req, res) => {
         }
         const provider = await User.findOneAndUpdate(
             { _id: providerId, role: "B2C_PARTNER" },
-            { 
+            {
                 status: "SUSPENDED",
                 suspendedAt: suspendedAt,
                 suspendedBy: req.userId,
@@ -571,7 +572,7 @@ export const activateB2CProvider = async (req, res) => {
         const previousSuspensionReason = await User.findById(providerId).select('suspensionReason').lean();
         const provider = await User.findOneAndUpdate(
             { _id: providerId, role: "B2C_PARTNER" },
-            { 
+            {
                 status: "ACTIVE",
                 activatedAt: new Date(),
                 activatedBy: req.userId,
@@ -846,7 +847,7 @@ export const getTransactions = async (req, res) => {
 export const approvePayout = async (req, res) => {
     try {
         const { payoutId } = req.params;
-        
+
         const payout = await Transaction.findByIdAndUpdate(
             payoutId,
             {
@@ -890,7 +891,7 @@ export const rejectPayout = async (req, res) => {
     try {
         const { payoutId } = req.params;
         const { reason } = req.body;
-        
+
         const payout = await Transaction.findByIdAndUpdate(
             payoutId,
             {
@@ -928,7 +929,7 @@ export const rejectPayout = async (req, res) => {
 export const completePayout = async (req, res) => {
     try {
         const { payoutId } = req.params;
-        
+
         const payout = await Transaction.findByIdAndUpdate(
             payoutId,
             {
@@ -984,9 +985,9 @@ export const getFraudAlerts = async (req, res) => {
                 { 'metadata.ipAddress': { $exists: true } }
             ]
         })
-        .sort({ createdAt: -1 })
-        .limit(Number.parseInt(limit))
-        .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+            .sort({ createdAt: -1 })
+            .limit(Number.parseInt(limit))
+            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
         const total = await Transaction.countDocuments({
             $or: [
@@ -1124,9 +1125,9 @@ export const getSystemLogs = async (req, res) => {
                 { status: 'INFO' }
             ]
         })
-        .sort({ createdAt: -1 })
-        .limit(Number.parseInt(limit))
-        .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+            .sort({ createdAt: -1 })
+            .limit(Number.parseInt(limit))
+            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
         const total = await Transaction.countDocuments({
             $or: [
@@ -1234,8 +1235,8 @@ export const getCustomReports = async (req, res) => {
         const reports = await Transaction.find({
             category: 'REPORT'
         })
-        .sort({ createdAt: -1 })
-        .limit(50);
+            .sort({ createdAt: -1 })
+            .limit(50);
 
         res.status(200).json({
             success: true,
@@ -1331,9 +1332,9 @@ export const getCommMessages = async (req, res) => {
             category: 'COMMUNICATION',
             ...query
         })
-        .sort({ createdAt: -1 })
-        .limit(Number.parseInt(limit) * 1)
-        .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+            .sort({ createdAt: -1 })
+            .limit(Number.parseInt(limit) * 1)
+            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
         // Get total count for pagination
         const totalMessages = await Transaction.countDocuments({
@@ -1449,7 +1450,7 @@ export const getCommConfig = async (req, res) => {
 export const sendWhatsAppMessage = async (req, res) => {
     try {
         const { recipientNumber, message, templateId } = req.body;
-        
+
         // Validate required fields
         if (!recipientNumber || !message) {
             return res.status(400).json({
@@ -1537,7 +1538,7 @@ export const sendWhatsAppMessage = async (req, res) => {
 
     } catch (error) {
         console.error("[v0] Error sending WhatsApp message:", error);
-        
+
         // Log failed message attempt
         try {
             await Transaction.create({
@@ -1953,7 +1954,7 @@ export const sendSMS = async (req, res) => {
 export const sendEmail = async (req, res) => {
     try {
         const { recipientEmail, subject, body, templateId } = req.body;
-        
+
         // Validate required fields
         if (!recipientEmail || !subject || !body) {
             return res.status(400).json({
@@ -1995,7 +1996,7 @@ export const sendEmail = async (req, res) => {
 
         // Real email service integration using Nodemailer with SMTP
         const nodemailer = require('nodemailer');
-        
+
         // Get email configuration from environment variables
         const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
         const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
@@ -2073,7 +2074,7 @@ export const sendEmail = async (req, res) => {
 
     } catch (error) {
         console.error("[v0] Error sending email:", error);
-        
+
         // Log failed email attempt
         try {
             await Transaction.create({
@@ -2109,7 +2110,7 @@ export const updateCommConfig = async (req, res) => {
     try {
         const { type } = req.params;
         const config = req.body;
-        
+
         // Validate configuration type
         if (!type || !['email', 'whatsapp'].includes(type)) {
             return res.status(400).json({
@@ -2167,7 +2168,7 @@ export const updateCommConfig = async (req, res) => {
 
     } catch (error) {
         console.error("[v0] Error updating config:", error);
-        
+
         // Log failed configuration update attempt
         try {
             await Transaction.create({
@@ -2204,7 +2205,7 @@ async function getPreviousConfig(type) {
             category: "SYSTEM_CONFIG",
             configType: type.toUpperCase()
         }).sort({ createdAt: -1 });
-        
+
         return lastConfig?.configData || {};
     } catch (error) {
         console.error(`[v0] Error fetching previous ${type} config:`, error);
@@ -2218,28 +2219,28 @@ async function updateEmailConfig(config) {
         // Update email configuration in environment or config store
         const fs = require('fs').promises;
         const path = require('path');
-        
+
         // Create config directory if it doesn't exist
         const configDir = path.join(process.cwd(), 'config');
         await fs.mkdir(configDir, { recursive: true });
-        
+
         // Update email config file
         const emailConfigPath = path.join(configDir, 'email.json');
         const currentEmailConfig = await fs.readFile(emailConfigPath, 'utf8')
             .then(data => JSON.parse(data))
             .catch(() => ({}));
-        
+
         const updatedEmailConfig = { ...currentEmailConfig, ...config };
         await fs.writeFile(emailConfigPath, JSON.stringify(updatedEmailConfig, null, 2));
-        
+
         console.log("[v0] Email configuration saved to file:", updatedEmailConfig);
-        
+
         // Update environment variables if provided
         if (config.smtpHost) process.env.SMTP_HOST = config.smtpHost;
         if (config.smtpPort) process.env.SMTP_PORT = config.smtpPort.toString();
         if (config.smtpUser) process.env.SMTP_USER = config.smtpUser;
         if (config.fromEmail) process.env.FROM_EMAIL = config.fromEmail;
-        
+
     } catch (error) {
         console.error("[v0] Error updating email config:", error);
         throw error;
@@ -2252,27 +2253,27 @@ async function updateWhatsAppConfig(config) {
         // Update WhatsApp configuration in environment or config store
         const fs = require('fs').promises;
         const path = require('path');
-        
+
         // Create config directory if it doesn't exist
         const configDir = path.join(process.cwd(), 'config');
         await fs.mkdir(configDir, { recursive: true });
-        
+
         // Update WhatsApp config file
         const whatsappConfigPath = path.join(configDir, 'whatsapp.json');
         const currentWhatsAppConfig = await fs.readFile(whatsappConfigPath, 'utf8')
             .then(data => JSON.parse(data))
             .catch(() => ({}));
-        
+
         const updatedWhatsAppConfig = { ...currentWhatsAppConfig, ...config };
         await fs.writeFile(whatsappConfigPath, JSON.stringify(updatedWhatsAppConfig, null, 2));
-        
+
         console.log("[v0] WhatsApp configuration saved to file:", updatedWhatsAppConfig);
-        
+
         // Update environment variables if provided
         if (config.accountSid) process.env.TWILIO_ACCOUNT_SID = config.accountSid;
         if (config.authToken) process.env.TWILIO_AUTH_TOKEN = config.authToken;
         if (config.phoneNumber) process.env.TWILIO_WHATSAPP_NUMBER = config.phoneNumber;
-        
+
     } catch (error) {
         console.error("[v0] Error updating WhatsApp config:", error);
         throw error;
@@ -2282,77 +2283,77 @@ async function updateWhatsAppConfig(config) {
 // Get ad campaigns for admin
 // Get public active campaigns for homepage (no auth required)
 export const getPublicActiveCampaigns = async (req, res) => {
-  try {
-    const { placement } = req.query;
-    const now = new Date();
-    
-    const query = {
-      status: 'active',
-      startDate: { $lte: now },
-      endDate: { $gte: now }
-    };
-    
-    if (placement) query.placement = placement;
-    
-    const campaigns = await Campaign.find(query)
-      .select('title provider placement size imageUrl targetUrl description startDate endDate')
-      .sort({ createdAt: -1 })
-      .limit(10);
-    
-    // Views are now tracked separately via trackCampaignView endpoint
-    // This provides more accurate per-impression tracking
-    
-    res.status(200).json({
-      success: true,
-      campaigns
-    });
-  } catch (error) {
-    console.error("Error fetching public campaigns:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching campaigns",
-      error: error.message
-    });
-  }
+    try {
+        const { placement } = req.query;
+        const now = new Date();
+
+        const query = {
+            status: 'active',
+            startDate: { $lte: now },
+            endDate: { $gte: now }
+        };
+
+        if (placement) query.placement = placement;
+
+        const campaigns = await Campaign.find(query)
+            .select('title provider placement size imageUrl targetUrl description startDate endDate')
+            .sort({ createdAt: -1 })
+            .limit(10);
+
+        // Views are now tracked separately via trackCampaignView endpoint
+        // This provides more accurate per-impression tracking
+
+        res.status(200).json({
+            success: true,
+            campaigns
+        });
+    } catch (error) {
+        console.error("Error fetching public campaigns:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching campaigns",
+            error: error.message
+        });
+    }
 };
 
 // Track campaign click
 export const trackCampaignClick = async (req, res) => {
-  try {
-    const { campaignId } = req.params;
-    
-    await Campaign.findByIdAndUpdate(campaignId, {
-      $inc: { clicks: 1 }
-    });
-    
-    res.status(200).json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+    try {
+        const { campaignId } = req.params;
+
+        await Campaign.findByIdAndUpdate(campaignId, {
+            $inc: { clicks: 1 }
+        });
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 // Track campaign view/impression (separate from fetch)
 export const trackCampaignView = async (req, res) => {
-  try {
-    const { campaignId } = req.params;
-    
-    await Campaign.findByIdAndUpdate(campaignId, {
-      $inc: { views: 1 }
-    });
-    
-    res.status(200).json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+    try {
+        const { campaignId } = req.params;
+
+        await Campaign.findByIdAndUpdate(campaignId, {
+            $inc: { views: 1 }
+        });
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 export const getAdCampaigns = async (req, res) => {
-  try {
-  const { status, page = 1, limit = 20, provider, placement } = req.query;
-  const query = {};
-  if (status && status !== 'all') query.status = status;
-  if (provider) query.provider = provider;
-  if (placement) query.placement = placement;
+    try {
+        const { status, page = 1, limit = 20, provider, placement } = req.query;
+        const query = {};
+        if (status && status !== 'all') query.status = status;
+        if (provider) query.provider = provider;
+        if (placement) query.placement = placement;
 
         const skip = (Number.parseInt(page) - 1) * Number.parseInt(limit);
         const [campaigns, totalCampaigns] = await Promise.all([
@@ -2426,115 +2427,115 @@ export const getAdStats = async (req, res) => {
 
 // Create ad campaign
 export const createAdCampaign = async (req, res) => {
-try {
-const { title, provider, placement, size, targetUrl, description, budget, dailyBudget, costPerClick, costPerView, startDate, endDate, status, targetAudience } = req.body;
+    try {
+        const { title, provider, placement, size, targetUrl, description, budget, dailyBudget, costPerClick, costPerView, startDate, endDate, status, targetAudience } = req.body;
 
-if (!title || !startDate || !endDate) {
-return res.status(400).json({ success: false, message: "Title, start date and end date are required" });
-}
+        if (!title || !startDate || !endDate) {
+            return res.status(400).json({ success: false, message: "Title, start date and end date are required" });
+        }
 
-// Handle image upload to Cloudinary
-let imageUrl = '';
-if (req.file) {
-  try {
-    const uploadResult = await uploadToCloudinary(req.file, 'driveme/campaigns', 'campaign');
-    imageUrl = uploadResult.secure_url;
-    console.log("[v0] Campaign image uploaded to Cloudinary:", imageUrl);
-  } catch (uploadError) {
-    console.error("[v0] Error uploading campaign image:", uploadError);
-    return res.status(400).json({
-      success: false,
-      message: "Error uploading campaign image",
-      error: uploadError.message
-    });
-  }
-}
+        // Handle image upload to Cloudinary
+        let imageUrl = '';
+        if (req.file) {
+            try {
+                const uploadResult = await uploadToCloudinary(req.file, 'driveme/campaigns', 'campaign');
+                imageUrl = uploadResult.secure_url;
+                console.log("[v0] Campaign image uploaded to Cloudinary:", imageUrl);
+            } catch (uploadError) {
+                console.error("[v0] Error uploading campaign image:", uploadError);
+                return res.status(400).json({
+                    success: false,
+                    message: "Error uploading campaign image",
+                    error: uploadError.message
+                });
+            }
+        }
 
-const campaign = new Campaign({
-title,
-provider: provider || '',
-placement: placement || 'banner',
-size: size || '728x90',
-imageUrl: imageUrl,
-targetUrl: targetUrl || '',
-description: description || '',
-budget: budget || 0,
-dailyBudget: dailyBudget || 0,
-costPerClick: costPerClick || 0,
-costPerView: costPerView || 0,
-startDate,
-endDate,
-status: status || 'draft',
-targetAudience: targetAudience || 'all',
-createdBy: req.userId || req.user?._id || req.user?.id,
-views: 0,
-clicks: 0,
-revenue: 0,
-});
+        const campaign = new Campaign({
+            title,
+            provider: provider || '',
+            placement: placement || 'banner',
+            size: size || '728x90',
+            imageUrl: imageUrl,
+            targetUrl: targetUrl || '',
+            description: description || '',
+            budget: budget || 0,
+            dailyBudget: dailyBudget || 0,
+            costPerClick: costPerClick || 0,
+            costPerView: costPerView || 0,
+            startDate,
+            endDate,
+            status: status || 'draft',
+            targetAudience: targetAudience || 'all',
+            createdBy: req.userId || req.user?._id || req.user?.id,
+            views: 0,
+            clicks: 0,
+            revenue: 0,
+        });
 
-await campaign.save();
+        await campaign.save();
 
-res.status(201).json({
-success: true,
-message: "Campaign created successfully",
-campaign
-});
-} catch (error) {
-console.error("Error creating campaign:", error);
-res.status(500).json({
-success: false,
-message: "Error creating campaign",
-error: error.message,
-});
-}
+        res.status(201).json({
+            success: true,
+            message: "Campaign created successfully",
+            campaign
+        });
+    } catch (error) {
+        console.error("Error creating campaign:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error creating campaign",
+            error: error.message,
+        });
+    }
 };
 
 // Update ad campaign
 export const updateAdCampaign = async (req, res) => {
-try {
-const { campaignId } = req.params;
-const allowedFields = ['title', 'provider', 'placement', 'size', 'targetUrl', 'description', 'budget', 'dailyBudget', 'costPerClick', 'costPerView', 'startDate', 'endDate', 'status', 'targetAudience'];
-const updateData = {};
-for (const field of allowedFields) {
-if (req.body[field] !== undefined) {
-updateData[field] = req.body[field];
-}
-}
+    try {
+        const { campaignId } = req.params;
+        const allowedFields = ['title', 'provider', 'placement', 'size', 'targetUrl', 'description', 'budget', 'dailyBudget', 'costPerClick', 'costPerView', 'startDate', 'endDate', 'status', 'targetAudience'];
+        const updateData = {};
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        }
 
-// Handle image upload to Cloudinary if new image is provided
-if (req.file) {
-  try {
-    const uploadResult = await uploadToCloudinary(req.file, 'driveme/campaigns', 'campaign');
-    updateData.imageUrl = uploadResult.secure_url;
-    console.log("[v0] Campaign image updated in Cloudinary:", updateData.imageUrl);
-  } catch (uploadError) {
-    console.error("[v0] Error uploading campaign image:", uploadError);
-    return res.status(400).json({
-      success: false,
-      message: "Error uploading campaign image",
-      error: uploadError.message
-    });
-  }
-}
+        // Handle image upload to Cloudinary if new image is provided
+        if (req.file) {
+            try {
+                const uploadResult = await uploadToCloudinary(req.file, 'driveme/campaigns', 'campaign');
+                updateData.imageUrl = uploadResult.secure_url;
+                console.log("[v0] Campaign image updated in Cloudinary:", updateData.imageUrl);
+            } catch (uploadError) {
+                console.error("[v0] Error uploading campaign image:", uploadError);
+                return res.status(400).json({
+                    success: false,
+                    message: "Error uploading campaign image",
+                    error: uploadError.message
+                });
+            }
+        }
 
-const campaign = await Campaign.findByIdAndUpdate(campaignId, updateData, { new: true, runValidators: true });
-if (!campaign) {
-return res.status(404).json({ success: false, message: "Campaign not found" });
-}
+        const campaign = await Campaign.findByIdAndUpdate(campaignId, updateData, { new: true, runValidators: true });
+        if (!campaign) {
+            return res.status(404).json({ success: false, message: "Campaign not found" });
+        }
 
-res.status(200).json({
-success: true,
-message: "Campaign updated successfully",
-campaign
-});
-} catch (error) {
-console.error("Error updating campaign:", error);
-res.status(500).json({
-success: false,
-message: "Error updating campaign",
-error: error.message,
-});
-}
+        res.status(200).json({
+            success: true,
+            message: "Campaign updated successfully",
+            campaign
+        });
+    } catch (error) {
+        console.error("Error updating campaign:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error updating campaign",
+            error: error.message,
+        });
+    }
 };
 
 // Delete ad campaign
@@ -2744,7 +2745,7 @@ export const getUserSuggestedRoutes = async (req, res) => {
 export const approveSuggestedRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
-        
+
         const routeRequest = await RouteRequest.findByIdAndUpdate(
             routeId,
             { status: "APPROVED" },
@@ -2754,7 +2755,7 @@ export const approveSuggestedRoute = async (req, res) => {
         if (!routeRequest) {
             return res.status(404).json({ success: false, message: "Route request not found" });
         }
-        
+
         res.status(200).json({
             success: true,
             message: "Route approved successfully",
@@ -2775,7 +2776,7 @@ export const rejectSuggestedRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
         const { reason } = req.body;
-        
+
         const routeRequest = await RouteRequest.findByIdAndUpdate(
             routeId,
             { status: "REJECTED", providerResponse: reason || "Rejected by admin" },
@@ -2785,7 +2786,7 @@ export const rejectSuggestedRoute = async (req, res) => {
         if (!routeRequest) {
             return res.status(404).json({ success: false, message: "Route request not found" });
         }
-        
+
         res.status(200).json({
             success: true,
             message: "Route rejected successfully",
@@ -2992,11 +2993,11 @@ export const getB2CProvidersFromB2B = async (req, res) => {
 export const suspendB2BProvider = async (req, res) => {
     try {
         const { providerId } = req.params;
-        
+
         const provider = await User.findOneAndUpdate(
             { _id: providerId, role: { $in: ["B2B_PARTNER", "B2C_PARTNER"] } },
-            { 
-                status: "SUSPENDED", 
+            {
+                status: "SUSPENDED",
                 suspendedAt: new Date(),
                 suspendedBy: req.user?.id || null
             },
@@ -3006,7 +3007,7 @@ export const suspendB2BProvider = async (req, res) => {
         if (!provider) {
             return res.status(404).json({ success: false, message: "Provider not found" });
         }
-        
+
         res.status(200).json({
             success: true,
             message: `${provider.role === "B2B_PARTNER" ? "B2B" : "B2C"} provider suspended successfully`,
@@ -3026,11 +3027,11 @@ export const suspendB2BProvider = async (req, res) => {
 export const activateB2BProvider = async (req, res) => {
     try {
         const { providerId } = req.params;
-        
+
         const provider = await User.findOneAndUpdate(
             { _id: providerId, role: { $in: ["B2B_PARTNER", "B2C_PARTNER"] } },
-            { 
-                status: "ACTIVE", 
+            {
+                status: "ACTIVE",
                 activatedAt: new Date(),
                 activatedBy: req.user?.id || null
             },
@@ -3040,7 +3041,7 @@ export const activateB2BProvider = async (req, res) => {
         if (!provider) {
             return res.status(404).json({ success: false, message: "Provider not found" });
         }
-        
+
         res.status(200).json({
             success: true,
             message: `${provider.role === "B2B_PARTNER" ? "B2B" : "B2C"} provider activated successfully`,
@@ -3274,7 +3275,7 @@ export const getB2CRoutes = async (req, res) => {
 export const createB2CRoute = async (req, res) => {
     try {
         const routeData = req.body;
-        
+
         // Create actual route in database using B2CPartnerRoute schema
         const newRoute = new B2CPartnerRoute({
             b2cPartnerId: routeData.b2cPartnerId,
@@ -3303,12 +3304,12 @@ export const createB2CRoute = async (req, res) => {
                 calculatedMonthlyPrice: routeData.pricing?.monthlyPrice || 0
             }
         });
-        
+
         const savedRoute = await newRoute.save();
-        
+
         // Populate B2C partner information for response
         await savedRoute.populate('b2cPartnerId', 'fullName companyName');
-        
+
         // Format response for frontend compatibility
         const formattedRoute = {
             _id: savedRoute._id,
@@ -3336,9 +3337,9 @@ export const createB2CRoute = async (req, res) => {
             assignedVehicle: savedRoute.assignedVehicle,
             assignedDriver: savedRoute.assignedDriver
         };
-        
+
         console.log(`Successfully created B2C route: ${formattedRoute.name}`);
-        
+
         res.status(201).json({
             success: true,
             message: "B2C route created successfully",
@@ -3359,7 +3360,7 @@ export const updateB2CRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
         const updateData = req.body;
-        
+
         // Normalize status to match enum (capitalize first letter)
         if (updateData.status) {
             const statusMap = {
@@ -3372,7 +3373,7 @@ export const updateB2CRoute = async (req, res) => {
             };
             updateData.status = statusMap[updateData.status] || 'Active';
         }
-        
+
         // Update actual route in database - use b2cPartnerId (correct field name)
         const updatedRoute = await B2CPartnerRoute.findByIdAndUpdate(
             routeId,
@@ -3382,14 +3383,14 @@ export const updateB2CRoute = async (req, res) => {
             },
             { new: true, runValidators: true }
         ).populate('b2cPartnerId', 'fullName companyName companyLogo');
-        
+
         if (!updatedRoute) {
             return res.status(404).json({
                 success: false,
                 message: "Route not found"
             });
         }
-        
+
         // Format response - use correct field names from B2CPartnerRoute model
         const formattedRoute = {
             _id: updatedRoute._id,
@@ -3413,9 +3414,9 @@ export const updateB2CRoute = async (req, res) => {
             createdAt: updatedRoute.createdAt,
             updatedAt: updatedRoute.updatedAt
         };
-        
+
         console.log(`Successfully updated B2C route: ${formattedRoute.name}`);
-        
+
         res.status(200).json({
             success: true,
             message: "B2C route updated successfully",
@@ -3435,19 +3436,19 @@ export const updateB2CRoute = async (req, res) => {
 export const deleteB2CRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
-        
+
         // Delete actual route from database
         const deletedRoute = await B2CPartnerRoute.findByIdAndDelete(routeId);
-        
+
         if (!deletedRoute) {
             return res.status(404).json({
                 success: false,
                 message: "Route not found"
             });
         }
-        
+
         console.log(`Successfully deleted B2C route: ${deletedRoute.name}`);
-        
+
         res.status(200).json({
             success: true,
             message: "B2C route deleted successfully",
@@ -3543,7 +3544,7 @@ export const getB2CTags = async (req, res) => {
 export const createB2CTag = async (req, res) => {
     try {
         const { label, color, textColor, icon, description, category } = req.body;
-        
+
         if (!label) {
             return res.status(400).json({ success: false, message: "Tag label is required" });
         }
@@ -3565,7 +3566,7 @@ export const createB2CTag = async (req, res) => {
         });
 
         await newTag.save();
-        
+
         res.status(201).json({
             success: true,
             message: "B2C tag created successfully",
@@ -4109,12 +4110,14 @@ export const getB2CEarningsPayments = async (req, res) => {
                 { $match: { type: { $in: ['B2C_BOOKING', 'B2C_SUBSCRIPTION', 'B2C_TRIP_EARNING'] }, status: { $in: ['COMPLETED', 'PROCESSING'] } } },
                 { $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'provider' } },
                 { $unwind: { path: '$provider', preserveNullAndEmptyArrays: true } },
-                { $group: {
-                    _id: '$userId',
-                    providerName: { $first: { $ifNull: ['$provider.companyName', '$provider.fullName'] } },
-                    revenue: { $sum: '$amount' },
-                    bookings: { $sum: 1 }
-                }},
+                {
+                    $group: {
+                        _id: '$userId',
+                        providerName: { $first: { $ifNull: ['$provider.companyName', '$provider.fullName'] } },
+                        revenue: { $sum: '$amount' },
+                        bookings: { $sum: 1 }
+                    }
+                },
                 { $sort: { revenue: -1 } },
                 { $limit: 5 }
             ]),
@@ -4231,12 +4234,14 @@ export const getB2CPartnerEarnings = async (req, res) => {
         const transactionHistory = await B2CPassengerBooking.aggregate([
             { $match: { $or: [{ b2cPartnerId: partnerObjId }, { partnerId: partnerObjId }], bookingStatus: { $in: completedStatuses } } },
             { $sort: { createdAt: -1 } },
-            { $group: {
-                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                trips: { $sum: 1 },
-                totalAmount: { $sum: { $ifNull: ["$driverEarnings", "$paymentAmount"] } },
-                status: { $first: '$paymentStatus' }
-            }},
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    trips: { $sum: 1 },
+                    totalAmount: { $sum: { $ifNull: ["$driverEarnings", "$paymentAmount"] } },
+                    status: { $first: '$paymentStatus' }
+                }
+            },
             { $sort: { _id: -1 } },
             { $limit: 20 }
         ]);
@@ -4278,35 +4283,311 @@ export const getB2CPartnerEarnings = async (req, res) => {
 export const getB2CPartnerFleet = async (req, res) => {
     try {
         console.log("[v0] Fetching B2C fleet for partner:", req.userId);
-        
+
         // Fetch real vehicles from B2CPartnerVehicle collection
-        const vehicles = await B2CPartnerVehicle.find({ 
+        const vehicles = await B2CPartnerVehicle.find({
             b2cPartnerId: req.userId
         })
-        .select('vehicleType model year seatingCapacity licensePlate vehicleColor status images assignedDrivers assignedRoutes createdAt updatedAt features insuranceExpiry registrationExpiry')
-        .sort({ createdAt: -1 });
-        
-        const transformedVehicles = vehicles.map(vehicle => ({
-            ...vehicle._doc,
-            images: vehicle.images || [],
-            features: vehicle.features || [],
-            insuranceExpiry: vehicle.insuranceExpiry,
-            registrationExpiry: vehicle.registrationExpiry
-        }));
+            .select('vehicleType model year seatingCapacity licensePlate vehicleColor status availabilityStatus assignedSchedules images assignedDrivers assignedRoutes createdAt updatedAt features insuranceExpiry registrationExpiry lastAvailabilityUpdate')
+            .sort({ createdAt: -1 });
 
-        console.log("[v0] Transformed vehicles:", transformedVehicles.length);
+        // Get current time for availability calculation
+        const now = new Date();
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(now);
+        todayEnd.setHours(23, 59, 59, 999);
 
-        res.status(200).json({ 
-            success: true, 
+        // Fetch ALL trips for today to calculate vehicle availability windows
+        // Include bookedSeats to determine if trips have actual bookings
+        const allTodayTrips = await B2CPartnerTrip.find({
+            b2cPartnerId: req.userId,
+            tripDate: { $gte: today, $lte: todayEnd }
+        }).select('vehicleId tripDate startTime status fromLocation toLocation completedAt bookedSeats').sort({ startTime: 1 });
+
+        // Create maps for vehicle trips by status
+        const vehicleInProgressMap = new Map();
+        const vehicleScheduledMap = new Map();
+        const vehicleCompletedMap = new Map();
+
+        for (const trip of allTodayTrips) {
+            if (!trip.vehicleId) continue;
+            const vehicleId = trip.vehicleId.toString();
+
+            if (['COMPLETED', 'Completed', 'DONE', 'Done'].includes(trip.status)) {
+                if (!vehicleCompletedMap.has(vehicleId)) vehicleCompletedMap.set(vehicleId, []);
+                vehicleCompletedMap.get(vehicleId).push({ ...trip._doc, bookedSeats: trip.bookedSeats || 0 });
+            } else if (['SCHEDULED', 'Scheduled'].includes(trip.status)) {
+                if (!vehicleScheduledMap.has(vehicleId)) vehicleScheduledMap.set(vehicleId, []);
+                vehicleScheduledMap.get(vehicleId).push({ ...trip._doc, bookedSeats: trip.bookedSeats || 0 });
+            } else if (['IN_PROGRESS', 'In Progress', 'STARTED', 'Started'].includes(trip.status)) {
+                if (!vehicleInProgressMap.has(vehicleId)) vehicleInProgressMap.set(vehicleId, []);
+                vehicleInProgressMap.get(vehicleId).push({ ...trip._doc, bookedSeats: trip.bookedSeats || 0 });
+            }
+        }
+
+        // Get all active schedules for this partner to determine vehicle assignments
+        const activeSchedules = await B2CPartnerSchedule.find({
+            b2cPartnerId: req.userId,
+            isActive: true
+        }).populate('routeId', 'fromLocation toLocation');
+
+        // Create a map of vehicle assignments with detailed schedule info
+        const vehicleScheduleMap = new Map();
+
+        for (const schedule of activeSchedules) {
+            // Check tripTimes for vehicle assignments
+            if (schedule.tripTimes && schedule.tripTimes.length > 0) {
+                for (const tripTime of schedule.tripTimes) {
+                    if (tripTime.assignedVehicle) {
+                        const vehicleId = tripTime.assignedVehicle.toString();
+                        if (!vehicleScheduleMap.has(vehicleId)) {
+                            vehicleScheduleMap.set(vehicleId, []);
+                        }
+                        vehicleScheduleMap.get(vehicleId).push({
+                            scheduleId: schedule._id,
+                            scheduleName: schedule.scheduleName,
+                            routeName: schedule.routeId ? `${schedule.routeId.fromLocation} → ${schedule.routeId.toLocation}` : 'Unknown Route',
+                            departureTime: tripTime.departureTime,
+                            arrivalTime: tripTime.arrivalTime,
+                            tripType: tripTime.tripType || schedule.tripType,
+                            availableDays: schedule.availableDays
+                        });
+                    }
+                }
+            }
+
+            // Also check main assignedVehicle field
+            if (schedule.assignedVehicle) {
+                const vehicleId = schedule.assignedVehicle.toString();
+                if (!vehicleScheduleMap.has(vehicleId)) {
+                    vehicleScheduleMap.set(vehicleId, []);
+                }
+                // Check if this schedule isn't already added from tripTimes
+                const existing = vehicleScheduleMap.get(vehicleId);
+                const alreadyAdded = existing.some(s => s.scheduleId.toString() === schedule._id.toString());
+                if (!alreadyAdded) {
+                    vehicleScheduleMap.get(vehicleId).push({
+                        scheduleId: schedule._id,
+                        scheduleName: schedule.scheduleName,
+                        routeName: schedule.routeId ? `${schedule.routeId.fromLocation} → ${schedule.routeId.toLocation}` : 'Unknown Route',
+                        departureTime: schedule.departureTime,
+                        arrivalTime: schedule.arrivalTime,
+                        tripType: schedule.tripType,
+                        availableDays: schedule.availableDays
+                    });
+                }
+            }
+        }
+
+        // Helper to convert time string to minutes since midnight
+        const timeToMinutes = (timeStr) => {
+            if (!timeStr) return 0;
+            let hours, minutes;
+            if (timeStr.includes('AM') || timeStr.includes('PM')) {
+                const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                if (match) {
+                    hours = parseInt(match[1]);
+                    minutes = parseInt(match[2]);
+                    const period = match[3].toUpperCase();
+                    if (period === 'PM' && hours !== 12) hours += 12;
+                    if (period === 'AM' && hours === 12) hours = 0;
+                } else {
+                    return 0;
+                }
+            } else {
+                const parts = timeStr.split(':');
+                hours = parseInt(parts[0]);
+                minutes = parseInt(parts[1] || 0);
+            }
+            return hours * 60 + minutes;
+        };
+
+        const currentMinutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+        const BUFFER_MINUTES = 30;
+
+        const transformedVehicles = vehicles.map(vehicle => {
+            const vehicleObj = vehicle._doc;
+            const vehicleId = vehicle._id.toString();
+            const assignedScheduleDetails = vehicleScheduleMap.get(vehicleId) || [];
+
+            // Get trip status for this vehicle
+            const inProgressTrips = vehicleInProgressMap.get(vehicleId) || [];
+            const scheduledTrips = vehicleScheduledMap.get(vehicleId) || [];
+            const completedTrips = vehicleCompletedMap.get(vehicleId) || [];
+
+            // Sort by departure time
+            assignedScheduleDetails.sort((a, b) => {
+                const timeA = a.departureTime || '23:59';
+                const timeB = b.departureTime || '23:59';
+                return timeA.localeCompare(timeB);
+            });
+
+            // DYNAMIC AVAILABILITY CALCULATION based on today's trips
+            // FIXED: Only consider trips with actual bookings (bookedSeats > 0) as commitments
+            let calculatedAvailabilityStatus = 'available';
+            let availabilityMessage = 'Available';
+            let availabilityColor = 'green';
+            let availableUntilDisplay = null;
+            let nextTripTime = null;
+
+            // Check if vehicle is currently in a trip
+            if (inProgressTrips.length > 0) {
+                calculatedAvailabilityStatus = 'busy';
+                availabilityMessage = `In Trip: ${inProgressTrips[0].fromLocation} → ${inProgressTrips[0].toLocation}`;
+                availabilityColor = 'red';
+            } else {
+                // Find upcoming scheduled trips for TODAY that have actual bookings
+                // ONLY trips with bookedSeats > 0 should be considered as commitments
+                const upcomingTrips = scheduledTrips
+                    .filter(t => {
+                        const tripMinutes = timeToMinutes(t.startTime);
+                        const isFuture = tripMinutes > currentMinutesSinceMidnight;
+                        const hasBookings = t.bookedSeats && t.bookedSeats > 0;
+                        return isFuture && hasBookings;
+                    })
+                    .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+
+                // NOTE: We no longer treat schedules without bookings as commitments
+                // Schedules are only commitments if they have generated trips with bookedSeats > 0
+                // This allows partners to set themselves as "available" even with assigned schedules
+
+                // Find the next commitment (only from trips with actual bookings)
+                let nextCommitmentTime = null;
+                let nextCommitmentTimeStr = null;
+
+                if (upcomingTrips.length > 0) {
+                    nextCommitmentTime = timeToMinutes(upcomingTrips[0].startTime);
+                    nextCommitmentTimeStr = upcomingTrips[0].startTime;
+                }
+
+                if (nextCommitmentTime) {
+                    const minutesUntilCommitment = nextCommitmentTime - currentMinutesSinceMidnight;
+                    nextTripTime = nextCommitmentTimeStr;
+
+                    if (minutesUntilCommitment <= BUFFER_MINUTES) {
+                        // Commitment is within 30 minutes
+                        calculatedAvailabilityStatus = 'scheduled';
+                        availabilityMessage = `Next trip in ${minutesUntilCommitment}min`;
+                        availabilityColor = 'orange';
+                    } else {
+                        // Vehicle is available until 30 min before next commitment
+                        calculatedAvailabilityStatus = 'available';
+                        const availableUntilMinutes = nextCommitmentTime - BUFFER_MINUTES;
+                        const availableUntilHours = Math.floor(availableUntilMinutes / 60);
+                        const availableUntilMins = availableUntilMinutes % 60;
+                        const period = availableUntilHours >= 12 ? 'PM' : 'AM';
+                        const displayHours = availableUntilHours > 12 ? availableUntilHours - 12 : (availableUntilHours === 0 ? 12 : availableUntilHours);
+                        availableUntilDisplay = `${displayHours}:${String(availableUntilMins).padStart(2, '0')} ${period}`;
+                        availabilityMessage = `Available until ${availableUntilDisplay}`;
+                        availabilityColor = 'green';
+                    }
+                } else {
+                    // No upcoming trips with bookings today
+                    // But we should still show "Available until X:XX" if vehicle has SCHEDULES (for display purposes)
+                    if (vehicle.availabilityStatus === 'offline') {
+                        calculatedAvailabilityStatus = 'offline';
+                        availabilityMessage = 'Offline';
+                        availabilityColor = 'gray';
+                    } else {
+                        // Check if vehicle has upcoming SCHEDULES (not trips with bookings) to display availability window
+                        // Use both full day names and abbreviated day names for compatibility
+                        const fullDayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
+                        const shortDayName = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][now.getDay()];
+
+                        // Filter schedules that are active today and in the future
+                        const upcomingSchedules = assignedScheduleDetails
+                            .filter(s => {
+                                // Check if schedule runs today - support both full names and abbreviations
+                                const availableDays = s.availableDays || [];
+                                const daysArray = typeof availableDays === 'string' ? [availableDays] : availableDays;
+                                const runsToday = daysArray.length === 0 ||
+                                    daysArray.some(day => {
+                                        const dayUpper = day.toUpperCase();
+                                        return dayUpper === shortDayName ||
+                                            dayUpper === fullDayName.toUpperCase() ||
+                                            day === fullDayName;
+                                    });
+                                if (!runsToday) return false;
+
+                                // Check if departure time is in the future
+                                const depMinutes = timeToMinutes(s.departureTime);
+                                return depMinutes > currentMinutesSinceMidnight;
+                            })
+                            .sort((a, b) => timeToMinutes(a.departureTime) - timeToMinutes(b.departureTime));
+
+                        if (upcomingSchedules.length > 0) {
+                            // Calculate available until time (30 min before next schedule)
+                            const nextScheduleTime = timeToMinutes(upcomingSchedules[0].departureTime);
+                            const availableUntilMinutes = nextScheduleTime - BUFFER_MINUTES;
+                            const availableUntilHoursCalc = Math.floor(availableUntilMinutes / 60);
+                            const availableUntilMinsCalc = availableUntilMinutes % 60;
+                            const period = availableUntilHoursCalc >= 12 ? 'PM' : 'AM';
+                            const displayHours = availableUntilHoursCalc > 12 ? availableUntilHoursCalc - 12 : (availableUntilHoursCalc === 0 ? 12 : availableUntilHoursCalc);
+                            availableUntilDisplay = `${displayHours}:${String(availableUntilMinsCalc).padStart(2, '0')} ${period}`;
+
+                            calculatedAvailabilityStatus = 'available';
+                            availabilityMessage = `Available until ${availableUntilDisplay}`;
+                            availabilityColor = 'green';
+                            nextTripTime = upcomingSchedules[0].departureTime;
+                        } else {
+                            // Vehicle is fully available - no schedules today
+                            calculatedAvailabilityStatus = 'available';
+                            availabilityMessage = 'Available';
+                            availabilityColor = 'green';
+                        }
+                    }
+                }
+            }
+
+            // Determine availability info based on assignments
+            let availabilityInfo = null;
+
+            if (assignedScheduleDetails.length > 0) {
+                // Get formatted time windows
+                const timeWindows = assignedScheduleDetails.map(s => ({
+                    time: s.departureTime + (s.arrivalTime ? ` - ${s.arrivalTime}` : ''),
+                    route: s.routeName,
+                    days: s.availableDays?.join(', ') || 'All Days'
+                }));
+
+                availabilityInfo = {
+                    assignedCount: assignedScheduleDetails.length,
+                    schedules: timeWindows,
+                    busyTimes: assignedScheduleDetails.map(s => s.departureTime).filter(Boolean)
+                };
+            }
+
+            return {
+                ...vehicleObj,
+                images: vehicle.images || [],
+                features: vehicle.features || [],
+                availabilityStatus: calculatedAvailabilityStatus, // Dynamically calculated
+                availabilityMessage: availabilityMessage,
+                availabilityColor: availabilityColor,
+                availableUntil: availableUntilDisplay,
+                nextTripTime: nextTripTime,
+                assignedSchedules: vehicle.assignedSchedules || [],
+                assignedScheduleDetails: assignedScheduleDetails,
+                availabilityInfo: availabilityInfo,
+                insuranceExpiry: vehicle.insuranceExpiry,
+                registrationExpiry: vehicle.registrationExpiry
+            };
+        });
+
+        console.log("[v0] Transformed vehicles:", transformedVehicles.length, "with schedules:", transformedVehicles.map(v => ({ model: v.model, schedulesCount: v.assignedScheduleDetails?.length || 0 })));
+
+        res.status(200).json({
+            success: true,
             fleet: {
                 vehicles: transformedVehicles || []
             }
         });
     } catch (error) {
         console.error("[v0] Error fetching B2C fleet data:", error);
-        res.status(500).json({ 
-            success: false, 
-            message: "Error fetching B2C fleet data" 
+        res.status(500).json({
+            success: false,
+            message: "Error fetching B2C fleet data"
         });
     }
 };
@@ -4315,27 +4596,27 @@ export const getB2CPartnerFleet = async (req, res) => {
 export const getB2CPartnerDrivers = async (req, res) => {
     try {
         console.log("[v0] Fetching B2C drivers for partner:", req.userId);
-        
+
         // Fetch real drivers from database
-        const drivers = await User.find({ 
+        const drivers = await User.find({
             role: 'B2C_PARTNER_DRIVER',
             b2cPartnerId: req.userId,
             status: 'ACTIVE'
         })
-        .select('fullName email whatsappNumber driverInfo profileImage status')
-        .sort({ createdAt: -1 });
+            .select('fullName email whatsappNumber driverInfo profileImage status')
+            .sort({ createdAt: -1 });
 
         console.log("[v0] Found B2C drivers:", drivers.length);
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             drivers: drivers || []
         });
     } catch (error) {
         console.error("[v0] Error fetching B2C drivers:", error);
-        res.status(500).json({ 
-            success: false, 
-            message: "Error fetching B2C drivers" 
+        res.status(500).json({
+            success: false,
+            message: "Error fetching B2C drivers"
         });
     }
 };
@@ -4344,10 +4625,10 @@ export const getB2CPartnerDrivers = async (req, res) => {
 export const createB2CPartnerVehicle = async (req, res) => {
     try {
         const vehicleData = req.body;
-        
+
         console.log("[v0] B2C Vehicle creation data:", vehicleData);
         console.log("[v0] B2C Vehicle files:", req.files);
-        
+
         // Handle image uploads to Cloudinary
         let uploadedImages = [];
         if (req.files && req.files.images && req.files.images.length > 0) {
@@ -4360,19 +4641,19 @@ export const createB2CPartnerVehicle = async (req, res) => {
                 // Continue without images if upload fails
             }
         }
-        
+
         // Parse additional fields if they're stringified
         let parsedFeatures = [];
         if (vehicleData.features) {
             try {
-                parsedFeatures = typeof vehicleData.features === 'string' 
-                    ? JSON.parse(vehicleData.features) 
+                parsedFeatures = typeof vehicleData.features === 'string'
+                    ? JSON.parse(vehicleData.features)
                     : vehicleData.features;
             } catch (e) {
                 parsedFeatures = Array.isArray(vehicleData.features) ? vehicleData.features : [];
             }
         }
-        
+
         // Parse tags if they're stringified
         let parsedTags = [];
         if (vehicleData.tags) {
@@ -4405,12 +4686,12 @@ export const createB2CPartnerVehicle = async (req, res) => {
             tags: parsedTags, // Add vehicle tags
             isActive: true
         });
-        
+
         const savedVehicle = await newVehicle.save();
-        
+
         console.log(`Successfully created B2C vehicle: ${savedVehicle.vehicleName}`);
         console.log(`Vehicle images: ${savedVehicle.images.length} uploaded`);
-        
+
         res.status(201).json({
             success: true,
             message: "B2C vehicle created successfully",
@@ -4431,23 +4712,23 @@ export const updateB2CPartnerVehicle = async (req, res) => {
     try {
         const { vehicleId } = req.params;
         const vehicleData = req.body;
-        
+
         console.log("[v0] B2C Vehicle update data:", vehicleData);
         console.log("[v0] B2C Vehicle files:", req.files);
-        
+
         // Find existing vehicle
         const existingVehicle = await B2CPartnerVehicle.findOne({
             _id: vehicleId,
             b2cPartnerId: req.userId
         });
-        
+
         if (!existingVehicle) {
             return res.status(404).json({
                 success: false,
                 message: "Vehicle not found or you don't have permission to update it"
             });
         }
-        
+
         // Handle image uploads to Cloudinary
         let uploadedImages = [];
         if (req.files && req.files.images && req.files.images.length > 0) {
@@ -4460,19 +4741,19 @@ export const updateB2CPartnerVehicle = async (req, res) => {
                 // Continue without images if upload fails
             }
         }
-        
+
         // Parse additional fields if they're stringified
         let parsedFeatures = [];
         if (vehicleData.features) {
             try {
-                parsedFeatures = typeof vehicleData.features === 'string' 
-                    ? JSON.parse(vehicleData.features) 
+                parsedFeatures = typeof vehicleData.features === 'string'
+                    ? JSON.parse(vehicleData.features)
                     : vehicleData.features;
             } catch (e) {
                 parsedFeatures = Array.isArray(vehicleData.features) ? vehicleData.features : [];
             }
         }
-        
+
         // Merge existing images with new ones
         let finalImages = existingVehicle.images || [];
         if (uploadedImages.length > 0) {
@@ -4481,7 +4762,7 @@ export const updateB2CPartnerVehicle = async (req, res) => {
                 publicId: img.public_id || `b2c-vehicles/${img.public_id || img.asset_id}`
             }))];
         }
-        
+
         // Update vehicle with new data
         const updatedVehicle = await B2CPartnerVehicle.findByIdAndUpdate(
             vehicleId,
@@ -4500,10 +4781,10 @@ export const updateB2CPartnerVehicle = async (req, res) => {
             },
             { new: true }
         );
-        
+
         console.log(`Successfully updated B2C vehicle: ${updatedVehicle.vehicleName}`);
         console.log(`Vehicle images: ${updatedVehicle.images.length} total`);
-        
+
         res.status(200).json({
             success: true,
             message: "B2C vehicle updated successfully",
@@ -4522,23 +4803,23 @@ export const updateB2CPartnerVehicle = async (req, res) => {
 export const deleteB2CPartnerVehicle = async (req, res) => {
     try {
         const { vehicleId } = req.params;
-        
+
         // Find and delete the vehicle
         const vehicle = await B2CPartnerVehicle.findOneAndDelete({
             _id: vehicleId,
             b2cPartnerId: req.userId
         });
-        
+
         if (!vehicle) {
             return res.status(404).json({
                 success: false,
                 message: "Vehicle not found or you don't have permission to delete it"
             });
         }
-        
+
         console.log(`Successfully deleted B2C vehicle: ${vehicle.vehicleName}`);
         console.log(`Vehicle had ${vehicle.images.length} images`);
-        
+
         res.status(200).json({
             success: true,
             message: "B2C vehicle deleted successfully"
@@ -4548,6 +4829,190 @@ export const deleteB2CPartnerVehicle = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error deleting B2C vehicle",
+            error: error.message
+        });
+    }
+};
+
+// Update B2C Partner vehicle availability/status (busy/available)
+export const updateB2CPartnerVehicleStatus = async (req, res) => {
+    try {
+        const { vehicleId } = req.params;
+        const { status, availabilityStatus } = req.body;
+        const partnerId = req.userId;
+
+        // Find the vehicle
+        const vehicle = await B2CPartnerVehicle.findOne({
+            _id: vehicleId,
+            b2cPartnerId: partnerId
+        });
+
+        if (!vehicle) {
+            return res.status(404).json({
+                success: false,
+                message: "Vehicle not found or you don't have permission to update it"
+            });
+        }
+
+        // If trying to set to available, check for active trips (but allow availability window)
+        if (availabilityStatus === 'available') {
+            const B2CPartnerTrip = mongoose.model('B2CPartnerTrip');
+            const now = new Date();
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const todayEnd = new Date();
+            todayEnd.setHours(23, 59, 59, 999);
+
+            // Get all trips for this vehicle today
+            const todayTrips = await B2CPartnerTrip.find({
+                vehicleId: vehicleId,
+                tripDate: { $gte: todayStart, $lte: todayEnd }
+            }).sort({ startTime: 1 });
+
+            // Check if any trip is currently IN_PROGRESS
+            const inProgressTrips = todayTrips.filter(t =>
+                ['IN_PROGRESS', 'In Progress', 'STARTED', 'Started'].includes(t.status)
+            );
+
+            if (inProgressTrips.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `This vehicle has a trip currently in progress. Please complete it before setting status to available.`,
+                    hasInProgressTrip: true,
+                    inProgressTripsCount: inProgressTrips.length
+                });
+            }
+
+            // Get completed and scheduled trips
+            const completedTrips = todayTrips.filter(t =>
+                ['COMPLETED', 'Completed', 'DONE', 'Done'].includes(t.status)
+            );
+            const scheduledTrips = todayTrips.filter(t =>
+                ['SCHEDULED', 'Scheduled'].includes(t.status)
+            );
+
+            // Get current time as HH:MM string
+            const currentHours = String(now.getHours()).padStart(2, '0');
+            const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+            const currentTimeStr = `${currentHours}:${currentMinutes}`;
+
+            // Find the next scheduled trip after current time
+            const nextTrip = scheduledTrips.find(t => {
+                const tripTime = t.startTime || '00:00';
+                return tripTime > currentTimeStr;
+            });
+
+            // Calculate availableUntil time if there's a next trip
+            let availableUntil = null;
+            let nextTripTime = null;
+            if (nextTrip) {
+                nextTripTime = nextTrip.startTime;
+                const [hours, minutes] = nextTripTime.split(':').map(Number);
+                const nextTripDate = new Date();
+                nextTripDate.setHours(hours, minutes, 0, 0);
+                availableUntil = new Date(nextTripDate.getTime() - 30 * 60 * 1000); // 30 mins before
+            }
+
+            // Update vehicle with availability window info
+            const updateData = {
+                availabilityStatus: 'available',
+                lastAvailabilityUpdate: new Date(),
+                updatedAt: new Date()
+            };
+
+            // Store availability window info if there's a next trip
+            if (availableUntil) {
+                updateData.availableUntil = availableUntil;
+                updateData.nextScheduledTripTime = nextTripTime;
+            } else {
+                // No upcoming trips - vehicle is fully available
+                updateData.availableUntil = null;
+                updateData.nextScheduledTripTime = null;
+            }
+
+            const updatedVehicle = await B2CPartnerVehicle.findByIdAndUpdate(
+                vehicleId,
+                { $set: updateData },
+                { new: true }
+            );
+
+            console.log(`[v0] Updated vehicle ${vehicleId} to available with window:`, {
+                availableUntil,
+                nextTripTime,
+                hasCompletedTrips: completedTrips.length > 0,
+                hasScheduledTrips: scheduledTrips.length > 0
+            });
+
+            // Broadcast real-time vehicle availability change via socket
+            broadcastVehicleAvailabilityChange(partnerId, {
+                vehicleId: updatedVehicle._id.toString(),
+                vehicleModel: updatedVehicle.model,
+                licensePlate: updatedVehicle.licensePlate,
+                availabilityStatus: 'available',
+                availableUntil: availableUntil,
+                nextScheduledTripTime: nextTripTime,
+                status: updatedVehicle.status
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: nextTripTime
+                    ? `Vehicle set to available until ${nextTripTime}`
+                    : 'Vehicle set to available',
+                vehicle: updatedVehicle,
+                availabilityStatus: 'available',
+                availableUntil: availableUntil,
+                nextScheduledTripTime: nextTripTime,
+                hasUpcomingTrip: !!nextTrip
+            });
+        }
+
+        // For busy status or other updates
+        const updateData = { updatedAt: new Date() };
+        if (status) {
+            updateData.status = status;
+        }
+        if (availabilityStatus) {
+            updateData.availabilityStatus = availabilityStatus;
+            updateData.lastAvailabilityUpdate = new Date();
+            // Clear availability window when set to busy
+            if (availabilityStatus === 'busy') {
+                updateData.availableUntil = null;
+                updateData.nextScheduledTripTime = null;
+            }
+        }
+
+        const updatedVehicle = await B2CPartnerVehicle.findByIdAndUpdate(
+            vehicleId,
+            { $set: updateData },
+            { new: true }
+        );
+
+        console.log(`[v0] Updated vehicle ${vehicleId} status:`, updateData);
+
+        // Broadcast real-time vehicle availability change via socket
+        if (availabilityStatus) {
+            broadcastVehicleAvailabilityChange(partnerId, {
+                vehicleId: updatedVehicle._id.toString(),
+                vehicleModel: updatedVehicle.model,
+                licensePlate: updatedVehicle.licensePlate,
+                availabilityStatus: updatedVehicle.availabilityStatus,
+                status: updatedVehicle.status
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Vehicle status updated successfully`,
+            vehicle: updatedVehicle,
+            status: updatedVehicle.status,
+            availabilityStatus: updatedVehicle.availabilityStatus
+        });
+    } catch (error) {
+        console.error("[v0] Error updating vehicle status:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error updating vehicle status",
             error: error.message
         });
     }
@@ -4699,7 +5164,7 @@ export const assignDriverToB2CRoute = async (req, res) => {
 export const createB2CPartnerTrip = async (req, res) => {
     try {
         const tripData = req.body;
-        
+
         // Create new trip instance
         const newTrip = new B2CPassengerBooking({
             routeId: tripData.routeId,
@@ -4718,15 +5183,15 @@ export const createB2CPartnerTrip = async (req, res) => {
             status: "Scheduled",
             isActive: true
         });
-        
+
         const savedTrip = await newTrip.save();
-        
+
         // Populate related data
         await savedTrip.populate('assignedVehicle', 'plateNumber model type capacity');
         await savedTrip.populate('assignedDriver', 'fullName phone');
-        
+
         console.log(`Successfully created B2C trip: ${tripData.fromLocation} to ${tripData.toLocation} on ${tripData.tripDate}`);
-        
+
         res.status(201).json({
             success: true,
             message: "B2C trip created successfully",
@@ -4746,7 +5211,7 @@ export const createB2CPartnerTrip = async (req, res) => {
 export const getCommuterRoutes = async (req, res) => {
     try {
         const userId = req.userId;
-        
+
         // Fetch real active B2C routes from database
         const routes = await B2CPartnerRoute.find({ status: 'Active' })
             .populate('b2cPartnerId', 'fullName companyName email')
@@ -4764,7 +5229,7 @@ export const getCommuterRoutes = async (req, res) => {
         } catch (e) {
             // B2CPartnerSchedule may not exist yet
         }
-        
+
         const scheduleMap = {};
         schedules.forEach(s => {
             if (!scheduleMap[s.routeId.toString()]) {
@@ -4794,16 +5259,16 @@ export const getCommuterRoutes = async (req, res) => {
 
         const formattedRoutes = routes.map(route => {
             const schedule = scheduleMap[route._id.toString()];
-            
+
             const stops = route.stopPoints || [];
             const sortedStops = [...stops].sort((a, b) => a.order - b.order);
             const firstStop = sortedStops.length > 0 ? sortedStops[0] : null;
             const lastStop = sortedStops.length > 0 ? sortedStops[sortedStops.length - 1] : null;
-            
+
             // Priority: schedule tripTimes > route startTime > stop point times
             let departureTime = 'Not set';
             let arrivalTime = 'Not set';
-            
+
             if (schedule && schedule.tripTimes && schedule.tripTimes.length > 0) {
                 departureTime = schedule.tripTimes[0].departureTime || schedule.tripTimes[0].startTime || 'Not set';
                 arrivalTime = schedule.tripTimes[0].arrivalTime || schedule.tripTimes[0].endTime || 'Not set';
@@ -4814,7 +5279,7 @@ export const getCommuterRoutes = async (req, res) => {
                 departureTime = firstStop.time || 'Not set';
                 arrivalTime = lastStop?.time || 'Not set';
             }
-            
+
             // Estimate distance
             const numStops = stops.length;
             let estimatedDistance = 'Not available';
@@ -4823,17 +5288,17 @@ export const getCommuterRoutes = async (req, res) => {
             } else if (numStops === 1 || route.fromLocation !== route.toLocation) {
                 estimatedDistance = '~15 km';
             }
-            
+
             // Estimate duration
             let estimatedDuration = 'Not available';
             const depTime = departureTime !== 'Not set' ? departureTime : firstStop?.time;
             const arrTime = arrivalTime !== 'Not set' ? arrivalTime : lastStop?.time;
-            
+
             if (depTime && arrTime && depTime !== arrTime) {
                 try {
                     const depMinutes = parseTime(depTime);
                     const arrMinutes = parseTime(arrTime);
-                    
+
                     if (depMinutes !== null && arrMinutes !== null) {
                         let diffMinutes = arrMinutes - depMinutes;
                         if (diffMinutes < 0) diffMinutes += 24 * 60; // handle overnight
@@ -4847,12 +5312,12 @@ export const getCommuterRoutes = async (req, res) => {
                     // Fallback
                 }
             }
-            
+
             // Check if current user is a member of this route
             const isMember = (route.members || []).some(
                 m => m.userId && m.userId.toString() === userId.toString() && m.status === 'ACTIVE'
             );
-            
+
             return {
                 _id: route._id,
                 name: route.routeName || `${route.fromLocation || 'Unknown'} to ${route.toLocation || 'Unknown'}`,
@@ -4877,15 +5342,15 @@ export const getCommuterRoutes = async (req, res) => {
             };
         });
 
-        res.status(200).json({ 
-            success: true, 
-            routes: formattedRoutes 
+        res.status(200).json({
+            success: true,
+            routes: formattedRoutes
         });
     } catch (error) {
         console.error("Error fetching commuter routes:", error);
-        res.status(500).json({ 
-            success: false, 
-            message: "Error fetching commuter routes" 
+        res.status(500).json({
+            success: false,
+            message: "Error fetching commuter routes"
         });
     }
 };
@@ -4895,14 +5360,14 @@ export const joinRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
         const userId = req.userId;
-        
+
         if (!routeId) {
             return res.status(400).json({
                 success: false,
                 message: "Route ID is required"
             });
         }
-        
+
         const route = await B2CPartnerRoute.findById(routeId);
         if (!route) {
             return res.status(404).json({
@@ -4910,33 +5375,33 @@ export const joinRoute = async (req, res) => {
                 message: "Route not found"
             });
         }
-        
+
         if (route.status !== 'Active') {
             return res.status(400).json({
                 success: false,
                 message: "Route is not active for joining"
             });
         }
-        
+
         // Check if user is already an active member using the members array
         const existingMember = (route.members || []).find(
             m => m.userId && m.userId.toString() === userId.toString() && m.status === 'ACTIVE'
         );
-        
+
         if (existingMember) {
             return res.status(400).json({
                 success: false,
                 message: "User is already a member of this route"
             });
         }
-        
+
         if (route.availableSeats <= 0) {
             return res.status(400).json({
                 success: false,
                 message: "No available seats on this route"
             });
         }
-        
+
         // Add member to route's members array and decrement available seats
         await B2CPartnerRoute.findByIdAndUpdate(routeId, {
             $inc: { availableSeats: -1 },
@@ -4948,7 +5413,7 @@ export const joinRoute = async (req, res) => {
                 }
             }
         });
-        
+
         res.status(200).json({
             success: true,
             message: "Successfully joined route",
@@ -4962,7 +5427,7 @@ export const joinRoute = async (req, res) => {
                 joinedAt: new Date()
             }
         });
-        
+
     } catch (error) {
         console.error("Error joining route:", error);
         res.status(500).json({
@@ -4978,14 +5443,14 @@ export const leaveRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
         const userId = req.userId;
-        
+
         if (!routeId) {
             return res.status(400).json({
                 success: false,
                 message: "Route ID is required"
             });
         }
-        
+
         const route = await B2CPartnerRoute.findById(routeId);
         if (!route) {
             return res.status(404).json({
@@ -4993,19 +5458,19 @@ export const leaveRoute = async (req, res) => {
                 message: "Route not found"
             });
         }
-        
+
         // Check membership in the route's members array
         const activeMember = (route.members || []).find(
             m => m.userId && m.userId.toString() === userId.toString() && m.status === 'ACTIVE'
         );
-        
+
         if (!activeMember) {
             return res.status(400).json({
                 success: false,
                 message: "User is not a member of this route"
             });
         }
-        
+
         // Update the member status to LEFT and increment available seats
         await B2CPartnerRoute.updateOne(
             { _id: routeId, 'members.userId': userId, 'members.status': 'ACTIVE' },
@@ -5014,7 +5479,7 @@ export const leaveRoute = async (req, res) => {
                 $inc: { availableSeats: 1 }
             }
         );
-        
+
         res.status(200).json({
             success: true,
             message: "Successfully left route",
@@ -5024,7 +5489,7 @@ export const leaveRoute = async (req, res) => {
                 leftAt: new Date()
             }
         });
-        
+
     } catch (error) {
         console.error("Error leaving route:", error);
         res.status(500).json({
@@ -5040,7 +5505,7 @@ export const getCommuterProfile = async (req, res) => {
     try {
         const userId = req.userId;
         const user = await User.findById(userId).select('-password');
-        
+
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -5069,16 +5534,16 @@ export const getCommuterProfile = async (req, res) => {
             promotionalOffers: user.notifications?.paymentAlerts ?? true
         };
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             profile,
-            preferences 
+            preferences
         });
     } catch (error) {
         console.error("[v0] Error fetching commuter profile:", error);
-        res.status(500).json({ 
-            success: false, 
-            message: "Error fetching commuter profile" 
+        res.status(500).json({
+            success: false,
+            message: "Error fetching commuter profile"
         });
     }
 };
@@ -5130,7 +5595,7 @@ export const updateCommuterProfile = async (req, res) => {
     try {
         const { profile, preferences } = req.body;
         const userId = req.userId;
-        
+
         // Validate input data
         if (!profile || !preferences) {
             return res.status(400).json({
@@ -5184,17 +5649,17 @@ export const updateCommuterProfile = async (req, res) => {
                     ...(profile.currency && { currency: profile.currency }),
                     ...(profile.profileImage && { profileImage: profile.profileImage }),
                     // Update preferences in user document or separate preferences collection
-                    ...(preferences.pushNotifications !== undefined && { 
-                        'preferences.pushNotifications': preferences.pushNotifications 
+                    ...(preferences.pushNotifications !== undefined && {
+                        'preferences.pushNotifications': preferences.pushNotifications
                     }),
-                    ...(preferences.marketingEmails !== undefined && { 
-                        'preferences.marketingEmails': preferences.marketingEmails 
+                    ...(preferences.marketingEmails !== undefined && {
+                        'preferences.marketingEmails': preferences.marketingEmails
                     }),
-                    ...(preferences.tripReminders !== undefined && { 
-                        'preferences.tripReminders': preferences.tripReminders 
+                    ...(preferences.tripReminders !== undefined && {
+                        'preferences.tripReminders': preferences.tripReminders
                     }),
-                    ...(preferences.promotionalOffers !== undefined && { 
-                        'preferences.promotionalOffers': preferences.promotionalOffers 
+                    ...(preferences.promotionalOffers !== undefined && {
+                        'preferences.promotionalOffers': preferences.promotionalOffers
                     })
                 }
             },
@@ -5254,7 +5719,7 @@ export const updateCommuterProfile = async (req, res) => {
 
     } catch (error) {
         console.error("[v0] Error updating commuter profile:", error);
-        
+
         // Log failed profile update attempt
         try {
             await Transaction.create({
@@ -5287,7 +5752,7 @@ export const changeCommuterPassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
         const userId = req.userId;
-        
+
         // Validate input data
         if (!currentPassword || !newPassword) {
             return res.status(400).json({
@@ -5376,7 +5841,7 @@ export const changeCommuterPassword = async (req, res) => {
 
     } catch (error) {
         console.error("[v0] Error changing password:", error);
-        
+
         // Log failed password change attempt
         try {
             await Transaction.create({
@@ -5409,7 +5874,7 @@ export const getB2CPartnerProfile = async (req, res) => {
     try {
         const userId = req.userId;
         const user = await User.findById(userId).select('-password');
-        
+
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -5417,21 +5882,21 @@ export const getB2CPartnerProfile = async (req, res) => {
             });
         }
 
-const profile = {
-_id: user._id,
-fullName: user.fullName,
-email: user.email,
-phone: user.whatsappNumber,
-company: user.companyName || '',
-licenseNumber: user.driverInfo?.licenseNumber || '',
-serviceType: user.serviceType,
-yearsOfExperience: user.yearsOfExperience,
-serviceDescription: user.serviceDescription,
-country: user.country,
-status: user.status,
-createdAt: user.createdAt,
-profileImage: user.profileImage || null
-};
+        const profile = {
+            _id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            phone: user.whatsappNumber,
+            company: user.companyName || '',
+            licenseNumber: user.driverInfo?.licenseNumber || '',
+            serviceType: user.serviceType,
+            yearsOfExperience: user.yearsOfExperience,
+            serviceDescription: user.serviceDescription,
+            country: user.country,
+            status: user.status,
+            createdAt: user.createdAt,
+            profileImage: user.profileImage || null
+        };
 
         const preferences = {
             newTripAlerts: user.notifications?.bookingAlerts ?? true,
@@ -5439,16 +5904,16 @@ profileImage: user.profileImage || null
             promotionalOffers: user.notifications?.smsNotifications ?? false,
         };
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             profile,
-            preferences 
+            preferences
         });
     } catch (error) {
         console.error("[v0] Error fetching B2C profile:", error);
-        res.status(500).json({ 
-            success: false, 
-            message: "Error fetching B2C profile" 
+        res.status(500).json({
+            success: false,
+            message: "Error fetching B2C profile"
         });
     }
 };
@@ -5458,7 +5923,7 @@ export const updateB2CPartnerProfile = async (req, res) => {
     try {
         const { profile, preferences } = req.body;
         const userId = req.userId;
-        
+
         // Handle profile image upload via Cloudinary
         let profileImageUrl = null;
         if (req.file) {
@@ -5466,7 +5931,7 @@ export const updateB2CPartnerProfile = async (req, res) => {
                 const uploadResult = await uploadToCloudinary(req.file, 'driveme/profiles', 'profile');
                 profileImageUrl = uploadResult.secure_url;
                 console.log("[v0] Profile image uploaded:", profileImageUrl);
-                
+
                 // If only image upload (profile/image endpoint)
                 if (!profile && !preferences) {
                     const updatedUser = await User.findByIdAndUpdate(
@@ -5474,7 +5939,7 @@ export const updateB2CPartnerProfile = async (req, res) => {
                         { $set: { profileImage: profileImageUrl } },
                         { new: true }
                     ).select('-password');
-                    
+
                     return res.status(200).json({
                         success: true,
                         message: "Profile image updated successfully",
@@ -5499,7 +5964,7 @@ export const updateB2CPartnerProfile = async (req, res) => {
                 });
             }
         }
-        
+
         // Validate input data
         if (!profile || !preferences) {
             return res.status(400).json({
@@ -5555,20 +6020,20 @@ export const updateB2CPartnerProfile = async (req, res) => {
                     ...(profile.website && { website: profile.website }),
                     ...(profileImageUrl && { profileImage: profileImageUrl }),
                     // Update B2C partner specific preferences
-                    ...(preferences.newTripAlerts !== undefined && { 
-                        'preferences.newTripAlerts': preferences.newTripAlerts 
+                    ...(preferences.newTripAlerts !== undefined && {
+                        'preferences.newTripAlerts': preferences.newTripAlerts
                     }),
-                    ...(preferences.dailyEarnings !== undefined && { 
-                        'preferences.dailyEarnings': preferences.dailyEarnings 
+                    ...(preferences.dailyEarnings !== undefined && {
+                        'preferences.dailyEarnings': preferences.dailyEarnings
                     }),
-                    ...(preferences.promotionalOffers !== undefined && { 
-                        'preferences.promotionalOffers': preferences.promotionalOffers 
+                    ...(preferences.promotionalOffers !== undefined && {
+                        'preferences.promotionalOffers': preferences.promotionalOffers
                     }),
-                    ...(preferences.vehicleMaintenance !== undefined && { 
-                        'preferences.vehicleMaintenance': preferences.vehicleMaintenance 
+                    ...(preferences.vehicleMaintenance !== undefined && {
+                        'preferences.vehicleMaintenance': preferences.vehicleMaintenance
                     }),
-                    ...(preferences.driverManagement !== undefined && { 
-                        'preferences.driverManagement': preferences.driverManagement 
+                    ...(preferences.driverManagement !== undefined && {
+                        'preferences.driverManagement': preferences.driverManagement
                     })
                 }
             },
@@ -5582,8 +6047,8 @@ export const updateB2CPartnerProfile = async (req, res) => {
             });
         }
 
-    // Profile update logged via console (no wallet transaction needed for profile updates)
-    console.log(`B2C partner profile updated for user ${userId}`);
+        // Profile update logged via console (no wallet transaction needed for profile updates)
+        console.log(`B2C partner profile updated for user ${userId}`);
 
         console.log(`[v0] B2C partner profile updated successfully for user ${userId}`);
 
@@ -5611,8 +6076,8 @@ export const updateB2CPartnerProfile = async (req, res) => {
 
     } catch (error) {
         console.error("[v0] Error updating B2C partner profile:", error);
-        
-    console.error("B2C partner profile update failed for user:", req.userId, error.message);
+
+        console.error("B2C partner profile update failed for user:", req.userId, error.message);
 
         res.status(500).json({
             success: false,
@@ -5650,9 +6115,9 @@ export const updateB2BSettings = async (req, res) => {
     try {
         const { companyInfo, notifications } = req.body;
         // TODO: Update settings in database
-        res.status(200).json({ 
-            success: true, 
-            message: "Settings updated successfully" 
+        res.status(200).json({
+            success: true,
+            message: "Settings updated successfully"
         });
     } catch (error) {
         res.status(500).json({ success: false, message: "Error updating B2B settings" });
@@ -6897,7 +7362,7 @@ export const getMonthlyRevenue = async (req, res) => {
     try {
         const currentYear = new Date().getFullYear();
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        
+
         // Get monthly revenue data
         const monthlyRevenue = await Payment.aggregate([
             {
@@ -6954,11 +7419,11 @@ export const getBookingTrends = async (req, res) => {
         const monthsToShow = parseInt(period);
         const currentYear = new Date().getFullYear();
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        
+
         // Get booking data for the specified period
         const startDate = new Date(currentYear, 12 - monthsToShow, 1);
         const endDate = new Date(currentYear, 11, 31);
-        
+
         // Aggregate bookings by month
         const bookingTrends = await Payment.aggregate([
             {

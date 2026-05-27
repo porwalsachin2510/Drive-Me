@@ -120,6 +120,20 @@ const passengerConnections = new Map()
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id)
 
+    // User joins their notification room
+    socket.on('join_user_room', (userId) => {
+        socket.join(`notifications-${userId}`)
+        socket.userId = userId
+        console.log(`User ${userId} joined their notification room`)
+    })
+
+    // B2C Partner joins their partner room for real-time driver availability updates
+    socket.on('join_b2c_partner_room', (partnerId) => {
+        socket.join(`b2c-partner-${partnerId}`)
+        socket.partnerId = partnerId
+        console.log(`B2C Partner ${partnerId} joined their partner room for driver availability updates`)
+    })
+
     // Driver joins their room
     socket.on('join-driver-room', (driverId) => {
         socket.join(`driver-${driverId}`)
@@ -393,32 +407,40 @@ io.on('connection', (socket) => {
             const B2CPartnerTrip = mongoose.model('B2CPartnerTrip')
             const B2CPassengerBooking = mongoose.model('B2CPassengerBooking')
 
+            // Get today's date range
+            const today = new Date()
+            const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0)
+            const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
+
             // If bookingId is provided, use it to find the correct trip for this specific booking
             if (bookingId) {
                 const booking = await B2CPassengerBooking.findById(bookingId)
-                    .select('monthlyTrips routeId pickupLocation dropoffLocation b2cPartnerId assignedDriverId')
+                    .select('monthlyTrips routeId pickupLocation dropoffLocation b2cPartnerId assignedDriverId isSelfDriver')
 
-                if (booking && booking.monthlyTrips && booking.monthlyTrips.length > 0) {
-                    console.log(`[v0] Found booking ${bookingId} with ${booking.monthlyTrips.length} monthly trips, route: ${booking.pickupLocation} -> ${booking.dropoffLocation}`)
+                if (booking) {
+                    console.log(`[v0] Found booking ${bookingId} with ${booking.monthlyTrips?.length || 0} monthly trips, route: ${booking.pickupLocation} -> ${booking.dropoffLocation}`)
+                    console.log(`[v0] Booking details - isSelfDriver: ${booking.isSelfDriver}, b2cPartnerId: ${booking.b2cPartnerId}`)
 
-                    // Get today's date range
-                    const today = new Date()
-                    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0)
-                    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
-
-                    // Find IN_PROGRESS trip matching this booking's route and today
-                    const inProgressTrip = await B2CPartnerTrip.findOne({
-                        _id: { $in: booking.monthlyTrips },
+                    // FIRST: Try to find an IN_PROGRESS trip directly by driverId OR b2cPartnerId for today
+                    let inProgressTrip = await B2CPartnerTrip.findOne({
+                        $or: [
+                            { driverId: driverId },
+                            { b2cPartnerId: driverId },
+                            { b2cPartnerId: booking.b2cPartnerId }
+                        ],
                         status: { $in: ['In Progress', 'IN_PROGRESS'] },
-                        tripDate: { $gte: startOfDay, $lte: endOfDay },
-                        fromLocation: booking.pickupLocation,
-                        toLocation: booking.dropoffLocation
-                    }).select('currentLocation status fromLocation toLocation')
+                        tripDate: { $gte: startOfDay, $lte: endOfDay }
+                    }).select('currentLocation status fromLocation toLocation _id').sort({ actualStartTime: -1 })
 
                     if (inProgressTrip) {
-                        console.log(`[v0] Found IN_PROGRESS trip for booking route: ${inProgressTrip._id}`)
-                        let driverLocation = null
+                        console.log(`[v0] Found IN_PROGRESS trip for driver/partner: ${inProgressTrip._id}`)
 
+                        // Verify this trip matches the booking's route (optional but good for accuracy)
+                        const tripMatchesRoute =
+                            (inProgressTrip.fromLocation === booking.pickupLocation && inProgressTrip.toLocation === booking.dropoffLocation) ||
+                            (booking.monthlyTrips?.some(t => t.toString() === inProgressTrip._id.toString()))
+
+                        let driverLocation = null
                         if (inProgressTrip.currentLocation) {
                             driverLocation = {
                                 lat: inProgressTrip.currentLocation.latitude || inProgressTrip.currentLocation.lat,
@@ -446,19 +468,78 @@ io.on('connection', (socket) => {
                                 isOnline: false,
                                 tripStatus: 'IN_PROGRESS',
                                 isLocationAvailable: false,
-                                message: 'Waiting for driver to share location'
+                                message: 'Trip is in progress. Waiting for driver to share location...'
                             })
                             return
                         }
                     }
 
+                    // SECOND: Check booking's monthlyTrips array
+                    if (booking.monthlyTrips && booking.monthlyTrips.length > 0) {
+                        inProgressTrip = await B2CPartnerTrip.findOne({
+                            _id: { $in: booking.monthlyTrips },
+                            status: { $in: ['In Progress', 'IN_PROGRESS'] },
+                            tripDate: { $gte: startOfDay, $lte: endOfDay }
+                        }).select('currentLocation status fromLocation toLocation')
+
+                        if (inProgressTrip) {
+                            console.log(`[v0] Found IN_PROGRESS trip in monthlyTrips: ${inProgressTrip._id}`)
+                            let driverLocation = null
+
+                            if (inProgressTrip.currentLocation) {
+                                driverLocation = {
+                                    lat: inProgressTrip.currentLocation.latitude || inProgressTrip.currentLocation.lat,
+                                    lng: inProgressTrip.currentLocation.longitude || inProgressTrip.currentLocation.lng,
+                                    lastUpdated: inProgressTrip.currentLocation.lastUpdated
+                                }
+                            }
+
+                            if (driverLocation && driverLocation.lat && driverLocation.lng) {
+                                socket.emit('driver-location-update', {
+                                    driverId,
+                                    location: { lat: driverLocation.lat, lng: driverLocation.lng },
+                                    timestamp: driverLocation.lastUpdated || new Date().toISOString(),
+                                    bookingId,
+                                    isOnline: true,
+                                    tripStatus: 'IN_PROGRESS',
+                                    isLocationAvailable: true
+                                })
+                                return
+                            } else {
+                                socket.emit('driver-location-update', {
+                                    driverId,
+                                    location: null,
+                                    bookingId,
+                                    isOnline: false,
+                                    tripStatus: 'IN_PROGRESS',
+                                    isLocationAvailable: false,
+                                    message: 'Trip is in progress. Waiting for driver to share location...'
+                                })
+                                return
+                            }
+                        }
+                    }
+
                     // Check for SCHEDULED trip for this booking's route today
                     const scheduledTrip = await B2CPartnerTrip.findOne({
-                        _id: { $in: booking.monthlyTrips },
+                        $or: [
+                            { _id: { $in: booking.monthlyTrips || [] } },
+                            {
+                                $and: [
+                                    {
+                                        $or: [
+                                            { driverId: driverId },
+                                            { b2cPartnerId: driverId },
+                                            { b2cPartnerId: booking.b2cPartnerId }
+                                        ]
+                                    },
+                                    { fromLocation: booking.pickupLocation },
+                                    { toLocation: booking.dropoffLocation }
+                                ]
+                            }
+                        ],
                         status: { $in: ['Scheduled', 'SCHEDULED'] },
-                        tripDate: { $gte: startOfDay, $lte: endOfDay },
-                        fromLocation: booking.pickupLocation,
-                        toLocation: booking.dropoffLocation
+                        tripDate: { $gte: startOfDay, $lte: endOfDay }
                     }).select('_id status')
 
                     if (scheduledTrip) {
@@ -496,7 +577,8 @@ io.on('connection', (socket) => {
                     { driverId: driverId },
                     { b2cPartnerId: driverId }
                 ],
-                status: { $in: ['In Progress', 'IN_PROGRESS'] }
+                status: { $in: ['In Progress', 'IN_PROGRESS'] },
+                tripDate: { $gte: startOfDay, $lte: endOfDay }
             }).select('currentLocation status')
 
             if (inProgressTrip) {
@@ -527,7 +609,7 @@ io.on('connection', (socket) => {
                         isOnline: false,
                         tripStatus: 'IN_PROGRESS',
                         isLocationAvailable: false,
-                        message: 'Waiting for driver to share location'
+                        message: 'Trip is in progress. Waiting for driver to share location...'
                     })
                 }
             } else {
@@ -536,7 +618,8 @@ io.on('connection', (socket) => {
                         { driverId: driverId },
                         { b2cPartnerId: driverId }
                     ],
-                    status: { $in: ['Scheduled', 'SCHEDULED'] }
+                    status: { $in: ['Scheduled', 'SCHEDULED'] },
+                    tripDate: { $gte: startOfDay, $lte: endOfDay }
                 }).select('_id status')
 
                 if (scheduledTrip) {

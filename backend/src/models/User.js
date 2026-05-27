@@ -251,6 +251,49 @@ const userSchema = new mongoose.Schema(
             ref: "User",
             default: null,
         },
+
+        // Self-driver availability for B2C_PARTNER who drives themselves
+        selfDriverAvailability: {
+            status: {
+                type: String,
+                enum: ["available", "busy", "offline"],
+                default: "available",
+            },
+            // Track which schedules this partner is assigned as driver
+            assignedSchedules: [{
+                scheduleId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "B2CPartnerSchedule",
+                },
+                tripTimeIndex: Number,
+                assignedAt: {
+                    type: Date,
+                    default: Date.now,
+                }
+            }],
+            // Available time slots for self-driving
+            availableTimeSlots: [{
+                day: {
+                    type: String,
+                    enum: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+                },
+                startTime: String,
+                endTime: String,
+            }],
+            lastUpdate: {
+                type: Date,
+                default: Date.now,
+            },
+            // Availability window - when partner is available until (for between-trips availability)
+            availableUntil: {
+                type: Date,
+                default: null,
+            },
+            nextScheduledTripTime: {
+                type: String,
+                default: null,
+            }
+        },
         // Driver ratings for B2C Partners who drive themselves (self-drivers)
         driverRatings: {
             average: {

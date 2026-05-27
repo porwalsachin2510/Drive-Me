@@ -418,6 +418,29 @@
   color: #166534;
 }
 
+/* Round-trip driver display styles */
+.b2c-driver-roundtrip {
+  gap: 8px;
+}
+
+.b2c-driver-trip-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 6px;
+}
+
+.b2c-driver-trip-section.b2c-driver-return {
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 6px;
+}
+
+.b2c-trip-label {
+  font-size: 0.65rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
 .b2c-td-seats {
   text-align: center;
 }

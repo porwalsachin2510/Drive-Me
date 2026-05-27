@@ -16,7 +16,7 @@ const scheduleSchema = new mongoose.Schema({
         required: true,
         default: "Route Schedule",
     },
-    // Multiple trip times for the same route
+    // Multiple trip times for the same route - each trip can have its own driver/vehicle
     tripTimes: [{
         departureTime: {
             type: String,
@@ -41,6 +41,18 @@ const scheduleSchema = new mongoose.Schema({
             type: String,
             enum: ["One Way", "Round Trip"],
             default: "One Way"
+        },
+        // Per-trip driver assignment (optional - falls back to schedule/route default)
+        assignedDriver: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "B2CPartnerDriver",
+            default: null
+        },
+        // Per-trip vehicle assignment (optional - falls back to schedule/route default)
+        assignedVehicle: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "B2CPartnerVehicle",
+            default: null
         },
         outboundStopPoints: [{
             location: {

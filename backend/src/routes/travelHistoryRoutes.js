@@ -6,7 +6,8 @@ import {
     addTravelRecord,
     updateTravelRecord,
     rateTrip,
-    getTravelStatistics
+    getTravelStatistics,
+    getDriverRatings
 } from "../controllers/travelHistoryController.js";
 
 const router = express.Router();
@@ -18,5 +19,7 @@ router.post("/add", verifyToken, addTravelRecord);
 router.put("/update/:travelId", verifyToken, updateTravelRecord);
 router.post("/rate/:travelId", verifyToken, rateTrip);
 router.get("/statistics", verifyToken, getTravelStatistics);
+// Driver ratings routes
+router.get("/driver-ratings", verifyToken, getDriverRatings);
 
 export default router;

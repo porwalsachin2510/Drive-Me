@@ -186,8 +186,6 @@ export const getDriverLocation = async (req, res) => {
         const { driverId } = req.params;
         const { bookingId } = req.query; // Get bookingId from query params
 
-        console.log("[v0] getDriverLocation called for driverId:", driverId, "bookingId:", bookingId);
-
         // Resolve actual driver model ID - driverId param could be userId or drivers._id
         let actualDriverId = driverId;
         const driverUser = await User.findById(driverId);
@@ -195,67 +193,22 @@ export const getDriverLocation = async (req, res) => {
             actualDriverId = driverUser.driverId.toString();
         }
 
-        console.log("[v0] Resolved actualDriverId:", actualDriverId, "Role:", driverUser?.role);
+        // Get today's date range (start and end of day)
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
         // If bookingId is provided, use it to find the correct trip for this specific booking
         if (bookingId) {
             const booking = await B2CPassengerBooking.findById(bookingId)
-                .select('monthlyTrips routeId pickupLocation dropoffLocation b2cPartnerId assignedDriverId');
+                .select('monthlyTrips routeId pickupLocation dropoffLocation returnPickupLocation returnDropoffLocation b2cPartnerId assignedDriverId isSelfDriver bookingStatus bookingType outboundDriverId outboundIsSelfDriver returnDriverId returnIsSelfDriver outboundTripTime returnTripTime');
 
             if (booking) {
-                console.log("[v0] Found booking:", bookingId, "with", booking.monthlyTrips?.length || 0, "monthly trips");
-
-                // Get today's date range (start and end of day)
-                const today = new Date();
-                const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-                const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-
-                // Find an IN_PROGRESS trip that belongs to this booking's monthlyTrips
-                // AND matches today's date AND has the same pickup/dropoff route
-                let trip = null;
-
-                if (booking.monthlyTrips && booking.monthlyTrips.length > 0) {
-                    trip = await B2CPartnerTrip.findOne({
-                        _id: { $in: booking.monthlyTrips },
-                        status: { $in: ['In Progress', 'IN_PROGRESS'] },
-                        tripDate: { $gte: startOfDay, $lte: endOfDay },
-                        // Also verify the route matches
-                        fromLocation: booking.pickupLocation,
-                        toLocation: booking.dropoffLocation
-                    }).select('currentLocation locationHistory status driverId b2cPartnerId routeId fromLocation toLocation tripDate');
-
-                    if (trip) {
-                        console.log("[v0] Found IN_PROGRESS trip for booking's route today:", trip._id, trip.fromLocation, "->", trip.toLocation);
-                    }
-                }
-
-                // If no matching IN_PROGRESS trip, check for SCHEDULED trips for this booking today
-                if (!trip) {
-                    const scheduledTrip = await B2CPartnerTrip.findOne({
-                        _id: { $in: booking.monthlyTrips || [] },
-                        status: { $in: ['Scheduled', 'SCHEDULED'] },
-                        tripDate: { $gte: startOfDay, $lte: endOfDay },
-                        fromLocation: booking.pickupLocation,
-                        toLocation: booking.dropoffLocation
-                    }).select('_id status tripDate startTime fromLocation toLocation');
-
-                    if (scheduledTrip) {
-                        console.log("[v0] Found SCHEDULED trip for booking's route today:", scheduledTrip._id, scheduledTrip.fromLocation, "->", scheduledTrip.toLocation);
-                        return res.json({
-                            success: true,
-                            data: {
-                                driverId,
-                                tripId: scheduledTrip._id,
-                                location: null,
-                                tripStatus: scheduledTrip.status,
-                                isLocationAvailable: false,
-                                message: `Trip for ${booking.pickupLocation} to ${booking.dropoffLocation} has not started yet. Driver location will be available once the trip begins.`
-                            }
-                        });
-                    }
-
-                    // No trip found for today's date on this route
-                    console.log("[v0] No trip found for booking's route today:", booking.pickupLocation, "->", booking.dropoffLocation);
+                // CRITICAL FIX: Check if booking is ACCEPTED before allowing tracking
+                // Passengers with CONFIRMED (not yet accepted) bookings should NOT be able to track
+                // Only ACCEPTED, IN_PROGRESS, or COMPLETED bookings can track the driver
+                const allowedTrackingStatuses = ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'];
+                if (!allowedTrackingStatuses.includes(booking.bookingStatus)) {
                     return res.json({
                         success: true,
                         data: {
@@ -263,31 +216,180 @@ export const getDriverLocation = async (req, res) => {
                             location: null,
                             tripStatus: null,
                             isLocationAvailable: false,
-                            message: `No trip scheduled for ${booking.pickupLocation} to ${booking.dropoffLocation} today.`
+                            bookingStatus: booking.bookingStatus,
+                            trackingAllowed: false,
+                            message: booking.bookingStatus === 'CONFIRMED'
+                                ? 'Your booking is waiting for partner acceptance. Driver tracking will be available once your booking is accepted.'
+                                : `Tracking is not available for ${booking.bookingStatus} bookings.`
                         }
                     });
                 }
 
-                // Return location for the matching IN_PROGRESS trip
-                const location = trip.currentLocation || null;
-                console.log("[v0] Returning location for matching trip", trip._id, ":", location);
+                // CRITICAL: For ROUND_TRIP bookings, we need to check BOTH outbound and return drivers
+                // Build a list of all possible driver IDs for this booking
+                const possibleDriverIds = [driverId, actualDriverId];
 
+                // Add outbound driver
+                if (booking.outboundDriverId) {
+                    possibleDriverIds.push(booking.outboundDriverId.toString());
+                    // If outbound is self-driver, b2cPartnerId is the driver
+                    if (booking.outboundIsSelfDriver && booking.b2cPartnerId) {
+                        possibleDriverIds.push(booking.b2cPartnerId.toString());
+                    }
+                }
+
+                // Add return driver for ROUND_TRIP bookings
+                if (booking.bookingType === 'ROUND_TRIP' && booking.returnDriverId) {
+                    possibleDriverIds.push(booking.returnDriverId.toString());
+                    // Also resolve the return driver's user ID if they have one
+                    const returnDriverUser = await User.findOne({ driverId: booking.returnDriverId });
+                    if (returnDriverUser) {
+                        possibleDriverIds.push(returnDriverUser._id.toString());
+                    }
+                    // Also try finding user with this driverId in selfDriverAvailability or directly
+                    const returnDriverById = await User.findById(booking.returnDriverId);
+                    if (returnDriverById) {
+                        possibleDriverIds.push(returnDriverById._id.toString());
+                        if (returnDriverById.driverId) {
+                            possibleDriverIds.push(returnDriverById.driverId.toString());
+                        }
+                    }
+                }
+
+                // Add b2cPartnerId for self-driving cases
+                if (booking.b2cPartnerId) {
+                    possibleDriverIds.push(booking.b2cPartnerId.toString());
+                }
+
+                // Remove duplicates
+                const uniqueDriverIds = [...new Set(possibleDriverIds.filter(Boolean))];
+
+                // FIRST: Try to find an IN_PROGRESS trip for ANY of the booking's drivers for today
+                // This handles both outbound and return trips
+                let trip = await B2CPartnerTrip.findOne({
+                    $or: [
+                        { driverId: { $in: uniqueDriverIds } },
+                        { b2cPartnerId: { $in: uniqueDriverIds } }
+                    ],
+                    status: { $in: ['In Progress', 'IN_PROGRESS'] },
+                    tripDate: { $gte: startOfDay, $lte: endOfDay }
+                }).select('currentLocation locationHistory status driverId b2cPartnerId routeId fromLocation toLocation tripDate').sort({ actualStartTime: -1 });
+
+                if (trip) {
+                    // Verify this trip matches the booking's route (outbound OR return for ROUND_TRIP)
+                    const tripMatchesOutboundRoute =
+                        (trip.fromLocation === booking.pickupLocation && trip.toLocation === booking.dropoffLocation) ||
+                        (trip.routeId && booking.routeId && trip.routeId.toString() === booking.routeId.toString());
+
+                    // For ROUND_TRIP, also check if the trip matches the return route
+                    const tripMatchesReturnRoute = booking.bookingType === 'ROUND_TRIP' && (
+                        (trip.fromLocation === booking.returnPickupLocation && trip.toLocation === booking.returnDropoffLocation) ||
+                        (trip.fromLocation === booking.dropoffLocation && trip.toLocation === booking.pickupLocation) // Reverse of outbound
+                    );
+
+                    if (tripMatchesOutboundRoute || tripMatchesReturnRoute || booking.monthlyTrips?.some(t => t.toString() === trip._id.toString())) {
+                        const location = trip.currentLocation || null;
+
+                        return res.json({
+                            success: true,
+                            data: {
+                                driverId: trip.driverId?.toString() || driverId, // Return actual driver ID from trip
+                                tripId: trip._id,
+                                location: location,
+                                locationHistory: (trip.locationHistory || []).slice(-10),
+                                tripStatus: trip.status,
+                                isLocationAvailable: !!(location && (location.latitude || location.lat)),
+                                trackingAllowed: true,
+                                isReturnTrip: tripMatchesReturnRoute // Indicate if this is the return trip
+                            }
+                        });
+                    }
+                }
+
+                // SECOND: If no directly matching IN_PROGRESS trip, check booking's monthlyTrips array
+                if (booking.monthlyTrips && booking.monthlyTrips.length > 0) {
+                    trip = await B2CPartnerTrip.findOne({
+                        _id: { $in: booking.monthlyTrips },
+                        status: { $in: ['In Progress', 'IN_PROGRESS'] },
+                        tripDate: { $gte: startOfDay, $lte: endOfDay }
+                    }).select('currentLocation locationHistory status driverId b2cPartnerId routeId fromLocation toLocation tripDate');
+
+                    if (trip) {
+                        const location = trip.currentLocation || null;
+                        return res.json({
+                            success: true,
+                            data: {
+                                driverId,
+                                tripId: trip._id,
+                                location: location,
+                                locationHistory: (trip.locationHistory || []).slice(-10),
+                                tripStatus: trip.status,
+                                isLocationAvailable: !!(location && (location.latitude || location.lat)),
+                                trackingAllowed: true
+                            }
+                        });
+                    }
+                }
+
+                // THIRD: Check for SCHEDULED trips if no in-progress trip found
+                // Use uniqueDriverIds to find scheduled trips for any of the booking's drivers
+                let scheduledTrip = await B2CPartnerTrip.findOne({
+                    $or: [
+                        { _id: { $in: booking.monthlyTrips || [] } },
+                        {
+                            $and: [
+                                {
+                                    $or: [
+                                        { driverId: { $in: uniqueDriverIds } },
+                                        { b2cPartnerId: { $in: uniqueDriverIds } }
+                                    ]
+                                },
+                                {
+                                    // Match either outbound OR return route
+                                    $or: [
+                                        { fromLocation: booking.pickupLocation, toLocation: booking.dropoffLocation },
+                                        { fromLocation: booking.returnPickupLocation, toLocation: booking.returnDropoffLocation },
+                                        { fromLocation: booking.dropoffLocation, toLocation: booking.pickupLocation } // Reverse for return
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    status: { $in: ['Scheduled', 'SCHEDULED'] },
+                    tripDate: { $gte: startOfDay, $lte: endOfDay }
+                }).select('_id status tripDate startTime fromLocation toLocation');
+
+                if (scheduledTrip) {
+                    return res.json({
+                        success: true,
+                        data: {
+                            driverId,
+                            tripId: scheduledTrip._id,
+                            location: null,
+                            tripStatus: scheduledTrip.status,
+                            isLocationAvailable: false,
+                            trackingAllowed: true,
+                            message: `Trip for ${booking.pickupLocation} to ${booking.dropoffLocation} has not started yet. Driver location will be available once the trip begins.`
+                        }
+                    });
+                }
+
+                // No trip found for today's date on this route
                 return res.json({
                     success: true,
                     data: {
                         driverId,
-                        tripId: trip._id,
-                        location: location,
-                        locationHistory: (trip.locationHistory || []).slice(-10),
-                        tripStatus: trip.status,
-                        isLocationAvailable: !!(location && (location.latitude || location.lat))
+                        location: null,
+                        tripStatus: null,
+                        isLocationAvailable: false,
+                        trackingAllowed: true,
+                        message: `No trip scheduled for ${booking.pickupLocation} to ${booking.dropoffLocation} today.`
                     }
                 });
             }
         }
 
         // Fallback: If no bookingId provided, use original logic (for backward compatibility)
-        // But this should ideally not be used for B2C tracking
         let trip = await B2CPartnerTrip.findOne({
             $or: [
                 { driverId: driverId },
@@ -295,10 +397,9 @@ export const getDriverLocation = async (req, res) => {
                 { 'assignedDriver': driverId },
                 { b2cPartnerId: driverId }
             ],
-            status: { $in: ['In Progress', 'IN_PROGRESS'] }
+            status: { $in: ['In Progress', 'IN_PROGRESS'] },
+            tripDate: { $gte: startOfDay, $lte: endOfDay }
         }).select('currentLocation locationHistory status driverId b2cPartnerId routeId').sort({ actualStartTime: -1 });
-
-        console.log("[v0] B2CPartnerTrip IN_PROGRESS search result (fallback):", trip ? `Found trip ${trip._id} with status ${trip.status}` : "No in-progress trip found");
 
         // If not found in B2CPartnerTrip, check Trip model (B2B/Corporate trips)
         if (!trip) {
@@ -309,10 +410,6 @@ export const getDriverLocation = async (req, res) => {
                 ],
                 status: 'IN_PROGRESS'
             }).select('currentLocation driverLocation status driverId routeId');
-
-            if (trip) {
-                console.log("[v0] Found B2B/Corporate trip IN_PROGRESS:", trip._id);
-            }
         }
 
         if (!trip) {
@@ -323,11 +420,11 @@ export const getDriverLocation = async (req, res) => {
                     { 'assignedDriver': driverId },
                     { b2cPartnerId: driverId }
                 ],
-                status: { $in: ['Scheduled', 'SCHEDULED'] }
+                status: { $in: ['Scheduled', 'SCHEDULED'] },
+                tripDate: { $gte: startOfDay, $lte: endOfDay }
             }).select('_id status tripDate startTime').sort({ tripDate: 1, startTime: 1 });
 
             if (scheduledTrip) {
-                console.log("[v0] Found SCHEDULED trip but not started:", scheduledTrip._id);
                 return res.json({
                     success: true,
                     data: {
@@ -341,7 +438,6 @@ export const getDriverLocation = async (req, res) => {
                 });
             }
 
-            console.log("[v0] No active trip found for driver:", driverId);
             return res.json({
                 success: true,
                 data: {
@@ -355,7 +451,6 @@ export const getDriverLocation = async (req, res) => {
         }
 
         const location = trip.currentLocation || trip.driverLocation || null;
-        console.log("[v0] Returning location for IN_PROGRESS trip", trip._id, ":", location);
 
         res.json({
             success: true,

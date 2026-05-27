@@ -3,6 +3,8 @@ import User from "../models/User.js";
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
 import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
+import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
+import mongoose from "mongoose";
 
 // Get B2C Partner Booking History (COMPLETED and CANCELLED bookings)
 export const getB2CPartnerBookingHistory = async (req, res) => {
@@ -129,6 +131,7 @@ export const getB2CPartnerBookingHistory = async (req, res) => {
 export const getB2CPartnerBookings = async (req, res) => {
     try {
         const partnerId = req.userId;
+        console.log("[v0] getB2CPartnerBookings called for partnerId:", partnerId);
 
         // Get all bookings for this partner
         const bookings = await B2CPassengerBooking.find({
@@ -139,23 +142,170 @@ export const getB2CPartnerBookings = async (req, res) => {
             .populate('assignedDriverId', 'fullName email whatsappNumber')
             .sort({ bookingDate: -1 });
 
+        console.log("[v0] Found", bookings.length, "bookings for partner");
+
+        // Import B2CPartnerSchedule for resolving driver info from schedules
+        const B2CPartnerSchedule = (await import('../models/B2CPartnerSchedule.js')).default;
+
+        // Process bookings to add driver names for ROUND_TRIP bookings
+        // NOTE: outboundDriverId/returnDriverId may store either:
+        // - User._id (for B2C_PARTNER self-driver) 
+        // - B2CPartnerDriver._id (for assigned drivers)
+        // We need to handle both cases
+
+        const formattedBookings = await Promise.all(bookings.map(async (booking) => {
+            const bookingObj = booking.toObject();
+
+            console.log("[v0] Processing booking:", bookingObj._id, "- returnDriverId:", bookingObj.returnDriverId, "returnIsSelfDriver:", bookingObj.returnIsSelfDriver);
+
+            // Helper function to get driver ID as string (handles both ObjectId and populated objects)
+            const getDriverId = (driverIdField) => {
+                if (!driverIdField) return null;
+                // If it's a populated object, get the _id
+                if (typeof driverIdField === 'object' && driverIdField._id) {
+                    return driverIdField._id.toString();
+                }
+                // If it's an ObjectId or string
+                return driverIdField.toString();
+            };
+
+            // CRITICAL FIX: For ONE_WAY bookings with null outboundDriverId, resolve from schedule's tripTimes
+            // This handles bookings that were created before the tripTime matching fix
+            if (!bookingObj.outboundDriverId && bookingObj.linkedSchedule && bookingObj.outboundTripTime) {
+                try {
+                    const schedule = await B2CPartnerSchedule.findById(bookingObj.linkedSchedule);
+                    if (schedule && schedule.tripTimes) {
+                        // Find the matching tripTime by departureTime or arrivalTime
+                        let matchedTripTime = schedule.tripTimes.find(tt =>
+                            tt.departureTime === bookingObj.outboundTripTime
+                        );
+                        if (!matchedTripTime) {
+                            // For return direction ONE_WAY, check arrivalTime
+                            matchedTripTime = schedule.tripTimes.find(tt =>
+                                tt.arrivalTime === bookingObj.outboundTripTime
+                            );
+                        }
+
+                        if (matchedTripTime && matchedTripTime.assignedDriver) {
+                            const driverId = matchedTripTime.assignedDriver.toString();
+                            const partnerId = bookingObj.b2cPartnerId?._id?.toString() || bookingObj.b2cPartnerId?.toString();
+
+                            // Check if driver is B2C Partner (self-driver) or B2CPartnerDriver
+                            const isSelf = driverId === partnerId;
+
+                            bookingObj.outboundDriverId = matchedTripTime.assignedDriver;
+                            bookingObj.outboundVehicleId = matchedTripTime.assignedVehicle;
+                            bookingObj.outboundIsSelfDriver = isSelf;
+                            bookingObj.isSelfDriver = isSelf;
+
+                            console.log("[v0] Resolved outbound driver from schedule tripTime:", {
+                                driverId,
+                                isSelf,
+                                outboundTripTime: bookingObj.outboundTripTime
+                            });
+                        }
+                    }
+                } catch (scheduleErr) {
+                    console.error("[v0] Error resolving schedule driver:", scheduleErr.message);
+                }
+            }
+
+            // Handle OUTBOUND driver
+            if (bookingObj.outboundIsSelfDriver) {
+                // Self-driver - get name from User (B2C_PARTNER)
+                const outboundId = getDriverId(bookingObj.outboundDriverId);
+                if (outboundId) {
+                    const partnerUser = await User.findById(outboundId);
+                    if (partnerUser) {
+                        bookingObj.outboundDriverName = partnerUser.fullName || 'Self-Driving';
+                    } else {
+                        bookingObj.outboundDriverName = bookingObj.driverName || 'Self-Driving';
+                    }
+                } else {
+                    bookingObj.outboundDriverName = bookingObj.driverName || 'Self-Driving';
+                }
+            } else if (bookingObj.outboundDriverId) {
+                // Assigned driver - could be User._id or B2CPartnerDriver._id
+                const outboundId = getDriverId(bookingObj.outboundDriverId);
+                if (outboundId) {
+                    // First try B2CPartnerDriver (most common case for assigned drivers)
+                    const outboundDriver = await B2CPartnerDriver.findById(outboundId);
+                    if (outboundDriver) {
+                        bookingObj.outboundDriverName = outboundDriver.name;
+                        bookingObj.outboundDriverPhone = outboundDriver.phoneNumber;
+                        bookingObj.outboundDriverImage = outboundDriver.driverImage?.url;
+                    } else {
+                        // Fallback: try User collection
+                        const driverUser = await User.findById(outboundId);
+                        if (driverUser) {
+                            bookingObj.outboundDriverName = driverUser.fullName;
+                            bookingObj.outboundDriverPhone = driverUser.whatsappNumber;
+                            bookingObj.outboundDriverImage = driverUser.profileImage;
+                        }
+                    }
+                }
+            }
+
+            // Handle RETURN driver
+            if (bookingObj.returnIsSelfDriver) {
+                // Self-driver - get name from User (B2C_PARTNER)
+                const returnId = getDriverId(bookingObj.returnDriverId);
+                if (returnId) {
+                    const partnerUser = await User.findById(returnId);
+                    if (partnerUser) {
+                        bookingObj.returnDriverName = partnerUser.fullName || 'Self-Driving';
+                    } else {
+                        bookingObj.returnDriverName = bookingObj.driverName || 'Self-Driving';
+                    }
+                } else {
+                    bookingObj.returnDriverName = bookingObj.driverName || 'Self-Driving';
+                }
+            } else if (bookingObj.returnDriverId) {
+                // Assigned driver - could be User._id or B2CPartnerDriver._id
+                const returnId = getDriverId(bookingObj.returnDriverId);
+                console.log("[v0] Looking up return driver with ID:", returnId);
+                if (returnId) {
+                    // First try B2CPartnerDriver (most common case for assigned drivers)
+                    const returnDriver = await B2CPartnerDriver.findById(returnId);
+                    console.log("[v0] B2CPartnerDriver lookup result:", returnDriver ? returnDriver.name : "NOT FOUND");
+                    if (returnDriver) {
+                        bookingObj.returnDriverName = returnDriver.name;
+                        bookingObj.returnDriverPhone = returnDriver.phoneNumber;
+                        bookingObj.returnDriverImage = returnDriver.driverImage?.url;
+                    } else {
+                        // Fallback: try User collection
+                        const driverUser = await User.findById(returnId);
+                        console.log("[v0] User lookup result:", driverUser ? driverUser.fullName : "NOT FOUND");
+                        if (driverUser) {
+                            bookingObj.returnDriverName = driverUser.fullName;
+                            bookingObj.returnDriverPhone = driverUser.whatsappNumber;
+                            bookingObj.returnDriverImage = driverUser.profileImage;
+                        }
+                    }
+                }
+            }
+
+            console.log("[v0] Final returnDriverName:", bookingObj.returnDriverName);
+            return bookingObj;
+        }));
+
         // Filter bookings based on driver assignment
-        const selfDriverBookings = bookings.filter(booking => booking.isSelfDriver);
-        const assignedDriverBookings = bookings.filter(booking => !booking.isSelfDriver);
+        const selfDriverBookings = formattedBookings.filter(booking => booking.isSelfDriver);
+        const assignedDriverBookings = formattedBookings.filter(booking => !booking.isSelfDriver);
 
         res.status(200).json({
             success: true,
             data: {
-                allBookings: bookings,
+                allBookings: formattedBookings,
                 selfDriverBookings, // Bookings where partner is driving
                 assignedDriverBookings, // Bookings where assigned drivers are driving
                 stats: {
-                    total: bookings.length,
+                    total: formattedBookings.length,
                     selfDriver: selfDriverBookings.length,
                     assignedDriver: assignedDriverBookings.length,
-                    pending: bookings.filter(b => b.bookingStatus === 'PENDING').length,
-                    confirmed: bookings.filter(b => b.bookingStatus === 'CONFIRMED').length,
-                    completed: bookings.filter(b => b.bookingStatus === 'COMPLETED').length
+                    pending: formattedBookings.filter(b => b.bookingStatus === 'PENDING').length,
+                    confirmed: formattedBookings.filter(b => b.bookingStatus === 'CONFIRMED').length,
+                    completed: formattedBookings.filter(b => b.bookingStatus === 'COMPLETED').length
                 }
             }
         });
@@ -295,27 +445,41 @@ export const getB2CPartnerDriverBookings = async (req, res) => {
         const driverId = driverUser.driverId;
         const b2cPartnerId = driverUser.b2cPartnerId;
 
-        console.log("[v0] Driver lookup:", { userId, driverId, b2cPartnerId });
+        console.log("[v0] Driver lookup:", { userId, driverId: driverId?.toString(), b2cPartnerId: b2cPartnerId?.toString() });
 
-        // APPROACH 1: Direct query by assignedDriverId matching driverId (B2CPartnerDriver document ID)
+        // COMPREHENSIVE QUERY: Find bookings where driver is assigned via ANY of:
+        // - assignedDriverId (primary driver assignment)
+        // - outboundDriverId (outbound trip driver for ROUND_TRIP)
+        // - returnDriverId (return trip driver for ROUND_TRIP)
+        // Note: driverId is the B2CPartnerDriver._id (ObjectId), which is what's stored in these fields
         let bookings = await B2CPassengerBooking.find({
-            assignedDriverId: driverId
+            $or: [
+                { assignedDriverId: driverId },
+                { outboundDriverId: driverId },
+                { returnDriverId: driverId }
+            ]
         })
             .populate('passengerId', 'fullName email whatsappNumber profileImage countryCode')
             .populate('routeId', 'fromLocation toLocation routeName stops')
             .populate('b2cPartnerId', 'fullName email whatsappNumber profileImage')
             .sort({ bookingDate: -1 });
 
-        console.log("[v0] Bookings found by direct assignedDriverId query:", bookings.length);
+        console.log("[v0] Bookings found by driver ID query:", bookings.length);
+        bookings.forEach(b => {
+            console.log("[v0] Booking:", b._id.toString(), "- assignedDriverId:", b.assignedDriverId?.toString(), "outboundDriverId:", b.outboundDriverId?.toString(), "returnDriverId:", b.returnDriverId?.toString());
+        });
 
         // APPROACH 2: If no bookings found, try to find via schedules that have this driver assigned
         if (bookings.length === 0 && driverId) {
             // Import B2CPartnerSchedule model dynamically
             const B2CPartnerSchedule = (await import('../models/B2CPartnerSchedule.js')).default;
 
-            // Find schedules where this driver is assigned
+            // Find schedules where this driver is assigned (either at schedule level or in tripTimes)
             const driverSchedules = await B2CPartnerSchedule.find({
-                assignedDriver: driverId,
+                $or: [
+                    { assignedDriver: driverId },
+                    { 'tripTimes.assignedDriver': driverId }
+                ],
                 isActive: true
             });
 
@@ -323,34 +487,55 @@ export const getB2CPartnerDriverBookings = async (req, res) => {
 
             if (driverSchedules.length > 0) {
                 const scheduleIds = driverSchedules.map(s => s._id);
-                const routeIds = driverSchedules.map(s => s.routeId);
 
-                // Get bookings linked to these schedules OR routes
-                bookings = await B2CPassengerBooking.find({
-                    $or: [
-                        { linkedSchedule: { $in: scheduleIds } },
-                        { routeId: { $in: routeIds } }
-                    ]
+                // CRITICAL FIX: Find which tripTimes have this driver assigned
+                // Then match bookings by their outboundTripTime or returnTripTime
+                const driverTripTimes = [];
+                for (const schedule of driverSchedules) {
+                    for (const tripTime of schedule.tripTimes || []) {
+                        if (tripTime.assignedDriver?.toString() === driverId.toString()) {
+                            driverTripTimes.push({
+                                scheduleId: schedule._id,
+                                departureTime: tripTime.departureTime,
+                                arrivalTime: tripTime.arrivalTime
+                            });
+                        }
+                    }
+                }
+
+                console.log("[v0] Driver assigned tripTimes:", driverTripTimes);
+
+                // Get bookings linked to these schedules AND match their trip times
+                const scheduleBookings = await B2CPassengerBooking.find({
+                    linkedSchedule: { $in: scheduleIds }
                 })
                     .populate('passengerId', 'fullName email whatsappNumber profileImage countryCode')
                     .populate('routeId', 'fromLocation toLocation routeName stops')
                     .populate('b2cPartnerId', 'fullName email whatsappNumber profileImage')
                     .sort({ bookingDate: -1 });
 
-                console.log("[v0] Bookings found via schedule/route query:", bookings.length);
-
-                // Update these bookings to have the correct assignedDriverId for future queries
-                if (bookings.length > 0) {
-                    for (const booking of bookings) {
-                        if (booking.assignedDriverId?.toString() !== driverId.toString()) {
-                            await B2CPassengerBooking.findByIdAndUpdate(booking._id, {
-                                assignedDriverId: driverId,
-                                isSelfDriver: false
-                            });
-                            console.log("[v0] Updated booking", booking._id, "with correct driver ID");
+                // Filter bookings to only those where the driver is assigned to their trip time
+                bookings = scheduleBookings.filter(booking => {
+                    // Check if booking's outboundTripTime or returnTripTime matches driver's assigned times
+                    for (const dtt of driverTripTimes) {
+                        if (booking.linkedSchedule?.toString() === dtt.scheduleId.toString()) {
+                            // For ONE_WAY return direction, outboundTripTime matches arrivalTime
+                            if (booking.outboundTripTime === dtt.departureTime ||
+                                booking.outboundTripTime === dtt.arrivalTime) {
+                                return true;
+                            }
+                            // For ROUND_TRIP, check returnTripTime as well
+                            if (booking.bookingType === 'ROUND_TRIP' &&
+                                (booking.returnTripTime === dtt.departureTime ||
+                                    booking.returnTripTime === dtt.arrivalTime)) {
+                                return true;
+                            }
                         }
                     }
-                }
+                    return false;
+                });
+
+                console.log("[v0] Bookings found via schedule tripTime matching:", bookings.length);
             }
         }
 
@@ -492,8 +677,10 @@ export const getB2CBookingDetails = async (req, res) => {
 
         let booking = await B2CPassengerBooking.findById(bookingId)
             .populate('passengerId', 'name email phone fullName')
-            .populate('b2cPartnerId', 'name email fullName phone profileImage')
-            .populate('assignedDriverId', 'name email phone driverImage phoneNumber')
+            .populate('b2cPartnerId', 'name email fullName phone profileImage whatsappNumber')
+            .populate('assignedDriverId', 'name email phone driverImage phoneNumber fullName whatsappNumber')
+            .populate('outboundDriverId', 'fullName email whatsappNumber profileImage driverId')
+            .populate('returnDriverId', 'fullName email whatsappNumber profileImage driverId')
             .populate('routeId')
             .populate('linkedSchedule');
 
@@ -617,6 +804,68 @@ export const getB2CBookingDetails = async (req, res) => {
             };
         }
 
+        // CRITICAL: For ROUND_TRIP bookings, check if any trips are "In Progress"
+        // This allows tracking even when booking status is COMPLETED
+        let hasActiveTripInProgress = false;
+        let hasScheduledReturnTripToday = false;
+        let activeTripInfo = null;
+
+        // Get today's date range
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        // Collect all trip IDs
+        const bookingTripIds = [];
+        if (booking.monthlyTrips) bookingTripIds.push(...booking.monthlyTrips.map(t => t.toString()));
+        if (booking.linkedTrip) bookingTripIds.push(booking.linkedTrip.toString());
+        if (booking.linkedReturnTrip) bookingTripIds.push(booking.linkedReturnTrip.toString());
+
+        if (bookingTripIds.length > 0) {
+            const trips = await B2CPartnerTrip.find({
+                _id: { $in: bookingTripIds }
+            }).select('_id status tripDate startTime fromLocation toLocation driverId').lean();
+
+            for (const trip of trips) {
+                // Check if trip is in progress
+                if (trip.status === 'In Progress' || trip.status === 'IN_PROGRESS' || trip.status === 'Started') {
+                    hasActiveTripInProgress = true;
+                    activeTripInfo = {
+                        tripId: trip._id,
+                        status: trip.status,
+                        startTime: trip.startTime,
+                        fromLocation: trip.fromLocation,
+                        toLocation: trip.toLocation,
+                        driverId: trip.driverId
+                    };
+                    break;
+                }
+
+                // Check for scheduled return trip today
+                if (trip.tripDate && booking.bookingType === 'ROUND_TRIP') {
+                    const tripDate = new Date(trip.tripDate);
+                    if (tripDate >= todayStart && tripDate <= todayEnd &&
+                        (trip.status === 'Scheduled' || trip.status === 'SCHEDULED')) {
+                        const isReturnTrip = trip.fromLocation === booking.returnPickupLocation ||
+                            trip.fromLocation === booking.dropoffLocation;
+                        if (isReturnTrip && !activeTripInfo) {
+                            hasScheduledReturnTripToday = true;
+                            activeTripInfo = {
+                                tripId: trip._id,
+                                status: 'Scheduled',
+                                startTime: trip.startTime,
+                                fromLocation: trip.fromLocation,
+                                toLocation: trip.toLocation,
+                                driverId: trip.driverId,
+                                isReturnTrip: true
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
         res.status(200).json({
             success: true,
             data: {
@@ -624,7 +873,10 @@ export const getB2CBookingDetails = async (req, res) => {
                     ...booking,
                     driverInfo,
                     vehicleInfo,
-                    partnerInfo
+                    partnerInfo,
+                    hasActiveTripInProgress,
+                    hasScheduledReturnTripToday,
+                    activeTripInfo
                 }
             }
         });

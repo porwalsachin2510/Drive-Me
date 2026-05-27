@@ -73,6 +73,29 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
     fetchExistingSchedule();
   }, [route._id]);
 
+  // Silent polling for real-time driver availability updates
+  useEffect(() => {
+    // Poll for driver availability every 5 seconds
+    const pollDriverAvailability = async () => {
+      try {
+        const response = await api.get("/b2c-partner/drivers");
+        if (response.data.drivers) {
+          setAvailableDrivers(response.data.drivers);
+        }
+      } catch (error) {
+        // Silent fail - don't disrupt user experience
+      }
+    };
+
+    // Start polling interval
+    const pollInterval = setInterval(pollDriverAvailability, 5000);
+
+    // Cleanup on unmount
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, []);
+
   const fetchExistingSchedule = async () => {
     try {
       setLoadingSchedule(true);
@@ -874,12 +897,49 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
                   className="b2c-form-input"
                 >
                   <option value="">Select Driver</option>
-                  {availableDrivers.map((driver) => (
-                    <option key={driver._id} value={driver._id}>
-                      {driver.name} ({driver.phoneNumber})
-                    </option>
-                  ))}
+                  {availableDrivers.map((driver) => {
+                    const availabilityStatus =
+                      driver.availability?.status ||
+                      driver.availabilityStatus ||
+                      "available";
+                    const availabilityIcon =
+                      availabilityStatus === "available"
+                        ? "🟢"
+                        : availabilityStatus === "busy"
+                          ? "🔴"
+                          : availabilityStatus === "offline"
+                            ? "🟠"
+                            : "🟠";
+                    const availabilityText =
+                      driver.availability?.message ||
+                      (availabilityStatus === "available"
+                        ? "Available"
+                        : availabilityStatus === "busy"
+                          ? "Busy"
+                          : availabilityStatus === "offline"
+                            ? "Offline"
+                            : "Not Available");
+                    return (
+                      <option key={driver._id} value={driver._id}>
+                        {availabilityIcon} {driver.name} ({driver.phoneNumber})
+                        - {availabilityText}
+                      </option>
+                    );
+                  })}
                 </select>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    marginTop: "6px",
+                    fontSize: "11px",
+                    color: "#64748b",
+                  }}
+                >
+                  <span>🟢 Available</span>
+                  <span>🟠 Has upcoming trip</span>
+                  <span>🔴 Currently busy</span>
+                </div>
               </div>
             </div>
           </div>

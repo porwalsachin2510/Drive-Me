@@ -34,6 +34,7 @@ const menuConfigs = {
     { id: "vehicles", label: "Fleet & Drivers", icon: "vehicles" },
     { id: "routes", label: "Routes", icon: "routes" },
     { id: "route-requests", label: "Route Requests", icon: "requests" },
+    { id: "ratings", label: "My Ratings", icon: "ratings" },
     { id: "account", label: "Account", icon: "account" },
   ],
   B2B_PARTNER: [
@@ -73,6 +74,7 @@ const menuConfigs = {
   B2C_PARTNER_DRIVER: [
     { id: "bookings", label: "Bookings", icon: "bookings" },
     { id: "daily-trips", label: "Daily Trips", icon: "calendar" },
+    { id: "ratings", label: "My Ratings", icon: "ratings" },
     { id: "location", label: "Live Location", icon: "location" },
   ],
   B2B_PARTNER_DRIVER: [
@@ -345,6 +347,18 @@ const getIcon = (iconType) => {
         <circle cx="12" cy="7" r="4" />
       </svg>
     ),
+    ratings: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    ),
     contracts: (
       <svg
         width="20"
@@ -509,6 +523,7 @@ const getIcon = (iconType) => {
         <line x1="20" y1="12" x2="22" y2="12" />
       </svg>
     ),
+    
     feedback: (
       <svg
         width="20"

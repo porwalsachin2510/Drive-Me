@@ -64,6 +64,59 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
             type: String,
             required: false,
         },
+
+
+        // Outbound Trip Driver/Vehicle Assignment (captured at booking time)
+        outboundDriverId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+        outboundVehicleId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "B2CPartnerVehicle",
+            default: null,
+        },
+        outboundIsSelfDriver: {
+            type: Boolean,
+            default: false,
+        },
+        outboundTripTime: {
+            type: String,
+            default: null,
+        },
+
+        // Outbound Trip Status (separate from bookingStatus for ROUND_TRIP tracking)
+        outboundTripStatus: {
+            type: String,
+            enum: ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
+            default: "SCHEDULED",
+        },
+        // Return Trip Driver/Vehicle Assignment (captured at booking time)
+        returnDriverId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+        returnVehicleId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "B2CPartnerVehicle",
+            default: null,
+        },
+        returnIsSelfDriver: {
+            type: Boolean,
+            default: false,
+        },
+        returnTripTime: {
+            type: String,
+            default: null,
+        },
+        // Return Trip Status (separate from bookingStatus for ROUND_TRIP tracking)
+        returnTripStatus: {
+            type: String,
+            enum: ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
+            default: "SCHEDULED",
+        },
         travelPath: [
             {
                 location: String,

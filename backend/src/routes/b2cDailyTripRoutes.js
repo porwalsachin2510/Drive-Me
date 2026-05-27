@@ -15,8 +15,16 @@ import {
     startPartnerTrip,
     completePartnerTrip,
     updateB2CDriverLocation,
-    getActiveB2CTrip
+    getActiveB2CTrip,
+    checkAndUpdateAvailability
 } from "../controllers/b2cDailyTripController.js";
+import {
+    updateDriverAvailabilityStatus,
+    getMyAvailabilityStatus,
+    updateAvailableTimeSlots,
+    getDriverIncompleteTrips,
+    getDetailedAvailabilityInfo
+} from "../controllers/driverController.js";
 
 const router = express.Router();
 
@@ -43,6 +51,14 @@ router.put("/driver/complete/:tripId", verifyToken, completeDriverTrip);
 router.get("/driver/active-trip", verifyToken, getActiveB2CTrip);
 router.post("/driver/update-location", verifyToken, updateB2CDriverLocation);
 
+// Driver availability management
+router.get("/driver/availability", verifyToken, getMyAvailabilityStatus);
+router.get("/driver/availability/detailed", verifyToken, getDetailedAvailabilityInfo);
+router.put("/driver/availability/status", verifyToken, updateDriverAvailabilityStatus);
+router.put("/driver/availability/time-slots", verifyToken, updateAvailableTimeSlots);
+router.get("/driver/incomplete-trips", verifyToken, getDriverIncompleteTrips);
+// Check and auto-update availability based on scheduled trips (call on login/dashboard load)
+router.get("/driver/check-availability", verifyToken, checkAndUpdateAvailability);
 // Statistics and dashboard
 router.get("/statistics/:tripId", verifyToken, checkB2CPartnerRole, getTripStatistics);
 router.get("/dashboard", verifyToken, checkB2CPartnerRole, getProviderDashboard);

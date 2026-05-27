@@ -47,6 +47,12 @@ export const setupSocketListeners = (userRole, userId, dispatch) => {
   // Join user-specific room
   socket.emit('join_user_room', userId);
 
+  // Join role-specific rooms for real-time updates
+  if (userRole === 'B2C_PARTNER') {
+    // Join B2C Partner room for driver availability updates
+    socket.emit('join_b2c_partner_room', userId);
+  }
+
   // Common listeners for all users
   socket.on('new_notification', (notification) => {
     dispatch({
@@ -216,6 +222,23 @@ const setupB2CPartnerListeners = (dispatch) => {
         message: data.message,
         isRead: false,
         createdAt: new Date().toISOString(),
+      }
+    });
+  });
+
+  // Real-time driver availability updates
+  // This triggers when any driver (or self) changes their availability status
+  socket.on('driver_availability_changed', (data) => {
+    console.log('[Socket] Driver availability changed:', data);
+    // Dispatch to Redux store for real-time UI updates
+    dispatch({
+      type: 'drivers/updateDriverAvailability',
+      payload: {
+        driverId: data.driverId,
+        driverName: data.driverName,
+        availabilityStatus: data.availabilityStatus,
+        isSelfDriver: data.isSelfDriver,
+        updatedAt: data.updatedAt
       }
     });
   });

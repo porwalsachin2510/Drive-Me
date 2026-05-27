@@ -6,6 +6,7 @@ import {
     createB2CPartnerVehicle,
     updateB2CPartnerVehicle,
     deleteB2CPartnerVehicle,
+    updateB2CPartnerVehicleStatus,
     createB2CPartnerTrip,
     getB2CPartnerProfile,
     updateB2CPartnerProfile,
@@ -17,6 +18,11 @@ import {
     getB2CPartnerDrivers,
     updateB2CPartnerDriver,
     deleteB2CPartnerDriver,
+    getB2CPartnerDriverAvailability,
+    updateDriverAvailabilityStatus,
+    getMyAvailabilityStatus,
+    updateAvailableTimeSlots,
+    getAvailableDriversForAssignment,
 } from "../controllers/driverController.js"
 import {
     createB2CPartnerRoute,
@@ -42,38 +48,41 @@ router.get("/earnings", verifyToken, checkB2CPartnerRole, getB2CPartnerEarnings)
 // B2C Partner Fleet Management
 router.get("/fleet", verifyToken, checkB2CPartnerRole, getB2CPartnerFleet)
 router.post(
-    "/vehicles", 
-    verifyToken, 
-    checkB2CPartnerRole, 
+    "/vehicles",
+    verifyToken,
+    checkB2CPartnerRole,
     upload.fields([
         { name: "images", maxCount: 10 }
-    ]), 
+    ]),
     createB2CPartnerVehicle
 )
 router.put(
-    "/vehicles/:vehicleId", 
-    verifyToken, 
-    checkB2CPartnerRole, 
+    "/vehicles/:vehicleId",
+    verifyToken,
+    checkB2CPartnerRole,
     upload.fields([
         { name: "images", maxCount: 10 }
-    ]), 
+    ]),
     updateB2CPartnerVehicle
 )
 router.delete("/vehicles/:vehicleId", verifyToken, checkB2CPartnerRole, deleteB2CPartnerVehicle)
+router.put("/vehicles/:vehicleId/status", verifyToken, checkB2CPartnerRole, updateB2CPartnerVehicleStatus)
 
 // B2C Partner Drivers Management
 router.get("/drivers", verifyToken, checkB2CPartnerRole, getB2CPartnerDrivers)
+router.post("/drivers/availability", verifyToken, checkB2CPartnerRole, getB2CPartnerDriverAvailability)
+router.get("/drivers/available-for-assignment", verifyToken, checkB2CPartnerRole, getAvailableDriversForAssignment)
 router.post(
-    "/drivers", 
-    verifyToken, 
-    checkB2CPartnerRole, 
+    "/drivers",
+    verifyToken,
+    checkB2CPartnerRole,
     upload.fields([
         { name: "driverImage", maxCount: 1 },
         { name: "license", maxCount: 1 },
         { name: "passport", maxCount: 1 },
         { name: "visa", maxCount: 1 },
         { name: "medicalCertificate", maxCount: 1 }
-    ]), 
+    ]),
     createB2CPartnerDriver
 )
 router.put(

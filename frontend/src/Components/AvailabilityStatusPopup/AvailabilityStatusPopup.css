@@ -1,0 +1,506 @@
+.availability-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.availability-popup {
+  background: white;
+  border-radius: 16px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: popupSlideUp 0.3s ease-out;
+}
+
+@keyframes popupSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header Styles */
+.availability-popup-header {
+  padding: 28px 24px;
+  text-align: center;
+  border-radius: 16px 16px 0 0;
+  position: relative;
+}
+
+.availability-popup-header.busy {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.availability-popup-header.available {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.availability-popup-header.offline {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+}
+
+.availability-popup-header .status-icon {
+  width: 72px;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.availability-popup-header .status-icon svg {
+  color: white;
+}
+
+.availability-popup-header h2 {
+  margin: 0 0 8px 0;
+  color: white;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.availability-popup-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+.availability-popup-header .close-icon-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.availability-popup-header .close-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Body Styles */
+.availability-popup-body {
+  padding: 20px 24px;
+}
+
+/* Section Headers */
+.availability-popup-body h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.availability-popup-body h4 svg {
+  color: #6b7280;
+}
+
+/* Schedule Section */
+.schedule-section {
+  margin-bottom: 20px;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-card {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 14px;
+  border-left: 4px solid #ef4444;
+}
+
+.schedule-time {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.time-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.trip-type-badge {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.schedule-route {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.schedule-route svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.schedule-route .from {
+  font-weight: 500;
+  color: #047857;
+}
+
+.schedule-route .to {
+  font-weight: 500;
+  color: #dc2626;
+}
+
+.schedule-name {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Completed Section */
+.completed-section {
+  margin-bottom: 20px;
+}
+
+.completed-section h4 svg {
+  color: #22c55e;
+}
+
+.completed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.completed-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.completed-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.completed-time {
+  font-weight: 600;
+  color: #166534;
+  font-size: 0.875rem;
+}
+
+.completed-route {
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.completed-badge {
+  background: #22c55e;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+/* Next Trip Section */
+.next-trip-section {
+  margin-bottom: 20px;
+}
+
+.next-trip-section h4 svg {
+  color: #3b82f6;
+}
+
+.next-trip-card {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 16px;
+  border-left: 4px solid #3b82f6;
+}
+
+.next-trip-time {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.big-time {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.time-until {
+  font-size: 0.875rem;
+  color: #3b82f6;
+  font-weight: 500;
+  background: #dbeafe;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.next-trip-route {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.next-trip-route svg {
+  color: #9ca3af;
+}
+
+/* Message Boxes */
+.availability-window-message,
+.cannot-available-message,
+.all-completed-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 10px;
+  margin-top: 16px;
+}
+
+.availability-window-message {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+}
+
+.availability-window-message .window-icon {
+  width: 44px;
+  height: 44px;
+  background: #dcfce7;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #22c55e;
+}
+
+.window-content h5,
+.message-content h5 {
+  margin: 0 0 6px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #166534;
+}
+
+.window-content p,
+.message-content p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #15803d;
+  line-height: 1.5;
+}
+
+.window-content strong,
+.message-content strong {
+  color: #166534;
+}
+
+.cannot-available-message {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+}
+
+.cannot-available-message .message-icon {
+  width: 44px;
+  height: 44px;
+  background: #fef9c3;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #f59e0b;
+}
+
+.cannot-available-message .message-content h5 {
+  color: #92400e;
+}
+
+.cannot-available-message .message-content p {
+  color: #b45309;
+}
+
+.all-completed-message {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+}
+
+.all-completed-message .message-icon.success {
+  width: 44px;
+  height: 44px;
+  background: #dcfce7;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #22c55e;
+}
+
+/* Footer */
+.availability-popup-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.availability-popup-footer .cancel-btn {
+  padding: 12px 24px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  color: #4b5563;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.availability-popup-footer .cancel-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.availability-popup-footer .cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.availability-popup-footer .confirm-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.availability-popup-footer .confirm-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.3);
+}
+
+.availability-popup-footer .confirm-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.availability-popup-footer .confirm-btn .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 520px) {
+  .availability-popup {
+    max-width: 100%;
+    margin: 10px;
+    border-radius: 12px;
+  }
+
+  .availability-popup-header {
+    padding: 24px 20px;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .availability-popup-body {
+    padding: 16px 20px;
+  }
+
+  .schedule-route {
+    flex-wrap: wrap;
+  }
+
+  .completed-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .next-trip-time {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .availability-popup-footer {
+    flex-direction: column;
+    padding: 16px 20px 20px;
+  }
+
+  .availability-popup-footer button {
+    width: 100%;
+    justify-content: center;
+  }
+}

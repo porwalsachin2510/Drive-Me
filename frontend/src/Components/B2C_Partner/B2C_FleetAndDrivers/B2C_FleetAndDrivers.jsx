@@ -1,62 +1,72 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import B2C_VehiclesTab from "../B2C_FleetAndDriversSub/B2C_VehiclesTab/B2C_VehiclesTab"
-import B2C_DriversTab from "../B2C_FleetAndDriversSub/B2C_DriversTab/B2C_DriversTab"
-import B2C_AddDriverModal from "../B2C_FleetAndDriversSub/B2C_AddDriverModal/B2C_AddDriverModal"
-import B2C_AddVehicleModal from "../B2C_FleetAndDriversSub/B2C_AddVehicleModal/B2C_AddVehicleModal"
-import "./b2c_fleetanddrivers.css"
-import api from "../../../utils/api"
+import { useState, useEffect } from "react";
+import B2C_VehiclesTab from "../B2C_FleetAndDriversSub/B2C_VehiclesTab/B2C_VehiclesTab";
+import B2C_DriversTab from "../B2C_FleetAndDriversSub/B2C_DriversTab/B2C_DriversTab";
+import B2C_AddDriverModal from "../B2C_FleetAndDriversSub/B2C_AddDriverModal/B2C_AddDriverModal";
+import B2C_AddVehicleModal from "../B2C_FleetAndDriversSub/B2C_AddVehicleModal/B2C_AddVehicleModal";
+import "./b2c_fleetanddrivers.css";
+import api from "../../../utils/api";
 
 function B2C_FleetAndDrivers() {
-  const [activeSubTab, setActiveSubTab] = useState("vehicles")
-  const [showAddDriverModal, setShowAddDriverModal] = useState(false)
-  const [showAddVehicleModal, setShowAddVehicleModal] = useState(false)
-  const [fleetData, setFleetData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [activeSubTab, setActiveSubTab] = useState("vehicles");
+  const [showAddDriverModal, setShowAddDriverModal] = useState(false);
+  const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
+  const [fleetData, setFleetData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchFleetData()
-  }, [])
+    fetchFleetData();
+
+    // Set up global callback for route creation to refresh fleet data
+    window.onRouteCreated = () => {
+      console.log("[v0] Route created, refreshing fleet data");
+      fetchFleetData();
+    };
+
+    return () => {
+      delete window.onRouteCreated;
+    };
+  }, []);
 
   const fetchFleetData = async () => {
     try {
-      setLoading(true)
-      const response = await api.get('/b2c-partner/fleet')
-      setFleetData(response.data.fleet)
+      setLoading(true);
+      const response = await api.get("/b2c-partner/fleet");
+      setFleetData(response.data.fleet);
     } catch (error) {
-      console.error("Error fetching fleet data:", error)
+      console.error("Error fetching fleet data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleAddDriver = async (driverData) => {
     try {
-      await api.post('/b2c-partner/drivers', driverData)
-      setShowAddDriverModal(false)
-      fetchFleetData()
+      await api.post("/b2c-partner/drivers", driverData);
+      setShowAddDriverModal(false);
+      fetchFleetData();
     } catch (error) {
-      console.error("Error adding driver:", error)
+      console.error("Error adding driver:", error);
     }
-  }
+  };
 
   const handleAddVehicle = async (vehicleData) => {
     try {
-      await api.post('/b2c-partner/vehicles', vehicleData)
-      setShowAddVehicleModal(false)
-      fetchFleetData()
+      await api.post("/b2c-partner/vehicles", vehicleData);
+      setShowAddVehicleModal(false);
+      fetchFleetData();
     } catch (error) {
-      console.error("Error adding vehicle:", error)
+      console.error("Error adding vehicle:", error);
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="b2c-fleet-and-drivers">
         <div className="loading">Loading fleet data...</div>
       </div>
-    )
+    );
   }
 
   if (!fleetData) {
@@ -64,7 +74,7 @@ function B2C_FleetAndDrivers() {
       <div className="b2c-fleet-and-drivers">
         <div className="error">Failed to load fleet data</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -105,7 +115,10 @@ function B2C_FleetAndDrivers() {
 
       <div className="b2c-sub-tab-content">
         {activeSubTab === "vehicles" && (
-          <B2C_VehiclesTab vehicles={fleetData?.vehicles || []} />
+          <B2C_VehiclesTab
+            vehicles={fleetData?.vehicles || []}
+            onVehicleUpdated={fetchFleetData}
+          />
         )}
         {activeSubTab === "drivers" && <B2C_DriversTab />}
       </div>
@@ -124,7 +137,7 @@ function B2C_FleetAndDrivers() {
         />
       )}
     </div>
-  )
+  );
 }
 
-export default B2C_FleetAndDrivers
+export default B2C_FleetAndDrivers;

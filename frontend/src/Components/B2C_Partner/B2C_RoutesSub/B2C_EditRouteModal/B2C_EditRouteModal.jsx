@@ -16,6 +16,16 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
   const [selectedScheduleIndex, setSelectedScheduleIndex] = useState(0);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
 
+  // Helper function to get local date string in YYYY-MM-DD format
+  // This avoids timezone shift issues that occur with toISOString()
+  const getLocalDateString = (date = new Date()) => {
+    const d = date instanceof Date ? date : new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const [formData, setFormData] = useState({
     fromLocation: route?.fromLocation || "",
     toLocation: route?.toLocation || "",
@@ -39,14 +49,14 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
         tripType: "One Way",
         outboundStopPoints: [],
         returnStopPoints: [],
+        assignedDriver: "",
+        assignedVehicle: "",
       },
     ],
-    vehicleId: route?.assignedVehicle?._id || "",
-    driverId: route?.assignedDriver?._id || route?.driverInfo?._id || "",
     totalSeats: route?.totalSeats?.toString() || "",
     availableSeats: route?.availableSeats?.toString() || "",
     routeStartDate: route?.routeStartDate
-      ? new Date(route.routeStartDate).toISOString().split("T")[0]
+      ? getLocalDateString(new Date(route.routeStartDate))
       : "",
     description: route?.description || "",
     tags: route?.tags || [],
@@ -98,6 +108,29 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
     fetchExistingSchedule();
   }, []);
 
+  // Silent polling for real-time driver availability updates
+  useEffect(() => {
+    // Poll for driver availability every 5 seconds
+    const pollDriverAvailability = async () => {
+      try {
+        const response = await api.get("/b2c-partner/drivers");
+        if (response.data.drivers) {
+          setAvailableDrivers(response.data.drivers);
+        }
+      } catch (error) {
+        // Silent fail - don't disrupt user experience
+      }
+    };
+
+    // Start polling interval
+    const pollInterval = setInterval(pollDriverAvailability, 5000);
+
+    // Cleanup on unmount
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, []);
+
   const fetchExistingSchedule = async () => {
     try {
       setLoadingSchedule(true);
@@ -136,20 +169,16 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
           location: stop.location,
           time: convertTo24HourFormat(stop.time),
         })),
+        // Add trip-level driver and vehicle assignment
+        assignedDriver: trip.assignedDriver?._id || trip.assignedDriver || "",
+        assignedVehicle:
+          trip.assignedVehicle?._id || trip.assignedVehicle || "",
       }));
 
       setFormData((prev) => ({
         ...prev,
         tripTimes: parsedTripTimes,
         availableDays: schedule.availableDays || prev.availableDays,
-        vehicleId:
-          schedule.assignedVehicle?._id ||
-          schedule.assignedVehicle ||
-          prev.vehicleId,
-        driverId:
-          schedule.assignedDriver?._id ||
-          schedule.assignedDriver ||
-          prev.driverId,
       }));
     }
   };
@@ -261,6 +290,8 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
           tripType: "One Way",
           outboundStopPoints: [],
           returnStopPoints: [],
+          assignedDriver: "",
+          assignedVehicle: "",
         },
       ],
     }));
@@ -337,21 +368,6 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
     }));
   };
 
-  // Handle vehicle selection change - update seats automatically
-  const handleVehicleChange = (e) => {
-    const selectedVehicleId = e.target.value;
-    const selectedVehicle = availableVehicles.find(
-      (v) => v._id === selectedVehicleId,
-    );
-
-    setFormData((prev) => ({
-      ...prev,
-      vehicleId: selectedVehicleId,
-      totalSeats: selectedVehicle?.seatingCapacity || prev.totalSeats,
-      availableSeats: selectedVehicle?.seatingCapacity || prev.availableSeats,
-    }));
-  };
-
   // Auto-calculate monthly prices based on reference prices
   const calculateMonthlyPrices = (
     oneWayPrice,
@@ -419,12 +435,22 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
         return;
       }
 
+      // Calculate seats from first trip's vehicle or use existing values
+      const firstTripVehicle = formData.tripTimes.find(
+        (t) => t.assignedVehicle,
+      )?.assignedVehicle;
+      const vehicleForSeats = availableVehicles.find(
+        (v) => v._id === firstTripVehicle,
+      );
+      const calculatedSeats =
+        vehicleForSeats?.seatingCapacity || route?.totalSeats || 20;
+
       // Update route data - include currency in pricing
       const routeData = {
         fromLocation: formData.fromLocation,
         toLocation: formData.toLocation,
-        totalSeats: parseInt(formData.totalSeats) || 20,
-        availableSeats: parseInt(formData.availableSeats) || 20,
+        totalSeats: calculatedSeats,
+        availableSeats: calculatedSeats,
         pricing: {
           oneWayPrice: parseFloat(formData.oneWayPrice) || 0,
           roundTripPrice: parseFloat(formData.roundTripPrice) || 0,
@@ -433,10 +459,7 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
             parseFloat(formData.monthlyRoundTripPrice) || 0,
           currency: currency,
         },
-        assignedVehicle: formData.vehicleId || null,
-        assignedDriver: formData.driverId || null,
-        routeStartDate:
-          formData.routeStartDate || new Date().toISOString().split("T")[0],
+        routeStartDate: formData.routeStartDate || getLocalDateString(),
         description: formData.description,
         tags: formData.tags || [],
         availableDays: formData.availableDays,
@@ -450,19 +473,20 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
       );
 
       if (routeResponse.data.success) {
-        // Now update or create schedule
+        // Now update or create schedule with trip-level assignments
         const scheduleData = {
           routeId: route._id,
           scheduleName: `${formData.fromLocation} to ${formData.toLocation} Schedule`,
-          tripTimes: validTripTimes,
+          tripTimes: validTripTimes.map((trip, idx) => ({
+            ...trip,
+            assignedDriver: formData.tripTimes[idx]?.assignedDriver || null,
+            assignedVehicle: formData.tripTimes[idx]?.assignedVehicle || null,
+          })),
           availableDays:
             formData.availableDays.length > 0
               ? formData.availableDays
               : ["MON", "TUE", "WED", "THU", "FRI"],
-          assignedVehicle: formData.vehicleId,
-          assignedDriver: formData.driverId,
-          startDate:
-            formData.routeStartDate || new Date().toISOString().split("T")[0],
+          startDate: formData.routeStartDate || getLocalDateString(),
         };
 
         if (existingSchedule) {
@@ -1039,6 +1063,394 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
                       </div>
                     )}
                   </div>
+
+                  {/* Per-Trip Driver & Vehicle Assignment */}
+                  <div
+                    className="b2c-trip-assignment"
+                    style={{
+                      marginTop: "16px",
+                      padding: "12px",
+                      backgroundColor: "#f8fafc",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <h5
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        color: "#475569",
+                        marginBottom: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <span>📋</span> Trip {index + 1} Assignment *
+                    </h5>
+                    <p
+                      style={{
+                        fontSize: "12px",
+                        color: "#64748b",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      Assign a driver and vehicle for this specific trip time.
+                      Drivers marked with 🟢 are available, 🔴 are busy, 🟠 are
+                      offline.
+                    </p>
+                    <div
+                      className="b2c-form-row"
+                      style={{ display: "flex", gap: "12px" }}
+                    >
+                      <div className="b2c-form-group" style={{ flex: 1 }}>
+                        <label
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            color: "#475569",
+                            marginBottom: "4px",
+                            display: "block",
+                          }}
+                        >
+                          Driver for Trip {index + 1} *
+                        </label>
+                        <select
+                          value={tripTime.assignedDriver || ""}
+                          onChange={(e) =>
+                            updateTripTime(
+                              index,
+                              "assignedDriver",
+                              e.target.value,
+                            )
+                          }
+                          className="b2c-form-input"
+                          style={{ fontSize: "13px", padding: "8px 10px" }}
+                          required
+                        >
+                          <option value="">Select a driver</option>
+                          {availableDrivers.map((driver) => {
+                            // Use backend-calculated availability status and message
+                            const availabilityStatus =
+                              driver.availability?.status ||
+                              driver.availabilityStatus ||
+                              "available";
+                            const availabilityMessage =
+                              driver.availability?.message ||
+                              driver.availabilityMessage ||
+                              "";
+                            const availableUntil =
+                              driver.availability?.availableUntilDisplay ||
+                              driver.availableUntil ||
+                              null;
+
+                            const availabilityIcon =
+                              availabilityStatus === "available"
+                                ? "🟢"
+                                : availabilityStatus === "busy"
+                                  ? "🔴"
+                                  : availabilityStatus === "offline"
+                                    ? "🟠"
+                                    : "🟠";
+                            // Allow selecting available drivers (even if they have upcoming trips)
+                            const isDisabled =
+                              availabilityStatus !== "available" &&
+                              availabilityStatus !== "scheduled";
+
+                            // Build schedule info text - show "Available until X:XX" if applicable
+                            // FIXED: Show "Available" even if driver has schedules (without bookings)
+                            const scheduleCount =
+                              driver.assignedScheduleDetails?.length || 0;
+                            const statusText =
+                              availabilityStatus === "available"
+                                ? availableUntil
+                                  ? `- Available until ${availableUntil}`
+                                  : scheduleCount > 0
+                                    ? "- Available"
+                                    : ""
+                                : availabilityStatus === "scheduled"
+                                  ? `- ${availabilityMessage}`
+                                  : availabilityStatus === "busy"
+                                    ? `- ${availabilityMessage || "Busy"}`
+                                    : availabilityStatus === "offline"
+                                      ? "- Offline"
+                                      : "- Not Available";
+
+                            return (
+                              <option
+                                key={driver._id}
+                                value={driver._id}
+                                disabled={isDisabled}
+                                style={{
+                                  color: isDisabled ? "#94a3b8" : "inherit",
+                                }}
+                              >
+                                {availabilityIcon} {driver.name} (
+                                {driver.phoneNumber}) {statusText}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {/* Show selected driver's schedule info */}
+                        {tripTime.assignedDriver &&
+                          (() => {
+                            const selectedDriver = availableDrivers.find(
+                              (d) => d._id === tripTime.assignedDriver,
+                            );
+                            if (
+                              selectedDriver?.assignedScheduleDetails?.length >
+                              0
+                            ) {
+                              return (
+                                <div
+                                  style={{
+                                    marginTop: "6px",
+                                    padding: "8px 10px",
+                                    backgroundColor: "#fef3c7",
+                                    borderRadius: "6px",
+                                    fontSize: "11px",
+                                    color: "#92400e",
+                                    border: "1px solid #fcd34d",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontWeight: "600",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    Already assigned to{" "}
+                                    {
+                                      selectedDriver.assignedScheduleDetails
+                                        .length
+                                    }{" "}
+                                    schedule(s):
+                                  </div>
+                                  {selectedDriver.assignedScheduleDetails
+                                    .slice(0, 3)
+                                    .map((sched, idx) => (
+                                      <div
+                                        key={idx}
+                                        style={{
+                                          marginLeft: "8px",
+                                          marginBottom: "2px",
+                                        }}
+                                      >
+                                        • {sched.departureTime}
+                                        {sched.arrivalTime
+                                          ? ` - ${sched.arrivalTime}`
+                                          : ""}
+                                        : {sched.routeName}
+                                        <span
+                                          style={{
+                                            color: "#a16207",
+                                            marginLeft: "4px",
+                                          }}
+                                        >
+                                          (
+                                          {sched.availableDays
+                                            ?.slice(0, 3)
+                                            .join(", ")}
+                                          {sched.availableDays?.length > 3
+                                            ? "..."
+                                            : ""}
+                                          )
+                                        </span>
+                                      </div>
+                                    ))}
+                                  {selectedDriver.assignedScheduleDetails
+                                    .length > 3 && (
+                                    <div
+                                      style={{
+                                        marginLeft: "8px",
+                                        fontStyle: "italic",
+                                      }}
+                                    >
+                                      ...and{" "}
+                                      {selectedDriver.assignedScheduleDetails
+                                        .length - 3}{" "}
+                                      more
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                      </div>
+                      <div className="b2c-form-group" style={{ flex: 1 }}>
+                        <label
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            color: "#475569",
+                            marginBottom: "4px",
+                            display: "block",
+                          }}
+                        >
+                          Vehicle for Trip {index + 1} *
+                        </label>
+                        <select
+                          value={tripTime.assignedVehicle || ""}
+                          onChange={(e) =>
+                            updateTripTime(
+                              index,
+                              "assignedVehicle",
+                              e.target.value,
+                            )
+                          }
+                          className="b2c-form-input"
+                          style={{ fontSize: "13px", padding: "8px 10px" }}
+                          required
+                        >
+                          <option value="">Select a vehicle</option>
+                          {availableVehicles.map((vehicle) => {
+                            // Use backend-calculated availability status
+                            const vehicleAvailability =
+                              vehicle.availabilityStatus || "available";
+                            const vehicleAvailableUntil =
+                              vehicle.availableUntil || null;
+                            const vehicleAvailabilityMessage =
+                              vehicle.availabilityMessage || "";
+
+                            const vehicleIcon =
+                              vehicleAvailability === "available"
+                                ? "🟢"
+                                : vehicleAvailability === "busy"
+                                  ? "🔴"
+                                  : vehicleAvailability === "scheduled"
+                                    ? "🟠"
+                                    : "🟠";
+                            // Allow selecting available vehicles (even if they have upcoming trips)
+                            const isVehicleDisabled =
+                              vehicleAvailability !== "available" &&
+                              vehicleAvailability !== "scheduled";
+
+                            // Build schedule info text - show "Available until X:XX" if applicable
+                            // FIXED: Show "Available" even if vehicle has schedules (without bookings)
+                            const scheduleCount =
+                              vehicle.assignedScheduleDetails?.length || 0;
+                            const vehicleStatusText =
+                              vehicleAvailability === "available"
+                                ? vehicleAvailableUntil
+                                  ? `- Available until ${vehicleAvailableUntil}`
+                                  : scheduleCount > 0
+                                    ? "- Available"
+                                    : ""
+                                : vehicleAvailability === "busy"
+                                  ? `- ${vehicleAvailabilityMessage || "BUSY"}`
+                                  : vehicleAvailability === "scheduled"
+                                    ? `- ${vehicleAvailabilityMessage}`
+                                    : "";
+
+                            return (
+                              <option
+                                key={vehicle._id}
+                                value={vehicle._id}
+                                disabled={isVehicleDisabled}
+                                style={{
+                                  color: isVehicleDisabled
+                                    ? "#94a3b8"
+                                    : "inherit",
+                                }}
+                              >
+                                {vehicleIcon} {vehicle.model} (
+                                {vehicle.licensePlate}) -{" "}
+                                {vehicle.seatingCapacity} seats{" "}
+                                {vehicleStatusText}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {/* Show selected vehicle's schedule info */}
+                        {tripTime.assignedVehicle &&
+                          (() => {
+                            const selectedVehicle = availableVehicles.find(
+                              (v) => v._id === tripTime.assignedVehicle,
+                            );
+                            if (
+                              selectedVehicle?.assignedScheduleDetails?.length >
+                              0
+                            ) {
+                              return (
+                                <div
+                                  style={{
+                                    marginTop: "6px",
+                                    padding: "8px 10px",
+                                    backgroundColor: "#dbeafe",
+                                    borderRadius: "6px",
+                                    fontSize: "11px",
+                                    color: "#1e40af",
+                                    border: "1px solid #93c5fd",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontWeight: "600",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    Already assigned to{" "}
+                                    {
+                                      selectedVehicle.assignedScheduleDetails
+                                        .length
+                                    }{" "}
+                                    schedule(s):
+                                  </div>
+                                  {selectedVehicle.assignedScheduleDetails
+                                    .slice(0, 3)
+                                    .map((sched, idx) => (
+                                      <div
+                                        key={idx}
+                                        style={{
+                                          marginLeft: "8px",
+                                          marginBottom: "2px",
+                                        }}
+                                      >
+                                        • {sched.departureTime}
+                                        {sched.arrivalTime
+                                          ? ` - ${sched.arrivalTime}`
+                                          : ""}
+                                        : {sched.routeName}
+                                        <span
+                                          style={{
+                                            color: "#1d4ed8",
+                                            marginLeft: "4px",
+                                          }}
+                                        >
+                                          (
+                                          {sched.availableDays
+                                            ?.slice(0, 3)
+                                            .join(", ")}
+                                          {sched.availableDays?.length > 3
+                                            ? "..."
+                                            : ""}
+                                          )
+                                        </span>
+                                      </div>
+                                    ))}
+                                  {selectedVehicle.assignedScheduleDetails
+                                    .length > 3 && (
+                                    <div
+                                      style={{
+                                        marginLeft: "8px",
+                                        fontStyle: "italic",
+                                      }}
+                                    >
+                                      ...and{" "}
+                                      {selectedVehicle.assignedScheduleDetails
+                                        .length - 3}{" "}
+                                      more
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
 
@@ -1052,100 +1464,50 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
             </div>
           </div>
 
-          {/* Pricing & Capacity Section */}
+          {/* Pricing Section */}
           <div className="b2c-form-section">
-            <h3 className="b2c-section-title">Pricing & Capacity</h3>
+            <h3 className="b2c-section-title">Pricing</h3>
 
-            {/* Vehicle Assignment Section */}
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label htmlFor="vehicleId" className="b2c-form-label">
-                  Assign Vehicle *
-                </label>
-                <select
-                  id="vehicleId"
-                  name="vehicleId"
-                  value={formData.vehicleId}
-                  onChange={handleVehicleChange}
-                  required
-                  className="b2c-form-input"
+            {/* Seat Capacity Info - Auto-calculated from trip vehicles */}
+            <div
+              className="b2c-info-box"
+              style={{
+                backgroundColor: "#eff6ff",
+                border: "1px solid #93c5fd",
+                borderRadius: "8px",
+                padding: "12px",
+                marginBottom: "16px",
+              }}
+            >
+              <p style={{ fontSize: "13px", color: "#1e40af", margin: 0 }}>
+                <strong>Seat Capacity:</strong> The total and available seats
+                are automatically determined by the vehicle assigned to each
+                trip above. Each trip can have a different vehicle with
+                different seating capacity.
+              </p>
+              {formData.tripTimes.some((t) => t.assignedVehicle) && (
+                <div
+                  style={{
+                    marginTop: "8px",
+                    fontSize: "12px",
+                    color: "#3b82f6",
+                  }}
                 >
-                  <option value="">Select Vehicle</option>
-                  {availableVehicles.map((vehicle) => (
-                    <option key={vehicle._id} value={vehicle._id}>
-                      {vehicle.model} ({vehicle.licensePlate}) -{" "}
-                      {vehicle.seatingCapacity} seats
-                    </option>
-                  ))}
-                </select>
-                {formData.vehicleId && (
-                  <small className="b2c-form-help">
-                    Vehicle capacity:{" "}
-                    {availableVehicles.find((v) => v._id === formData.vehicleId)
-                      ?.seatingCapacity || 0}{" "}
-                    seats
-                  </small>
-                )}
-              </div>
-
-              <div className="b2c-form-group">
-                <label htmlFor="driverId" className="b2c-form-label">
-                  Assign Driver *
-                </label>
-                <select
-                  id="driverId"
-                  name="driverId"
-                  value={formData.driverId}
-                  onChange={handleChange}
-                  required
-                  className="b2c-form-input"
-                >
-                  <option value="">Select Driver</option>
-                  {availableDrivers.map((driver) => (
-                    <option key={driver._id} value={driver._id}>
-                      {driver.name} ({driver.phoneNumber})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label htmlFor="totalSeats" className="b2c-form-label">
-                  Total Seats *
-                </label>
-                <input
-                  type="number"
-                  id="totalSeats"
-                  name="totalSeats"
-                  placeholder="20"
-                  value={formData.totalSeats}
-                  onChange={handleChange}
-                  required
-                  min="1"
-                  max="50"
-                  className="b2c-form-input"
-                />
-              </div>
-
-              <div className="b2c-form-group">
-                <label htmlFor="availableSeats" className="b2c-form-label">
-                  Available Seats *
-                </label>
-                <input
-                  type="number"
-                  id="availableSeats"
-                  name="availableSeats"
-                  placeholder="20"
-                  value={formData.availableSeats}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  max={formData.totalSeats}
-                  className="b2c-form-input"
-                />
-              </div>
+                  {formData.tripTimes.map((trip, idx) => {
+                    if (!trip.assignedVehicle) return null;
+                    const vehicle = availableVehicles.find(
+                      (v) => v._id === trip.assignedVehicle,
+                    );
+                    return vehicle ? (
+                      <div key={idx}>
+                        Trip {idx + 1}: {vehicle.model || vehicle.vehicleName} (
+                        {vehicle.licensePlate}) - {vehicle.seatingCapacity}{" "}
+                        seats
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="b2c-form-row">

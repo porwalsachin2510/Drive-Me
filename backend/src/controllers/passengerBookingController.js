@@ -230,7 +230,9 @@ export const getPassengerBookings = async (req, res) => {
             passengerId: req.userId
         })
             .populate('routeId')
-            .populate('b2cPartnerId', 'fullName email name phone whatsappNumber')
+            .populate('b2cPartnerId', 'fullName email name phone whatsappNumber profileImage')
+            .populate('outboundDriverId', 'fullName email whatsappNumber profileImage driverId')
+            .populate('returnDriverId', 'fullName email whatsappNumber profileImage driverId')
             .sort({ travelDate: -1 });
 
         // Collect route vehicle IDs and partner IDs for lookup
@@ -268,6 +270,37 @@ export const getPassengerBookings = async (req, res) => {
             }
         });
 
+        // CRITICAL: For ROUND_TRIP bookings, check if any trips are "In Progress"
+        // This allows tracking even when booking status is COMPLETED (one leg done but return leg in progress)
+        // Collect all monthlyTrips IDs from all bookings
+        const allTripIds = [];
+        bookings.forEach(b => {
+            if (b.monthlyTrips && b.monthlyTrips.length > 0) {
+                allTripIds.push(...b.monthlyTrips);
+            }
+            if (b.linkedTrip) allTripIds.push(b.linkedTrip);
+            if (b.linkedReturnTrip) allTripIds.push(b.linkedReturnTrip);
+        });
+
+        // Fetch all trips to check their status - include tripDate for filtering
+        const allTrips = allTripIds.length > 0 ? await B2CPartnerTrip.find({
+            _id: { $in: allTripIds }
+        }).select('_id status tripStatus tripDate startTime fromLocation toLocation driverId').lean() : [];
+
+        // Create a map of trip statuses by trip ID
+        const tripStatusMap = {};
+        const tripDataMap = {};
+        allTrips.forEach(t => {
+            tripStatusMap[t._id.toString()] = t.status || t.tripStatus || 'Scheduled';
+            tripDataMap[t._id.toString()] = t;
+        });
+
+        // Get today's date range for filtering
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
         // Enrich bookings with vehicle and driver info
         const enrichedBookings = bookings.map(booking => {
             const bookingObj = booking.toObject();
@@ -296,6 +329,91 @@ export const getPassengerBookings = async (req, res) => {
                 bookingObj.driverName = bookingObj.routeId.assignedDriver.name;
                 bookingObj.driverPhoneNumber = bookingObj.routeId.assignedDriver.phoneNumber;
                 bookingObj.driverImage = bookingObj.routeId.assignedDriver.driverImage?.url;
+            }
+
+            // CRITICAL: Check if any of this booking's trips are "In Progress"
+            // This flag enables tracking even when booking status is COMPLETED
+            const bookingTripIds = [];
+            if (bookingObj.monthlyTrips) bookingTripIds.push(...bookingObj.monthlyTrips.map(t => t.toString()));
+            if (bookingObj.linkedTrip) bookingTripIds.push(bookingObj.linkedTrip.toString());
+            if (bookingObj.linkedReturnTrip) bookingTripIds.push(bookingObj.linkedReturnTrip.toString());
+
+            // Check for any in-progress trip OR any today's trip that could be tracked
+            let hasActiveTripInProgress = false;
+            let activeTripInfo = null;
+
+            // CRITICAL FIX: Also check outboundTripStatus and returnTripStatus directly from booking
+            // These fields are updated by startDriverTrip/startPartnerTrip when a trip starts
+            const outboundInProgress = bookingObj.outboundTripStatus === 'IN_PROGRESS';
+            const returnInProgress = bookingObj.returnTripStatus === 'IN_PROGRESS';
+
+            if (outboundInProgress || returnInProgress) {
+                hasActiveTripInProgress = true;
+                console.log("[v0] Booking has trip IN_PROGRESS via trip status fields:", {
+                    bookingId: bookingObj._id,
+                    outboundTripStatus: bookingObj.outboundTripStatus,
+                    returnTripStatus: bookingObj.returnTripStatus
+                });
+            }
+
+            for (const tripId of bookingTripIds) {
+                const status = tripStatusMap[tripId];
+                const tripData = tripDataMap[tripId];
+
+                // Check if trip is in progress
+                if (status === 'In Progress' || status === 'IN_PROGRESS' || status === 'Started') {
+                    hasActiveTripInProgress = true;
+                    activeTripInfo = {
+                        tripId,
+                        status,
+                        startTime: tripData?.startTime,
+                        fromLocation: tripData?.fromLocation,
+                        toLocation: tripData?.toLocation,
+                        driverId: tripData?.driverId
+                    };
+                    console.log("[v0] Found IN_PROGRESS trip for booking:", bookingObj._id, activeTripInfo);
+                    break;
+                }
+
+                // Also check if there's a scheduled trip for TODAY that can be tracked once started
+                if (tripData && tripData.tripDate) {
+                    const tripDate = new Date(tripData.tripDate);
+                    if (tripDate >= todayStart && tripDate <= todayEnd &&
+                        (status === 'Scheduled' || status === 'SCHEDULED')) {
+                        // This is a today's trip - mark as trackable if the booking is for a ROUND_TRIP
+                        // and one leg might be in progress
+                        if (bookingObj.bookingType === 'ROUND_TRIP') {
+                            // For ROUND_TRIP, if there's a scheduled trip for today, it could be the return
+                            // Check if this is the return trip (going opposite direction)
+                            const isReturnTrip = tripData.fromLocation === bookingObj.returnPickupLocation ||
+                                tripData.fromLocation === bookingObj.dropoffLocation;
+                            if (isReturnTrip && !activeTripInfo) {
+                                activeTripInfo = {
+                                    tripId,
+                                    status: 'Scheduled',
+                                    startTime: tripData?.startTime,
+                                    fromLocation: tripData?.fromLocation,
+                                    toLocation: tripData?.toLocation,
+                                    driverId: tripData?.driverId,
+                                    isReturnTrip: true
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+
+            bookingObj.hasActiveTripInProgress = hasActiveTripInProgress;
+            bookingObj.activeTripInfo = activeTripInfo;
+
+            // CRITICAL: For ROUND_TRIP bookings with COMPLETED status, also add a flag
+            // to show Track button if there's a scheduled return trip for today
+            if (bookingObj.bookingType === 'ROUND_TRIP' &&
+                bookingObj.bookingStatus === 'COMPLETED' &&
+                activeTripInfo &&
+                activeTripInfo.isReturnTrip) {
+                bookingObj.hasScheduledReturnTripToday = true;
+                console.log("[v0] ROUND_TRIP booking has scheduled return trip today:", bookingObj._id, activeTripInfo);
             }
 
             return bookingObj;

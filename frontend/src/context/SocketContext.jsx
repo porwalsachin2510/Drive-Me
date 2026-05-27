@@ -5,6 +5,10 @@ import {
   addRealtimeNotification,
   getUnreadNotificationCount,
 } from "../Redux/slices/notificationSlice";
+import {
+  updateDriverAvailabilityInStore,
+  updateVehicleAvailabilityInStore,
+} from "../Redux/slices/b2cPartnerSlice";
 
 const SocketContext = createContext();
 
@@ -461,6 +465,29 @@ export const SocketProvider = ({ children }) => {
         }
       });
 
+      // B2C Partner driver and vehicle availability real-time updates
+      instance.on("driver_availability_changed", (data) => {
+        console.log("[v0] Driver availability changed:", data);
+        dispatch(
+          updateDriverAvailabilityInStore({
+            driverId: data.driverId,
+            availabilityStatus: data.availabilityStatus,
+            isSelfDriver: data.isSelfDriver || false,
+          }),
+        );
+      });
+
+      instance.on("vehicle_availability_changed", (data) => {
+        console.log("[v0] Vehicle availability changed:", data);
+        dispatch(
+          updateVehicleAvailabilityInStore({
+            vehicleId: data.vehicleId,
+            availabilityStatus: data.availabilityStatus,
+            status: data.status,
+          }),
+        );
+      });
+      
       // B2C Partner specific events
       instance.on("new-booking-request", (data) => {
         console.log("New booking request:", data);

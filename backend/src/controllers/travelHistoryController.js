@@ -768,14 +768,17 @@ export const getDriverRatings = async (req, res) => {
         if (user.role === 'B2C_PARTNER') {
             averageRating = user.driverRatings?.average || 0;
             totalRatings = user.driverRatings?.count || 0;
-            const history = user.driverRatings?.history || [];
 
             // Get paginated history
             const startIndex = (parseInt(page) - 1) * parseInt(limit);
-            const paginatedHistory = history.slice(startIndex, startIndex + parseInt(limit));
 
-            // Get detailed ratings from trips
+            // Get detailed ratings from trips where this B2C Partner was the driver
+            // Check both: driverId equals userId (self-driver) OR b2cPartnerId equals userId
             const trips = await B2CPartnerTrip.find({
+                $or: [
+                    { driverId: userId },
+                    { b2cPartnerId: userId, isSelfDriven: true }
+                ],
                 'passengers.rating': { $exists: true, $ne: null }
             })
                 .populate('passengers.userId', 'fullName profileImage')
@@ -783,13 +786,30 @@ export const getDriverRatings = async (req, res) => {
                 .sort({ tripDate: -1 })
                 .lean();
 
-            // Filter trips where this user was the driver (self-driver)
-            const myTripsAsDriver = trips.filter(trip => {
-                // For self-driver, check if driverId references the user themselves
-                return trip.driverId?.toString() === userId.toString();
+            // Also get trips where this partner owns the schedule/route
+            const partnerTrips = await B2CPartnerTrip.find({
+                b2cPartnerId: userId,
+                'passengers.rating': { $exists: true, $ne: null }
+            })
+                .populate('passengers.userId', 'fullName profileImage')
+                .populate('routeId', 'routeName fromLocation toLocation')
+                .populate('driverId', 'fullName')
+                .sort({ tripDate: -1 })
+                .lean();
+
+            // Combine trips, removing duplicates
+            const allTripIds = new Set();
+            const allTrips = [];
+
+            [...trips, ...partnerTrips].forEach(trip => {
+                if (!allTripIds.has(trip._id.toString())) {
+                    allTripIds.add(trip._id.toString());
+                    allTrips.push(trip);
+                }
             });
 
-            ratings = myTripsAsDriver.flatMap(trip => {
+            // Extract ratings from passengers
+            ratings = allTrips.flatMap(trip => {
                 return (trip.passengers || [])
                     .filter(p => p.rating)
                     .map(p => ({
@@ -801,9 +821,23 @@ export const getDriverRatings = async (req, res) => {
                         ratedAt: p.ratedAt || trip.completedAt,
                         passengerName: p.userId?.fullName || 'Anonymous',
                         passengerImage: p.userId?.profileImage,
-                        routeName: trip.routeId?.routeName || `${trip.fromLocation} → ${trip.toLocation}`
+                        routeName: trip.routeId?.routeName || `${trip.fromLocation} → ${trip.toLocation}`,
+                        driverName: trip.driverId?.fullName || 'Self'
                     }));
-            }).slice(startIndex, startIndex + parseInt(limit));
+            });
+
+            // Sort by date and paginate
+            ratings.sort((a, b) => new Date(b.ratedAt || b.tripDate) - new Date(a.ratedAt || a.tripDate));
+            totalRatings = ratings.length;
+            ratings = ratings.slice(startIndex, startIndex + parseInt(limit));
+
+            // Recalculate average from actual ratings
+            if (totalRatings > 0) {
+                const allRatings = allTrips.flatMap(trip =>
+                    (trip.passengers || []).filter(p => p.rating).map(p => p.rating)
+                );
+                averageRating = allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length;
+            }
         }
 
         // For B2C_PARTNER_DRIVER, get ratings from B2CPartnerDriver model

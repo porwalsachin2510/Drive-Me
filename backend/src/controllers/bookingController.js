@@ -1828,8 +1828,8 @@ export const getPassengerBookings = async (req, res) => {
                 }
             })
 
-            // Enrich bookings with vehicle info
-            bookings = b2cBookings.map((b) => {
+            // Enrich bookings with vehicle info AND trip status
+            bookings = await Promise.all(b2cBookings.map(async (b) => {
                 const bookingObj = b.toObject()
                 const partnerId = bookingObj.b2cPartnerId?._id?.toString() || bookingObj.b2cPartnerId?.toString()
 
@@ -1874,12 +1874,45 @@ export const getPassengerBookings = async (req, res) => {
                     }
                 }
 
+                // CRITICAL: Compute hasActiveTripInProgress from the booking's monthly trips
+                // This allows the Track button to show when a trip is IN_PROGRESS
+                let hasActiveTripInProgress = false
+                let activeTripInfo = null
+
+                if (bookingObj.monthlyTrips && bookingObj.monthlyTrips.length > 0) {
+                    try {
+                        const B2CPartnerTrip = (await import("../models/B2CPartnerTrip.js")).default
+                        const trips = await B2CPartnerTrip.find({
+                            _id: { $in: bookingObj.monthlyTrips }
+                        }).select('status fromLocation toLocation startTime actualStartTime')
+
+                        for (const trip of trips) {
+                            if (trip.status === 'In Progress' || trip.status === 'IN_PROGRESS' || trip.status === 'Started') {
+                                hasActiveTripInProgress = true
+                                activeTripInfo = {
+                                    tripId: trip._id,
+                                    fromLocation: trip.fromLocation,
+                                    toLocation: trip.toLocation,
+                                    status: trip.status,
+                                    actualStartTime: trip.actualStartTime
+                                }
+                                break // Found an active trip
+                            }
+                        }
+                    } catch (tripError) {
+                        console.error("Error checking trips for booking:", bookingObj._id, tripError.message)
+                    }
+                }
+
+                bookingObj.hasActiveTripInProgress = hasActiveTripInProgress
+                bookingObj.activeTripInfo = activeTripInfo
+
                 return {
                     ...bookingObj,
                     type: "B2C",
                     userType: "NORMAL_PASSENGER",
                 }
-            })
+            }))
         }
 
         return res.status(200).json({
@@ -1906,18 +1939,72 @@ export const getPartnerBookings = async (req, res) => {
 
         const query = { b2cPartnerId: partnerId }
 
-        if (status) {
+        if (status && status !== "ALL") {
             query.bookingStatus = status
         }
 
         const bookings = await B2CPassengerBooking.find(query)
             .populate("passengerId", "fullName whatsappNumber email")
             .sort({ createdAt: -1 })
+            .lean()
+
+        // Get B2CPartnerDriver model for resolving driver names
+        const B2CPartnerDriver = (await import("../models/B2CPartnerDriver.js")).default
+
+        // Enhance bookings with resolved driver names for both outbound and return
+        const enhancedBookings = await Promise.all(bookings.map(async (booking) => {
+            let outboundDriverName = booking.driverName || null
+            let returnDriverName = null
+
+            // Resolve outbound driver name if not self-driver
+            if (booking.outboundDriverId && !booking.outboundIsSelfDriver) {
+                // Try B2CPartnerDriver first
+                const b2cDriver = await B2CPartnerDriver.findById(booking.outboundDriverId).lean()
+                if (b2cDriver) {
+                    outboundDriverName = b2cDriver.name
+                } else {
+                    // Fallback to User table
+                    const userDriver = await User.findById(booking.outboundDriverId).lean()
+                    if (userDriver) {
+                        outboundDriverName = userDriver.fullName || userDriver.name
+                    }
+                }
+            } else if (booking.outboundIsSelfDriver) {
+                outboundDriverName = 'Self-Driving'
+            }
+
+            // Resolve return driver name if ROUND_TRIP and different from outbound
+            if (booking.bookingType === 'ROUND_TRIP' && booking.returnDriverId) {
+                if (booking.returnIsSelfDriver) {
+                    returnDriverName = 'Self-Driving'
+                } else if (booking.returnDriverId.toString() !== booking.outboundDriverId?.toString()) {
+                    // Different driver for return trip
+                    const b2cDriver = await B2CPartnerDriver.findById(booking.returnDriverId).lean()
+                    if (b2cDriver) {
+                        returnDriverName = b2cDriver.name
+                    } else {
+                        const userDriver = await User.findById(booking.returnDriverId).lean()
+                        if (userDriver) {
+                            returnDriverName = userDriver.fullName || userDriver.name
+                        }
+                    }
+                } else {
+                    // Same driver as outbound
+                    returnDriverName = outboundDriverName
+                }
+            }
+
+            return {
+                ...booking,
+                outboundDriverName,
+                returnDriverName
+            }
+        }))
 
         return res.status(200).json({
             success: true,
-            bookings,
-            totalBookings: bookings.length,
+            bookings: enhancedBookings,
+            totalBookings: enhancedBookings.length,
         })
     } catch (error) {
         console.error("Error fetching partner bookings:", error)
@@ -3220,6 +3307,33 @@ export const getDailyTripsForBooking = async (req, res) => {
         // Filter to show only today's and future trips (not all 58 trips at once)
         const today = new Date()
         today.setHours(0, 0, 0, 0)
+
+        // For trips where driverId didn't populate (Self-driving case where driverId is User ID)
+        // We need to fetch the User info
+        const tripsNeedingUserLookup = dailyTrips.filter(trip => trip.driverId && !trip.driverId.name)
+        if (tripsNeedingUserLookup.length > 0) {
+            const userIds = [...new Set(tripsNeedingUserLookup.map(t => t.driverId.toString()))]
+            const users = await User.find({ _id: { $in: userIds } })
+                .select('fullName whatsappNumber profileImage')
+                .lean()
+            const userMap = {}
+            users.forEach(u => {
+                userMap[u._id.toString()] = {
+                    name: u.fullName || 'Self',
+                    phoneNumber: u.whatsappNumber || ''
+                }
+            })
+            // Update trips with user info
+            dailyTrips = dailyTrips.map(trip => {
+                if (trip.driverId && !trip.driverId.name) {
+                    const userInfo = userMap[trip.driverId.toString()]
+                    if (userInfo) {
+                        trip.driverId = userInfo
+                    }
+                }
+                return trip
+            })
+        }
 
         // Enrich trips with booking-relevant data
         const enrichedTrips = dailyTrips.map(trip => ({

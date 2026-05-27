@@ -2,16 +2,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
 import "./b2c_addroutemodal.css";
 import "./b2c_trip_stops.css";
 import api from "../../../../utils/api";
 import useCurrency from "../../../../hooks/useCurrency";
+import { updateVehicleAvailabilityInStore } from "../../../../Redux/slices/b2cPartnerSlice";
 
 function B2C_AddRouteModal({ onClose }) {
+  const dispatch = useDispatch();
   const { formatAmount, getCurrencyDecimals, getCurrencySymbol } =
     useCurrency();
   const [currency, setCurrency] = useState("AED");
   const [decimals, setDecimals] = useState(2);
+
+  // Helper function to get local date string in YYYY-MM-DD format
+  // This avoids timezone shift issues that occur with toISOString()
+  const getLocalDateString = (date = new Date()) => {
+    const d = date instanceof Date ? date : new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   // New: Toggle between creating new route or adding schedule to existing route
   const [routeMode, setRouteMode] = useState("new"); // "new" or "existing"
@@ -34,6 +47,8 @@ function B2C_AddRouteModal({ onClose }) {
         tripType: "One Way",
         outboundStopPoints: [], // For One Way or Round Trip outbound journey
         returnStopPoints: [], // Only for Round Trip return journey
+        assignedDriver: "", // Per-trip driver assignment (optional)
+        assignedVehicle: "", // Per-trip vehicle assignment (optional)
       },
     ],
     vehicleId: "",
@@ -50,6 +65,8 @@ function B2C_AddRouteModal({ onClose }) {
   const [loadingAssets, setLoadingAssets] = useState(true);
   const [schedulingConflicts, setSchedulingConflicts] = useState([]);
   const [checkingConflicts, setCheckingConflicts] = useState(false);
+  const [checkingDriverAvailability, setCheckingDriverAvailability] =
+    useState(false);
 
   const daysOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const tripTypes = ["One Way", "Round Trip"];
@@ -58,6 +75,35 @@ function B2C_AddRouteModal({ onClose }) {
   useEffect(() => {
     fetchUserCountryAndAssets();
     fetchExistingRoutes();
+  }, []);
+
+  // Silent polling for real-time driver and vehicle availability updates
+  useEffect(() => {
+    // Poll for driver and vehicle availability every 5 seconds
+    const pollAvailability = async () => {
+      try {
+        const [driversResponse, vehiclesResponse] = await Promise.all([
+          api.get("/b2c-partner/drivers"),
+          api.get("/b2c-partner/fleet"),
+        ]);
+        if (driversResponse.data.drivers) {
+          setAvailableDrivers(driversResponse.data.drivers);
+        }
+        if (vehiclesResponse.data.fleet?.vehicles) {
+          setAvailableVehicles(vehiclesResponse.data.fleet.vehicles);
+        }
+      } catch (error) {
+        // Silent fail - don't disrupt user experience
+      }
+    };
+
+    // Start polling interval
+    const pollInterval = setInterval(pollAvailability, 5000);
+
+    // Cleanup on unmount
+    return () => {
+      clearInterval(pollInterval);
+    };
   }, []);
 
   // Fetch existing routes for the "Add Schedule to Existing Route" mode
@@ -99,8 +145,8 @@ function B2C_AddRouteModal({ onClose }) {
           route.assignedDriver ||
           "",
         routeStartDate: route.routeStartDate
-          ? new Date(route.routeStartDate).toISOString().split("T")[0]
-          : new Date().toISOString().split("T")[0],
+          ? getLocalDateString(new Date(route.routeStartDate))
+          : getLocalDateString(),
         description: route.description || "",
         tags: route.tags?.map((t) => t._id || t) || [],
         totalSeats: route.totalSeats || 0,
@@ -113,6 +159,8 @@ function B2C_AddRouteModal({ onClose }) {
             tripType: "One Way",
             outboundStopPoints: [],
             returnStopPoints: [],
+            assignedDriver: "", // Per-trip driver (optional)
+            assignedVehicle: "", // Per-trip vehicle (optional)
           },
         ],
       }));
@@ -147,6 +195,8 @@ function B2C_AddRouteModal({ onClose }) {
             tripType: "One Way",
             outboundStopPoints: [],
             returnStopPoints: [],
+            assignedDriver: "", // Per-trip driver (optional)
+            assignedVehicle: "", // Per-trip vehicle (optional)
           },
         ],
         vehicleId: "",
@@ -254,13 +304,18 @@ function B2C_AddRouteModal({ onClose }) {
         updatedData.workingDaysPerMonth = workingDaysPerMonth;
       }
 
-      // Check for conflicts when days change
+      // Check for conflicts and refresh driver availability when days change
       setTimeout(() => {
         checkConflicts(
           prev.driverId,
           prev.vehicleId,
           prev.tripTimes,
           updatedDays,
+        );
+        refreshDriverAvailability(
+          prev.tripTimes,
+          updatedDays,
+          prev.routeStartDate,
         );
       }, 300);
 
@@ -293,6 +348,44 @@ function B2C_AddRouteModal({ onClose }) {
     }));
   };
 
+  // Track which drivers/vehicles are assigned within the current modal session
+  // This prevents the same driver/vehicle from showing as "available" in multiple trips
+  const getAssignedDriversInModal = () => {
+    const assigned = new Set();
+    formData.tripTimes.forEach((tripTime) => {
+      if (tripTime.assignedDriver) {
+        assigned.add(tripTime.assignedDriver);
+      }
+    });
+    return assigned;
+  };
+
+  const getAssignedVehiclesInModal = () => {
+    const assigned = new Set();
+    formData.tripTimes.forEach((tripTime) => {
+      if (tripTime.assignedVehicle) {
+        assigned.add(tripTime.assignedVehicle);
+      }
+    });
+    return assigned;
+  };
+
+  // Check if a driver is assigned to another trip in this modal
+  const isDriverAssignedInOtherTrip = (driverId, currentTripIndex) => {
+    return formData.tripTimes.some(
+      (tripTime, idx) =>
+        idx !== currentTripIndex && tripTime.assignedDriver === driverId,
+    );
+  };
+
+  // Check if a vehicle is assigned to another trip in this modal
+  const isVehicleAssignedInOtherTrip = (vehicleId, currentTripIndex) => {
+    return formData.tripTimes.some(
+      (tripTime, idx) =>
+        idx !== currentTripIndex && tripTime.assignedVehicle === vehicleId,
+    );
+  };
+
   // Trip time management functions
   const addTripTime = () => {
     setFormData((prev) => ({
@@ -305,6 +398,8 @@ function B2C_AddRouteModal({ onClose }) {
           tripType: "One Way",
           outboundStopPoints: [], // For One Way or Round Trip outbound journey
           returnStopPoints: [], // Only for Round Trip return journey
+          assignedDriver: "", // Per-trip driver assignment (optional)
+          assignedVehicle: "", // Per-trip vehicle assignment (optional)
         },
       ],
     }));
@@ -315,15 +410,20 @@ function B2C_AddRouteModal({ onClose }) {
       const updatedTripTimes = [...prev.tripTimes];
       updatedTripTimes[index] = { ...updatedTripTimes[index], [field]: value };
 
-      // Check conflicts when departure time changes
+      // Check conflicts and refresh driver availability when departure time changes
       if (field === "departureTime" && value) {
-        // Use setTimeout to debounce the conflict check
+        // Use setTimeout to debounce the checks
         setTimeout(() => {
           checkConflicts(
             prev.driverId,
             prev.vehicleId,
             updatedTripTimes,
             prev.availableDays,
+          );
+          refreshDriverAvailability(
+            updatedTripTimes,
+            prev.availableDays,
+            prev.routeStartDate,
           );
         }, 500);
       }
@@ -395,26 +495,74 @@ function B2C_AddRouteModal({ onClose }) {
     }));
   };
 
-  // Check for scheduling conflicts
+  // Refresh driver availability based on trip times and available days
+  const refreshDriverAvailability = async (
+    tripTimes,
+    availableDays,
+    routeStartDate,
+  ) => {
+    const validTripTimes = tripTimes.filter((t) => t.departureTime);
+    if (validTripTimes.length === 0) return;
+
+    setCheckingDriverAvailability(true);
+    try {
+      const response = await api.post("/b2c-partner/drivers/availability", {
+        tripTimes: validTripTimes.map((t) => ({
+          departureTime: t.departureTime,
+          arrivalTime: t.arrivalTime,
+          tripType: t.tripType,
+        })),
+        availableDays:
+          availableDays.length > 0
+            ? availableDays
+            : ["MON", "TUE", "WED", "THU", "FRI"],
+        routeStartDate: routeStartDate || getLocalDateString(),
+      });
+
+      if (response.data.success && response.data.drivers) {
+        setAvailableDrivers(response.data.drivers);
+      }
+    } catch (error) {
+      console.error("Error refreshing driver availability:", error);
+    } finally {
+      setCheckingDriverAvailability(false);
+    }
+  };
+
+  // Check for scheduling conflicts (supports per-trip driver/vehicle)
   const checkConflicts = async (
     driverId,
     vehicleId,
     tripTimes,
     availableDays,
   ) => {
-    // Only check if we have driver or vehicle and at least one trip time
+    // Only check if we have driver or vehicle (default or per-trip) and at least one trip time
     const validTripTimes = tripTimes.filter((t) => t.departureTime);
-    if ((!driverId && !vehicleId) || validTripTimes.length === 0) {
+    const hasAnyDriver =
+      driverId || validTripTimes.some((t) => t.assignedDriver);
+    const hasAnyVehicle =
+      vehicleId || validTripTimes.some((t) => t.assignedVehicle);
+
+    if ((!hasAnyDriver && !hasAnyVehicle) || validTripTimes.length === 0) {
       setSchedulingConflicts([]);
       return;
     }
 
     setCheckingConflicts(true);
     try {
+      // Include per-trip driver/vehicle assignments in the conflict check
+      const tripTimesWithAssignments = validTripTimes.map((t) => ({
+        departureTime: t.departureTime,
+        arrivalTime: t.arrivalTime,
+        tripType: t.tripType,
+        assignedDriver: t.assignedDriver || null,
+        assignedVehicle: t.assignedVehicle || null,
+      }));
+
       const response = await api.post("/b2c-schedules/check-conflicts", {
         driverId: driverId || null,
         vehicleId: vehicleId || null,
-        tripTimes: validTripTimes,
+        tripTimes: tripTimesWithAssignments,
         availableDays:
           availableDays.length > 0
             ? availableDays
@@ -530,6 +678,28 @@ function B2C_AddRouteModal({ onClose }) {
     });
   };
 
+  // Helper function to update assigned vehicles in Redux after schedule creation
+  const updateAssignedVehiclesInRedux = (validTripTimes) => {
+    // Collect all unique vehicles assigned in trip times
+    const assignedVehicleIds = new Set();
+
+    validTripTimes.forEach((tripTime) => {
+      if (tripTime.assignedVehicle) {
+        assignedVehicleIds.add(tripTime.assignedVehicle);
+      }
+    });
+
+    // If a vehicle is assigned to any trip, mark it as busy in Redux
+    assignedVehicleIds.forEach((vehicleId) => {
+      dispatch(
+        updateVehicleAvailabilityInStore({
+          vehicleId,
+          availabilityStatus: "busy",
+        }),
+      );
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -615,8 +785,7 @@ function B2C_AddRouteModal({ onClose }) {
             selectedExistingRoute.assignedDriver?._id ||
             selectedExistingRoute.driverInfo?._id ||
             selectedExistingRoute.assignedDriver,
-          startDate:
-            formData.routeStartDate || new Date().toISOString().split("T")[0],
+          startDate: formData.routeStartDate || getLocalDateString(),
           notes: `Additional schedule for ${selectedExistingRoute.fromLocation} → ${selectedExistingRoute.toLocation}`,
         };
 
@@ -626,9 +795,17 @@ function B2C_AddRouteModal({ onClose }) {
         );
 
         if (scheduleResponse.data.success) {
+          // Check if it was an update (merged with existing) or new creation
+          const isUpdate = scheduleResponse.data.isUpdate;
           alert(
-            "New schedule added to existing route! Trips will be generated automatically.",
+            isUpdate
+              ? "New trip times added to existing schedule successfully!"
+              : "New schedule added to existing route! Trips will be generated automatically.",
           );
+
+          // Update assigned vehicles in Redux for real-time UI update
+          updateAssignedVehiclesInRedux(validTripTimes);
+
           onClose();
           // Trigger parent refresh
           if (window.onRouteCreated) {
@@ -641,11 +818,20 @@ function B2C_AddRouteModal({ onClose }) {
       }
 
       // Handle "new route" mode - create new route first
+      // Calculate seats from first trip's vehicle or use default
+      const firstTripVehicle = formData.tripTimes.find(
+        (t) => t.assignedVehicle,
+      )?.assignedVehicle;
+      const vehicleForSeats = availableVehicles.find(
+        (v) => v._id === firstTripVehicle,
+      );
+      const calculatedSeats = vehicleForSeats?.seatingCapacity || 20;
+
       const routeData = {
         fromLocation: formData.fromLocation,
         toLocation: formData.toLocation,
-        totalSeats: parseInt(formData.totalSeats) || 20,
-        availableSeats: parseInt(formData.availableSeats) || 20,
+        totalSeats: calculatedSeats,
+        availableSeats: calculatedSeats,
         pricing: {
           oneWayPrice: parseFloat(formData.oneWayPrice) || 0,
           roundTripPrice: parseFloat(formData.roundTripPrice) || 0,
@@ -656,8 +842,7 @@ function B2C_AddRouteModal({ onClose }) {
         },
         assignedVehicle: formData.vehicleId || null,
         assignedDriver: formData.driverId || null,
-        routeStartDate:
-          formData.routeStartDate || new Date().toISOString().split("T")[0],
+        routeStartDate: formData.routeStartDate || getLocalDateString(),
         description: formData.description,
         tags: formData.tags || [], // Include selected tags
       };
@@ -678,8 +863,7 @@ function B2C_AddRouteModal({ onClose }) {
               : ["MON", "TUE", "WED", "THU", "FRI"],
           assignedVehicle: formData.vehicleId,
           assignedDriver: formData.driverId,
-          startDate:
-            formData.routeStartDate || new Date().toISOString().split("T")[0],
+          startDate: formData.routeStartDate || getLocalDateString(),
           notes: `Auto-created schedule for ${createdRoute.fromLocation} → ${createdRoute.toLocation}`,
         };
 
@@ -692,6 +876,9 @@ function B2C_AddRouteModal({ onClose }) {
           alert(
             "Route and Schedule created successfully! Trips will be generated automatically.",
           );
+
+          // Update assigned vehicles in Redux for real-time UI update
+          updateAssignedVehiclesInRedux(validTripTimes);
         }
 
         onClose();
@@ -1298,6 +1485,412 @@ function B2C_AddRouteModal({ onClose }) {
                       </div>
                     )}
                   </div>
+
+                  {/* Per-Trip Driver & Vehicle Assignment */}
+                  <div
+                    className="b2c-trip-assignment"
+                    style={{
+                      marginTop: "16px",
+                      padding: "12px",
+                      backgroundColor: "#f8fafc",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <h5
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        color: "#475569",
+                        marginBottom: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <span>📋</span> Trip {index + 1} Assignment *
+                    </h5>
+                    <p
+                      style={{
+                        fontSize: "12px",
+                        color: "#64748b",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      Assign a driver and vehicle for this specific trip time.
+                      Drivers/Vehicles: 🟢 available, 🔴 busy, 🟠 offline, 🔵
+                      assigned to another trip above.
+                    </p>
+                    <div
+                      className="b2c-form-row"
+                      style={{ display: "flex", gap: "12px" }}
+                    >
+                      <div className="b2c-form-group" style={{ flex: 1 }}>
+                        <label
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            color: "#475569",
+                            marginBottom: "4px",
+                            display: "block",
+                          }}
+                        >
+                          Driver for Trip {index + 1} *
+                        </label>
+                        <select
+                          value={tripTime.assignedDriver || ""}
+                          onChange={(e) =>
+                            updateTripTime(
+                              index,
+                              "assignedDriver",
+                              e.target.value,
+                            )
+                          }
+                          className="b2c-form-input"
+                          style={{ fontSize: "13px", padding: "8px 10px" }}
+                          required
+                        >
+                          <option value="">Select a driver</option>
+                          {availableDrivers.map((driver) => {
+                            // Check if this driver is assigned to another trip in this modal
+                            const isAssignedInModal =
+                              isDriverAssignedInOtherTrip(driver._id, index);
+
+                            // Use the backend-calculated availability status and message
+                            const availabilityStatus = isAssignedInModal
+                              ? "assigned"
+                              : driver.availability?.status ||
+                                driver.availabilityStatus ||
+                                "available";
+                            const availabilityMessage =
+                              driver.availability?.message ||
+                              driver.availabilityMessage ||
+                              "";
+                            const availableUntil =
+                              driver.availability?.availableUntilDisplay ||
+                              driver.availableUntil ||
+                              null;
+
+                            const availabilityIcon = isAssignedInModal
+                              ? "🔵"
+                              : availabilityStatus === "available"
+                                ? "🟢"
+                                : availabilityStatus === "busy"
+                                  ? "🔴"
+                                  : availabilityStatus === "offline"
+                                    ? "🟠"
+                                    : "🟠";
+                            // Allow selecting "available" drivers even if they have upcoming trips
+                            const isDisabled =
+                              isAssignedInModal ||
+                              (availabilityStatus !== "available" &&
+                                availabilityStatus !== "scheduled");
+
+                            // Build schedule info text - show "Available until X:XX" if applicable
+                            // FIXED: Show "Available" even if driver has schedules (without bookings)
+                            // The detailed schedule info is shown in the info box when the driver is selected
+                            const scheduleCount =
+                              driver.assignedScheduleDetails?.length || 0;
+                            let statusText = isAssignedInModal
+                              ? "- Assigned to Trip Above"
+                              : availabilityStatus === "available"
+                                ? availableUntil
+                                  ? `- Available until ${availableUntil}`
+                                  : scheduleCount > 0
+                                    ? "- Available"
+                                    : ""
+                                : availabilityStatus === "scheduled"
+                                  ? `- ${availabilityMessage}`
+                                  : availabilityStatus === "busy"
+                                    ? `- ${availabilityMessage || "Busy"}`
+                                    : availabilityStatus === "offline"
+                                      ? "- Offline"
+                                      : "- Not Available";
+
+                            return (
+                              <option
+                                key={driver._id}
+                                value={driver._id}
+                                disabled={isDisabled}
+                                style={{
+                                  color: isDisabled ? "#94a3b8" : "inherit",
+                                }}
+                              >
+                                {availabilityIcon} {driver.name} (
+                                {driver.phoneNumber}) {statusText}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {/* Show selected driver's schedule info */}
+                        {tripTime.assignedDriver &&
+                          (() => {
+                            const selectedDriver = availableDrivers.find(
+                              (d) => d._id === tripTime.assignedDriver,
+                            );
+                            if (
+                              selectedDriver?.assignedScheduleDetails?.length >
+                              0
+                            ) {
+                              return (
+                                <div
+                                  style={{
+                                    marginTop: "6px",
+                                    padding: "8px 10px",
+                                    backgroundColor: "#fef3c7",
+                                    borderRadius: "6px",
+                                    fontSize: "11px",
+                                    color: "#92400e",
+                                    border: "1px solid #fcd34d",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontWeight: "600",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    Already assigned to{" "}
+                                    {
+                                      selectedDriver.assignedScheduleDetails
+                                        .length
+                                    }{" "}
+                                    schedule(s):
+                                  </div>
+                                  {selectedDriver.assignedScheduleDetails
+                                    .slice(0, 3)
+                                    .map((sched, idx) => (
+                                      <div
+                                        key={idx}
+                                        style={{
+                                          marginLeft: "8px",
+                                          marginBottom: "2px",
+                                        }}
+                                      >
+                                        • {sched.departureTime}
+                                        {sched.arrivalTime
+                                          ? ` - ${sched.arrivalTime}`
+                                          : ""}
+                                        : {sched.routeName}
+                                        <span
+                                          style={{
+                                            color: "#a16207",
+                                            marginLeft: "4px",
+                                          }}
+                                        >
+                                          (
+                                          {sched.availableDays
+                                            ?.slice(0, 3)
+                                            .join(", ")}
+                                          {sched.availableDays?.length > 3
+                                            ? "..."
+                                            : ""}
+                                          )
+                                        </span>
+                                      </div>
+                                    ))}
+                                  {selectedDriver.assignedScheduleDetails
+                                    .length > 3 && (
+                                    <div
+                                      style={{
+                                        marginLeft: "8px",
+                                        fontStyle: "italic",
+                                      }}
+                                    >
+                                      ...and{" "}
+                                      {selectedDriver.assignedScheduleDetails
+                                        .length - 3}{" "}
+                                      more
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                      </div>
+                      <div className="b2c-form-group" style={{ flex: 1 }}>
+                        <label
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            color: "#475569",
+                            marginBottom: "4px",
+                            display: "block",
+                          }}
+                        >
+                          Vehicle for Trip {index + 1} *
+                        </label>
+                        <select
+                          value={tripTime.assignedVehicle || ""}
+                          onChange={(e) =>
+                            updateTripTime(
+                              index,
+                              "assignedVehicle",
+                              e.target.value,
+                            )
+                          }
+                          className="b2c-form-input"
+                          style={{ fontSize: "13px", padding: "8px 10px" }}
+                          required
+                        >
+                          <option value="">Select a vehicle</option>
+                          {availableVehicles.map((vehicle) => {
+                            // Check if this vehicle is assigned to another trip in this modal
+                            const isAssignedInModal =
+                              isVehicleAssignedInOtherTrip(vehicle._id, index);
+
+                            // Use backend-calculated availability status
+                            const vehicleAvailability = isAssignedInModal
+                              ? "assigned"
+                              : vehicle.availabilityStatus || "available";
+                            const vehicleAvailableUntil =
+                              vehicle.availableUntil || null;
+                            const vehicleAvailabilityMessage =
+                              vehicle.availabilityMessage || "";
+
+                            const vehicleIcon = isAssignedInModal
+                              ? "🔵"
+                              : vehicleAvailability === "available"
+                                ? "🟢"
+                                : vehicleAvailability === "busy"
+                                  ? "🔴"
+                                  : vehicleAvailability === "scheduled"
+                                    ? "🟠"
+                                    : "🟠";
+                            // Allow selecting "available" vehicles even if they have upcoming trips
+                            const isVehicleDisabled =
+                              isAssignedInModal ||
+                              (vehicleAvailability !== "available" &&
+                                vehicleAvailability !== "scheduled");
+
+                            // Build schedule info text - show "Available until X:XX" if applicable
+                            // FIXED: Show "Available" even if vehicle has schedules (without bookings)
+                            // The detailed schedule info is shown in the info box when the vehicle is selected
+                            const scheduleCount =
+                              vehicle.assignedScheduleDetails?.length || 0;
+                            const vehicleStatusText = isAssignedInModal
+                              ? "- ASSIGNED TO TRIP ABOVE"
+                              : vehicleAvailability === "available"
+                                ? vehicleAvailableUntil
+                                  ? `- Available until ${vehicleAvailableUntil}`
+                                  : scheduleCount > 0
+                                    ? "- Available"
+                                    : ""
+                                : vehicleAvailability === "busy"
+                                  ? `- ${vehicleAvailabilityMessage || "BUSY"}`
+                                  : vehicleAvailability === "scheduled"
+                                    ? `- ${vehicleAvailabilityMessage}`
+                                    : "";
+
+                            return (
+                              <option
+                                key={vehicle._id}
+                                value={vehicle._id}
+                                disabled={isVehicleDisabled}
+                                style={{
+                                  color: isVehicleDisabled
+                                    ? "#94a3b8"
+                                    : "inherit",
+                                }}
+                              >
+                                {vehicleIcon} {vehicle.model} (
+                                {vehicle.licensePlate}) -{" "}
+                                {vehicle.seatingCapacity} seats{" "}
+                                {vehicleStatusText}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {/* Show selected vehicle's schedule info */}
+                        {tripTime.assignedVehicle &&
+                          (() => {
+                            const selectedVehicle = availableVehicles.find(
+                              (v) => v._id === tripTime.assignedVehicle,
+                            );
+                            if (
+                              selectedVehicle?.assignedScheduleDetails?.length >
+                              0
+                            ) {
+                              return (
+                                <div
+                                  style={{
+                                    marginTop: "6px",
+                                    padding: "8px 10px",
+                                    backgroundColor: "#dbeafe",
+                                    borderRadius: "6px",
+                                    fontSize: "11px",
+                                    color: "#1e40af",
+                                    border: "1px solid #93c5fd",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontWeight: "600",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    Already assigned to{" "}
+                                    {
+                                      selectedVehicle.assignedScheduleDetails
+                                        .length
+                                    }{" "}
+                                    schedule(s):
+                                  </div>
+                                  {selectedVehicle.assignedScheduleDetails
+                                    .slice(0, 3)
+                                    .map((sched, idx) => (
+                                      <div
+                                        key={idx}
+                                        style={{
+                                          marginLeft: "8px",
+                                          marginBottom: "2px",
+                                        }}
+                                      >
+                                        • {sched.departureTime}
+                                        {sched.arrivalTime
+                                          ? ` - ${sched.arrivalTime}`
+                                          : ""}
+                                        : {sched.routeName}
+                                        <span
+                                          style={{
+                                            color: "#1d4ed8",
+                                            marginLeft: "4px",
+                                          }}
+                                        >
+                                          (
+                                          {sched.availableDays
+                                            ?.slice(0, 3)
+                                            .join(", ")}
+                                          {sched.availableDays?.length > 3
+                                            ? "..."
+                                            : ""}
+                                          )
+                                        </span>
+                                      </div>
+                                    ))}
+                                  {selectedVehicle.assignedScheduleDetails
+                                    .length > 3 && (
+                                    <div
+                                      style={{
+                                        marginLeft: "8px",
+                                        fontStyle: "italic",
+                                      }}
+                                    >
+                                      ...and{" "}
+                                      {selectedVehicle.assignedScheduleDetails
+                                        .length - 3}{" "}
+                                      more
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
 
@@ -1311,405 +1904,379 @@ function B2C_AddRouteModal({ onClose }) {
             </div>
           </div>
 
-          {/* Vehicle & Driver Assignment - Show for both new and existing routes */}
-          <div className="b2c-form-section">
-            <h3 className="b2c-section-title">
-              {routeMode === "existing"
-                ? "Schedule Assignment"
-                : "Pricing & Capacity"}
-            </h3>
-            {routeMode === "existing" && (
-              <p className="b2c-section-description">
-                Optionally assign a different vehicle or driver for this
-                schedule (uses route defaults if not changed).
+          {/* Pricing Section - Only for new routes */}
+          {routeMode === "new" && (
+            <div className="b2c-form-section">
+              <h3 className="b2c-section-title">Pricing</h3>
+              <p
+                className="b2c-section-description"
+                style={{
+                  color: "#64748b",
+                  fontSize: "13px",
+                  marginBottom: "12px",
+                }}
+              >
+                Set the pricing for this route. Seat capacity is automatically
+                determined by the vehicle assigned to each trip above.
               </p>
-            )}
 
-            {/* Vehicle Assignment Section */}
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label htmlFor="vehicleId" className="b2c-form-label">
-                  Assign Vehicle {routeMode === "new" ? "*" : "(Optional)"}
-                </label>
-                <select
-                  id="vehicleId"
-                  name="vehicleId"
-                  value={formData.vehicleId}
-                  onChange={handleVehicleChange}
-                  required={routeMode === "new"}
-                  className="b2c-form-input"
-                >
-                  <option value="">
-                    {routeMode === "existing"
-                      ? "Use route default"
-                      : "Select Vehicle"}
-                  </option>
-                  {availableVehicles.map((vehicle) => (
-                    <option key={vehicle._id} value={vehicle._id}>
-                      {vehicle.model} ({vehicle.licensePlate}) -{" "}
-                      {vehicle.seatingCapacity} seats
-                    </option>
-                  ))}
-                </select>
-                {formData.vehicleId && (
-                  <small className="b2c-form-help">
-                    Vehicle capacity:{" "}
-                    {availableVehicles.find((v) => v._id === formData.vehicleId)
-                      ?.seatingCapacity || 0}{" "}
-                    seats
-                  </small>
-                )}
-              </div>
-
-              <div className="b2c-form-group">
-                <label htmlFor="driverId" className="b2c-form-label">
-                  Assign Driver {routeMode === "new" ? "*" : "(Optional)"}
-                </label>
-                <select
-                  id="driverId"
-                  name="driverId"
-                  value={formData.driverId}
-                  onChange={handleDriverChange}
-                  required={routeMode === "new"}
-                  className="b2c-form-input"
-                >
-                  <option value="">
-                    {routeMode === "existing"
-                      ? "Use route default"
-                      : "Select Driver"}
-                  </option>
-                  {availableDrivers.map((driver) => (
-                    <option key={driver._id} value={driver._id}>
-                      {driver.name} ({driver.phoneNumber})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Scheduling Conflict Warning */}
-            {schedulingConflicts.length > 0 && (
-              <div
-                className="b2c-conflict-warning"
-                style={{
-                  backgroundColor: "#fef2f2",
-                  border: "1px solid #fca5a5",
-                  borderRadius: "8px",
-                  padding: "16px",
-                  marginTop: "16px",
-                  marginBottom: "16px",
-                }}
-              >
+              {/* Scheduling Conflict Warning */}
+              {schedulingConflicts.length > 0 && (
                 <div
+                  className="b2c-conflict-warning"
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    marginBottom: "8px",
+                    backgroundColor: "#fef2f2",
+                    border: "1px solid #fca5a5",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    marginTop: "16px",
+                    marginBottom: "16px",
                   }}
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    style={{ marginRight: "8px" }}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginBottom: "8px",
+                    }}
                   >
-                    <path
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      stroke="#dc2626"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span style={{ fontWeight: "600", color: "#dc2626" }}>
-                    Scheduling Conflicts Detected
-                  </span>
-                </div>
-                <ul
-                  style={{ margin: "0", paddingLeft: "20px", color: "#7f1d1d" }}
-                >
-                  {schedulingConflicts.map((conflict, index) => (
-                    <li key={index} style={{ marginBottom: "4px" }}>
-                      <strong>
-                        {conflict.type === "DRIVER" ? "Driver" : "Vehicle"}
-                      </strong>{" "}
-                      is already assigned to{" "}
-                      <strong>{conflict.existingRoute}</strong> at{" "}
-                      <strong>{conflict.conflictingTime}</strong> on{" "}
-                      <strong>{conflict.overlappingDays?.join(", ")}</strong>
-                    </li>
-                  ))}
-                </ul>
-                <p
-                  style={{
-                    marginTop: "8px",
-                    marginBottom: "0",
-                    fontSize: "13px",
-                    color: "#991b1b",
-                  }}
-                >
-                  Please change the time, driver, vehicle, or available days to
-                  avoid double-booking.
-                </p>
-              </div>
-            )}
-
-            {checkingConflicts && (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "8px",
-                  color: "#6b7280",
-                }}
-              >
-                Checking for scheduling conflicts...
-              </div>
-            )}
-
-            {/* Seats and Pricing - Only for new routes */}
-            {routeMode === "new" && (
-              <>
-                <div className="b2c-form-row">
-                  <div className="b2c-form-group">
-                    <label htmlFor="totalSeats" className="b2c-form-label">
-                      Total Seats *
-                    </label>
-                    <input
-                      type="number"
-                      id="totalSeats"
-                      name="totalSeats"
-                      placeholder="20"
-                      value={formData.totalSeats}
-                      onChange={handleChange}
-                      required
-                      min="1"
-                      max="50"
-                      className="b2c-form-input"
-                    />
-                  </div>
-
-                  <div className="b2c-form-group">
-                    <label htmlFor="availableSeats" className="b2c-form-label">
-                      Available Seats *
-                    </label>
-                    <input
-                      type="number"
-                      id="availableSeats"
-                      name="availableSeats"
-                      placeholder="20"
-                      value={formData.availableSeats}
-                      onChange={handleChange}
-                      required
-                      min="0"
-                      max={formData.totalSeats}
-                      className="b2c-form-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="b2c-form-row">
-                  <div className="b2c-form-group">
-                    <label htmlFor="oneWayPrice" className="b2c-form-label">
-                      One Way Price ({getCurrencySymbol(currency)}) *
-                    </label>
-                    <input
-                      type="number"
-                      id="oneWayPrice"
-                      name="oneWayPrice"
-                      placeholder="50.00"
-                      value={formData.oneWayPrice}
-                      onChange={handlePriceChange}
-                      required
-                      min="0"
-                      step={decimals === 3 ? "0.001" : "0.01"}
-                      className="b2c-form-input"
-                    />
-                    <small className="b2c-form-help">
-                      Daily price per trip (used for monthly calculation)
-                    </small>
-                  </div>
-
-                  <div className="b2c-form-group">
-                    <label htmlFor="roundTripPrice" className="b2c-form-label">
-                      Round Trip Price ({getCurrencySymbol(currency)}) *
-                    </label>
-                    <input
-                      type="number"
-                      id="roundTripPrice"
-                      name="roundTripPrice"
-                      placeholder="80.00"
-                      value={formData.roundTripPrice}
-                      onChange={handlePriceChange}
-                      required
-                      min="0"
-                      step={decimals === 3 ? "0.001" : "0.01"}
-                      className="b2c-form-input"
-                    />
-                    <small className="b2c-form-help">
-                      Daily price per round trip (used for monthly calculation)
-                    </small>
-                  </div>
-                </div>
-
-                <div className="b2c-form-row">
-                  <div className="b2c-form-group">
-                    <label
-                      htmlFor="monthlyOneWayPrice"
-                      className="b2c-form-label"
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      style={{ marginRight: "8px" }}
                     >
-                      Monthly Pass (One Way) ({getCurrencySymbol(currency)}) *
-                    </label>
-                    <input
-                      type="number"
-                      id="monthlyOneWayPrice"
-                      name="monthlyOneWayPrice"
-                      placeholder="Auto-calculated"
-                      value={formData.monthlyOneWayPrice}
-                      onChange={handleChange}
-                      required
-                      min="0"
-                      step="0.01"
-                      className="b2c-form-input"
-                      readonly
-                    />
-                    <small className="b2c-form-help">
-                      Auto-calculated based on daily price and available days
-                    </small>
+                      <path
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        stroke="#dc2626"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span style={{ fontWeight: "600", color: "#dc2626" }}>
+                      Scheduling Conflicts Detected
+                    </span>
                   </div>
-
-                  <div className="b2c-form-group">
-                    <label className="b2c-form-label">
-                      Monthly Pass (Round Trip) ({getCurrencySymbol(currency)})
-                      *
-                    </label>
-                    <input
-                      type="number"
-                      id="monthlyRoundTripPrice"
-                      name="monthlyRoundTripPrice"
-                      placeholder="Auto-calculated"
-                      value={formData.monthlyRoundTripPrice}
-                      onChange={handleChange}
-                      required
-                      min="0"
-                      step={decimals === 3 ? "0.001" : "0.01"}
-                      className="b2c-form-input"
-                      readonly
-                    />
-                    <small className="b2c-form-help">
-                      Auto-calculated based on daily price and available days
-                    </small>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="b2c-pricing-preview">
-              <h4 className="b2c-preview-title">
-                🎫{" "}
-                {routeMode === "existing"
-                  ? "New Schedule Summary"
-                  : "Monthly Pass Pricing"}
-              </h4>
-              <div className="b2c-preview-grid">
-                <div className="b2c-preview-item">
-                  <span className="b2c-preview-label">Route:</span>
-                  <span className="b2c-preview-value">
-                    {routeMode === "existing" && selectedExistingRoute
-                      ? `${selectedExistingRoute.fromLocation} → ${selectedExistingRoute.toLocation}`
-                      : `${formData.fromLocation} → ${formData.toLocation}`}
-                  </span>
-                </div>
-                <div className="b2c-preview-item">
-                  <span className="b2c-preview-label">Days:</span>
-                  <span className="b2c-preview-value">
-                    {formData.availableDays.join(", ")}
-                  </span>
-                </div>
-                <div className="b2c-preview-item">
-                  <span className="b2c-preview-label">Trips per Day:</span>
-                  <span className="b2c-preview-value">
-                    {formData.tripTimes.filter((t) => t.departureTime).length}
-                  </span>
-                </div>
-                <div className="b2c-preview-item">
-                  <span className="b2c-preview-label">Total Weekly Trips:</span>
-                  <span className="b2c-preview-value">
-                    {formData.tripTimes.filter((t) => t.departureTime).length *
-                      formData.availableDays.length}
-                  </span>
-                </div>
-              </div>
-
-              {formData.tripTimes.filter((t) => t.departureTime).length > 0 && (
-                <div className="b2c-trip-times-preview">
-                  <h5 className="b2c-preview-subtitle">🕐 Daily Trip Times:</h5>
-                  {formData.tripTimes
-                    .filter((t) => t.departureTime)
-                    .map((trip, index) => (
-                      <div key={index} className="b2c-trip-preview">
-                        <div className="b2c-trip-header">
-                          <span className="b2c-trip-time">
-                            {trip.departureTime}
-                            {trip.tripType === "Round Trip" &&
-                              trip.arrivalTime &&
-                              ` - Return ${trip.arrivalTime}`}
+                  <ul
+                    style={{
+                      margin: "0",
+                      paddingLeft: "20px",
+                      color: "#7f1d1d",
+                    }}
+                  >
+                    {schedulingConflicts.map((conflict, index) => (
+                      <li key={index} style={{ marginBottom: "4px" }}>
+                        {conflict.tripIndex && (
+                          <span style={{ color: "#ef4444", fontWeight: "600" }}>
+                            [Trip {conflict.tripIndex}]{" "}
                           </span>
-                          <span className="b2c-trip-type">{trip.tripType}</span>
-                        </div>
-
-                        {/* Outbound Stops Preview */}
-                        {trip.outboundStopPoints.length > 0 && (
-                          <div className="b2c-trip-stops-preview">
-                            <span className="b2c-stops-label">
-                              🛑 Outbound:
-                            </span>
-                            {trip.outboundStopPoints.map((stop, stopIndex) => (
-                              <span
-                                key={stopIndex}
-                                className="b2c-stop-preview"
-                              >
-                                {stop.location} ({stop.time})
-                              </span>
-                            ))}
-                          </div>
                         )}
-
-                        {/* Return Stops Preview */}
-                        {trip.tripType === "Round Trip" &&
-                          trip.returnStopPoints.length > 0 && (
-                            <div className="b2c-trip-stops-preview">
-                              <span className="b2c-stops-label">
-                                🔄 Return:
-                              </span>
-                              {trip.returnStopPoints.map((stop, stopIndex) => (
-                                <span
-                                  key={stopIndex}
-                                  className="b2c-stop-preview"
-                                >
-                                  {stop.location} ({stop.time})
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                      </div>
+                        <strong>
+                          {conflict.type === "DRIVER" ? "Driver" : "Vehicle"}
+                        </strong>{" "}
+                        is already assigned to{" "}
+                        <strong>{conflict.existingRoute}</strong> at{" "}
+                        <strong>{conflict.conflictingTime}</strong> on{" "}
+                        <strong>{conflict.overlappingDays?.join(", ")}</strong>
+                        {conflict.tripTime && (
+                          <span> (Your trip at {conflict.tripTime})</span>
+                        )}
+                      </li>
                     ))}
+                  </ul>
+                  <p
+                    style={{
+                      marginTop: "8px",
+                      marginBottom: "0",
+                      fontSize: "13px",
+                      color: "#991b1b",
+                    }}
+                  >
+                    Please change the time, driver, vehicle, or available days
+                    to avoid double-booking.
+                  </p>
                 </div>
               )}
 
-              <div className="b2c-pass-info">
-                <p className="b2c-pass-text">
-                  🚌 Passengers get unlimited travel with monthly pass!
-                </p>
-                <p className="b2c-pass-text">
-                  💳 No daily tickets, only monthly subscriptions
-                </p>
-                <p className="b2c-pass-text">
-                  🔄 Each trip time can be One Way or Round Trip
-                </p>
+              {checkingConflicts && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "8px",
+                    color: "#6b7280",
+                  }}
+                >
+                  Checking for scheduling conflicts...
+                </div>
+              )}
+
+              {/* Seats Info - Auto-calculated from trip vehicles */}
+              {routeMode === "new" && (
+                <>
+                  <div
+                    className="b2c-info-box"
+                    style={{
+                      backgroundColor: "#eff6ff",
+                      border: "1px solid #93c5fd",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <p
+                      style={{ fontSize: "13px", color: "#1e40af", margin: 0 }}
+                    >
+                      <strong>Seat Capacity:</strong> The total and available
+                      seats are automatically determined by the vehicle assigned
+                      to each trip above. Each trip can have a different vehicle
+                      with different seating capacity.
+                    </p>
+                    {formData.tripTimes.some((t) => t.assignedVehicle) && (
+                      <div
+                        style={{
+                          marginTop: "8px",
+                          fontSize: "12px",
+                          color: "#3b82f6",
+                        }}
+                      >
+                        {formData.tripTimes.map((trip, idx) => {
+                          if (!trip.assignedVehicle) return null;
+                          const vehicle = availableVehicles.find(
+                            (v) => v._id === trip.assignedVehicle,
+                          );
+                          return vehicle ? (
+                            <div key={idx}>
+                              Trip {idx + 1}:{" "}
+                              {vehicle.model || vehicle.vehicleName} (
+                              {vehicle.licensePlate || vehicle.plateNumber}) -{" "}
+                              {vehicle.seatingCapacity} seats
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="b2c-form-row">
+                    <div className="b2c-form-group">
+                      <label htmlFor="oneWayPrice" className="b2c-form-label">
+                        One Way Price ({getCurrencySymbol(currency)}) *
+                      </label>
+                      <input
+                        type="number"
+                        id="oneWayPrice"
+                        name="oneWayPrice"
+                        placeholder="50.00"
+                        value={formData.oneWayPrice}
+                        onChange={handlePriceChange}
+                        required
+                        min="0"
+                        step={decimals === 3 ? "0.001" : "0.01"}
+                        className="b2c-form-input"
+                      />
+                      <small className="b2c-form-help">
+                        Daily price per trip (used for monthly calculation)
+                      </small>
+                    </div>
+
+                    <div className="b2c-form-group">
+                      <label
+                        htmlFor="roundTripPrice"
+                        className="b2c-form-label"
+                      >
+                        Round Trip Price ({getCurrencySymbol(currency)}) *
+                      </label>
+                      <input
+                        type="number"
+                        id="roundTripPrice"
+                        name="roundTripPrice"
+                        placeholder="80.00"
+                        value={formData.roundTripPrice}
+                        onChange={handlePriceChange}
+                        required
+                        min="0"
+                        step={decimals === 3 ? "0.001" : "0.01"}
+                        className="b2c-form-input"
+                      />
+                      <small className="b2c-form-help">
+                        Daily price per round trip (used for monthly
+                        calculation)
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="b2c-form-row">
+                    <div className="b2c-form-group">
+                      <label
+                        htmlFor="monthlyOneWayPrice"
+                        className="b2c-form-label"
+                      >
+                        Monthly Pass (One Way) ({getCurrencySymbol(currency)}) *
+                      </label>
+                      <input
+                        type="number"
+                        id="monthlyOneWayPrice"
+                        name="monthlyOneWayPrice"
+                        placeholder="Auto-calculated"
+                        value={formData.monthlyOneWayPrice}
+                        onChange={handleChange}
+                        required
+                        min="0"
+                        step="0.01"
+                        className="b2c-form-input"
+                        readonly
+                      />
+                      <small className="b2c-form-help">
+                        Auto-calculated based on daily price and available days
+                      </small>
+                    </div>
+
+                    <div className="b2c-form-group">
+                      <label className="b2c-form-label">
+                        Monthly Pass (Round Trip) ({getCurrencySymbol(currency)}
+                        ) *
+                      </label>
+                      <input
+                        type="number"
+                        id="monthlyRoundTripPrice"
+                        name="monthlyRoundTripPrice"
+                        placeholder="Auto-calculated"
+                        value={formData.monthlyRoundTripPrice}
+                        onChange={handleChange}
+                        required
+                        min="0"
+                        step={decimals === 3 ? "0.001" : "0.01"}
+                        className="b2c-form-input"
+                        readonly
+                      />
+                      <small className="b2c-form-help">
+                        Auto-calculated based on daily price and available days
+                      </small>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="b2c-pricing-preview">
+                <h4 className="b2c-preview-title">
+                  🎫{" "}
+                  {routeMode === "existing"
+                    ? "New Schedule Summary"
+                    : "Monthly Pass Pricing"}
+                </h4>
+                <div className="b2c-preview-grid">
+                  <div className="b2c-preview-item">
+                    <span className="b2c-preview-label">Route:</span>
+                    <span className="b2c-preview-value">
+                      {routeMode === "existing" && selectedExistingRoute
+                        ? `${selectedExistingRoute.fromLocation} → ${selectedExistingRoute.toLocation}`
+                        : `${formData.fromLocation} → ${formData.toLocation}`}
+                    </span>
+                  </div>
+                  <div className="b2c-preview-item">
+                    <span className="b2c-preview-label">Days:</span>
+                    <span className="b2c-preview-value">
+                      {formData.availableDays.join(", ")}
+                    </span>
+                  </div>
+                  <div className="b2c-preview-item">
+                    <span className="b2c-preview-label">Trips per Day:</span>
+                    <span className="b2c-preview-value">
+                      {formData.tripTimes.filter((t) => t.departureTime).length}
+                    </span>
+                  </div>
+                  <div className="b2c-preview-item">
+                    <span className="b2c-preview-label">
+                      Total Weekly Trips:
+                    </span>
+                    <span className="b2c-preview-value">
+                      {formData.tripTimes.filter((t) => t.departureTime)
+                        .length * formData.availableDays.length}
+                    </span>
+                  </div>
+                </div>
+
+                {formData.tripTimes.filter((t) => t.departureTime).length >
+                  0 && (
+                  <div className="b2c-trip-times-preview">
+                    <h5 className="b2c-preview-subtitle">
+                      🕐 Daily Trip Times:
+                    </h5>
+                    {formData.tripTimes
+                      .filter((t) => t.departureTime)
+                      .map((trip, index) => (
+                        <div key={index} className="b2c-trip-preview">
+                          <div className="b2c-trip-header">
+                            <span className="b2c-trip-time">
+                              {trip.departureTime}
+                              {trip.tripType === "Round Trip" &&
+                                trip.arrivalTime &&
+                                ` - Return ${trip.arrivalTime}`}
+                            </span>
+                            <span className="b2c-trip-type">
+                              {trip.tripType}
+                            </span>
+                          </div>
+
+                          {/* Outbound Stops Preview */}
+                          {trip.outboundStopPoints.length > 0 && (
+                            <div className="b2c-trip-stops-preview">
+                              <span className="b2c-stops-label">
+                                🛑 Outbound:
+                              </span>
+                              {trip.outboundStopPoints.map(
+                                (stop, stopIndex) => (
+                                  <span
+                                    key={stopIndex}
+                                    className="b2c-stop-preview"
+                                  >
+                                    {stop.location} ({stop.time})
+                                  </span>
+                                ),
+                              )}
+                            </div>
+                          )}
+
+                          {/* Return Stops Preview */}
+                          {trip.tripType === "Round Trip" &&
+                            trip.returnStopPoints.length > 0 && (
+                              <div className="b2c-trip-stops-preview">
+                                <span className="b2c-stops-label">
+                                  🔄 Return:
+                                </span>
+                                {trip.returnStopPoints.map(
+                                  (stop, stopIndex) => (
+                                    <span
+                                      key={stopIndex}
+                                      className="b2c-stop-preview"
+                                    >
+                                      {stop.location} ({stop.time})
+                                    </span>
+                                  ),
+                                )}
+                              </div>
+                            )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+
+                <div className="b2c-pass-info">
+                  <p className="b2c-pass-text">
+                    🚌 Passengers get unlimited travel with monthly pass!
+                  </p>
+                  <p className="b2c-pass-text">
+                    💳 No daily tickets, only monthly subscriptions
+                  </p>
+                  <p className="b2c-pass-text">
+                    🔄 Each trip time can be One Way or Round Trip
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="b2c-modal-actions">
             <button

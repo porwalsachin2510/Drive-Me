@@ -57,14 +57,20 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const [passDuration, setPassDuration] = useState(1); // months
   const [passStartDate, setPassStartDate] = useState(() => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    // Use local date formatting to avoid timezone shift issues
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // Format: YYYY-MM-DD in local timezone
   }); // Custom start date
   const [passEndDate, setPassEndDate] = useState(() => {
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + 1);
-    endDate.setHours(0, 0, 0, 0);
-    return endDate.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    // Use local date formatting to avoid timezone shift issues
+    const year = endDate.getFullYear();
+    const month = String(endDate.getMonth() + 1).padStart(2, "0");
+    const day = String(endDate.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // Format: YYYY-MM-DD in local timezone
   }); // Custom end date
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -409,14 +415,21 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     const start = new Date(passStartDate);
     const newEnd = new Date(start);
     newEnd.setMonth(newEnd.getMonth() + months);
-    setPassEndDate(newEnd.toISOString().split("T")[0]);
+    // Use local date formatting to avoid timezone shift issues
+    const year = newEnd.getFullYear();
+    const month = String(newEnd.getMonth() + 1).padStart(2, "0");
+    const day = String(newEnd.getDate()).padStart(2, "0");
+    setPassEndDate(`${year}-${month}-${day}`);
   };
 
   // Get min date (today)
   const getMinDate = () => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today.toISOString().split("T")[0];
+    // Use local date formatting to avoid timezone shift issues
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   };
 
   // Get available trips from schedule data
@@ -519,6 +532,8 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const groupedOutboundTrips = groupTripsBySchedule(outboundTrips);
   const groupedReturnTrips = groupTripsBySchedule(returnTrips);
   const groupedAllTrips = groupTripsBySchedule(allTrips);
+
+  console.log("first groupedAllTrips", groupedAllTrips);
 
   // Get pickup/dropoff points from selected trip - includes all stop points with times
   const getPickupPoints = () => {
@@ -842,25 +857,6 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       <span className="value">{route.toLocation}</span>
                     </div>
                   </div>
-                  <div className="summary-row">
-                    <FaUser className="icon" />
-                    <div className="summary-info">
-                      <span className="label">Driver</span>
-                      <span className="value">
-                        {route.driverName || "Assigned Driver"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="summary-row">
-                    <FaBus className="icon" />
-                    <div className="summary-info">
-                      <span className="label">Vehicle</span>
-                      <span className="value">
-                        {route.vehicleModel || "Bus"} -{" "}
-                        {route.vehiclePlate || "N/A"}
-                      </span>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -1016,6 +1012,190 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                                 <div className="trip-option-details">
                                   <div className="trip-route">
                                     {trip.fromLocation} &rarr; {trip.toLocation}
+                                  </div>
+                                  {/* Always show driver/vehicle info for this trip */}
+                                  <div
+                                    className="trip-assignment-details"
+                                    style={{
+                                      fontSize: "12px",
+                                      marginTop: "8px",
+                                      padding: "8px 10px",
+                                      backgroundColor:
+                                        selectedTrip?._id === trip._id
+                                          ? "#ecfdf5"
+                                          : "#f8fafc",
+                                      borderRadius: "6px",
+                                      border: `1px solid ${selectedTrip?._id === trip._id ? "#10b981" : "#e2e8f0"}`,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        marginBottom: "6px",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: "28px",
+                                          height: "28px",
+                                          borderRadius: "50%",
+                                          backgroundColor: "#e0f2fe",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        {trip.effectiveDriver?.image ? (
+                                          <img
+                                            src={trip.effectiveDriver.image}
+                                            alt="Driver"
+                                            style={{
+                                              width: "100%",
+                                              height: "100%",
+                                              objectFit: "cover",
+                                            }}
+                                          />
+                                        ) : (
+                                          <FaUser
+                                            style={{
+                                              fontSize: "12px",
+                                              color: "#0369a1",
+                                            }}
+                                          />
+                                        )}
+                                      </div>
+                                      <div style={{ flex: 1 }}>
+                                        <div
+                                          style={{
+                                            fontWeight: "600",
+                                            color: "#1e293b",
+                                            fontSize: "12px",
+                                          }}
+                                        >
+                                          {trip.effectiveDriver?.name ||
+                                            "Driver Not Assigned"}
+                                        </div>
+                                        {trip.effectiveDriver?.phoneNumber && (
+                                          <div
+                                            style={{
+                                              fontSize: "10px",
+                                              color: "#64748b",
+                                            }}
+                                          >
+                                            {trip.effectiveDriver.phoneNumber}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: "28px",
+                                          height: "28px",
+                                          borderRadius: "6px",
+                                          backgroundColor: "#fef3c7",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        {trip.effectiveVehicle?.image ? (
+                                          <img
+                                            src={trip.effectiveVehicle.image}
+                                            alt="Vehicle"
+                                            style={{
+                                              width: "100%",
+                                              height: "100%",
+                                              objectFit: "cover",
+                                            }}
+                                          />
+                                        ) : (
+                                          <FaBus
+                                            style={{
+                                              fontSize: "12px",
+                                              color: "#b45309",
+                                            }}
+                                          />
+                                        )}
+                                      </div>
+                                      <div style={{ flex: 1 }}>
+                                        <div
+                                          style={{
+                                            fontWeight: "600",
+                                            color: "#1e293b",
+                                            fontSize: "12px",
+                                          }}
+                                        >
+                                          {trip.effectiveVehicle
+                                            ? `${trip.effectiveVehicle.vehicleType || ""} ${trip.effectiveVehicle.model || ""}`.trim() ||
+                                              "Vehicle"
+                                            : "Vehicle Not Assigned"}
+                                        </div>
+                                        <div
+                                          style={{
+                                            fontSize: "10px",
+                                            color: "#64748b",
+                                            display: "flex",
+                                            gap: "8px",
+                                          }}
+                                        >
+                                          {trip.effectiveVehicle
+                                            ?.licensePlate && (
+                                            <span>
+                                              {
+                                                trip.effectiveVehicle
+                                                  .licensePlate
+                                              }
+                                            </span>
+                                          )}
+                                          {trip.effectiveVehicle
+                                            ?.vehicleColor && (
+                                            <span
+                                              style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "3px",
+                                              }}
+                                            >
+                                              <span
+                                                style={{
+                                                  width: "8px",
+                                                  height: "8px",
+                                                  borderRadius: "50%",
+                                                  backgroundColor:
+                                                    trip.effectiveVehicle.vehicleColor.toLowerCase(),
+                                                  border: "1px solid #d1d5db",
+                                                }}
+                                              />
+                                              {
+                                                trip.effectiveVehicle
+                                                  .vehicleColor
+                                              }
+                                            </span>
+                                          )}
+                                          {trip.effectiveVehicle
+                                            ?.seatingCapacity && (
+                                            <span>
+                                              {
+                                                trip.effectiveVehicle
+                                                  .seatingCapacity
+                                              }{" "}
+                                              seats
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
                                   <div className="trip-stops">
                                     {trip.stopPoints
@@ -1202,6 +1382,197 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                                       <div className="trip-route">
                                         {trip.fromLocation} &rarr;{" "}
                                         {trip.toLocation}
+                                      </div>
+                                      {/* Always show driver/vehicle info for this return trip */}
+                                      <div
+                                        className="trip-assignment-details"
+                                        style={{
+                                          fontSize: "12px",
+                                          marginTop: "8px",
+                                          padding: "8px 10px",
+                                          backgroundColor:
+                                            selectedReturnTrip?._id === trip._id
+                                              ? "#fef2f2"
+                                              : "#f8fafc",
+                                          borderRadius: "6px",
+                                          border: `1px solid ${selectedReturnTrip?._id === trip._id ? "#ef4444" : "#e2e8f0"}`,
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "8px",
+                                            marginBottom: "6px",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              width: "28px",
+                                              height: "28px",
+                                              borderRadius: "50%",
+                                              backgroundColor: "#e0f2fe",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              overflow: "hidden",
+                                            }}
+                                          >
+                                            {trip.effectiveDriver?.image ? (
+                                              <img
+                                                src={trip.effectiveDriver.image}
+                                                alt="Driver"
+                                                style={{
+                                                  width: "100%",
+                                                  height: "100%",
+                                                  objectFit: "cover",
+                                                }}
+                                              />
+                                            ) : (
+                                              <FaUser
+                                                style={{
+                                                  fontSize: "12px",
+                                                  color: "#0369a1",
+                                                }}
+                                              />
+                                            )}
+                                          </div>
+                                          <div style={{ flex: 1 }}>
+                                            <div
+                                              style={{
+                                                fontWeight: "600",
+                                                color: "#1e293b",
+                                                fontSize: "12px",
+                                              }}
+                                            >
+                                              {trip.effectiveDriver?.name ||
+                                                "Driver Not Assigned"}
+                                            </div>
+                                            {trip.effectiveDriver
+                                              ?.phoneNumber && (
+                                              <div
+                                                style={{
+                                                  fontSize: "10px",
+                                                  color: "#64748b",
+                                                }}
+                                              >
+                                                {
+                                                  trip.effectiveDriver
+                                                    .phoneNumber
+                                                }
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "8px",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              width: "28px",
+                                              height: "28px",
+                                              borderRadius: "6px",
+                                              backgroundColor: "#fef3c7",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              overflow: "hidden",
+                                            }}
+                                          >
+                                            {trip.effectiveVehicle?.image ? (
+                                              <img
+                                                src={
+                                                  trip.effectiveVehicle.image
+                                                }
+                                                alt="Vehicle"
+                                                style={{
+                                                  width: "100%",
+                                                  height: "100%",
+                                                  objectFit: "cover",
+                                                }}
+                                              />
+                                            ) : (
+                                              <FaBus
+                                                style={{
+                                                  fontSize: "12px",
+                                                  color: "#b45309",
+                                                }}
+                                              />
+                                            )}
+                                          </div>
+                                          <div style={{ flex: 1 }}>
+                                            <div
+                                              style={{
+                                                fontWeight: "600",
+                                                color: "#1e293b",
+                                                fontSize: "12px",
+                                              }}
+                                            >
+                                              {trip.effectiveVehicle
+                                                ? `${trip.effectiveVehicle.vehicleType || ""} ${trip.effectiveVehicle.model || ""}`.trim() ||
+                                                  "Vehicle"
+                                                : "Vehicle Not Assigned"}
+                                            </div>
+                                            <div
+                                              style={{
+                                                fontSize: "10px",
+                                                color: "#64748b",
+                                                display: "flex",
+                                                gap: "8px",
+                                              }}
+                                            >
+                                              {trip.effectiveVehicle
+                                                ?.licensePlate && (
+                                                <span>
+                                                  {
+                                                    trip.effectiveVehicle
+                                                      .licensePlate
+                                                  }
+                                                </span>
+                                              )}
+                                              {trip.effectiveVehicle
+                                                ?.vehicleColor && (
+                                                <span
+                                                  style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "3px",
+                                                  }}
+                                                >
+                                                  <span
+                                                    style={{
+                                                      width: "8px",
+                                                      height: "8px",
+                                                      borderRadius: "50%",
+                                                      backgroundColor:
+                                                        trip.effectiveVehicle.vehicleColor.toLowerCase(),
+                                                      border:
+                                                        "1px solid #d1d5db",
+                                                    }}
+                                                  />
+                                                  {
+                                                    trip.effectiveVehicle
+                                                      .vehicleColor
+                                                  }
+                                                </span>
+                                              )}
+                                              {trip.effectiveVehicle
+                                                ?.seatingCapacity && (
+                                                <span>
+                                                  {
+                                                    trip.effectiveVehicle
+                                                      .seatingCapacity
+                                                  }{" "}
+                                                  seats
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
                                       <div className="trip-stops">
                                         {trip.stopPoints

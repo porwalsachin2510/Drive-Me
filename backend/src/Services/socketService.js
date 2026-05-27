@@ -51,6 +51,12 @@ const TYPE_TO_EVENT_MAP = {
     'TRIP_STATUS_UPDATE': 'trip-status-update',
     'TRIP_CANCELLED': 'trip-cancelled',
     'TRIP_DELAYED': 'trip-delayed',
+    // Route Request events
+    'NEW_ROUTE_REQUEST': 'new_route_request',
+    'ROUTE_REQUEST_RESPONSE': 'route_request_response',
+    'ROUTE_REQUEST': 'route_request',
+    // Driver Availability events
+    'DRIVER_AVAILABILITY_CHANGED': 'driver_availability_changed',
 }
 
 // Send real-time notification to user
@@ -226,5 +232,108 @@ export const notifyAdminsWalletEvent = (eventType, data) => {
         console.log(`Admin wallet event sent: ${eventType}`)
     } catch (error) {
         console.error('Error notifying admins about wallet event:', error)
+    }
+}
+
+// Broadcast driver availability change to B2C Partner
+// This allows real-time updates in Add Route, Edit Route, Manage Schedule modals
+export const broadcastDriverAvailabilityChange = (b2cPartnerId, driverData) => {
+    if (!ioInstance) {
+        console.log('Socket.io not initialized yet - cannot broadcast driver availability')
+        return
+    }
+
+    if (!b2cPartnerId) {
+        console.log('No b2cPartnerId provided - cannot broadcast driver availability')
+        return
+    }
+
+    try {
+        const availabilityPayload = {
+            driverId: driverData.driverId,
+            driverName: driverData.driverName,
+            availabilityStatus: driverData.availabilityStatus,
+            isSelfDriver: driverData.isSelfDriver || false,
+            updatedAt: new Date().toISOString()
+        }
+
+        // Emit to B2C Partner's room so they see real-time availability updates
+        const partnerRoom = `b2c-partner-${b2cPartnerId}`
+        ioInstance.to(partnerRoom).emit('driver_availability_changed', availabilityPayload)
+
+        // Also emit to notifications room for the B2C Partner
+        const notificationRoom = `notifications-${b2cPartnerId}`
+        ioInstance.to(notificationRoom).emit('driver_availability_changed', availabilityPayload)
+
+        console.log(`Driver availability broadcast to partner ${b2cPartnerId}:`, availabilityPayload.driverName, '-', availabilityPayload.availabilityStatus)
+    } catch (error) {
+        console.error('Error broadcasting driver availability:', error)
+    }
+}
+
+// Broadcast self-driver (B2C Partner) availability change
+// This is for when the B2C Partner changes their own availability as a self-driver
+export const broadcastSelfDriverAvailabilityChange = (b2cPartnerId, availabilityData) => {
+    if (!ioInstance) {
+        console.log('Socket.io not initialized yet - cannot broadcast self-driver availability')
+        return
+    }
+
+    try {
+        const availabilityPayload = {
+            driverId: b2cPartnerId, // Self-driver uses their own ID
+            driverName: availabilityData.driverName || 'Self',
+            availabilityStatus: availabilityData.status,
+            isSelfDriver: true,
+            updatedAt: new Date().toISOString()
+        }
+
+        // Emit to B2C Partner's own room (for their own UI update)
+        const partnerRoom = `b2c-partner-${b2cPartnerId}`
+        ioInstance.to(partnerRoom).emit('driver_availability_changed', availabilityPayload)
+
+        const notificationRoom = `notifications-${b2cPartnerId}`
+        ioInstance.to(notificationRoom).emit('driver_availability_changed', availabilityPayload)
+
+        console.log(`Self-driver availability broadcast for partner ${b2cPartnerId}:`, availabilityPayload.availabilityStatus)
+    } catch (error) {
+        console.error('Error broadcasting self-driver availability:', error)
+    }
+}
+
+// Broadcast vehicle availability change to B2C Partner
+// This allows real-time updates in Fleet Management, Add Route, Edit Route modals
+export const broadcastVehicleAvailabilityChange = (b2cPartnerId, vehicleData) => {
+    if (!ioInstance) {
+        console.log('Socket.io not initialized yet - cannot broadcast vehicle availability')
+        return
+    }
+
+    if (!b2cPartnerId) {
+        console.log('No b2cPartnerId provided - cannot broadcast vehicle availability')
+        return
+    }
+
+    try {
+        const availabilityPayload = {
+            vehicleId: vehicleData.vehicleId,
+            vehicleModel: vehicleData.vehicleModel || 'Unknown',
+            licensePlate: vehicleData.licensePlate || '',
+            availabilityStatus: vehicleData.availabilityStatus,
+            status: vehicleData.status, // Vehicle status (Active, Maintenance, etc.)
+            updatedAt: new Date().toISOString()
+        }
+
+        // Emit to B2C Partner's room so they see real-time availability updates
+        const partnerRoom = `b2c-partner-${b2cPartnerId}`
+        ioInstance.to(partnerRoom).emit('vehicle_availability_changed', availabilityPayload)
+
+        // Also emit to notifications room for the B2C Partner
+        const notificationRoom = `notifications-${b2cPartnerId}`
+        ioInstance.to(notificationRoom).emit('vehicle_availability_changed', availabilityPayload)
+
+        console.log(`Vehicle availability broadcast to partner ${b2cPartnerId}:`, availabilityPayload.vehicleModel, '-', availabilityPayload.availabilityStatus)
+    } catch (error) {
+        console.error('Error broadcasting vehicle availability:', error)
     }
 }

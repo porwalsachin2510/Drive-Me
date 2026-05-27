@@ -266,3 +266,126 @@
 .b2c-delete-btn:hover {
   background: #dc2626;
 }
+
+
+/* Availability Badge */
+.b2c-availability-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.b2c-availability-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.b2c-availability-label {
+  white-space: nowrap;
+}
+
+/* Availability Window Section */
+.b2c-availability-window-section {
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border-top: 1px solid #d1fae5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.b2c-completed-trips,
+.b2c-in-progress-trip,
+.b2c-next-trip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.b2c-section-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.b2c-completed-count {
+  background: #10b981;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.b2c-in-progress-trip {
+  background: #fef3c7;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #fcd34d;
+}
+
+.b2c-in-progress-trip .b2c-section-label {
+  color: #92400e;
+}
+
+.b2c-trip-info {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.b2c-trip-time {
+  background: #3b82f6;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.b2c-trip-route {
+  color: #374151;
+  font-weight: 500;
+}
+
+.b2c-time-until {
+  color: #6b7280;
+  font-style: italic;
+  font-size: 11px;
+}
+
+.b2c-availability-window-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #93c5fd;
+  margin-top: 4px;
+}
+
+.b2c-window-icon {
+  font-size: 16px;
+}
+
+.b2c-window-text {
+  color: #1e40af;
+  font-weight: 600;
+  font-size: 12px;
+}

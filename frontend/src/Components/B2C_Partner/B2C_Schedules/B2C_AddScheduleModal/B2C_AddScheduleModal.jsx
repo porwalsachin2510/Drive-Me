@@ -21,25 +21,78 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
   const daysOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const repeatPatterns = ["Daily", "Weekdays", "Weekends", "Custom"];
   const timeOptions = [
-    "06:00 AM", "06:30 AM", "07:00 AM", "07:30 AM", "08:00 AM", "08:30 AM",
-    "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-    "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM",
-    "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM",
-    "06:00 PM", "06:30 PM", "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM",
-    "09:00 PM", "09:30 PM", "10:00 PM", "10:30 PM", "11:00 PM", "11:30 PM"
+    "06:00 AM",
+    "06:30 AM",
+    "07:00 AM",
+    "07:30 AM",
+    "08:00 AM",
+    "08:30 AM",
+    "09:00 AM",
+    "09:30 AM",
+    "10:00 AM",
+    "10:30 AM",
+    "11:00 AM",
+    "11:30 AM",
+    "12:00 PM",
+    "12:30 PM",
+    "01:00 PM",
+    "01:30 PM",
+    "02:00 PM",
+    "02:30 PM",
+    "03:00 PM",
+    "03:30 PM",
+    "04:00 PM",
+    "04:30 PM",
+    "05:00 PM",
+    "05:30 PM",
+    "06:00 PM",
+    "06:30 PM",
+    "07:00 PM",
+    "07:30 PM",
+    "08:00 PM",
+    "08:30 PM",
+    "09:00 PM",
+    "09:30 PM",
+    "10:00 PM",
+    "10:30 PM",
+    "11:00 PM",
+    "11:30 PM",
   ];
 
   useEffect(() => {
     fetchAssets();
   }, []);
 
+  // Silent polling for real-time driver availability updates
+  useEffect(() => {
+    // Poll for driver availability every 5 seconds
+    const pollDriverAvailability = async () => {
+      try {
+        const response = await api.get("/b2c-partner/drivers");
+        if (response.data.drivers) {
+          setAvailableDrivers(response.data.drivers);
+        }
+      } catch (error) {
+        // Silent fail - don't disrupt user experience
+      }
+    };
+
+    // Start polling interval
+    const pollInterval = setInterval(pollDriverAvailability, 5000);
+
+    // Cleanup on unmount
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, []);
+
   const fetchAssets = async () => {
     try {
       setLoadingAssets(true);
-      
+
       const [vehiclesResponse, driversResponse] = await Promise.all([
-        api.get('/b2c-partner/fleet'),
-        api.get('/b2c-partner/drivers')
+        api.get("/b2c-partner/fleet"),
+        api.get("/b2c-partner/drivers"),
       ]);
 
       setAvailableVehicles(vehiclesResponse.data.fleet?.vehicles || []);
@@ -72,7 +125,7 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
 
   const handleRepeatPatternChange = (pattern) => {
     let days = [...formData.availableDays];
-    
+
     if (pattern === "Daily") {
       days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
     } else if (pattern === "Weekdays") {
@@ -80,26 +133,26 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
     } else if (pattern === "Weekends") {
       days = ["SAT", "SUN"];
     }
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
       repeatPattern: pattern,
-      availableDays: days
+      availableDays: days,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       const scheduleData = {
         ...formData,
         assignedVehicle: formData.assignedVehicle || null,
         assignedDriver: formData.assignedDriver || null,
       };
-      
-      await api.post('/b2c-schedules/schedules', scheduleData);
+
+      await api.post("/b2c-schedules/schedules", scheduleData);
       onSave(scheduleData);
     } catch (error) {
       console.error("Error creating schedule:", error);
@@ -111,13 +164,26 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
 
   return (
     <div className="b2c-modal-overlay" onClick={onClose}>
-      <div className="b2c-modal-content b2c-schedule-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="b2c-modal-content b2c-schedule-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="b2c-modal-header">
           <h2 className="b2c-modal-title">Add New Schedule</h2>
           <button className="b2c-modal-close" onClick={onClose}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" />
-              <path d="M6 6L18 18" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="M18 6L6 18"
+                stroke="#6b7280"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M6 6L18 18"
+                stroke="#6b7280"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -125,7 +191,7 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
         <form onSubmit={handleSubmit} className="b2c-modal-form">
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Schedule Information</h3>
-            
+
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="routeId" className="b2c-form-label">
@@ -142,7 +208,8 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
                   <option value="">Select route</option>
                   {routes.map((route) => (
                     <option key={route._id} value={route._id}>
-                      {route.fromLocation} → {route.toLocation} ({route.tripType})
+                      {route.fromLocation} → {route.toLocation} (
+                      {route.tripType})
                     </option>
                   ))}
                 </select>
@@ -172,9 +239,7 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
 
             <div className="b2c-form-row">
               <div className="b2c-form-group">
-                <label className="b2c-form-label">
-                  Repeat Pattern *
-                </label>
+                <label className="b2c-form-label">Repeat Pattern *</label>
                 <div className="b2c-repeat-patterns">
                   {repeatPatterns.map((pattern) => (
                     <button
@@ -195,9 +260,7 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
             {formData.repeatPattern === "Custom" && (
               <div className="b2c-form-row">
                 <div className="b2c-form-group">
-                  <label className="b2c-form-label">
-                    Available Days *
-                  </label>
+                  <label className="b2c-form-label">Available Days *</label>
                   <div className="b2c-days-selector">
                     {daysOfWeek.map((day) => (
                       <button
@@ -219,7 +282,7 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
 
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Assignments</h3>
-            
+
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="assignedVehicle" className="b2c-form-label">
@@ -240,7 +303,8 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
                     <option value="">Select vehicle (optional)</option>
                     {availableVehicles.map((vehicle) => (
                       <option key={vehicle._id} value={vehicle._id}>
-                        {vehicle.model} ({vehicle.licensePlate}) - {vehicle.capacity} seats
+                        {vehicle.model} ({vehicle.licensePlate}) -{" "}
+                        {vehicle.capacity} seats
                       </option>
                     ))}
                   </select>
@@ -264,11 +328,34 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
                     className="b2c-form-input"
                   >
                     <option value="">Select driver (optional)</option>
-                    {availableDrivers.map((driver) => (
-                      <option key={driver._id} value={driver._id}>
-                        {driver.name} - {driver.phoneNumber}
-                      </option>
-                    ))}
+                    {availableDrivers.map((driver) => {
+                      const availabilityStatus =
+                        driver.availability?.status ||
+                        driver.availabilityStatus ||
+                        "available";
+                      const availabilityIcon =
+                        availabilityStatus === "available"
+                          ? "🟢"
+                          : availabilityStatus === "busy"
+                            ? "🔴"
+                            : availabilityStatus === "offline"
+                              ? "🟠"
+                              : "🟠";
+                      const availabilityText =
+                        availabilityStatus === "available"
+                          ? ""
+                          : availabilityStatus === "busy"
+                            ? "- Busy"
+                            : availabilityStatus === "offline"
+                              ? "- Offline"
+                              : "- Not Available";
+                      return (
+                        <option key={driver._id} value={driver._id}>
+                          {availabilityIcon} {driver.name} -{" "}
+                          {driver.phoneNumber} {availabilityText}
+                        </option>
+                      );
+                    })}
                   </select>
                 )}
               </div>
@@ -276,10 +363,18 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
           </div>
 
           <div className="b2c-modal-actions">
-            <button type="button" className="b2c-btn b2c-btn-cancel" onClick={onClose}>
+            <button
+              type="button"
+              className="b2c-btn b2c-btn-cancel"
+              onClick={onClose}
+            >
               Cancel
             </button>
-            <button type="submit" className="b2c-btn b2c-btn-submit" disabled={loading}>
+            <button
+              type="submit"
+              className="b2c-btn b2c-btn-submit"
+              disabled={loading}
+            >
               {loading ? "Creating Schedule..." : "Create Schedule"}
             </button>
           </div>

@@ -9,6 +9,7 @@ function B2C_Navigation({ b2cactiveTab, setB2CActiveTab }) {
     { id: "vehicles", label: "Fleet", icon: "vehicles" },
     { id: "routes", label: "Routes", icon: "routes" },
     { id: "route-requests", label: "Requests", icon: "requests" },
+    { id: "ratings", label: "My Ratings", icon: "ratings" },
     { id: "account", label: "Account", icon: "account" },
   ];
 
@@ -75,25 +76,87 @@ function B2C_Navigation({ b2cactiveTab, setB2CActiveTab }) {
       case "routes":
         return (
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M3 7L9 3L15 7V14C15 14.5523 14.5523 15 14 15H4C3.44772 15 3 14.5523 3 14V7Z" stroke="currentColor" strokeWidth="1.5" />
+            <path
+              d="M3 7L9 3L15 7V14C15 14.5523 14.5523 15 14 15H4C3.44772 15 3 14.5523 3 14V7Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
             <path d="M7 15V9H11V15" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         );
       case "overview":
         return (
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <rect x="2" y="2" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
-            <rect x="10" y="2" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
-            <rect x="2" y="10" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
-            <rect x="10" y="10" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
+            <rect
+              x="2"
+              y="2"
+              width="6"
+              height="6"
+              rx="1"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <rect
+              x="10"
+              y="2"
+              width="6"
+              height="6"
+              rx="1"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <rect
+              x="2"
+              y="10"
+              width="6"
+              height="6"
+              rx="1"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <rect
+              x="10"
+              y="10"
+              width="6"
+              height="6"
+              rx="1"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
           </svg>
         );
       case "requests":
         return (
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M3 3H15V13H7L3 16V3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M7 7H11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M7 10H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path
+              d="M3 3H15V13H7L3 16V3Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M7 7H11"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+            <path
+              d="M7 10H9"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        );
+      case "ratings":
+        return (
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M9 1L11.2 6.3L17 7L12.8 11L14 17L9 14L4 17L5.2 11L1 7L6.8 6.3L9 1Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
           </svg>
         );
       case "account":

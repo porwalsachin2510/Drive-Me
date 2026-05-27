@@ -61,6 +61,37 @@ const b2cPartnerVehicleSchema = new mongoose.Schema(
             enum: ["Active", "Maintenance", "Inactive"],
             default: "Active",
         },
+        // Availability status for scheduling (available/busy)
+        availabilityStatus: {
+            type: String,
+            enum: ["available", "busy"],
+            default: "available",
+        },
+        // Track which schedules/trip times this vehicle is assigned to
+        assignedSchedules: [{
+            scheduleId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "B2CPartnerSchedule"
+            },
+            tripTimeIndex: Number,
+            assignedAt: {
+                type: Date,
+                default: Date.now
+            }
+        }],
+        lastAvailabilityUpdate: {
+            type: Date,
+            default: Date.now
+        },
+        // Availability window - when vehicle is available until (for between-trips availability)
+        availableUntil: {
+            type: Date,
+            default: null
+        },
+        nextScheduledTripTime: {
+            type: String,
+            default: null
+        },
         isActive: {
             type: Boolean,
             default: true,

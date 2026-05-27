@@ -68,6 +68,38 @@ const b2CMonthlyPassSchema = new mongoose.Schema({
         default: null,
     },
     
+    // Outbound Trip Driver/Vehicle Assignment (at booking time)
+    outboundDriverId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
+    outboundVehicleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "B2CPartnerVehicle",
+        default: null,
+    },
+    outboundIsSelfDriver: {
+        type: Boolean,
+        default: false,
+    },
+
+    // Return Trip Driver/Vehicle Assignment (at booking time)
+    returnDriverId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
+    returnVehicleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "B2CPartnerVehicle",
+        default: null,
+    },
+    returnIsSelfDriver: {
+        type: Boolean,
+        default: false,
+    },
+    
     // Duration and Validity
     startDate: {
         type: Date,

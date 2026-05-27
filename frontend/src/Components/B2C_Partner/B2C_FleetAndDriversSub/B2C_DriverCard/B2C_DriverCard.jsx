@@ -52,15 +52,62 @@ function B2C_DriverCard({ driver, onEdit, onDelete, onRefresh }) {
     return `${exp} years`;
   };
 
-    const getRating = () => {
-      const avg = driver.ratings?.average;
-      const count = driver.ratings?.count || 0;
-      return {
-        average: avg ? avg.toFixed(1) : "0.0",
-        count: count,
-      };
+  const getRating = () => {
+    const avg = driver.ratings?.average;
+    const count = driver.ratings?.count || 0;
+    return {
+      average: avg ? avg.toFixed(1) : "0.0",
+      count: count,
+    };
   };
-  
+
+  // Get availability window information
+  const getAvailabilityWindow = () => {
+    const window = driver.availabilityWindow;
+    if (!window) return null;
+
+    return {
+      completedTripsToday: window.completedTripsToday || [],
+      nextScheduledTrip: window.nextScheduledTrip,
+      availableUntilFormatted: window.availableUntilFormatted,
+      timeUntilNextTrip: window.timeUntilNextTrip,
+      hasCompletedTripsToday: window.hasCompletedTripsToday,
+      hasUpcomingTrips: window.hasUpcomingTrips,
+      canBeAvailableBetweenTrips: window.canBeAvailableBetweenTrips,
+      inProgressTrip: window.inProgressTrip,
+    };
+  };
+
+  // Get availability status display
+  const getAvailabilityStatusDisplay = () => {
+    const status =
+      driver.availabilityStatus || driver.availability?.status || "available";
+    const window = getAvailabilityWindow();
+
+    if (window?.inProgressTrip) {
+      return { status: "busy", label: "On Trip", color: "#f59e0b" };
+    }
+
+    if (status === "busy") {
+      return { status: "busy", label: "Busy", color: "#ef4444" };
+    }
+
+    if (status === "offline") {
+      return { status: "offline", label: "Offline", color: "#6b7280" };
+    }
+
+    // Available - check if between trips
+    if (window?.canBeAvailableBetweenTrips) {
+      return {
+        status: "available",
+        label: `Available until ${window.availableUntilFormatted}`,
+        color: "#10b981",
+      };
+    }
+
+    return { status: "available", label: "Available", color: "#10b981" };
+  };
+
   const handleEditClick = () => {
     if (onEdit) {
       onEdit(driver);
@@ -99,6 +146,28 @@ function B2C_DriverCard({ driver, onEdit, onDelete, onRefresh }) {
           {getDriverStatus()}
         </span>
       </div>
+
+      {/* Availability Status Badge */}
+      {(() => {
+        const availStatus = getAvailabilityStatusDisplay();
+        return (
+          <div
+            className="b2c-availability-badge"
+            style={{ backgroundColor: availStatus.color }}
+          >
+            <span
+              className="b2c-availability-dot"
+              style={{
+                backgroundColor:
+                  availStatus.status === "available"
+                    ? "#fff"
+                    : "rgba(255,255,255,0.5)",
+              }}
+            ></span>
+            <span className="b2c-availability-label">{availStatus.label}</span>
+          </div>
+        );
+      })()}
 
       <div className="b2c-driver-header">
         <div className="b2c-driver-image">
@@ -143,6 +212,67 @@ function B2C_DriverCard({ driver, onEdit, onDelete, onRefresh }) {
         </div>
       </div>
 
+      {/* Availability Window Section */}
+      {(() => {
+        const window = getAvailabilityWindow();
+        if (!window) return null;
+
+        return (
+          <div className="b2c-availability-window-section">
+            {/* Completed Trips Today */}
+            {window.hasCompletedTripsToday && (
+              <div className="b2c-completed-trips">
+                <span className="b2c-section-label">Completed Today:</span>
+                <span className="b2c-completed-count">
+                  {window.completedTripsToday.length} trip(s)
+                </span>
+              </div>
+            )}
+
+            {/* In Progress Trip */}
+            {window.inProgressTrip && (
+              <div className="b2c-in-progress-trip">
+                <span className="b2c-section-label">Currently On Trip:</span>
+                <span className="b2c-trip-info">
+                  {window.inProgressTrip.fromLocation} →{" "}
+                  {window.inProgressTrip.toLocation}
+                </span>
+              </div>
+            )}
+
+            {/* Next Scheduled Trip */}
+            {window.nextScheduledTrip && !window.inProgressTrip && (
+              <div className="b2c-next-trip">
+                <span className="b2c-section-label">Next Trip:</span>
+                <span className="b2c-trip-time">
+                  {window.nextScheduledTrip.departureTime}
+                </span>
+                <span className="b2c-trip-route">
+                  {window.nextScheduledTrip.fromLocation} →{" "}
+                  {window.nextScheduledTrip.toLocation}
+                </span>
+                {window.timeUntilNextTrip && (
+                  <span className="b2c-time-until">
+                    in {window.timeUntilNextTrip}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Availability Window Message */}
+            {window.canBeAvailableBetweenTrips && (
+              <div className="b2c-availability-window-msg">
+                <span className="b2c-window-icon">🕐</span>
+                <span className="b2c-window-text">
+                  Available for assignment until{" "}
+                  {window.availableUntilFormatted}
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+      
       <div className="b2c-driver-actions">
         <button
           className="b2c-action-btn b2c-edit-btn"

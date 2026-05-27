@@ -5,7 +5,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "../../../hooks/useSocket";
-import { getPartnerBookings, acceptBooking, rejectBooking, startB2CTrip, completeB2CTrip } from "../../../Redux/slices/bookingSlice";
+import {
+  getPartnerBookings,
+  acceptBooking,
+  rejectBooking,
+  startB2CTrip,
+  completeB2CTrip,
+} from "../../../Redux/slices/bookingSlice";
 import DailyTripsInBooking from "../../../Components/DailyTripsInBooking/DailyTripsInBooking";
 import api from "../../../utils/api";
 import WalletRechargeModal from "../../../Components/WalletRechargeModal/WalletRechargeModal";
@@ -29,8 +35,9 @@ const B2C_PartnerBookingsPage = () => {
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningData, setWarningData] = useState(null);
   const [showPassengerModal, setShowPassengerModal] = useState(false);
-  const [selectedPassengerBookingId, setSelectedPassengerBookingId] = useState(null);
-  
+  const [selectedPassengerBookingId, setSelectedPassengerBookingId] =
+    useState(null);
+
   const fetchWalletBalance = async () => {
     try {
       const response = await api.get("/wallet/balance");
@@ -493,13 +500,72 @@ const B2C_PartnerBookingsPage = () => {
                 </div>
 
                 <div className="B2C_Partner-bookings-page-driver-info">
-                  <p>
-                    <strong>Driver</strong>{" "}
-                    {booking.driverName || "Not Assigned"}
-                  </p>
-                  <p>
-                    <strong>Phone</strong> {booking.driverPhoneNumber || "N/A"}
-                  </p>
+                  {/* Show separate outbound and return drivers for ROUND_TRIP bookings */}
+                  {booking.bookingType === "ROUND_TRIP" ? (
+                    <>
+                      <div className="B2C_Partner-bookings-page-driver-section">
+                        <p
+                          style={{
+                            marginBottom: "4px",
+                            color: "#6b7280",
+                            fontSize: "12px",
+                          }}
+                        >
+                          <strong>
+                            Outbound ({booking.outboundTripTime || "N/A"})
+                          </strong>
+                        </p>
+                        <p>
+                          <strong>Driver</strong>{" "}
+                          {booking.outboundDriverName ||
+                            (booking.outboundIsSelfDriver
+                              ? "Self-Driving"
+                              : booking.driverName || "Not Assigned")}
+                        </p>
+                      </div>
+                      <div
+                        className="B2C_Partner-bookings-page-driver-section"
+                        style={{
+                          marginTop: "8px",
+                          paddingTop: "8px",
+                          borderTop: "1px dashed #e5e7eb",
+                        }}
+                      >
+                        <p
+                          style={{
+                            marginBottom: "4px",
+                            color: "#6b7280",
+                            fontSize: "12px",
+                          }}
+                        >
+                          <strong>
+                            Return ({booking.returnTripTime || "N/A"})
+                          </strong>
+                        </p>
+                        <p>
+                          <strong>Driver</strong>{" "}
+                          {booking.returnDriverName ||
+                            (booking.returnIsSelfDriver
+                              ? "Self-Driving"
+                              : "Not Assigned")}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p>
+                        <strong>Driver</strong>{" "}
+                        {booking.outboundDriverName ||
+                          (booking.isSelfDriver
+                            ? "Self-Driving"
+                            : booking.driverName || "Not Assigned")}
+                      </p>
+                      <p>
+                        <strong>Phone</strong>{" "}
+                        {booking.driverPhoneNumber || "N/A"}
+                      </p>
+                    </>
+                  )}
                   <div className="B2C_Partner-bookings-page-passenger-row">
                     <p>
                       <strong>Passenger</strong>{" "}
@@ -940,7 +1006,7 @@ const B2C_PartnerBookingsPage = () => {
           </div>
         </div>
       )}
-      
+
       {/* Passenger Details Modal */}
       <PassengerDetailsModal
         bookingId={selectedPassengerBookingId}
