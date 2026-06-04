@@ -22,9 +22,22 @@ function B2C_AddDriverModal({ onClose }) {
   const [loading, setLoading] = useState(false);
 
   const nationalities = [
-    "Kuwait", "UAE", "India", "Pakistan", "Philippines", "Bangladesh", 
-    "Sri Lanka", "Nepal", "Egypt", "Jordan", "Lebanon", "Saudi Arabia", 
-    "Qatar", "Oman", "Bahrain", "Other"
+    "Kuwait",
+    "UAE",
+    "India",
+    "Pakistan",
+    "Philippines",
+    "Bangladesh",
+    "Sri Lanka",
+    "Nepal",
+    "Egypt",
+    "Jordan",
+    "Lebanon",
+    "Saudi Arabia",
+    "Qatar",
+    "Oman",
+    "Bahrain",
+    "Other",
   ];
 
   const handleChange = (e) => {
@@ -59,36 +72,36 @@ function B2C_AddDriverModal({ onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       // Create FormData for file upload
       const submitFormData = new FormData();
-      
+
       // Add basic driver data
-      submitFormData.append('fullName', formData.name);
-      submitFormData.append('email', formData.email);
-      submitFormData.append('phone', formData.phoneNumber);
-      submitFormData.append('licenseNumber', formData.licenseNumber);
-      submitFormData.append('licenseExpiry', formData.licenseExpiry);
-      submitFormData.append('nationality', formData.nationality);
-      submitFormData.append('experience', formData.experience);
-      submitFormData.append('address', formData.address);
-      submitFormData.append('emergencyContact', formData.emergencyContact);
-      submitFormData.append('emergencyPhone', formData.emergencyPhone);
-      
+      submitFormData.append("fullName", formData.name);
+      submitFormData.append("email", formData.email);
+      submitFormData.append("phone", formData.phoneNumber);
+      submitFormData.append("licenseNumber", formData.licenseNumber);
+      submitFormData.append("licenseExpiry", formData.licenseExpiry);
+      submitFormData.append("nationality", formData.nationality);
+      submitFormData.append("experience", formData.experience);
+      submitFormData.append("address", formData.address);
+      submitFormData.append("emergencyContact", formData.emergencyContact);
+      submitFormData.append("emergencyPhone", formData.emergencyPhone);
+
       // Add driver image if available
       if (formData.driverImage && formData.driverImage.file) {
-        submitFormData.append('driverImage', formData.driverImage.file);
+        submitFormData.append("driverImage", formData.driverImage.file);
       }
-      
+
       console.log("Submitting driver data with FormData:", submitFormData);
-      
-      const response = await api.post('/b2c-partner/drivers', submitFormData, {
+
+      const response = await api.post("/b2c-partner/drivers", submitFormData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
-      
+
       if (response.data.success) {
         console.log("Driver created successfully:", response.data.driver);
         alert("Driver added successfully!");
@@ -104,14 +117,16 @@ function B2C_AddDriverModal({ onClose }) {
       }
     } catch (error) {
       console.error("Error adding driver:", error);
-      alert(`Failed to add driver: ${error.response?.data?.message || error.message}`);
+      alert(
+        `Failed to add driver: ${error.response?.data?.message || error.message}`,
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="b2c-modal-overlay" onClick={onClose}>
+    <div className="b2c-modal-overlay">
       <div className="b2c-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="b2c-modal-header">
           <h2 className="b2c-modal-title">Add New Driver</h2>
@@ -136,7 +151,7 @@ function B2C_AddDriverModal({ onClose }) {
         <form onSubmit={handleSubmit} className="b2c-modal-form">
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Personal Information</h3>
-            
+
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="name" className="b2c-form-label">
@@ -282,7 +297,7 @@ function B2C_AddDriverModal({ onClose }) {
 
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Emergency Contact</h3>
-            
+
             <div className="b2c-form-row">
               <div className="b2c-form-group">
                 <label htmlFor="emergencyContact" className="b2c-form-label">
@@ -318,7 +333,7 @@ function B2C_AddDriverModal({ onClose }) {
 
           <div className="b2c-form-section">
             <h3 className="b2c-section-title">Driver Photo</h3>
-            
+
             <div className="b2c-image-upload">
               {formData.driverImage ? (
                 <div className="b2c-driver-image-preview">
@@ -354,10 +369,18 @@ function B2C_AddDriverModal({ onClose }) {
           </div>
 
           <div className="b2c-modal-actions">
-            <button type="button" className="b2c-btn b2c-btn-cancel" onClick={onClose}>
+            <button
+              type="button"
+              className="b2c-btn b2c-btn-cancel"
+              onClick={onClose}
+            >
               Cancel
             </button>
-            <button type="submit" className="b2c-btn b2c-btn-submit" disabled={loading}>
+            <button
+              type="submit"
+              className="b2c-btn b2c-btn-submit"
+              disabled={loading}
+            >
               {loading ? "Adding Driver..." : "Add Driver"}
             </button>
           </div>

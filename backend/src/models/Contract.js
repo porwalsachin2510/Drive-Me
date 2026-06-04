@@ -80,11 +80,11 @@ const contractSchema = new mongoose.Schema(
                             type: String,
                             default: null,
                         },
-                        routeDetails: {
+                        // Changed from single ObjectId to array to support multiple routes per vehicle
+                        routeDetails: [{
                             type: mongoose.Schema.Types.ObjectId,
                             ref: "Route",
-                            default: null,
-                        },
+                        }],
                         settings: {
                             mode: {
                                 type: String,
@@ -228,7 +228,7 @@ const contractSchema = new mongoose.Schema(
                 installmentsOverdue: Number,
             },
         },
-        
+
         vehicleAccess: {
             isActive: {
                 type: Boolean,
@@ -308,7 +308,7 @@ const contractSchema = new mongoose.Schema(
                 },
             ],
         },
-        
+
         // Negotiation Commission from Corporate (separate field for admin negotiation service)
         // This is the commission Corporate pays to Admin for negotiating with B2B Partner on their behalf
         negotiationCommission: {

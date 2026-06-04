@@ -7,6 +7,7 @@ import Notification from "../models/Notification.js"
 import User from "../models/User.js"
 import AdminNegotiation from "../models/AdminNegotiation.js"
 import EMIPayment from "../models/EMIPayment.js"
+import ProcessedPayment from "../models/ProcessedPayment.js"
 import { creditAdminNegotiationCommission } from "./walletController.js"
 import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js"
 import paymentGatewayService, {
@@ -608,55 +609,73 @@ export const stripeWebhook = async (req, res) => {
                 console.log("[v0] Processing wallet top-up from Stripe webhook")
                 const userId = session.metadata?.userId
                 const reference = session.metadata?.reference
+                const amountToAdd = session.amount_total / 100 // Convert from cents
 
                 if (userId) {
-                    // Find user's wallet
+                    // CRITICAL: Atomic duplicate prevention using ProcessedPayment collection
+                    // Try to insert - if duplicate key error, payment was already processed
+                    try {
+                        await ProcessedPayment.create({
+                            paymentSessionId: session.id,
+                            gatewayTransactionId: session.payment_intent,
+                            userId,
+                            amount: amountToAdd,
+                            currency: session.currency?.toUpperCase() || "AED",
+                            gateway: 'STRIPE',
+                            processedBy: 'WEBHOOK',
+                            processedAt: new Date()
+                        })
+                        console.log("[v0] Webhook: Payment session marked as processed:", session.id)
+                    } catch (error) {
+                        // Check if it's a duplicate key error (E11000)
+                        if (error.code === 11000 || error.message?.includes('duplicate key')) {
+                            console.log("[v0] Webhook: Payment already processed (atomic check):", session.id)
+                            return res.json({ received: true })
+                        }
+                        // Log but don't fail for other errors - webhook should still acknowledge
+                        console.error("[v0] Webhook: Error checking ProcessedPayment:", error.message)
+                    }
+
+                    // Create transaction object
+                    const transaction = {
+                        type: "DEPOSIT",
+                        amount: amountToAdd,
+                        description: `Funds added via card`,
+                        paymentMethod: "card",
+                        status: "COMPLETED",
+                        paymentSessionId: session.id,
+                        gatewayTransactionId: session.payment_intent,
+                        reference: reference,
+                        createdAt: new Date()
+                    }
+
+                    // Find or create wallet and add transaction
                     let wallet = await Wallet.findOne({ userId })
 
                     if (!wallet) {
-                        // Create wallet if doesn't exist
-                        const User = (await import("../models/User.js")).default
+                        // Create new wallet with initial transaction
                         const user = await User.findById(userId)
                         wallet = await Wallet.create({
                             userId,
                             role: user?.role || "COMMUTER",
-                            balance: 0,
+                            balance: amountToAdd,
                             currency: session.currency?.toUpperCase() || "AED",
+                            transactions: [transaction]
                         })
-                    }
-
-                    // Check if this payment was already processed (by reference or session ID)
-                    const existingTransaction = wallet.transactions?.find(
-                        t => t.paymentSessionId === session.id || t.reference === reference
-                    )
-
-                    if (!existingTransaction) {
-                        const amountToAdd = session.amount_total / 100 // Convert from cents
-
-                        // Add transaction to wallet
-                        const transaction = {
-                            type: "DEPOSIT",
-                            amount: amountToAdd,
-                            description: `Funds added via Stripe (webhook)`,
-                            paymentMethod: "card",
-                            status: "COMPLETED",
-                            paymentSessionId: session.id,
-                            gatewayTransactionId: session.payment_intent,
-                            reference: reference,
-                            createdAt: new Date()
-                        }
-
+                        console.log("[v0] Webhook: Created new wallet:", {
+                            userId,
+                            balance: wallet.balance
+                        })
+                    } else {
+                        // Add transaction to existing wallet
                         wallet.transactions.push(transaction)
                         wallet.balance += amountToAdd
                         await wallet.save()
-
-                        console.log("[v0] Wallet top-up processed from Stripe webhook:", {
+                        console.log("[v0] Webhook: Wallet top-up processed:", {
                             userId,
                             amountAdded: amountToAdd,
                             newBalance: wallet.balance
                         })
-                    } else {
-                        console.log("[v0] Wallet top-up already processed, skipping")
                     }
                 }
 

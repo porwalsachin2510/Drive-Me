@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import "./AdminOverview.css"
-import AdminStatsCards from "../AdminStatsCards/AdminStatsCards"
-import AdminRevenueChart from "../AdminRevenueChart/AdminRevenueChart"
-import AdminUserDistribution from "../AdminUserDistribution/AdminUserDistribution"
-import AdminBookingTrends from "../AdminBookingTrends/AdminBookingTrends"
+import "./AdminOverview.css";
+import AdminStatsCards from "../AdminStatsCards/AdminStatsCards";
+import AdminRevenueChart from "../AdminRevenueChart/AdminRevenueChart";
+import AdminUserDistribution from "../AdminUserDistribution/AdminUserDistribution";
+import AdminBookingTrends from "../AdminBookingTrends/AdminBookingTrends";
 import api from "../../../utils/api";
 
 function AdminOverview() {
@@ -29,8 +29,8 @@ function AdminOverview() {
   const [onlinePaymentStatus, setOnlinePaymentStatus] = useState({
     enabled: true,
     lastToggled: null,
-    toggledBy: null
-  })
+    toggledBy: null,
+  });
 
   useEffect(() => {
     fetchDashboardData();
@@ -42,45 +42,41 @@ function AdminOverview() {
     try {
       setLoading(true);
       setError(null);
-      
-      // Fetch dashboard stats
-      const statsResponse = await api.get('/admin/dashboard/stats');
-      
-      // Fetch user stats
-      const userStatsResponse = await api.get('/admin/users/stats');
-      
-      // Fetch recent activity
-      const activityResponse = await api.get('/admin/recent-activity');
 
-      // Combine all stats with real data
+      // Fetch dashboard stats - now includes all user counts
+      const statsResponse = await api.get("/admin/dashboard/stats");
+
+      // Fetch recent activity
+      const activityResponse = await api.get("/admin/recent-activity");
+
+      // Use stats from the dashboard stats API which now includes all counts
+      const dashboardStats = statsResponse.data.stats || {};
+
       const combinedStats = {
-        totalUsers:
-          statsResponse.data.stats?.totalUsers ||
-          userStatsResponse.data.stats?.totalUsers ||
-          0,
-        totalCorporates: userStatsResponse.data.stats?.totalCorporates || 0,
-        totalB2CPartners: userStatsResponse.data.stats?.totalB2CPartners || 0,
-        totalB2BPartners: userStatsResponse.data.stats?.totalB2BPartners || 0,
-        totalBookings: statsResponse.data.stats?.totalBookings || 0,
-        totalRevenue: statsResponse.data.stats?.totalRevenue || 0,
-        activeTrips: statsResponse.data.stats?.activeTrips || 0,
-        pendingPayments: statsResponse.data.stats?.pendingPayments || 0,
-        supportTickets: statsResponse.data.stats?.supportTickets || 0,
-        activeContracts: statsResponse.data.stats?.activeContracts || 0,
-        totalDrivers: userStatsResponse.data.stats?.totalDrivers || 0,
-        suspendedUsers: userStatsResponse.data.stats?.suspendedUsers || 0,
-        adminBalance: statsResponse.data.stats?.adminBalance || 0,
-        totalEarnings: statsResponse.data.stats?.totalEarnings || 0,
-        currency: statsResponse.data.stats?.currency || "AED",
+        totalUsers: dashboardStats.totalUsers || 0,
+        totalCorporates: dashboardStats.totalCorporates || 0,
+        totalB2CPartners: dashboardStats.totalB2CPartners || 0,
+        totalB2BPartners: dashboardStats.totalB2BPartners || 0,
+        totalBookings: dashboardStats.totalBookings || 0,
+        totalRevenue: dashboardStats.totalRevenue || 0,
+        activeTrips: dashboardStats.activeTrips || 0,
+        pendingPayments: dashboardStats.pendingPayments || 0,
+        supportTickets: dashboardStats.supportTickets || 0,
+        activeContracts: dashboardStats.activeContracts || 0,
+        activeBookings: dashboardStats.activeBookings || 0,
+        totalDrivers: dashboardStats.totalDrivers || 0,
+        suspendedUsers: dashboardStats.suspendedUsers || 0,
+        adminBalance: dashboardStats.adminBalance || 0,
+        totalEarnings: dashboardStats.totalEarnings || 0,
+        currency: dashboardStats.currency || "AED",
       };
 
       setStats(combinedStats);
       setRecentActivity(activityResponse.data.recentActivity || []);
-      
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       setError("Failed to load dashboard data");
-      
+
       // Set fallback data only on error
       setStats({
         totalUsers: 0,
@@ -103,7 +99,7 @@ function AdminOverview() {
 
   const fetchRecentActivity = async () => {
     try {
-      const response = await api.get('/admin/recent-activity');
+      const response = await api.get("/admin/recent-activity");
       setRecentActivity(response.data.recentActivity || []);
     } catch (error) {
       console.error("Error fetching recent activity:", error);
@@ -113,18 +109,18 @@ function AdminOverview() {
 
   const fetchOnlinePaymentStatus = async () => {
     try {
-      const response = await api.get('/admin/payments/online/status')
-      setOnlinePaymentStatus(response.data.status)
+      const response = await api.get("/admin/payments/online/status");
+      setOnlinePaymentStatus(response.data.status);
     } catch (error) {
-      console.error("Error fetching online payment status:", error)
+      console.error("Error fetching online payment status:", error);
     }
-  }
+  };
 
   const toggleOnlinePayments = async () => {
     try {
-      const response = await api.put('/admin/payments/online/toggle', {
-        enabled: !onlinePaymentStatus.enabled
-      })
+      const response = await api.put("/admin/payments/online/toggle", {
+        enabled: !onlinePaymentStatus.enabled,
+      });
       setOnlinePaymentStatus({
         ...onlinePaymentStatus,
         enabled: response.data.enabled,
@@ -132,15 +128,15 @@ function AdminOverview() {
         toggledBy: response.data.toggledBy || "System Admin",
       });
     } catch (error) {
-      console.error("Error toggling online payments:", error)
+      console.error("Error toggling online payments:", error);
       alert("Failed to toggle online payments. Please try again.");
     }
-  }
+  };
 
   const _formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED',
+    return new Intl.NumberFormat("en-AE", {
+      style: "currency",
+      currency: "AED",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -280,38 +276,39 @@ function AdminOverview() {
 
 const getActivityIcon = (type) => {
   switch (type) {
-    case 'user':
-    case 'user_registered':
-      return '👤';
-    case 'payment':
-    case 'payment_received':
-      return '💰';
-    case 'contract':
-    case 'contract_signed':
-      return '📋';
-    case 'trip':
-    case 'trip_completed':
-      return '🚌';
-    case 'support':
-    case 'support_ticket':
-      return '🎫';
-    case 'booking':
-      return '🎫';
+    case "user":
+    case "user_registered":
+      return "👤";
+    case "payment":
+    case "payment_received":
+      return "💰";
+    case "contract":
+    case "contract_signed":
+      return "📋";
+    case "trip":
+    case "trip_completed":
+      return "🚌";
+    case "support":
+    case "support_ticket":
+      return "🎫";
+    case "booking":
+      return "🎫";
     default:
-      return '📊';
+      return "📊";
   }
 };
 
 const formatTime = (timestamp) => {
-  if (!timestamp) return 'Just now';
-  
+  if (!timestamp) return "Just now";
+
   const now = new Date();
   const time = new Date(timestamp);
   const diffInMinutes = Math.floor((now - time) / (1000 * 60));
-  
-  if (diffInMinutes < 1) return 'Just now';
+
+  if (diffInMinutes < 1) return "Just now";
   if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
-  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`;
+  if (diffInMinutes < 1440)
+    return `${Math.floor(diffInMinutes / 60)} hours ago`;
   return `${Math.floor(diffInMinutes / 1440)} days ago`;
 };
 

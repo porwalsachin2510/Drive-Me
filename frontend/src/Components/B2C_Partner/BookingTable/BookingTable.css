@@ -20,6 +20,33 @@
   color: #1a202c;
 }
 
+.b2c-booking-table-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.b2c-wallet-balance-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  color: #166534;
+  font-size: 0.85rem;
+}
+
+.b2c-wallet-balance-display svg {
+  color: #16a34a;
+}
+
+.b2c-wallet-balance-display strong {
+  font-weight: 700;
+  color: #15803d;
+}
+
 .b2c-booking-table-refresh-btn {
   display: flex;
   align-items: center;
@@ -913,6 +940,22 @@
     align-items: flex-start;
     gap: 12px;
   }
+  
+  .b2c-booking-table-header-right {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+  
+  .b2c-wallet-balance-display {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .b2c-booking-table-refresh-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 480px) {
@@ -948,4 +991,112 @@
   .b2c-booking-modal-actions {
     padding: 16px;
   }
+}
+
+/* Wallet Warning Modal Styles */
+.b2c-wallet-warning-modal {
+  max-width: 420px;
+}
+
+.b2c-wallet-warning-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.b2c-wallet-warning-text {
+  text-align: center;
+  color: #4a5568;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 20px !important;
+}
+
+.b2c-wallet-warning-text strong {
+  color: #e53e3e;
+}
+
+.b2c-wallet-info-box {
+  background-color: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+
+.b2c-wallet-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf2f7;
+  font-size: 0.9rem;
+}
+
+.b2c-wallet-info-row:last-child {
+  border-bottom: none;
+}
+
+.b2c-wallet-info-row span:first-child {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.b2c-wallet-balance {
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.b2c-wallet-required {
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+.b2c-wallet-shortage span:last-child {
+  font-weight: 700;
+  color: #e53e3e;
+}
+
+.b2c-booking-btn-recharge {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2);
+}
+
+.b2c-booking-btn-recharge:hover {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+  transform: translateY(-1px);
+}
+
+/* CANCELLED Status Styles */
+.b2c-status-pill.status-cancelled {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+/* Commission Refund Badge */
+.b2c-commission-refund-badge {
+  display: block;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background-color: #d1fae5;
+  color: #047857;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid #a7f3d0;
+}
+
+/* Red stat color for cancelled */
+.b2c-booking-stat-value.stat-red {
+  color: #dc2626;
 }

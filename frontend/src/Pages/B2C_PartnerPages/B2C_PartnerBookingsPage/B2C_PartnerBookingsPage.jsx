@@ -262,6 +262,10 @@ const B2C_PartnerBookingsPage = () => {
         return "#dc3545";
       case "COMPLETED":
         return "#6c757d";
+      case "CANCELLED":
+        return "#ff6b6b";
+      case "IN_PROGRESS":
+        return "#ffc107";
       default:
         return "#6c757d";
     }
@@ -383,6 +387,20 @@ const B2C_PartnerBookingsPage = () => {
           </span>
           <span className="B2C_Partner-bookings-page-stat-label">
             Completed
+          </span>
+        </div>
+        <div className="B2C_Partner-bookings-page-stat-card">
+          <span
+            className="B2C_Partner-bookings-page-stat-number"
+            style={{ color: "#ff6b6b" }}
+          >
+            {Array.isArray(partnerBookings)
+              ? partnerBookings.filter((b) => b.bookingStatus === "CANCELLED")
+                  .length
+              : 0}
+          </span>
+          <span className="B2C_Partner-bookings-page-stat-label">
+            Cancelled
           </span>
         </div>
       </div>
@@ -623,6 +641,38 @@ const B2C_PartnerBookingsPage = () => {
                     {(booking.driverEarnings || 0).toLocaleString()}{" "}
                     {booking.currency || "KWD"}
                   </p>
+                  {/* Show commission refund info for CANCELLED bookings */}
+                  {booking.bookingStatus === "CANCELLED" &&
+                    booking.commissionRefunded && (
+                      <p
+                        style={{
+                          color: "#28a745",
+                          fontWeight: "600",
+                          padding: "8px",
+                          backgroundColor: "#d4edda",
+                          borderRadius: "6px",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <strong>Commission Refunded:</strong>{" "}
+                        {(booking.commissionRefundAmount || 0).toLocaleString()}{" "}
+                        {booking.currency || "KWD"}
+                      </p>
+                    )}
+                  {/* Show cancellation reason for CANCELLED bookings */}
+                  {booking.bookingStatus === "CANCELLED" &&
+                    booking.cancellationReason && (
+                      <p
+                        style={{
+                          color: "#dc3545",
+                          marginTop: "8px",
+                          fontSize: "13px",
+                        }}
+                      >
+                        <strong>Cancellation Reason:</strong>{" "}
+                        {booking.cancellationReason}
+                      </p>
+                    )}
                 </div>
               </div>
 

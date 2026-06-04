@@ -67,6 +67,11 @@ const dropdownOptionsSchema = new mongoose.Schema({
             "NATIONALITIES",
             // Payment methods
             "PAYMENT_METHODS",
+            // Employee master data
+            "DEPARTMENTS",
+            "DESIGNATIONS",
+            "WORK_LOCATIONS",
+            "SHIFT_TYPES",
         ],
         index: true,
     },

@@ -160,6 +160,12 @@ const userSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
+        // B2C Partner: Flag to indicate if they have registered themselves as a driver
+        // This must be explicitly set to true by the partner to appear in driver dropdown
+        isRegisteredAsDriver: {
+            type: Boolean,
+            default: false,
+        },
         // Legacy routeListings - kept for backward compatibility
         routeListings: [
             {
@@ -331,6 +337,23 @@ const userSchema = new mongoose.Schema(
         acceptedPaymentMethods: {
             type: [String],
             default: [],
+        },
+        // Payment Gateway Connected Accounts (for automatic payouts)
+        stripeConnectAccountId: {
+            type: String,
+            default: null, // Stripe Connect account ID for receiving payouts
+        },
+        tapAccountId: {
+            type: String,
+            default: null, // TAP Payments destination ID for receiving payouts (Kuwait/GCC)
+        },
+        // Bank account details for manual payouts
+        bankDetails: {
+            bankName: { type: String, default: null },
+            bankCode: { type: String, default: null },
+            iban: { type: String, default: null },
+            accountHolderName: { type: String, default: null },
+            swiftCode: { type: String, default: null },
         },
         notifications: {
             emailNotifications: {

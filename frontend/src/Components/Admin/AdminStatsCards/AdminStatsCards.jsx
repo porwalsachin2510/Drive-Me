@@ -1,4 +1,4 @@
-import "./AdminStatsCards.css"
+import "./AdminStatsCards.css";
 
 function AdminStatsCards({ stats }) {
   const statsData = [
@@ -7,13 +7,13 @@ function AdminStatsCards({ stats }) {
       value: stats?.totalUsers || 0,
       change: "+12% this month",
       positive: true,
-      icon: "�",
+      icon: "👥",
       color: "#10b981",
     },
     {
       title: "Corporate Clients",
       value: stats?.totalCorporates || 0,
-      change: "+8% this month",
+      change: `${stats?.activeContracts || 0} active contracts`,
       positive: true,
       icon: "🏢",
       color: "#3b82f6",
@@ -21,9 +21,9 @@ function AdminStatsCards({ stats }) {
     {
       title: "B2C Partners",
       value: stats?.totalB2CPartners || 0,
-      change: "+15% this month",
+      change: `${stats?.activeBookings || 0} active bookings`,
       positive: true,
-      icon: "�",
+      icon: "🚐",
       color: "#8b5cf6",
     },
     {
@@ -72,14 +72,6 @@ function AdminStatsCards({ stats }) {
       icon: "⏳",
       color: "#f59e0b",
     },
-    // {
-    //   title: "Support Tickets",
-    //   value: stats?.supportTickets || 0,
-    //   change: "Open tickets",
-    //   positive: false,
-    //   icon: "🎫",
-    //   color: "#6b7280",
-    // },
   ];
 
   return (
@@ -89,12 +81,20 @@ function AdminStatsCards({ stats }) {
           <div className="ad-dash-stat-content">
             <div className="ad-dash-stat-header">
               <span className="ad-dash-stat-title">{stat.title}</span>
-              <span className="ad-dash-stat-icon" style={{ backgroundColor: `${stat.color}20`, color: stat.color }}>
+              <span
+                className="ad-dash-stat-icon"
+                style={{
+                  backgroundColor: `${stat.color}20`,
+                  color: stat.color,
+                }}
+              >
                 {stat.icon}
               </span>
             </div>
             <div className="ad-dash-stat-value">{stat.value}</div>
-            <div className={`ad-dash-stat-change ${stat.positive ? "ad-dash-stat-positive" : "ad-dash-stat-negative"}`}>
+            <div
+              className={`ad-dash-stat-change ${stat.positive ? "ad-dash-stat-positive" : "ad-dash-stat-negative"}`}
+            >
               {stat.positive && "↗ "}
               {stat.change}
             </div>
@@ -102,7 +102,7 @@ function AdminStatsCards({ stats }) {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
-export default AdminStatsCards
+export default AdminStatsCards;

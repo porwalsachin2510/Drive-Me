@@ -1676,13 +1676,19 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       </div>
                     </label>
 
-                    <label className="pass-type-option">
+                    <label
+                      className={`pass-type-option ${returnTrips.length === 0 ? "disabled" : ""}`}
+                    >
                       <input
                         type="radio"
                         name="passType"
                         value="ROUND_TRIP"
                         checked={selectedPassType === "ROUND_TRIP"}
+                        disabled={returnTrips.length === 0}
                         onChange={(e) => {
+                          if (returnTrips.length === 0) {
+                            return; // Don't allow selection if no return trips
+                          }
                           setSelectedPassType(e.target.value);
                           // Reset trips when switching to ROUND_TRIP
                           setSelectedTrip(null);
@@ -1696,6 +1702,19 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       <div className="pass-type-content">
                         <div className="pass-type-title">
                           Round Trip Monthly Pass
+                          {returnTrips.length === 0 && (
+                            <span
+                              style={{
+                                display: "block",
+                                fontSize: "10px",
+                                color: "#ef4444",
+                                fontWeight: "500",
+                                marginTop: "4px",
+                              }}
+                            >
+                              (No return trips available)
+                            </span>
+                          )}
                         </div>
                         <div className="pass-type-price">
                           {currency}{" "}
@@ -2230,12 +2249,29 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 <button
                   className="btn-primary"
                   onClick={handleContinueToPayment}
-                  disabled={loading || isProcessing}
+                  disabled={
+                    loading ||
+                    isProcessing ||
+                    (selectedPassType === "ROUND_TRIP" &&
+                      returnTrips.length === 0) ||
+                    (selectedPassType === "ROUND_TRIP" && !selectedReturnTrip)
+                  }
+                  title={
+                    selectedPassType === "ROUND_TRIP" &&
+                    returnTrips.length === 0
+                      ? "No return trips available for this route. Please select One-Way Monthly Pass instead."
+                      : selectedPassType === "ROUND_TRIP" && !selectedReturnTrip
+                        ? "Please select a return trip to continue."
+                        : ""
+                  }
                 >
                   {loading || isProcessing ? (
                     <>
                       <FaSpinner className="spinner" /> Processing...
                     </>
+                  ) : selectedPassType === "ROUND_TRIP" &&
+                    returnTrips.length === 0 ? (
+                    "No Return Trips Available"
                   ) : isCorporate ? (
                     "Confirm Booking"
                   ) : (

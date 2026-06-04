@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import api from "../../../utils/api";
@@ -15,8 +15,18 @@ const WalletPaymentCallback = () => {
   const [verificationStatus, setVerificationStatus] = useState("verifying");
   const [message, setMessage] = useState("");
 
+  // CRITICAL: Use ref to prevent double execution in React StrictMode
+  const hasVerifiedRef = useRef(false);
+  const isVerifyingRef = useRef(false);
+
   useEffect(() => {
     const verifyWalletPayment = async () => {
+      // PREVENT DOUBLE EXECUTION - This is critical for React StrictMode
+      if (hasVerifiedRef.current || isVerifyingRef.current) {
+        console.log("[Wallet] Skipping duplicate verification call");
+        return;
+      }
+      isVerifyingRef.current = true;
       const status = searchParams.get("status");
       const sessionId = searchParams.get("session_id"); // Stripe
       const chargeId = searchParams.get("tap_id"); // Tap Payments
@@ -63,6 +73,9 @@ const WalletPaymentCallback = () => {
           });
 
           if (response.data.success) {
+            // Mark as verified to prevent any future duplicate calls
+            hasVerifiedRef.current = true;
+
             console.log(
               "[Wallet] Payment verified and funds added:",
               response.data,
@@ -70,7 +83,9 @@ const WalletPaymentCallback = () => {
 
             setVerificationStatus("success");
             setMessage(
-              "Payment completed successfully! Funds have been added to your wallet.",
+              response.data.data?.alreadyProcessed
+                ? "Payment was already processed. Your wallet balance is up to date."
+                : "Payment completed successfully! Funds have been added to your wallet.",
             );
 
             // Refresh wallet balance
@@ -93,10 +108,12 @@ const WalletPaymentCallback = () => {
           }
         } catch (error) {
           console.error("[Wallet] Payment verification error:", error);
+          isVerifyingRef.current = false; // Allow retry on error
           setVerificationStatus("failed");
           setMessage("Payment verification failed. Please contact support.");
         }
       } else if (status === "cancelled" || status === "canceled") {
+        hasVerifiedRef.current = true; // Prevent further processing
         setVerificationStatus("cancelled");
         setMessage(
           "Payment was cancelled. You can try again from the wallet page.",
@@ -105,13 +122,14 @@ const WalletPaymentCallback = () => {
           navigate("/wallet");
         }, 3000);
       } else {
+        hasVerifiedRef.current = true; // Prevent further processing
         setVerificationStatus("failed");
         setMessage("Payment failed or was not completed. Please try again.");
         setTimeout(() => {
           navigate("/wallet");
         }, 3000);
       }
-    };;
+    };
 
     verifyWalletPayment();
   }, [searchParams, dispatch, navigate]);
@@ -123,7 +141,10 @@ const WalletPaymentCallback = () => {
           <>
             <LoadingSpinner />
             <h2>Verifying Payment</h2>
-            <p>Please wait while we confirm your payment and add funds to your wallet...</p>
+            <p>
+              Please wait while we confirm your payment and add funds to your
+              wallet...
+            </p>
           </>
         )}
 

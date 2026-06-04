@@ -838,7 +838,7 @@
   gap: 12px;
 }
 
-.corporate-assigned-vehicles-create-trips-btn {
+.corporate-assigned-vehicles-view-details-btn {
   flex: 1;
   background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
   color: white;
@@ -852,7 +852,7 @@
   text-transform: uppercase;
 }
 
-.corporate-assigned-vehicles-create-trips-btn:hover {
+.corporate-assigned-vehicles-view-details-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
 }
@@ -1606,4 +1606,393 @@
     flex-direction: column; /* Stack info and button */
     align-items: flex-start;
   }
+}
+
+/* ============ MULTIPLE ROUTES SUPPORT ============ */
+
+/* Routes Section in Vehicle Card */
+.routes-section {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.routes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.route-item {
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+}
+
+.route-item:hover {
+  border-color: #0066ff;
+  background: #f0f7ff;
+}
+
+.route-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.route-number {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0066ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.route-delete-btn {
+  background: #fef2f2;
+  border: none;
+  color: #ef4444;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.route-delete-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.route-item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.route-item-details .route-text {
+  font-size: 13px;
+  margin: 0;
+  color: #333;
+}
+
+.route-item-details .route-text strong {
+  color: #666;
+  font-weight: 600;
+}
+
+.route-item-details .route-date {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* Add Route Button */
+.add-route-btn {
+  margin-top: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.add-route-btn:hover {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Delete Route Button in Routes Tab */
+.corporate-assigned-vehicles-delete-route-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+.corporate-assigned-vehicles-delete-route-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Route Actions Flex Container */
+.corporate-assigned-vehicles-route-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .corporate-assigned-vehicles-route-actions {
+    flex-direction: column;
+  }
+  
+  .corporate-assigned-vehicles-view-details-btn,
+  .corporate-assigned-vehicles-delete-route-btn {
+    width: 100%;
+  }
+}
+
+/* ============ ROUND TRIP TIME FIELDS ============ */
+
+.round-trip-times-container {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 16px 0;
+}
+
+.round-trip-section {
+  margin-bottom: 20px;
+}
+
+.round-trip-section:last-child {
+  margin-bottom: 0;
+}
+
+.round-trip-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-icon {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.section-icon.outbound-icon {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.section-icon.return-icon {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.round-trip-section .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.round-trip-section .form-group {
+  margin-bottom: 0;
+}
+
+.round-trip-section .form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.round-trip-section .form-group input[type="time"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.round-trip-section .form-group input[type="time"]:focus {
+  outline: none;
+  border-color: #0066ff;
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+}
+
+.round-trip-section .form-hint {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Divider between pickup and return sections */
+.round-trip-section:first-child {
+  padding-bottom: 16px;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+@media (max-width: 600px) {
+  .round-trip-section .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .round-trip-times-container {
+    padding: 16px;
+  }
+}
+
+/* ============ TRIP DETAILS MODAL STYLES ============ */
+
+.corporate-assigned-vehicles-trip-details-route-info {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.corporate-assigned-vehicles-trip-details-route-info h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: #1a1a1a;
+}
+
+.corporate-assigned-vehicles-trip-details-route-info p {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.corporate-assigned-vehicles-trip-details-section {
+  margin-bottom: 20px;
+}
+
+.corporate-assigned-vehicles-trip-details-section h4 {
+  font-size: 16px;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.corporate-assigned-vehicles-trip-times-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.corporate-assigned-vehicles-trip-time-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.corporate-assigned-vehicles-trip-time-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.corporate-assigned-vehicles-trip-number {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+.corporate-assigned-vehicles-trip-type-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.corporate-assigned-vehicles-trip-type-badge.one-way {
+  background: #e8f4ff;
+  color: #0066ff;
+}
+
+.corporate-assigned-vehicles-trip-type-badge.round-trip {
+  background: #e8fff0;
+  color: #00a699;
+}
+
+.corporate-assigned-vehicles-trip-time-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.corporate-assigned-vehicles-trip-journey {
+  background: #fafafa;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.corporate-assigned-vehicles-trip-journey strong {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.corporate-assigned-vehicles-trip-journey p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+.corporate-assigned-vehicles-trip-stops {
+  margin-top: 8px;
+  padding: 10px;
+  background: #fff8e8;
+  border-radius: 6px;
+}
+
+.corporate-assigned-vehicles-trip-stops strong {
+  display: block;
+  font-size: 12px;
+  color: #996600;
+  margin-bottom: 6px;
+}
+
+.corporate-assigned-vehicles-trip-stops ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.corporate-assigned-vehicles-trip-stops li {
+  font-size: 13px;
+  color: #666;
+  margin: 4px 0;
+}
+
+.corporate-assigned-vehicles-no-trips {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  padding: 20px;
+}
+
+.corporate-assigned-vehicles-trip-details-notes {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.corporate-assigned-vehicles-trip-details-notes h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.corporate-assigned-vehicles-trip-details-notes p {
+  margin: 0;
+  font-size: 14px;
+  color: #1a1a1a;
 }

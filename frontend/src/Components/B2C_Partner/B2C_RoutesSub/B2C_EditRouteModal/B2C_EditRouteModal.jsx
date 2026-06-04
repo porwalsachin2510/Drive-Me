@@ -517,7 +517,7 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
 
   if (loadingAssets || loadingSchedule) {
     return (
-      <div className="b2c-modal-overlay" onClick={onClose}>
+      <div className="b2c-modal-overlay">
         <div
           className="b2c-modal-content b2c-edit-route-modal"
           onClick={(e) => e.stopPropagation()}
@@ -532,7 +532,7 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
   }
 
   return (
-    <div className="b2c-modal-overlay" onClick={onClose}>
+    <div className="b2c-modal-overlay">
       <div
         className="b2c-modal-content b2c-edit-route-modal"
         onClick={(e) => e.stopPropagation()}

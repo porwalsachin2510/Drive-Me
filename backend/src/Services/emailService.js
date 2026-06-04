@@ -1695,34 +1695,44 @@ export const sendSuspensionEmail = async ({ email, fullName, reason, durationDay
 };
 
 // Send Activation Email
-export const sendActivationEmail = async ({ email, fullName, message, previousReason }) => {
+export const sendActivationEmail = async ({ email, fullName, message, previousReason, isNewActivation }) => {
     try {
         const transporter = createTransporter();
 
+        // Different content based on new activation vs reactivation
+        const emailTitle = isNewActivation ? "Welcome to DriveMeGo!" : "Welcome Back!";
+        const emailSubtitle = isNewActivation ? "Your account has been activated" : "Your account has been reactivated";
+        const emailSubject = isNewActivation
+            ? "Account Activated - Welcome to DriveMeGo!"
+            : "Account Reactivated - Welcome Back to DriveMeGo!";
+        const mainMessage = isNewActivation
+            ? "Great news! Your DriveMeGo account has been activated. You can now log in and start using our services."
+            : "Great news! Your DriveMeGo account has been reactivated.";
+
         const mailOptions = {
-            from: process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
+            from: process.env.EMAIL_FROM || '"DriveMeGo" <noreply@drivemego.com>',
             to: email,
-            subject: 'Account Reactivated - Welcome Back to DriveMe!',
+            subject: emailSubject,
             html: `
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Account Reactivated</title>
+                    <title>${isNewActivation ? 'Account Activated' : 'Account Reactivated'}</title>
                 </head>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
                     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                         <div style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                            <h1 style="color: white; margin: 0; font-size: 28px;">Welcome Back!</h1>
-                            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Your account has been reactivated</p>
+                            <h1 style="color: white; margin: 0; font-size: 28px;">${emailTitle}</h1>
+                            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">${emailSubtitle}</p>
                         </div>
                         
                         <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
                             <h3 style="color: #333; margin-top: 0;">Hello ${fullName},</h3>
                             
                             <div style="background: #d4edda; border: 1px solid #28a745; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                                <p style="margin: 0; color: #155724;"><strong>Great news! Your DriveMe account has been reactivated.</strong></p>
+                                <p style="margin: 0; color: #155724;"><strong>${mainMessage}</strong></p>
                             </div>
                             
                             ${message ? `
@@ -1732,6 +1742,7 @@ export const sendActivationEmail = async ({ email, fullName, message, previousRe
                             </div>
                             ` : ''}
                             
+                            ${!isNewActivation ? `
                             <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ffeaa7;">
                                 <p style="margin: 0; color: #856404;"><strong>Important Reminder:</strong></p>
                                 <p style="margin: 10px 0 0 0; color: #856404;">
@@ -1739,17 +1750,18 @@ export const sendActivationEmail = async ({ email, fullName, message, previousRe
                                     ${previousReason ? `<br><br>Previous suspension reason: <em>${previousReason}</em>` : ''}
                                 </p>
                             </div>
+                            ` : ''}
                             
                             <div style="text-align: center; margin: 30px 0;">
-                                <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'https://driveme.com'}/login" 
+                                <a href="${process.env.FRONTEND_URL?.split(",")[0] || 'https://drivemego.com'}/login" 
                                    style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
                                     Login to Your Account
                                 </a>
                             </div>
                             
                             <div style="text-align: center; margin-top: 30px; color: #666; font-size: 14px;">
-                                <p>Thank you for being part of DriveMe!</p>
-                                <p>DriveMe - Your Trusted Transportation Partner</p>
+                                <p>Thank you for being part of DriveMeGo!</p>
+                                <p>DriveMeGo - Your Trusted Transportation Partner</p>
                             </div>
                         </div>
                     </div>

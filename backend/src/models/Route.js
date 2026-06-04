@@ -55,6 +55,54 @@ const routeSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
+        // Trip times with support for both one-way and round-trip
+        tripTimes: [
+            {
+                tripNumber: {
+                    type: Number,
+                    required: true,
+                },
+                tripType: {
+                    type: String,
+                    enum: ["One Way", "Round Trip"],
+                    default: "One Way",
+                },
+                // One-way trip time
+                departureTime: {
+                    type: String,
+                    default: null,
+                },
+                // Round trip time fields (4 separate times)
+                pickupStartTime: {
+                    type: String,
+                    default: null,
+                },
+                pickupEndTime: {
+                    type: String,
+                    default: null,
+                },
+                returnStartTime: {
+                    type: String,
+                    default: null,
+                },
+                returnEndTime: {
+                    type: String,
+                    default: null,
+                },
+                outboundStopPoints: [
+                    {
+                        location: String,
+                        time: String,
+                    },
+                ],
+                returnStopPoints: [
+                    {
+                        location: String,
+                        time: String,
+                    },
+                ],
+            },
+        ],
         totalSeats: {
             type: Number,
             required: true,

@@ -22,35 +22,35 @@ function B2C_AddVehicleModal({ onClose }) {
 
   const [newFeature, setNewFeature] = useState("");
   const [loading, setLoading] = useState(false);
- const [availableTags, setAvailableTags] = useState([]);
- const [groupedTags, setGroupedTags] = useState({});
+  const [availableTags, setAvailableTags] = useState([]);
+  const [groupedTags, setGroupedTags] = useState({});
 
- // Fetch vehicle-related tags on mount
- useEffect(() => {
-   fetchVehicleTags();
- }, []);
+  // Fetch vehicle-related tags on mount
+  useEffect(() => {
+    fetchVehicleTags();
+  }, []);
 
- const fetchVehicleTags = async () => {
-   try {
-     const response = await api.get("/admin/tags/by-category", {
-       params: { context: "vehicle" },
-     });
-     setAvailableTags(response.data.tags || []);
-     setGroupedTags(response.data.groupedTags || {});
-   } catch (error) {
-     console.error("Error fetching vehicle tags:", error);
-   }
- };
-
- const handleTagToggle = (tagId) => {
-   setFormData((prev) => ({
-     ...prev,
-     tags: prev.tags.includes(tagId)
-       ? prev.tags.filter((id) => id !== tagId)
-       : [...prev.tags, tagId],
-   }));
+  const fetchVehicleTags = async () => {
+    try {
+      const response = await api.get("/admin/tags/by-category", {
+        params: { context: "vehicle" },
+      });
+      setAvailableTags(response.data.tags || []);
+      setGroupedTags(response.data.groupedTags || {});
+    } catch (error) {
+      console.error("Error fetching vehicle tags:", error);
+    }
   };
-  
+
+  const handleTagToggle = (tagId) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: prev.tags.includes(tagId)
+        ? prev.tags.filter((id) => id !== tagId)
+        : [...prev.tags, tagId],
+    }));
+  };
+
   const vehicleTypes = [
     "Sedan",
     "SUV",
@@ -58,7 +58,7 @@ function B2C_AddVehicleModal({ onClose }) {
     "Minibus",
     "Bus",
     "Pickup Truck",
-    "Other"
+    "Other",
   ];
 
   const commonFeatures = [
@@ -69,7 +69,7 @@ function B2C_AddVehicleModal({ onClose }) {
     "Audio System",
     "Safety Belts",
     "First Aid Kit",
-    "Fire Extinguisher"
+    "Fire Extinguisher",
   ];
 
   const handleChange = (e) => {
@@ -106,7 +106,7 @@ function B2C_AddVehicleModal({ onClose }) {
       preview: URL.createObjectURL(file),
       fileName: file.name,
     }));
-    
+
     setFormData((prev) => ({
       ...prev,
       images: [...prev.images, ...newImages].slice(0, 10), // Max 10 images
@@ -130,7 +130,7 @@ function B2C_AddVehicleModal({ onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       // Create FormData for file upload
       const submitFormData = new FormData();
@@ -182,14 +182,16 @@ function B2C_AddVehicleModal({ onClose }) {
       }
     } catch (error) {
       console.error("Error adding vehicle:", error);
-      alert(`Failed to add vehicle: ${error.response?.data?.message || error.message}`);
+      alert(
+        `Failed to add vehicle: ${error.response?.data?.message || error.message}`,
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="b2c-modal-overlay" onClick={onClose}>
+    <div className="b2c-modal-overlay">
       <div className="b2c-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="b2c-modal-header">
           <h2 className="b2c-modal-title">Add New Vehicle</h2>

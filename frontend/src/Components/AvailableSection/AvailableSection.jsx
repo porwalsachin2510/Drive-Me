@@ -545,6 +545,50 @@ const AvailableSection = ({
                     ))}
                   </div>
                 </div>
+
+                {/* Trip Times Section - Show departure times for this route */}
+                <div className="drivemego-availablesection-trip-times-section">
+                  <label className="drivemego-availablesection-availablesection-detail-label">
+                    TRIP TIMES
+                  </label>
+                  <div className="drivemego-availablesection-trip-times-container">
+                    {route.tripTimes && route.tripTimes.length > 0 ? (
+                      route.tripTimes.slice(0, 5).map((trip, tripIdx) => (
+                        <span
+                          key={tripIdx}
+                          className="drivemego-availablesection-trip-time-badge"
+                        >
+                          {trip.departureTime || trip.time || "N/A"}
+                        </span>
+                      ))
+                    ) : route.upcomingTrips &&
+                      route.upcomingTrips.length > 0 ? (
+                      route.upcomingTrips.slice(0, 5).map((trip, tripIdx) => (
+                        <span
+                          key={tripIdx}
+                          className="drivemego-availablesection-trip-time-badge"
+                        >
+                          {trip.departureTime || trip.time || "N/A"}
+                        </span>
+                      ))
+                    ) : route.pickupArrivalTime &&
+                      route.pickupArrivalTime !== "N/A" ? (
+                      <span className="drivemego-availablesection-trip-time-badge">
+                        {route.pickupArrivalTime}
+                      </span>
+                    ) : (
+                      <span className="drivemego-availablesection-no-trip-times">
+                        Click "Book This Route" to see available times
+                      </span>
+                    )}
+                    {route.tripTimes && route.tripTimes.length > 5 && (
+                      <span className="drivemego-availablesection-more-times">
+                        +{route.tripTimes.length - 5} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 {/* Stop Points - Show all stops along the route */}
                 {(route.allStops?.length > 0 ||
                   route.scheduleStops?.length > 0 ||
@@ -674,6 +718,6 @@ const AvailableSection = ({
       />
     </div>
   );
-};;;;
+};
 
 export default AvailableSection;

@@ -25,6 +25,8 @@ import {
     approvePayout,
     rejectPayout,
     completePayout,
+    processAutomaticPayout,
+    getPayoutGatewayInfo,
     getFraudAlerts,
     getUserActivity,
     getSystemLogs,
@@ -111,7 +113,12 @@ import {
     suspendAdmin,
     activateAdmin,
     deleteAdmin,
-    getMyPermissions
+    getMyPermissions,
+    // Revenue Reports APIs
+    getCorporateRevenueReport,
+    getB2CPartnerRevenueReport,
+    getB2BPartnerRevenueReport,
+    getRevenueSummary
 } from "../controllers/adminController.js";
 import { verifyToken, checkAdminRole } from "../middleware/auth.js"
 
@@ -168,9 +175,11 @@ router.put("/b2b/settings", verifyToken, checkAdminRole, updateB2BSettings)
 router.get("/finance/metrics", verifyToken, checkAdminRole, getFinanceMetrics)
 router.get("/finance/payouts", verifyToken, checkAdminRole, getPayoutRequests)
 router.get("/finance/transactions", verifyToken, checkAdminRole, getTransactions)
+router.get("/finance/payouts/:payoutId/gateway-info", verifyToken, checkAdminRole, getPayoutGatewayInfo)
 router.put("/finance/payouts/:payoutId/approve", verifyToken, checkAdminRole, approvePayout)
 router.put("/finance/payouts/:payoutId/reject", verifyToken, checkAdminRole, rejectPayout)
 router.put("/finance/payouts/:payoutId/complete", verifyToken, checkAdminRole, completePayout)
+router.put("/finance/payouts/:payoutId/process-automatic", verifyToken, checkAdminRole, processAutomaticPayout)
 
 // Reports Management
 router.get("/reports/fraud-alerts", verifyToken, checkAdminRole, getFraudAlerts)
@@ -180,6 +189,12 @@ router.get("/reports/user-activity", verifyToken, checkAdminRole, getUserActivit
 router.get("/reports/system-logs", verifyToken, checkAdminRole, getSystemLogs)
 router.get("/reports", verifyToken, checkAdminRole, getCustomReports)
 router.post("/reports/generate", verifyToken, checkAdminRole, generateCustomReport)
+
+// Revenue Reports - User-wise and Vendor-wise
+router.get("/reports/revenue/summary", verifyToken, checkAdminRole, getRevenueSummary)
+router.get("/reports/revenue/corporate", verifyToken, checkAdminRole, getCorporateRevenueReport)
+router.get("/reports/revenue/b2c-partners", verifyToken, checkAdminRole, getB2CPartnerRevenueReport)
+router.get("/reports/revenue/b2b-partners", verifyToken, checkAdminRole, getB2BPartnerRevenueReport)
 
 // Communication Management
 router.get("/comm/templates", verifyToken, checkAdminRole, getCommTemplates)

@@ -38,7 +38,7 @@ const walletSchema = new mongoose.Schema(
             default: 0,
             min: 0,
         },
-        
+
         currency: {
             type: String,
             default: "AED",
@@ -77,6 +77,20 @@ const walletSchema = new mongoose.Schema(
             paymentMethod: {
                 type: String,
             },
+            // Payment session ID from payment gateway (Stripe checkout session ID, Tap charge ID, etc.)
+            paymentSessionId: {
+                type: String,
+                sparse: true, // Allow null/undefined values
+            },
+            // Gateway transaction ID (Stripe payment intent ID, Tap transaction ID, etc.)
+            gatewayTransactionId: {
+                type: String,
+                sparse: true,
+            },
+            // Reference for tracking
+            reference: {
+                type: String,
+            },
             bankAccount: {
                 type: String,
             },
@@ -112,5 +126,9 @@ const walletSchema = new mongoose.Schema(
 )
 
 walletSchema.index({ userId: 1 })
+// Sparse index for payment session IDs to prevent duplicate transactions
+// This allows quick lookup and prevents double-charging race conditions
+walletSchema.index({ "transactions.paymentSessionId": 1 }, { sparse: true })
+walletSchema.index({ "transactions.gatewayTransactionId": 1 }, { sparse: true })
 
 export default mongoose.model("Wallet", walletSchema)

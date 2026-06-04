@@ -163,7 +163,7 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
   };
 
   return (
-    <div className="b2c-modal-overlay" onClick={onClose}>
+    <div className="b2c-modal-overlay">
       <div
         className="b2c-modal-content b2c-schedule-modal"
         onClick={(e) => e.stopPropagation()}

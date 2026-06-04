@@ -3,6 +3,7 @@ import { verifyToken, requireRole } from "../middleware/auth.js"
 import {
     createEMIPlan,
     getEMIPlanByContract,
+    getEMIEligibility,
     payEMIInstallment,
     verifyEMIPayment,
     verifyEMIOnlinePayment,
@@ -36,6 +37,7 @@ router.post("/:emiPaymentId/request-suspension", verifyToken, requireRole(["B2B_
 
 // Common routes (Corporate or B2B Partner)
 router.get("/contract/:contractId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), getEMIPlanByContract)
+router.get("/eligibility/:contractId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), getEMIEligibility)
 
 // Admin routes
 router.get("/admin/all", verifyToken, requireRole(["ADMIN"]), getAllEMIPaymentsAdmin)

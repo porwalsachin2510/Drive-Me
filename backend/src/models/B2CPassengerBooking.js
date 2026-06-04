@@ -85,13 +85,13 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
-
         // Outbound Trip Status (separate from bookingStatus for ROUND_TRIP tracking)
         outboundTripStatus: {
             type: String,
             enum: ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
             default: "SCHEDULED",
         },
+
         // Return Trip Driver/Vehicle Assignment (captured at booking time)
         returnDriverId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -117,6 +117,7 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
             enum: ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
             default: "SCHEDULED",
         },
+
         travelPath: [
             {
                 location: String,
@@ -255,6 +256,27 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
             default: null
         },
         refundReason: String,
+        refundAmount: {
+            type: Number,
+            default: 0
+        },
+        cancellationFee: {
+            type: Number,
+            default: 0
+        },
+        // Commission Refund Fields (for CASH bookings cancelled by commuter)
+        commissionRefunded: {
+            type: Boolean,
+            default: false
+        },
+        commissionRefundAmount: {
+            type: Number,
+            default: 0
+        },
+        commissionRefundedAt: {
+            type: Date,
+            default: null
+        },
         // Admin action log
         adminActions: [{
             action: String,
@@ -265,7 +287,7 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
                 ref: "User"
             }
         }],
-        
+
         // Late Trip Tracking
         isLateStart: {
             type: Boolean,
@@ -279,7 +301,7 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
             type: String, // B2C_PARTNER, B2C_PARTNER_DRIVER
             default: null,
         },
-        
+
         // Booking Timeout Fields - for auto-cancellation feature
         acceptanceDeadline: {
             type: Date, // 24 hours after booking creation

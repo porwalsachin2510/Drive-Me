@@ -27,21 +27,21 @@ const ContractRequestModal = ({ quotation, onClose, onSuccess }) => {
         createContractFromQuotation({
           quotationId: quotation._id,
           data: formData,
-        })
+        }),
       );
 
-     if (result.type === "contract/createFromQuotation/fulfilled") {
-       // Check if onSuccess is provided before calling it
-       if (onSuccess && typeof onSuccess === "function") {
-         onSuccess(result.payload.data.contract);
-       } else {
-         // Fallback behavior if onSuccess is not provided
-         alert("Contract created successfully!");
-         onClose();
-       }
-     } else {
-       alert("Failed to create contract request. Please try again.");
-     }
+      if (result.type === "contract/createFromQuotation/fulfilled") {
+        // Check if onSuccess is provided before calling it
+        if (onSuccess && typeof onSuccess === "function") {
+          onSuccess(result.payload.data.contract);
+        } else {
+          // Fallback behavior if onSuccess is not provided
+          alert("Contract created successfully!");
+          onClose();
+        }
+      } else {
+        alert("Failed to create contract request. Please try again.");
+      }
     } catch (error) {
       console.error("Contract creation error:", error);
       alert("An error occurred. Please try again.");
@@ -53,9 +53,9 @@ const ContractRequestModal = ({ quotation, onClose, onSuccess }) => {
   const totalVehicles = quotation.vehicles.reduce(
     (sum, v) => sum + v.quantity,
     0,
-  ); 
+  );
   return (
-    <div className="contract-request-modal-overlay" onClick={onClose}>
+    <div className="contract-request-modal-overlay">
       <div
         className="contract-request-modal-content"
         onClick={(e) => e.stopPropagation()}
@@ -90,9 +90,7 @@ const ContractRequestModal = ({ quotation, onClose, onSuccess }) => {
             </div>
             <div className="contract-request-summary-item">
               <span>Total Vehicles:</span>
-              <strong>
-                {totalVehicles}
-              </strong>
+              <strong>{totalVehicles}</strong>
             </div>
           </div>
 

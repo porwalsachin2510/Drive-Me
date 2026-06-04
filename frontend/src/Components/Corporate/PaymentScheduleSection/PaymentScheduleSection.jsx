@@ -25,7 +25,7 @@ const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
 
   // eslint-disable-next-line no-unused-vars
   const { currentSchedule, loading } = useSelector(
-    (state) => state.paymentSchedule
+    (state) => state.paymentSchedule,
   );
 
   useEffect(() => {
@@ -85,13 +85,13 @@ const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
           contractId,
           newProposedDate: extensionData.newProposedDate,
           reason: extensionData.reason,
-        })
+        }),
       ).unwrap();
 
       alert("Due date extension request submitted successfully!");
       setShowExtensionModal(false);
       setExtensionData({ newProposedDate: "", reason: "" });
-      
+
       // Refresh the schedule
       dispatch(getPaymentScheduleByContract(contractId));
     } catch (error) {
@@ -101,7 +101,8 @@ const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
     }
   };
 
-  const hasPendingExtensionRequest = contract?.dueDateExtensionRequest?.isRequested && 
+  const hasPendingExtensionRequest =
+    contract?.dueDateExtensionRequest?.isRequested &&
     contract?.dueDateExtensionRequest?.status === "PENDING";
 
   if (!currentSchedule || currentSchedule.length === 0) {
@@ -123,7 +124,7 @@ const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
 
     const total = currentSchedule.reduce(
       (sum, item) => sum + (item.amount || 0),
-      0
+      0,
     );
     const paid = currentSchedule
       .filter((item) => item.status === "PAID")
@@ -240,20 +241,26 @@ const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
                         <FiClock />
                         <span>Due date extension request pending approval</span>
                       </div>
-                    ) : contract?.dueDateExtensionRequest?.status === "APPROVED" ? (
+                    ) : contract?.dueDateExtensionRequest?.status ===
+                      "APPROVED" ? (
                       <div className="approved-extension-notice">
                         <FiCheckCircle />
                         <span>Due date extended successfully</span>
                       </div>
-                    ) : contract?.dueDateExtensionRequest?.status === "COUNTER_OFFERED" ? (
+                    ) : contract?.dueDateExtensionRequest?.status ===
+                      "COUNTER_OFFERED" ? (
                       <div className="counter-offered-notice">
                         <FiCheckCircle />
                         <span>
-                          Due date adjusted to {formatDate(contract?.dueDateExtensionRequest?.counterOfferedDate)}
+                          Due date adjusted to{" "}
+                          {formatDate(
+                            contract?.dueDateExtensionRequest
+                              ?.counterOfferedDate,
+                          )}
                         </span>
                       </div>
                     ) : (
-                      <button 
+                      <button
                         className="request-extension-btn"
                         onClick={() => setShowExtensionModal(true)}
                       >
@@ -271,11 +278,11 @@ const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
 
       {/* Due Date Extension Modal */}
       {showExtensionModal && (
-        <div className="extension-modal-overlay" onClick={() => setShowExtensionModal(false)}>
+        <div className="extension-modal-overlay">
           <div className="extension-modal" onClick={(e) => e.stopPropagation()}>
             <div className="extension-modal-header">
               <h3>Request Due Date Extension</h3>
-              <button 
+              <button
                 className="modal-close-btn"
                 onClick={() => setShowExtensionModal(false)}
               >
@@ -284,18 +291,23 @@ const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
             </div>
             <div className="extension-modal-body">
               <p className="modal-description">
-                If you need more time to make the final payment, you can request a due date extension. 
-                The fleet owner will review your request.
+                If you need more time to make the final payment, you can request
+                a due date extension. The fleet owner will review your request.
               </p>
-              
+
               <div className="form-group">
                 <label htmlFor="newProposedDate">New Proposed Due Date *</label>
                 <input
                   type="date"
                   id="newProposedDate"
                   value={extensionData.newProposedDate}
-                  onChange={(e) => setExtensionData({...extensionData, newProposedDate: e.target.value})}
-                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) =>
+                    setExtensionData({
+                      ...extensionData,
+                      newProposedDate: e.target.value,
+                    })
+                  }
+                  min={new Date().toISOString().split("T")[0]}
                 />
               </div>
 
@@ -306,19 +318,24 @@ const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
                   rows="4"
                   placeholder="Please explain why you need more time to make the payment..."
                   value={extensionData.reason}
-                  onChange={(e) => setExtensionData({...extensionData, reason: e.target.value})}
+                  onChange={(e) =>
+                    setExtensionData({
+                      ...extensionData,
+                      reason: e.target.value,
+                    })
+                  }
                 />
               </div>
             </div>
             <div className="extension-modal-footer">
-              <button 
+              <button
                 className="cancel-btn"
                 onClick={() => setShowExtensionModal(false)}
                 disabled={submitting}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="submit-btn"
                 onClick={handleRequestExtension}
                 disabled={submitting}

@@ -369,9 +369,41 @@ const FeaturedRoutes = ({ routes, loading }) => {
                   {/* Frequency */}
                   <div className="drivemego-featuredroutes-frequency-section">
                     <span className="drivemego-featuredroutes-calendar-icon">
-                      📅
+                      Calendar
                     </span>{" "}
                     {getDaysFrequency(route.daysOfWeek || route.availableDays)}
+                  </div>
+
+                  {/* Trip Times - Show available departure times */}
+                  <div className="drivemego-featuredroutes-featured-detail-group">
+                    <label className="drivemego-featuredroutes-detail-label">
+                      Trip Times
+                    </label>
+                    <div className="drivemego-featuredroutes-trip-times">
+                      {route.tripTimes && route.tripTimes.length > 0 ? (
+                        route.tripTimes.slice(0, 3).map((trip, idx) => (
+                          <span
+                            key={idx}
+                            className="drivemego-featuredroutes-trip-time-badge"
+                          >
+                            {trip.departureTime || trip.time || "N/A"}
+                          </span>
+                        ))
+                      ) : route.departureTime ? (
+                        <span className="drivemego-featuredroutes-trip-time-badge">
+                          {normalizeTime(route.departureTime)}
+                        </span>
+                      ) : (
+                        <span className="drivemego-featuredroutes-no-time">
+                          Click to view times
+                        </span>
+                      )}
+                      {route.tripTimes && route.tripTimes.length > 3 && (
+                        <span className="drivemego-featuredroutes-more-times">
+                          +{route.tripTimes.length - 3} more
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Timings */}
@@ -381,14 +413,24 @@ const FeaturedRoutes = ({ routes, loading }) => {
                     </label>
                     <p className="drivemego-featuredroutes-detail-value">
                       <span className="drivemego-featuredroutes-detail-icon">
-                        🕐
+                        Clock
                       </span>
                       {route.pickupArrivalTime &&
-                        route.pickupArrivalTime !== "N/A" && (
-                          <span className="drivemego-featuredroutes-arrival-time">
-                            {normalizeTime(route.pickupArrivalTime)}
-                          </span>
-                        )}
+                      route.pickupArrivalTime !== "N/A" ? (
+                        <span className="drivemego-featuredroutes-arrival-time">
+                          {normalizeTime(route.pickupArrivalTime)}
+                        </span>
+                      ) : route.tripTimes &&
+                        route.tripTimes.length > 0 &&
+                        route.tripTimes[0].departureTime ? (
+                        <span className="drivemego-featuredroutes-arrival-time">
+                          {normalizeTime(route.tripTimes[0].departureTime)}
+                        </span>
+                      ) : (
+                        <span className="drivemego-featuredroutes-no-time">
+                          See trip details
+                        </span>
+                      )}
                     </p>
                   </div>
 

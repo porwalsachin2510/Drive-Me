@@ -104,18 +104,23 @@ function B2BPartnerDriverDashboard() {
     setActiveTrip(null);
   }, [isSharingLocation]);
 
-  const startTrip = async (bookingId) => {
+  const startTrip = async (bookingId, mergedTripIds = []) => {
     try {
+      // Send merged trip IDs to start all trips for this route at once
       const response = await api.put(
         `/bookings/b2b-partner/${bookingId}/start`,
+        { mergedTripIds },
       );
       if (response.data.success) {
+        // Update all merged trips to IN_PROGRESS status
+        const allTripIds = [bookingId, ...(mergedTripIds || [])];
         setBookings((prev) =>
           prev.map((booking) =>
-            booking._id === bookingId
+            allTripIds.includes(booking._id)
               ? {
                   ...booking,
                   bookingStatus: "IN_PROGRESS",
+                  status: "IN_PROGRESS",
                   startedAt: new Date(),
                 }
               : booking,
@@ -128,25 +133,35 @@ function B2BPartnerDriverDashboard() {
           startAutomaticLocationSharing();
         }
 
-        console.log("🚀 Trip started:", bookingId);
+        console.log(
+          "Trip started:",
+          bookingId,
+          "with",
+          mergedTripIds?.length || 0,
+          "merged trips",
+        );
       }
     } catch (error) {
       console.error("Error starting trip:", error);
     }
   };
 
-  const completeTrip = async (bookingId) => {
+  const completeTrip = async (bookingId, mergedTripIds = []) => {
     try {
       const response = await api.put(
         `/bookings/b2b-partner/${bookingId}/complete`,
+        { mergedTripIds },
       );
       if (response.data.success) {
+        // Update all merged trips to COMPLETED status
+        const allTripIds = [bookingId, ...(mergedTripIds || [])];
         setBookings((prev) =>
           prev.map((booking) =>
-            booking._id === bookingId
+            allTripIds.includes(booking._id)
               ? {
                   ...booking,
                   bookingStatus: "COMPLETED",
+                  status: "COMPLETED",
                   completedAt: new Date(),
                 }
               : booking,
@@ -155,7 +170,7 @@ function B2BPartnerDriverDashboard() {
 
         const remainingTrips = bookings.filter(
           (booking) =>
-            booking._id !== bookingId &&
+            !allTripIds.includes(booking._id) &&
             (booking.bookingStatus === "CONFIRMED" ||
               booking.bookingStatus === "IN_PROGRESS"),
         );
@@ -166,7 +181,7 @@ function B2BPartnerDriverDashboard() {
           setActiveTrip(remainingTrips[0]);
         }
 
-        console.log("✅ Trip completed:", bookingId);
+        console.log("Trip completed:", bookingId);
       }
     } catch (error) {
       console.error("Error completing trip:", error);
@@ -397,10 +412,15 @@ function B2BPartnerDriverDashboard() {
                           </div>
                           <div className="B2BPartner-driver-dashboard-with-tabs-booking-actions">
                             <button
-                              onClick={() => startTrip(booking._id)}
+                              onClick={() =>
+                                startTrip(booking._id, booking.mergedTripIds)
+                              }
                               className="B2BPartner-driver-dashboard-with-tabs-start-btn"
                             >
                               Start Trip
+                              {booking.passengerCount > 1
+                                ? ` (${booking.passengerCount} passengers)`
+                                : ""}
                             </button>
                           </div>
                         </div>
@@ -447,7 +467,9 @@ function B2BPartnerDriverDashboard() {
                           </div>
                           <div className="B2BPartner-driver-dashboard-with-tabs-booking-actions">
                             <button
-                              onClick={() => completeTrip(booking._id)}
+                              onClick={() =>
+                                completeTrip(booking._id, booking.mergedTripIds)
+                              }
                               className="B2BPartner-driver-dashboard-with-tabs-complete-btn"
                             >
                               Complete Trip
@@ -538,7 +560,7 @@ function B2BPartnerDriverDashboard() {
 
       case "location":
         return (
-           <div className="B2BPartner-driver-dashboard-with-tabs-location-section">
+          <div className="B2BPartner-driver-dashboard-with-tabs-location-section">
             <h3>Live Location Tracking</h3>
             <div className="B2BPartner-driver-dashboard-with-tabs-location-info">
               <p>

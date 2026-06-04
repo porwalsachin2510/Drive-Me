@@ -159,7 +159,7 @@ function PaymentModal({
   );
 
   return (
-    <div className="drivemego-wppm-payment-modal-overlay" onClick={onClose}>
+    <div className="drivemego-wppm-payment-modal-overlay">
       <div
         className="drivemego-wppm-payment-modal"
         onClick={(e) => e.stopPropagation()}

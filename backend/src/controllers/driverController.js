@@ -2382,12 +2382,12 @@ export const getAvailableDriversForAssignment = async (req, res) => {
 
         // Get the B2C Partner for self-driving option
         const b2cPartner = await User.findById(b2cPartnerId)
-            .select('fullName whatsappNumber profileImage selfDriverAvailability');
+            .select('fullName whatsappNumber profileImage selfDriverAvailability isRegisteredAsDriver');
 
         const availableDrivers = [];
 
-        // Check Self (B2C Partner) availability
-        if (b2cPartner) {
+        // Check Self (B2C Partner) availability - ONLY if they have explicitly registered as a driver
+        if (b2cPartner && b2cPartner.isRegisteredAsDriver === true) {
             const selfStatus = b2cPartner.selfDriverAvailability?.status || 'available';
             const isAvailable = selfStatus === 'available';
 
@@ -2505,6 +2505,97 @@ export const getDriverIncompleteTrips = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error getting incomplete trips",
+            error: error.message
+        });
+    }
+}
+
+// Toggle B2C Partner's self-driver registration status
+// This allows a B2C Partner to register/unregister themselves as a driver
+export const toggleSelfDriverRegistration = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { register } = req.body; // true to register, false to unregister
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        if (user.role !== 'B2C_PARTNER') {
+            return res.status(403).json({
+                success: false,
+                message: "Only B2C Partners can register as self-drivers"
+            });
+        }
+
+        // If unregistering, check if they have any assigned schedules as a driver
+        if (register === false) {
+            const assignedSchedules = user.selfDriverAvailability?.assignedSchedules || [];
+            if (assignedSchedules.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Cannot unregister as driver while you have assigned schedules. Please reassign or remove your trips first.",
+                    assignedSchedulesCount: assignedSchedules.length
+                });
+            }
+        }
+
+        // Update the registration status
+        user.isRegisteredAsDriver = register === true;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: register
+                ? "You are now registered as a self-driver. You will appear in the driver dropdown when assigning trips."
+                : "You have unregistered as a self-driver. You will no longer appear in the driver dropdown.",
+            isRegisteredAsDriver: user.isRegisteredAsDriver
+        });
+
+    } catch (error) {
+        console.error("[v0] Error toggling self-driver registration:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error updating self-driver registration",
+            error: error.message
+        });
+    }
+}
+
+// Get B2C Partner's self-driver registration status
+export const getSelfDriverRegistrationStatus = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        const user = await User.findById(userId).select('isRegisteredAsDriver selfDriverAvailability fullName whatsappNumber profileImage');
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            isRegisteredAsDriver: user.isRegisteredAsDriver || false,
+            selfDriverInfo: user.isRegisteredAsDriver ? {
+                name: user.fullName,
+                phone: user.whatsappNumber,
+                profileImage: user.profileImage,
+                availabilityStatus: user.selfDriverAvailability?.status || 'available',
+                assignedSchedulesCount: user.selfDriverAvailability?.assignedSchedules?.length || 0
+            } : null
+        });
+
+    } catch (error) {
+        console.error("[v0] Error getting self-driver status:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error getting self-driver registration status",
             error: error.message
         });
     }

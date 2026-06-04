@@ -53,6 +53,11 @@ const CorporateAssignedVehiclesPage = () => {
         tripNumber: 1,
         departureTime: "",
         tripType: "One Way",
+        // Round trip specific time fields
+        pickupStartTime: "", // When pickup begins from origin
+        pickupEndTime: "", // When pickup ends (arrive at destination)
+        returnStartTime: "", // When return trip starts from destination
+        returnEndTime: "", // When return trip ends (back at origin)
         outboundStopPoints: [
           { location: "", time: "" },
           { location: "", time: "" },
@@ -69,19 +74,9 @@ const CorporateAssignedVehiclesPage = () => {
 
   const [modalType, setModalType] = useState(null);
 
-  // Trip creation state
-  const [tripForm, setTripForm] = useState({
-    routeId: "",
-    tripSchedules: [
-      {
-        startTime: "",
-        endTime: "",
-        tripType: "ONE_WAY", // Individual trip type per schedule
-        direction: "FORWARD",
-      },
-    ],
-  });
-  const [showTripModal, setShowTripModal] = useState(false);
+  // State for viewing trip details
+  const [showTripDetailsModal, setShowTripDetailsModal] = useState(false);
+  const [selectedRouteForDetails, setSelectedRouteForDetails] = useState(null);
 
   const fetchCorporateDrivers = useCallback(async () => {
     try {
@@ -150,18 +145,27 @@ const CorporateAssignedVehiclesPage = () => {
 
   useEffect(() => {
     if (assignedVehicles && assignedVehicles.length > 0) {
-      const extractedRoutes = assignedVehicles
-        .filter(
-          (vehicle) =>
-            vehicle.routeDetails &&
-            Object.keys(vehicle.routeDetails).length > 0,
-        )
-        .map((vehicle) => ({
-          ...vehicle.routeDetails,
-          vehicleId: vehicle._id,
-          vehicleName: vehicle.vehicleDetails?.vehicleName,
-          registrationNumber: vehicle.vehicleDetails?.registrationNumber,
-        }));
+      // Changed: Extract all routes from all vehicles (routeDetails is now an array)
+      const extractedRoutes = [];
+      assignedVehicles.forEach((vehicle) => {
+        // Handle both array (new) and single object (legacy) formats
+        const routeDetailsArray = Array.isArray(vehicle.routeDetails)
+          ? vehicle.routeDetails
+          : vehicle.routeDetails
+            ? [vehicle.routeDetails]
+            : [];
+
+        routeDetailsArray.forEach((routeDetail) => {
+          if (routeDetail && Object.keys(routeDetail).length > 0) {
+            extractedRoutes.push({
+              ...routeDetail,
+              assignedVehicleId: vehicle._id,
+              vehicleName: vehicle.vehicleDetails?.vehicleName,
+              registrationNumber: vehicle.vehicleDetails?.registrationNumber,
+            });
+          }
+        });
+      });
       setRoutes(extractedRoutes);
     }
   }, [assignedVehicles]);
@@ -211,6 +215,29 @@ const CorporateAssignedVehiclesPage = () => {
       return;
     }
 
+    // Validate trip times - ensure each trip has proper time fields
+    for (let i = 0; i < routeForm.tripTimes.length; i++) {
+      const trip = routeForm.tripTimes[i];
+      if (trip.tripType === "One Way") {
+        if (!trip.departureTime) {
+          alert(`Trip ${i + 1}: Please enter departure time for One Way trip`);
+          return;
+        }
+      } else if (trip.tripType === "Round Trip") {
+        if (
+          !trip.pickupStartTime ||
+          !trip.pickupEndTime ||
+          !trip.returnStartTime ||
+          !trip.returnEndTime
+        ) {
+          alert(
+            `Trip ${i + 1}: Please enter all time fields for Round Trip (Pickup Start/End and Return Start/End)`,
+          );
+          return;
+        }
+      }
+    }
+
     try {
       const response = await api.post(
         `/contracts/assign-route/${contractId}/${selectedVehicle._id}`,
@@ -252,124 +279,15 @@ const CorporateAssignedVehiclesPage = () => {
     });
   };
 
-  // Trip creation handlers
-  const handleTripSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!tripForm.routeId) {
-      alert("Please select a route");
-      return;
-    }
-
-    try {
-      const response = await api.post("/trips/create-from-route", tripForm);
-
-      if (response.data.success) {
-        alert(`Created ${response.data.data.trips.length} trips successfully`);
-        setShowTripModal(false);
-        setTripForm({
-          routeId: "",
-          tripSchedules: [
-            {
-              startTime: "",
-              endTime: "",
-              tripType: "ONE_WAY",
-              direction: "FORWARD",
-            },
-          ],
-        });
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to create trips");
-      console.error("Error creating trips:", err);
-    }
+  // View trip details handler - shows the trip times already defined in the route
+  const openTripDetailsModal = (route) => {
+    setSelectedRouteForDetails(route);
+    setShowTripDetailsModal(true);
   };
 
-  // Get route locations for dynamic direction labels
-  const getRouteLocations = () => {
-    const route = routes.find((r) => r._id === tripForm.routeId);
-    if (route) {
-      return {
-        from: route.fromLocation,
-        to: route.toLocation,
-      };
-    }
-    return { from: "Start Location", to: "End Location" };
-  };
-
-  const handleScheduleChange = (index, field, value) => {
-    setTripForm((prev) => ({
-      ...prev,
-      tripSchedules: prev.tripSchedules.map((schedule, i) =>
-        i === index ? { ...schedule, [field]: value } : schedule,
-      ),
-    }));
-  };
-
-  const handleTripTypeChangeForSchedule = (index, tripType) => {
-    setTripForm((prev) => ({
-      ...prev,
-      tripSchedules: prev.tripSchedules.map((schedule, i) => {
-        if (i === index) {
-          if (tripType === "ROUND_TRIP") {
-            // For round trip, automatically set both directions
-            return {
-              ...schedule,
-              tripType: tripType,
-              direction: "FORWARD", // Round trip always starts with forward
-            };
-          } else {
-            return {
-              ...schedule,
-              tripType: tripType,
-              direction: "FORWARD", // One way only forward
-            };
-          }
-        }
-        return schedule;
-      }),
-    }));
-  };
-
-  const addSchedule = () => {
-    setTripForm((prev) => ({
-      ...prev,
-      tripSchedules: [
-        ...prev.tripSchedules,
-        {
-          startTime: "",
-          endTime: "",
-          tripType: "ONE_WAY",
-          direction: "FORWARD",
-        },
-      ],
-    }));
-  };
-
-  const removeSchedule = (index) => {
-    if (tripForm.tripSchedules.length > 1) {
-      setTripForm((prev) => ({
-        ...prev,
-        tripSchedules: prev.tripSchedules.filter((_, i) => i !== index),
-      }));
-    }
-  };
-
-  const openTripModal = (routeId) => {
-    const route = routes.find((r) => r._id === routeId);
-    setTripForm((prev) => ({
-      ...prev,
-      routeId,
-      tripSchedules: [
-        {
-          startTime: "",
-          endTime: "",
-          tripType: "ONE_WAY",
-          direction: "FORWARD",
-        },
-      ],
-    }));
-    setShowTripModal(true);
+  const closeTripDetailsModal = () => {
+    setShowTripDetailsModal(false);
+    setSelectedRouteForDetails(null);
   };
 
   const openAssignmentModal = (vehicle, type) => {
@@ -443,10 +361,38 @@ const CorporateAssignedVehiclesPage = () => {
     setSelectedVehicle(null);
   };
 
-  const getAssignedVehicleRoute = (vehicle) => {
-    return vehicle.routeDetails && Object.keys(vehicle.routeDetails).length > 0
-      ? vehicle.routeDetails
-      : null;
+  // Changed: Returns array of routes (supports multiple routes per vehicle)
+  const getAssignedVehicleRoutes = (vehicle) => {
+    // Handle both array (new) and single object (legacy) formats
+    if (Array.isArray(vehicle.routeDetails)) {
+      return vehicle.routeDetails.filter((r) => r && Object.keys(r).length > 0);
+    }
+    // Legacy format - single routeDetails object
+    if (vehicle.routeDetails && Object.keys(vehicle.routeDetails).length > 0) {
+      return [vehicle.routeDetails];
+    }
+    return [];
+  };
+
+  // Delete a route
+  const handleDeleteRoute = async (vehicleId, routeId) => {
+    if (!window.confirm("Are you sure you want to delete this route?")) {
+      return;
+    }
+
+    try {
+      const response = await api.delete(
+        `/contracts/${contractId}/vehicles/${vehicleId}/routes/${routeId}`,
+      );
+
+      if (response.data.success) {
+        alert("Route deleted successfully");
+        await fetchAssignedVehicles();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete route");
+      console.error("Error deleting route:", err);
+    }
   };
 
   const getAssignmentStatus = (vehicle, type) => {
@@ -503,8 +449,12 @@ const CorporateAssignedVehiclesPage = () => {
         {
           tripNumber: prev.tripTimes.length + 1,
           departureTime: "",
-          returnTime: "",
           tripType: "One Way",
+          // Round trip time fields
+          pickupStartTime: "",
+          pickupEndTime: "",
+          returnStartTime: "",
+          returnEndTime: "",
           outboundStopPoints: [
             { location: "", time: "" },
             { location: "", time: "" },
@@ -540,17 +490,34 @@ const CorporateAssignedVehiclesPage = () => {
       ...prev,
       tripTimes: prev.tripTimes.map((trip, i) => {
         if (i === index) {
-          return {
-            ...trip,
-            tripType: tripType,
-            returnStopPoints:
-              tripType === "Round Trip"
-                ? [
-                    { location: "", time: "" },
-                    { location: "", time: "" },
-                  ]
-                : [],
-          };
+          if (tripType === "Round Trip") {
+            return {
+              ...trip,
+              tripType: tripType,
+              // Clear one-way field when switching to round trip
+              departureTime: "",
+              // Initialize round trip time fields
+              pickupStartTime: trip.pickupStartTime || "",
+              pickupEndTime: trip.pickupEndTime || "",
+              returnStartTime: trip.returnStartTime || "",
+              returnEndTime: trip.returnEndTime || "",
+              returnStopPoints: [
+                { location: "", time: "" },
+                { location: "", time: "" },
+              ],
+            };
+          } else {
+            return {
+              ...trip,
+              tripType: tripType,
+              // Clear round trip fields when switching to one-way
+              pickupStartTime: "",
+              pickupEndTime: "",
+              returnStartTime: "",
+              returnEndTime: "",
+              returnStopPoints: [],
+            };
+          }
         }
         return trip;
       }),
@@ -716,7 +683,7 @@ const CorporateAssignedVehiclesPage = () => {
             ) : (
               <div className="vehicles-grid">
                 {assignedVehicles.map((vehicle) => {
-                  const vehicleRoute = getAssignedVehicleRoute(vehicle);
+                  const vehicleRoutes = getAssignedVehicleRoutes(vehicle);
                   return (
                     <div key={vehicle._id} className="vehicle-card-premium">
                       <div className="vehicle-card-header-premium">
@@ -824,45 +791,75 @@ const CorporateAssignedVehiclesPage = () => {
                         )}
                       </div>
 
-                      {/* Route Section */}
-                      <div className="assignment-card">
+                      {/* Routes Section - Multiple Routes Support */}
+                      <div className="assignment-card routes-section">
                         <div className="assignment-card-header">
-                          <span className="assignment-label">Route</span>
+                          <span className="assignment-label">
+                            Routes ({vehicleRoutes.length})
+                          </span>
                           <span
                             className={`status-badge ${
-                              vehicleRoute ? "assigned" : "pending"
+                              vehicleRoutes.length > 0 ? "assigned" : "pending"
                             }`}
                           >
-                            {vehicleRoute ? "assigned" : "pending"}
+                            {vehicleRoutes.length > 0
+                              ? `${vehicleRoutes.length} route(s)`
+                              : "pending"}
                           </span>
                         </div>
-                        {vehicleRoute ? (
-                          <div className="assignment-details">
-                            <p className="route-text">
-                              <strong>📍 From:</strong>{" "}
-                              {vehicleRoute.fromLocation}
-                            </p>
-                            <p className="route-text">
-                              <strong>📍 To:</strong> {vehicleRoute.toLocation}
-                            </p>
-                            <p className="route-text">
-                              <strong>📅 Date:</strong>{" "}
-                              {new Date(
-                                vehicleRoute.routeStartDate,
-                              ).toLocaleDateString()}
-                            </p>
+
+                        {vehicleRoutes.length > 0 ? (
+                          <div className="routes-list">
+                            {vehicleRoutes.map((route, index) => (
+                              <div
+                                key={route._id || index}
+                                className="route-item"
+                              >
+                                <div className="route-item-header">
+                                  <span className="route-number">
+                                    Route {index + 1}
+                                  </span>
+                                  <button
+                                    className="route-delete-btn"
+                                    onClick={() =>
+                                      handleDeleteRoute(vehicle._id, route._id)
+                                    }
+                                    title="Delete this route"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                                <div className="route-item-details">
+                                  <p className="route-text">
+                                    <strong>From:</strong> {route.fromLocation}
+                                  </p>
+                                  <p className="route-text">
+                                    <strong>To:</strong> {route.toLocation}
+                                  </p>
+                                  {route.routeStartDate && (
+                                    <p className="route-text route-date">
+                                      <strong>Date:</strong>{" "}
+                                      {new Date(
+                                        route.routeStartDate,
+                                      ).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ) : (
-                          <p className="not-assigned">No route assigned yet</p>
+                          <p className="not-assigned">No routes assigned yet</p>
                         )}
-                        {!vehicleRoute && (
-                          <button
-                            className="assign-btn"
-                            onClick={() => openRouteModal(vehicle)}
-                          >
-                            Assign Route
-                          </button>
-                        )}
+
+                        {/* Always show Add Route button to support multiple routes */}
+                        <button
+                          className="assign-btn add-route-btn"
+                          onClick={() => openRouteModal(vehicle)}
+                        >
+                          + Add {vehicleRoutes.length > 0 ? "Another " : ""}
+                          Route
+                        </button>
                       </div>
                     </div>
                   );
@@ -918,13 +915,24 @@ const CorporateAssignedVehiclesPage = () => {
                         )}
                       </div>
 
-                      {/* Create Trips Button */}
+                      {/* View Trip Details Button */}
                       <div className="corporate-assigned-vehicles-route-actions">
                         <button
-                          className="corporate-assigned-vehicles-create-trips-btn"
-                          onClick={() => openTripModal(route._id)}
+                          className="corporate-assigned-vehicles-view-details-btn"
+                          onClick={() => openTripDetailsModal(route)}
                         >
-                          🚀 Create Trips
+                          View Trip Details
+                        </button>
+                        <button
+                          className="corporate-assigned-vehicles-delete-route-btn"
+                          onClick={() =>
+                            handleDeleteRoute(
+                              route.assignedVehicleId,
+                              route._id,
+                            )
+                          }
+                        >
+                          Delete Route
                         </button>
                       </div>
 
@@ -1038,7 +1046,7 @@ const CorporateAssignedVehiclesPage = () => {
                         </p>
                       </div>
                     </div>
-                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -1092,7 +1100,7 @@ const CorporateAssignedVehiclesPage = () => {
         )} */}
 
         {modalType === "driver" && selectedVehicle && (
-          <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-overlay">
             <div className="modal-premium" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header-premium">
                 <h2>Assign Driver</h2>
@@ -1151,7 +1159,7 @@ const CorporateAssignedVehiclesPage = () => {
 
         {/* Change Driver Modal - For updating CORPORATE assigned drivers */}
         {modalType === "changeDriver" && selectedVehicle && (
-          <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-overlay">
             <div className="modal-premium" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header-premium">
                 <h2>Change Driver</h2>
@@ -1228,7 +1236,7 @@ const CorporateAssignedVehiclesPage = () => {
 
         {/* Fuel Assignment Modal */}
         {modalType === "fuel" && selectedVehicle && (
-          <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-overlay">
             <div className="modal-premium" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header-premium">
                 <h2>Add Fuel Card</h2>
@@ -1274,7 +1282,7 @@ const CorporateAssignedVehiclesPage = () => {
 
         {/* Route Assignment Modal - Enhanced with Trip Times */}
         {modalType === "route" && selectedVehicle && (
-          <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-overlay">
             <div
               className="modal-premium modal-large modal-scrollable"
               onClick={(e) => e.stopPropagation()}
@@ -1403,21 +1411,7 @@ const CorporateAssignedVehiclesPage = () => {
                       </div>
 
                       <div className="form-row">
-                        <div className="form-group">
-                          <label>Departure Time *</label>
-                          <input
-                            type="time"
-                            value={trip.departureTime}
-                            onChange={(e) =>
-                              updateTripTime(
-                                tripIndex,
-                                "departureTime",
-                                e.target.value,
-                              )
-                            }
-                            required
-                          />
-                        </div>
+                        {/* Trip Type Selector - Always visible */}
                         <div className="form-group">
                           <label>Trip Type</label>
                           <select
@@ -1430,27 +1424,126 @@ const CorporateAssignedVehiclesPage = () => {
                             <option value="Round Trip">Round Trip</option>
                           </select>
                         </div>
-                        {trip.tripType === "Round Trip" && (
+
+                        {/* One Way: Single Departure Time */}
+                        {trip.tripType === "One Way" && (
                           <div className="form-group">
-                            <label>Return Time *</label>
+                            <label>Departure Time *</label>
                             <input
                               type="time"
-                              value={trip.returnTime || ""}
+                              value={trip.departureTime}
                               onChange={(e) =>
                                 updateTripTime(
                                   tripIndex,
-                                  "returnTime",
+                                  "departureTime",
                                   e.target.value,
                                 )
                               }
                               required
                             />
-                            <small className="form-hint">
-                              Time when vehicle returns from destination
-                            </small>
                           </div>
                         )}
                       </div>
+
+                      {/* Round Trip: 4 Time Fields */}
+                      {trip.tripType === "Round Trip" && (
+                        <div className="round-trip-times-container">
+                          <div className="round-trip-section">
+                            <h5 className="round-trip-section-title">
+                              <span className="section-icon outbound-icon"></span>
+                              Pickup Journey (
+                              {routeForm.fromLocation || "Origin"} &rarr;{" "}
+                              {routeForm.toLocation || "Destination"})
+                            </h5>
+                            <div className="form-row">
+                              <div className="form-group">
+                                <label>Pickup Start Time *</label>
+                                <input
+                                  type="time"
+                                  value={trip.pickupStartTime || ""}
+                                  onChange={(e) =>
+                                    updateTripTime(
+                                      tripIndex,
+                                      "pickupStartTime",
+                                      e.target.value,
+                                    )
+                                  }
+                                  required
+                                />
+                                <small className="form-hint">
+                                  When vehicle starts picking up employees
+                                </small>
+                              </div>
+                              <div className="form-group">
+                                <label>Pickup End Time *</label>
+                                <input
+                                  type="time"
+                                  value={trip.pickupEndTime || ""}
+                                  onChange={(e) =>
+                                    updateTripTime(
+                                      tripIndex,
+                                      "pickupEndTime",
+                                      e.target.value,
+                                    )
+                                  }
+                                  required
+                                />
+                                <small className="form-hint">
+                                  When vehicle arrives at destination
+                                </small>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="round-trip-section">
+                            <h5 className="round-trip-section-title">
+                              <span className="section-icon return-icon"></span>
+                              Return Journey (
+                              {routeForm.toLocation ||
+                                "Destination"} &rarr;{" "}
+                              {routeForm.fromLocation || "Origin"})
+                            </h5>
+                            <div className="form-row">
+                              <div className="form-group">
+                                <label>Return Start Time *</label>
+                                <input
+                                  type="time"
+                                  value={trip.returnStartTime || ""}
+                                  onChange={(e) =>
+                                    updateTripTime(
+                                      tripIndex,
+                                      "returnStartTime",
+                                      e.target.value,
+                                    )
+                                  }
+                                  required
+                                />
+                                <small className="form-hint">
+                                  When vehicle departs from destination
+                                </small>
+                              </div>
+                              <div className="form-group">
+                                <label>Return End Time *</label>
+                                <input
+                                  type="time"
+                                  value={trip.returnEndTime || ""}
+                                  onChange={(e) =>
+                                    updateTripTime(
+                                      tripIndex,
+                                      "returnEndTime",
+                                      e.target.value,
+                                    )
+                                  }
+                                  required
+                                />
+                                <small className="form-hint">
+                                  When employees are dropped back
+                                </small>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Outbound Stops (Morning: Home -> Office) */}
                       <div className="stop-points-container">
@@ -1660,174 +1753,187 @@ const CorporateAssignedVehiclesPage = () => {
           />
         )}
 
-        {/* Trip Creation Modal */}
-        {showTripModal && (
+        {/* Trip Details Modal - Shows the trip times already defined in the route */}
+        {showTripDetailsModal && selectedRouteForDetails && (
           <div
             className="corporate-assigned-vehicles-modal-overlay"
-            onClick={() => setShowTripModal(false)}
+            onClick={closeTripDetailsModal}
           >
             <div
               className="corporate-assigned-vehicles-modal-premium"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="corporate-assigned-vehicles-modal-header-premium">
-                <h2>🚀 Create Trips from Route</h2>
+                <h2>Trip Details</h2>
                 <button
                   className="corporate-assigned-vehicles-modal-close"
-                  onClick={() => setShowTripModal(false)}
+                  onClick={closeTripDetailsModal}
                 >
-                  ✕
+                  X
                 </button>
               </div>
-              <form
-                onSubmit={handleTripSubmit}
-                className="corporate-assigned-vehicles-modal-form"
-              >
-                <div className="corporate-assigned-vehicles-form-group">
-                  <label className="corporate-assigned-vehicles-form-label">
-                    Trip Schedules
-                  </label>
-                  <div className="corporate-assigned-vehicles-modal-trip-schedules">
-                    {tripForm.tripSchedules.map((schedule, index) => (
-                      <div
-                        key={index}
-                        className="corporate-assigned-vehicles-modal-schedule-item"
-                      >
-                        <div className="corporate-assigned-vehicles-modal-schedule-header">
-                          <span className="corporate-assigned-vehicles-modal-schedule-number">
-                            Trip {index + 1}
-                          </span>
-                          {tripForm.tripSchedules.length > 1 && (
-                            <button
-                              type="button"
-                              className="corporate-assigned-vehicles-modal-remove-schedule-btn"
-                              onClick={() => removeSchedule(index)}
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                        <div className="corporate-assigned-vehicles-modal-schedule-fields">
-                          <div className="corporate-assigned-vehicles-form-group">
-                            <label>Trip Type</label>
-                            <div className="corporate-assigned-vehicles-modal-trip-type-selector-small">
-                              <button
-                                type="button"
-                                className={`corporate-assigned-vehicles-modal-trip-type-btn-small ${schedule.tripType === "ONE_WAY" ? "corporate-assigned-vehicles-modal-selected" : ""}`}
-                                onClick={() =>
-                                  handleTripTypeChangeForSchedule(
-                                    index,
-                                    "ONE_WAY",
-                                  )
-                                }
-                              >
-                                🚗 One Way
-                              </button>
-                              <button
-                                type="button"
-                                className={`corporate-assigned-vehicles-modal-trip-type-btn-small ${schedule.tripType === "ROUND_TRIP" ? "corporate-assigned-vehicles-modal-selected" : ""}`}
-                                onClick={() =>
-                                  handleTripTypeChangeForSchedule(
-                                    index,
-                                    "ROUND_TRIP",
-                                  )
-                                }
-                              >
-                                🔄 Round Trip
-                              </button>
-                            </div>
-                          </div>
-                          <div className="corporate-assigned-vehicles-modal-form-row">
-                            <div className="corporate-assigned-vehicles-form-group">
-                              <label>Start Time</label>
-                              <input
-                                type="time"
-                                value={schedule.startTime}
-                                onChange={(e) =>
-                                  handleScheduleChange(
-                                    index,
-                                    "startTime",
-                                    e.target.value,
-                                  )
-                                }
-                                required
-                              />
-                            </div>
-                            <div className="corporate-assigned-vehicles-form-group">
-                              <label>End Time</label>
-                              <input
-                                type="time"
-                                value={schedule.endTime}
-                                onChange={(e) =>
-                                  handleScheduleChange(
-                                    index,
-                                    "endTime",
-                                    e.target.value,
-                                  )
-                                }
-                                required
-                              />
-                            </div>
-                          </div>
-                          <div className="corporate-assigned-vehicles-form-group">
-                            <label>Trip Details</label>
-                            <div className="corporate-assigned-vehicles-modal-trip-info-display">
-                              {(() => {
-                                const { from, to } = getRouteLocations();
-                                if (schedule.tripType === "ONE_WAY") {
-                                  return (
-                                    <div className="corporate-assigned-vehicles-modal-trip-info-one-way">
-                                      <span className="corporate-assigned-vehicles-modal-trip-icon">
-                                        🚗
-                                      </span>
-                                      <span className="corporate-assigned-vehicles-modal-trip-text">
-                                        One Way: {from} → {to}
-                                      </span>
-                                    </div>
-                                  );
-                                } else {
-                                  return (
-                                    <div className="corporate-assigned-vehicles-modal-trip-info-round-trip">
-                                      <span className="corporate-assigned-vehicles-modal-trip-icon">
-                                        🔄
-                                      </span>
-                                      <span className="corporate-assigned-vehicles-modal-trip-text">
-                                        Round Trip: {from} → {to} → {from}
-                                      </span>
-                                    </div>
-                                  );
-                                }
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      className="corporate-assigned-vehicles-modal-add-schedule-btn"
-                      onClick={addSchedule}
-                    >
-                      + Add Another Schedule
-                    </button>
-                  </div>
+              <div className="corporate-assigned-vehicles-modal-form">
+                {/* Route Info */}
+                <div className="corporate-assigned-vehicles-trip-details-route-info">
+                  <h3>
+                    {selectedRouteForDetails.fromLocation} to{" "}
+                    {selectedRouteForDetails.toLocation}
+                  </h3>
+                  <p>
+                    <strong>Start Date:</strong>{" "}
+                    {new Date(
+                      selectedRouteForDetails.routeStartDate,
+                    ).toLocaleDateString()}
+                  </p>
+                  {selectedRouteForDetails.totalDistance && (
+                    <p>
+                      <strong>Distance:</strong>{" "}
+                      {selectedRouteForDetails.totalDistance}
+                    </p>
+                  )}
+                  {selectedRouteForDetails.estimatedDuration && (
+                    <p>
+                      <strong>Duration:</strong>{" "}
+                      {selectedRouteForDetails.estimatedDuration}
+                    </p>
+                  )}
+                  {selectedRouteForDetails.availableDays &&
+                    selectedRouteForDetails.availableDays.length > 0 && (
+                      <p>
+                        <strong>Available Days:</strong>{" "}
+                        {selectedRouteForDetails.availableDays.join(", ")}
+                      </p>
+                    )}
                 </div>
+
+                {/* Trip Times */}
+                <div className="corporate-assigned-vehicles-trip-details-section">
+                  <h4>Scheduled Trips</h4>
+                  {selectedRouteForDetails.tripTimes &&
+                  selectedRouteForDetails.tripTimes.length > 0 ? (
+                    <div className="corporate-assigned-vehicles-trip-times-list">
+                      {selectedRouteForDetails.tripTimes.map((trip, index) => (
+                        <div
+                          key={index}
+                          className="corporate-assigned-vehicles-trip-time-card"
+                        >
+                          <div className="corporate-assigned-vehicles-trip-time-header">
+                            <span className="corporate-assigned-vehicles-trip-number">
+                              Trip {trip.tripNumber || index + 1}
+                            </span>
+                            <span
+                              className={`corporate-assigned-vehicles-trip-type-badge ${trip.tripType === "Round Trip" ? "round-trip" : "one-way"}`}
+                            >
+                              {trip.tripType || "One Way"}
+                            </span>
+                          </div>
+                          <div className="corporate-assigned-vehicles-trip-time-details">
+                            {trip.tripType === "Round Trip" ? (
+                              <>
+                                <div className="corporate-assigned-vehicles-trip-journey">
+                                  <strong>Pickup Journey:</strong>
+                                  <p>
+                                    {selectedRouteForDetails.fromLocation} to{" "}
+                                    {selectedRouteForDetails.toLocation}
+                                  </p>
+                                  <p>
+                                    Start:{" "}
+                                    {trip.pickupStartTime ||
+                                      trip.departureTime ||
+                                      "N/A"}{" "}
+                                    | End: {trip.pickupEndTime || "N/A"}
+                                  </p>
+                                </div>
+                                <div className="corporate-assigned-vehicles-trip-journey">
+                                  <strong>Return Journey:</strong>
+                                  <p>
+                                    {selectedRouteForDetails.toLocation} to{" "}
+                                    {selectedRouteForDetails.fromLocation}
+                                  </p>
+                                  <p>
+                                    Start:{" "}
+                                    {trip.returnStartTime ||
+                                      trip.returnDepartureTime ||
+                                      "N/A"}{" "}
+                                    | End:{" "}
+                                    {trip.returnEndTime ||
+                                      trip.returnArrivalTime ||
+                                      "N/A"}
+                                  </p>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="corporate-assigned-vehicles-trip-journey">
+                                <strong>One Way Journey:</strong>
+                                <p>
+                                  {selectedRouteForDetails.fromLocation} to{" "}
+                                  {selectedRouteForDetails.toLocation}
+                                </p>
+                                <p>Departure: {trip.departureTime || "N/A"}</p>
+                              </div>
+                            )}
+
+                            {/* Outbound Stop Points */}
+                            {trip.outboundStopPoints &&
+                              trip.outboundStopPoints.length > 0 && (
+                                <div className="corporate-assigned-vehicles-trip-stops">
+                                  <strong>Outbound Stops:</strong>
+                                  <ul>
+                                    {trip.outboundStopPoints.map(
+                                      (stop, idx) => (
+                                        <li key={idx}>
+                                          {stop.location} - {stop.time}
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+
+                            {/* Return Stop Points (for Round Trip) */}
+                            {trip.tripType === "Round Trip" &&
+                              trip.returnStopPoints &&
+                              trip.returnStopPoints.length > 0 && (
+                                <div className="corporate-assigned-vehicles-trip-stops">
+                                  <strong>Return Stops:</strong>
+                                  <ul>
+                                    {trip.returnStopPoints.map((stop, idx) => (
+                                      <li key={idx}>
+                                        {stop.location} - {stop.time}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="corporate-assigned-vehicles-no-trips">
+                      No trip times defined for this route.
+                    </p>
+                  )}
+                </div>
+
+                {/* Route Notes */}
+                {selectedRouteForDetails.routeNotes && (
+                  <div className="corporate-assigned-vehicles-trip-details-notes">
+                    <h4>Notes</h4>
+                    <p>{selectedRouteForDetails.routeNotes}</p>
+                  </div>
+                )}
+
                 <div className="corporate-assigned-vehicles-modal-form-actions">
                   <button
                     type="button"
-                    className="corporate-assigned-vehicles-modal-btn-secondary"
-                    onClick={() => setShowTripModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
                     className="corporate-assigned-vehicles-modal-btn-primary"
+                    onClick={closeTripDetailsModal}
                   >
-                    Create Trips
+                    Close
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
         )}
@@ -1835,6 +1941,6 @@ const CorporateAssignedVehiclesPage = () => {
       <Footer />
     </>
   );
-};;
+};
 
 export default CorporateAssignedVehiclesPage;

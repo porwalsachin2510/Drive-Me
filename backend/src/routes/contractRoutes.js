@@ -17,6 +17,8 @@ import {
     assignRouteToVehicle,
     assignDriverOrFuelToVehicle,
     getContractRoutes,
+    getVehicleRoutes,
+    deleteVehicleRoute,
     requestDueDateExtension,
     respondToDueDateExtension,
     getDueDateExtensionRequests,
@@ -118,6 +120,12 @@ router.put("/update-corporate-driver/:contractId/:assignedVehicleId", verifyToke
 
 // Get contract routes
 router.get("/routes/:contractId", verifyToken, checkCorporateOwnerRole, getContractRoutes)
+
+// Get all routes for a specific vehicle in a contract
+router.get("/:contractId/vehicles/:assignedVehicleId/routes", verifyToken, checkCorporateOwnerRole, getVehicleRoutes)
+
+// Delete a route from a vehicle
+router.delete("/:contractId/vehicles/:assignedVehicleId/routes/:routeId", verifyToken, checkCorporateOwnerRole, deleteVehicleRoute)
 
 // @route   POST /api/contracts/:contractId/request-due-date-extension
 // @desc    Corporate requests due date extension for final payment

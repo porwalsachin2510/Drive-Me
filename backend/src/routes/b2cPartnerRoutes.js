@@ -23,6 +23,8 @@ import {
     getMyAvailabilityStatus,
     updateAvailableTimeSlots,
     getAvailableDriversForAssignment,
+    toggleSelfDriverRegistration,
+    getSelfDriverRegistrationStatus,
 } from "../controllers/driverController.js"
 import {
     createB2CPartnerRoute,
@@ -72,6 +74,11 @@ router.put("/vehicles/:vehicleId/status", verifyToken, checkB2CPartnerRole, upda
 router.get("/drivers", verifyToken, checkB2CPartnerRole, getB2CPartnerDrivers)
 router.post("/drivers/availability", verifyToken, checkB2CPartnerRole, getB2CPartnerDriverAvailability)
 router.get("/drivers/available-for-assignment", verifyToken, checkB2CPartnerRole, getAvailableDriversForAssignment)
+
+// B2C Partner Self-Driver Registration (to register/unregister themselves as a driver)
+router.get("/self-driver/status", verifyToken, checkB2CPartnerRole, getSelfDriverRegistrationStatus)
+router.post("/self-driver/toggle", verifyToken, checkB2CPartnerRole, toggleSelfDriverRegistration)
+
 router.post(
     "/drivers",
     verifyToken,

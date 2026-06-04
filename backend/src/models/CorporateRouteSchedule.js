@@ -28,13 +28,29 @@ const corporateRouteScheduleSchema = new mongoose.Schema({
             required: true,
             default: 1,
         },
+        // For One Way trips - single departure time
         departureTime: {
             type: String,
-            required: true,
+            required: false, // Not required for Round Trip (uses pickupStartTime instead)
         },
         arrivalTime: {
             type: String,
         },
+        // For Round Trip - pickup journey times
+        pickupStartTime: {
+            type: String, // When vehicle starts picking up employees
+        },
+        pickupEndTime: {
+            type: String, // When vehicle arrives at destination
+        },
+        // For Round Trip - return journey times
+        returnStartTime: {
+            type: String, // When vehicle departs from destination (returnDepartureTime alias)
+        },
+        returnEndTime: {
+            type: String, // When employees are dropped back (returnArrivalTime alias)
+        },
+        // Legacy fields for backward compatibility
         returnDepartureTime: {
             type: String,
         },
@@ -145,11 +161,28 @@ corporateRouteScheduleSchema.index({ corporateId: 1, routeId: 1 });
 corporateRouteScheduleSchema.index({ contractId: 1 });
 corporateRouteScheduleSchema.index({ isActive: 1, status: 1 });
 
-// Pre-save middleware to set default available days if empty
+// Pre-save middleware to set default available days if empty and validate trip times
 corporateRouteScheduleSchema.pre('save', function (next) {
     if (this.isModified('availableDays') && this.availableDays.length === 0) {
         this.availableDays = ["MON", "TUE", "WED", "THU", "FRI"];
     }
+
+    // Validate tripTimes: ensure each trip has proper time fields based on tripType
+    if (this.tripTimes && this.tripTimes.length > 0) {
+        for (let i = 0; i < this.tripTimes.length; i++) {
+            const trip = this.tripTimes[i];
+            const isRoundTrip = trip.tripType === "Round Trip";
+
+            if (isRoundTrip) {
+                // For Round Trip: use pickupStartTime as departureTime if not set
+                if (!trip.departureTime && trip.pickupStartTime) {
+                    trip.departureTime = trip.pickupStartTime;
+                }
+            }
+            // For One Way: departureTime should already be set from frontend
+        }
+    }
+
     next();
 });
 

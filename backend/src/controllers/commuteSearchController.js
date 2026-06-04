@@ -442,9 +442,34 @@ export const searchCommuteRoutes = async (req, res) => {
                NORMAL / B2C COMMUTER ROUTES
             ====================================================== */
 
+        // Helper function to determine route country from location names
+        const getRouteCountry = (fromLocation, toLocation) => {
+            const allLocations = `${fromLocation || ''} ${toLocation || ''}`.toLowerCase();
+
+            // Kuwait indicators
+            const kuwaitIndicators = ['kuwait', 'salwa', 'jahra', 'salmiya', 'hawally', 'farwaniya', 'ahmadi', 'mangaf', 'fahaheel', 'fintas', 'mahboula', 'khaitan', 'jleeb', 'mubarak'];
+
+            // UAE indicators
+            const uaeIndicators = ['dubai', 'abu dhabi', 'sharjah', 'ajman', 'fujairah', 'ras al', 'umm al', 'al ain', 'deira', 'bur dubai', 'jumeirah', 'marina', 'jebel ali', 'silicon oasis', 'business bay', 'creek', 'mall of emirates', 'burjuman'];
+
+            // Check for Kuwait locations
+            for (const indicator of kuwaitIndicators) {
+                if (allLocations.includes(indicator)) {
+                    return 'Kuwait';
+                }
+            }
+
+            // Check for UAE locations
+            for (const indicator of uaeIndicators) {
+                if (allLocations.includes(indicator)) {
+                    return 'UAE';
+                }
+            }
+
+            return null; // Unknown country
+        };
 
         // Get B2C Partner Routes directly from B2CPartnerRoute collection
-        // Relaxed query to match publicSearchRoutes behavior
         const b2cRoutes = await B2CPartnerRoute.find({
             status: "Active",
             $or: [
@@ -452,15 +477,36 @@ export const searchCommuteRoutes = async (req, res) => {
                 { isActive: { $exists: false } },
                 { isActive: null }
             ]
-        }).populate('b2cPartnerId', 'fullName companyLogo profileImage')
+        }).populate('b2cPartnerId', 'fullName companyLogo profileImage country')
             .populate('assignedVehicle')
             .populate('assignedDriver')
             .populate('tags', 'label color textColor icon category')
 
         for (const route of b2cRoutes) {
 
+            // Filter by country based on route locations
+            if (nationality) {
+                const countryMapping = {
+                    'UAE': 'UAE',
+                    'United Arab Emirates': 'UAE',
+                    'Kuwait': 'Kuwait',
+                    'KW': 'Kuwait',
+                    'AE': 'UAE'
+                };
+                const userCountry = countryMapping[nationality] || nationality;
+                const routeCountry = getRouteCountry(route.fromLocation, route.toLocation);
+
+                // Only show routes that match the user's country
+                // If routeCountry is null (unknown location like India), skip the route for UAE/Kuwait users
+                // This ensures only verified UAE/Kuwait routes are shown to respective users
+                if (userCountry === 'UAE' || userCountry === 'Kuwait') {
+                    if (routeCountry !== userCountry) {
+                        continue; // Skip routes that don't match OR are from unknown countries
+                    }
+                }
+            }
+
             // Get ALL schedules for this route (not just one)
-            console.log("Finding all schedules for route:", route._id)
             const schedules = await B2CPartnerSchedule.find({
                 routeId: route._id,
                 isActive: true,
@@ -681,7 +727,16 @@ export const searchCommuteRoutes = async (req, res) => {
             const intermediateStopsFromPath = travelData.travelPath
                 .filter(stop => !stop.isFromLocation && !stop.isToLocation && stop.isStop)
                 .map(stop => ({ location: stop.location, time: stop.time }))
-            
+
+            // Calculate dynamic available seats based on active monthly passes
+            const activePassCountAuth = await B2CMonthlyPass.countDocuments({
+                routeId: route._id,
+                status: { $in: ['ACTIVE', 'active', 'Active'] },
+                endDate: { $gte: new Date() }
+            });
+            const totalSeatsAuth = route.totalSeats || route.assignedVehicle?.seatingCapacity || 35;
+            const dynamicAvailableSeatsAuth = Math.max(0, totalSeatsAuth - activePassCountAuth);
+
             routes.push({
                 routeId: route._id,
                 operator: route.b2cPartnerId?.fullName || "Unknown Operator",
@@ -716,8 +771,8 @@ export const searchCommuteRoutes = async (req, res) => {
                 oneWayPrice: route.pricing?.oneWayPrice,
                 monthlyPrice: route.pricing?.monthlyOneWayPrice,
                 monthlyRoundTripPrice: route.pricing?.monthlyRoundTripPrice,
-                availableSeats: route.availableSeats,
-                totalSeats: route.totalSeats,
+                availableSeats: dynamicAvailableSeatsAuth,
+                totalSeats: totalSeatsAuth,
                 dayMatching: travelData.dayMatching,
 
                 driverName: route.assignedDriver?.name,
@@ -759,6 +814,7 @@ export const publicSearchRoutes = async (req, res) => {
             dropoffLocation,
             filterType,
             selectedDays,
+            nationality, // Country filter from frontend
         } = req.query
 
 
@@ -774,8 +830,34 @@ export const publicSearchRoutes = async (req, res) => {
 
         const routes = []
 
-        // Get all active B2C Partner Routes - relaxed query to include routes with Active status
-        // isActive field may not be set on older routes, so we don't require it
+        // Helper function to determine route country from location names
+        const getRouteCountry = (fromLocation, toLocation) => {
+            const allLocations = `${fromLocation || ''} ${toLocation || ''}`.toLowerCase();
+
+            // Kuwait indicators
+            const kuwaitIndicators = ['kuwait', 'salwa', 'jahra', 'salmiya', 'hawally', 'farwaniya', 'ahmadi', 'mangaf', 'fahaheel', 'fintas', 'mahboula', 'khaitan', 'jleeb', 'mubarak'];
+
+            // UAE indicators
+            const uaeIndicators = ['dubai', 'abu dhabi', 'sharjah', 'ajman', 'fujairah', 'ras al', 'umm al', 'al ain', 'deira', 'bur dubai', 'jumeirah', 'marina', 'jebel ali', 'silicon oasis', 'business bay', 'creek', 'mall of emirates', 'burjuman'];
+
+            // Check for Kuwait locations
+            for (const indicator of kuwaitIndicators) {
+                if (allLocations.includes(indicator)) {
+                    return 'Kuwait';
+                }
+            }
+
+            // Check for UAE locations
+            for (const indicator of uaeIndicators) {
+                if (allLocations.includes(indicator)) {
+                    return 'UAE';
+                }
+            }
+
+            return null; // Unknown country
+        };
+
+        // Get all active B2C Partner Routes
         const b2cRoutes = await B2CPartnerRoute.find({
             status: "Active",
             $or: [
@@ -783,12 +865,34 @@ export const publicSearchRoutes = async (req, res) => {
                 { isActive: { $exists: false } },
                 { isActive: null }
             ]
-        }).populate('b2cPartnerId', 'fullName companyLogo profileImage')
+        }).populate('b2cPartnerId', 'fullName companyLogo profileImage country')
             .populate('assignedVehicle')
             .populate('assignedDriver')
             .populate('tags', 'label color textColor icon category')
 
         for (const route of b2cRoutes) {
+
+            // Filter by country based on route locations
+            if (nationality) {
+                const countryMapping = {
+                    'UAE': 'UAE',
+                    'United Arab Emirates': 'UAE',
+                    'Kuwait': 'Kuwait',
+                    'KW': 'Kuwait',
+                    'AE': 'UAE'
+                };
+                const userCountry = countryMapping[nationality] || nationality;
+                const routeCountry = getRouteCountry(route.fromLocation, route.toLocation);
+
+                // Only show routes that match the user's country
+                // If routeCountry is null (unknown location), skip the route for UAE/Kuwait users
+                // This ensures only verified UAE/Kuwait routes are shown to respective users
+                if (userCountry === 'UAE' || userCountry === 'Kuwait') {
+                    if (routeCountry !== userCountry) {
+                        continue; // Skip routes that don't match OR are from unknown countries
+                    }
+                }
+            }
 
             // Get schedule for this route (optional - route might not have a schedule yet)
             const schedule = await B2CPartnerSchedule.findOne({
@@ -930,7 +1034,7 @@ export const publicSearchRoutes = async (req, res) => {
             const intermediateStopsFromPath = travelData.travelPath
                 .filter(stop => !stop.isFromLocation && !stop.isToLocation && stop.isStop)
                 .map(stop => ({ location: stop.location, time: stop.time }))
-            
+
             // Get upcoming trips
             const today = new Date()
             today.setHours(0, 0, 0, 0)
@@ -953,6 +1057,15 @@ export const publicSearchRoutes = async (req, res) => {
                 availableSeats: trip.availableSeats,
                 pricing: trip.pricing,
             }))
+
+            // Calculate dynamic available seats based on active monthly passes
+            const activePassCount = await B2CMonthlyPass.countDocuments({
+                routeId: route._id,
+                status: { $in: ['ACTIVE', 'active', 'Active'] },
+                endDate: { $gte: new Date() }
+            });
+            const totalSeats = route.totalSeats || route.assignedVehicle?.seatingCapacity || 35;
+            const dynamicAvailableSeats = Math.max(0, totalSeats - activePassCount);
 
             routes.push({
                 routeId: route._id,
@@ -986,8 +1099,8 @@ export const publicSearchRoutes = async (req, res) => {
                 oneWayPrice: route.pricing?.oneWayPrice,
                 monthlyPrice: route.pricing?.monthlyOneWayPrice,
                 monthlyRoundTripPrice: route.pricing?.monthlyRoundTripPrice,
-                availableSeats: route.availableSeats,
-                totalSeats: route.totalSeats,
+                availableSeats: dynamicAvailableSeats,
+                totalSeats: totalSeats,
                 dayMatching: travelData.dayMatching,
                 stopPoints: route.stopPoints || [],
                 scheduleStops: intermediateStopsFromPath, // Only stops between pickup and dropoff
@@ -1250,7 +1363,7 @@ export const respondToRouteRequest = async (req, res) => {
         })
 
         console.log(`[v0] Route request response notification sent to commuter: ${routeRequest.passengerId}`)
-        
+
         return res.status(200).json({
             success: true,
             message: `Route request ${status.toLowerCase()} successfully`,
@@ -1286,7 +1399,7 @@ export const getB2CPartnerSubscriptionRenewals = async (req, res) => {
         const renewalData = passes.map(pass => {
             const endDate = new Date(pass.endDate)
             const daysRemaining = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24))
-            
+
             let renewalStatus = "active"
             if (daysRemaining <= 0) renewalStatus = "expired"
             else if (daysRemaining <= 7) renewalStatus = "expiring_soon"

@@ -487,7 +487,7 @@ export const uploadContractDocument = async (req, res) => {
 //         const { signature, ipAddress } = req.body
 
 //         console.log(contractId, userId, userRole, signature, ipAddress);
-        
+
 //         const contract = await Contract.findById(contractId).populate({
 //             path: "quotationId",
 //             select: "quotationNumber requirements quotedPrice",
@@ -504,7 +504,7 @@ export const uploadContractDocument = async (req, res) => {
 //                 path: "vehicles.vehicleId",
 //                 select: "vehicleName vehicleCategory registrationNumber photos",
 //             })
-        
+
 //         console.log("contract", contract);
 
 //         if (!contract) {
@@ -1343,7 +1343,7 @@ export const getAssignedVehiclesForContract = async (req, res) => {
             .populate({
                 path: "vehicles.assignedVehicles.routeDetails",
                 select:
-                    "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes status",
+                    "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes status tripTimes availableDays",
             })
             .populate({
                 path: "fleetOwnerId",
@@ -1453,7 +1453,7 @@ export const assignDriverOrFuelToVehicle = async (req, res) => {
             {
                 path: "vehicles.assignedVehicles.routeDetails",
                 select:
-                    "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes status",
+                    "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes status tripTimes availableDays",
             },
         ])
 
@@ -1591,6 +1591,23 @@ export const assignRouteToVehicle = async (req, res) => {
             console.log("[v0] Warning: Vehicle has no seating capacity defined, defaulting to 0")
         }
 
+        // Format trip times for Route model (handles both One Way and Round Trip)
+        const formattedTripTimesForRoute = (tripTimes || []).map((trip, index) => {
+            const isRoundTrip = trip.tripType === "Round Trip";
+            return {
+                tripNumber: index + 1,
+                tripType: trip.tripType || "One Way",
+                // For One Way: use departureTime, For Round Trip: use pickupStartTime as departureTime
+                departureTime: isRoundTrip ? (trip.pickupStartTime || '') : (trip.departureTime || ''),
+                pickupStartTime: trip.pickupStartTime || null,
+                pickupEndTime: trip.pickupEndTime || null,
+                returnStartTime: trip.returnStartTime || null,
+                returnEndTime: trip.returnEndTime || null,
+                outboundStopPoints: (trip.outboundStopPoints || []).filter(stop => stop.location && stop.location.trim() !== ''),
+                returnStopPoints: (trip.returnStopPoints || []).filter(stop => stop.location && stop.location.trim() !== '')
+            };
+        });
+
         // Create new route
         const route = new Route({
             contractId,
@@ -1606,6 +1623,8 @@ export const assignRouteToVehicle = async (req, res) => {
             estimatedDuration,
             availableDays,
             routeNotes,
+            // Store trip times with all time fields (supports both one-way and round-trip)
+            tripTimes: formattedTripTimesForRoute,
             assignedBy: corporateOwnerId,
             totalSeats: seatingCapacity,
             availableSeats: seatingCapacity,
@@ -1635,12 +1654,27 @@ export const assignRouteToVehicle = async (req, res) => {
                         time: stop.time || ''
                     }));
 
+                // Handle both One Way and Round Trip scenarios
+                // For Round Trip: use pickupStartTime as departureTime if departureTime is not set
+                const isRoundTrip = trip.tripType === "Round Trip";
+                const effectiveDepartureTime = isRoundTrip
+                    ? (trip.pickupStartTime || trip.departureTime || '')
+                    : (trip.departureTime || '');
+
                 return {
                     tripNumber: index + 1,
-                    departureTime: trip.departureTime,
-                    arrivalTime: trip.arrivalTime || null,
-                    returnDepartureTime: trip.returnTime || null,
-                    returnArrivalTime: trip.returnArrivalTime || null,
+                    // For One Way: use departureTime directly
+                    // For Round Trip: use pickupStartTime as departureTime
+                    departureTime: effectiveDepartureTime,
+                    arrivalTime: isRoundTrip ? (trip.pickupEndTime || trip.arrivalTime || null) : (trip.arrivalTime || null),
+                    // Round Trip specific times
+                    pickupStartTime: trip.pickupStartTime || null,
+                    pickupEndTime: trip.pickupEndTime || null,
+                    returnStartTime: trip.returnStartTime || null,
+                    returnEndTime: trip.returnEndTime || null,
+                    // Legacy field mapping for backward compatibility
+                    returnDepartureTime: trip.returnStartTime || trip.returnTime || null,
+                    returnArrivalTime: trip.returnEndTime || trip.returnArrivalTime || null,
                     tripType: trip.tripType || "One Way",
                     outboundStopPoints: validOutboundStops,
                     returnStopPoints: validReturnStops
@@ -1673,7 +1707,12 @@ export const assignRouteToVehicle = async (req, res) => {
             const assignedVehicle = vehicleGroup.assignedVehicles.find((v) => v._id.toString() === assignedVehicleId)
 
             if (assignedVehicle) {
-                assignedVehicle.routeDetails = route._id
+                // Changed: Push to array instead of replacing single value
+                // This allows multiple routes per vehicle
+                if (!assignedVehicle.routeDetails || !Array.isArray(assignedVehicle.routeDetails)) {
+                    assignedVehicle.routeDetails = []
+                }
+                assignedVehicle.routeDetails.push(route._id)
                 updated = true
                 break
             }
@@ -1702,7 +1741,7 @@ export const assignRouteToVehicle = async (req, res) => {
             {
                 path: "vehicles.assignedVehicles.routeDetails",
                 select:
-                    "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes totalSeats availableSeats status",
+                    "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes totalSeats availableSeats status tripTimes availableDays",
             },
         ])
 
@@ -1761,6 +1800,129 @@ export const getContractRoutes = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to fetch routes",
+            error: error.message,
+        })
+    }
+}
+
+// @desc    Get all routes for a specific vehicle in a contract
+// @route   GET /api/contracts/:contractId/vehicles/:assignedVehicleId/routes
+// @access  Private (CORPORATE only)
+export const getVehicleRoutes = async (req, res) => {
+    try {
+        const { contractId, assignedVehicleId } = req.params
+        const corporateOwnerId = req.userId
+
+        // Verify contract ownership
+        const contract = await Contract.findOne({
+            _id: contractId,
+            corporateOwnerId,
+        })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found",
+            })
+        }
+
+        // Get all routes for this specific vehicle
+        const routes = await Route.find({
+            contractId,
+            assignedVehicleId
+        })
+            .populate("assignedBy", "fullName")
+            .sort({ createdAt: -1 })
+
+        res.status(200).json({
+            success: true,
+            data: {
+                routes,
+                count: routes.length
+            },
+        })
+    } catch (error) {
+        console.error("[v0] Error fetching vehicle routes:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch vehicle routes",
+            error: error.message,
+        })
+    }
+}
+
+// @desc    Delete a route from a vehicle
+// @route   DELETE /api/contracts/:contractId/vehicles/:assignedVehicleId/routes/:routeId
+// @access  Private (CORPORATE only)
+export const deleteVehicleRoute = async (req, res) => {
+    try {
+        const { contractId, assignedVehicleId, routeId } = req.params
+        const corporateOwnerId = req.userId
+
+        // Verify contract ownership
+        const contract = await Contract.findOne({
+            _id: contractId,
+            corporateOwnerId,
+        })
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found",
+            })
+        }
+
+        // Find and verify the route exists
+        const route = await Route.findOne({
+            _id: routeId,
+            contractId,
+            assignedVehicleId,
+        })
+
+        if (!route) {
+            return res.status(404).json({
+                success: false,
+                message: "Route not found",
+            })
+        }
+
+        // Remove route reference from the contract's assigned vehicle
+        let updated = false
+        for (const vehicleGroup of contract.vehicles) {
+            const assignedVehicle = vehicleGroup.assignedVehicles.find(
+                (v) => v._id.toString() === assignedVehicleId
+            )
+
+            if (assignedVehicle && assignedVehicle.routeDetails) {
+                // Remove the route from the array
+                assignedVehicle.routeDetails = assignedVehicle.routeDetails.filter(
+                    (r) => r.toString() !== routeId
+                )
+                updated = true
+                break
+            }
+        }
+
+        if (updated) {
+            contract.markModified("vehicles")
+            await contract.save()
+        }
+
+        // Delete associated CorporateRouteSchedule
+        await CorporateRouteSchedule.deleteMany({ routeId })
+
+        // Delete the route
+        await Route.findByIdAndDelete(routeId)
+
+        res.status(200).json({
+            success: true,
+            message: "Route deleted successfully",
+        })
+    } catch (error) {
+        console.error("[v0] Error deleting route:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to delete route",
             error: error.message,
         })
     }
@@ -1913,7 +2075,7 @@ export const requestDueDateExtension = async (req, res) => {
         }
 
         // Check if there's already a pending request
-        if (contract.dueDateExtensionRequest?.isRequested && 
+        if (contract.dueDateExtensionRequest?.isRequested &&
             contract.dueDateExtensionRequest?.status === "PENDING") {
             return res.status(400).json({
                 success: false,
@@ -1946,7 +2108,7 @@ export const requestDueDateExtension = async (req, res) => {
             newProposedDate: new Date(newProposedDate),
             reason,
             status: "PENDING",
-            history: contract.dueDateExtensionRequest?.history 
+            history: contract.dueDateExtensionRequest?.history
                 ? [...contract.dueDateExtensionRequest.history, historyEntry]
                 : [historyEntry],
         }
@@ -2010,7 +2172,7 @@ export const respondToDueDateExtension = async (req, res) => {
             })
         }
 
-        if (!contract.dueDateExtensionRequest?.isRequested || 
+        if (!contract.dueDateExtensionRequest?.isRequested ||
             contract.dueDateExtensionRequest?.status !== "PENDING") {
             return res.status(400).json({
                 success: false,
@@ -2023,8 +2185,8 @@ export const respondToDueDateExtension = async (req, res) => {
             date: new Date(),
             by: fleetOwnerId,
             notes: responseNotes || "",
-            proposedDate: action === "COUNTER_OFFERED" 
-                ? new Date(counterOfferedDate) 
+            proposedDate: action === "COUNTER_OFFERED"
+                ? new Date(counterOfferedDate)
                 : contract.dueDateExtensionRequest.newProposedDate,
         }
 
@@ -2032,7 +2194,7 @@ export const respondToDueDateExtension = async (req, res) => {
         contract.dueDateExtensionRequest.respondedBy = fleetOwnerId
         contract.dueDateExtensionRequest.respondedDate = new Date()
         contract.dueDateExtensionRequest.responseNotes = responseNotes || ""
-        
+
         if (action === "COUNTER_OFFERED") {
             contract.dueDateExtensionRequest.counterOfferedDate = new Date(counterOfferedDate)
         }
@@ -2044,7 +2206,7 @@ export const respondToDueDateExtension = async (req, res) => {
             const newDueDate = contract.dueDateExtensionRequest.newProposedDate
             contract.financials.finalPayment.dueDate = newDueDate
             contract.dueDateExtensionRequest.isRequested = false
-            
+
             // Also update PaymentSchedule table
             const PaymentSchedule = (await import("../models/PaymentSchedule.js")).default;
             await PaymentSchedule.updateMany(
@@ -2057,7 +2219,7 @@ export const respondToDueDateExtension = async (req, res) => {
             const newDueDate = new Date(counterOfferedDate)
             contract.financials.finalPayment.dueDate = newDueDate
             contract.dueDateExtensionRequest.isRequested = false
-            
+
             // Also update PaymentSchedule table
             const PaymentSchedule = (await import("../models/PaymentSchedule.js")).default;
             await PaymentSchedule.updateMany(
@@ -2241,9 +2403,9 @@ export const getDueDateExtensionRequests = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            data: { 
+            data: {
                 requests: contracts,
-                count: contracts.length 
+                count: contracts.length
             },
         })
     } catch (error) {

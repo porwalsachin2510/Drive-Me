@@ -228,6 +228,43 @@ export const createEMIPlan = async (req, res) => {
             })
         }
 
+        // Calculate contract duration in months
+        const { durationType, duration, startDate: contractStart, endDate: contractEnd } = contract.rentalPeriod
+        let contractDurationMonths = 0
+
+        if (durationType === "DAILY") {
+            contractDurationMonths = Math.ceil(duration / 30)
+        } else if (durationType === "WEEKLY") {
+            contractDurationMonths = Math.ceil((duration * 7) / 30)
+        } else if (durationType === "MONTHLY" || durationType === "LONG_TERM") {
+            contractDurationMonths = duration
+        } else if (contractStart && contractEnd) {
+            // Fallback: Calculate from actual dates
+            const start = new Date(contractStart)
+            const end = new Date(contractEnd)
+            const diffTime = Math.abs(end - start)
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+            contractDurationMonths = Math.ceil(diffDays / 30)
+        }
+
+        console.log("[v0] Contract duration calculation:", { durationType, duration, contractDurationMonths })
+
+        // Check if contract is eligible for EMI (minimum 3 months)
+        if (contractDurationMonths < 3) {
+            return res.status(400).json({
+                success: false,
+                message: `EMI payment is not available for contracts shorter than 3 months. Your contract duration is ${contractDurationMonths} month(s). Please use Standard Payment instead.`,
+            })
+        }
+
+        // Validate tenure does not exceed contract duration
+        if (tenure > contractDurationMonths) {
+            return res.status(400).json({
+                success: false,
+                message: `EMI tenure (${tenure} months) cannot exceed contract duration (${contractDurationMonths} months). Please select a tenure of ${contractDurationMonths} months or less.`,
+            })
+        }
+
         // Verify corporate owner
         if (contract.corporateOwnerId._id.toString() !== corporateOwnerId) {
             return res.status(403).json({
@@ -297,7 +334,7 @@ export const createEMIPlan = async (req, res) => {
         const lateFeePercentage = commissionSettings?.emiCommissionSettings?.lateFeePercentage || 2
 
         console.log("[v0] Final EMI Commission Rate for B2B Partner:", emiCommissionRate, "%")
-        
+
         // Get contract amounts
         const contractAmount = contract.financials.totalAmount
         const securityDeposit = contract.financials.securityDeposit?.amount || 0
@@ -543,6 +580,84 @@ export const getEMIPlanByContract = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to fetch EMI plan",
+            error: error.message,
+        })
+    }
+}
+
+
+// @desc    Get EMI Eligibility for a Contract
+// @route   GET /api/emi-payments/eligibility/:contractId
+// @access  Private (CORPORATE or B2B_PARTNER)
+export const getEMIEligibility = async (req, res) => {
+    try {
+        const { contractId } = req.params
+
+        console.log("[v0] Get EMI eligibility request:", { contractId })
+
+        // Get contract
+        const contract = await Contract.findById(contractId)
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found",
+            })
+        }
+
+        // Calculate contract duration in months
+        const { durationType, duration, startDate, endDate } = contract.rentalPeriod
+        let contractDurationMonths = 0
+
+        if (durationType === "DAILY") {
+            contractDurationMonths = Math.ceil(duration / 30)
+        } else if (durationType === "WEEKLY") {
+            contractDurationMonths = Math.ceil((duration * 7) / 30)
+        } else if (durationType === "MONTHLY" || durationType === "LONG_TERM") {
+            contractDurationMonths = duration
+        } else if (startDate && endDate) {
+            const start = new Date(startDate)
+            const end = new Date(endDate)
+            const diffTime = Math.abs(end - start)
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+            contractDurationMonths = Math.ceil(diffDays / 30)
+        }
+
+        // Check EMI eligibility (minimum 3 months)
+        const isEligible = contractDurationMonths >= 3
+
+        // Generate available tenure options based on contract duration
+        const allTenures = [3, 6, 9, 12, 18, 24]
+        const availableTenures = allTenures.filter(t => t <= contractDurationMonths)
+
+        // Check if EMI already exists
+        const existingEMI = await EMIPayment.findOne({ contractId })
+
+        res.json({
+            success: true,
+            data: {
+                contractId,
+                contractDurationMonths,
+                durationType: contract.rentalPeriod.durationType,
+                duration: contract.rentalPeriod.duration,
+                isEligible,
+                availableTenures,
+                existingEMI: existingEMI ? {
+                    _id: existingEMI._id,
+                    tenure: existingEMI.emiPlan.tenure,
+                    status: existingEMI.emiPlan.status,
+                } : null,
+                message: isEligible
+                    ? `EMI payment is available for this ${contractDurationMonths}-month contract.`
+                    : `EMI payment is not available for contracts shorter than 3 months. Your contract duration is ${contractDurationMonths} month(s).`,
+            }
+        })
+
+    } catch (error) {
+        console.error("[v0] Get EMI eligibility error:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to get EMI eligibility",
             error: error.message,
         })
     }
@@ -1943,7 +2058,7 @@ export const verifyEMIOnlinePayment = async (req, res) => {
 
         // Re-fetch the specific installment from updated document
         installment = emiPayment.installments.find(i => i.gatewaySessionId === session_id)
-        
+
         if (!installment) {
             return res.status(404).json({
                 success: false,

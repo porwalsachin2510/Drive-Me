@@ -233,11 +233,11 @@ export const getB2BPartnerAnalytics = async (req, res) => {
         // Get contracts and vehicles for analytics
         const contracts = await Contract.find({ fleetOwnerId: userId })
         const vehicles = await Vehicle.find({ fleetOwnerId: userId })
-        
+
         // Calculate analytics based on period
         const now = new Date()
         let startDate
-        
+
         switch (period) {
             case 'weekly':
                 startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
@@ -253,7 +253,7 @@ export const getB2BPartnerAnalytics = async (req, res) => {
         }
 
         const periodContracts = contracts.filter(c => new Date(c.createdAt) >= startDate)
-        
+
         // Get currency from contracts
         const currency = contracts.find(c => c.financials?.currency)?.financials?.currency || 'AED'
 
@@ -647,7 +647,7 @@ export const getB2BContractAssignedVehicles = async (req, res) => {
             })
             .populate({
                 path: "vehicles.assignedVehicles.routeDetails",
-                select: "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes status availableDays"
+                select: "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes status availableDays tripTimes"
             })
             .populate({
                 path: "corporateOwnerId",

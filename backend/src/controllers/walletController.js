@@ -1,6 +1,8 @@
 import Wallet from "../models/Wallet.js"
 import User from "../models/User.js"
 import Transaction from "../models/Transaction.js"
+import WithdrawalRequest from "../models/WithdrawalRequest.js"
+import ProcessedPayment from "../models/ProcessedPayment.js"
 import { sendRealTimeNotification, notifyAdminsWalletEvent } from "../Services/socketService.js"
 import { createNotification } from "./notificationController.js"
 import { detectCountryFromCurrency, getPaymentGateway } from "../Services/paymentGatewayService.js"
@@ -99,10 +101,10 @@ export const createPaymentSession = async (req, res) => {
 // Get wallet balance
 export const getWalletBalance = async (req, res) => {
     try {
-        
+
         const userId = req.userId
         const userRole = req.userRole
-        
+
         // Get user details for currency detection
         const user = await User.findById(userId)
         if (!user) {
@@ -111,7 +113,7 @@ export const getWalletBalance = async (req, res) => {
                 message: "User not found"
             })
         }
-        
+
         // Find or create wallet for user
         let wallet = await Wallet.findOne({ userId })
         if (!wallet) {
@@ -120,7 +122,7 @@ export const getWalletBalance = async (req, res) => {
             if (user.country) {
                 const countryCurrencyMap = {
                     "UAE": "AED",
-                    "KW": "KWD", 
+                    "KW": "KWD",
                     "KUWAIT": "KWD",
                     "SA": "SAR",
                     "BH": "BHD",
@@ -129,15 +131,15 @@ export const getWalletBalance = async (req, res) => {
                 }
                 userCurrency = countryCurrencyMap[user.country] || "KWD"
             }
-            
+
             // Map role to valid wallet roles - some driver roles don't have wallets
             const validWalletRoles = ["COMMUTER", "CORPORATE", "CORPORATE_EMPLOYEE", "B2C_PARTNER", "B2C_PARTNER_DRIVER", "B2B_PARTNER", "ADMIN"]
-            const resolvedRole = validWalletRoles.includes(userRole) 
-                ? userRole 
-                : validWalletRoles.includes(user.role) 
-                    ? user.role 
+            const resolvedRole = validWalletRoles.includes(userRole)
+                ? userRole
+                : validWalletRoles.includes(user.role)
+                    ? user.role
                     : "COMMUTER" // fallback
-            
+
             wallet = new Wallet({
                 userId,
                 role: resolvedRole,
@@ -278,7 +280,7 @@ export const addFundsToWallet = async (req, res) => {
             }
 
             console.log("[v0] Verifying payment with gateway:", { gateway, paymentSessionId, userCurrency, detectedFromId: detectGatewayFromSessionId(paymentSessionId) });
-            
+
             // Verify payment
             paymentVerification = await paymentGatewayService.default.verifyPayment(gateway, paymentSessionId)
 
@@ -287,7 +289,7 @@ export const addFundsToWallet = async (req, res) => {
                 status: paymentVerification.status,
                 amount: paymentVerification.amount
             });
-            
+
             if (!paymentVerification.success || paymentVerification.status !== "COMPLETED") {
                 return res.status(400).json({
                     success: false,
@@ -313,32 +315,160 @@ export const addFundsToWallet = async (req, res) => {
             })
         }
 
-        // Find or create wallet with proper currency
-        let wallet = await Wallet.findOne({ userId })
-        if (!wallet) {
-            wallet = new Wallet({
+        // CRITICAL: Atomic duplicate prevention using ProcessedPayment collection
+        // Try to insert the payment session ID - if it already exists, MongoDB will throw a duplicate key error
+        // This is the ONLY reliable way to prevent race conditions when two requests hit simultaneously
+        try {
+            await ProcessedPayment.create({
+                paymentSessionId,
+                gatewayTransactionId: paymentVerification.transactionId,
                 userId,
-                balance: 0,
+                amount: verifiedAmount,
                 currency: userCurrency,
-                transactions: []
+                gateway: detectGatewayFromSessionId(paymentSessionId) || 'STRIPE',
+                processedBy: 'CALLBACK',
+                processedAt: new Date()
             })
+            console.log("[v0] Payment session marked as processed:", paymentSessionId)
+        } catch (error) {
+            // Check if it's a duplicate key error (E11000)
+            if (error.code === 11000 || error.message?.includes('duplicate key')) {
+                console.log("[v0] Payment already processed (atomic check via ProcessedPayment):", paymentSessionId)
+
+                // Find the existing wallet to return
+                const existingWallet = await Wallet.findOne({ userId })
+                const existingTransaction = existingWallet?.transactions?.find(
+                    t => t.paymentSessionId === paymentSessionId ||
+                        t.gatewayTransactionId === paymentVerification.transactionId
+                )
+
+                return res.status(200).json({
+                    success: true,
+                    message: "Payment already processed",
+                    data: {
+                        wallet: existingWallet,
+                        transaction: existingTransaction,
+                        alreadyProcessed: true
+                    }
+                })
+            }
+            // Re-throw other errors
+            throw error
         }
 
-        // Add transaction only after payment verification
+        // If we reach here, the payment session was successfully marked as processed
+        // Now we can safely add funds to the wallet
+
+        // IMPORTANT: Use atomic operation to prevent race conditions between webhook and callback
+        // Both webhook and callback might try to add funds at the same time
+
+        // First, try to atomically update the wallet ONLY if the payment hasn't been processed yet
+        // This uses MongoDB's atomic findOneAndUpdate to prevent duplicate transactions
+        const transactionId = paymentVerification.transactionId
+
+        // Create the transaction object
         const transaction = {
             type: "DEPOSIT",
             amount: verifiedAmount,
-            description: `Funds added via ${paymentMethod || 'payment gateway'}`,
+            description: `Funds added via ${paymentMethod || 'card'}`,
             paymentMethod: paymentMethod || 'card',
             status: "COMPLETED",
             paymentSessionId,
-            gatewayTransactionId: paymentVerification.transactionId,
+            gatewayTransactionId: transactionId,
             createdAt: new Date()
         }
 
-        wallet.transactions.push(transaction)
-        wallet.balance += verifiedAmount
-        await wallet.save()
+        // Atomically check if transaction exists and add it if not
+        // The $not: $elemMatch ensures we only update if no matching transaction exists
+        const updateResult = await Wallet.findOneAndUpdate(
+            {
+                userId,
+                // Only update if NO transaction exists with this paymentSessionId OR gatewayTransactionId
+                $and: [
+                    { "transactions.paymentSessionId": { $ne: paymentSessionId } },
+                    { "transactions.gatewayTransactionId": { $ne: transactionId } }
+                ]
+            },
+            {
+                $push: { transactions: transaction },
+                $inc: { balance: verifiedAmount },
+                $setOnInsert: { currency: userCurrency }
+            },
+            {
+                new: true,
+                upsert: false // Don't create new wallet here
+            }
+        )
+
+        // If updateResult is null, either wallet doesn't exist OR transaction was already processed
+        if (!updateResult) {
+            // Check if wallet exists
+            let wallet = await Wallet.findOne({ userId })
+
+            if (!wallet) {
+                // Create wallet and add transaction (first time)
+                wallet = new Wallet({
+                    userId,
+                    balance: verifiedAmount,
+                    currency: userCurrency,
+                    transactions: [transaction]
+                })
+                await wallet.save()
+
+                console.log("[v0] Created new wallet with funds:", {
+                    userId,
+                    balance: wallet.balance,
+                    paymentSessionId
+                })
+            } else {
+                // Wallet exists but transaction was already processed (duplicate prevention worked!)
+                const existingTransaction = wallet.transactions?.find(
+                    t => t.paymentSessionId === paymentSessionId ||
+                        t.gatewayTransactionId === transactionId
+                )
+
+                console.log("[v0] Payment already processed (atomic check), returning existing wallet data:", {
+                    paymentSessionId,
+                    existingTransactionId: existingTransaction?._id,
+                    currentBalance: wallet.balance
+                })
+
+                return res.status(200).json({
+                    success: true,
+                    message: "Payment already processed",
+                    data: {
+                        wallet,
+                        transaction: existingTransaction,
+                        alreadyProcessed: true
+                    }
+                })
+            }
+
+            // Send notifications for new wallet
+            const walletCurrency = wallet.currency || userCurrency || "KWD"
+            await sendRealTimeNotification(userId, {
+                type: "WALLET_UPDATED",
+                title: "Funds Added",
+                message: `${verifiedAmount} ${walletCurrency} has been added to your wallet`,
+                data: {
+                    newBalance: wallet.balance,
+                    currency: walletCurrency,
+                    transaction
+                }
+            })
+
+            return res.status(200).json({
+                success: true,
+                message: "Funds added successfully",
+                data: {
+                    wallet,
+                    transaction
+                }
+            })
+        }
+
+        // Transaction was added successfully via atomic update
+        const wallet = updateResult
 
         console.log("[v0] Wallet updated:", {
             userId,
@@ -408,11 +538,11 @@ export const addFundsToWallet = async (req, res) => {
 export const withdrawFromWallet = async (req, res) => {
     try {
         const userId = req.userId
-        const { 
-            amount, 
-            iban, 
-            bankCode, 
-            accountHolderName, 
+        const {
+            amount,
+            iban,
+            bankCode,
+            accountHolderName,
             currency = "KWD",
             country = "KW"
         } = req.body
@@ -498,6 +628,42 @@ export const withdrawFromWallet = async (req, res) => {
         wallet.balance -= amount
         wallet.totalWithdrawals += amount
         await wallet.save()
+
+        // Get the wallet transaction ID (last added transaction)
+        const walletTransactionId = wallet.transactions[wallet.transactions.length - 1]._id
+
+        // Create WithdrawalRequest for admin to process
+        const withdrawalRequest = await WithdrawalRequest.create({
+            userId,
+            walletId: wallet._id,
+            requestId: WithdrawalRequest.generateRequestId(),
+            amount,
+            currency,
+            bankName: withdrawalValidation.bankName,
+            bankCode,
+            iban: bankValidationService.formatIBAN(iban),
+            accountHolderName,
+            status: "PENDING",
+            userInfo: {
+                fullName: user.fullName || user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role
+            },
+            walletTransactionId,
+            metadata: {
+                reference: withdrawalReference,
+                processingTime: bankValidationService.getBankProcessingTimes(country),
+                country
+            }
+        })
+
+        console.log("[withdrawFromWallet] Created withdrawal request:", {
+            requestId: withdrawalRequest.requestId,
+            amount,
+            userId,
+            bankName: withdrawalValidation.bankName
+        })
 
         // Send real-time notification
         await sendRealTimeNotification(userId, {

@@ -411,12 +411,60 @@ function EmployeeTripBooking() {
       }
     };
 
+    // Handle real-time trip started notification
+    const handleTripStarted = (data) => {
+      // Update the trip status in the trips list
+      setTrips((prev) =>
+        prev.map((trip) =>
+          trip._id === data.tripId || trip._id === data.data?.tripId
+            ? { ...trip, status: "IN_PROGRESS" }
+            : trip,
+        ),
+      );
+      // Also refresh trips to get latest data
+      fetchMyScheduledTrips();
+    };
+
+    // Handle real-time trip completed notification
+    const handleTripCompleted = (data) => {
+      // Update the trip status
+      setTrips((prev) =>
+        prev.map((trip) =>
+          trip._id === data.tripId || trip._id === data.data?.tripId
+            ? { ...trip, status: "COMPLETED" }
+            : trip,
+        ),
+      );
+      // Close tracking modal if this trip was being tracked
+      if (
+        trackingTrip &&
+        (trackingTrip._id === data.tripId ||
+          trackingTrip._id === data.data?.tripId)
+      ) {
+        // Stop tracking inline instead of calling handleStopTracking to avoid initialization issues
+        if (socket?.socket && trackingTrip?._id) {
+          socket.socket.emit("leave_booking_room", trackingTrip._id);
+        }
+        setShowTrackingModal(false);
+        setTrackingTrip(null);
+        setDriverLocation(null);
+      }
+    };
+
     socket.socket.on("driver-location-update", handleLocationUpdate);
     socket.socket.on("location-update", handleLocationUpdate);
+    socket.socket.on("TRIP_STARTED", handleTripStarted);
+    socket.socket.on("trip-started", handleTripStarted);
+    socket.socket.on("RIDE_COMPLETED", handleTripCompleted);
+    socket.socket.on("trip-completed", handleTripCompleted);
 
     return () => {
       socket.socket.off("driver-location-update", handleLocationUpdate);
       socket.socket.off("location-update", handleLocationUpdate);
+      socket.socket.off("TRIP_STARTED", handleTripStarted);
+      socket.socket.off("trip-started", handleTripStarted);
+      socket.socket.off("RIDE_COMPLETED", handleTripCompleted);
+      socket.socket.off("trip-completed", handleTripCompleted);
     };
   }, [socket, trackingTrip]);
 

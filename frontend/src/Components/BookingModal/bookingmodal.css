@@ -519,6 +519,29 @@
   font-size: 10px;
 }
 
+/* Disabled pass type option */
+.pass-type-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+  background: #f8f9fa;
+  border-color: #e9ecef;
+}
+
+.pass-type-option.disabled:hover {
+  border-color: #e9ecef;
+  transform: none;
+  box-shadow: none;
+}
+
+.pass-type-option.disabled .pass-type-content {
+  background: #f8f9fa;
+}
+
+.pass-type-option.disabled .pass-type-price {
+  color: #9ca3af;
+}
+
 .pass-type-title {
   font-weight: 600;
   color: #2c3e50;

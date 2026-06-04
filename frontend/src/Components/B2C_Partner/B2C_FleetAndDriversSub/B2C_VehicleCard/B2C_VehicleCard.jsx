@@ -519,7 +519,7 @@ function B2C_VehicleCard({ vehicle, onVehicleUpdated, onVehicleDeleted }) {
 
       {/* Image Gallery Modal */}
       {showImageModal && vehicle.images && vehicle.images.length > 0 && (
-        <div className="b2c-image-modal-overlay" onClick={closeImageModal}>
+        <div className="b2c-image-modal-overlay">
           <div
             className="b2c-image-modal-content"
             onClick={(e) => e.stopPropagation()}

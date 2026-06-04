@@ -392,7 +392,7 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
 
   if (loadingAssets || loadingSchedule) {
     return (
-      <div className="b2c-modal-overlay" onClick={onClose}>
+      <div className="b2c-modal-overlay">
         <div
           className="b2c-modal-content b2c-schedule-modal"
           onClick={(e) => e.stopPropagation()}
@@ -407,7 +407,7 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
   }
 
   return (
-    <div className="b2c-modal-overlay" onClick={onClose}>
+    <div className="b2c-modal-overlay">
       <div
         className="b2c-modal-content b2c-schedule-modal"
         onClick={(e) => e.stopPropagation()}

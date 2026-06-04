@@ -8,6 +8,9 @@ import {
   rejectBooking,
 } from "../../../Redux/slices/bookingSlice";
 import PassengerDetailsModal from "../PassengerDetailsModal/PassengerDetailsModal";
+import WalletRechargeModal from "../../WalletRechargeModal/WalletRechargeModal";
+import api from "../../../utils/api";
+import { useSocket } from "../../../hooks/useSocket";
 import "./BookingTable.css";
 
 /**
@@ -23,6 +26,7 @@ function BookingTable() {
   const dispatch = useDispatch();
   const { partnerBookings, loading } = useSelector((state) => state.booking);
   const { user } = useSelector((state) => state.auth);
+  const socket = useSocket();
 
   // Modal states
   const [showPassengerModal, setShowPassengerModal] = useState(false);
@@ -30,6 +34,12 @@ function BookingTable() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
+
+  // Wallet states for cash booking acceptance
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [showWalletWarning, setShowWalletWarning] = useState(false);
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [pendingAcceptBooking, setPendingAcceptBooking] = useState(null);
 
   // Table control states
   const [filterStatus, setFilterStatus] = useState("ALL");
@@ -43,8 +53,42 @@ function BookingTable() {
   useEffect(() => {
     if (user?.role === "B2C_PARTNER") {
       dispatch(getPartnerBookings({ status: "ALL" }));
+      fetchWalletBalance();
     }
   }, [dispatch, user]);
+
+  // Socket listener for real-time updates (e.g., booking cancelled by commuter)
+  useEffect(() => {
+    if (!socket || !socket.socket) return;
+
+    const handleNotification = (notification) => {
+      if (notification.type === "BOOKING_CANCELLED") {
+        // Refresh bookings and wallet balance when a booking is cancelled
+        dispatch(getPartnerBookings({ status: "ALL" }));
+        fetchWalletBalance(); // Commission might have been refunded
+      }
+    };
+
+    socket.socket.on("notification", handleNotification);
+
+    return () => {
+      if (socket.socket) {
+        socket.socket.off("notification", handleNotification);
+      }
+    };
+  }, [dispatch, socket]);
+
+  // Fetch wallet balance
+  const fetchWalletBalance = async () => {
+    try {
+      const response = await api.get("/wallet/balance");
+      const balance = response.data.data?.balance || 0;
+      setWalletBalance(balance);
+    } catch (error) {
+      console.error("[v0] Error fetching wallet balance:", error);
+      setWalletBalance(0);
+    }
+  };
 
   // Helper functions
   const getPassengerName = (booking) => {
@@ -228,6 +272,9 @@ function BookingTable() {
       completedBookings: bookingsArr.filter(
         (b) => b.bookingStatus === "COMPLETED",
       ).length,
+      cancelledBookings: bookingsArr.filter(
+        (b) => b.bookingStatus === "CANCELLED",
+      ).length,
     };
   }, [partnerBookings]);
 
@@ -247,9 +294,42 @@ function BookingTable() {
   };
 
   const handleAccept = (booking) => {
-    dispatch(acceptBooking(booking._id)).then(() => {
-      dispatch(getPartnerBookings({ status: "ALL" }));
-    });
+    // Check wallet balance for cash bookings before accepting
+    if (booking.paymentMethod === "CASH") {
+      const adminCommission = booking.adminCommissionAmount || 0;
+      const requiredBalance = adminCommission + 50; // 50 AED buffer as per backend
+
+      if (walletBalance < requiredBalance) {
+        // Insufficient balance - show warning modal
+        setPendingAcceptBooking(booking);
+        setShowWalletWarning(true);
+        return;
+      }
+    }
+
+    // Proceed with accepting the booking
+    dispatch(acceptBooking(booking._id))
+      .then((result) => {
+        if (result.meta.requestStatus === "fulfilled") {
+          dispatch(getPartnerBookings({ status: "ALL" }));
+          fetchWalletBalance(); // Refresh wallet balance after acceptance
+        } else if (result.payload?.requiresWalletFunding) {
+          // Backend returned wallet funding required error
+          setPendingAcceptBooking(booking);
+          setShowWalletWarning(true);
+        } else {
+          alert(
+            `Failed to accept booking: ${result.payload?.message || "Unknown error"}`,
+          );
+        }
+      })
+      .catch((error) => {
+        console.error("[v0] Accept booking error:", error);
+        if (error.requiresWalletFunding) {
+          setPendingAcceptBooking(booking);
+          setShowWalletWarning(true);
+        }
+      });
   };
 
   const handleRejectClick = (booking) => {
@@ -264,12 +344,24 @@ function BookingTable() {
           bookingId: selectedBooking._id,
           rejectionReason,
         }),
-      ).then(() => {
-        dispatch(getPartnerBookings({ status: "ALL" }));
-        setShowRejectModal(false);
-        setSelectedBooking(null);
-        setRejectionReason("");
-      });
+      )
+        .then((result) => {
+          if (result.meta.requestStatus === "fulfilled") {
+            // Success - refresh bookings
+            dispatch(getPartnerBookings({ status: "ALL" }));
+            setShowRejectModal(false);
+            setSelectedBooking(null);
+            setRejectionReason("");
+          } else {
+            // Error - show alert
+            alert(
+              `Failed to reject booking: ${result.payload || "Unknown error"}`,
+            );
+          }
+        })
+        .catch((err) => {
+          alert(`Error rejecting booking: ${err.message}`);
+        });
     }
   };
 
@@ -298,23 +390,44 @@ function BookingTable() {
       {/* Header */}
       <div className="b2c-booking-table-header">
         <h2>Booking Management</h2>
-        <button
-          className="b2c-booking-table-refresh-btn"
-          onClick={refreshBookings}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
+        <div className="b2c-booking-table-header-right">
+          <div className="b2c-wallet-balance-display">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="M16 10h.01" />
+            </svg>
+            <span>
+              Wallet: <strong>{walletBalance.toLocaleString()} AED</strong>
+            </span>
+          </div>
+          <button
+            className="b2c-booking-table-refresh-btn"
+            onClick={() => {
+              refreshBookings();
+              fetchWalletBalance();
+            }}
           >
-            <path d="M23 4v6h-6M1 20v-6h6" />
-            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-          </svg>
-          Refresh
-        </button>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M23 4v6h-6M1 20v-6h6" />
+              <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Stats Row */}
@@ -342,6 +455,12 @@ function BookingTable() {
             {bookingStats.completedBookings}
           </span>
           <span className="b2c-booking-stat-label">Completed</span>
+        </div>
+        <div className="b2c-booking-stat-card">
+          <span className="b2c-booking-stat-value stat-red">
+            {bookingStats.cancelledBookings}
+          </span>
+          <span className="b2c-booking-stat-label">Cancelled</span>
         </div>
       </div>
 
@@ -386,6 +505,7 @@ function BookingTable() {
             <option value="ACCEPTED">Accepted</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="REJECTED">Rejected</option>
+            <option value="CANCELLED">Cancelled</option>
             <option value="COMPLETED">Completed</option>
           </select>
 
@@ -577,6 +697,16 @@ function BookingTable() {
                       >
                         {booking.bookingStatus}
                       </span>
+                      {/* Show commission refund badge for CANCELLED bookings */}
+                      {booking.bookingStatus === "CANCELLED" &&
+                        booking.commissionRefunded && (
+                          <span className="b2c-commission-refund-badge">
+                            Refunded:{" "}
+                            {booking.commissionRefundAmount?.toLocaleString() ||
+                              0}{" "}
+                            {booking.currency || "AED"}
+                          </span>
+                        )}
                     </td>
                     <td className="b2c-td-date">
                       <span className="b2c-date-text">
@@ -755,6 +885,113 @@ function BookingTable() {
           setShowPassengerModal(false);
           setSelectedBookingId(null);
         }}
+      />
+
+      {/* Wallet Warning Modal for Cash Bookings */}
+      {showWalletWarning && pendingAcceptBooking && (
+        <div className="b2c-booking-modal-overlay">
+          <div className="b2c-booking-modal b2c-wallet-warning-modal">
+            <div className="b2c-booking-modal-header">
+              <h3>Insufficient Wallet Balance</h3>
+              <button
+                className="b2c-booking-modal-close"
+                onClick={() => {
+                  setShowWalletWarning(false);
+                  setPendingAcceptBooking(null);
+                }}
+              >
+                x
+              </button>
+            </div>
+            <div className="b2c-booking-modal-body">
+              <div className="b2c-wallet-warning-icon">
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4M12 16h.01" />
+                </svg>
+              </div>
+              <p className="b2c-wallet-warning-text">
+                You need sufficient wallet balance to accept cash bookings. The
+                admin commission of{" "}
+                <strong>
+                  {pendingAcceptBooking?.adminCommissionAmount || 0}{" "}
+                  {pendingAcceptBooking?.currency || "AED"}
+                </strong>{" "}
+                will be deducted from your wallet.
+              </p>
+              <div className="b2c-wallet-info-box">
+                <div className="b2c-wallet-info-row">
+                  <span>Current Balance:</span>
+                  <span className="b2c-wallet-balance">
+                    {walletBalance} {pendingAcceptBooking?.currency || "AED"}
+                  </span>
+                </div>
+                <div className="b2c-wallet-info-row">
+                  <span>Required Amount:</span>
+                  <span className="b2c-wallet-required">
+                    {(pendingAcceptBooking?.adminCommissionAmount || 0) + 50}{" "}
+                    {pendingAcceptBooking?.currency || "AED"}
+                  </span>
+                </div>
+                <div className="b2c-wallet-info-row b2c-wallet-shortage">
+                  <span>Shortage:</span>
+                  <span>
+                    {Math.max(
+                      0,
+                      (pendingAcceptBooking?.adminCommissionAmount || 0) +
+                        50 -
+                        walletBalance,
+                    )}{" "}
+                    {pendingAcceptBooking?.currency || "AED"}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="b2c-booking-modal-actions">
+              <button
+                className="b2c-booking-btn-cancel"
+                onClick={() => {
+                  setShowWalletWarning(false);
+                  setPendingAcceptBooking(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="b2c-booking-btn-recharge"
+                onClick={() => {
+                  setShowWalletWarning(false);
+                  setShowRechargeModal(true);
+                }}
+              >
+                Add Funds to Wallet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Recharge Modal */}
+      <WalletRechargeModal
+        isOpen={showRechargeModal}
+        onClose={() => {
+          setShowRechargeModal(false);
+          setPendingAcceptBooking(null);
+        }}
+        onRechargeSuccess={() => {
+          setShowRechargeModal(false);
+          fetchWalletBalance();
+          // After successful recharge, user can try accepting the booking again
+        }}
+        country={user?.country || "UAE"}
+        currency={pendingAcceptBooking?.currency || "AED"}
       />
     </div>
   );

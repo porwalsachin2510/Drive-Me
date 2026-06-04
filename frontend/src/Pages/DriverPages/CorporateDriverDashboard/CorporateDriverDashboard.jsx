@@ -158,16 +158,22 @@ export default function CorporateDriverDashboard() {
     }
   }, [user?.employedBy]);
 
-  const startTrip = async (bookingId) => {
+  const startTrip = async (bookingId, mergedTripIds = []) => {
     try {
-      const response = await api.put(`/bookings/corporate/${bookingId}/start`);
+      // Send merged trip IDs to start all trips for this route at once
+      const response = await api.put(`/bookings/corporate/${bookingId}/start`, {
+        mergedTripIds,
+      });
       if (response.data.success) {
+        // Update all merged trips to IN_PROGRESS status
+        const allTripIds = [bookingId, ...(mergedTripIds || [])];
         setBookings((prev) =>
           prev.map((booking) =>
-            booking._id === bookingId
+            allTripIds.includes(booking._id)
               ? {
                   ...booking,
                   bookingStatus: "IN_PROGRESS",
+                  status: "IN_PROGRESS",
                   startedAt: new Date(),
                 }
               : booking,
@@ -179,26 +185,29 @@ export default function CorporateDriverDashboard() {
         if (!isSharingLocation) {
           startAutomaticLocationSharing();
         }
-
-        console.log("🚀 Trip started:", bookingId);
       }
     } catch (error) {
       console.error("Error starting trip:", error);
     }
   };
 
-  const completeTrip = async (bookingId) => {
+  const completeTrip = async (bookingId, mergedTripIds = []) => {
     try {
+      // Send merged trip IDs to complete all trips for this route at once
       const response = await api.put(
         `/bookings/corporate/${bookingId}/complete`,
+        { mergedTripIds },
       );
       if (response.data.success) {
+        // Update all merged trips to COMPLETED status
+        const allTripIds = [bookingId, ...(mergedTripIds || [])];
         setBookings((prev) =>
           prev.map((booking) =>
-            booking._id === bookingId
+            allTripIds.includes(booking._id)
               ? {
                   ...booking,
                   bookingStatus: "COMPLETED",
+                  status: "COMPLETED",
                   completedAt: new Date(),
                 }
               : booking,
@@ -207,7 +216,7 @@ export default function CorporateDriverDashboard() {
 
         const remainingTrips = bookings.filter(
           (booking) =>
-            booking._id !== bookingId &&
+            !allTripIds.includes(booking._id) &&
             (booking.bookingStatus === "CONFIRMED" ||
               booking.bookingStatus === "IN_PROGRESS"),
         );
@@ -217,8 +226,6 @@ export default function CorporateDriverDashboard() {
         } else {
           setActiveTrip(remainingTrips[0]);
         }
-
-        console.log("✅ Trip completed:", bookingId);
       }
     } catch (error) {
       console.error("Error completing trip:", error);
@@ -418,15 +425,22 @@ export default function CorporateDriverDashboard() {
                     <div className="corp-driver-booking-actions">
                       {activeBookingTab === "confirmed" && (
                         <button
-                          onClick={() => startTrip(booking._id)}
+                          onClick={() =>
+                            startTrip(booking._id, booking.mergedTripIds)
+                          }
                           className="corp-driver-action-btn start"
                         >
                           Start Trip
+                          {booking.passengerCount > 1
+                            ? ` (${booking.passengerCount} passengers)`
+                            : ""}
                         </button>
                       )}
                       {activeBookingTab === "in-progress" && (
                         <button
-                          onClick={() => completeTrip(booking._id)}
+                          onClick={() =>
+                            completeTrip(booking._id, booking.mergedTripIds)
+                          }
                           className="corp-driver-action-btn complete"
                         >
                           Complete Trip

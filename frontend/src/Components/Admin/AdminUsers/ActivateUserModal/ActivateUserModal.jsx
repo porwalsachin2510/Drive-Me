@@ -7,14 +7,22 @@ function ActivateUserModal({ user, onClose, onConfirm }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Check if this is a new user (PENDING) or a suspended user being reactivated
+  const isNewUser = user.status === "PENDING";
+  const actionTitle = isNewUser ? "Activate User" : "Reactivate User";
+  const actionButton = isNewUser ? "Activate User" : "Reactivate User";
+  const loadingText = isNewUser ? "Activating..." : "Reactivating...";
+  const defaultMessage = isNewUser
+    ? "Your account has been activated. Welcome to DriveMeGo! You can now log in and start using our services."
+    : "Your account has been reactivated. Please ensure you follow our platform guidelines to avoid future suspensions.";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       await onConfirm({
-        message:
-          message.trim() ||
-          "Your account has been reactivated. Please ensure you follow our platform guidelines to avoid future suspensions.",
+        message: message.trim() || defaultMessage,
+        isNewActivation: isNewUser,
       });
     } finally {
       setLoading(false);
@@ -31,10 +39,10 @@ function ActivateUserModal({ user, onClose, onConfirm }) {
   };
 
   return (
-    <div className="activate-modal-overlay" onClick={onClose}>
+    <div className="activate-modal-overlay">
       <div className="activate-modal" onClick={(e) => e.stopPropagation()}>
         <div className="activate-modal-header">
-          <h2>Reactivate User</h2>
+          <h2>{actionTitle}</h2>
           <button className="close-btn" onClick={onClose}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -67,11 +75,15 @@ function ActivateUserModal({ user, onClose, onConfirm }) {
             <div className="user-details">
               <h3>{user.fullName}</h3>
               <p>{user.email}</p>
-              <span className="status-badge suspended">SUSPENDED</span>
+              <span
+                className={`status-badge ${isNewUser ? "pending" : "suspended"}`}
+              >
+                {user.status}
+              </span>
             </div>
           </div>
 
-          {user.suspensionReason && (
+          {!isNewUser && user.suspensionReason && (
             <div className="suspension-info">
               <h4>Suspension Details</h4>
               <div className="info-row">
@@ -110,8 +122,9 @@ function ActivateUserModal({ user, onClose, onConfirm }) {
                 className="message-textarea"
               />
               <p className="hint-text">
-                If left empty, a default message will be sent reminding them to
-                follow platform guidelines.
+                {isNewUser
+                  ? "If left empty, a welcome message will be sent to the new user."
+                  : "If left empty, a default message will be sent reminding them to follow platform guidelines."}
               </p>
             </div>
 
@@ -135,7 +148,9 @@ function ActivateUserModal({ user, onClose, onConfirm }) {
                 <ul>
                   <li>User will receive an email notification</li>
                   <li>User will be able to log in immediately</li>
-                  <li>All suspension records will be cleared</li>
+                  {!isNewUser && (
+                    <li>All suspension records will be cleared</li>
+                  )}
                 </ul>
               </div>
             </div>
@@ -150,7 +165,7 @@ function ActivateUserModal({ user, onClose, onConfirm }) {
                 Cancel
               </button>
               <button type="submit" className="confirm-btn" disabled={loading}>
-                {loading ? "Activating..." : "Reactivate User"}
+                {loading ? loadingText : actionButton}
               </button>
             </div>
           </form>

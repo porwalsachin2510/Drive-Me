@@ -178,7 +178,7 @@ function AddDriverModal({ onClose, onSuccess }) {
     formDataToSend.append("experienceYears", formData.experienceYears);
     formDataToSend.append(
       "experienceDescription",
-      formData.experienceDescription
+      formData.experienceDescription,
     );
 
     if (files.license) formDataToSend.append("license", files.license);
@@ -260,7 +260,7 @@ function AddDriverModal({ onClose, onSuccess }) {
   }, []);
 
   return (
-    <div className="drivemego-cadm-modal-overlay" onClick={handleModalClose}>
+    <div className="drivemego-cadm-modal-overlay">
       <div
         className="drivemego-cadm-modal-content"
         onClick={(e) => e.stopPropagation()}

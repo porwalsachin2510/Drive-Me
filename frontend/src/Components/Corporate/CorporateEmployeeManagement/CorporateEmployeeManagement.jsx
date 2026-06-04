@@ -23,6 +23,14 @@ function CorporateEmployeeManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  // Dropdown options state for master data fields
+  const [dropdownOptions, setDropdownOptions] = useState({
+    departments: [],
+    designations: [],
+    workLocations: [],
+    shiftTypes: [],
+  });
+
   console.log("availableRoutes", availableRoutes);
 
   // Form states - match backend CorporateEmployee model schema
@@ -73,7 +81,39 @@ function CorporateEmployeeManagement() {
   useEffect(() => {
     fetchEmployees();
     fetchAvailableRoutes();
+    fetchDropdownOptions();
   }, [currentPage, searchTerm, filterStatus]);
+
+  // Fetch dropdown options for master data fields (Department, Designation, Work Location)
+  const fetchDropdownOptions = async () => {
+    try {
+      const response = await api.post("/dropdowns/multiple", {
+        categories: [
+          "DEPARTMENTS",
+          "DESIGNATIONS",
+          "WORK_LOCATIONS",
+          "SHIFT_TYPES",
+        ],
+      });
+
+      const dropdownData = response.data?.data?.dropdowns || {};
+      setDropdownOptions({
+        departments: dropdownData.DEPARTMENTS?.options || [],
+        designations: dropdownData.DESIGNATIONS?.options || [],
+        workLocations: dropdownData.WORK_LOCATIONS?.options || [],
+        shiftTypes: dropdownData.SHIFT_TYPES?.options || [],
+      });
+    } catch (error) {
+      console.error("Error fetching dropdown options:", error);
+      // Set default options if API fails
+      setDropdownOptions({
+        departments: [],
+        designations: [],
+        workLocations: [],
+        shiftTypes: [],
+      });
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -475,72 +515,72 @@ function CorporateEmployeeManagement() {
   //   }
   // };
 
-   const handleBulkUploadFile = async (e) => {
-     const file = e.target.files[0];
-     if (!file) return;
+  const handleBulkUploadFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-     const fileExtension = file.name.split(".").pop().toLowerCase();
+    const fileExtension = file.name.split(".").pop().toLowerCase();
 
-     if (fileExtension === "xlsx" || fileExtension === "xls") {
-       // Handle Excel file
-       try {
-         const xlsxModule = await import("xlsx");
-         const XLSX = xlsxModule.default || xlsxModule;
-         const reader = new FileReader();
-         reader.onload = (event) => {
-           try {
-             const data = new Uint8Array(event.target.result);
-             const workbook = XLSX.read(data, { type: "array" });
-             const firstSheetName = workbook.SheetNames[0];
-             const worksheet = workbook.Sheets[firstSheetName];
-             const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    if (fileExtension === "xlsx" || fileExtension === "xls") {
+      // Handle Excel file
+      try {
+        const xlsxModule = await import("xlsx");
+        const XLSX = xlsxModule.default || xlsxModule;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-             // Map Excel columns to expected format
-             const employees = jsonData.map((row) => ({
-               fullName: row["Full Name"] || row["fullName"] || "",
-               email: row["Email"] || row["email"] || "",
-               contactNumber:
-                 row["Phone"] ||
-                 row["Phone Number"] ||
-                 row["contactNumber"] ||
-                 "",
-               department: row["Department"] || row["department"] || "",
-               designation: row["Designation"] || row["designation"] || "",
-               workLocation: row["Work Location"] || row["workLocation"] || "",
-               homeAddress: row["Home Address"] || row["homeAddress"] || "",
-               workShift: row["Work Shift"] || row["workShift"] || "FULL_DAY",
-             }));
+            // Map Excel columns to expected format
+            const employees = jsonData.map((row) => ({
+              fullName: row["Full Name"] || row["fullName"] || "",
+              email: row["Email"] || row["email"] || "",
+              contactNumber:
+                row["Phone"] ||
+                row["Phone Number"] ||
+                row["contactNumber"] ||
+                "",
+              department: row["Department"] || row["department"] || "",
+              designation: row["Designation"] || row["designation"] || "",
+              workLocation: row["Work Location"] || row["workLocation"] || "",
+              homeAddress: row["Home Address"] || row["homeAddress"] || "",
+              workShift: row["Work Shift"] || row["workShift"] || "FULL_DAY",
+            }));
 
-             setBulkUploadData({ employees });
-           } catch (error) {
-             console.error("Error parsing Excel:", error);
-             alert("Invalid Excel file. Please check the format.");
-           }
-         };
-         reader.readAsArrayBuffer(file);
-       } catch (error) {
-         console.error("Error loading xlsx library:", error);
-         alert("Error processing Excel file");
-       }
-     } else if (fileExtension === "json") {
-       // Handle JSON file (legacy support)
-       const reader = new FileReader();
-       reader.onload = (event) => {
-         try {
-           const jsonData = JSON.parse(event.target.result);
-           setBulkUploadData({
-             employees: Array.isArray(jsonData) ? jsonData : [jsonData],
-           });
-         } catch (error) {
-           alert("Invalid JSON file");
-         }
-       };
-       reader.readAsText(file);
-     } else {
-       alert("Please upload an Excel (.xlsx, .xls) file");
-     }
+            setBulkUploadData({ employees });
+          } catch (error) {
+            console.error("Error parsing Excel:", error);
+            alert("Invalid Excel file. Please check the format.");
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (error) {
+        console.error("Error loading xlsx library:", error);
+        alert("Error processing Excel file");
+      }
+    } else if (fileExtension === "json") {
+      // Handle JSON file (legacy support)
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const jsonData = JSON.parse(event.target.result);
+          setBulkUploadData({
+            employees: Array.isArray(jsonData) ? jsonData : [jsonData],
+          });
+        } catch (error) {
+          alert("Invalid JSON file");
+        }
+      };
+      reader.readAsText(file);
+    } else {
+      alert("Please upload an Excel (.xlsx, .xls) file");
+    }
   };
-  
+
   const downloadSampleTemplate = async () => {
     try {
       const xlsxModule = await import("xlsx");
@@ -777,7 +817,7 @@ function CorporateEmployeeManagement() {
   const getEmployeeDepartment = (emp) => emp.personalInfo?.department || "N/A";
   const getEmployeeDesignation = (emp) =>
     emp.personalInfo?.designation || "N/A";
-   const getEmployeeHomeAddress = (emp) => emp.homeAddress || "N/A";
+  const getEmployeeHomeAddress = (emp) => emp.homeAddress || "N/A";
   const getEmployeeRoute = (emp) => {
     if (emp.transportDetails?.assignedRoute?.routeName)
       return emp.transportDetails.assignedRoute.routeName;
@@ -1103,9 +1143,7 @@ function CorporateEmployeeManagement() {
                   />
                 </div>
                 <div className="drivemego-cem-form-row">
-                  <input
-                    type="text"
-                    placeholder="Department"
+                  <select
                     value={employeeForm.personalInfo.department}
                     onChange={(e) =>
                       setEmployeeForm((prev) => ({
@@ -1116,10 +1154,15 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
-                  />
-                  <input
-                    type="text"
-                    placeholder="Designation"
+                  >
+                    <option value="">Select Department</option>
+                    {dropdownOptions.departments.map((dept) => (
+                      <option key={dept.value} value={dept.value}>
+                        {dept.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
                     value={employeeForm.personalInfo.designation}
                     onChange={(e) =>
                       setEmployeeForm((prev) => ({
@@ -1130,12 +1173,17 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
-                  />
+                  >
+                    <option value="">Select Designation</option>
+                    {dropdownOptions.designations.map((desig) => (
+                      <option key={desig.value} value={desig.value}>
+                        {desig.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="drivemego-cem-form-row">
-                  <input
-                    type="text"
-                    placeholder="Work Location (Office)"
+                  <select
                     value={employeeForm.personalInfo.workLocation}
                     onChange={(e) =>
                       setEmployeeForm((prev) => ({
@@ -1146,7 +1194,14 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
-                  />
+                  >
+                    <option value="">Select Work Location</option>
+                    {dropdownOptions.workLocations.map((loc) => (
+                      <option key={loc.value} value={loc.value}>
+                        {loc.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="drivemego-cem-form-row">
                   <input
@@ -1947,9 +2002,7 @@ function CorporateEmployeeManagement() {
                   />
                 </div>
                 <div className="drivemego-cem-form-row">
-                  <input
-                    type="text"
-                    placeholder="Department"
+                  <select
                     value={employeeForm.personalInfo.department}
                     onChange={(e) =>
                       setEmployeeForm((prev) => ({
@@ -1960,10 +2013,15 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
-                  />
-                  <input
-                    type="text"
-                    placeholder="Designation"
+                  >
+                    <option value="">Select Department</option>
+                    {dropdownOptions.departments.map((dept) => (
+                      <option key={dept.value} value={dept.value}>
+                        {dept.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
                     value={employeeForm.personalInfo.designation}
                     onChange={(e) =>
                       setEmployeeForm((prev) => ({
@@ -1974,12 +2032,17 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
-                  />
+                  >
+                    <option value="">Select Designation</option>
+                    {dropdownOptions.designations.map((desig) => (
+                      <option key={desig.value} value={desig.value}>
+                        {desig.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="drivemego-cem-form-row">
-                  <input
-                    type="text"
-                    placeholder="Work Location (Office)"
+                  <select
                     value={employeeForm.personalInfo.workLocation}
                     onChange={(e) =>
                       setEmployeeForm((prev) => ({
@@ -1990,7 +2053,14 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
-                  />
+                  >
+                    <option value="">Select Work Location</option>
+                    {dropdownOptions.workLocations.map((loc) => (
+                      <option key={loc.value} value={loc.value}>
+                        {loc.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="drivemego-cem-form-row">
                   <input

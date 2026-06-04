@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Payment from "../models/Payment.js";
 import Contract from "../models/Contract.js";
 import Wallet from "../models/Wallet.js";
@@ -18,10 +19,12 @@ import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import AdminNegotiation from "../models/AdminNegotiation.js";
 import EMIPayment from "../models/EMIPayment.js";
+import WithdrawalRequest from "../models/WithdrawalRequest.js";
 import { uploadToCloudinary } from "../Config/Cloudinary.js";
 import { createNotification, sendRealTimeNotification } from "../Services/notificationService.js";
 import { broadcastVehicleAvailabilityChange } from "../Services/socketService.js";
 import { creditAdminNegotiationCommission } from "./walletController.js";
+import paymentGatewayService, { getPaymentGateway, detectCountryFromCurrency } from "../Services/paymentGatewayService.js";
 
 // Get all users for admin
 export const getAllUsers = async (req, res) => {
@@ -217,9 +220,11 @@ export const activateUser = async (req, res) => {
     try {
         const { userId } = req.params;
 
-        const { message } = req.body; // Optional message from admin
+        const { message, isNewActivation } = req.body; // Optional message from admin and flag for new vs reactivation
 
-        const previousSuspensionReason = await User.findById(userId).select('suspensionReason').lean();
+        // Get previous user status to determine if this is a new activation or reactivation
+        const previousUser = await User.findById(userId).select('status suspensionReason').lean();
+        const wasNewUser = previousUser?.status === "PENDING" || isNewActivation;
 
         const user = await User.findByIdAndUpdate(
             userId,
@@ -242,25 +247,34 @@ export const activateUser = async (req, res) => {
             });
         }
 
+        // Set appropriate wording based on new activation vs reactivation
+        const notificationTitle = wasNewUser ? "Account Activated" : "Account Reactivated";
+        const defaultMessage = wasNewUser
+            ? "Your account has been activated. Welcome to DriveMeGo! You can now log in and start using our services."
+            : "Your account has been reactivated. Please ensure you follow our platform guidelines to avoid future suspensions.";
+
         // Send activation notification
         try {
             await createNotification({
                 userId: user._id,
                 type: "ACCOUNT_ACTIVATED",
-                title: "Account Reactivated",
-                message: message || "Your account has been reactivated. Please ensure you follow our platform guidelines to avoid future suspensions.",
+                title: notificationTitle,
+                message: message || defaultMessage,
                 data: {
-                    reactivatedAt: new Date(),
-                    adminMessage: message
+                    activatedAt: new Date(),
+                    adminMessage: message,
+                    isNewActivation: wasNewUser
                 }
             });
 
             // Send real-time notification
             sendRealTimeNotification(user._id.toString(), {
                 type: "ACCOUNT_ACTIVATED",
-                title: "Account Reactivated",
-                message: "Your account has been reactivated! You can now log in.",
-                data: { adminMessage: message }
+                title: notificationTitle,
+                message: wasNewUser
+                    ? "Your account has been activated! Welcome to DriveMeGo."
+                    : "Your account has been reactivated! You can now log in.",
+                data: { adminMessage: message, isNewActivation: wasNewUser }
             });
         } catch (notifError) {
             console.error("[v0] Error sending activation notification:", notifError);
@@ -272,8 +286,9 @@ export const activateUser = async (req, res) => {
             await sendActivationEmail({
                 email: user.email,
                 fullName: user.fullName,
-                message: message || "Your account has been reactivated. Please ensure you follow our platform guidelines to avoid future suspensions.",
-                previousReason: previousSuspensionReason?.suspensionReason
+                message: message || defaultMessage,
+                previousReason: wasNewUser ? null : previousUser?.suspensionReason,
+                isNewActivation: wasNewUser
             });
         } catch (emailError) {
             console.error("[v0] Error sending activation email:", emailError);
@@ -281,7 +296,7 @@ export const activateUser = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "User activated successfully",
+            message: wasNewUser ? "User activated successfully" : "User reactivated successfully",
             user
         });
     } catch (error) {
@@ -724,20 +739,101 @@ export const getPayoutRequests = async (req, res) => {
 
         if (status) query.status = status;
 
-        const payouts = await Transaction.find({
-            category: 'PAYOUT_REQUESTED',
-            ...query
-        })
-            .populate('userId', 'fullName email')
+        // First, sync any PENDING wallet withdrawals that don't have WithdrawalRequest records
+        // This handles legacy data before WithdrawalRequest model was implemented
+        try {
+            const walletsWithPendingWithdrawals = await Wallet.find({
+                'transactions.type': 'WITHDRAWAL',
+                'transactions.status': 'PENDING'
+            }).populate('userId', 'fullName email phone role');
+
+            for (const wallet of walletsWithPendingWithdrawals) {
+                for (const txn of wallet.transactions) {
+                    if (txn.type === 'WITHDRAWAL' && txn.status === 'PENDING') {
+                        // Check if WithdrawalRequest already exists for this transaction
+                        const existingRequest = await WithdrawalRequest.findOne({
+                            walletTransactionId: txn._id
+                        });
+
+                        if (!existingRequest) {
+                            // Create WithdrawalRequest for legacy withdrawal
+                            const user = wallet.userId;
+                            await WithdrawalRequest.create({
+                                userId: user?._id || wallet.userId,
+                                walletId: wallet._id,
+                                requestId: `WR-LEGACY-${txn._id.toString().slice(-8).toUpperCase()}`,
+                                amount: Math.abs(txn.amount),
+                                currency: wallet.currency || 'AED',
+                                bankName: txn.bankName || (txn.description?.match(/to (.+?) -/) || [])[1] || 'Unknown Bank',
+                                bankCode: txn.bankCode || '',
+                                iban: txn.bankAccount || 'N/A',
+                                accountHolderName: txn.accountHolderName || (txn.description?.match(/- (.+)$/) || [])[1] || user?.fullName || 'Unknown',
+                                status: 'PENDING',
+                                userInfo: {
+                                    fullName: user?.fullName || user?.name || 'Unknown',
+                                    email: user?.email || '',
+                                    phone: user?.phone || '',
+                                    role: user?.role || wallet.role || 'USER'
+                                },
+                                walletTransactionId: txn._id,
+                                metadata: {
+                                    reference: txn.reference,
+                                    legacyMigration: true,
+                                    originalCreatedAt: txn.createdAt,
+                                    originalDescription: txn.description
+                                },
+                                createdAt: txn.createdAt || new Date()
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (migrationError) {
+            console.error("[getPayoutRequests] Error migrating legacy withdrawals:", migrationError);
+            // Continue even if migration fails
+        }
+
+        // Fetch from WithdrawalRequest model
+        const payouts = await WithdrawalRequest.find(query)
+            .populate('userId', 'fullName email phone role')
             .sort({ createdAt: -1 })
             .limit(Number.parseInt(limit))
             .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
-        const total = await Transaction.countDocuments({ category: 'PAYOUT_REQUESTED', ...query });
+        const total = await WithdrawalRequest.countDocuments(query);
+        const pendingCount = await WithdrawalRequest.countDocuments({ status: 'PENDING' });
+
+        // Transform data for frontend
+        const formattedPayouts = payouts.map(payout => ({
+            _id: payout._id,
+            requestId: payout.requestId,
+            providerId: payout.userId,
+            type: payout.userInfo?.role || 'USER',
+            totalAmount: payout.amount,
+            commissionAmount: 0, // No commission on withdrawals
+            netPayable: payout.amount,
+            status: payout.status,
+            bankName: payout.bankName,
+            iban: payout.iban,
+            accountHolderName: payout.accountHolderName,
+            currency: payout.currency,
+            createdAt: payout.createdAt,
+            processedAt: payout.processedAt,
+            completedAt: payout.completedAt,
+            rejectedAt: payout.rejectedAt,
+            rejectionReason: payout.rejectionReason,
+            adminNotes: payout.adminNotes,
+            transactionReference: payout.transactionReference,
+            userInfo: payout.userInfo
+        }));
 
         res.status(200).json({
             success: true,
-            payouts,
+            payouts: formattedPayouts,
+            stats: {
+                total,
+                pending: pendingCount
+            },
             pagination: {
                 total,
                 page: Number.parseInt(page),
@@ -847,16 +943,9 @@ export const getTransactions = async (req, res) => {
 export const approvePayout = async (req, res) => {
     try {
         const { payoutId } = req.params;
+        const { adminNotes } = req.body;
 
-        const payout = await Transaction.findByIdAndUpdate(
-            payoutId,
-            {
-                status: 'APPROVED',
-                approvedAt: new Date(),
-                approvedBy: req.userId
-            },
-            { new: true }
-        );
+        const payout = await WithdrawalRequest.findById(payoutId);
 
         if (!payout) {
             return res.status(404).json({
@@ -865,15 +954,42 @@ export const approvePayout = async (req, res) => {
             });
         }
 
-        // Process payout (you can integrate with payment gateway here)
-        // For now, we'll mark it as completed
-        payout.status = 'COMPLETED';
-        payout.completedAt = new Date();
+        if (payout.status !== 'PENDING') {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot approve payout with status: ${payout.status}`
+            });
+        }
+
+        // Update payout status to APPROVED (not COMPLETED - admin still needs to manually transfer)
+        payout.status = 'APPROVED';
+        payout.approvedAt = new Date();
+        payout.processedBy = req.userId;
+        if (adminNotes) payout.adminNotes = adminNotes;
         await payout.save();
+
+        // Update wallet transaction status
+        const wallet = await Wallet.findById(payout.walletId);
+        if (wallet && payout.walletTransactionId) {
+            const txn = wallet.transactions.id(payout.walletTransactionId);
+            if (txn) {
+                txn.status = 'APPROVED';
+                await wallet.save();
+            }
+        }
+
+        // Send notification to user
+        await createNotification({
+            userId: payout.userId,
+            type: 'PAYOUT_APPROVED',
+            title: 'Withdrawal Approved',
+            message: `Your withdrawal request of ${payout.currency} ${payout.amount} has been approved. Payment will be processed shortly.`,
+            data: { requestId: payout.requestId, amount: payout.amount }
+        });
 
         res.status(200).json({
             success: true,
-            message: "Payout approved and completed successfully",
+            message: "Payout approved successfully. Please complete the bank transfer and mark as completed.",
             payout
         });
     } catch (error) {
@@ -892,16 +1008,7 @@ export const rejectPayout = async (req, res) => {
         const { payoutId } = req.params;
         const { reason } = req.body;
 
-        const payout = await Transaction.findByIdAndUpdate(
-            payoutId,
-            {
-                status: 'REJECTED',
-                rejectedAt: new Date(),
-                rejectedBy: req.userId,
-                failureReason: reason || 'Payout rejected by admin'
-            },
-            { new: true }
-        );
+        const payout = await WithdrawalRequest.findById(payoutId);
 
         if (!payout) {
             return res.status(404).json({
@@ -910,9 +1017,58 @@ export const rejectPayout = async (req, res) => {
             });
         }
 
+        if (!['PENDING', 'APPROVED'].includes(payout.status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot reject payout with status: ${payout.status}`
+            });
+        }
+
+        // Update payout status
+        payout.status = 'REJECTED';
+        payout.rejectedAt = new Date();
+        payout.processedBy = req.userId;
+        payout.rejectionReason = reason || 'Payout rejected by admin';
+        await payout.save();
+
+        // Refund the amount back to user's wallet
+        const wallet = await Wallet.findById(payout.walletId);
+        if (wallet) {
+            wallet.balance += payout.amount;
+            wallet.totalWithdrawals = Math.max(0, (wallet.totalWithdrawals || 0) - payout.amount);
+
+            // Update wallet transaction status
+            if (payout.walletTransactionId) {
+                const txn = wallet.transactions.id(payout.walletTransactionId);
+                if (txn) {
+                    txn.status = 'REJECTED';
+                }
+            }
+
+            // Add refund transaction
+            wallet.transactions.push({
+                type: 'REFUND',
+                amount: payout.amount,
+                description: `Withdrawal request rejected - funds returned. Reason: ${payout.rejectionReason}`,
+                status: 'COMPLETED',
+                createdAt: new Date()
+            });
+
+            await wallet.save();
+        }
+
+        // Send notification to user
+        await createNotification({
+            userId: payout.userId,
+            type: 'PAYOUT_REJECTED',
+            title: 'Withdrawal Rejected',
+            message: `Your withdrawal request of ${payout.currency} ${payout.amount} has been rejected. Reason: ${payout.rejectionReason}. The amount has been refunded to your wallet.`,
+            data: { requestId: payout.requestId, amount: payout.amount, reason: payout.rejectionReason }
+        });
+
         res.status(200).json({
             success: true,
-            message: "Payout rejected successfully",
+            message: "Payout rejected successfully. Amount refunded to user's wallet.",
             payout
         });
     } catch (error) {
@@ -929,16 +1085,9 @@ export const rejectPayout = async (req, res) => {
 export const completePayout = async (req, res) => {
     try {
         const { payoutId } = req.params;
+        const { transactionReference, paymentProof, adminNotes } = req.body;
 
-        const payout = await Transaction.findByIdAndUpdate(
-            payoutId,
-            {
-                status: 'COMPLETED',
-                completedAt: new Date(),
-                completedBy: req.userId
-            },
-            { new: true }
-        );
+        const payout = await WithdrawalRequest.findById(payoutId);
 
         if (!payout) {
             return res.status(404).json({
@@ -947,12 +1096,45 @@ export const completePayout = async (req, res) => {
             });
         }
 
-        // Process payout to provider's wallet
-        const wallet = await Wallet.findOne({ userId: payout.userId });
-        if (wallet) {
-            wallet.balance += payout.amount;
-            await wallet.save();
+        if (!['PENDING', 'APPROVED'].includes(payout.status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot complete payout with status: ${payout.status}`
+            });
         }
+
+        // Update payout status
+        payout.status = 'COMPLETED';
+        payout.completedAt = new Date();
+        payout.processedBy = req.userId;
+        payout.processedAt = new Date();
+        if (transactionReference) payout.transactionReference = transactionReference;
+        if (paymentProof) payout.paymentProof = paymentProof;
+        if (adminNotes) payout.adminNotes = adminNotes;
+        await payout.save();
+
+        // Update wallet transaction status
+        const wallet = await Wallet.findById(payout.walletId);
+        if (wallet && payout.walletTransactionId) {
+            const txn = wallet.transactions.id(payout.walletTransactionId);
+            if (txn) {
+                txn.status = 'COMPLETED';
+                await wallet.save();
+            }
+        }
+
+        // Send notification to user
+        await createNotification({
+            userId: payout.userId,
+            type: 'PAYOUT_COMPLETED',
+            title: 'Withdrawal Completed',
+            message: `Your withdrawal of ${payout.currency} ${payout.amount} has been transferred to your bank account (${payout.bankName}).`,
+            data: {
+                requestId: payout.requestId,
+                amount: payout.amount,
+                transactionReference: payout.transactionReference
+            }
+        });
 
         res.status(200).json({
             success: true,
@@ -969,37 +1151,285 @@ export const completePayout = async (req, res) => {
     }
 };
 
+// Process payout automatically via payment gateway (Stripe/TAP)
+export const processAutomaticPayout = async (req, res) => {
+    try {
+        const { payoutId } = req.params;
+        const { adminNotes } = req.body;
+
+        const payout = await WithdrawalRequest.findById(payoutId)
+            .populate('userId', 'fullName email phone stripeConnectAccountId tapAccountId');
+
+        if (!payout) {
+            return res.status(404).json({
+                success: false,
+                message: "Payout request not found"
+            });
+        }
+
+        if (!['PENDING', 'APPROVED'].includes(payout.status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot process payout with status: ${payout.status}`
+            });
+        }
+
+        // Determine the appropriate payment gateway based on country/currency
+        const country = payout.country || detectCountryFromCurrency(payout.currency);
+        const gateway = getPaymentGateway(country);
+
+        // Get user's destination account for automatic payout
+        let destinationAccountId = payout.destinationAccountId;
+
+        // If no destination account, check user's connected accounts
+        if (!destinationAccountId && payout.userId) {
+            if (gateway === "STRIPE") {
+                destinationAccountId = payout.userId.stripeConnectAccountId;
+            } else if (gateway === "TAP") {
+                destinationAccountId = payout.userId.tapAccountId;
+            }
+        }
+
+        // If still no destination account, we cannot process automatically
+        if (!destinationAccountId) {
+            return res.status(400).json({
+                success: false,
+                message: `User does not have a connected ${gateway} account for automatic payouts. Please use manual transfer instead.`,
+                canProcessManually: true
+            });
+        }
+
+        // Update status to PROCESSING
+        payout.status = 'PROCESSING';
+        payout.paymentMethod = gateway;
+        payout.processedAt = new Date();
+        payout.processedBy = req.userId;
+        if (adminNotes) payout.adminNotes = adminNotes;
+        await payout.save();
+
+        // Attempt automatic payout via payment gateway
+        try {
+            const payoutResult = await paymentGatewayService.createPayout(gateway, {
+                amount: payout.amount,
+                currency: payout.currency,
+                destinationAccountId: destinationAccountId,
+                metadata: {
+                    requestId: payout.requestId,
+                    userId: payout.userId._id?.toString() || payout.userId.toString(),
+                    walletId: payout.walletId.toString(),
+                },
+                description: `Withdrawal ${payout.requestId} - ${payout.userInfo?.fullName || 'User'}`
+            });
+
+            if (payoutResult.success) {
+                // Update payout with gateway info
+                payout.gatewayPayoutId = payoutResult.payoutId;
+                payout.gatewayStatus = payoutResult.status;
+                payout.transactionReference = payoutResult.payoutId;
+
+                // If immediately completed (some gateways)
+                if (payoutResult.status === 'COMPLETED') {
+                    payout.status = 'COMPLETED';
+                    payout.completedAt = new Date();
+                }
+
+                await payout.save();
+
+                // Update wallet transaction status
+                const wallet = await Wallet.findById(payout.walletId);
+                if (wallet && payout.walletTransactionId) {
+                    const txn = wallet.transactions.id(payout.walletTransactionId);
+                    if (txn) {
+                        txn.status = payout.status === 'COMPLETED' ? 'COMPLETED' : 'PROCESSING';
+                        await wallet.save();
+                    }
+                }
+
+                // Send notification to user
+                await createNotification({
+                    userId: payout.userId._id || payout.userId,
+                    type: payout.status === 'COMPLETED' ? 'PAYOUT_COMPLETED' : 'PAYOUT_PROCESSING',
+                    title: payout.status === 'COMPLETED' ? 'Withdrawal Completed' : 'Withdrawal Processing',
+                    message: payout.status === 'COMPLETED'
+                        ? `Your withdrawal of ${payout.currency} ${payout.amount} has been transferred to your account via ${gateway}.`
+                        : `Your withdrawal of ${payout.currency} ${payout.amount} is being processed via ${gateway}. You will be notified once completed.`,
+                    data: {
+                        requestId: payout.requestId,
+                        amount: payout.amount,
+                        gateway,
+                        payoutId: payoutResult.payoutId
+                    }
+                });
+
+                return res.status(200).json({
+                    success: true,
+                    message: payout.status === 'COMPLETED'
+                        ? `Payout completed successfully via ${gateway}`
+                        : `Payout is being processed via ${gateway}`,
+                    payout,
+                    gatewayResponse: {
+                        gateway,
+                        payoutId: payoutResult.payoutId,
+                        status: payoutResult.status
+                    }
+                });
+            }
+        } catch (gatewayError) {
+            console.error("[processAutomaticPayout] Gateway error:", gatewayError);
+
+            // Revert status to APPROVED on gateway failure
+            payout.status = 'APPROVED';
+            payout.gatewayStatus = 'FAILED';
+            payout.metadata = {
+                ...payout.metadata,
+                lastGatewayError: gatewayError.message,
+                lastGatewayAttempt: new Date()
+            };
+            await payout.save();
+
+            return res.status(400).json({
+                success: false,
+                message: `Automatic payout failed: ${gatewayError.message}. You can try again or use manual transfer.`,
+                canProcessManually: true
+            });
+        }
+
+    } catch (error) {
+        console.error("[processAutomaticPayout] Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error processing automatic payout",
+            error: error.message,
+        });
+    }
+};
+
+// Get payout gateway info (which gateway will be used based on country)
+export const getPayoutGatewayInfo = async (req, res) => {
+    try {
+        const { payoutId } = req.params;
+
+        const payout = await WithdrawalRequest.findById(payoutId)
+            .populate('userId', 'fullName email stripeConnectAccountId tapAccountId');
+
+        if (!payout) {
+            return res.status(404).json({
+                success: false,
+                message: "Payout request not found"
+            });
+        }
+
+        const country = payout.country || detectCountryFromCurrency(payout.currency);
+        const recommendedGateway = getPaymentGateway(country);
+
+        // Check if user has connected accounts
+        let hasStripeAccount = false;
+        let hasTapAccount = false;
+
+        if (payout.userId) {
+            hasStripeAccount = !!payout.userId.stripeConnectAccountId;
+            hasTapAccount = !!payout.userId.tapAccountId;
+        }
+
+        const canProcessAutomatically = (recommendedGateway === 'STRIPE' && hasStripeAccount) ||
+            (recommendedGateway === 'TAP' && hasTapAccount);
+
+        res.status(200).json({
+            success: true,
+            gatewayInfo: {
+                country,
+                recommendedGateway,
+                canProcessAutomatically,
+                hasStripeAccount,
+                hasTapAccount,
+                availableOptions: [
+                    {
+                        method: 'MANUAL',
+                        label: 'Manual Bank Transfer',
+                        description: 'Transfer manually to user bank account and mark as complete',
+                        available: true
+                    },
+                    {
+                        method: 'STRIPE',
+                        label: 'Stripe Payout',
+                        description: 'Automatic transfer via Stripe (UAE, international)',
+                        available: hasStripeAccount,
+                        reason: !hasStripeAccount ? 'User does not have a connected Stripe account' : null
+                    },
+                    {
+                        method: 'TAP',
+                        label: 'TAP Payments',
+                        description: 'Automatic transfer via TAP (Kuwait, GCC)',
+                        available: hasTapAccount,
+                        reason: !hasTapAccount ? 'User does not have a connected TAP account' : null
+                    }
+                ]
+            },
+            payout: {
+                _id: payout._id,
+                requestId: payout.requestId,
+                amount: payout.amount,
+                currency: payout.currency,
+                status: payout.status,
+                bankName: payout.bankName,
+                iban: payout.iban,
+                accountHolderName: payout.accountHolderName,
+                userInfo: payout.userInfo
+            }
+        });
+    } catch (error) {
+        console.error("[getPayoutGatewayInfo] Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching gateway info",
+            error: error.message,
+        });
+    }
+};
+
 // Get fraud alerts for admin
 export const getFraudAlerts = async (req, res) => {
     try {
         const { severity, page = 1, limit = 20 } = req.query;
-        const query = {};
 
-        if (severity) query.severity = severity;
-
-        // Fetch real fraud alerts from database
-        const realAlerts = await Transaction.find({
+        // Fetch ACTUAL fraud alerts - only suspicious/flagged activity
+        // Not regular transactions like commissions or refunds
+        const fraudQuery = {
             $or: [
                 { status: 'SUSPICIOUS' },
-                { amount: { $gt: 1000 } }, // High-value transactions
-                { 'metadata.ipAddress': { $exists: true } }
+                { status: 'FLAGGED' },
+                { isFraudulent: true },
+                { 'metadata.flaggedForReview': true }
             ]
-        })
+        };
+
+        if (severity) {
+            fraudQuery.severity = severity;
+        }
+
+        const realAlerts = await Transaction.find(fraudQuery)
+            .populate('userId', 'fullName email profileImage')
             .sort({ createdAt: -1 })
             .limit(Number.parseInt(limit))
             .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
-        const total = await Transaction.countDocuments({
-            $or: [
-                { status: 'SUSPICIOUS' },
-                { amount: { $gt: 1000 } },
-                { 'metadata.ipAddress': { $exists: true } }
-            ]
-        });
+        const total = await Transaction.countDocuments(fraudQuery);
+
+        // Transform to proper fraud alert format
+        const alerts = realAlerts.map(alert => ({
+            _id: alert._id,
+            type: alert.type || 'SUSPICIOUS_TRANSACTION',
+            description: alert.description || `Suspicious ${alert.transactionType || 'activity'} detected`,
+            userId: alert.userId,
+            severity: alert.severity || 'MEDIUM',
+            createdAt: alert.createdAt,
+            amount: alert.amount,
+            status: alert.status
+        }));
 
         res.status(200).json({
             success: true,
-            alerts: realAlerts,
+            alerts: alerts,
             pagination: {
                 total,
                 page: Number.parseInt(page),
@@ -1112,30 +1542,85 @@ export const getUserActivity = async (req, res) => {
 export const getSystemLogs = async (req, res) => {
     try {
         const { level, source, page = 1, limit = 50 } = req.query;
-        const query = {};
 
-        if (level) query.level = level;
-        if (source) query.source = source;
+        // Try to fetch from SystemLog collection if it exists
+        // Otherwise generate logs from recent system activity
+        let logs = [];
+        let total = 0;
 
-        // Fetch real system logs from database
-        const logs = await Transaction.find({
-            $or: [
-                { status: 'ERROR' },
-                { status: 'WARNING' },
-                { status: 'INFO' }
-            ]
-        })
-            .sort({ createdAt: -1 })
-            .limit(Number.parseInt(limit))
-            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+        try {
+            // Try to get logs from a dedicated SystemLog model if it exists
+            const SystemLog = mongoose.models.SystemLog;
+            if (SystemLog) {
+                const query = {};
+                if (level) query.level = level;
+                if (source) query.source = source;
 
-        const total = await Transaction.countDocuments({
-            $or: [
-                { status: 'ERROR' },
-                { status: 'WARNING' },
-                { status: 'INFO' }
-            ]
-        });
+                logs = await SystemLog.find(query)
+                    .sort({ createdAt: -1 })
+                    .limit(Number.parseInt(limit))
+                    .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+
+                total = await SystemLog.countDocuments(query);
+            }
+        } catch (modelError) {
+            // SystemLog model doesn't exist, generate from activity
+        }
+
+        // If no dedicated logs, generate from recent activity
+        if (logs.length === 0) {
+            // Get recent user registrations as INFO logs
+            const recentUsers = await User.find({})
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .select('fullName email role createdAt');
+
+            // Get recent payments as INFO logs  
+            const recentPayments = await Payment.find({ status: 'COMPLETED' })
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .select('amount paymentType createdAt');
+
+            // Get failed payments as ERROR logs
+            const failedPayments = await Payment.find({ status: 'FAILED' })
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .select('amount paymentType createdAt errorMessage');
+
+            // Combine into log format
+            const userLogs = recentUsers.map(user => ({
+                _id: user._id,
+                level: 'INFO',
+                source: 'USER_SERVICE',
+                message: `New ${user.role} registered: ${user.fullName}`,
+                timestamp: user.createdAt,
+                details: { email: user.email, role: user.role }
+            }));
+
+            const paymentLogs = recentPayments.map(payment => ({
+                _id: payment._id,
+                level: 'INFO',
+                source: 'PAYMENT_SERVICE',
+                message: `Payment completed: AED ${payment.amount}`,
+                timestamp: payment.createdAt,
+                details: { type: payment.paymentType, amount: payment.amount }
+            }));
+
+            const errorLogs = failedPayments.map(payment => ({
+                _id: payment._id,
+                level: 'ERROR',
+                source: 'PAYMENT_SERVICE',
+                message: `Payment failed: ${payment.errorMessage || 'Unknown error'}`,
+                timestamp: payment.createdAt,
+                details: { type: payment.paymentType, amount: payment.amount }
+            }));
+
+            logs = [...errorLogs, ...userLogs, ...paymentLogs]
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .slice(0, Number.parseInt(limit));
+
+            total = logs.length;
+        }
 
         res.status(200).json({
             success: true,
@@ -7315,45 +7800,123 @@ export const getAllContracts = async (req, res) => {
 // Get admin dashboard statistics
 export const getDashboardStats = async (req, res) => {
     try {
-        const [totalContracts, activeContracts, pendingPayments, totalPaymentRevenue, adminWallet, dominantCurrencyResult] = await Promise.all([
+        // Fetch all stats in parallel for performance
+        const [
+            // User counts
+            totalUsers,
+            totalCorporates,
+            totalB2CPartners,
+            totalB2BPartners,
+            totalDrivers,
+            suspendedUsers,
+
+            // Contract counts
+            totalContracts,
+            activeContracts,
+
+            // Booking counts - B2C passenger bookings
+            totalB2CBookings,
+            activeB2CBookings,
+
+            // Payment counts
+            pendingPayments,
+            totalPaymentRevenue,
+
+            // Trip counts
+            activeTrips,
+
+            // Wallet
+            adminWallet,
+            dominantCurrencyResult
+        ] = await Promise.all([
+            // User counts
+            User.countDocuments(),
+            User.countDocuments({ role: "CORPORATE" }),
+            User.countDocuments({ role: "B2C_PARTNER" }),
+            User.countDocuments({ role: "B2B_PARTNER" }),
+            User.countDocuments({ role: { $in: ["B2B_PARTNER_DRIVER", "CORPORATE_DRIVER", "B2C_PARTNER_DRIVER"] } }),
+            User.countDocuments({ status: "SUSPENDED" }),
+
+            // Contract counts
             Contract.countDocuments(),
             Contract.countDocuments({ status: "ACTIVE" }),
+
+            // B2C Passenger Bookings
+            B2CPassengerBooking.countDocuments(),
+            B2CPassengerBooking.countDocuments({
+                status: { $in: ["CONFIRMED", "ACTIVE", "BOARDED"] }
+            }),
+
+            // Payment counts
             Payment.countDocuments({ verificationStatus: "PENDING" }),
-            Payment.aggregate([{ $match: { status: "COMPLETED" } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
+            Payment.aggregate([
+                { $match: { status: "COMPLETED" } },
+                { $group: { _id: null, total: { $sum: "$amount" } } }
+            ]),
+
+            // Active trips (trips currently in progress)
+            B2CPartnerTrip.countDocuments({
+                status: { $in: ["SCHEDULED", "IN_PROGRESS", "STARTED"] },
+                tripDate: {
+                    $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+                    $lte: new Date(new Date().setHours(23, 59, 59, 999))
+                }
+            }),
+
+            // Admin wallet
             Wallet.findOne({ userId: req.userId, role: "ADMIN" }),
+
             // Get the dominant currency from wallets
             Wallet.aggregate([
                 { $group: { _id: "$currency", count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
                 { $limit: 1 }
             ])
-        ])
+        ]);
 
         const currency = dominantCurrencyResult[0]?._id || adminWallet?.currency || "AED";
 
         // Total revenue is the admin wallet balance (commissions from all payments)
-        // This reflects actual admin earnings from EMI commissions, negotiation fees, etc.
         const totalRevenue = adminWallet?.totalEarnings || adminWallet?.balance || 0;
 
         res.status(200).json({
             success: true,
             stats: {
+                // User stats
+                totalUsers,
+                totalCorporates,
+                totalB2CPartners,
+                totalB2BPartners,
+                totalDrivers,
+                suspendedUsers,
+
+                // Contract stats
                 totalContracts,
                 activeContracts,
+
+                // Booking stats
+                totalBookings: totalB2CBookings,
+                activeBookings: activeB2CBookings,
+
+                // Payment stats
                 pendingPayments,
                 totalRevenue: totalRevenue,
                 adminBalance: adminWallet?.balance || 0,
                 totalEarnings: adminWallet?.totalEarnings || 0,
+
+                // Trip stats
+                activeTrips,
+
                 currency: currency,
             },
-        })
+        });
     } catch (error) {
-        console.error("[v0] Error fetching dashboard stats:", error)
+        console.error("[v0] Error fetching dashboard stats:", error);
         res.status(500).json({
             success: false,
             message: "Error fetching dashboard statistics",
             error: error.message,
-        })
+        });
     }
 }
 
@@ -9113,6 +9676,534 @@ export const getMyPermissions = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error fetching permissions",
+            error: error.message,
+        });
+    }
+};
+
+// ============================================================
+// REVENUE REPORTS APIs - User-wise and Vendor-wise Reports
+// ============================================================
+
+// Get Corporate-wise revenue report
+export const getCorporateRevenueReport = async (req, res) => {
+    try {
+        const { startDate, endDate, page = 1, limit = 20, search } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Build date filter
+        const dateFilter = {};
+        if (startDate) dateFilter.$gte = new Date(startDate);
+        if (endDate) dateFilter.$lte = new Date(endDate);
+
+        // Get all corporate users with their payment data
+        const corporateUsers = await User.find({
+            role: "CORPORATE",
+            ...(search && {
+                $or: [
+                    { fullName: { $regex: search, $options: "i" } },
+                    { email: { $regex: search, $options: "i" } },
+                    { companyName: { $regex: search, $options: "i" } },
+                ]
+            })
+        }).select('_id fullName email companyName phoneNumber createdAt status profileImage');
+
+        const corporateIds = corporateUsers.map(u => u._id);
+
+        // Aggregate payments by corporate user
+        const paymentAggregation = await Payment.aggregate([
+            {
+                $match: {
+                    corporateOwnerId: { $in: corporateIds },
+                    status: "COMPLETED",
+                    ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
+                }
+            },
+            {
+                $group: {
+                    _id: "$corporateOwnerId",
+                    totalPayments: { $sum: "$amount" },
+                    paymentCount: { $sum: 1 },
+                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommission", 0] } },
+                    avgPayment: { $avg: "$amount" },
+                    lastPaymentDate: { $max: "$createdAt" },
+                    currency: { $first: "$currency" }
+                }
+            }
+        ]);
+
+        // Get contract counts by corporate
+        const contractAggregation = await Contract.aggregate([
+            {
+                $match: {
+                    corporateOwnerId: { $in: corporateIds },
+                    ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
+                }
+            },
+            {
+                $group: {
+                    _id: "$corporateOwnerId",
+                    totalContracts: { $sum: 1 },
+                    activeContracts: {
+                        $sum: { $cond: [{ $eq: ["$status", "ACTIVE"] }, 1, 0] }
+                    },
+                    totalContractValue: { $sum: "$financials.totalAmount" }
+                }
+            }
+        ]);
+
+        // Create lookup maps
+        const paymentMap = new Map(paymentAggregation.map(p => [p._id.toString(), p]));
+        const contractMap = new Map(contractAggregation.map(c => [c._id.toString(), c]));
+
+        // Combine data
+        const revenueData = corporateUsers.map(user => {
+            const payments = paymentMap.get(user._id.toString()) || {};
+            const contracts = contractMap.get(user._id.toString()) || {};
+            return {
+                userId: user._id,
+                fullName: user.fullName,
+                email: user.email,
+                companyName: user.companyName || 'N/A',
+                phoneNumber: user.phoneNumber,
+                profileImage: user.profileImage,
+                status: user.status,
+                joinedDate: user.createdAt,
+                totalRevenue: payments.totalPayments || 0,
+                paymentCount: payments.paymentCount || 0,
+                adminCommission: payments.totalAdminCommission || 0,
+                avgPaymentAmount: payments.avgPayment || 0,
+                lastPaymentDate: payments.lastPaymentDate,
+                currency: payments.currency || "AED",
+                totalContracts: contracts.totalContracts || 0,
+                activeContracts: contracts.activeContracts || 0,
+                totalContractValue: contracts.totalContractValue || 0,
+            };
+        });
+
+        // Sort by total revenue descending
+        revenueData.sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+        // Paginate
+        const paginatedData = revenueData.slice(skip, skip + parseInt(limit));
+
+        // Calculate totals
+        const totals = {
+            totalCorporates: corporateUsers.length,
+            totalRevenue: revenueData.reduce((sum, r) => sum + r.totalRevenue, 0),
+            totalAdminCommission: revenueData.reduce((sum, r) => sum + r.adminCommission, 0),
+            totalContracts: revenueData.reduce((sum, r) => sum + r.totalContracts, 0),
+            activeContracts: revenueData.reduce((sum, r) => sum + r.activeContracts, 0),
+        };
+
+        res.status(200).json({
+            success: true,
+            data: paginatedData,
+            totals,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(revenueData.length / parseInt(limit)),
+                totalRecords: revenueData.length,
+                hasMore: skip + parseInt(limit) < revenueData.length
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching corporate revenue report:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching corporate revenue report",
+            error: error.message,
+        });
+    }
+};
+
+// Get B2C Partner-wise revenue report
+export const getB2CPartnerRevenueReport = async (req, res) => {
+    try {
+        const { startDate, endDate, page = 1, limit = 20, search } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Build date filter
+        const dateFilter = {};
+        if (startDate) dateFilter.$gte = new Date(startDate);
+        if (endDate) dateFilter.$lte = new Date(endDate);
+
+        // Get all B2C partner users
+        const b2cPartners = await User.find({
+            role: "B2C_PARTNER",
+            ...(search && {
+                $or: [
+                    { fullName: { $regex: search, $options: "i" } },
+                    { email: { $regex: search, $options: "i" } },
+                    { companyName: { $regex: search, $options: "i" } },
+                ]
+            })
+        }).select('_id fullName email companyName phoneNumber createdAt status profileImage');
+
+        const partnerIds = b2cPartners.map(u => u._id);
+
+        // Aggregate bookings by B2C partner
+        const bookingAggregation = await B2CPassengerBooking.aggregate([
+            {
+                $match: {
+                    b2cPartnerId: { $in: partnerIds },
+                    paymentStatus: "COMPLETED",
+                    ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
+                }
+            },
+            {
+                $group: {
+                    _id: "$b2cPartnerId",
+                    totalBookingRevenue: { $sum: "$paymentAmount" },
+                    bookingCount: { $sum: 1 },
+                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommissionAmount", 0] } },
+                    totalDriverEarnings: { $sum: { $ifNull: ["$driverEarnings", 0] } },
+                    avgBookingAmount: { $avg: "$paymentAmount" },
+                    completedTrips: {
+                        $sum: { $cond: [{ $eq: ["$bookingStatus", "COMPLETED"] }, 1, 0] }
+                    },
+                    activeBookings: {
+                        $sum: { $cond: [{ $in: ["$bookingStatus", ["CONFIRMED", "ACCEPTED", "IN_PROGRESS"]] }, 1, 0] }
+                    },
+                    cancelledBookings: {
+                        $sum: { $cond: [{ $eq: ["$bookingStatus", "CANCELLED"] }, 1, 0] }
+                    },
+                    lastBookingDate: { $max: "$createdAt" },
+                    currency: { $first: "$currency" }
+                }
+            }
+        ]);
+
+        // Get wallet data for partners
+        const walletData = await Wallet.find({
+            userId: { $in: partnerIds },
+            role: "B2C_PARTNER"
+        }).select('userId balance totalEarnings totalWithdrawals currency');
+
+        // Create lookup maps
+        const bookingMap = new Map(bookingAggregation.map(b => [b._id.toString(), b]));
+        const walletMap = new Map(walletData.map(w => [w.userId.toString(), w]));
+
+        // Combine data
+        const revenueData = b2cPartners.map(partner => {
+            const bookings = bookingMap.get(partner._id.toString()) || {};
+            const wallet = walletMap.get(partner._id.toString()) || {};
+
+            // Net partner earnings = Total Revenue - Admin Commission
+            const netPartnerEarnings = (bookings.totalBookingRevenue || 0) - (bookings.totalAdminCommission || 0);
+
+            return {
+                partnerId: partner._id,
+                fullName: partner.fullName,
+                email: partner.email,
+                companyName: partner.companyName || partner.fullName || 'N/A',
+                phoneNumber: partner.phoneNumber,
+                profileImage: partner.profileImage,
+                status: partner.status,
+                joinedDate: partner.createdAt,
+                totalBookingRevenue: bookings.totalBookingRevenue || 0,
+                bookingCount: bookings.bookingCount || 0,
+                adminCommission: bookings.totalAdminCommission || 0,
+                netPartnerEarnings: netPartnerEarnings,
+                avgBookingAmount: bookings.avgBookingAmount || 0,
+                completedTrips: bookings.completedTrips || 0,
+                activeBookings: bookings.activeBookings || 0,
+                cancelledBookings: bookings.cancelledBookings || 0,
+                lastBookingDate: bookings.lastBookingDate,
+                currency: bookings.currency || wallet.currency || "AED",
+                walletBalance: wallet.balance || 0,
+                totalWalletEarnings: wallet.totalEarnings || 0,
+                totalWithdrawals: wallet.totalWithdrawals || 0,
+            };
+        });
+
+        // Sort by total revenue descending
+        revenueData.sort((a, b) => b.totalBookingRevenue - a.totalBookingRevenue);
+
+        // Paginate
+        const paginatedData = revenueData.slice(skip, skip + parseInt(limit));
+
+        // Calculate totals
+        const totals = {
+            totalPartners: b2cPartners.length,
+            totalRevenue: revenueData.reduce((sum, r) => sum + r.totalBookingRevenue, 0),
+            totalAdminCommission: revenueData.reduce((sum, r) => sum + r.adminCommission, 0),
+            totalNetPartnerEarnings: revenueData.reduce((sum, r) => sum + r.netPartnerEarnings, 0),
+            totalBookings: revenueData.reduce((sum, r) => sum + r.bookingCount, 0),
+            totalCompletedTrips: revenueData.reduce((sum, r) => sum + r.completedTrips, 0),
+            totalActiveBookings: revenueData.reduce((sum, r) => sum + r.activeBookings, 0),
+        };
+
+        res.status(200).json({
+            success: true,
+            data: paginatedData,
+            totals,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(revenueData.length / parseInt(limit)),
+                totalRecords: revenueData.length,
+                hasMore: skip + parseInt(limit) < revenueData.length
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching B2C partner revenue report:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching B2C partner revenue report",
+            error: error.message,
+        });
+    }
+};
+
+// Get B2B Partner-wise revenue report
+export const getB2BPartnerRevenueReport = async (req, res) => {
+    try {
+        const { startDate, endDate, page = 1, limit = 20, search } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Build date filter
+        const dateFilter = {};
+        if (startDate) dateFilter.$gte = new Date(startDate);
+        if (endDate) dateFilter.$lte = new Date(endDate);
+
+        // Get all B2B partner users
+        const b2bPartners = await User.find({
+            role: "B2B_PARTNER",
+            ...(search && {
+                $or: [
+                    { fullName: { $regex: search, $options: "i" } },
+                    { email: { $regex: search, $options: "i" } },
+                    { companyName: { $regex: search, $options: "i" } },
+                ]
+            })
+        }).select('_id fullName email companyName phoneNumber createdAt status profileImage');
+
+        const partnerIds = b2bPartners.map(u => u._id);
+
+        // Aggregate payments where B2B partner is the fleet owner
+        const paymentAggregation = await Payment.aggregate([
+            {
+                $match: {
+                    fleetOwnerId: { $in: partnerIds },
+                    status: "COMPLETED",
+                    ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
+                }
+            },
+            {
+                $group: {
+                    _id: "$fleetOwnerId",
+                    totalRevenue: { $sum: "$fleetOwnerAmount" },
+                    paymentCount: { $sum: 1 },
+                    totalGrossAmount: { $sum: "$amount" },
+                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommission", 0] } },
+                    avgPayment: { $avg: "$fleetOwnerAmount" },
+                    lastPaymentDate: { $max: "$createdAt" },
+                    currency: { $first: "$currency" }
+                }
+            }
+        ]);
+
+        // Get contract counts where B2B partner is the fleet owner
+        const contractAggregation = await Contract.aggregate([
+            {
+                $match: {
+                    fleetOwnerId: { $in: partnerIds },
+                    ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
+                }
+            },
+            {
+                $group: {
+                    _id: "$fleetOwnerId",
+                    totalContracts: { $sum: 1 },
+                    activeContracts: {
+                        $sum: { $cond: [{ $eq: ["$status", "ACTIVE"] }, 1, 0] }
+                    },
+                    totalContractValue: { $sum: "$financials.totalAmount" }
+                }
+            }
+        ]);
+
+        // Get wallet data
+        const walletData = await Wallet.find({
+            userId: { $in: partnerIds },
+            role: "B2B_PARTNER"
+        }).select('userId balance totalEarnings totalWithdrawals currency');
+
+        // Create lookup maps
+        const paymentMap = new Map(paymentAggregation.map(p => [p._id.toString(), p]));
+        const contractMap = new Map(contractAggregation.map(c => [c._id.toString(), c]));
+        const walletMap = new Map(walletData.map(w => [w.userId.toString(), w]));
+
+        // Combine data
+        const revenueData = b2bPartners.map(partner => {
+            const payments = paymentMap.get(partner._id.toString()) || {};
+            const contracts = contractMap.get(partner._id.toString()) || {};
+            const wallet = walletMap.get(partner._id.toString()) || {};
+            return {
+                partnerId: partner._id,
+                fullName: partner.fullName,
+                email: partner.email,
+                companyName: partner.companyName || partner.fullName || 'N/A',
+                phoneNumber: partner.phoneNumber,
+                profileImage: partner.profileImage,
+                status: partner.status,
+                joinedDate: partner.createdAt,
+                totalRevenue: payments.totalRevenue || 0,
+                totalGrossAmount: payments.totalGrossAmount || 0,
+                adminCommission: payments.totalAdminCommission || 0,
+                paymentCount: payments.paymentCount || 0,
+                avgPaymentAmount: payments.avgPayment || 0,
+                lastPaymentDate: payments.lastPaymentDate,
+                currency: payments.currency || wallet.currency || "AED",
+                totalContracts: contracts.totalContracts || 0,
+                activeContracts: contracts.activeContracts || 0,
+                totalContractValue: contracts.totalContractValue || 0,
+                walletBalance: wallet.balance || 0,
+                totalWalletEarnings: wallet.totalEarnings || 0,
+                totalWithdrawals: wallet.totalWithdrawals || 0,
+            };
+        });
+
+        // Sort by total revenue descending
+        revenueData.sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+        // Paginate
+        const paginatedData = revenueData.slice(skip, skip + parseInt(limit));
+
+        // Calculate totals
+        const totals = {
+            totalPartners: b2bPartners.length,
+            totalRevenue: revenueData.reduce((sum, r) => sum + r.totalRevenue, 0),
+            totalGrossAmount: revenueData.reduce((sum, r) => sum + r.totalGrossAmount, 0),
+            totalAdminCommission: revenueData.reduce((sum, r) => sum + r.adminCommission, 0),
+            totalContracts: revenueData.reduce((sum, r) => sum + r.totalContracts, 0),
+            activeContracts: revenueData.reduce((sum, r) => sum + r.activeContracts, 0),
+        };
+
+        res.status(200).json({
+            success: true,
+            data: paginatedData,
+            totals,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(revenueData.length / parseInt(limit)),
+                totalRecords: revenueData.length,
+                hasMore: skip + parseInt(limit) < revenueData.length
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching B2B partner revenue report:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching B2B partner revenue report",
+            error: error.message,
+        });
+    }
+};
+
+// Get overall revenue summary
+export const getRevenueSummary = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        // Build date filter
+        const dateFilter = {};
+        if (startDate) dateFilter.$gte = new Date(startDate);
+        if (endDate) dateFilter.$lte = new Date(endDate);
+
+        // Get payment statistics
+        const paymentStats = await Payment.aggregate([
+            {
+                $match: {
+                    status: "COMPLETED",
+                    ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalPaymentRevenue: { $sum: "$amount" },
+                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommission", 0] } },
+                    paymentCount: { $sum: 1 },
+                    currency: { $first: "$currency" }
+                }
+            }
+        ]);
+
+        // Get B2C booking statistics  
+        const bookingStats = await B2CPassengerBooking.aggregate([
+            {
+                $match: {
+                    paymentStatus: "COMPLETED",
+                    ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalBookingRevenue: { $sum: "$paymentAmount" },
+                    totalBookingCommission: { $sum: { $ifNull: ["$adminCommissionAmount", 0] } },
+                    bookingCount: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Get user counts by role
+        const userCounts = await User.aggregate([
+            {
+                $match: {
+                    role: { $in: ["CORPORATE", "B2C_PARTNER", "B2B_PARTNER"] }
+                }
+            },
+            {
+                $group: {
+                    _id: "$role",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Get admin wallet for total earnings
+        const adminWallet = await Wallet.findOne({ role: "ADMIN" });
+
+        const userCountMap = new Map(userCounts.map(u => [u._id, u.count]));
+        const payment = paymentStats[0] || {};
+        const booking = bookingStats[0] || {};
+
+        res.status(200).json({
+            success: true,
+            summary: {
+                // Revenue breakdown
+                corporateRevenue: payment.totalPaymentRevenue || 0,
+                b2cRevenue: booking.totalBookingRevenue || 0,
+                totalRevenue: (payment.totalPaymentRevenue || 0) + (booking.totalBookingRevenue || 0),
+
+                // Commission breakdown
+                corporateCommission: payment.totalAdminCommission || 0,
+                b2cCommission: booking.totalBookingCommission || 0,
+                totalCommission: (payment.totalAdminCommission || 0) + (booking.totalBookingCommission || 0),
+
+                // Transaction counts
+                corporatePayments: payment.paymentCount || 0,
+                b2cBookings: booking.bookingCount || 0,
+
+                // User counts
+                totalCorporates: userCountMap.get("CORPORATE") || 0,
+                totalB2CPartners: userCountMap.get("B2C_PARTNER") || 0,
+                totalB2BPartners: userCountMap.get("B2B_PARTNER") || 0,
+
+                // Admin wallet
+                adminWalletBalance: adminWallet?.balance || 0,
+                adminTotalEarnings: adminWallet?.totalEarnings || 0,
+
+                currency: payment.currency || adminWallet?.currency || "AED"
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching revenue summary:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching revenue summary",
             error: error.message,
         });
     }
