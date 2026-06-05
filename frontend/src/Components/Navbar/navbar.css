@@ -243,6 +243,31 @@
   justify-content: center;
 }
 
+/* Logout Button */
+.drivemego-topbar-logout-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #5f6368;
+}
+
+.drivemego-topbar-logout-btn:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.drivemego-topbar-logout-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Tablet & iPad (768px - 1024px) */
 @media (max-width: 1024px) {
   .drivemego-topbar-navbar-container {

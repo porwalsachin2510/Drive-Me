@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import "./navbar.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import WalletIcon from "./WalletIcon";
@@ -12,6 +12,8 @@ import {
   selectIsAuthenticated,
   selectLoading,
 } from "../../Redux/selectors/authSelectors";
+import { logout } from "../../Redux/slices/authSlice";
+import api from "../../utils/api";
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -23,6 +25,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
 
   // Determine active mode based on current path or activeTab
   const getActiveMode = () => {
@@ -100,6 +103,41 @@ export default function Navbar({ activeTab, setActiveTab }) {
   const handleCorporateClick = () => {
     handleTabClick("corporate");
     navigate("/service-selection");
+  };
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (token) {
+        await api.post(
+          "/auth/logout",
+          {},
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+      }
+
+      // Clear all local storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("activeTab");
+
+      // Dispatch logout action
+      dispatch(logout());
+
+      // Navigate to login
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if API fails, clear local data and redirect
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("activeTab");
+      dispatch(logout());
+      navigate("/login");
+    }
   };
 
   const handleContractTabClick = (tab) => {
@@ -254,6 +292,29 @@ export default function Navbar({ activeTab, setActiveTab }) {
                 >
                   {userInitial}
                 </span>
+              </button>
+
+              {/* Logout Button */}
+              <button
+                className="drivemego-topbar-logout-btn"
+                onClick={handleLogout}
+                title="Logout"
+                aria-label="Logout"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
               </button>
             </div>
           ) : (
