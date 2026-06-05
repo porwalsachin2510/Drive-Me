@@ -1167,7 +1167,7 @@ export const getB2CPartnerDrivers = async (req, res) => {
         });
 
         // Add B2C Partner as a driver option if they can drive
-        if (b2cPartner && (b2cPartner.canDrive || b2cPartner.hasDrivingLicense || b2cPartner.role === 'B2C_PARTNER')) {
+        if (b2cPartner && b2cPartner.isRegisteredAsDriver === true) {
             // Check partner's availability as a driver - use stored selfDriverAvailability from database
             const storedSelfAvailability = b2cPartner.selfDriverAvailability?.status || 'available';
             const partnerAvailability = getAvailabilityStatus(b2cPartner._id, storedSelfAvailability);
@@ -1554,7 +1554,7 @@ export const getB2CPartnerDriverAvailability = async (req, res) => {
         }
 
         // Add B2C Partner as a driver option if they can drive
-        if (b2cPartner && (b2cPartner.canDrive || b2cPartner.hasDrivingLicense || b2cPartner.role === 'B2C_PARTNER')) {
+        if (b2cPartner && b2cPartner.isRegisteredAsDriver === true) {
             const partnerId = b2cPartner._id.toString();
 
             // Get all trips for the partner (when driving)
