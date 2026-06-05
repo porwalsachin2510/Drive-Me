@@ -245,7 +245,7 @@
   background-color: #ffffff;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
-  overflow: hidden;
+  overflow: auto;
   margin-bottom: 20px;
 }
 
