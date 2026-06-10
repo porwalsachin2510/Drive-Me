@@ -734,7 +734,19 @@ export const searchCommuteRoutes = async (req, res) => {
                 status: { $in: ['ACTIVE', 'active', 'Active'] },
                 endDate: { $gte: new Date() }
             });
-            const totalSeatsAuth = route.totalSeats || route.assignedVehicle?.seatingCapacity || 35;
+            // Derive seat capacity from the ACTUAL vehicles assigned to this route's
+            // trip schedules (each trip time may use a different vehicle). Use the
+            // max capacity across trip options so the route card matches the
+            // per-trip seats shown inside the booking modal.
+            const vehicleSeatCapacitiesAuth = populatedTripTimes
+                .map(tt => tt.effectiveVehicle?.seatingCapacity)
+                .filter(cap => Number.isFinite(cap) && cap > 0);
+            if (Number.isFinite(route.assignedVehicle?.seatingCapacity) && route.assignedVehicle.seatingCapacity > 0) {
+                vehicleSeatCapacitiesAuth.push(route.assignedVehicle.seatingCapacity);
+            }
+            const totalSeatsAuth = vehicleSeatCapacitiesAuth.length > 0
+                ? Math.max(...vehicleSeatCapacitiesAuth)
+                : (route.totalSeats || 35);
             const dynamicAvailableSeatsAuth = Math.max(0, totalSeatsAuth - activePassCountAuth);
 
             routes.push({
@@ -742,6 +754,7 @@ export const searchCommuteRoutes = async (req, res) => {
                 operator: route.b2cPartnerId?.fullName || "Unknown Operator",
                 operatorId: route.b2cPartnerId?._id,
                 companyLogo: route.b2cPartnerId?.companyLogo || route.b2cPartnerId?.profileImage || null,
+                profileImage: route.b2cPartnerId?.profileImage || null,
 
                 fromLocation: travelData.fromLocation,
                 toLocation: travelData.toLocation,
@@ -1064,7 +1077,20 @@ export const publicSearchRoutes = async (req, res) => {
                 status: { $in: ['ACTIVE', 'active', 'Active'] },
                 endDate: { $gte: new Date() }
             });
-            const totalSeats = route.totalSeats || route.assignedVehicle?.seatingCapacity || 35;
+            // Derive seat capacity from the ACTUAL vehicles assigned to this route's
+            // trip schedules (each trip time may use a different vehicle with a
+            // different seating capacity). The route card shows the best (max)
+            // capacity available across all trip options so it matches what the
+            // commuter sees per-trip inside the booking modal.
+            const vehicleSeatCapacities = populatedTripTimes
+                .map(tt => tt.effectiveVehicle?.seatingCapacity)
+                .filter(cap => Number.isFinite(cap) && cap > 0);
+            if (Number.isFinite(route.assignedVehicle?.seatingCapacity) && route.assignedVehicle.seatingCapacity > 0) {
+                vehicleSeatCapacities.push(route.assignedVehicle.seatingCapacity);
+            }
+            const totalSeats = vehicleSeatCapacities.length > 0
+                ? Math.max(...vehicleSeatCapacities)
+                : (route.totalSeats || 35);
             const dynamicAvailableSeats = Math.max(0, totalSeats - activePassCount);
 
             routes.push({
@@ -1072,6 +1098,7 @@ export const publicSearchRoutes = async (req, res) => {
                 operator: route.b2cPartnerId?.fullName || "Unknown Operator",
                 operatorId: route.b2cPartnerId?._id,
                 companyLogo: route.b2cPartnerId?.companyLogo || route.b2cPartnerId?.profileImage || null,
+                profileImage: route.b2cPartnerId?.profileImage || null,
 
                 fromLocation: travelData.fromLocation,
                 toLocation: travelData.toLocation,

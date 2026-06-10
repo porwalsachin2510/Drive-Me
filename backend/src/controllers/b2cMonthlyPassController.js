@@ -5,6 +5,8 @@ import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import User from "../models/User.js";
+import Wallet from "../models/Wallet.js";
+import Transaction from "../models/Transaction.js";
 import CommissionSettings from "../models/CommissionSettings.js";
 import { generatePassCertificate } from "../Services/passCertificateService.js";
 import { sendPassEmail } from "../Services/emailService.js";
@@ -318,19 +320,115 @@ export const createB2CMonthlyPass = async (req, res) => {
             });
         }
 
+        // ==================== SERVER-SIDE PRICING (AUTHORITATIVE) ====================
+        // A monthly pass ALWAYS bills for the route's full weekly availability,
+        // regardless of how many days the commuter personally intends to travel.
+        // We never trust the client-supplied totalAmount — it is recomputed here
+        // from the route's operating days and per-day pricing.
+        // Day values may be stored abbreviated (MON, TUE) or full (Monday), so we
+        // normalize every value to a canonical full day name before counting.
+        // =============================================================================
+        const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const DAY_NAME_MAP = {
+            mon: 'Monday', monday: 'Monday',
+            tue: 'Tuesday', tues: 'Tuesday', tuesday: 'Tuesday',
+            wed: 'Wednesday', weds: 'Wednesday', wednesday: 'Wednesday',
+            thu: 'Thursday', thur: 'Thursday', thurs: 'Thursday', thursday: 'Thursday',
+            fri: 'Friday', friday: 'Friday',
+            sat: 'Saturday', saturday: 'Saturday',
+            sun: 'Sunday', sunday: 'Sunday'
+        };
+        const normalizeDay = (d) => DAY_NAME_MAP[String(d).trim().toLowerCase()] || null;
+
+        // Route operating days come from the schedule first, then the route.
+        const rawRouteDays =
+            (Array.isArray(schedule?.availableDays) && schedule.availableDays.length > 0
+                ? schedule.availableDays
+                : route.availableDays) || [];
+        const normalizedRouteDays = rawRouteDays.map(normalizeDay).filter(Boolean);
+        // Keep canonical week order and de-duplicate.
+        const billingDays = ALL_DAYS.filter((d) => normalizedRouteDays.includes(d));
+        const routeBillingDays = billingDays.length > 0 ? billingDays : ALL_DAYS;
+
+        // Per-day rate based on pass type (route pricing is stored as a per-day rate).
+        const perDayRate = passType === 'ROUND_TRIP'
+            ? (route.pricing?.roundTripPrice ?? route.roundTripPrice ?? 0)
+            : (route.pricing?.oneWayPrice ?? route.oneWayPrice ?? 0);
+
+        // Count every operating day within the pass period.
+        const dayNamesIdx = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const billingDaysLower = routeBillingDays.map((d) => d.toLowerCase());
+        let computedTravelDays = 0;
+        const cursor = new Date(startDate);
+        cursor.setHours(0, 0, 0, 0);
+        const endCursor = new Date(endDate);
+        endCursor.setHours(23, 59, 59, 999);
+        while (cursor <= endCursor) {
+            if (billingDaysLower.includes(dayNamesIdx[cursor.getDay()].toLowerCase())) {
+                computedTravelDays++;
+            }
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        const safeSeats = Number(numberOfSeats) > 0 ? Number(numberOfSeats) : 1;
+        const computedTotalAmount = Number(
+            (perDayRate * computedTravelDays * safeSeats).toFixed(3)
+        );
+
+        // Authoritative values used for the rest of the flow.
+        const finalTravelDays = computedTravelDays;
+        const finalSelectedDays = routeBillingDays;
+        const finalTotalAmount = computedTotalAmount > 0
+            ? computedTotalAmount
+            : Number(totalAmount) || 0;
+
+        console.log("[v0] Server-side pricing recompute:", {
+            rawRouteDays,
+            routeBillingDays,
+            daysPerWeek: routeBillingDays.length,
+            perDayRate,
+            computedTravelDays: finalTravelDays,
+            numberOfSeats: safeSeats,
+            clientTotalAmount: totalAmount,
+            finalTotalAmount
+        });
+
         // Get dynamic commission rate for B2C Partner
         const commissionRate = await getB2CPartnerCommissionRate(route.b2cPartnerId);
         console.log("[v0] Dynamic Commission Rate for B2C Partner:", commissionRate * 100, "%");
 
         // Calculate commission based on dynamic rate
-        const adminCommission = totalAmount * commissionRate;
-        const partnerEarnings = totalAmount * (1 - commissionRate);
+        const adminCommission = finalTotalAmount * commissionRate;
+        const partnerEarnings = finalTotalAmount * (1 - commissionRate);
 
-        // Normalize paymentMethod for B2CMonthlyPass model (STRIPE, TAP, CARD, CASH)
-        const normalizedPaymentMethod = ["STRIPE", "TAP", "CARD", "CASH"].includes(paymentMethod) ? paymentMethod : "STRIPE";
+        // Normalize paymentMethod for B2CMonthlyPass model (STRIPE, TAP, CARD, CASH, WALLET)
+        const normalizedPaymentMethod = ["STRIPE", "TAP", "CARD", "CASH", "WALLET"].includes(paymentMethod) ? paymentMethod : "STRIPE";
 
         // Get currency from route pricing or user country, default to KWD
         const routeCurrency = route.pricing?.currency || currency || "KWD";
+
+        // WALLET payment: validate the commuter has sufficient balance BEFORE creating
+        // the pass / booking / trips so we never leave a half-created booking on failure.
+        let commuterWallet = null;
+        if (normalizedPaymentMethod === "WALLET") {
+            commuterWallet = await Wallet.findOne({ userId: passengerId });
+
+            if (!commuterWallet) {
+                return res.status(400).json({
+                    success: false,
+                    message: "No wallet found. Please add funds to your wallet before paying with wallet balance."
+                });
+            }
+
+            if ((commuterWallet.balance || 0) < finalTotalAmount) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient wallet balance. Required: ${routeCurrency} ${finalTotalAmount.toFixed(2)}, Available: ${routeCurrency} ${(commuterWallet.balance || 0).toFixed(2)}.`,
+                    walletBalance: commuterWallet.balance || 0,
+                    requiredAmount: finalTotalAmount
+                });
+            }
+        }
 
         // Create monthly pass
         const monthlyPass = new B2CMonthlyPass({
@@ -356,11 +454,12 @@ export const createB2CMonthlyPass = async (req, res) => {
             startDate,
             endDate,
             durationMonths,
-            totalAmount,
+            totalAmount: finalTotalAmount,
             currency: routeCurrency,
-            selectedDays: travelDays || [],
+            selectedDays: finalSelectedDays || [],
+            travelDaysCount: finalTravelDays,
             paymentMethod: normalizedPaymentMethod,
-            paymentStatus: normalizedPaymentMethod === "CASH" ? "PAID" : "PENDING",
+            paymentStatus: ["CASH", "WALLET"].includes(normalizedPaymentMethod) ? "PAID" : "PENDING",
             adminCommission,
             partnerEarnings,
             notes
@@ -460,7 +559,7 @@ export const createB2CMonthlyPass = async (req, res) => {
             paymentAmount: totalAmount,
             currency: routeCurrency,
             paymentMethod: normalizedPaymentMethod,
-            paymentStatus: normalizedPaymentMethod === "CASH" ? "COMPLETED" : "PENDING",
+            paymentStatus: ["CASH", "WALLET"].includes(normalizedPaymentMethod) ? "COMPLETED" : "PENDING",
             transactionId: monthlyPass._id.toString(),
             bookingStatus: "CONFIRMED",
             adminCommissionAmount: adminCommission,
@@ -859,9 +958,72 @@ export const createB2CMonthlyPass = async (req, res) => {
             console.error("[v0] Error generating pass certificate:", certError);
         }
 
+        // WALLET payment: debit the commuter's wallet immediately. Balance was already
+        // validated above, but we re-check defensively in case it changed concurrently.
+        if (normalizedPaymentMethod === "WALLET" && finalTotalAmount > 0) {
+            try {
+                // Re-fetch to avoid acting on a stale balance
+                commuterWallet = await Wallet.findOne({ userId: passengerId });
+
+                if (!commuterWallet || (commuterWallet.balance || 0) < finalTotalAmount) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Insufficient wallet balance to complete this booking.",
+                        walletBalance: commuterWallet?.balance || 0,
+                        requiredAmount: finalTotalAmount
+                    });
+                }
+
+                const balanceBefore = commuterWallet.balance;
+                commuterWallet.balance -= finalTotalAmount;
+                commuterWallet.transactions.push({
+                    type: "EMI_PAYMENT",
+                    amount: finalTotalAmount,
+                    description: `Monthly pass payment for booking ${passengerBooking._id} (wallet)`,
+                    reference: passengerBooking._id.toString(),
+                    status: "COMPLETED",
+                    timestamp: new Date()
+                });
+                await commuterWallet.save();
+
+                await Transaction.create({
+                    walletId: commuterWallet._id,
+                    userId: passengerId,
+                    type: "DEBIT",
+                    category: "BOOKING_PAYMENT",
+                    amount: finalTotalAmount,
+                    currency: routeCurrency,
+                    balanceBefore,
+                    balanceAfter: commuterWallet.balance,
+                    referenceId: passengerBooking._id,
+                    referenceModel: "B2CPassengerBooking",
+                    description: `Monthly pass payment (wallet) for booking ${passengerBooking._id}`,
+                    metadata: {
+                        bookingId: passengerBooking._id,
+                        monthlyPassId: monthlyPass._id,
+                        routeId: routeId,
+                        passType: passType
+                    }
+                });
+
+                console.log("[v0] WALLET payment debited from commuter:", {
+                    passengerId,
+                    amount: finalTotalAmount,
+                    newBalance: commuterWallet.balance
+                });
+            } catch (walletError) {
+                console.error("[v0] WALLET payment processing failed:", walletError.message);
+                return res.status(400).json({
+                    success: false,
+                    message: "Failed to process wallet payment",
+                    error: walletError.message
+                });
+            }
+        }
+
         // Handle payment gateway if needed
         let paymentSessionData = null;
-        if (["STRIPE", "TAP", "CARD"].includes(normalizedPaymentMethod) && totalAmount > 0) {
+        if (["STRIPE", "TAP", "CARD"].includes(normalizedPaymentMethod) && finalTotalAmount > 0) {
             try {
                 const country = detectCountryFromCurrency(currency || "AED");
                 const passenger = await User.findById(passengerId);
@@ -869,7 +1031,7 @@ export const createB2CMonthlyPass = async (req, res) => {
                 // Create payment session using PaymentGatewayService
                 paymentSessionData = await PaymentGatewayService.createPaymentSession({
                     gateway: normalizedPaymentMethod === "CARD" ? "STRIPE" : normalizedPaymentMethod,
-                    amount: totalAmount,
+                    amount: finalTotalAmount,
                     currency: currency || "AED",
                     customer: {
                         email: passenger?.email,
@@ -890,7 +1052,7 @@ export const createB2CMonthlyPass = async (req, res) => {
                 console.log("[v0] Payment session created:", {
                     gateway: paymentSessionData.provider,
                     sessionId: paymentSessionData.sessionId,
-                    amount: totalAmount,
+                    amount: finalTotalAmount,
                     passenger: passengerId
                 });
 
@@ -954,7 +1116,7 @@ export const createB2CMonthlyPass = async (req, res) => {
                 paymentUrl: paymentSessionData.paymentUrl,
                 sessionId: paymentSessionData.sessionId,
                 provider: paymentSessionData.provider,
-                amount: totalAmount,
+                amount: finalTotalAmount,
                 currency: currency || "AED"
             } : null,
             paymentRequired: !!paymentSessionData,
@@ -970,6 +1132,7 @@ export const createB2CMonthlyPass = async (req, res) => {
         });
     }
 };
+
 
 
 // Update Trip Seats for Monthly Pass

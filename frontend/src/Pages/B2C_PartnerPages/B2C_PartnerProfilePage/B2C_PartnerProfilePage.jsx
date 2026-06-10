@@ -11,6 +11,7 @@ import Account from "../../../Components/B2C_Partner/Tabs/Account/Account";
 import B2CPartnerOverview from "../../../Components/B2C_Partner/B2CPartnerOverview/B2CPartnerOverview";
 import B2CRouteRequests from "../../../Components/B2C_Partner/B2CRouteRequests/B2CRouteRequests";
 import DriverRatings from "../../../Components/DriverRatings/DriverRatings";
+import MyCommission from "../../../Components/MyCommission/MyCommission";
 import "./b2c_partnerprofilepage.css";
 
 function B2C_PartnerProfilePage() {
@@ -34,6 +35,8 @@ function B2C_PartnerProfilePage() {
         return <B2CRouteRequests />;
       case "ratings":
         return <DriverRatings />;
+      case "my-commission":
+        return <MyCommission />;
       case "account":
         return <Account />;
       default:

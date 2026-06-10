@@ -4,6 +4,34 @@ import Contract from "../models/Contract.js"
 import AdminNegotiation from "../models/AdminNegotiation.js"
 import { DEFAULT_COMMISSION_PERCENTAGE } from "../Services/HelperUtilities.js"
 
+// Which custom-rate types are valid for each role. Mirrors the calculation logic:
+// B2C Partner earns on bookings & monthly passes, B2B Partner on contracts AND
+// EMI payments (EMI commission is deducted from the B2B Partner's installment
+// payout), and Corporate on negotiations.
+const RATE_TYPES_BY_ROLE = {
+    B2C_PARTNER: ["BOOKING", "MONTHLY_PASS"],
+    B2B_PARTNER: ["CONTRACT", "EMI"],
+    CORPORATE: ["NEGOTIATION"],
+}
+
+/**
+ * Validate that every custom rate type provided is applicable to the given role.
+ * Returns an error message string if invalid, otherwise null.
+ */
+const validateCustomRatesForRole = (role, customRates) => {
+    if (!Array.isArray(customRates) || customRates.length === 0) return null
+    const allowed = RATE_TYPES_BY_ROLE[role] || []
+    for (const r of customRates) {
+        if (!allowed.includes(r.rateType)) {
+            return `Rate type "${r.rateType}" is not applicable for ${role}. Allowed types: ${allowed.join(", ")}.`
+        }
+        if (r.rate === undefined || r.rate < 0 || r.rate > 100) {
+            return `Custom rate for "${r.rateType}" must be between 0 and 100%.`
+        }
+    }
+    return null
+}
+
 /**
  * Get all users with their commission settings
  * GET /api/commission/users-with-settings
@@ -155,6 +183,146 @@ export const getAllCommissionSettings = async (req, res) => {
     }
 }
 
+// Human-readable metadata for each commission type, keyed by the user role it
+// applies to. Used to build the self-service breakdown shown to each user.
+const COMMISSION_META_BY_ROLE = {
+    B2C_PARTNER: {
+        primaryLabel: "Booking Commission",
+        primaryRateField: "defaultCommissionRate",
+        primaryDescription:
+            "Charged by Admin on the total amount of every commuter booking you fulfil.",
+        types: {
+            BOOKING: {
+                label: "Booking Commission",
+                description: "Commission on each commuter booking, calculated on the total booking amount.",
+            },
+            MONTHLY_PASS: {
+                label: "Monthly Pass Commission",
+                description: "Commission on monthly pass / subscription purchases by commuters.",
+            },
+        },
+    },
+    B2B_PARTNER: {
+        primaryLabel: "Contract Commission",
+        primaryRateField: "defaultCommissionRate",
+        primaryDescription:
+            "Charged by Admin when a Corporate pays for a contract (Standard Payment or EMI). Calculated on the advance/contract payment amount.",
+        types: {
+            CONTRACT: {
+                label: "Contract Commission",
+                description: "Commission on contract payments made by a Corporate.",
+            },
+            EMI: {
+                label: "EMI Commission",
+                description: "Commission deducted from your payout on each EMI installment a Corporate pays.",
+            },
+        },
+    },
+    CORPORATE: {
+        primaryLabel: "Negotiation Commission",
+        primaryRateField: "negotiationCommissionRate",
+        primaryDescription:
+            "Charged by Admin when Admin negotiates a price reduction on your behalf. Calculated as a percentage of the savings achieved through negotiation.",
+        types: {
+            NEGOTIATION: {
+                label: "Negotiation Commission",
+                description: "Commission on the savings achieved through Admin negotiation.",
+            },
+        },
+    },
+}
+
+/**
+ * Get the logged-in user's own commission settings (self-service).
+ * Returns a role-aware, human-readable breakdown of which commissions Admin
+ * charges them, the applicable rates, and the time period each rate is valid.
+ * GET /api/commission/my-commission
+ */
+export const getMyCommission = async (req, res) => {
+    try {
+        const userId = req.userId
+
+        const user = await User.findById(userId).select("fullName email companyName role status")
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" })
+        }
+
+        const meta = COMMISSION_META_BY_ROLE[user.role]
+        if (!meta) {
+            return res.status(403).json({
+                success: false,
+                message: "Commission details are not available for this account type.",
+            })
+        }
+
+        const settings = await CommissionSettings.findOne({ userId, isActive: true }).lean()
+        const now = new Date()
+
+        // Resolve the primary/default commission rate for this role.
+        const primaryRate =
+            settings?.[meta.primaryRateField] ??
+            (meta.primaryRateField === "negotiationCommissionRate" ? 25 : DEFAULT_COMMISSION_PERCENTAGE)
+
+        // Build the list of custom (time-bound) rules that apply to this role,
+        // enriched with status (active / scheduled / expired) for the period.
+        const allowedTypes = RATE_TYPES_BY_ROLE[user.role] || []
+        const customRules = (settings?.customRates || [])
+            .filter((r) => allowedTypes.includes(r.rateType))
+            .map((r) => {
+                const from = r.effectiveFrom ? new Date(r.effectiveFrom) : null
+                const until = r.effectiveUntil ? new Date(r.effectiveUntil) : null
+                let status = "active"
+                if (from && from > now) status = "scheduled"
+                else if (until && until < now) status = "expired"
+                return {
+                    rateType: r.rateType,
+                    label: meta.types[r.rateType]?.label || r.rateType,
+                    description: meta.types[r.rateType]?.description || "",
+                    rate: r.rate,
+                    effectiveFrom: r.effectiveFrom || null,
+                    effectiveUntil: r.effectiveUntil || null,
+                    status,
+                }
+            })
+            .sort((a, b) => new Date(b.effectiveFrom || 0) - new Date(a.effectiveFrom || 0))
+
+        // EMI settings only relevant to B2B partners.
+        const emiSettings =
+            user.role === "B2B_PARTNER" && settings?.emiCommissionSettings
+                ? settings.emiCommissionSettings
+                : null
+
+        res.json({
+            success: true,
+            data: {
+                role: user.role,
+                user: {
+                    fullName: user.fullName,
+                    email: user.email,
+                    companyName: user.companyName,
+                },
+                primary: {
+                    label: meta.primaryLabel,
+                    description: meta.primaryDescription,
+                    rate: primaryRate,
+                },
+                customRules,
+                emiSettings,
+                isDefault: !settings,
+                notes: settings?.notes || "",
+                lastUpdated: settings?.updatedAt || null,
+            },
+        })
+    } catch (error) {
+        console.error("Error getting my commission:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to get commission details",
+            error: error.message,
+        })
+    }
+}
+
 /**
  * Get commission settings for a specific user
  * GET /api/admin/commission/settings/:userId
@@ -237,6 +405,15 @@ export const createCommissionSettings = async (req, res) => {
             })
         }
 
+        // Validate custom rate types are applicable for this user's role
+        const createRateError = validateCustomRatesForRole(user.role, customRates)
+        if (createRateError) {
+            return res.status(400).json({
+                success: false,
+                message: createRateError,
+            })
+        }
+
         const settings = new CommissionSettings({
             userId,
             role: user.role,
@@ -293,6 +470,24 @@ export const updateCommissionSettings = async (req, res) => {
                 success: false,
                 message: "Commission rate must be between 0 and 100%",
             })
+        }
+
+        // Validate custom rate types are applicable for this user's role
+        if (customRates !== undefined) {
+            const targetUser = await User.findById(userId).select("role")
+            if (!targetUser) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found",
+                })
+            }
+            const updateRateError = validateCustomRatesForRole(targetUser.role, customRates)
+            if (updateRateError) {
+                return res.status(400).json({
+                    success: false,
+                    message: updateRateError,
+                })
+            }
         }
 
         let settings = await CommissionSettings.findOne({ userId })
@@ -386,7 +581,7 @@ export const updateCommissionSettings = async (req, res) => {
 
                 settings.emiCommissionSettings = newEmiSettings
             }
-            
+
             if (notes !== undefined) {
                 settings.notes = notes
             }

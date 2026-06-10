@@ -1,40 +1,40 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import "./earnings.css"
-import api from "../../../../utils/api"
+import { useState, useEffect, useCallback } from "react";
+import "./earnings.css";
+import api from "../../../../utils/api";
 
 function Earnings() {
-  const [earningsData, setEarningsData] = useState(null)
-  const [transactions, setTransactions] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState("monthly")
+  const [earningsData, setEarningsData] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState("monthly");
 
   const fetchEarningsData = useCallback(async () => {
     try {
-      setLoading(true)
-      const response = await api.get('/b2c-partner/earnings', {
-        params: { period }
-      })
-      setEarningsData(response.data.earnings)
-      setTransactions(response.data.transactions || [])
+      setLoading(true);
+      const response = await api.get("/b2c-partner/earnings", {
+        params: { period },
+      });
+      setEarningsData(response.data.earnings);
+      setTransactions(response.data.transactions || []);
     } catch (error) {
-      console.error("Error fetching earnings data:", error)
+      console.error("Error fetching earnings data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [period])
+  }, [period]);
 
   useEffect(() => {
-    fetchEarningsData()
-  }, [fetchEarningsData])
+    fetchEarningsData();
+  }, [fetchEarningsData]);
 
   if (loading) {
     return (
       <div className="earnings">
         <div className="loading">Loading earnings...</div>
       </div>
-    )
+    );
   }
 
   if (!earningsData) {
@@ -42,15 +42,15 @@ function Earnings() {
       <div className="earnings">
         <div className="error">Failed to load earnings data</div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="earnings">
       <div className="earnings-header">
         <h2>Earnings Overview</h2>
-        <select 
-          value={period} 
+        <select
+          value={period}
           onChange={(e) => setPeriod(e.target.value)}
           className="period-selector"
         >
@@ -83,9 +83,23 @@ function Earnings() {
                 strokeLinecap="round"
               />
             </svg>
-            Total Earnings
+            Net Earnings
           </div>
-          <div className="card-value">{earningsData.total}</div>
+          <div className="card-value">
+            {earningsData.totalNet || earningsData.total}
+          </div>
+          <div className="card-breakdown">
+            <div className="breakdown-row">
+              <span className="breakdown-label">Total Payments</span>
+              <span className="breakdown-value">{earningsData.totalGross}</span>
+            </div>
+            <div className="breakdown-row">
+              <span className="breakdown-label">Admin Commission</span>
+              <span className="breakdown-value deduction">
+                - {earningsData.totalCommission}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="earnings-card week">
@@ -108,8 +122,26 @@ function Earnings() {
             </svg>
             This Week
           </div>
-          <div className="card-value">{earningsData.thisWeek}</div>
-          <div className="card-change">{earningsData.thisWeekChange}</div>
+          <div className="card-value">
+            {earningsData.thisWeekNet || earningsData.thisWeek}
+          </div>
+          <div className="card-change positive">
+            {earningsData.thisWeekChange}
+          </div>
+          <div className="card-breakdown">
+            <div className="breakdown-row">
+              <span className="breakdown-label">Payments</span>
+              <span className="breakdown-value">
+                {earningsData.thisWeekGross}
+              </span>
+            </div>
+            <div className="breakdown-row">
+              <span className="breakdown-label">Commission</span>
+              <span className="breakdown-value deduction">
+                - {earningsData.thisWeekCommission}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="earnings-card today">
@@ -132,23 +164,53 @@ function Earnings() {
             </svg>
             Today
           </div>
-          <div className="card-value">{earningsData.today}</div>
+          <div className="card-value">
+            {earningsData.todayNet || earningsData.today}
+          </div>
+          <div className="card-breakdown">
+            <div className="breakdown-row">
+              <span className="breakdown-label">Payments</span>
+              <span className="breakdown-value">{earningsData.todayGross}</span>
+            </div>
+            <div className="breakdown-row">
+              <span className="breakdown-label">Commission</span>
+              <span className="breakdown-value deduction">
+                - {earningsData.todayCommission}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="transactions-section">
         <h3>Transaction History</h3>
         <div className="transactions-list">
+          {transactions.length > 0 && (
+            <div className="transaction-item transaction-head">
+              <div className="transaction-date">Date</div>
+              <div className="transaction-col">Trips</div>
+              <div className="transaction-col">Total Payment</div>
+              <div className="transaction-col">Admin Commission</div>
+              <div className="transaction-col">Net Earnings</div>
+              <div className="transaction-col">Status</div>
+            </div>
+          )}
           {transactions.map((transaction, index) => (
             <div key={index} className="transaction-item">
               <div className="transaction-date">{transaction.date}</div>
-              <div className="transaction-details">
-                <span className="transaction-trips">{transaction.trips} trips</span>
-                <span className={`transaction-amount ${transaction.status.toLowerCase()}`}>
-                  {transaction.amount}
-                </span>
+              <div className="transaction-col">{transaction.trips} trips</div>
+              <div className="transaction-col gross">
+                {transaction.grossAmount}
               </div>
-              <div className={`transaction-status ${transaction.status.toLowerCase()}`}>
+              <div className="transaction-col commission">
+                - {transaction.commissionAmount}
+              </div>
+              <div className="transaction-col net">
+                {transaction.netAmount || transaction.amount}
+              </div>
+              <div
+                className={`transaction-col transaction-status ${transaction.status.toLowerCase()}`}
+              >
                 {transaction.status}
               </div>
             </div>
@@ -162,7 +224,7 @@ function Earnings() {
         )}
       </div>
     </div>
-  )
+  );
 }
 
-export default Earnings
+export default Earnings;

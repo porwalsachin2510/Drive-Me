@@ -3,7 +3,12 @@
 
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { getWalletBalance, getWalletTransactions, addFundsToWallet, withdrawFromWallet } from "../../../Redux/slices/walletSlice";
+import {
+  getWalletBalance,
+  getWalletTransactions,
+  addFundsToWallet,
+  withdrawFromWallet,
+} from "../../../Redux/slices/walletSlice";
 import PaymentModal from "../../../Components/Payment/PaymentModal";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
@@ -11,9 +16,11 @@ import "./walletpage.css";
 
 function WalletPage() {
   const dispatch = useDispatch();
-  const { wallet, balance, transactions, loading, error } = useSelector((state) => state.wallet);
+  const { wallet, balance, transactions, loading, error } = useSelector(
+    (state) => state.wallet,
+  );
   const { user } = useSelector((state) => state.auth);
-  
+
   const [activeTab, setActiveTab] = useState("overview");
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -23,7 +30,7 @@ function WalletPage() {
     iban: "",
     bankCode: "",
     accountHolderName: "",
-    country: user?.country || "UAE"
+    country: user?.country || "UAE",
   });
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -85,37 +92,62 @@ function WalletPage() {
   };
 
   const formatCurrency = (amount) => {
-    const currency = user?.country === 'KW' ? 'KWD' : 'AED';
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: currency === 'KWD' ? 'KWD' : 'AED',
-      minimumFractionDigits: currency === 'KWD' ? 3 : 2,
+    const currency = user?.country === "KW" ? "KWD" : "AED";
+    return new Intl.NumberFormat("en-AE", {
+      style: "currency",
+      currency: currency === "KWD" ? "KWD" : "AED",
+      minimumFractionDigits: currency === "KWD" ? 3 : 2,
     }).format(amount);
   };
 
   const getPaymentMethods = () => {
     const methods = [
-      { id: 'card', name: 'Credit/Debit Card', icon: '💳' },
-      { id: 'apple_pay', name: 'Apple Pay', icon: '🍎' },
-      { id: 'google_pay', name: 'Google Pay', icon: '🤖' },
-      { id: 'upi', name: 'UPI', icon: '📱' },
-      { id: 'knet', name: 'KNET', icon: '🔵' },
-      { id: 'benefit', name: 'Benefit', icon: '🟣' },
-      { id: 'zaincash', name: 'Zain Cash', icon: '🟢' },
+      { id: "card", name: "Credit/Debit Card", icon: "💳" },
+      { id: "apple_pay", name: "Apple Pay", icon: "🍎" },
+      { id: "google_pay", name: "Google Pay", icon: "🤖" },
+      { id: "upi", name: "UPI", icon: "📱" },
+      { id: "knet", name: "KNET", icon: "🔵" },
+      { id: "benefit", name: "Benefit", icon: "🟣" },
+      { id: "zaincash", name: "Zain Cash", icon: "🟢" },
     ];
 
-    if (user?.country === 'KW') {
-      return methods.filter(m => ['card', 'knet', 'benefit', 'zaincash'].includes(m.id));
+    if (user?.country === "KW") {
+      return methods.filter((m) =>
+        ["card", "knet", "benefit", "zaincash"].includes(m.id),
+      );
     } else {
-      return methods.filter(m => ['card', 'apple_pay', 'google_pay', 'knet'].includes(m.id));
+      return methods.filter((m) =>
+        ["card", "apple_pay", "google_pay", "knet"].includes(m.id),
+      );
     }
   };
 
   const getBalanceColor = () => {
-    if (balance > 1000) return '#10b981';
-    if (balance > 100) return '#f59e0b';
-    return '#ef4444';
+    if (balance > 1000) return "#10b981";
+    if (balance > 100) return "#f59e0b";
+    return "#ef4444";
   };
+
+  // Embedded wallet transactions use types like DEPOSIT/REFUND/WITHDRAWAL (not CREDIT/DEBIT).
+  // Money coming IN = credit (+), money going OUT = debit (-).
+  const CREDIT_TYPES = [
+    "CREDIT",
+    "DEPOSIT",
+    "REFUND",
+    "BOOKING_EARNING",
+    "COMMISSION",
+    "COMMISSION_REFUND",
+    "SECURITY_DEPOSIT_REFUND",
+    "TRANSFER_IN",
+  ];
+  const isCreditTransaction = (transaction) => {
+    if (!transaction || !transaction.type) return false;
+    return CREDIT_TYPES.includes(transaction.type);
+  };
+  const signedAmount = (transaction) =>
+    isCreditTransaction(transaction)
+      ? Math.abs(transaction.amount)
+      : -Math.abs(transaction.amount);
 
   return (
     <>
@@ -201,7 +233,7 @@ function WalletPage() {
                       {formatCurrency(
                         transactions
                           .slice(0, 10)
-                          .reduce((sum, t) => sum + t.amount, 0),
+                          .reduce((sum, t) => sum + signedAmount(t), 0),
                       )}
                     </p>
                   </div>
@@ -214,7 +246,7 @@ function WalletPage() {
                   {transactions.slice(0, 5).map((transaction, index) => (
                     <div key={index} className="transaction-item">
                       <div className="drivemego-wp-transaction-icon">
-                        {transaction.type === "CREDIT" ? "➕" : "➖"}
+                        {isCreditTransaction(transaction) ? "➕" : "➖"}
                       </div>
                       <div className="drivemego-wp-transaction-details">
                         <p className="drivemego-wp-transaction-description">
@@ -225,9 +257,9 @@ function WalletPage() {
                         </span>
                       </div>
                       <div
-                        className={`drivemego-wp-transaction-amount ${transaction.type === "CREDIT" ? "drivemego-wp-credit" : "drivemego-wp-debit"}`}
+                        className={`drivemego-wp-transaction-amount ${isCreditTransaction(transaction) ? "drivemego-wp-credit" : "drivemego-wp-debit"}`}
                       >
-                        {transaction.type === "CREDIT" ? "+" : "-"}
+                        {isCreditTransaction(transaction) ? "+" : "-"}
                         {formatCurrency(Math.abs(transaction.amount))}
                       </div>
                     </div>
@@ -260,7 +292,7 @@ function WalletPage() {
                 {transactions.map((transaction, index) => (
                   <div key={index} className="drivemego-wp-transaction-item">
                     <div className="drivemego-wp-transaction-icon">
-                      {transaction.type === "CREDIT" ? "➕" : "➖"}
+                      {isCreditTransaction(transaction) ? "➕" : "➖"}
                     </div>
                     <div className="drivemego-wp-transaction-details">
                       <p className="drivemego-wp-transaction-description">
@@ -273,9 +305,9 @@ function WalletPage() {
                       </span>
                     </div>
                     <div
-                      className={`drivemego-wp-transaction-amount ${transaction.type === "CREDIT" ? "drivemego-wp-credit" : "drivemego-wp-debit"}`}
+                      className={`drivemego-wp-transaction-amount ${isCreditTransaction(transaction) ? "drivemego-wp-credit" : "drivemego-wp-debit"}`}
                     >
-                      {transaction.type === "CREDIT" ? "+" : "-"}
+                      {isCreditTransaction(transaction) ? "+" : "-"}
                       {formatCurrency(Math.abs(transaction.amount))}
                     </div>
                   </div>

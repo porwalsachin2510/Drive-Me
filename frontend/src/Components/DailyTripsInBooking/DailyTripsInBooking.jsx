@@ -24,7 +24,7 @@ const DailyTripsInBooking = ({
 
   // Unique identifier for this component instance
   const bookingId = booking?._id || booking?.bookingId;
-  
+
   const handleToggleExpand = () => {
     if (onToggleExpand) {
       onToggleExpand();
@@ -155,7 +155,10 @@ const DailyTripsInBooking = ({
       return tripDate >= todayStart && tripDate < todayEnd;
     }
     if (filter === "upcoming") {
-      return tripDate >= todayStart;
+      // "Upcoming" means trips from tomorrow onwards (exclude today's trips,
+      // which have their own "Today" tab). This keeps the counts consistent:
+      // All = Today + Upcoming + Past.
+      return tripDate >= todayEnd;
     }
     return true; // "all"
   });
@@ -165,8 +168,9 @@ const DailyTripsInBooking = ({
     const d = new Date(t.tripDate);
     return d >= todayStart && d < todayEnd;
   });
+  // Upcoming excludes today (starts from tomorrow) so it never equals All
   const upcomingTrips = dailyTrips.filter(
-    (t) => new Date(t.tripDate) >= todayStart,
+    (t) => new Date(t.tripDate) >= todayEnd,
   );
   const completedTrips = dailyTrips.filter(
     (t) => t.status === "Completed" || t.tripStatus === "Completed",
@@ -373,6 +377,6 @@ const DailyTripsInBooking = ({
       </div>
     </div>
   );
-};;;
+};
 
 export default DailyTripsInBooking;

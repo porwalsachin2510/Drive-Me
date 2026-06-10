@@ -8,6 +8,7 @@ import {
   createCorporateBooking,
   clearBookingData,
 } from "../../Redux/slices/bookingSlice";
+import { getWalletBalance } from "../../Redux/slices/walletSlice";
 import api from "../../utils/api";
 import {
   FaTimes,
@@ -20,6 +21,7 @@ import {
   FaCreditCard,
   FaMoneyBillWave,
   FaUniversity,
+  FaWallet,
   FaCheck,
   FaSpinner,
 } from "react-icons/fa";
@@ -30,6 +32,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const { loading, error, currentBooking, bookingCreated, paymentData } =
     useSelector((state) => state.booking);
   const { user } = useSelector((state) => state.auth);
+  const walletBalance = useSelector((state) => state.wallet?.balance || 0);
 
   // State for schedule data - now supports multiple schedules
   const [scheduleData, setScheduleData] = useState(null);
@@ -96,6 +99,13 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
 
     fetchPaymentSettings();
   }, []);
+
+  // Fetch the commuter's wallet balance so we can offer "Pay with Wallet"
+  useEffect(() => {
+    if (isOpen) {
+      dispatch(getWalletBalance());
+    }
+  }, [isOpen, dispatch]);
 
   // Set default pickup/dropoff points and selected days when route changes
   useEffect(() => {
@@ -317,18 +327,37 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     }
   };
 
-  // Calculate travel days per month based on user's selected days
-  const getTravelDaysPerMonth = () => {
-    if (selectedDays.length === 0) return 0;
-    if (selectedDays.length === 7) return 30; // Full week ~ 30 days
-    // Approximate: (selected days per week / 7) * 30 days in month
-    return Math.round((selectedDays.length / 7) * 30);
+  // Get the route's full weekly availability (normalized to full day names).
+  // Billing is ALWAYS based on these days, regardless of which days the
+  // commuter personally plans to travel. A monthly pass charges for the
+  // route's entire operating week.
+  const normalizeDayName = (d) => {
+    if (!d) return null;
+    const key = String(d).trim().toLowerCase();
+    const map = {
+      mon: "Monday",
+      monday: "Monday",
+      tue: "Tuesday",
+      tues: "Tuesday",
+      tuesday: "Tuesday",
+      wed: "Wednesday",
+      weds: "Wednesday",
+      wednesday: "Wednesday",
+      thu: "Thursday",
+      thur: "Thursday",
+      thurs: "Thursday",
+      thursday: "Thursday",
+      fri: "Friday",
+      friday: "Friday",
+      sat: "Saturday",
+      saturday: "Saturday",
+      sun: "Sunday",
+      sunday: "Sunday",
+    };
+    return map[key] || null;
   };
 
-  // Toggle a day in selectedDays
-  const toggleDay = (day) => {
-    const routeDays =
-      route.availableDays || route.schedule?.availableDays || [];
+  const getRouteAllowedDays = () => {
     const allDays = [
       "Monday",
       "Tuesday",
@@ -338,30 +367,40 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       "Saturday",
       "Sunday",
     ];
-    // Get the available days for this route
-    let allowedDays = allDays;
-    if (Array.isArray(routeDays) && routeDays.length > 0) {
-      allowedDays = routeDays.map(
-        (d) => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase(),
-      );
-    }
-    // Only allow toggling days that the route operates on
-    if (!allowedDays.includes(day)) return;
+    let routeDays = route.availableDays || route.schedule?.availableDays || [];
 
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
-    );
+    // Handle string-based availability (e.g. "Daily", "Weekdays")
+    if (typeof routeDays === "string") {
+      const s = routeDays.toLowerCase();
+      if (s === "daily" || s === "all") return allDays;
+      if (s === "weekdays")
+        return ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+      if (s === "weekends") return ["Saturday", "Sunday"];
+      routeDays = [routeDays];
+    }
+
+    if (Array.isArray(routeDays) && routeDays.length > 0) {
+      const normalized = routeDays.map(normalizeDayName).filter(Boolean);
+      // De-duplicate while preserving canonical week order
+      const unique = allDays.filter((day) => normalized.includes(day));
+      if (unique.length > 0) return unique;
+    }
+    return allDays;
   };
+
+  // The route's number of operating days per week (e.g. 5 or 7)
+  const routeAllowedDays = getRouteAllowedDays();
+  const routeDaysPerWeek = routeAllowedDays.length;
 
   const availableSeats = route.availableSeats ?? route.totalSeats ?? 10;
   const currency = route.pricing?.currency || route.currency || "KWD";
   const currencyDecimals =
     currency === "KWD" || currency === "BHD" || currency === "OMR" ? 3 : 2;
   const perDayPrice = getPerDayPrice();
-  const travelDaysPerMonth = getTravelDaysPerMonth();
-  const pricePerMonth = perDayPrice * travelDaysPerMonth;
 
-  // Calculate actual travel days based on selected dates and travel days
+  // Calculate actual travel days based on selected date range and the route's
+  // FULL weekly availability (not the commuter's personal day subset).
+  // A monthly pass always bills for every operating day in the period.
   const calculateActualTravelDays = () => {
     const start = new Date(passStartDate);
     const end = new Date(passEndDate);
@@ -374,13 +413,12 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       "Friday",
       "Saturday",
     ];
+    const billingDays = routeAllowedDays.map((d) => d.toLowerCase());
     let count = 0;
     const current = new Date(start);
     while (current <= end) {
       const dayName = dayNames[current.getDay()];
-      if (
-        selectedDays.map((d) => d.toLowerCase()).includes(dayName.toLowerCase())
-      ) {
+      if (billingDays.includes(dayName.toLowerCase())) {
         count++;
       }
       current.setDate(current.getDate() + 1);
@@ -722,7 +760,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
         (selectedPassType === "ROUND_TRIP" ? route.fromLocation : ""),
       durationMonths: effectiveDuration,
       numberOfSeats: numberOfSeats,
-      selectedDays: selectedDays, // Days user selected for travel
+      selectedDays: routeAllowedDays, // Pass covers the route's full weekly availability
       totalAmount: Number.parseFloat(totalAmount),
       paymentMethod: method,
       notes: notes,
@@ -745,9 +783,13 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
           );
           window.location.href = response.data.payment.paymentUrl;
           return;
-        } else if (method === "CASH") {
-          // Show success message for cash payment
-          console.log("[v0] Cash payment selected - showing success");
+        } else if (method === "CASH" || method === "WALLET") {
+          // Cash and Wallet payments complete immediately (no gateway redirect)
+          console.log(`[v0] ${method} payment selected - showing success`);
+          if (method === "WALLET") {
+            // Wallet balance changed — refresh it for the header/UI
+            dispatch(getWalletBalance());
+          }
           setStep(3);
           setTimeout(() => {
             if (onSuccess) onSuccess();
@@ -1217,11 +1259,18 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                                     const tripKey = `${trip.departureTime}_${trip.direction}`;
                                     const seatInfo =
                                       tripSeatAvailability[tripKey];
+                                    // Prefer real-time per-trip seat data. When it
+                                    // is unavailable, fall back to THIS trip's own
+                                    // assigned vehicle capacity (each schedule may
+                                    // use a different vehicle), not the route-wide
+                                    // number.
                                     const seatsAvailable =
-                                      seatInfo?.availableSeats ||
-                                      route.availableSeats ||
-                                      route.totalSeats ||
-                                      35;
+                                      seatInfo?.availableSeats ??
+                                      trip.effectiveVehicle?.seatingCapacity ??
+                                      trip.seatingCapacity ??
+                                      route.availableSeats ??
+                                      route.totalSeats ??
+                                      0;
                                     const hasEnoughSeats =
                                       seatsAvailable >= numberOfSeats;
                                     return (
@@ -1597,11 +1646,18 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                                         const tripKey = `${trip.departureTime}_${trip.direction}`;
                                         const seatInfo =
                                           tripSeatAvailability[tripKey];
+                                        // Prefer real-time per-trip seat data, then
+                                        // fall back to THIS trip's own assigned
+                                        // vehicle capacity (return trips can use a
+                                        // different vehicle than outbound).
                                         const seatsAvailable =
-                                          seatInfo?.availableSeats ||
-                                          route.availableSeats ||
-                                          route.totalSeats ||
-                                          35;
+                                          seatInfo?.availableSeats ??
+                                          trip.effectiveVehicle
+                                            ?.seatingCapacity ??
+                                          trip.seatingCapacity ??
+                                          route.availableSeats ??
+                                          route.totalSeats ??
+                                          0;
                                         const hasEnoughSeats =
                                           seatsAvailable >= numberOfSeats;
                                         return (
@@ -1829,15 +1885,15 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 </div>
               )}
 
-              {/* TRAVEL DAYS SELECTION */}
+              {/* TRAVEL DAYS (LOCKED TO ROUTE AVAILABILITY) */}
               <div className="days-selection-card">
                 <div className="days-selection-header">
                   <h3>
                     <FaCalendarAlt style={{ marginRight: 8 }} />
-                    Select Travel Days
+                    Route Travel Days
                   </h3>
                   <span className="days-count">
-                    {selectedDays.length} days/week
+                    {routeDaysPerWeek} days/week
                   </span>
                 </div>
                 <div className="days-selection-body">
@@ -1851,38 +1907,17 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       "Saturday",
                       "Sunday",
                     ].map((day) => {
-                      const routeDays =
-                        route.availableDays ||
-                        route.schedule?.availableDays ||
-                        [];
-                      const allDays = [
-                        "Monday",
-                        "Tuesday",
-                        "Wednesday",
-                        "Thursday",
-                        "Friday",
-                        "Saturday",
-                        "Sunday",
-                      ];
-                      let allowedDays = allDays;
-                      if (Array.isArray(routeDays) && routeDays.length > 0) {
-                        allowedDays = routeDays.map(
-                          (d) =>
-                            d.charAt(0).toUpperCase() +
-                            d.slice(1).toLowerCase(),
-                        );
-                      }
-                      const isAllowed = allowedDays.includes(day);
-                      const isSelected = selectedDays.includes(day);
+                      const isAllowed = routeAllowedDays.includes(day);
                       return (
                         <button
                           key={day}
                           type="button"
-                          className={`day-chip ${isSelected ? "selected" : ""} ${!isAllowed ? "disabled" : ""}`}
-                          onClick={() => toggleDay(day)}
-                          disabled={!isAllowed}
+                          className={`day-chip ${isAllowed ? "selected" : "disabled"}`}
+                          disabled
                           title={
-                            !isAllowed ? "Route not available on this day" : ""
+                            isAllowed
+                              ? "This route operates on this day"
+                              : "Route not available on this day"
                           }
                         >
                           {day.slice(0, 3)}
@@ -1890,56 +1925,19 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       );
                     })}
                   </div>
-                  <div className="days-presets">
-                    <button
-                      type="button"
-                      className="preset-btn"
-                      onClick={() =>
-                        setSelectedDays([
-                          "Monday",
-                          "Tuesday",
-                          "Wednesday",
-                          "Thursday",
-                          "Friday",
-                        ])
-                      }
-                    >
-                      Weekdays
-                    </button>
-                    <button
-                      type="button"
-                      className="preset-btn"
-                      onClick={() =>
-                        setSelectedDays([
-                          "Monday",
-                          "Tuesday",
-                          "Wednesday",
-                          "Thursday",
-                          "Friday",
-                          "Saturday",
-                          "Sunday",
-                        ])
-                      }
-                    >
-                      All Days
-                    </button>
-                    <button
-                      type="button"
-                      className="preset-btn"
-                      onClick={() =>
-                        setSelectedDays([
-                          "Monday",
-                          "Tuesday",
-                          "Wednesday",
-                          "Thursday",
-                          "Friday",
-                          "Saturday",
-                        ])
-                      }
-                    >
-                      Mon-Sat
-                    </button>
-                  </div>
+                  <p
+                    style={{
+                      marginTop: "12px",
+                      fontSize: "13px",
+                      color: "#6b7280",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    This monthly pass covers all {routeDaysPerWeek} operating
+                    days per week for this route. The pass price always includes
+                    the route&apos;s full weekly schedule, even if you travel on
+                    fewer days.
+                  </p>
                 </div>
               </div>
 
@@ -2183,7 +2181,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                 <div className="price-row">
                   <span>Total Travel Days</span>
                   <span>
-                    {actualTravelDays} days ({selectedDays.length} days/week)
+                    {actualTravelDays} days ({routeDaysPerWeek} days/week)
                   </span>
                 </div>
                 <div className="price-row">
@@ -2378,6 +2376,37 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                       )}
                     </div>
 
+                    {/* Wallet Payment - available when balance covers the amount */}
+                    {(() => {
+                      const amountDue = Number.parseFloat(totalAmount) || 0;
+                      const hasEnough = walletBalance >= amountDue;
+                      const walletDisabled = isProcessing || !hasEnough;
+                      return (
+                        <div
+                          className={`payment-option ${paymentMethod === "WALLET" ? "selected" : ""} ${walletDisabled ? "disabled" : ""}`}
+                          onClick={() =>
+                            !walletDisabled &&
+                            handleSelectPaymentMethod("WALLET")
+                          }
+                        >
+                          <div className="option-icon">
+                            <FaWallet />
+                          </div>
+                          <div className="option-info">
+                            <span className="option-title">Wallet Balance</span>
+                            <span className="option-desc">
+                              {hasEnough
+                                ? `Pay using your wallet (${currency} ${walletBalance.toFixed(2)} available)`
+                                : `Insufficient balance (${currency} ${walletBalance.toFixed(2)} available)`}
+                            </span>
+                          </div>
+                          {paymentMethod === "WALLET" && isProcessing && (
+                            <FaSpinner className="processing-spinner" />
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* Message when online payments are disabled */}
                     {!onlinePaymentsEnabled && (
                       <div className="payment-disabled-notice">
@@ -2417,7 +2446,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   ? "Your corporate booking has been confirmed. Your company has been notified."
                   : paymentMethod === "CASH"
                     ? "Your booking is pending. Please pay the driver when you board."
-                    : "Your booking has been confirmed and payment received."}
+                    : paymentMethod === "WALLET"
+                      ? "Your booking is confirmed and the amount has been deducted from your wallet."
+                      : "Your booking has been confirmed and payment received."}
               </p>
 
               <div className="booking-confirmation-details">

@@ -176,38 +176,38 @@ const checkVehicleConflict = async (vehicleId, b2cPartnerId, proposedSchedule, e
 // Helper function to convert time to HH:MM AM/PM format
 const convertToAMPMFormat = (timeString) => {
     if (!timeString) return "";
-    
+
     // If already in correct format, return as is
     if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?(AM|PM)$/i.test(timeString)) {
         return timeString.toUpperCase();
     }
-    
+
     // Handle 24-hour format (HH:MM or HH:MM:SS)
     if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/.test(timeString)) {
         const [time] = timeString.split(':');
         const [hours, minutes] = timeString.split(':').map(Number);
-        
+
         const period = hours >= 12 ? 'PM' : 'AM';
         const displayHours = hours % 12 || 12; // Convert 0 to 12
-        
+
         return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
     }
-    
+
     // Handle other formats, try to extract time
     const timeMatch = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
     if (timeMatch) {
         let [, hours, minutes, period] = timeMatch;
         hours = parseInt(hours);
         minutes = parseInt(minutes);
-        
+
         if (!period) {
             period = hours >= 12 ? 'PM' : 'AM';
             hours = hours % 12 || 12;
         }
-        
+
         return `${hours}:${minutes.toString().padStart(2, '0')} ${period.toUpperCase()}`;
     }
-    
+
     // Default fallback
     return "12:00 PM";
 };
@@ -216,7 +216,7 @@ const convertToAMPMFormat = (timeString) => {
 export const createB2CPartnerRoute = async (req, res) => {
     try {
         console.log("[v0] Creating B2C Partner Route:", JSON.stringify(req.body, null, 2));
-        
+
         const {
             routeName,
             fromLocation,
@@ -318,11 +318,11 @@ export const createB2CPartnerRoute = async (req, res) => {
         const route = await B2CPartnerRoute.create(routeData);
 
         console.log("[v0] B2C Partner Route created successfully:", route._id);
-        
+
         // Create schedule for the route if startTime and availableDays are provided
         if (startTime && availableDays && availableDays.length > 0) {
             console.log("[v0] Creating schedule for route:", route._id);
-            
+
             const scheduleData = {
                 b2cPartnerId: req.userId,
                 routeId: route._id,
@@ -336,27 +336,27 @@ export const createB2CPartnerRoute = async (req, res) => {
                 lastTripGenerated: new Date(),
                 nextTripGeneration: new Date()
             };
-            
+
             const schedule = await B2CPartnerSchedule.create(scheduleData);
             console.log("[v0] Schedule created successfully:", schedule._id);
-            
+
             // Assign vehicle to driver if both are provided
             if (assignedVehicle && assignedDriver) {
                 console.log("[v0] Assigning vehicle to driver:", assignedVehicle, assignedDriver);
                 try {
                     await B2CPartnerDriver.findByIdAndUpdate(
                         assignedDriver,
-                        { 
+                        {
                             $addToSet: { assignedVehicles: assignedVehicle },
                             $set: { updatedAt: new Date() }
                         }
                     );
                     console.log("[v0] Vehicle assigned to driver successfully");
-                    
+
                     // Also assign driver to vehicle
                     await B2CPartnerVehicle.findByIdAndUpdate(
                         assignedVehicle,
-                        { 
+                        {
                             $addToSet: { assignedDrivers: assignedDriver },
                             $set: { updatedAt: new Date() }
                         }
@@ -367,13 +367,13 @@ export const createB2CPartnerRoute = async (req, res) => {
                     // Don't fail route creation if assignment fails
                 }
             }
-            
+
             // NOTE: DO NOT generate trips automatically when B2C_PARTNER creates route
-        // Trips should only be generated when COMMUTER makes booking
-        // This prevents creating empty trips that no one has booked
-        console.log("[v0] Route and schedule created - trips will be generated on passenger booking");
+            // Trips should only be generated when COMMUTER makes booking
+            // This prevents creating empty trips that no one has booked
+            console.log("[v0] Route and schedule created - trips will be generated on passenger booking");
         }
-        
+
         res.status(201).json({
             success: true,
             message: "Route created successfully",
@@ -394,19 +394,19 @@ export const createB2CPartnerRoute = async (req, res) => {
 export const getB2CPartnerRoutes = async (req, res) => {
     try {
         // Fetch real B2C partner routes from database
-        const routes = await B2CPartnerRoute.find({ 
-            b2cPartnerId: req.userId 
+        const routes = await B2CPartnerRoute.find({
+            b2cPartnerId: req.userId
         })
-        .populate('assignedVehicle', 'model vehicleType seatingCapacity licensePlate year images')
+            .populate('assignedVehicle', 'model vehicleType seatingCapacity licensePlate year images')
             .sort({ createdAt: -1 });
-        
+
         // Get B2C_PARTNER user info for self-driver case
         const partnerUser = await User.findById(req.userId).select('fullName whatsappNumber profileImage');
 
         // Add upcoming trips to each route and handle driver info
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         const routesWithTrips = await Promise.all(
             routes.map(async (route) => {
                 const upcomingTrips = await B2CPartnerTrip.find({
@@ -464,15 +464,15 @@ export const getB2CPartnerRoutes = async (req, res) => {
             })
         );
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             routes: routesWithTrips || []
         });
     } catch (error) {
         console.error("[v0] Error fetching B2C partner routes:", error.message);
-        res.status(500).json({ 
-            success: false, 
-            message: "Error fetching B2C routes" 
+        res.status(500).json({
+            success: false,
+            message: "Error fetching B2C routes"
         });
     }
 };
@@ -482,7 +482,7 @@ export const updateB2CPartnerRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
         const allowedFields = ['fromLocation', 'toLocation', 'startTime', 'totalSeats', 'availableSeats', 'pricing', 'tripType', 'routeStartDate', 'availableDays', 'assignedVehicle', 'assignedDriver', 'status', 'isActive', 'description', 'tags'];
-        
+
         const updateData = {};
         for (const field of allowedFields) {
             if (req.body[field] !== undefined) {
@@ -517,8 +517,8 @@ export const updateB2CPartnerRoute = async (req, res) => {
             { $set: updateData },
             { new: true }
         )
-        .populate('assignedVehicle', 'model vehicleType seatingCapacity licensePlate year')
-        .populate('assignedDriverId', 'name phoneNumber email profileImage');
+            .populate('assignedVehicle', 'model vehicleType seatingCapacity licensePlate year')
+            .populate('assignedDriverId', 'name phoneNumber email profileImage');
 
         if (!route) {
             return res.status(404).json({
@@ -622,22 +622,22 @@ export const updateB2CPartnerRoute = async (req, res) => {
 export const deleteB2CPartnerRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
-        
+
         // Find and delete route
         const route = await B2CPartnerRoute.findOneAndDelete({
             _id: routeId,
             b2cPartnerId: req.userId
         });
-        
+
         if (!route) {
             return res.status(404).json({
                 success: false,
                 message: "Route not found or you don't have permission to delete it"
             });
         }
-        
+
         console.log(`Successfully deleted B2C route: ${route.fromLocation} to ${route.toLocation}`);
-        
+
         res.status(200).json({
             success: true,
             message: "B2C route deleted successfully"
@@ -656,14 +656,14 @@ export const deleteB2CPartnerRoute = async (req, res) => {
 export const getTodayTrips = async (req, res) => {
     try {
         const { routeId } = req.query; // Get routeId from query params
-        
+
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Start of today
-        
+
         // Get trips from today onwards (next 30 days)
         const endDate = new Date(today);
         endDate.setDate(endDate.getDate() + 30); // Next 30 days
-        
+
         // Build query filter
         const queryFilter = {
             b2cPartnerId: req.userId,
@@ -672,18 +672,18 @@ export const getTodayTrips = async (req, res) => {
                 $lt: endDate
             }
         };
-        
+
         // Add routeId filter if provided
         if (routeId) {
             queryFilter.routeId = routeId;
         }
-        
+
         // Fetch upcoming trips for this B2C partner (and specific route if provided)
         const trips = await B2CPartnerTrip.find(queryFilter)
-        .populate('vehicleId', 'model licensePlate vehicleType')
-        .populate('driverId', 'name phoneNumber')
-        .populate('routeId', 'fromLocation toLocation startTime')
-        .sort({ tripDate: 1, startTime: 1 });
+            .populate('vehicleId', 'model licensePlate vehicleType')
+            .populate('driverId', 'name phoneNumber')
+            .populate('routeId', 'fromLocation toLocation startTime')
+            .sort({ tripDate: 1, startTime: 1 });
 
         res.status(200).json({
             success: true,
@@ -703,18 +703,18 @@ export const getTodayTrips = async (req, res) => {
 export const createB2CPartnerSchedule = async (req, res) => {
     try {
         const { routeId, scheduleData } = req.body;
-        
+
         const schedule = new B2CPartnerSchedule({
             routeId,
             b2cPartnerId: req.userId,
             ...scheduleData
         });
-        
+
         await schedule.save();
-        
+
         // Generate trips for this schedule
         // await generateTripsForSchedule(schedule._id);
-        
+
         res.status(201).json({
             success: true,
             message: "Schedule created successfully",
@@ -734,23 +734,23 @@ export const createB2CPartnerSchedule = async (req, res) => {
 export const getB2CPartnerSchedules = async (req, res) => {
     try {
         const { routeId } = req.query;
-        
+
         const query = {
             b2cPartnerId: req.userId,
             isActive: true,
             status: "Active"
         };
-        
+
         if (routeId) {
             query.routeId = routeId;
         }
-        
+
         const schedules = await B2CPartnerSchedule.find(query)
             .populate('routeId', 'fromLocation toLocation tripType')
             .populate('assignedVehicle', 'model licensePlate vehicleType')
             .populate('assignedDriver', 'name phoneNumber')
             .sort({ scheduleTime: 1 });
-        
+
         res.status(200).json({
             success: true,
             schedules
@@ -791,22 +791,22 @@ export const getPublicRouteTripSeatAvailability = async (req, res) => {
 
         // Get all trips for this route (public access - no auth check)
         console.log("[v0] DEBUG: Querying trips for routeId:", routeId);
-        
+
         // First try without any filters to see what exists
         const allTrips = await B2CPartnerTrip.find({ routeId: routeId });
         console.log(`[v0] DEBUG: Found ${allTrips.length} total trips for route (no filters)`);
-        
+
         allTrips.forEach(trip => {
             console.log(`[v0] DEBUG: Trip ${trip._id}: isActive=${trip.isActive}, tripDate=${trip.tripDate}, startTime=${trip.startTime}`);
         });
-        
+
         // Fix timezone issue - use local date comparison
         const today = new Date();
         const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate()); // Start of day in local timezone
-        
+
         console.log("[v0] Today's date (local start of day):", todayLocal);
         console.log("[v0] Today's date (UTC):", today);
-        
+
         // Remove isActive filter since it's undefined, and fix date filter
         const trips = await B2CPartnerTrip.find({
             routeId: routeId,
@@ -814,7 +814,7 @@ export const getPublicRouteTripSeatAvailability = async (req, res) => {
         }).sort({ tripDate: 1, startTime: 1 });
 
         console.log(`[v0] Found ${trips.length} trips for public seat availability (with fixed filters)`);
-        
+
         // Debug: Log found trips
         trips.forEach(trip => {
             console.log(`[v0] Found trip: ${trip._id}, date: ${trip.tripDate}, time: ${trip.startTime}, seats: ${trip.availableSeats}/${trip.totalSeats}`);
@@ -822,12 +822,12 @@ export const getPublicRouteTripSeatAvailability = async (req, res) => {
 
         // Group trips by time and direction for seat availability
         const seatAvailability = {};
-        
+
         trips.forEach(trip => {
             // Create trip keys matching frontend format
             const direction = trip.fromLocation === route.fromLocation ? 'outbound' : 'return';
             const tripKey = `${trip.startTime}_${direction}`;
-            
+
             seatAvailability[tripKey] = {
                 tripId: trip._id,
                 availableSeats: trip.availableSeats,
@@ -839,36 +839,85 @@ export const getPublicRouteTripSeatAvailability = async (req, res) => {
                 toLocation: trip.toLocation,
                 status: trip.status
             };
-            
+
             console.log(`[v0] PUBLIC Seat availability for ${tripKey}: ${trip.availableSeats}/${trip.totalSeats} seats`);
         });
 
         console.log("[v0] Final PUBLIC seat availability keys:", Object.keys(seatAvailability));
 
-        // If no trips exist, provide default availability from route
+        // If no real trips exist yet, build availability from the route's
+        // schedule trip-times so each trip key reflects the ACTUAL vehicle
+        // assigned to it (different trips can use different vehicles with
+        // different seating capacities). Keys match the frontend format
+        // `${departureTime}_${direction}`.
         if (Object.keys(seatAvailability).length === 0) {
-            const defaultAvailable = route.availableSeats || route.totalSeats || 35;
-            
-            // Add default entries for common trip times
-            const commonTimes = ['8:00 AM', '9:00 AM', '10:00 AM', '5:00 PM', '6:00 PM', '7:00 PM'];
-            
-            commonTimes.forEach(time => {
-                seatAvailability[`${time}_outbound`] = {
-                    availableSeats: defaultAvailable,
-                    totalSeats: route.totalSeats || 35,
-                    bookedSeats: 0,
-                    status: "Available"
-                };
-                
-                seatAvailability[`${time}_return`] = {
-                    availableSeats: defaultAvailable,
-                    totalSeats: route.totalSeats || 35,
-                    bookedSeats: 0,
-                    status: "Available"
-                };
+            const schedules = await B2CPartnerSchedule.find({ routeId: routeId });
+
+            // Subtract active monthly passes from capacity for a realistic number.
+            const { default: B2CMonthlyPass } = await import("../models/B2CMonthlyPass.js");
+            const activePassCount = await B2CMonthlyPass.countDocuments({
+                routeId: routeId,
+                status: { $in: ['ACTIVE', 'active', 'Active'] },
+                endDate: { $gte: new Date() }
             });
-            
-            console.log("[v0] Created default availability for common times (PUBLIC)");
+
+            // Collect all per-trip vehicle ids for a single batch lookup.
+            const vehicleIds = new Set();
+            for (const sch of schedules) {
+                for (const tt of (sch.tripTimes || [])) {
+                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                }
+            }
+            if (route.assignedVehicle) vehicleIds.add(route.assignedVehicle.toString());
+
+            const vehicles = vehicleIds.size > 0
+                ? await B2CPartnerVehicle.find({ _id: { $in: Array.from(vehicleIds) } }).select('seatingCapacity')
+                : [];
+            const vehicleCapMap = {};
+            vehicles.forEach(v => { vehicleCapMap[v._id.toString()] = v.seatingCapacity; });
+
+            const routeDefaultCap =
+                (route.assignedVehicle && vehicleCapMap[route.assignedVehicle.toString()]) ||
+                route.totalSeats || 35;
+
+            for (const sch of schedules) {
+                for (const tt of (sch.tripTimes || [])) {
+                    const tripVehicleCap =
+                        (tt.assignedVehicle && vehicleCapMap[tt.assignedVehicle.toString()]) ||
+                        routeDefaultCap;
+                    const available = Math.max(0, tripVehicleCap - activePassCount);
+
+                    if (tt.tripType === "Round Trip") {
+                        // Round trip exposes both an outbound and a return leg.
+                        if (tt.departureTime) {
+                            seatAvailability[`${tt.departureTime}_outbound`] = {
+                                availableSeats: available,
+                                totalSeats: tripVehicleCap,
+                                bookedSeats: activePassCount,
+                                status: "Available"
+                            };
+                        }
+                        if (tt.arrivalTime) {
+                            seatAvailability[`${tt.arrivalTime}_return`] = {
+                                availableSeats: available,
+                                totalSeats: tripVehicleCap,
+                                bookedSeats: activePassCount,
+                                status: "Available"
+                            };
+                        }
+                    } else if (tt.departureTime) {
+                        // One Way trips are always outbound.
+                        seatAvailability[`${tt.departureTime}_outbound`] = {
+                            availableSeats: available,
+                            totalSeats: tripVehicleCap,
+                            bookedSeats: activePassCount,
+                            status: "Available"
+                        };
+                    }
+                }
+            }
+
+            console.log("[v0] Built schedule-based availability (PUBLIC):", Object.keys(seatAvailability));
         }
 
         res.status(200).json({
@@ -934,12 +983,12 @@ export const getRouteTripSeatAvailability = async (req, res) => {
 
         // Group trips by time and direction for seat availability
         const seatAvailability = {};
-        
+
         trips.forEach(trip => {
             // Create trip keys matching frontend format
             const direction = trip.fromLocation === route.fromLocation ? 'outbound' : 'return';
             const tripKey = `${trip.startTime}_${direction}`;
-            
+
             seatAvailability[tripKey] = {
                 tripId: trip._id,
                 availableSeats: trip.availableSeats,
@@ -951,36 +1000,80 @@ export const getRouteTripSeatAvailability = async (req, res) => {
                 toLocation: trip.toLocation,
                 status: trip.status
             };
-            
+
             console.log(`[v0] Seat availability for ${tripKey}: ${trip.availableSeats}/${trip.totalSeats} seats`);
         });
 
         console.log("[v0] Final seat availability keys:", Object.keys(seatAvailability));
 
-        // If no trips exist, provide default availability from route
+        // If no real trips exist yet, build availability from the route's
+        // schedule trip-times so each trip key reflects the ACTUAL vehicle
+        // assigned to it. Keys match the frontend format
+        // `${departureTime}_${direction}`.
         if (Object.keys(seatAvailability).length === 0) {
-            const defaultAvailable = route.availableSeats || route.totalSeats || 35;
-            
-            // Add default entries for common trip times
-            const commonTimes = ['8:00 AM', '9:00 AM', '10:00 AM', '5:00 PM', '6:00 PM', '7:00 PM'];
-            
-            commonTimes.forEach(time => {
-                seatAvailability[`${time}_outbound`] = {
-                    availableSeats: defaultAvailable,
-                    totalSeats: route.totalSeats || 35,
-                    bookedSeats: 0,
-                    status: "Available"
-                };
-                
-                seatAvailability[`${time}_return`] = {
-                    availableSeats: defaultAvailable,
-                    totalSeats: route.totalSeats || 35,
-                    bookedSeats: 0,
-                    status: "Available"
-                };
+            const schedules = await B2CPartnerSchedule.find({ routeId: routeId });
+
+            const { default: B2CMonthlyPass } = await import("../models/B2CMonthlyPass.js");
+            const activePassCount = await B2CMonthlyPass.countDocuments({
+                routeId: routeId,
+                status: { $in: ['ACTIVE', 'active', 'Active'] },
+                endDate: { $gte: new Date() }
             });
-            
-            console.log("[v0] Created default availability for common times");
+
+            const vehicleIds = new Set();
+            for (const sch of schedules) {
+                for (const tt of (sch.tripTimes || [])) {
+                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                }
+            }
+            if (route.assignedVehicle) vehicleIds.add(route.assignedVehicle.toString());
+
+            const vehicles = vehicleIds.size > 0
+                ? await B2CPartnerVehicle.find({ _id: { $in: Array.from(vehicleIds) } }).select('seatingCapacity')
+                : [];
+            const vehicleCapMap = {};
+            vehicles.forEach(v => { vehicleCapMap[v._id.toString()] = v.seatingCapacity; });
+
+            const routeDefaultCap =
+                (route.assignedVehicle && vehicleCapMap[route.assignedVehicle.toString()]) ||
+                route.totalSeats || 35;
+
+            for (const sch of schedules) {
+                for (const tt of (sch.tripTimes || [])) {
+                    const tripVehicleCap =
+                        (tt.assignedVehicle && vehicleCapMap[tt.assignedVehicle.toString()]) ||
+                        routeDefaultCap;
+                    const available = Math.max(0, tripVehicleCap - activePassCount);
+
+                    if (tt.tripType === "Round Trip") {
+                        if (tt.departureTime) {
+                            seatAvailability[`${tt.departureTime}_outbound`] = {
+                                availableSeats: available,
+                                totalSeats: tripVehicleCap,
+                                bookedSeats: activePassCount,
+                                status: "Available"
+                            };
+                        }
+                        if (tt.arrivalTime) {
+                            seatAvailability[`${tt.arrivalTime}_return`] = {
+                                availableSeats: available,
+                                totalSeats: tripVehicleCap,
+                                bookedSeats: activePassCount,
+                                status: "Available"
+                            };
+                        }
+                    } else if (tt.departureTime) {
+                        seatAvailability[`${tt.departureTime}_outbound`] = {
+                            availableSeats: available,
+                            totalSeats: tripVehicleCap,
+                            bookedSeats: activePassCount,
+                            status: "Available"
+                        };
+                    }
+                }
+            }
+
+            console.log("[v0] Built schedule-based availability:", Object.keys(seatAvailability));
         }
 
         res.status(200).json({
@@ -1006,14 +1099,14 @@ export const getRouteTripSeatAvailability = async (req, res) => {
 export const createB2CPartnerTrip = async (req, res) => {
     try {
         const tripData = req.body;
-        
+
         const trip = new B2CPartnerTrip({
             ...tripData,
             b2cPartnerId: req.userId
         });
-        
+
         await trip.save();
-        
+
         res.status(201).json({
             success: true,
             message: "Trip created successfully",
@@ -1034,27 +1127,27 @@ export const getB2CPartnerTrips = async (req, res) => {
     try {
         const { routeId } = req.query;
         const { startDate } = req.query;
-        
+
         const query = {
             b2cPartnerId: req.userId
         };
-        
+
         if (routeId) {
             query.routeId = routeId;
         }
-        
+
         if (startDate) {
             query.tripDate = {
                 $gte: new Date(startDate)
             };
         }
-        
+
         const trips = await B2CPartnerTrip.find(query)
             .populate('routeId', 'fromLocation toLocation tripType')
             .populate('vehicleId', 'model licensePlate vehicleType')
             .populate('driverId', 'fullName phoneNumber')
             .sort({ tripDate: 1 });
-        
+
         res.status(200).json({
             success: true,
             trips

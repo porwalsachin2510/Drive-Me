@@ -244,12 +244,13 @@ const FeaturedRoutes = ({ routes, loading }) => {
                       route.images?.[0]?.url ||
                       route.images?.[0] ||
                       route.driverImage ||
-                      route.companyLogo
+                      route.companyLogo ||
+                      "/placeholder-banner.svg"
                     }
                     alt={`${route.fromLocation} to ${route.toLocation}`}
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "/placeholder.svg";
+                      e.target.src = "/placeholder-bannner.svg";
                     }}
                   />
 
@@ -306,7 +307,7 @@ const FeaturedRoutes = ({ routes, loading }) => {
                         }}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = "/placeholder.svg";
+                          e.target.src = "/placeholder-bannner.svg";
                         }}
                       />
                       <div className="drivemego-featuredroutes-company-info">

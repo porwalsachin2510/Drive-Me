@@ -18,7 +18,10 @@ const walletSchema = new mongoose.Schema(
         balance: {
             type: Number,
             default: 0,
-            min: 0, // Allow minimum 0 balance
+            // No min constraint: a partner who collects a cash cancellation fee from a
+            // passenger owes that amount to the admin. If their available balance is less
+            // than the fee, the balance goes negative so they must top up (add money) to
+            // recover the wallet before they can withdraw again.
         },
 
         minimumRequiredBalance: {
@@ -63,7 +66,7 @@ const walletSchema = new mongoose.Schema(
         transactions: [{
             type: {
                 type: String,
-                enum: ["DEPOSIT", "WITHDRAWAL", "TRANSFER", "PAYOUT", "COMMISSION_DEDUCTION", "BOOKING_EARNING", "NEGOTIATION_COMMISSION", "EMI_PAYMENT", "SECURITY_DEPOSIT", "SECURITY_DEPOSIT_REFUND"],
+                enum: ["DEPOSIT", "WITHDRAWAL", "TRANSFER", "PAYOUT", "COMMISSION", "COMMISSION_DEDUCTION", "BOOKING_EARNING", "NEGOTIATION_COMMISSION", "EMI_PAYMENT", "SECURITY_DEPOSIT", "SECURITY_DEPOSIT_REFUND", "REFUND", "COMMISSION_REFUND", "COMMISSION_REVERSAL", "EARNINGS_REVERSAL", "CANCELLATION_FEE"],
                 required: true,
             },
             amount: {

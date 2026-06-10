@@ -4680,50 +4680,113 @@ export const getB2CPartnerEarnings = async (req, res) => {
 
         const partnerObjId = new mongoose.Types.ObjectId(userId);
         const completedStatuses = ['COMPLETED', 'ACCEPTED', 'IN_PROGRESS'];
+        const partnerMatch = { $or: [{ b2cPartnerId: partnerObjId }, { partnerId: partnerObjId }], bookingStatus: { $in: completedStatuses } };
 
-        // Get earnings from B2CPassengerBooking (where partner gets driverEarnings or paymentAmount)
+        // Reusable aggregation that returns gross (total payment received), admin commission, and net earnings.
+        // - gross   = paymentAmount (full amount the commuter paid)
+        // - commission = adminCommissionAmount (admin's cut). Falls back to (paymentAmount - driverEarnings) when missing.
+        // - net     = driverEarnings (what the partner actually keeps). Falls back to (paymentAmount - commission).
+        const breakdownGroup = {
+            _id: null,
+            gross: { $sum: { $ifNull: ["$paymentAmount", 0] } },
+            commission: {
+                $sum: {
+                    $ifNull: [
+                        "$adminCommissionAmount",
+                        { $subtract: [{ $ifNull: ["$paymentAmount", 0] }, { $ifNull: ["$driverEarnings", 0] }] }
+                    ]
+                }
+            },
+            net: {
+                $sum: {
+                    $ifNull: [
+                        "$driverEarnings",
+                        {
+                            $subtract: [
+                                { $ifNull: ["$paymentAmount", 0] },
+                                { $ifNull: ["$adminCommissionAmount", 0] }
+                            ]
+                        }
+                    ]
+                }
+            }
+        };
+
+        // Get earnings breakdown from B2CPassengerBooking for each time window
         const [totalResult, todayResult, thisWeekResult, lastWeekResult] = await Promise.all([
             B2CPassengerBooking.aggregate([
-                { $match: { $or: [{ b2cPartnerId: partnerObjId }, { partnerId: partnerObjId }], bookingStatus: { $in: completedStatuses } } },
-                { $group: { _id: null, total: { $sum: { $ifNull: ["$driverEarnings", "$paymentAmount"] } } } }
+                { $match: partnerMatch },
+                { $group: breakdownGroup }
             ]),
             B2CPassengerBooking.aggregate([
-                { $match: { $or: [{ b2cPartnerId: partnerObjId }, { partnerId: partnerObjId }], bookingStatus: { $in: completedStatuses }, createdAt: { $gte: todayStart } } },
-                { $group: { _id: null, total: { $sum: { $ifNull: ["$driverEarnings", "$paymentAmount"] } } } }
+                { $match: { ...partnerMatch, createdAt: { $gte: todayStart } } },
+                { $group: breakdownGroup }
             ]),
             B2CPassengerBooking.aggregate([
-                { $match: { $or: [{ b2cPartnerId: partnerObjId }, { partnerId: partnerObjId }], bookingStatus: { $in: completedStatuses }, createdAt: { $gte: weekStart } } },
-                { $group: { _id: null, total: { $sum: { $ifNull: ["$driverEarnings", "$paymentAmount"] } } } }
+                { $match: { ...partnerMatch, createdAt: { $gte: weekStart } } },
+                { $group: breakdownGroup }
             ]),
             B2CPassengerBooking.aggregate([
-                { $match: { $or: [{ b2cPartnerId: partnerObjId }, { partnerId: partnerObjId }], bookingStatus: { $in: completedStatuses }, createdAt: { $gte: lastWeekStart, $lt: weekStart } } },
-                { $group: { _id: null, total: { $sum: { $ifNull: ["$driverEarnings", "$paymentAmount"] } } } }
+                { $match: { ...partnerMatch, createdAt: { $gte: lastWeekStart, $lt: weekStart } } },
+                { $group: breakdownGroup }
             ])
         ]);
 
-        const totalEarnings = totalResult[0]?.total || 0;
-        const todayEarnings = todayResult[0]?.total || 0;
-        const thisWeekEarnings = thisWeekResult[0]?.total || 0;
-        const lastWeekEarnings = lastWeekResult[0]?.total || 0;
+        // Gross totals
+        const totalGross = totalResult[0]?.gross || 0;
+        const totalCommission = totalResult[0]?.commission || 0;
+        const totalNet = totalResult[0]?.net || 0;
 
-        // Calculate week-over-week change
+        const todayGross = todayResult[0]?.gross || 0;
+        const todayCommission = todayResult[0]?.commission || 0;
+        const todayNet = todayResult[0]?.net || 0;
+
+        const thisWeekGross = thisWeekResult[0]?.gross || 0;
+        const thisWeekCommission = thisWeekResult[0]?.commission || 0;
+        const thisWeekNet = thisWeekResult[0]?.net || 0;
+
+        // Net earnings are what we compare week-over-week (what the partner actually keeps)
+        const lastWeekNet = lastWeekResult[0]?.net || 0;
+
+        // Calculate week-over-week change (based on net earnings)
         let weekChange = "0%";
-        if (lastWeekEarnings > 0) {
-            const pctChange = ((thisWeekEarnings - lastWeekEarnings) / lastWeekEarnings * 100).toFixed(0);
+        if (lastWeekNet > 0) {
+            const pctChange = ((thisWeekNet - lastWeekNet) / lastWeekNet * 100).toFixed(0);
             weekChange = pctChange >= 0 ? `+${pctChange}%` : `${pctChange}%`;
-        } else if (thisWeekEarnings > 0) {
+        } else if (thisWeekNet > 0) {
             weekChange = "+100%";
         }
 
         // Get transaction history grouped by date from B2CPassengerBooking
         const transactionHistory = await B2CPassengerBooking.aggregate([
-            { $match: { $or: [{ b2cPartnerId: partnerObjId }, { partnerId: partnerObjId }], bookingStatus: { $in: completedStatuses } } },
+            { $match: partnerMatch },
             { $sort: { createdAt: -1 } },
             {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
                     trips: { $sum: 1 },
-                    totalAmount: { $sum: { $ifNull: ["$driverEarnings", "$paymentAmount"] } },
+                    grossAmount: { $sum: { $ifNull: ["$paymentAmount", 0] } },
+                    commissionAmount: {
+                        $sum: {
+                            $ifNull: [
+                                "$adminCommissionAmount",
+                                { $subtract: [{ $ifNull: ["$paymentAmount", 0] }, { $ifNull: ["$driverEarnings", 0] }] }
+                            ]
+                        }
+                    },
+                    netAmount: {
+                        $sum: {
+                            $ifNull: [
+                                "$driverEarnings",
+                                {
+                                    $subtract: [
+                                        { $ifNull: ["$paymentAmount", 0] },
+                                        { $ifNull: ["$adminCommissionAmount", 0] }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
                     status: { $first: '$paymentStatus' }
                 }
             },
@@ -4736,20 +4799,37 @@ export const getB2CPartnerEarnings = async (req, res) => {
         const partnerRoute = await B2CPartnerRoute.findOne({ b2cPartnerId: userId });
         const currency = partnerRoute?.currency || "AED";
 
+        const fmt = (val) => `${(val || 0).toFixed(2)} ${currency}`;
+
         const transactions = transactionHistory.map(t => ({
             date: t._id,
             trips: t.trips,
-            amount: `+${(t.totalAmount || 0).toFixed(2)} ${currency}`,
-            status: t.status === 'PAID' ? 'Paid' : 'Pending'
+            // Net amount the partner keeps (kept for backwards compatibility)
+            amount: `+${(t.netAmount || 0).toFixed(2)} ${currency}`,
+            grossAmount: fmt(t.grossAmount),
+            commissionAmount: fmt(t.commissionAmount),
+            netAmount: fmt(t.netAmount),
+            status: t.status === 'PAID' || t.status === 'COMPLETED' ? 'Paid' : 'Pending'
         }));
 
         res.status(200).json({
             success: true,
             earnings: {
-                total: `${totalEarnings.toFixed(2)} ${currency}`,
-                thisWeek: `${thisWeekEarnings.toFixed(2)} ${currency}`,
+                // `total` kept as net for backwards compatibility with older clients
+                total: fmt(totalNet),
+                // Full breakdown for the overview cards
+                totalGross: fmt(totalGross),
+                totalCommission: fmt(totalCommission),
+                totalNet: fmt(totalNet),
+                thisWeek: fmt(thisWeekNet),
+                thisWeekGross: fmt(thisWeekGross),
+                thisWeekCommission: fmt(thisWeekCommission),
+                thisWeekNet: fmt(thisWeekNet),
                 thisWeekChange: weekChange,
-                today: `${todayEarnings.toFixed(2)} ${currency}`,
+                today: fmt(todayNet),
+                todayGross: fmt(todayGross),
+                todayCommission: fmt(todayCommission),
+                todayNet: fmt(todayNet),
                 currency: currency,
             },
             transactions

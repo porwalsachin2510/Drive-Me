@@ -183,7 +183,7 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
         },
         paymentMethod: {
             type: String,
-            enum: ["STRIPE", "TAP", "CARD", "CASH"],
+            enum: ["STRIPE", "TAP", "CARD", "CASH", "WALLET"],
             required: true,
         },
         paymentStatus: {
@@ -276,6 +276,38 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
         commissionRefundedAt: {
             type: Date,
             default: null
+        },
+        // ===== Pro-rata cancellation tracking (monthly passes / multi-trip bookings) =====
+        refundMethod: {
+            type: String,
+            enum: ["WALLET", "CASH_FROM_PARTNER", "NONE", null],
+            default: null
+        },
+        // For CASH bookings: amount the partner owes back to the commuter for unused trips
+        cashRefundDueFromPartner: {
+            type: Number,
+            default: 0
+        },
+        cashRefundSettled: {
+            type: Boolean,
+            default: false
+        },
+        // For CASH bookings: partner collected the cancellation fee in cash and settled it to admin via wallet
+        cashCancellationFeePaidByPartner: {
+            type: Boolean,
+            default: false
+        },
+        cashCancellationFeeAmount: {
+            type: Number,
+            default: 0
+        },
+        usedTripsCount: {
+            type: Number,
+            default: 0
+        },
+        remainingTripsCount: {
+            type: Number,
+            default: 0
         },
         // Admin action log
         adminActions: [{

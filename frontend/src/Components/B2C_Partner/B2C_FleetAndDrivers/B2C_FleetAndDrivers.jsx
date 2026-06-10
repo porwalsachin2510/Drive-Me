@@ -13,15 +13,18 @@ function B2C_FleetAndDrivers() {
   const [showAddDriverModal, setShowAddDriverModal] = useState(false);
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
   const [fleetData, setFleetData] = useState(null);
+  const [driversCount, setDriversCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchFleetData();
+    fetchDriversCount();
 
     // Set up global callback for route creation to refresh fleet data
     window.onRouteCreated = () => {
       console.log("[v0] Route created, refreshing fleet data");
       fetchFleetData();
+      fetchDriversCount();
     };
 
     return () => {
@@ -41,11 +44,37 @@ function B2C_FleetAndDrivers() {
     }
   };
 
+  const fetchDriversCount = async () => {
+    try {
+      // Fetch external drivers and self-driver registration status in parallel
+      const [driversRes, selfRes] = await Promise.all([
+        api.get("/b2c-partner/drivers"),
+        api.get("/b2c-partner/self-driver/status"),
+      ]);
+
+      let count = 0;
+      if (driversRes.data.success) {
+        // External drivers (the partner / self-driver is excluded from this list)
+        count += (driversRes.data.drivers || []).filter(
+          (driver) => !driver.isSelf,
+        ).length;
+      }
+      // The partner also counts as a driver when "Registered as Driver" is ON
+      if (selfRes.data.success && selfRes.data.isRegisteredAsDriver) {
+        count += 1;
+      }
+      setDriversCount(count);
+    } catch (error) {
+      console.error("Error fetching drivers count:", error);
+    }
+  };
+
   const handleAddDriver = async (driverData) => {
     try {
       await api.post("/b2c-partner/drivers", driverData);
       setShowAddDriverModal(false);
       fetchFleetData();
+      fetchDriversCount();
     } catch (error) {
       console.error("Error adding driver:", error);
     }
@@ -109,7 +138,7 @@ function B2C_FleetAndDrivers() {
           className={`b2c-sub-tab ${activeSubTab === "drivers" ? "active" : ""}`}
           onClick={() => setActiveSubTab("drivers")}
         >
-          Drivers
+          Drivers ({driversCount})
         </button>
       </div>
 
@@ -120,7 +149,9 @@ function B2C_FleetAndDrivers() {
             onVehicleUpdated={fetchFleetData}
           />
         )}
-        {activeSubTab === "drivers" && <B2C_DriversTab />}
+        {activeSubTab === "drivers" && (
+          <B2C_DriversTab onDriversCountChange={setDriversCount} />
+        )}
       </div>
 
       {showAddVehicleModal && (

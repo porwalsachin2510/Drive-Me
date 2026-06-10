@@ -911,8 +911,8 @@ function B2C_AddRouteModal({ onClose }) {
   };
 
   return (
-    <div className="b2c-modal-overlay" onClick={onClose}>
-      <div className="b2c-modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="b2c-modal-overlay">
+      <div className="b2c-modal-content">
         <div className="b2c-modal-header">
           <h2 className="b2c-modal-title">
             {routeMode === "existing"

@@ -98,6 +98,7 @@
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 20px;
   width: 100%;
+  align-items: start;
 }
 
 /* ============ NEW COMPACT BOOKING CARD ============ */
@@ -110,6 +111,8 @@
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
+  height: fit-content;
+  align-self: start;
 }
 
 .cmbp-booking-card:hover {
@@ -337,7 +340,7 @@
   gap: 8px;
   padding: 12px 20px 16px;
   border-top: 1px solid #f1f5f9;
-  margin-top: auto;
+  margin-top: 5px;
 }
 
 .cmbp-action-btn {

@@ -14,6 +14,7 @@ import CorporateEmployeeBookingsPage from "../CorporateEmployeeBookingsPage/Corp
 import CorporateBilling from "../../../Components/Corporate/CorporateBilling/CorporateBilling";
 import CorporateRoutesTab from "../../../Components/Corporate/CorporateRoutesTab/CorporateRoutesTab";
 import MyQuotationsContent from "../MyQuotations/MyQuotationsContent";
+import MyCommission from "../../../Components/MyCommission/MyCommission";
 import "./corporateprofilepage.css";
 
 export default function CorporateProfilePage() {
@@ -91,6 +92,8 @@ export default function CorporateProfilePage() {
         return <CorporateRoutesTab />;
       case "billing":
         return <CorporateBilling />;
+      case "my-commission":
+        return <MyCommission />;
       case "account-settings":
         return <AccountSettings />;
       default:

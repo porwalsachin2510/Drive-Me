@@ -68,13 +68,67 @@ const AdminCommissionSettings = () => {
     { value: "B2C_PARTNER", label: "B2C Partner", icon: Car },
   ];
 
-  const rateTypes = [
-    { value: "CONTRACT", label: "Contract Commission" },
-    { value: "BOOKING", label: "Booking Commission" },
-    { value: "MONTHLY_PASS", label: "Monthly Pass Commission" },
-    { value: "NEGOTIATION", label: "Negotiation Commission" },
-    { value: "EMI", label: "EMI Commission" },
-  ];
+  // All commission rate types with labels
+  const rateTypeLabels = {
+    CONTRACT: "Contract Commission",
+    BOOKING: "Booking Commission",
+    MONTHLY_PASS: "Monthly Pass Commission",
+    NEGOTIATION: "Negotiation Commission",
+    EMI: "EMI Commission",
+  };
+
+  // Which custom-rate types are applicable to each role.
+  // This mirrors the backend: B2C Partner earns on bookings & monthly passes,
+  // B2B Partner on contracts AND EMI payments (EMI commission is deducted from
+  // the B2B Partner's per-installment payout), and Corporate on negotiations.
+  const rateTypesByRole = {
+    B2C_PARTNER: ["BOOKING", "MONTHLY_PASS"],
+    B2B_PARTNER: ["CONTRACT", "EMI"],
+    CORPORATE: ["NEGOTIATION"],
+  };
+
+  // Return the rate-type options that are valid for a given role
+  const getRateTypesForRole = (role) => {
+    const allowed = rateTypesByRole[role] || ["BOOKING"];
+    return allowed.map((value) => ({ value, label: rateTypeLabels[value] }));
+  };
+
+  // The "primary" commission type for a role (used to resolve the effective rate)
+  const getPrimaryRateType = (role) => {
+    if (role === "B2B_PARTNER") return "CONTRACT";
+    if (role === "CORPORATE") return "NEGOTIATION";
+    return "BOOKING"; // B2C_PARTNER
+  };
+
+  // Resolve the rate that is ACTUALLY in effect right now for a user, taking
+  // active custom rate rules (with their effective date ranges) into account.
+  // Falls back to the role's default rate when no custom rule is currently active.
+  const getEffectiveRate = (role, settings) => {
+    const baseRate =
+      role === "CORPORATE"
+        ? (settings?.negotiationCommissionRate ?? 25)
+        : (settings?.defaultCommissionRate ?? 20);
+
+    const primaryType = getPrimaryRateType(role);
+    const customRates = settings?.customRates || [];
+
+    if (customRates.length > 0) {
+      const now = new Date();
+      const activeRule = customRates.find((r) => {
+        if (r.rateType !== primaryType) return false;
+        const from = r.effectiveFrom ? new Date(r.effectiveFrom) : null;
+        const until = r.effectiveUntil ? new Date(r.effectiveUntil) : null;
+        const fromOk = !from || from <= now;
+        const untilOk = !until || until >= now;
+        return fromOk && untilOk;
+      });
+      if (activeRule) {
+        return { rate: activeRule.rate, isCustom: true };
+      }
+    }
+
+    return { rate: baseRate, isCustom: false };
+  };
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -231,12 +285,14 @@ const AdminCommissionSettings = () => {
   };
 
   const addCustomRate = () => {
+    // Default a new rule to the first commission type valid for this user's role
+    const allowedTypes = rateTypesByRole[selectedUser?.role] || ["BOOKING"];
     setCommissionForm((prev) => ({
       ...prev,
       customRates: [
         ...prev.customRates,
         {
-          rateType: "CONTRACT",
+          rateType: allowedTypes[0],
           rate: 20,
           effectiveFrom: new Date().toISOString().split("T")[0],
           effectiveUntil: null,
@@ -429,14 +485,25 @@ const AdminCommissionSettings = () => {
                     </span>
                   </td>
                   <td>
-                    <span className="rate-value">
-                      {user.role === "B2B_PARTNER" &&
-                        `${user.commissionSettings?.defaultCommissionRate ?? 20}%`}
-                      {user.role === "CORPORATE" &&
-                        `${user.commissionSettings?.negotiationCommissionRate ?? 25}%`}
-                      {user.role === "B2C_PARTNER" &&
-                        `${user.commissionSettings?.defaultCommissionRate ?? 20}%`}
-                    </span>
+                    {(() => {
+                      const effective = getEffectiveRate(
+                        user.role,
+                        user.commissionSettings,
+                      );
+                      return (
+                        <span className="rate-value">
+                          {`${effective.rate}%`}
+                          {effective.isCustom && (
+                            <span
+                              className="active-rule-tag"
+                              title="A custom rate rule is currently active for this user"
+                            >
+                              Custom active
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td>
                     <span
@@ -676,11 +743,13 @@ const AdminCommissionSettings = () => {
                                 }
                                 disabled={!editMode}
                               >
-                                {rateTypes.map((type) => (
-                                  <option key={type.value} value={type.value}>
-                                    {type.label}
-                                  </option>
-                                ))}
+                                {getRateTypesForRole(selectedUser.role).map(
+                                  (type) => (
+                                    <option key={type.value} value={type.value}>
+                                      {type.label}
+                                    </option>
+                                  ),
+                                )}
                               </select>
                             </div>
                             <div className="form-group">
@@ -746,15 +815,18 @@ const AdminCommissionSettings = () => {
                   )}
                 </div>
 
-                {/* EMI Commission Settings - Only for CORPORATE users */}
-                {selectedUser.role === "CORPORATE" && (
+                {/* EMI Commission Settings - Only for B2B_PARTNER users.
+                    EMI commission is deducted from the B2B Partner's payout on
+                    each installment when a Corporate pays a contract via EMI. */}
+                {selectedUser.role === "B2B_PARTNER" && (
                   <div className="form-section emi-section">
                     <h4>
                       <DollarSign size={18} />
                       EMI Payment Settings
                     </h4>
                     <p className="section-description">
-                      Configure commission and penalties for EMI payments
+                      Configure commission and penalties charged to this B2B
+                      Partner on each EMI installment paid by a Corporate
                     </p>
 
                     <div className="form-row">

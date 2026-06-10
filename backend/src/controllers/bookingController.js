@@ -859,8 +859,8 @@ export const acceptB2CBooking = async (req, res) => {
                 deductedAmount: adminCommission,
                 partnerNewBalance: partnerWallet.balance
             })
-        } else if (booking.paymentMethod === "STRIPE" && booking.paymentStatus === "COMPLETED") {
-            // STRIPE Payment: Payment already received by Admin via Stripe
+        } else if ((booking.paymentMethod === "STRIPE" || booking.paymentMethod === "WALLET") && booking.paymentStatus === "COMPLETED") {
+            // STRIPE / WALLET Payment: Payment already received/held by the platform.
             // Now credit the B2C Partner's wallet with their earnings (total - admin commission)
             let partnerWallet = await Wallet.findOne({ userId: partnerId })
 
@@ -1230,8 +1230,13 @@ export const rejectB2CBooking = async (req, res) => {
         }
 
         // ===== REFUND PROCESSING =====
-        // Process refund for online payments (STRIPE/TAP)
-        if (booking.paymentStatus === "COMPLETED" && booking.transactionId) {
+        // IMPORTANT: only ONLINE payments (STRIPE/TAP/WALLET) are refunded to the passenger wallet, because
+        // only those amounts were ever collected/held by the platform. For CASH bookings the passenger paid
+        // (or will pay) the B2C partner directly in cash, so NOTHING goes to the wallet — otherwise the
+        // passenger would be wrongly credited the full fare.
+        const isOnlinePayment = booking.paymentMethod === "STRIPE" || booking.paymentMethod === "TAP" || booking.paymentMethod === "WALLET"
+
+        if (isOnlinePayment && booking.paymentStatus === "COMPLETED" && booking.transactionId) {
             const passengerWallet = await Wallet.findOne({ userId: booking.passengerId._id || booking.passengerId })
 
             if (passengerWallet) {
@@ -1265,15 +1270,25 @@ export const rejectB2CBooking = async (req, res) => {
 
                 booking.paymentStatus = "REFUNDED"
                 booking.refundAmount = refundAmount
+                booking.refundMethod = "WALLET"
                 booking.refundProcessedAt = new Date()
 
-                console.log("[rejectB2CBooking] Refund processed:", {
+                console.log("[rejectB2CBooking] Online refund processed to wallet:", {
                     refundAmount,
                     newBalance: passengerWallet.balance
                 })
             } else {
                 console.error("[rejectB2CBooking] Passenger wallet not found for refund:", booking.passengerId)
             }
+        } else if (booking.paymentMethod === "CASH") {
+            // CASH: no wallet refund. If the partner already collected cash from the passenger, the
+            // partner settles it back to the passenger OFFLINE in cash. We only mark the booking so the
+            // UI/records reflect that there is no platform wallet refund for cash bookings.
+            booking.refundMethod = "CASH_FROM_PARTNER"
+            booking.refundAmount = 0
+            booking.refundProcessedAt = new Date()
+
+            console.log("[rejectB2CBooking] CASH booking rejected - no wallet refund (offline cash settlement by partner)")
         }
 
         // ===== REVERSE WALLET TRANSACTIONS IF BOOKING WAS ACCEPTED =====
@@ -1355,9 +1370,10 @@ export const rejectB2CBooking = async (req, res) => {
 
                     console.log("[rejectB2CBooking] Reversed admin commission:", adminCommission)
                 }
-            } else if (booking.paymentMethod === "STRIPE" && booking.paymentStatus === "COMPLETED") {
-                // STRIPE: Partner had earnings credited, admin had commission credited
-                // Reverse: Deduct earnings from partner, deduct commission from admin
+            } else if ((booking.paymentMethod === "STRIPE" || booking.paymentMethod === "WALLET") && (booking.paymentStatus === "REFUNDED" || booking.paymentStatus === "COMPLETED")) {
+                // STRIPE / WALLET: at acceptance the platform credited partner earnings + admin commission.
+                // The full amount has already been refunded to the passenger above (paymentStatus is now
+                // REFUNDED), so we must reverse BOTH the partner earnings and the admin commission here.
 
                 if (partnerWallet && driverEarnings > 0) {
                     const partnerBalanceBefore = partnerWallet.balance
@@ -2648,6 +2664,11 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
             ? { $or: [{ driverId: actualDriverId }, { driverId: paramDriverId }] }
             : { driverId: paramDriverId }
 
+        const query = { ...driverIdFilter }
+        if (status) {
+            query.status = status
+        }
+
         // Only show today's trips for daily driver view
         const todayStart = new Date()
         todayStart.setHours(0, 0, 0, 0)
@@ -2674,66 +2695,21 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
             .populate("b2bPartnerId", "companyName fullName")
             .populate("passengers.employeeId", "fullName email whatsappNumber")
             .populate("passengers.passengerId", "fullName email whatsappNumber")
-            .sort({ tripDate: 1, startTime: 1 })
-            .lean()
+            .sort({ tripDate: 1 })
+            .lean() // Use lean for better performance and simpler objects
 
         console.log("[v0] Found trips:", (trips || []).length)
 
-        // Group trips by route + date + time to consolidate passengers
-        // This ensures if separate trips were created for same route/date/time, they appear as one
-        const tripGroupMap = new Map()
-
-        for (const trip of (trips || [])) {
-            // Create a unique key for grouping: routeId + date + startTime + direction
-            const tripDate = new Date(trip.tripDate).toISOString().split('T')[0]
-            const groupKey = `${trip.routeId?._id || trip.routeId}_${tripDate}_${trip.startTime}_${trip.direction || 'FORWARD'}`
-
-            if (tripGroupMap.has(groupKey)) {
-                // Add passengers from this trip to existing group
-                const existingGroup = tripGroupMap.get(groupKey)
-                const existingPassengerIds = new Set(
-                    (existingGroup.passengers || []).map(p =>
-                        (p.passengerId?._id || p.passengerId || p.employeeId?._id || p.employeeId || '').toString()
-                    )
-                )
-
-                // Add new passengers that aren't already in the group
-                for (const passenger of (trip.passengers || [])) {
-                    const passengerId = (passenger.passengerId?._id || passenger.passengerId || passenger.employeeId?._id || passenger.employeeId || '').toString()
-                    if (!existingPassengerIds.has(passengerId)) {
-                        existingGroup.passengers.push(passenger)
-                        existingPassengerIds.add(passengerId)
-                    }
-                }
-
-                // Track all trip IDs that were merged
-                existingGroup.mergedTripIds = existingGroup.mergedTripIds || [existingGroup._id]
-                existingGroup.mergedTripIds.push(trip._id)
-
-                // Keep the most recent status (IN_PROGRESS > SCHEDULED)
-                if (trip.status === 'IN_PROGRESS') {
-                    existingGroup.status = 'IN_PROGRESS'
-                }
-            } else {
-                tripGroupMap.set(groupKey, {
-                    ...trip,
-                    passengers: [...(trip.passengers || [])],
-                    mergedTripIds: [trip._id]
-                })
-            }
-        }
-
-        // Convert grouped trips to booking format for frontend compatibility
-        const bookings = Array.from(tripGroupMap.values()).map(trip => {
+        // Transform trips into booking format for frontend compatibility
+        const bookings = (trips || []).map(trip => {
             // Get passengers with CONFIRMED status - safely handle undefined passengers
             const confirmedPassengers = (trip.passengers || []).filter(p =>
-                p.bookingStatus === 'CONFIRMED' || p.status === 'Confirmed' || p.status === 'CONFIRMED'
+                status ? p.bookingStatus === status : true
             )
 
             return {
                 _id: trip._id,
                 tripId: trip._id,
-                mergedTripIds: trip.mergedTripIds, // Include all merged trip IDs for bulk operations
                 tripDate: trip.tripDate,
                 startTime: trip.startTime,
                 endTime: trip.endTime,
@@ -2748,18 +2724,7 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
                 bookedSeats: trip.bookedSeats,
                 status: trip.status,
                 bookingStatus: trip.status, // Map trip status to bookingStatus for frontend
-                passengers: confirmedPassengers.map(p => ({
-                    _id: p._id,
-                    name: p.name || p.employeeId?.fullName || p.passengerId?.fullName || 'Employee',
-                    employeeId: p.employeeId,
-                    passengerId: p.passengerId,
-                    seatNumber: p.seatNumber,
-                    pickupStop: p.pickupStop || p.pickupPoint,
-                    dropoffStop: p.dropoffStop,
-                    pickupPoint: p.pickupPoint || p.pickupStop,
-                    pickupTime: p.pickupTime,
-                    bookingStatus: p.bookingStatus || p.status
-                })),
+                passengers: confirmedPassengers,
                 passengerCount: confirmedPassengers.length,
                 route: trip.routeId,
                 vehicle: trip.vehicleId,
@@ -2773,19 +2738,17 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
             }
         })
 
-        // Sort by startTime
-        bookings.sort((a, b) => {
-            const timeA = a.startTime || '00:00'
-            const timeB = b.startTime || '00:00'
-            return timeA.localeCompare(timeB)
-        })
+        // Filter out trips with no passengers if status filter is applied
+        const filteredBookings = status
+            ? (bookings || []).filter(b => b && b.passengerCount > 0)
+            : (bookings || [])
 
-        console.log("[v0] Returning grouped bookings:", bookings.length)
+        console.log("[v0] Returning bookings:", (filteredBookings || []).length)
 
         res.status(200).json({
             success: true,
-            bookings: bookings,
-            count: bookings.length,
+            bookings: filteredBookings,
+            count: filteredBookings.length,
         })
     } catch (error) {
         console.error("[v0] Error fetching B2B driver bookings:", error)
@@ -2798,12 +2761,10 @@ export const getB2B_PartnerDriverBookings = async (req, res) => {
 }
 
 // Start B2B_Partner Driver Trip - Works with Trip model
-// Supports bulk starting multiple trips (merged trips) for same route at once
 export const startB2B_PartnerDriverTrip = async (req, res) => {
     try {
         const driverId = req.userId
         const { bookingId } = req.params
-        const { mergedTripIds } = req.body // Optional: array of trip IDs to start together
 
         // Resolve actual driver model ID from user's driverId field
         let actualDriverId = driverId
@@ -2814,47 +2775,20 @@ export const startB2B_PartnerDriverTrip = async (req, res) => {
 
         console.log("[v0] Starting trip:", bookingId, "by driver userId:", driverId, "actualDriverId:", actualDriverId)
 
-        // Collect all trip IDs to start (main + merged)
-        const tripIdsToStart = [bookingId]
-        if (mergedTripIds && Array.isArray(mergedTripIds)) {
-            for (const tid of mergedTripIds) {
-                if (tid && tid !== bookingId && !tripIdsToStart.includes(tid)) {
-                    tripIdsToStart.push(tid)
-                }
-            }
-        }
+        // Try to find in Trip model first (corporate trips)
+        let trip = await Trip.findById(bookingId)
+            .populate("passengers.employeeId", "fullName email whatsappNumber")
 
-        console.log("[v0] Starting trips (bulk):", tripIdsToStart.length, "trip(s)")
-
-        // Find all trips to start
-        const tripsToStart = await Trip.find({
-            _id: { $in: tripIdsToStart }
-        }).populate("passengers.employeeId", "fullName email whatsappNumber")
-            .populate("passengers.passengerId", "fullName email whatsappNumber")
-
-        if (!tripsToStart || tripsToStart.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No trips found to start",
-            })
-        }
-
-        // Verify driver owns all trips
-        for (const trip of tripsToStart) {
+        if (trip) {
+            // It's a Trip model record - check against both user ID and driver model ID
             const tripDriverId = trip.driverId?.toString()
             if (tripDriverId !== driverId && tripDriverId !== actualDriverId) {
                 return res.status(403).json({
                     success: false,
-                    message: "Unauthorized: One or more trips do not belong to you",
+                    message: "Unauthorized: This trip does not belong to you",
                 })
             }
-        }
 
-        // Start all trips and collect all passengers
-        const allPassengers = []
-        const startedTrips = []
-
-        for (const trip of tripsToStart) {
             trip.status = "IN_PROGRESS"
             trip.events.push({
                 eventType: "TRIP_STARTED",
@@ -2862,84 +2796,113 @@ export const startB2B_PartnerDriverTrip = async (req, res) => {
                 description: "Trip started by driver",
             })
             await trip.save()
-            startedTrips.push(trip._id)
 
-            // Collect passengers from this trip
-            for (const passenger of (trip.passengers || [])) {
+            // Notify all passengers
+            for (const passenger of trip.passengers) {
                 if (passenger.bookingStatus === "CONFIRMED") {
-                    allPassengers.push({
-                        ...passenger.toObject ? passenger.toObject() : passenger,
-                        tripId: trip._id,
-                        fromLocation: trip.fromLocation,
-                        toLocation: trip.toLocation
-                    })
+                    // Use passengerId (which is the userId) for notifications, not employeeId (which is CorporateEmployee record ID)
+                    const passengerUserId = passenger.passengerId?._id || passenger.passengerId
+
+                    if (passengerUserId) {
+                        const tripStartNotification = await createNotification({
+                            userId: passengerUserId,
+                            type: "TRIP_STARTED",
+                            title: "Trip Started",
+                            message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has started`,
+                            relatedUserId: driverId,
+                            bookingId: trip._id,
+                        })
+
+                        await sendRealTimeNotification(passengerUserId, {
+                            type: "TRIP_STARTED",
+                            title: tripStartNotification.title,
+                            message: tripStartNotification.message,
+                            data: {
+                                tripId: trip._id,
+                                driverId,
+                                status: "IN_PROGRESS",
+                                notification: tripStartNotification
+                            }
+                        })
+                    }
                 }
             }
+
+            return res.status(200).json({
+                success: true,
+                booking: {
+                    _id: trip._id,
+                    status: trip.status,
+                    bookingStatus: trip.status,
+                    startedAt: new Date(),
+                },
+                message: "Trip started successfully",
+            })
         }
 
-        console.log("[v0] Started", startedTrips.length, "trips, notifying", allPassengers.length, "passengers")
+        // Fallback to CorporateBooking model
+        const booking = await CorporateBooking.findById(bookingId)
 
-        // Notify ALL passengers across all started trips
-        for (const passenger of allPassengers) {
-            // Use passengerId (which is the userId) for notifications
-            const passengerUserId = passenger.passengerId?._id || passenger.passengerId
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: "Trip/Booking not found",
+            })
+        }
 
-            if (passengerUserId) {
-                const tripStartNotification = await createNotification({
-                    userId: passengerUserId,
-                    type: "TRIP_STARTED",
-                    title: "Trip Started",
-                    message: `Your trip from ${passenger.fromLocation} to ${passenger.toLocation} has started. You can now track your driver's live location.`,
-                    relatedUserId: driverId,
-                    bookingId: passenger.tripId,
-                })
+        if (booking.driverId?.toString() !== driverId) {
+            return res.status(403).json({
+                success: false,
+                message: "Unauthorized: This booking does not belong to you",
+            })
+        }
 
-                await sendRealTimeNotification(passengerUserId, {
-                    type: "TRIP_STARTED",
-                    title: tripStartNotification.title,
-                    message: tripStartNotification.message,
-                    data: {
-                        tripId: passenger.tripId,
-                        driverId,
-                        status: "IN_PROGRESS",
-                        notification: tripStartNotification
-                    },
-                })
+        booking.bookingStatus = "IN_PROGRESS"
+        booking.startedAt = new Date()
+        await booking.save()
+
+        // Notify employee
+        const tripStartNotification = await createNotification({
+            userId: booking.passengerId,
+            type: "TRIP_STARTED",
+            title: "Trip Started",
+            message: "Your corporate trip has started",
+            relatedUserId: driverId,
+            bookingId: booking._id,
+        })
+
+        await sendRealTimeNotification(booking.passengerId, {
+            type: "TRIP_STARTED",
+            title: tripStartNotification.title,
+            message: tripStartNotification.message,
+            data: {
+                bookingId: booking._id,
+                driverId,
+                passengerId: booking.passengerId,
+                notification: tripStartNotification
             }
-        }
+        })
 
-        // Return success with the main trip data
-        const mainTrip = tripsToStart.find(t => t._id.toString() === bookingId) || tripsToStart[0]
-
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
-            message: `Started ${startedTrips.length} trip(s) with ${allPassengers.length} passenger(s)`,
-            booking: {
-                _id: mainTrip._id,
-                status: mainTrip.status,
-                fromLocation: mainTrip.fromLocation,
-                toLocation: mainTrip.toLocation,
-                startedTrips: startedTrips.length,
-                passengerCount: allPassengers.length,
-            },
+            booking,
+            message: "Trip started successfully",
         })
     } catch (error) {
-        console.error("[v0] Error starting B2B driver trip:", error)
+        console.error("[v0] Error starting trip:", error)
         res.status(500).json({
             success: false,
-            message: "Error starting trip",
+            message: "Server error",
             error: error.message,
         })
     }
 }
 
 // Complete Corporate Booking - Works with Trip model
-// Supports bulk completing multiple trips (merged trips) for same route at once
 export const completeB2B_PartnerDriverBooking = async (req, res) => {
     try {
         const driverId = req.userId
         const { bookingId } = req.params
-        const { mergedTripIds } = req.body // Optional: array of trip IDs to complete together
 
         // Resolve actual driver model ID from user's driverId field
         let actualDriverId = driverId
@@ -2950,47 +2913,20 @@ export const completeB2B_PartnerDriverBooking = async (req, res) => {
 
         console.log("[v0] Completing trip:", bookingId, "by driver userId:", driverId, "actualDriverId:", actualDriverId)
 
-        // Collect all trip IDs to complete (main + merged)
-        const tripIdsToComplete = [bookingId]
-        if (mergedTripIds && Array.isArray(mergedTripIds)) {
-            for (const tid of mergedTripIds) {
-                if (tid && tid !== bookingId && !tripIdsToComplete.includes(tid)) {
-                    tripIdsToComplete.push(tid)
-                }
-            }
-        }
+        // Try to find in Trip model first (corporate trips)
+        let trip = await Trip.findById(bookingId)
+            .populate("passengers.employeeId", "fullName email whatsappNumber")
 
-        console.log("[v0] Completing trips (bulk):", tripIdsToComplete.length, "trip(s)")
-
-        // Find all trips to complete
-        const tripsToComplete = await Trip.find({
-            _id: { $in: tripIdsToComplete }
-        }).populate("passengers.employeeId", "fullName email whatsappNumber")
-            .populate("passengers.passengerId", "fullName email whatsappNumber")
-
-        if (!tripsToComplete || tripsToComplete.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No trips found to complete",
-            })
-        }
-
-        // Verify driver owns all trips
-        for (const trip of tripsToComplete) {
+        if (trip) {
+            // It's a Trip model record - check against both user ID and driver model ID
             const tripDriverId = trip.driverId?.toString()
             if (tripDriverId !== driverId && tripDriverId !== actualDriverId) {
                 return res.status(403).json({
                     success: false,
-                    message: "Unauthorized: One or more trips do not belong to you",
+                    message: "Unauthorized: This trip does not belong to you",
                 })
             }
-        }
 
-        // Complete all trips and collect all passengers
-        const allPassengers = []
-        const completedTrips = []
-
-        for (const trip of tripsToComplete) {
             trip.status = "COMPLETED"
             trip.events.push({
                 eventType: "TRIP_COMPLETED",
@@ -2998,71 +2934,103 @@ export const completeB2B_PartnerDriverBooking = async (req, res) => {
                 description: "Trip completed by driver",
             })
             await trip.save()
-            completedTrips.push(trip._id)
 
-            // Collect passengers from this trip
-            for (const passenger of (trip.passengers || [])) {
+            // Notify all passengers
+            for (const passenger of trip.passengers) {
                 if (passenger.bookingStatus === "CONFIRMED") {
-                    allPassengers.push({
-                        ...passenger.toObject ? passenger.toObject() : passenger,
-                        tripId: trip._id,
-                        fromLocation: trip.fromLocation,
-                        toLocation: trip.toLocation
-                    })
+                    // Use passengerId (which is the userId) for notifications, not employeeId (which is CorporateEmployee record ID)
+                    const passengerUserId = passenger.passengerId?._id || passenger.passengerId
+
+                    if (passengerUserId) {
+                        const tripCompleteNotification = await createNotification({
+                            userId: passengerUserId,
+                            type: "RIDE_COMPLETED",
+                            title: "Trip Completed",
+                            message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has been completed`,
+                            relatedUserId: driverId,
+                            bookingId: trip._id,
+                        })
+
+                        await sendRealTimeNotification(passengerUserId, {
+                            type: "RIDE_COMPLETED",
+                            title: tripCompleteNotification.title,
+                            message: tripCompleteNotification.message,
+                            data: {
+                                tripId: trip._id,
+                                driverId,
+                                status: "COMPLETED",
+                                notification: tripCompleteNotification
+                            }
+                        })
+                    }
                 }
             }
+
+            return res.status(200).json({
+                success: true,
+                booking: {
+                    _id: trip._id,
+                    status: trip.status,
+                    bookingStatus: trip.status,
+                    completedAt: new Date(),
+                },
+                message: "Trip completed successfully",
+            })
         }
 
-        console.log("[v0] Completed", completedTrips.length, "trips, notifying", allPassengers.length, "passengers")
+        // Fallback to CorporateBooking model
+        const booking = await CorporateBooking.findById(bookingId)
 
-        // Notify ALL passengers across all completed trips
-        for (const passenger of allPassengers) {
-            const passengerUserId = passenger.passengerId?._id || passenger.passengerId
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: "Trip/Booking not found",
+            })
+        }
 
-            if (passengerUserId) {
-                const tripCompleteNotification = await createNotification({
-                    userId: passengerUserId,
-                    type: "RIDE_COMPLETED",
-                    title: "Trip Completed",
-                    message: `Your trip from ${passenger.fromLocation} to ${passenger.toLocation} has been completed. Thank you for traveling with us!`,
-                    relatedUserId: driverId,
-                    bookingId: passenger.tripId,
-                })
+        if (booking.driverId?.toString() !== driverId) {
+            return res.status(403).json({
+                success: false,
+                message: "Unauthorized: This booking does not belong to you",
+            })
+        }
 
-                await sendRealTimeNotification(passengerUserId, {
-                    type: "RIDE_COMPLETED",
-                    title: tripCompleteNotification.title,
-                    message: tripCompleteNotification.message,
-                    data: {
-                        tripId: passenger.tripId,
-                        driverId,
-                        status: "COMPLETED",
-                        notification: tripCompleteNotification
-                    },
-                })
+        booking.bookingStatus = "COMPLETED"
+        booking.completedAt = new Date()
+        await booking.save()
+
+        // Notify employee
+        const corporateTripCompleteNotification = await createNotification({
+            userId: booking.passengerId,
+            type: "RIDE_COMPLETED",
+            title: "Trip Completed",
+            message: "Your corporate trip has been completed",
+            relatedUserId: driverId,
+            bookingId: booking._id,
+        })
+
+        await sendRealTimeNotification(booking.passengerId, {
+            type: "RIDE_COMPLETED",
+            title: corporateTripCompleteNotification.title,
+            message: corporateTripCompleteNotification.message,
+            data: {
+                bookingId: booking._id,
+                driverId,
+                passengerId: booking.passengerId,
+                notification: corporateTripCompleteNotification
             }
-        }
+        })
 
-        // Return success with the main trip data
-        const mainTrip = tripsToComplete.find(t => t._id.toString() === bookingId) || tripsToComplete[0]
-
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
-            message: `Completed ${completedTrips.length} trip(s) with ${allPassengers.length} passenger(s)`,
-            booking: {
-                _id: mainTrip._id,
-                status: mainTrip.status,
-                fromLocation: mainTrip.fromLocation,
-                toLocation: mainTrip.toLocation,
-                completedTrips: completedTrips.length,
-                passengerCount: allPassengers.length,
-            },
+            booking,
+            message: "Trip completed successfully",
         })
     } catch (error) {
-        console.error("[v0] Error completing B2B driver trip:", error)
+        console.error("[v0] Error completing trip:", error)
         res.status(500).json({
             success: false,
-            message: "Error completing trip",
+            message: "Server error",
             error: error.message,
         })
     }
@@ -3105,17 +3073,16 @@ export const getCorporateDriverBookings = async (req, res) => {
             query.status = status
         }
 
-        // Only show TODAY's trips (not all future trips)
+        // Show trips from today onwards (not just today - driver may want to see upcoming trips too)
         const todayStart = new Date()
         todayStart.setHours(0, 0, 0, 0)
-        const todayEnd = new Date()
-        todayEnd.setHours(23, 59, 59, 999)
 
-        // Include only today's trips or any in-progress trips (in case they started yesterday and are still going)
+        // Include trips from today onwards or any in progress
         const dateFilter = {
             $or: [
-                { tripDate: { $gte: todayStart, $lte: todayEnd } }, // Only today's trips
-                { status: 'IN_PROGRESS' } // Include any in-progress trips regardless of date
+                { tripDate: { $gte: todayStart } }, // Today and future trips
+                { status: 'IN_PROGRESS' },
+                { status: 'SCHEDULED' }
             ]
         }
         const finalQuery = { $and: [baseFilter, dateFilter] }
@@ -3131,66 +3098,19 @@ export const getCorporateDriverBookings = async (req, res) => {
             .populate("b2bPartnerId", "companyName fullName")
             .populate("passengers.employeeId", "fullName email whatsappNumber")
             .populate("passengers.passengerId", "fullName email whatsappNumber")
-            .sort({ tripDate: 1, startTime: 1 })
-            .lean()
+            .sort({ tripDate: 1 })
 
-        console.log("[v0] Found corporate driver trips:", trips.length)
+        console.log("[v0] Found corporate driver trips for today:", trips.length)
 
-        // Group trips by route + date + time to consolidate passengers
-        // This ensures if separate trips were created for same route/date/time, they appear as one
-        const tripGroupMap = new Map()
-
-        for (const trip of (trips || [])) {
-            // Create a unique key for grouping: routeId + date + startTime + direction
-            const tripDate = new Date(trip.tripDate).toISOString().split('T')[0]
-            const groupKey = `${trip.routeId?._id || trip.routeId}_${tripDate}_${trip.startTime}_${trip.direction || 'FORWARD'}`
-
-            if (tripGroupMap.has(groupKey)) {
-                // Add passengers from this trip to existing group
-                const existingGroup = tripGroupMap.get(groupKey)
-                const existingPassengerIds = new Set(
-                    (existingGroup.passengers || []).map(p =>
-                        (p.passengerId?._id || p.passengerId || p.employeeId?._id || p.employeeId || '').toString()
-                    )
-                )
-
-                // Add new passengers that aren't already in the group
-                for (const passenger of (trip.passengers || [])) {
-                    const passengerId = (passenger.passengerId?._id || passenger.passengerId || passenger.employeeId?._id || passenger.employeeId || '').toString()
-                    if (!existingPassengerIds.has(passengerId)) {
-                        existingGroup.passengers.push(passenger)
-                        existingPassengerIds.add(passengerId)
-                    }
-                }
-
-                // Track all trip IDs that were merged
-                existingGroup.mergedTripIds = existingGroup.mergedTripIds || [existingGroup._id]
-                existingGroup.mergedTripIds.push(trip._id)
-
-                // Keep the most recent status (IN_PROGRESS > SCHEDULED)
-                if (trip.status === 'IN_PROGRESS') {
-                    existingGroup.status = 'IN_PROGRESS'
-                }
-            } else {
-                tripGroupMap.set(groupKey, {
-                    ...trip,
-                    passengers: [...(trip.passengers || [])],
-                    mergedTripIds: [trip._id]
-                })
-            }
-        }
-
-        // Convert grouped trips to booking format for frontend compatibility
-        const bookings = Array.from(tripGroupMap.values()).map(trip => {
-            // Get passengers with CONFIRMED status - safely handle undefined passengers
-            const confirmedPassengers = (trip.passengers || []).filter(p =>
-                p.bookingStatus === 'CONFIRMED' || p.status === 'Confirmed' || p.status === 'CONFIRMED'
+        // Transform trips into booking format for frontend compatibility
+        const bookings = trips.map(trip => {
+            const confirmedPassengers = trip.passengers.filter(p =>
+                status ? p.bookingStatus === status : true
             )
 
             return {
                 _id: trip._id,
                 tripId: trip._id,
-                mergedTripIds: trip.mergedTripIds, // Include all merged trip IDs for bulk operations
                 tripDate: trip.tripDate,
                 startTime: trip.startTime,
                 endTime: trip.endTime,
@@ -3204,19 +3124,8 @@ export const getCorporateDriverBookings = async (req, res) => {
                 availableSeats: trip.availableSeats,
                 bookedSeats: trip.bookedSeats,
                 status: trip.status,
-                bookingStatus: trip.status, // Map trip status to bookingStatus for frontend
-                passengers: confirmedPassengers.map(p => ({
-                    _id: p._id,
-                    name: p.name || p.employeeId?.fullName || p.passengerId?.fullName || 'Employee',
-                    employeeId: p.employeeId,
-                    passengerId: p.passengerId,
-                    seatNumber: p.seatNumber,
-                    pickupStop: p.pickupStop || p.pickupPoint,
-                    dropoffStop: p.dropoffStop,
-                    pickupPoint: p.pickupPoint || p.pickupStop,
-                    pickupTime: p.pickupTime,
-                    bookingStatus: p.bookingStatus || p.status
-                })),
+                bookingStatus: trip.status,
+                passengers: confirmedPassengers,
                 passengerCount: confirmedPassengers.length,
                 route: trip.routeId,
                 vehicle: trip.vehicleId,
@@ -3230,19 +3139,16 @@ export const getCorporateDriverBookings = async (req, res) => {
             }
         })
 
-        // Sort by startTime
-        bookings.sort((a, b) => {
-            const timeA = a.startTime || '00:00'
-            const timeB = b.startTime || '00:00'
-            return timeA.localeCompare(timeB)
-        })
+        const filteredBookings = status
+            ? bookings.filter(b => b.passengerCount > 0)
+            : bookings
 
-        console.log("[v0] Returning grouped corporate driver bookings:", bookings.length)
+        console.log("[v0] Returning corporate driver bookings:", filteredBookings.length)
 
         res.status(200).json({
             success: true,
-            bookings: bookings,
-            count: bookings.length,
+            bookings: filteredBookings,
+            count: filteredBookings.length,
         })
     } catch (error) {
         console.error("[v0] Error fetching corporate driver bookings:", error)
@@ -3255,12 +3161,10 @@ export const getCorporateDriverBookings = async (req, res) => {
 }
 
 // Start Corporate Trip - Works with Trip model
-// Supports bulk starting multiple trips (merged trips) for same route at once
 export const startCorporateTrip = async (req, res) => {
     try {
         const driverId = req.userId
         const { bookingId } = req.params
-        const { mergedTripIds } = req.body // Optional: array of trip IDs to start together
 
         // Resolve actual driver model ID from user's driverId field
         let actualDriverId = driverId
@@ -3269,50 +3173,20 @@ export const startCorporateTrip = async (req, res) => {
             actualDriverId = driverUser.driverId.toString()
         }
 
-        console.log("[v0] Starting corporate trip:", bookingId, "by driver userId:", driverId, "actualDriverId:", actualDriverId)
+        // Try to find in Trip model first
+        let trip = await Trip.findById(bookingId)
+            .populate("passengers.employeeId", "fullName email whatsappNumber")
 
-        // Collect all trip IDs to start (main + merged)
-        const tripIdsToStart = [bookingId]
-        if (mergedTripIds && Array.isArray(mergedTripIds)) {
-            for (const tid of mergedTripIds) {
-                if (tid && tid !== bookingId && !tripIdsToStart.includes(tid)) {
-                    tripIdsToStart.push(tid)
-                }
-            }
-        }
-
-        console.log("[v0] Starting corporate trips (bulk):", tripIdsToStart.length, "trip(s)")
-
-        // Find all trips to start
-        const tripsToStart = await Trip.find({
-            _id: { $in: tripIdsToStart }
-        }).populate("passengers.employeeId", "fullName email whatsappNumber")
-            .populate("passengers.passengerId", "fullName email whatsappNumber")
-
-        if (!tripsToStart || tripsToStart.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No trips found to start",
-            })
-        }
-
-        // Verify driver owns all trips
-        for (const trip of tripsToStart) {
+        if (trip) {
             const tripDriverId = trip.driverId?.toString()
             // Allow if no driver assigned yet, or if driver matches
             if (tripDriverId && tripDriverId !== driverId && tripDriverId !== actualDriverId) {
                 return res.status(403).json({
                     success: false,
-                    message: "Unauthorized: One or more trips do not belong to you",
+                    message: "Unauthorized: This trip does not belong to you",
                 })
             }
-        }
 
-        // Start all trips and collect all passengers
-        const allPassengers = []
-        const startedTrips = []
-
-        for (const trip of tripsToStart) {
             trip.status = "IN_PROGRESS"
             trip.events.push({
                 eventType: "TRIP_STARTED",
@@ -3321,89 +3195,116 @@ export const startCorporateTrip = async (req, res) => {
             })
             // Assign driver if not yet assigned
             if (!trip.driverId) {
-                trip.driverId = driverId
+                trip.driverId = driverId;
             }
             await trip.save()
-            startedTrips.push(trip._id)
 
-            // Collect passengers from this trip
-            for (const passenger of (trip.passengers || [])) {
+            // Notify all passengers
+            for (const passenger of trip.passengers) {
                 if (passenger.bookingStatus === "CONFIRMED" || passenger.status === "Confirmed") {
-                    allPassengers.push({
-                        ...passenger.toObject ? passenger.toObject() : passenger,
-                        tripId: trip._id,
-                        fromLocation: trip.fromLocation,
-                        toLocation: trip.toLocation
-                    })
+                    // Get the correct user ID - could be passengerId or employeeId
+                    const passengerUserId = passenger.passengerId?._id || passenger.passengerId || passenger.employeeId?._id || passenger.employeeId;
+
+                    if (passengerUserId) {
+                        const tripStartNotification = await createNotification({
+                            userId: passengerUserId,
+                            type: "TRIP_STARTED",
+                            title: "Trip Started",
+                            message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has started. Driver is on the way.`,
+                            relatedUserId: driverId,
+                            bookingId: trip._id,
+                        })
+
+                        await sendRealTimeNotification(passengerUserId, {
+                            type: "TRIP_STARTED",
+                            title: tripStartNotification.title,
+                            message: tripStartNotification.message,
+                            data: {
+                                tripId: trip._id,
+                                driverId,
+                                status: "IN_PROGRESS",
+                                notification: tripStartNotification
+                            }
+                        })
+                    }
                 }
             }
+
+            return res.status(200).json({
+                success: true,
+                booking: {
+                    _id: trip._id,
+                    status: trip.status,
+                    bookingStatus: trip.status,
+                    startedAt: new Date(),
+                },
+                message: "Trip started successfully",
+            })
         }
 
-        console.log("[v0] Started", startedTrips.length, "corporate trips, notifying", allPassengers.length, "passengers")
+        // Fallback to CorporateBooking model
+        const booking = await CorporateBooking.findById(bookingId)
 
-        // Notify ALL passengers across all started trips
-        for (const passenger of allPassengers) {
-            // Get the correct user ID - could be passengerId or employeeId
-            const passengerUserId = passenger.passengerId?._id || passenger.passengerId
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: "Trip/Booking not found",
+            })
+        }
 
-            if (passengerUserId) {
-                const tripStartNotification = await createNotification({
-                    userId: passengerUserId,
-                    type: "TRIP_STARTED",
-                    title: "Trip Started",
-                    message: `Your trip from ${passenger.fromLocation} to ${passenger.toLocation} has started. You can now track your driver's live location.`,
-                    relatedUserId: driverId,
-                    bookingId: passenger.tripId,
-                })
+        if (booking.driverId?.toString() !== driverId) {
+            return res.status(403).json({
+                success: false,
+                message: "Unauthorized: This booking does not belong to you",
+            })
+        }
 
-                await sendRealTimeNotification(passengerUserId, {
-                    type: "TRIP_STARTED",
-                    title: tripStartNotification.title,
-                    message: tripStartNotification.message,
-                    data: {
-                        tripId: passenger.tripId,
-                        driverId,
-                        status: "IN_PROGRESS",
-                        notification: tripStartNotification
-                    },
-                })
+        booking.bookingStatus = "IN_PROGRESS"
+        booking.startedAt = new Date()
+        await booking.save()
+
+        // Notify employee
+        const tripStartNotification = await createNotification({
+            userId: booking.passengerId,
+            type: "TRIP_STARTED",
+            title: "Trip Started",
+            message: "Your corporate trip has started",
+            relatedUserId: driverId,
+            bookingId: booking._id,
+        })
+
+        await sendRealTimeNotification(booking.passengerId, {
+            type: "TRIP_STARTED",
+            title: tripStartNotification.title,
+            message: tripStartNotification.message,
+            data: {
+                bookingId: booking._id,
+                driverId,
+                passengerId: booking.passengerId,
+                notification: tripStartNotification
             }
-        }
+        })
 
-        // Return success with the main trip data
-        const mainTrip = tripsToStart.find(t => t._id.toString() === bookingId) || tripsToStart[0]
-
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
-            message: `Started ${startedTrips.length} trip(s) with ${allPassengers.length} passenger(s)`,
-            booking: {
-                _id: mainTrip._id,
-                status: mainTrip.status,
-                bookingStatus: mainTrip.status,
-                fromLocation: mainTrip.fromLocation,
-                toLocation: mainTrip.toLocation,
-                startedTrips: startedTrips.length,
-                passengerCount: allPassengers.length,
-                startedAt: new Date(),
-            },
+            booking,
+            message: "Trip started successfully",
         })
     } catch (error) {
-        console.error("[v0] Error starting corporate trip:", error)
+        console.error("Error starting corporate trip:", error)
         res.status(500).json({
             success: false,
-            message: "Error starting trip",
+            message: "Server error",
             error: error.message,
         })
     }
 }
 
 // Complete Corporate Booking - Works with Trip model
-// Supports bulk completing multiple trips (merged trips) for same route at once
 export const completeCorporateBooking = async (req, res) => {
     try {
         const driverId = req.userId
         const { bookingId } = req.params
-        const { mergedTripIds } = req.body // Optional: array of trip IDs to complete together
 
         // Resolve actual driver model ID from user's driverId field
         let actualDriverId = driverId
@@ -3412,50 +3313,21 @@ export const completeCorporateBooking = async (req, res) => {
             actualDriverId = driverUser.driverId.toString()
         }
 
-        console.log("[v0] Completing corporate trip:", bookingId, "by driver userId:", driverId, "actualDriverId:", actualDriverId)
-
-        // Collect all trip IDs to complete (main + merged)
-        const tripIdsToComplete = [bookingId]
-        if (mergedTripIds && Array.isArray(mergedTripIds)) {
-            for (const tid of mergedTripIds) {
-                if (tid && tid !== bookingId && !tripIdsToComplete.includes(tid)) {
-                    tripIdsToComplete.push(tid)
-                }
-            }
-        }
-
-        console.log("[v0] Completing corporate trips (bulk):", tripIdsToComplete.length, "trip(s)")
-
-        // Find all trips to complete
-        const tripsToComplete = await Trip.find({
-            _id: { $in: tripIdsToComplete }
-        }).populate("passengers.employeeId", "fullName email whatsappNumber")
+        // Try to find in Trip model first
+        let trip = await Trip.findById(bookingId)
+            .populate("passengers.employeeId", "fullName email whatsappNumber")
             .populate("passengers.passengerId", "fullName email whatsappNumber")
 
-        if (!tripsToComplete || tripsToComplete.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No trips found to complete",
-            })
-        }
-
-        // Verify driver owns all trips
-        for (const trip of tripsToComplete) {
+        if (trip) {
             const tripDriverId = trip.driverId?.toString()
             // Allow if no driver assigned, or if driver matches
             if (tripDriverId && tripDriverId !== driverId && tripDriverId !== actualDriverId) {
                 return res.status(403).json({
                     success: false,
-                    message: "Unauthorized: One or more trips do not belong to you",
+                    message: "Unauthorized: This trip does not belong to you",
                 })
             }
-        }
 
-        // Complete all trips and collect all passengers
-        const allPassengers = []
-        const completedTrips = []
-
-        for (const trip of tripsToComplete) {
             trip.status = "COMPLETED"
             trip.events.push({
                 eventType: "TRIP_COMPLETED",
@@ -3463,70 +3335,100 @@ export const completeCorporateBooking = async (req, res) => {
                 description: "Trip completed by driver",
             })
             await trip.save()
-            completedTrips.push(trip._id)
 
-            // Collect passengers from this trip
-            for (const passenger of (trip.passengers || [])) {
+            // Notify all passengers
+            for (const passenger of trip.passengers) {
                 if (passenger.bookingStatus === "CONFIRMED" || passenger.status === "Confirmed") {
-                    allPassengers.push({
-                        ...passenger.toObject ? passenger.toObject() : passenger,
-                        tripId: trip._id,
-                        fromLocation: trip.fromLocation,
-                        toLocation: trip.toLocation
-                    })
+                    // Get the correct user ID - could be passengerId or employeeId
+                    const passengerUserId = passenger.passengerId?._id || passenger.passengerId || passenger.employeeId?._id || passenger.employeeId;
+
+                    if (passengerUserId) {
+                        const tripCompleteNotification = await createNotification({
+                            userId: passengerUserId,
+                            type: "RIDE_COMPLETED",
+                            title: "Trip Completed",
+                            message: `Your trip from ${trip.fromLocation} to ${trip.toLocation} has been completed. Thank you for traveling with us!`,
+                            relatedUserId: driverId,
+                            bookingId: trip._id,
+                        })
+
+                        await sendRealTimeNotification(passengerUserId, {
+                            type: "RIDE_COMPLETED",
+                            title: tripCompleteNotification.title,
+                            message: tripCompleteNotification.message,
+                            data: {
+                                tripId: trip._id,
+                                driverId,
+                                status: "COMPLETED",
+                                notification: tripCompleteNotification
+                            }
+                        })
+                    }
                 }
             }
+
+            return res.status(200).json({
+                success: true,
+                booking: {
+                    _id: trip._id,
+                    status: trip.status,
+                    bookingStatus: trip.status,
+                    completedAt: new Date(),
+                },
+                message: "Trip completed successfully",
+            })
         }
 
-        console.log("[v0] Completed", completedTrips.length, "corporate trips, notifying", allPassengers.length, "passengers")
+        // Fallback to CorporateBooking model
+        const booking = await CorporateBooking.findById(bookingId)
 
-        // Notify ALL passengers across all completed trips
-        for (const passenger of allPassengers) {
-            const passengerUserId = passenger.passengerId?._id || passenger.passengerId
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: "Trip/Booking not found",
+            })
+        }
 
-            if (passengerUserId) {
-                const tripCompleteNotification = await createNotification({
-                    userId: passengerUserId,
-                    type: "RIDE_COMPLETED",
-                    title: "Trip Completed",
-                    message: `Your trip from ${passenger.fromLocation} to ${passenger.toLocation} has been completed. Thank you for traveling with us!`,
-                    relatedUserId: driverId,
-                    bookingId: passenger.tripId,
-                })
+        if (booking.driverId?.toString() !== driverId) {
+            return res.status(403).json({
+                success: false,
+                message: "Unauthorized: This booking does not belong to you",
+            })
+        }
 
-                await sendRealTimeNotification(passengerUserId, {
-                    type: "RIDE_COMPLETED",
-                    title: tripCompleteNotification.title,
-                    message: tripCompleteNotification.message,
-                    data: {
-                        tripId: passenger.tripId,
-                        driverId,
-                        status: "COMPLETED",
-                        notification: tripCompleteNotification
-                    },
-                })
+        booking.bookingStatus = "COMPLETED"
+        booking.completedAt = new Date()
+        await booking.save()
+
+        // Notify employee
+        const corporateTripCompleteNotification = await createNotification({
+            userId: booking.passengerId,
+            type: "RIDE_COMPLETED",
+            title: "Trip Completed",
+            message: "Your corporate trip has been completed",
+            relatedUserId: driverId,
+            bookingId: booking._id,
+        })
+
+        await sendRealTimeNotification(booking.passengerId, {
+            type: "RIDE_COMPLETED",
+            title: corporateTripCompleteNotification.title,
+            message: corporateTripCompleteNotification.message,
+            data: {
+                bookingId: booking._id,
+                driverId,
+                passengerId: booking.passengerId,
+                notification: corporateTripCompleteNotification
             }
-        }
+        })
 
-        // Return success with the main trip data
-        const mainTrip = tripsToComplete.find(t => t._id.toString() === bookingId) || tripsToComplete[0]
-
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
-            message: `Completed ${completedTrips.length} trip(s) with ${allPassengers.length} passenger(s)`,
-            booking: {
-                _id: mainTrip._id,
-                status: mainTrip.status,
-                bookingStatus: mainTrip.status,
-                fromLocation: mainTrip.fromLocation,
-                toLocation: mainTrip.toLocation,
-                completedTrips: completedTrips.length,
-                passengerCount: allPassengers.length,
-                completedAt: new Date(),
-            },
+            booking,
+            message: "Trip completed successfully",
         })
     } catch (error) {
-        console.error("[v0] Error completing corporate trip:", error)
+        console.error("Error completing corporate trip:", error)
         res.status(500).json({
             success: false,
             message: "Server error",
@@ -3748,46 +3650,88 @@ export const cancelBooking = async (req, res) => {
         const wasAccepted = currentStatus === "ACCEPTED"
         const wasConfirmed = currentStatus === "CONFIRMED"
 
-        // ===== CALCULATE CANCELLATION FEE =====
+        // ===== CALCULATE CANCELLATION FEE (PRO-RATA AWARE) =====
         let cancellationFee = 0
         let refundAmount = 0
+        let usedTripsCount = 0
+        let remainingTripsCount = 0
+        let refundableBase = 0 // money tied to unused/remaining trips
         const bookingCreatedAt = new Date(booking.createdAt)
         const now = new Date()
         const hoursSinceBooking = (now - bookingCreatedAt) / (1000 * 60 * 60)
 
-        // Cancellation fee logic:
-        // - Free cancellation within 12 hours of booking
-        // - 10% fee if cancelled after 12 hours
-        // - 20% fee if cancelled after booking was ACCEPTED
-        // - 30% fee if cancelled within 24 hours of travel date
-
         const travelDate = new Date(booking.travelDate)
         const hoursUntilTravel = (travelDate - now) / (1000 * 60 * 60)
 
-        if (booking.paymentStatus === "COMPLETED" || booking.paymentStatus === "PAID") {
-            const paymentAmount = booking.paymentAmount || booking.totalAmount || 0
+        const paymentAmount = booking.paymentAmount || booking.totalAmount || 0
+        const isPaid = booking.paymentStatus === "COMPLETED" || booking.paymentStatus === "PAID"
 
+        // ===== PRO-RATA: figure out how many trips were already used =====
+        // For monthly passes / multi-trip bookings, the commuter may have already travelled
+        // for several days. They are only entitled to a refund for the UNUSED (remaining) trips.
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+
+        if (bookingType === "B2C" && booking.isMonthlyPass && Array.isArray(booking.monthlyTrips) && booking.monthlyTrips.length > 0) {
+            try {
+                const passTrips = await B2CPartnerTrip.find({ _id: { $in: booking.monthlyTrips } }).select("tripDate status")
+                const totalTrips = passTrips.length || booking.totalTripsCount || booking.monthlyTrips.length
+
+                for (const t of passTrips) {
+                    const tDate = new Date(t.tripDate)
+                    const isPast = tDate < todayStart
+                    const isDone = ["Completed", "In Progress"].includes(t.status)
+                    if (isPast || isDone) {
+                        usedTripsCount++
+                    } else {
+                        remainingTripsCount++
+                    }
+                }
+
+                const perTripValue = totalTrips > 0 ? paymentAmount / totalTrips : 0
+                refundableBase = perTripValue * remainingTripsCount
+
+                console.log("[cancelBooking] Pro-rata monthly pass calc:", {
+                    totalTrips, usedTripsCount, remainingTripsCount, perTripValue, refundableBase
+                })
+            } catch (proRataErr) {
+                console.error("[cancelBooking] Pro-rata calculation failed, falling back to full amount:", proRataErr)
+                refundableBase = paymentAmount
+                remainingTripsCount = 0
+            }
+        } else {
+            // Single-trip booking: the whole payment is refundable (minus fee), no trips used yet
+            refundableBase = paymentAmount
+            remainingTripsCount = 1
+        }
+
+        // Cancellation fee applied ONLY on the refundable (unused) portion
+        if (isPaid && refundableBase > 0) {
             if (hoursUntilTravel <= 24) {
-                // Within 24 hours of travel - 30% cancellation fee
-                cancellationFee = paymentAmount * 0.30
+                cancellationFee = refundableBase * 0.30
             } else if (wasAccepted) {
-                // Booking was accepted - 20% cancellation fee
-                cancellationFee = paymentAmount * 0.20
+                cancellationFee = refundableBase * 0.20
             } else if (hoursSinceBooking > 12) {
-                // More than 12 hours since booking - 10% cancellation fee
-                cancellationFee = paymentAmount * 0.10
+                cancellationFee = refundableBase * 0.10
             }
             // Else: Free cancellation (within 12 hours)
-
-            refundAmount = paymentAmount - cancellationFee
+            refundAmount = Math.max(0, refundableBase - cancellationFee)
         }
+
+        // Persist usage snapshot for transparency
+        booking.usedTripsCount = usedTripsCount
+        booking.remainingTripsCount = remainingTripsCount
 
         console.log("[cancelBooking] Cancellation calculation:", {
             bookingId,
+            paymentMethod: booking.paymentMethod,
             wasAccepted,
             hoursSinceBooking,
             hoursUntilTravel,
-            paymentAmount: booking.paymentAmount,
+            paymentAmount,
+            usedTripsCount,
+            remainingTripsCount,
+            refundableBase,
             cancellationFee,
             refundAmount
         })
@@ -3872,15 +3816,22 @@ export const cancelBooking = async (req, res) => {
         }
 
         // ===== REFUND PROCESSING =====
-        if ((booking.paymentStatus === "COMPLETED" || booking.paymentStatus === "PAID") && refundAmount > 0) {
+        // Online (STRIPE/TAP/CARD): platform held the money -> credit commuter wallet.
+        // CASH: commuter paid the partner directly, platform never held money -> partner must
+        // return the cash offline. We only record the amount due, never credit the app wallet.
+        const isCashBooking = booking.paymentMethod === "CASH"
+
+        if (isPaid && refundAmount > 0 && !isCashBooking) {
             try {
                 const wallet = await Wallet.findOne({ userId })
                 if (wallet) {
                     const balanceBefore = wallet.balance
                     wallet.balance += refundAmount
 
-                    // Create detailed transaction description
                     let description = `Refund for cancelled booking #${booking.bookingNumber || bookingId}`
+                    if (booking.isMonthlyPass && remainingTripsCount >= 0) {
+                        description += ` (refund for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'}; ${usedTripsCount} already used)`
+                    }
                     if (cancellationFee > 0) {
                         description += ` (${booking.currency || 'AED'} ${cancellationFee.toFixed(2)} cancellation fee deducted)`
                     }
@@ -3894,7 +3845,6 @@ export const cancelBooking = async (req, res) => {
                     })
                     await wallet.save()
 
-                    // Create separate Transaction record for better tracking
                     await Transaction.create({
                         walletId: wallet._id,
                         userId: userId,
@@ -3910,6 +3860,8 @@ export const cancelBooking = async (req, res) => {
                         metadata: {
                             bookingId: booking._id,
                             originalAmount: booking.paymentAmount || booking.totalAmount,
+                            usedTripsCount,
+                            remainingTripsCount,
                             cancellationFee,
                             refundAmount,
                             cancelledBy: "COMMUTER",
@@ -3919,14 +3871,40 @@ export const cancelBooking = async (req, res) => {
                 }
 
                 booking.paymentStatus = "REFUNDED"
+                booking.refundStatus = "COMPLETED"
+                booking.refundMethod = "WALLET"
                 booking.refundAmount = refundAmount
                 booking.cancellationFee = cancellationFee
             } catch (refundError) {
                 console.error("[cancelBooking] Refund processing error:", refundError)
             }
+        } else if (isCashBooking && refundAmount > 0) {
+            // CASH: partner owes the unused-trip amount back to the commuter (settled offline)
+            booking.refundMethod = "CASH_FROM_PARTNER"
+            booking.cashRefundDueFromPartner = refundAmount
+            booking.cashRefundSettled = false
+            booking.refundStatus = "PENDING"
+            booking.refundAmount = refundAmount
+            booking.cancellationFee = cancellationFee
+            console.log("[cancelBooking] CASH booking - partner owes commuter:", {
+                cashRefundDueFromPartner: refundAmount,
+                usedTripsCount,
+                remainingTripsCount
+            })
+        } else {
+            booking.refundMethod = "NONE"
+            booking.refundAmount = 0
+            booking.cancellationFee = cancellationFee
         }
 
-        // ===== CREDIT CANCELLATION FEE TO ADMIN =====
+        // ===== SETTLE CANCELLATION FEE TO ADMIN =====
+        // ONLINE (STRIPE/TAP): the platform already holds the full fare, so the fee is simply
+        //   credited to the admin wallet (no counter-party debit needed).
+        // CASH: the partner collected the full fare in cash and returns only the unused value
+        //   MINUS the cancellation fee to the commuter — so the partner is physically holding the
+        //   cancellation fee. That fee belongs to the admin, so we settle it via wallet here:
+        //   partner wallet (DEBIT) -> admin wallet (CREDIT). This only applies when the booking was
+        //   accepted (partner actually collected the cash).
         if (cancellationFee > 0) {
             try {
                 const adminUser = await User.findOne({ role: 'ADMIN' })
@@ -3943,41 +3921,130 @@ export const cancelBooking = async (req, res) => {
                         })
                     }
 
-                    const adminBalanceBefore = adminWallet.balance
-                    adminWallet.balance += cancellationFee
-                    adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + cancellationFee
-                    adminWallet.transactions.push({
-                        type: 'DEPOSIT',
-                        amount: cancellationFee,
-                        description: `Cancellation fee from booking ${booking._id}`,
-                        status: 'COMPLETED'
-                    })
-                    await adminWallet.save()
+                    if (!isCashBooking) {
+                        // ----- ONLINE: credit fee to admin (platform held the money) -----
+                        const adminBalanceBefore = adminWallet.balance
+                        adminWallet.balance += cancellationFee
+                        adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + cancellationFee
+                        adminWallet.transactions.push({
+                            type: 'DEPOSIT',
+                            amount: cancellationFee,
+                            description: `Cancellation fee from booking ${booking._id}`,
+                            status: 'COMPLETED'
+                        })
+                        await adminWallet.save()
 
-                    // Create Transaction record
-                    await Transaction.create({
-                        walletId: adminWallet._id,
-                        userId: adminUser._id,
-                        type: "CREDIT",
-                        amount: cancellationFee,
-                        currency: booking.currency || "AED",
-                        category: "CANCELLATION_FEE",
-                        description: `Cancellation fee from booking ${booking._id}`,
-                        referenceId: booking._id,
-                        referenceModel: "B2CPassengerBooking",
-                        balanceBefore: adminBalanceBefore,
-                        balanceAfter: adminWallet.balance,
-                        metadata: {
-                            bookingId: booking._id,
-                            cancelledBy: userId,
-                            cancellationReason
+                        await Transaction.create({
+                            walletId: adminWallet._id,
+                            userId: adminUser._id,
+                            type: "CREDIT",
+                            amount: cancellationFee,
+                            currency: booking.currency || "AED",
+                            category: "CANCELLATION_FEE",
+                            description: `Cancellation fee from booking ${booking._id}`,
+                            referenceId: booking._id,
+                            referenceModel: "B2CPassengerBooking",
+                            balanceBefore: adminBalanceBefore,
+                            balanceAfter: adminWallet.balance,
+                            metadata: {
+                                bookingId: booking._id,
+                                cancelledBy: userId,
+                                cancellationReason
+                            }
+                        })
+
+                        console.log("[cancelBooking] Cancellation fee credited to admin (online):", cancellationFee)
+                    } else if (wasAccepted) {
+                        // ----- CASH: partner holds the fee in cash -> transfer to admin via wallet -----
+                        const feePartnerId = booking.b2cPartnerId._id || booking.b2cPartnerId
+                        const feePartnerWallet = await Wallet.findOne({ userId: feePartnerId })
+
+                        if (feePartnerWallet) {
+                            const partnerBalanceBefore = feePartnerWallet.balance
+                            // The partner physically collected the commuter's cash cancellation fee, so they
+                            // owe the FULL fee to the admin. Deduct the full fee from their wallet. If their
+                            // balance is less than the fee, the balance goes NEGATIVE on purpose — the partner
+                            // must add money (top up) to bring the wallet back to >= 0 before they can withdraw.
+                            feePartnerWallet.balance = Math.round((feePartnerWallet.balance - cancellationFee) * 100) / 100
+                            feePartnerWallet.transactions.push({
+                                type: 'CANCELLATION_FEE',
+                                amount: cancellationFee,
+                                description: `Cancellation fee paid to admin - cash booking cancelled by passenger (Booking #${booking.bookingNumber || booking._id})`,
+                                status: 'COMPLETED',
+                                createdAt: new Date()
+                            })
+                            await feePartnerWallet.save()
+
+                            await Transaction.create({
+                                walletId: feePartnerWallet._id,
+                                userId: feePartnerId,
+                                type: "DEBIT",
+                                amount: cancellationFee,
+                                currency: booking.currency || "AED",
+                                category: "CANCELLATION_FEE",
+                                description: `Cancellation fee paid to admin - cash booking cancelled by passenger`,
+                                referenceId: booking._id,
+                                referenceModel: "B2CPassengerBooking",
+                                balanceBefore: partnerBalanceBefore,
+                                balanceAfter: feePartnerWallet.balance,
+                                metadata: {
+                                    bookingId: booking._id,
+                                    cancelledBy: userId,
+                                    cancellationReason,
+                                    reason: "cash_cancellation_fee_collected_by_partner"
+                                }
+                            })
+
+                            console.log("[cancelBooking] Cancellation fee debited from partner (cash):", {
+                                cancellationFee,
+                                balanceBefore: partnerBalanceBefore,
+                                balanceAfter: feePartnerWallet.balance
+                            })
                         }
-                    })
 
-                    console.log("[cancelBooking] Cancellation fee credited to admin:", cancellationFee)
+                        // Credit the same fee to the admin wallet
+                        const adminBalanceBefore = adminWallet.balance
+                        adminWallet.balance += cancellationFee
+                        adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + cancellationFee
+                        adminWallet.transactions.push({
+                            type: 'DEPOSIT',
+                            amount: cancellationFee,
+                            description: `Cancellation fee from cash booking ${booking._id} (collected by partner from passenger)`,
+                            status: 'COMPLETED',
+                            createdAt: new Date()
+                        })
+                        await adminWallet.save()
+
+                        await Transaction.create({
+                            walletId: adminWallet._id,
+                            userId: adminUser._id,
+                            type: "CREDIT",
+                            amount: cancellationFee,
+                            currency: booking.currency || "AED",
+                            category: "CANCELLATION_FEE",
+                            description: `Cancellation fee from cash booking ${booking._id} (paid by partner)`,
+                            referenceId: booking._id,
+                            referenceModel: "B2CPassengerBooking",
+                            balanceBefore: adminBalanceBefore,
+                            balanceAfter: adminWallet.balance,
+                            metadata: {
+                                bookingId: booking._id,
+                                cancelledBy: userId,
+                                cancellationReason,
+                                reason: "cash_cancellation_fee_paid_by_partner",
+                                paidByPartner: feePartnerId
+                            }
+                        })
+
+                        // Track on the booking that the partner has settled the fee with admin
+                        booking.cashCancellationFeePaidByPartner = true
+                        booking.cashCancellationFeeAmount = cancellationFee
+
+                        console.log("[cancelBooking] Cancellation fee credited to admin (cash, paid by partner):", cancellationFee)
+                    }
                 }
             } catch (feeError) {
-                console.error("[cancelBooking] Error crediting cancellation fee:", feeError)
+                console.error("[cancelBooking] Error settling cancellation fee:", feeError)
             }
         }
 
@@ -3999,31 +4066,54 @@ export const cancelBooking = async (req, res) => {
             // Get Partner wallet
             const partnerWallet = await Wallet.findOne({ userId: partnerId })
 
-            if (booking.paymentMethod === "STRIPE" && booking.paymentStatus === "COMPLETED") {
-                // STRIPE: Partner had earnings credited during acceptance
-                // Since we're refunding the passenger, we need to reverse partner's earnings
+            // NOTE: use `isPaid` (captured BEFORE the refund block mutates paymentStatus to
+            // "REFUNDED"). Using booking.paymentStatus here would always be false after refund,
+            // which previously prevented partner/admin reversals from ever running.
+            if ((booking.paymentMethod === "STRIPE" || booking.paymentMethod === "TAP" || booking.paymentMethod === "WALLET") && isPaid) {
+                // ONLINE (STRIPE/TAP/WALLET): during acceptance the platform split the commuter's payment
+                // into partner earnings + admin commission. On cancellation we must reverse BOTH,
+                // but ONLY for the unused (remaining) trips so the commuter can be refunded the full
+                // unused value. Money already earned for travelled trips stays with partner/admin.
+                const totalTripsForReversal = (usedTripsCount + remainingTripsCount) || 1
+                const earningsToReverse = booking.isMonthlyPass
+                    ? Math.max(0, (driverEarnings / totalTripsForReversal) * remainingTripsCount)
+                    : driverEarnings
+                const commissionToReverse = booking.isMonthlyPass
+                    ? Math.max(0, (adminCommission / totalTripsForReversal) * remainingTripsCount)
+                    : adminCommission
 
-                if (partnerWallet && driverEarnings > 0) {
+                console.log("[cancelBooking] ONLINE booking - pro-rata reversal:", {
+                    paymentMethod: booking.paymentMethod,
+                    fullDriverEarnings: driverEarnings,
+                    fullAdminCommission: adminCommission,
+                    earningsToReverse,
+                    commissionToReverse,
+                    usedTripsCount,
+                    remainingTripsCount
+                })
+
+                // 1. Reverse partner earnings (pro-rata for unused trips)
+                if (partnerWallet && earningsToReverse > 0) {
                     const partnerBalanceBefore = partnerWallet.balance
-                    partnerWallet.balance -= driverEarnings
-                    partnerWallet.totalEarnings = Math.max(0, (partnerWallet.totalEarnings || 0) - driverEarnings)
+                    partnerWallet.balance = Math.max(0, partnerWallet.balance - earningsToReverse)
+                    partnerWallet.totalEarnings = Math.max(0, (partnerWallet.totalEarnings || 0) - earningsToReverse)
                     partnerWallet.transactions.push({
-                        type: 'WITHDRAWAL',
-                        amount: driverEarnings,
-                        description: `Earnings reversed - booking cancelled by passenger ${booking._id}`,
-                        status: 'COMPLETED'
+                        type: 'EARNINGS_REVERSAL',
+                        amount: earningsToReverse,
+                        description: `Earnings reversed for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'} - booking cancelled by passenger (Booking #${booking.bookingNumber || booking._id})`,
+                        status: 'COMPLETED',
+                        createdAt: new Date()
                     })
                     await partnerWallet.save()
 
-                    // Create transaction record
                     await Transaction.create({
                         walletId: partnerWallet._id,
                         userId: partnerId,
                         type: "DEBIT",
-                        amount: driverEarnings,
+                        amount: earningsToReverse,
                         currency: booking.currency || "AED",
                         category: "EARNINGS_REVERSAL",
-                        description: `Earnings reversed - booking cancelled by passenger`,
+                        description: `Earnings reversed for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'} - booking cancelled by passenger`,
                         referenceId: booking._id,
                         referenceModel: "B2CPassengerBooking",
                         balanceBefore: partnerBalanceBefore,
@@ -4031,18 +4121,173 @@ export const cancelBooking = async (req, res) => {
                         metadata: {
                             bookingId: booking._id,
                             reason: "booking_cancelled_by_passenger",
-                            cancelledBy: userId
+                            cancelledBy: userId,
+                            usedTripsCount,
+                            remainingTripsCount,
+                            fullDriverEarnings: driverEarnings
                         }
                     })
 
-                    console.log("[cancelBooking] Reversed partner earnings:", driverEarnings)
+                    console.log("[cancelBooking] Reversed partner earnings (pro-rata):", earningsToReverse)
                 }
 
-                // Note: Admin commission is NOT reversed - this is the penalty for late cancellation
-                // Admin keeps the commission as it was already processed
+                // 2. Reverse admin commission (pro-rata for unused trips) so the commuter gets the
+                //    full unused value back. Used-trip commission stays with the admin.
+                if (commissionToReverse > 0) {
+                    const adminUser = await User.findOne({ role: 'ADMIN' })
+                    if (adminUser) {
+                        const adminWallet = await Wallet.findOne({ userId: adminUser._id })
+                        if (adminWallet) {
+                            const adminBalanceBefore = adminWallet.balance
+                            adminWallet.balance = Math.max(0, adminWallet.balance - commissionToReverse)
+                            adminWallet.totalEarnings = Math.max(0, (adminWallet.totalEarnings || 0) - commissionToReverse)
+                            adminWallet.transactions.push({
+                                type: 'COMMISSION_REVERSAL',
+                                amount: commissionToReverse,
+                                description: `Commission reversed for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'} - online booking cancelled by passenger (Booking #${booking.bookingNumber || booking._id})`,
+                                status: 'COMPLETED',
+                                createdAt: new Date()
+                            })
+                            await adminWallet.save()
+
+                            await Transaction.create({
+                                walletId: adminWallet._id,
+                                userId: adminUser._id,
+                                type: "DEBIT",
+                                amount: commissionToReverse,
+                                currency: booking.currency || "AED",
+                                category: "COMMISSION_REVERSAL",
+                                description: `Commission reversed for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'} - online booking cancelled by passenger`,
+                                referenceId: booking._id,
+                                referenceModel: "B2CPassengerBooking",
+                                balanceBefore: adminBalanceBefore,
+                                balanceAfter: adminWallet.balance,
+                                metadata: {
+                                    bookingId: booking._id,
+                                    reason: "online_booking_cancelled_by_commuter",
+                                    cancelledBy: userId,
+                                    usedTripsCount,
+                                    remainingTripsCount,
+                                    fullAdminCommission: adminCommission
+                                }
+                            })
+
+                            console.log("[cancelBooking] Reversed admin commission (pro-rata):", commissionToReverse)
+                        }
+                    }
+                }
+            } else if (booking.paymentMethod === "CASH") {
+                // CASH Payment: B2C Partner already paid commission to admin during acceptance.
+                // On cancellation the partner gets commission refunded — but only for the UNUSED
+                // (remaining) trips. Commission for already-travelled trips stays with the admin.
+                let commissionToRefund = adminCommission
+                if (booking.isMonthlyPass) {
+                    const totalTripsForCommission = (usedTripsCount + remainingTripsCount) || 1
+                    const perTripCommission = adminCommission / totalTripsForCommission
+                    commissionToRefund = Math.max(0, perTripCommission * remainingTripsCount)
+                }
+
+                if (commissionToRefund > 0) {
+                    const adminCommission = commissionToRefund // shadow so existing logic reuses pro-rata value
+                    console.log("[cancelBooking] CASH booking cancelled - Refunding pro-rata commission to B2C Partner:", {
+                        fullCommission: booking.adminCommissionAmount,
+                        commissionToRefund,
+                        usedTripsCount,
+                        remainingTripsCount,
+                        partnerId
+                    })
+
+                    // 1. Refund commission to B2C Partner's wallet for the unused trips.
+                    if (partnerWallet) {
+                        const partnerBalanceBefore = partnerWallet.balance
+                        partnerWallet.balance = Math.round((partnerWallet.balance + adminCommission) * 100) / 100
+                        partnerWallet.transactions.push({
+                            type: 'DEPOSIT',
+                            amount: adminCommission,
+                            description: `Commission refund - booking cancelled by passenger (Booking #${booking.bookingNumber || booking._id})`,
+                            status: 'COMPLETED',
+                            createdAt: new Date()
+                        })
+                        await partnerWallet.save()
+
+                        // Create transaction record for partner
+                        await Transaction.create({
+                            walletId: partnerWallet._id,
+                            userId: partnerId,
+                            type: "CREDIT",
+                            amount: adminCommission,
+                            currency: booking.currency || "AED",
+                            category: "COMMISSION_REFUND",
+                            description: `Commission refund - cash booking cancelled by passenger`,
+                            referenceId: booking._id,
+                            referenceModel: "B2CPassengerBooking",
+                            balanceBefore: partnerBalanceBefore,
+                            balanceAfter: partnerWallet.balance,
+                            metadata: {
+                                bookingId: booking._id,
+                                reason: "cash_booking_cancelled_by_commuter",
+                                cancelledBy: userId,
+                                refundedAmount: adminCommission
+                            }
+                        })
+
+                        console.log("[cancelBooking] Commission refunded to B2C Partner:", {
+                            amount: adminCommission,
+                            newBalance: partnerWallet.balance
+                        })
+                    }
+
+                    // 2. Deduct commission from Admin's wallet
+                    const adminUser = await User.findOne({ role: 'ADMIN' })
+                    if (adminUser) {
+                        const adminWallet = await Wallet.findOne({ userId: adminUser._id })
+                        if (adminWallet) {
+                            const adminBalanceBefore = adminWallet.balance
+                            adminWallet.balance -= adminCommission
+                            adminWallet.totalEarnings = Math.max(0, (adminWallet.totalEarnings || 0) - adminCommission)
+                            adminWallet.transactions.push({
+                                type: 'WITHDRAWAL',
+                                amount: adminCommission,
+                                description: `Commission reversed - cash booking cancelled by passenger (Booking #${booking.bookingNumber || booking._id})`,
+                                status: 'COMPLETED',
+                                createdAt: new Date()
+                            })
+                            await adminWallet.save()
+
+                            // Create transaction record for admin
+                            await Transaction.create({
+                                walletId: adminWallet._id,
+                                userId: adminUser._id,
+                                type: "DEBIT",
+                                amount: adminCommission,
+                                currency: booking.currency || "AED",
+                                category: "COMMISSION_REVERSAL",
+                                description: `Commission reversed - cash booking cancelled by passenger`,
+                                referenceId: booking._id,
+                                referenceModel: "B2CPassengerBooking",
+                                balanceBefore: adminBalanceBefore,
+                                balanceAfter: adminWallet.balance,
+                                metadata: {
+                                    bookingId: booking._id,
+                                    reason: "cash_booking_cancelled_by_commuter",
+                                    cancelledBy: userId,
+                                    refundedToPartner: partnerId
+                                }
+                            })
+
+                            console.log("[cancelBooking] Commission deducted from Admin wallet:", {
+                                amount: adminCommission,
+                                newAdminBalance: adminWallet.balance
+                            })
+                        }
+                    }
+
+                    // Store refund info in booking
+                    booking.commissionRefunded = true
+                    booking.commissionRefundAmount = adminCommission
+                    booking.commissionRefundedAt = new Date()
+                }
             }
-            // For CASH bookings: Partner already paid commission to admin during acceptance
-            // This commission is NOT returned - it's the penalty for late cancellation
         }
 
         await booking.save()
@@ -4051,11 +4296,26 @@ export const cancelBooking = async (req, res) => {
         const notifyUserId = booking.b2cPartnerId?._id || booking.b2cPartnerId || booking.driverId
         if (notifyUserId) {
             try {
+                // Build notification message with commission refund info if applicable
+                let notifMessage = `Booking #${booking.bookingNumber || bookingId} has been cancelled by the passenger.`
+                if (booking.isMonthlyPass && (usedTripsCount > 0 || remainingTripsCount > 0)) {
+                    notifMessage += ` (${usedTripsCount} trip${usedTripsCount === 1 ? '' : 's'} already used, ${remainingTripsCount} unused.)`
+                }
+                if (booking.commissionRefunded && booking.commissionRefundAmount > 0) {
+                    notifMessage += ` Your commission of ${booking.currency || 'AED'} ${booking.commissionRefundAmount.toFixed(2)} has been refunded to your wallet.`
+                }
+                if (booking.refundMethod === "CASH_FROM_PARTNER" && booking.cashRefundDueFromPartner > 0) {
+                    notifMessage += ` Please return ${booking.currency || 'AED'} ${booking.cashRefundDueFromPartner.toFixed(2)} in cash to the passenger for their ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'}.`
+                }
+                if (cancellationFee > 0) {
+                    notifMessage += ` Cancellation fee: ${booking.currency || 'AED'} ${cancellationFee.toFixed(2)}`
+                }
+
                 await createNotification({
                     userId: notifyUserId,
                     type: "BOOKING_CANCELLED",
-                    title: "Booking Cancelled",
-                    message: `Booking #${booking.bookingNumber || bookingId} has been cancelled by the passenger.${cancellationFee > 0 ? ` Cancellation fee: ${booking.currency || 'AED'} ${cancellationFee.toFixed(2)}` : ''}`,
+                    title: booking.commissionRefunded ? "Booking Cancelled - Commission Refunded" : "Booking Cancelled",
+                    message: notifMessage,
                     bookingId: bookingId,
                     category: "BOOKING"
                 })
@@ -4063,13 +4323,19 @@ export const cancelBooking = async (req, res) => {
                 // Send real-time notification
                 await sendRealTimeNotification(notifyUserId, {
                     type: "BOOKING_CANCELLED",
-                    title: "Booking Cancelled",
-                    message: `Booking #${booking.bookingNumber || bookingId} has been cancelled by the passenger.`,
+                    title: booking.commissionRefunded ? "Booking Cancelled - Commission Refunded" : "Booking Cancelled",
+                    message: notifMessage,
                     data: {
                         bookingId: booking._id,
                         cancellationReason,
                         cancellationFee,
-                        refundAmount
+                        refundAmount,
+                        refundMethod: booking.refundMethod,
+                        cashRefundDueFromPartner: booking.cashRefundDueFromPartner || 0,
+                        usedTripsCount,
+                        remainingTripsCount,
+                        commissionRefunded: booking.commissionRefunded || false,
+                        commissionRefundAmount: booking.commissionRefundAmount || 0
                     }
                 })
             } catch (notifError) {
@@ -4078,14 +4344,30 @@ export const cancelBooking = async (req, res) => {
             }
         }
 
+        // Build the commuter-facing message based on how the refund is settled
+        let responseMessage = "Booking cancelled successfully"
+        if (booking.refundMethod === "WALLET" && refundAmount > 0) {
+            responseMessage = `Booking cancelled. ${booking.currency || 'AED'} ${refundAmount.toFixed(2)} has been refunded to your wallet${booking.isMonthlyPass ? ` for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'}` : ''}.`
+        } else if (booking.refundMethod === "CASH_FROM_PARTNER" && refundAmount > 0) {
+            responseMessage = `Booking cancelled. Since you paid by cash, the operator will return ${booking.currency || 'AED'} ${refundAmount.toFixed(2)} to you for your ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'}.`
+        } else if (booking.isMonthlyPass && usedTripsCount > 0 && refundAmount === 0) {
+            responseMessage = "Booking cancelled. No refund is due as all paid trips have been used."
+        }
+
         res.status(200).json({
             success: true,
-            message: "Booking cancelled successfully",
+            message: responseMessage,
             data: {
                 booking,
                 refunded: booking.paymentStatus === "REFUNDED",
+                refundMethod: booking.refundMethod,
                 refundAmount,
+                cashRefundDueFromPartner: booking.cashRefundDueFromPartner || 0,
+                usedTripsCount,
+                remainingTripsCount,
                 cancellationFee,
+                commissionRefunded: booking.commissionRefunded || false,
+                commissionRefundAmount: booking.commissionRefundAmount || 0,
                 cancellationFeeApplied: cancellationFee > 0
             },
         })

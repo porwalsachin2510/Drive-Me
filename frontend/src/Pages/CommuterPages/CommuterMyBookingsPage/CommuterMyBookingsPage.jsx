@@ -1192,7 +1192,13 @@ const CommuterMyBookingsPage = () => {
           </div>
         ) : (
           <div className="cmbp-bookings-grid">
-            {passengerBookings.map((booking) => {
+            {passengerBookings.map((booking, bookingIndex) => {
+              // Stable unique identifier for this card. Falls back to index so
+              // that even if a booking is missing _id, each card still gets a
+              // distinct expand key (prevents all cards toggling together).
+              const bookingKey = String(
+                booking._id || booking.bookingId || `idx-${bookingIndex}`,
+              );
               const statusConfig = getStatusBadge(booking.bookingStatus);
               const statusClass =
                 booking.bookingStatus?.toLowerCase().replace("_", "-") ||
@@ -1243,7 +1249,7 @@ const CommuterMyBookingsPage = () => {
               const currency = booking.currency || "KWD";
 
               return (
-                <div key={booking._id} className="cmbp-booking-card">
+                <div key={bookingKey} className="cmbp-booking-card">
                   {/* Card Header with Gradient */}
                   <div className="cmbp-card-header">
                     <div className="cmbp-card-header-content">
@@ -1500,8 +1506,8 @@ const CommuterMyBookingsPage = () => {
                     <DailyTripsInBooking
                       booking={booking}
                       userRole={userType}
-                      isExpanded={expandedBookings.has(String(booking._id))}
-                      onToggleExpand={() => toggleBookingExpansion(booking._id)}
+                      isExpanded={expandedBookings.has(bookingKey)}
+                      onToggleExpand={() => toggleBookingExpansion(bookingKey)}
                       onTripStatusChange={(status, tripId) => {
                         dispatch(getPassengerBookings());
                       }}

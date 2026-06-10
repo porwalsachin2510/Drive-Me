@@ -419,7 +419,9 @@ const CommuterBookingDetailsPage = () => {
         cancelReason,
       );
       if (response.success) {
-        alert("Booking cancelled successfully");
+        // Show the detailed, settlement-aware message from the backend
+        // (e.g. wallet refund vs. cash to be returned by the operator)
+        alert(response.message || "Booking cancelled successfully");
         setShowCancelModal(false);
         // Refresh booking data
         const updatedBooking =

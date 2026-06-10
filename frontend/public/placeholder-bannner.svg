@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400" role="img" aria-label="Route image placeholder">
+  <rect width="600" height="400" fill="#e5e7eb"/>
+  <g fill="none" stroke="#9ca3af" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="210" y="150" width="180" height="120" rx="16" fill="#d1d5db" stroke="#9ca3af"/>
+    <rect x="228" y="172" width="64" height="44" rx="6" fill="#e5e7eb"/>
+    <rect x="308" y="172" width="64" height="44" rx="6" fill="#e5e7eb"/>
+    <circle cx="240" cy="278" r="14" fill="#9ca3af" stroke="none"/>
+    <circle cx="360" cy="278" r="14" fill="#9ca3af" stroke="none"/>
+  </g>
+  <text x="300" y="330" fill="#9ca3af" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" text-anchor="middle">Drive Me Go</text>
+</svg>

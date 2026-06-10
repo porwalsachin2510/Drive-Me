@@ -9,10 +9,14 @@ import {
     getCommissionSummary,
     bulkUpdateCommissionSettings,
     getUsersWithSettings,
+    getMyCommission,
 } from "../controllers/commissionSettingsController.js"
 import { verifyToken, checkAdminRole } from "../middleware/auth.js"
 
 const router = express.Router()
+
+// Self-service: any authenticated user can view their own commission details
+router.get("/my-commission", verifyToken, getMyCommission)
 
 // Commission Settings Management (Admin only)
 router.get("/users-with-settings", verifyToken, checkAdminRole, getUsersWithSettings)

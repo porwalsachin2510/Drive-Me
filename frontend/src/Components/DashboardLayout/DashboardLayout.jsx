@@ -35,6 +35,7 @@ const menuConfigs = {
     { id: "routes", label: "Routes", icon: "routes" },
     { id: "route-requests", label: "Route Requests", icon: "requests" },
     { id: "ratings", label: "My Ratings", icon: "ratings" },
+    { id: "my-commission", label: "My Commission", icon: "commission" },
     { id: "account", label: "Account", icon: "account" },
   ],
   B2B_PARTNER: [
@@ -46,6 +47,7 @@ const menuConfigs = {
     { id: "requirements", label: "Requirements", icon: "requirements" },
     { id: "analytics", label: "Analytics", icon: "analytics" },
     { id: "invoices", label: "Invoices", icon: "invoices" },
+    { id: "my-commission", label: "My Commission", icon: "commission" },
     { id: "settings", label: "Settings", icon: "settings" },
   ],
   CORPORATE: [
@@ -61,6 +63,7 @@ const menuConfigs = {
     },
     { id: "routes", label: "Active Routes", icon: "routes" },
     { id: "billing", label: "Billing", icon: "billing" },
+    { id: "my-commission", label: "My Commission", icon: "commission" },
     { id: "account-settings", label: "Account Settings", icon: "settings" },
   ],
   CORPORATE_EMPLOYEE: [
@@ -523,7 +526,7 @@ const getIcon = (iconType) => {
         <line x1="20" y1="12" x2="22" y2="12" />
       </svg>
     ),
-    
+
     feedback: (
       <svg
         width="20"

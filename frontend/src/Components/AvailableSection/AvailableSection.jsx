@@ -413,6 +413,19 @@ const AvailableSection = ({
                 <div className="drivemego-availablesection-route-row-1">
                   <div className="drivemego-availablesection-available-section-route-info">
                     <h3 className="drivemego-availablesection-route-title">
+                      <img
+                        src={
+                          route.profileImage ||
+                          route.companyLogo ||
+                          "/default-avatar.png"
+                        }
+                        alt={route.company || route.operator || "Provider"}
+                        className="drivemego-availablesection-provider-avatar"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "/default-avatar.png";
+                        }}
+                      />
                       {route.company || route.operator}
                       {route.rating && (
                         <span className="drivemego-availablesection-star-icon">
@@ -446,7 +459,7 @@ const AvailableSection = ({
                   </div>
 
                   <h6 className="drivemego-availablesection-availableseats">
-                    AVAILABLE SEATS: {route.availableSeats}
+                    AVAILABLE SEATS: up to {route.availableSeats}
                   </h6>
 
                   <div className="drivemego-availablesection-available-section-price-section">
@@ -528,8 +541,8 @@ const AvailableSection = ({
                   </label>
                   <div className="drivemego-availablesection-my-available-days">
                     {(
-                      route.dayMatching?.matchedDays ||
                       route.availableDays ||
+                      route.dayMatching?.matchedDays ||
                       []
                     ).map((day) => (
                       <span

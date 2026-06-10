@@ -106,19 +106,70 @@
   color: #6b7280;
 }
 
-.card-amount {
+.card-amount,
+.card-value {
   font-size: 28px;
   font-weight: 700;
   line-height: 1.2;
 }
 
-.earnings-card.total .card-amount {
+.earnings-card.total .card-amount,
+.earnings-card.total .card-value {
   color: #ffffff;
 }
 
 .earnings-card.week .card-amount,
-.earnings-card.today .card-amount {
+.earnings-card.today .card-amount,
+.earnings-card.week .card-value,
+.earnings-card.today .card-value {
   color: #1f2937;
+}
+
+/* ============ CARD BREAKDOWN (gross / commission) ============ */
+.card-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.earnings-card.total .card-breakdown {
+  border-top-color: rgba(255, 255, 255, 0.25);
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.breakdown-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.breakdown-value {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.breakdown-value.deduction {
+  color: #DC2626;
+}
+
+.earnings-card.total .breakdown-label {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.earnings-card.total .breakdown-value {
+  color: #ffffff;
+}
+
+.earnings-card.total .breakdown-value.deduction {
+  color: #FECACA;
 }
 
 .card-subtitle {
@@ -207,13 +258,47 @@
 }
 
 .transaction-item {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1.1fr 1.2fr 1.1fr 0.9fr;
   align-items: center;
+  gap: 12px;
   padding: 16px 20px;
   background-color: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   transition: background-color 0.2s ease;
+}
+
+.transaction-item.transaction-head {
+  background-color: #f9fafb;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #6b7280;
+}
+
+.transaction-item.transaction-head:hover {
+  background-color: #f9fafb;
+}
+
+.transaction-col {
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.transaction-col.gross {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.transaction-col.commission {
+  font-weight: 600;
+  color: #DC2626;
+}
+
+.transaction-col.net {
+  font-weight: 700;
+  color: #22C55E;
 }
 
 .transaction-item:last-child {
@@ -330,10 +415,17 @@
   }
 
   .transaction-item {
-    flex-direction: column;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
-    align-items: flex-start;
     padding: 12px;
+  }
+
+  .transaction-item.transaction-head {
+    display: none;
+  }
+
+  .transaction-col::before {
+    content: attr(data-label);
   }
 
   .tx-amount-status {

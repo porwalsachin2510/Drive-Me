@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import "./account.css"
-import api from "../../../../utils/api"
+import { useState, useEffect } from "react";
+import "./account.css";
+import api from "../../../../utils/api";
 
 function Account() {
   const [profileData, setProfileData] = useState({
@@ -11,108 +11,110 @@ function Account() {
     phone: "",
     company: "",
     licenseNumber: "",
-    profileImage: null
-  })
+    profileImage: null,
+  });
   const [preferences, setPreferences] = useState({
     newTripAlerts: true,
     dailyEarnings: true,
     promotionalOffers: false,
-  })
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [uploadingImage, setUploadingImage] = useState(false)
-  const [imagePreview, setImagePreview] = useState(null)
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
-    fetchProfileData()
-  }, [])
+    fetchProfileData();
+  }, []);
 
   const fetchProfileData = async () => {
     try {
-      setLoading(true)
-      const response = await api.get('/b2c-partner/profile')
-      setProfileData(response.data.profile)
-      setPreferences(response.data.preferences || {
-        newTripAlerts: true,
-        dailyEarnings: true,
-        promotionalOffers: false,
-      })
+      setLoading(true);
+      const response = await api.get("/b2c-partner/profile");
+      setProfileData(response.data.profile);
+      setPreferences(
+        response.data.preferences || {
+          newTripAlerts: true,
+          dailyEarnings: true,
+          promotionalOffers: false,
+        },
+      );
     } catch (error) {
-      console.error("Error fetching profile data:", error)
+      console.error("Error fetching profile data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleProfileChange = (field, value) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      [field]: value
-    }))
-  }
+      [field]: value,
+    }));
+  };
 
   const handleProfileImageChange = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const file = e.target.files[0];
+    if (!file) return;
 
     // Show preview immediately
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onloadend = () => {
-      setImagePreview(reader.result)
-    }
-    reader.readAsDataURL(file)
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
 
     // Upload to server
     try {
-      setUploadingImage(true)
-      const formData = new FormData()
-      formData.append('profileImage', file)
+      setUploadingImage(true);
+      const formData = new FormData();
+      formData.append("profileImage", file);
 
-      const response = await api.put('/b2c-partner/profile/image', formData, {
+      const response = await api.put("/b2c-partner/profile/image", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.data.success) {
-        setProfileData(prev => ({
+        setProfileData((prev) => ({
           ...prev,
-          profileImage: response.data.profileImage
-        }))
-        setImagePreview(null)
-        alert("Profile image updated successfully!")
+          profileImage: response.data.profileImage,
+        }));
+        setImagePreview(null);
+        alert("Profile image updated successfully!");
       }
     } catch (error) {
-      console.error("Error uploading profile image:", error)
-      alert("Failed to upload profile image")
-      setImagePreview(null)
+      console.error("Error uploading profile image:", error);
+      alert("Failed to upload profile image");
+      setImagePreview(null);
     } finally {
-      setUploadingImage(false)
+      setUploadingImage(false);
     }
-  }
+  };
 
   const handleToggle = (key) => {
     setPreferences((prev) => ({
       ...prev,
       [key]: !prev[key],
-    }))
-  }
+    }));
+  };
 
   const handleSave = async () => {
     try {
-      setSaving(true)
-      await api.put('/b2c-partner/profile', {
+      setSaving(true);
+      await api.put("/b2c-partner/profile", {
         profile: profileData,
-        preferences
-      })
-      alert("Profile updated successfully!")
+        preferences,
+      });
+      alert("Profile updated successfully!");
     } catch (error) {
-      console.error("Error updating profile:", error)
-      alert("Failed to update profile")
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -192,8 +194,8 @@ function Account() {
                     background: "#f0f0f0",
                   }}
                   onError={(e) => {
-                    e.target.src =
-                      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23e0e0e0" width="100" height="100"/><text x="50" y="55" fill="%23888" font-size="40" text-anchor="middle">?</text></svg>';
+                    e.target.onerror = null;
+                    e.target.src = "/default-avatar.png";
                   }}
                 />
               )}
@@ -382,4 +384,4 @@ function Account() {
   );
 }
 
-export default Account
+export default Account;

@@ -6,7 +6,7 @@ import B2C_DriverCard from "../B2C_DriverCard/B2C_DriverCard";
 import B2C_EditDriverModal from "../B2C_EditDriverModal/B2C_EditDriverModal";
 import "./b2c_driverstab.css";
 
-function B2C_DriversTab() {
+function B2C_DriversTab({ onDriversCountChange }) {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState(null);
@@ -88,6 +88,16 @@ function B2C_DriversTab() {
     fetchDrivers();
     fetchSelfDriverStatus();
   }, [fetchDrivers, fetchSelfDriverStatus]);
+
+  // Keep the parent tab badge in sync with the total drivers count.
+  // The partner counts as a driver too when "Registered as Driver" is ON.
+  useEffect(() => {
+    if (typeof onDriversCountChange === "function") {
+      const externalCount = drivers.filter((driver) => !driver.isSelf).length;
+      const selfCount = selfDriverStatus.isRegistered ? 1 : 0;
+      onDriversCountChange(externalCount + selfCount);
+    }
+  }, [drivers, selfDriverStatus.isRegistered, onDriversCountChange]);
 
   const handleEditDriver = (driver) => {
     setSelectedDriver(driver);
