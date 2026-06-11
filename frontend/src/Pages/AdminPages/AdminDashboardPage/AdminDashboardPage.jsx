@@ -21,6 +21,7 @@ import AdminManagement from "../../../Components/Admin/AdminManagement/AdminMana
 import AdminCommissionSettings from "../../../Components/Admin/AdminCommissionSettings/AdminCommissionSettings";
 import AdminNegotiations from "../../../Components/Admin/AdminNegotiations/AdminNegotiations";
 import AdminTermsManagement from "../../../Components/Admin/AdminTermsManagement/AdminTermsManagement";
+import AdminCashRenewals from "../../../Components/Admin/AdminCashRenewals/AdminCashRenewals";
 import "./admindashboardpage.css";
 
 function AdminDashboardPage() {
@@ -48,6 +49,8 @@ function AdminDashboardPage() {
         return <AdminAds />;
       case "Payment Verification":
         return <PaymentVerification />;
+      case "cash-renewals":
+        return <AdminCashRenewals />;
       case "vehicle-approval":
         return <AdminVehicleApproval />;
       case "settlement":

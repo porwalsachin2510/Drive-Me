@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
@@ -1205,9 +1206,6 @@ export const getSchedulesForRoute = async (req, res) => {
                 });
             }
         });
-
-        // Import mongoose to use ObjectId
-        const mongoose = require('mongoose');
 
         // Convert string IDs back to ObjectIds for proper MongoDB querying
         const driverObjectIds = Array.from(driverIds).map(id => {

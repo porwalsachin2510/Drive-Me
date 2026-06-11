@@ -1,0 +1,176 @@
+.acr-container {
+  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 12px;
+}
+
+.acr-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.acr-title {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.acr-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+  max-width: 640px;
+}
+
+.acr-refresh-btn {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.acr-refresh-btn:hover:not(:disabled) {
+  background-color: #f3f4f6;
+}
+
+.acr-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.acr-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.acr-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  min-width: 180px;
+}
+
+.acr-summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.acr-summary-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.acr-error {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+.acr-loading,
+.acr-empty {
+  padding: 40px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.acr-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.acr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.acr-table thead {
+  background-color: #f9fafb;
+}
+
+.acr-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.acr-table td {
+  padding: 14px 16px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.acr-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.acr-amount {
+  font-weight: 600;
+  color: #111827;
+}
+
+.acr-confirm-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: #16a34a;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.acr-confirm-btn:hover:not(:disabled) {
+  background-color: #15803d;
+}
+
+.acr-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .acr-container {
+    padding: 16px;
+  }
+
+  .acr-header {
+    flex-direction: column;
+  }
+
+  .acr-summary {
+    flex-direction: column;
+  }
+
+  .acr-summary-card {
+    min-width: 0;
+  }
+}

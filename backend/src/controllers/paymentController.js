@@ -3,6 +3,7 @@ import Wallet from "../models/Wallet.js"
 import Transaction from "../models/Transaction.js"
 import Contract from "../models/Contract.js"
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
+import B2CMonthlyPass from "../models/B2CMonthlyPass.js"
 import Notification from "../models/Notification.js"
 import User from "../models/User.js"
 import AdminNegotiation from "../models/AdminNegotiation.js"
@@ -415,6 +416,74 @@ export const verifyPayment = async (req, res) => {
                 console.log("[v0] Stripe session retrieved:", session.id)
                 console.log("[v0] Session metadata:", session.metadata)
 
+                // Monthly pass renewal: activate the renewed pass, settle earnings,
+                // and generate the daily trips for the renewed window.
+                //
+                // This branch is AUTHORITATIVE: once we know this is a renewal we
+                // ALWAYS return a renewal response (success or failure) and never
+                // fall through to the booking branch below, otherwise the commuter
+                // would be wrongly redirected to /commuter/my-bookings.
+                if (session.metadata?.renewal === "true") {
+                    if (session.payment_status !== "paid") {
+                        return res.status(200).json({
+                            success: false,
+                            message: "Renewal payment not completed yet. Please try again.",
+                            paymentType: "renewal",
+                            data: { redirectUrl: "/commuter-profile?tab=subscription-settings" },
+                        })
+                    }
+
+                    let renewedPassId = session.metadata?.contractId || session.client_reference_id
+                    // Final fallback: the pass stores its in-flight gateway session id,
+                    // so we can still resolve it even if metadata was lost on an older
+                    // session created before the metadata fix.
+                    if (!renewedPassId) {
+                        const passBySession = await B2CMonthlyPass.findOne({
+                            gatewaySessionId: session.id,
+                        }).select("_id")
+                        if (passBySession) {
+                            renewedPassId = passBySession._id.toString()
+                            console.log(
+                                "[v0] Renewal verify: resolved pass via gatewaySessionId fallback",
+                                renewedPassId
+                            )
+                        }
+                    }
+                    if (!renewedPassId) {
+                        console.error("[v0] Renewal verify: missing pass id in session metadata", session.id)
+                        return res.status(200).json({
+                            success: false,
+                            message: "Renewal could not be matched to a pass. Please contact support.",
+                            paymentType: "renewal",
+                            data: { redirectUrl: "/commuter-profile?tab=subscription-settings" },
+                        })
+                    }
+
+                    try {
+                        const { activateCardRenewalPass } = await import(
+                            "./subscriptionSettingsController.js"
+                        )
+                        const activated = await activateCardRenewalPass(renewedPassId, session.id)
+                        return res.status(200).json({
+                            success: true,
+                            message: "Monthly pass renewal verified successfully",
+                            paymentType: "renewal",
+                            data: {
+                                pass: activated,
+                                redirectUrl: "/commuter-profile?tab=subscription-settings",
+                            },
+                        })
+                    } catch (renewalError) {
+                        console.error("[v0] Renewal activation failed:", renewalError.message)
+                        return res.status(200).json({
+                            success: false,
+                            message: "We received your payment but could not activate the renewal automatically. Our team has been notified.",
+                            paymentType: "renewal",
+                            data: { redirectUrl: "/commuter-profile?tab=subscription-settings" },
+                        })
+                    }
+                }
+
                 if (session.payment_status === "paid" && session.metadata?.bookingId) {
                     const booking = await B2CPassengerBooking.findById(session.metadata.bookingId)
 
@@ -760,6 +829,25 @@ export const stripeWebhook = async (req, res) => {
                 return res.json({ received: true })
             }
 
+            // Monthly pass renewal: extend the pass in place + generate trips.
+            // This is the reliable backup path in case the browser never hit the
+            // verify endpoint. activateCardRenewalPass is idempotent via the
+            // gateway session id, so it is safe even if verify already ran.
+            if (session.metadata?.renewal === "true") {
+                console.log("[v0] Processing monthly pass renewal from Stripe webhook")
+                const renewedPassId = session.metadata?.contractId || session.client_reference_id
+                if (renewedPassId) {
+                    try {
+                        const { activateCardRenewalPass } = await import("./subscriptionSettingsController.js")
+                        await activateCardRenewalPass(renewedPassId, session.id)
+                        console.log("[v0] Renewal activated from Stripe webhook for pass:", renewedPassId)
+                    } catch (renewalError) {
+                        console.error("[v0] Webhook renewal activation failed:", renewalError.message)
+                    }
+                }
+                return res.json({ received: true })
+            }
+
             // Handle contract payment
             const payment = await Payment.findOne({ gatewaySessionId: session.id })
 
@@ -887,6 +975,23 @@ export const tapWebhook = async (req, res) => {
                     }
                 }
 
+                return res.status(200).json({ status: "success" })
+            }
+
+            // Monthly pass renewal (Tap / Kuwait): extend the pass in place +
+            // generate trips. Idempotent via the gateway session id.
+            if (metadata.renewal === "true") {
+                console.log("[v0] Processing monthly pass renewal from Tap webhook")
+                const renewedPassId = metadata.contractId
+                if (renewedPassId) {
+                    try {
+                        const { activateCardRenewalPass } = await import("./subscriptionSettingsController.js")
+                        await activateCardRenewalPass(renewedPassId, chargeId)
+                        console.log("[v0] Renewal activated from Tap webhook for pass:", renewedPassId)
+                    } catch (renewalError) {
+                        console.error("[v0] Tap webhook renewal activation failed:", renewalError.message)
+                    }
+                }
                 return res.status(200).json({ status: "success" })
             }
 

@@ -7,26 +7,37 @@ const subscriptionSettingsSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
-    
+
     // Auto-Renewal Settings
     autoRenewal: {
         type: Boolean,
         default: false
     },
-    
+
     renewalReminderDays: {
         type: Number,
         default: 7,
         min: 1,
         max: 30
     },
-    
+
+    // SAME_CARD  -> auto-charge a fresh card payment session each cycle
+    // WALLET     -> auto-debit the commuter wallet each cycle
+    // CASH       -> commuter requests, admin confirms cash collection
+    // MANUAL     -> no auto-renewal, commuter renews manually
     renewalPaymentMethod: {
         type: String,
-        enum: ["SAME_CARD", "WALLET", "MANUAL"],
+        enum: ["SAME_CARD", "WALLET", "CASH", "MANUAL"],
         default: "SAME_CARD"
     },
-    
+
+    // The active monthly pass this subscription is tracking / will renew
+    linkedPassId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "B2CMonthlyPass",
+        default: null
+    },
+
     // Notification Preferences
     emailNotifications: {
         renewalReminder: {
@@ -46,7 +57,7 @@ const subscriptionSettingsSchema = new mongoose.Schema({
             default: true
         }
     },
-    
+
     // SMS Notifications
     smsNotifications: {
         renewalReminder: {
@@ -62,7 +73,7 @@ const subscriptionSettingsSchema = new mongoose.Schema({
             default: true
         }
     },
-    
+
     // Push Notifications
     pushNotifications: {
         renewalReminder: {
@@ -78,18 +89,18 @@ const subscriptionSettingsSchema = new mongoose.Schema({
             default: true
         }
     },
-    
+
     // Renewal History
     lastRenewalDate: {
         type: Date,
         default: null
     },
-    
+
     nextRenewalDate: {
         type: Date,
         default: null
     },
-    
+
     renewalHistory: [{
         date: {
             type: Date,
@@ -97,7 +108,7 @@ const subscriptionSettingsSchema = new mongoose.Schema({
         },
         status: {
             type: String,
-            enum: ["SUCCESS", "FAILED", "CANCELLED"],
+            enum: ["SUCCESS", "FAILED", "CANCELLED", "PENDING", "PENDING_PAYMENT"],
             required: true
         },
         amount: {
@@ -113,27 +124,48 @@ const subscriptionSettingsSchema = new mongoose.Schema({
             default: null
         }
     }],
-    
+
     // Cancellation Settings
     cancellationReason: {
         type: String,
         default: null
     },
-    
+
     cancellationDate: {
         type: Date,
         default: null
     },
-    
+
     // Subscription Limits
     maxRenewalAttempts: {
         type: Number,
         default: 3
     },
-    
+
     currentRenewalAttempts: {
         type: Number,
         default: 0
+    },
+
+    // Pending Cash Renewal (commuter requests -> admin confirms)
+    pendingCashRenewal: {
+        requested: {
+            type: Boolean,
+            default: false
+        },
+        passId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "B2CMonthlyPass",
+            default: null
+        },
+        amount: {
+            type: Number,
+            default: 0
+        },
+        requestedAt: {
+            type: Date,
+            default: null
+        }
     }
 }, {
     timestamps: true

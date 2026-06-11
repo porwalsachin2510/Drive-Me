@@ -131,6 +131,22 @@
   color: #2a4365;
 }
 
+.fr-route-status.fr-booked {
+  background: #c6f6d5;
+  color: #276749;
+}
+
+.fr-route-status.fr-saved {
+  background: #feebc8;
+  color: #7b341e;
+}
+
+.fr-route-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .fr-route-price {
   font-size: 18px;
   font-weight: 700;
@@ -279,7 +295,8 @@
   border-top: 1px solid #edf2f7;
 }
 
-.fr-join-btn {
+.fr-book-btn {
+  flex: 1;
   padding: 8px 20px;
   background: #2DD4BF;
   color: white;
@@ -291,20 +308,20 @@
   transition: all 0.2s;
 }
 
-.fr-join-btn:hover {
+.fr-book-btn:hover {
   background: #14B8A6;
 }
 
-.fr-join-btn:disabled {
+.fr-book-btn:disabled {
   background: #a0aec0;
   cursor: not-allowed;
 }
 
-.fr-leave-btn {
-  padding: 8px 20px;
-  background: #EF4444;
-  color: white;
-  border: none;
+.fr-save-btn {
+  padding: 8px 16px;
+  background: #fff;
+  color: #2d3748;
+  border: 1px solid #cbd5e0;
   border-radius: 6px;
   font-weight: 600;
   font-size: 13px;
@@ -312,8 +329,14 @@
   transition: all 0.2s;
 }
 
-.fr-leave-btn:hover {
-  background: #DC2626;
+.fr-save-btn:hover {
+  background: #f7fafc;
+  border-color: #a0aec0;
+}
+
+.fr-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .fr-loading {

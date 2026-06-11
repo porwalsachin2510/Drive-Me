@@ -243,6 +243,26 @@ const b2CMonthlyPassSchema = new mongoose.Schema({
         default: "",
     },
 
+    // Number of times this pass has been renewed (extended in place)
+    renewalCount: {
+        type: Number,
+        default: 0,
+    },
+
+    // Date of the most recent successful renewal/extension
+    lastRenewedAt: {
+        type: Date,
+        default: null,
+    },
+
+    // Gateway session ids that have already been applied as renewals to this
+    // pass. Used to guarantee a card renewal is never double-applied even if
+    // the payment-verify endpoint is hit more than once.
+    appliedRenewalSessions: {
+        type: [String],
+        default: [],
+    },
+
     createdAt: {
         type: Date,
         default: Date.now,

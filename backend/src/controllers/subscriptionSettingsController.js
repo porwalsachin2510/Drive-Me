@@ -1,9 +1,404 @@
 import SubscriptionSettings from "../models/SubscriptionSettings.js";
 import B2CMonthlyPass from "../models/B2CMonthlyPass.js";
+import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
+import B2CPartnerRoute from "../models/B2CPartnerRoute.js";
+import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import User from "../models/User.js";
+import Wallet from "../models/Wallet.js";
+import Transaction from "../models/Transaction.js";
 import { sendEmail } from "../Services/emailService.js";
+import PaymentGatewayService from "../Services/paymentGatewayService.js";
 
-// Update subscription settings
+/*
+ * Subscription renewal supports three commuter-chosen methods:
+ *   SAME_CARD -> auto-charge a fresh payment session (Stripe/Tap) each cycle
+ *   WALLET    -> auto-debit the commuter wallet each cycle
+ *   CASH      -> commuter requests renewal, admin confirms cash collection
+ *   MANUAL    -> auto-renewal off, commuter renews on demand
+ */
+
+// Map the values the frontend sends to the values the model stores
+const normalizeRenewalMethod = (value) => {
+    if (!value) return undefined;
+    const map = {
+        CREDIT_CARD: "SAME_CARD",
+        DEBIT_CARD: "SAME_CARD",
+        CARD: "SAME_CARD",
+        SAME_CARD: "SAME_CARD",
+        WALLET: "WALLET",
+        WALLET_BALANCE: "WALLET",
+        CASH: "CASH",
+        BANK_TRANSFER: "MANUAL",
+        MANUAL: "MANUAL",
+    };
+    return map[value] || "SAME_CARD";
+};
+
+// Settle a paid renewal: credit admin commission + partner earnings into their wallets
+const settleRenewalEarnings = async (pass) => {
+    const currency = pass.currency || "KWD";
+
+    // Credit admin commission
+    const adminUserId = process.env.ADMIN_USER_ID;
+    if (adminUserId && pass.adminCommission > 0) {
+        let adminWallet = await Wallet.findOne({ userId: adminUserId });
+        if (!adminWallet) {
+            adminWallet = await Wallet.create({
+                userId: adminUserId,
+                role: "ADMIN",
+                balance: 0,
+                currency,
+            });
+        }
+        const adminBefore = adminWallet.balance;
+        adminWallet.balance += pass.adminCommission;
+        adminWallet.totalEarnings += pass.adminCommission;
+        await adminWallet.save();
+
+        await Transaction.create({
+            walletId: adminWallet._id,
+            userId: adminUserId,
+            type: "CREDIT",
+            amount: pass.adminCommission,
+            currency,
+            category: "COMMISSION_EARNED",
+            description: `Commission from monthly pass renewal ${pass._id}`,
+            referenceId: pass._id,
+            balanceBefore: adminBefore,
+            balanceAfter: adminWallet.balance,
+            metadata: { monthlyPassId: pass._id, type: "RENEWAL" },
+        });
+    }
+
+    // Credit partner earnings
+    if (pass.partnerId && pass.partnerEarnings > 0) {
+        let partnerWallet = await Wallet.findOne({ userId: pass.partnerId });
+        if (!partnerWallet) {
+            partnerWallet = await Wallet.create({
+                userId: pass.partnerId,
+                role: "B2C_PARTNER",
+                balance: 0,
+                currency,
+            });
+        }
+        const partnerBefore = partnerWallet.balance;
+        partnerWallet.balance += pass.partnerEarnings;
+        partnerWallet.totalEarnings += pass.partnerEarnings;
+        await partnerWallet.save();
+
+        await Transaction.create({
+            walletId: partnerWallet._id,
+            userId: pass.partnerId,
+            type: "CREDIT",
+            amount: pass.partnerEarnings,
+            currency,
+            category: "PAYMENT_RECEIVED",
+            description: `Monthly pass renewal earnings ${pass._id}`,
+            referenceId: pass._id,
+            balanceBefore: partnerBefore,
+            balanceAfter: partnerWallet.balance,
+            metadata: { monthlyPassId: pass._id, type: "RENEWAL" },
+        });
+    }
+};
+
+// ----------------------------------------------------------------------------
+// Trip generation for a renewed pass
+//   Mirrors the day-by-day trip creation/seat reservation used when a monthly
+//   pass is first purchased (see createB2CMonthlyPass). This guarantees the
+//   commuter actually has trips to travel on for the entire renewed window.
+// ----------------------------------------------------------------------------
+
+// Resolve how many seats the original pass reserved per trip (defaults to 1)
+const resolveRenewalSeatCount = async (basePass) => {
+    try {
+        const originalBooking = await B2CPassengerBooking.findOne({
+            monthlyPassId: basePass._id,
+            isMonthlyPass: true,
+        }).sort({ createdAt: -1 });
+        const seats = originalBooking?.numberOfSeats;
+        return seats && seats > 0 ? seats : 1;
+    } catch (err) {
+        console.error("[v0] Could not resolve renewal seat count, defaulting to 1:", err.message);
+        return 1;
+    }
+};
+
+// Determine, for a ONE_WAY pass, whether the commuter travels in the return
+// direction (toLocation -> fromLocation) so generated trips match their pass.
+const detectReturnDirectionOneWay = (newPass, route, schedule) => {
+    if (newPass.passType !== "ONE_WAY") return false;
+
+    const tripTimeConfig = schedule?.tripTimes?.[0];
+    if (tripTimeConfig) {
+        if (newPass.outboundTripTime === tripTimeConfig.arrivalTime) return true;
+
+        const returnStopLocations = (tripTimeConfig.returnStopPoints || []).map((sp) => sp.location);
+        const outboundStopLocations = (tripTimeConfig.outboundStopPoints || []).map((sp) => sp.location);
+        if (
+            returnStopLocations.includes(newPass.pickupLocation) &&
+            !outboundStopLocations.includes(newPass.pickupLocation)
+        ) {
+            return true;
+        }
+
+        if (newPass.returnPickupLocation && newPass.returnDropoffLocation) {
+            if (
+                newPass.returnPickupLocation === route.toLocation ||
+                newPass.returnDropoffLocation === route.fromLocation
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Legacy fallback when no schedule is available
+    return (
+        newPass.dropoffLocation === route.fromLocation ||
+        newPass.returnPickupLocation === route.toLocation ||
+        newPass.returnDropoffLocation === route.fromLocation
+    );
+};
+
+// Generate (or reuse) and seat-reserve every daily trip for the renewed window.
+// Returns the list of linked trip ids so they can be stored on the mirror booking.
+const generateRenewalTrips = async (newPass, numberOfSeats, windowStart, windowEnd) => {
+    const route = await B2CPartnerRoute.findById(newPass.routeId);
+    if (!route) {
+        console.error("[v0] Renewal trip generation skipped: route not found for pass", newPass._id);
+        return { tripIds: [], createdCount: 0, existingCount: 0 };
+    }
+
+    let schedule = null;
+    try {
+        const B2CPartnerSchedule = (await import("../models/B2CPartnerSchedule.js")).default;
+        schedule = await B2CPartnerSchedule.findById(newPass.scheduleId);
+    } catch (err) {
+        console.error("[v0] Could not load schedule for renewal trip generation:", err.message);
+    }
+
+    const isReturnDirectionOneWay = detectReturnDirectionOneWay(newPass, route, schedule);
+
+    // For ONE_WAY, pick the correct travel direction; ROUND_TRIP always uses both.
+    let oneWayFromLocation = route.fromLocation;
+    let oneWayToLocation = route.toLocation;
+    if (newPass.passType === "ONE_WAY" && isReturnDirectionOneWay) {
+        oneWayFromLocation = route.toLocation;
+        oneWayToLocation = route.fromLocation;
+    }
+
+    const tripFromLocation = newPass.passType === "ONE_WAY" ? oneWayFromLocation : route.fromLocation;
+    const tripToLocation = newPass.passType === "ONE_WAY" ? oneWayToLocation : route.toLocation;
+
+    const createdTrips = [];
+    const existingTrips = [];
+
+    // Generate trips only for the requested window. For an in-place renewal this
+    // is the *extension* window (day after the old end date -> new end date) so we
+    // never regenerate trips that already exist for the original period.
+    const currentDate = new Date(windowStart || newPass.startDate);
+    currentDate.setHours(0, 0, 0, 0);
+    const endDateObj = new Date(windowEnd || newPass.endDate);
+
+    while (currentDate <= endDateObj) {
+        const tripDateStart = new Date(currentDate);
+        tripDateStart.setHours(0, 0, 0, 0);
+        const tripDateEnd = new Date(currentDate);
+        tripDateEnd.setHours(23, 59, 59, 999);
+
+        // Outbound (or directional ONE_WAY) trip
+        const existingOutbound = await B2CPartnerTrip.findOne({
+            routeId: newPass.routeId,
+            b2cPartnerId: route.b2cPartnerId,
+            tripDate: { $gte: tripDateStart, $lt: tripDateEnd },
+            startTime: newPass.outboundTripTime,
+            fromLocation: tripFromLocation,
+            toLocation: tripToLocation,
+            tripType: "One Way",
+        });
+
+        if (existingOutbound) {
+            if (existingOutbound.availableSeats >= numberOfSeats) {
+                await B2CPartnerTrip.findByIdAndUpdate(existingOutbound._id, {
+                    $inc: { bookedSeats: numberOfSeats },
+                    $set: { availableSeats: existingOutbound.availableSeats - numberOfSeats },
+                });
+                existingTrips.push(existingOutbound);
+            }
+        } else {
+            const outboundTrip = new B2CPartnerTrip({
+                routeId: newPass.routeId,
+                b2cPartnerId: route.b2cPartnerId,
+                vehicleId: newPass.outboundVehicleId,
+                driverId: newPass.outboundDriverId,
+                tripDate: new Date(currentDate),
+                startTime: newPass.outboundTripTime,
+                tripType: "One Way",
+                fromLocation: tripFromLocation,
+                toLocation: tripToLocation,
+                totalSeats: route.totalSeats || 35,
+                availableSeats: (route.availableSeats || route.totalSeats || 35) - numberOfSeats,
+                bookedSeats: numberOfSeats,
+                status: "Scheduled",
+                isActive: true,
+                createdAt: new Date(),
+            });
+            await outboundTrip.save();
+            createdTrips.push(outboundTrip);
+        }
+
+        // Return trip for ROUND_TRIP passes
+        if (
+            newPass.passType === "ROUND_TRIP" &&
+            newPass.returnTripTime &&
+            newPass.returnPickupLocation &&
+            newPass.returnDropoffLocation
+        ) {
+            const existingReturn = await B2CPartnerTrip.findOne({
+                routeId: newPass.routeId,
+                b2cPartnerId: route.b2cPartnerId,
+                tripDate: { $gte: tripDateStart, $lt: tripDateEnd },
+                startTime: newPass.returnTripTime,
+                fromLocation: route.toLocation,
+                toLocation: route.fromLocation,
+                tripType: "One Way",
+            });
+
+            if (existingReturn) {
+                if (existingReturn.availableSeats >= numberOfSeats) {
+                    await B2CPartnerTrip.findByIdAndUpdate(existingReturn._id, {
+                        $inc: { bookedSeats: numberOfSeats },
+                        $set: { availableSeats: existingReturn.availableSeats - numberOfSeats },
+                    });
+                    existingTrips.push(existingReturn);
+                }
+            } else {
+                const returnTrip = new B2CPartnerTrip({
+                    routeId: newPass.routeId,
+                    b2cPartnerId: route.b2cPartnerId,
+                    vehicleId: newPass.returnVehicleId,
+                    driverId: newPass.returnDriverId,
+                    tripDate: new Date(currentDate),
+                    startTime: newPass.returnTripTime,
+                    tripType: "One Way",
+                    fromLocation: route.toLocation,
+                    toLocation: route.fromLocation,
+                    totalSeats: route.totalSeats || 35,
+                    availableSeats: (route.availableSeats || route.totalSeats || 35) - numberOfSeats,
+                    bookedSeats: numberOfSeats,
+                    status: "Scheduled",
+                    isActive: true,
+                    createdAt: new Date(),
+                });
+                await returnTrip.save();
+                createdTrips.push(returnTrip);
+            }
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const allTrips = [...createdTrips, ...existingTrips];
+    console.log(
+        `[v0] Renewal trips for pass ${newPass._id}: created ${createdTrips.length}, reused ${existingTrips.length}, total ${allTrips.length}`
+    );
+
+    return {
+        tripIds: allTrips.map((t) => t._id),
+        createdCount: createdTrips.length,
+        existingCount: existingTrips.length,
+    };
+};
+
+// Extend an existing monthly pass *in place* once a renewal is paid, instead of
+// creating a duplicate pass + duplicate booking. This pushes the pass end date
+// forward, generates daily trips for the newly-paid extension window, and appends
+// those trips to the commuter's existing booking so the My Rides card keeps showing
+// the full set of future trips they are entitled to.
+//
+// `sessionId` (optional) is the gateway checkout session for card renewals and is
+// used to guarantee the same payment is never applied twice.
+const applyRenewalToPass = async (basePass, { paymentMethod, sessionId } = {}) => {
+    // Idempotency guard for card renewals: if this session was already applied,
+    // do nothing and report the already-extended state.
+    if (sessionId && Array.isArray(basePass.appliedRenewalSessions) && basePass.appliedRenewalSessions.includes(sessionId)) {
+        console.log(`[v0] Renewal session ${sessionId} already applied to pass ${basePass._id}; skipping.`);
+        return { alreadyApplied: true, tripResult: { tripIds: [], createdCount: 0, existingCount: 0 } };
+    }
+
+    const durationMonths = basePass.durationMonths || 1;
+
+    // The extension starts the day after the current end date (or today if the pass
+    // has already lapsed) so trips never overlap with the original period.
+    const previousEndDate = new Date(basePass.endDate);
+    const now = new Date();
+    const extensionStart = new Date(Math.max(previousEndDate.getTime(), now.getTime()));
+    extensionStart.setDate(extensionStart.getDate() + 1);
+    extensionStart.setHours(0, 0, 0, 0);
+
+    const newEndDate = new Date(previousEndDate);
+    newEndDate.setMonth(newEndDate.getMonth() + durationMonths);
+    newEndDate.setHours(23, 59, 59, 999);
+
+    const numberOfSeats = await resolveRenewalSeatCount(basePass);
+
+    // Generate daily trips + reserve seats for the extension window only.
+    let tripResult = { tripIds: [], createdCount: 0, existingCount: 0 };
+    try {
+        tripResult = await generateRenewalTrips(basePass, numberOfSeats, extensionStart, newEndDate);
+    } catch (tripError) {
+        console.error("[v0] Renewal trip generation failed:", tripError.message);
+    }
+
+    // Extend the pass in place.
+    basePass.endDate = newEndDate;
+    basePass.status = "ACTIVE";
+    basePass.paymentStatus = "PAID";
+    if (paymentMethod) basePass.paymentMethod = paymentMethod;
+    basePass.renewalCount = (basePass.renewalCount || 0) + 1;
+    basePass.lastRenewedAt = new Date();
+    // Grow the pass's trip allowance by the trips generated for the extension
+    // window so usage tracking (usedTrips / totalTrips) stays accurate.
+    if (tripResult.tripIds.length > 0) {
+        basePass.totalTrips = (basePass.totalTrips || 0) + tripResult.tripIds.length;
+    }
+    if (sessionId) {
+        basePass.appliedRenewalSessions = [...(basePass.appliedRenewalSessions || []), sessionId];
+    }
+    await basePass.save();
+
+    // Append the new trips to the commuter's existing booking so My Rides shows them.
+    try {
+        const booking = await B2CPassengerBooking.findOne({ monthlyPassId: basePass._id }).sort({ createdAt: -1 });
+        if (booking) {
+            const existingTripIds = (booking.monthlyTrips || []).map((t) => String(t));
+            const newTripIds = tripResult.tripIds.filter((id) => !existingTripIds.includes(String(id)));
+            booking.monthlyTrips = [...(booking.monthlyTrips || []), ...newTripIds];
+            booking.totalTripsCount = booking.monthlyTrips.length;
+            booking.createdTripsCount = (booking.createdTripsCount || 0) + tripResult.createdCount;
+            booking.existingTripsCount = (booking.existingTripsCount || 0) + tripResult.existingCount;
+            booking.passEndDate = newEndDate;
+            booking.paymentStatus = "COMPLETED";
+            booking.bookingStatus = "CONFIRMED";
+            await booking.save();
+            console.log(
+                `[v0] Renewal extended booking ${booking._id}: +${newTripIds.length} trips (total ${booking.monthlyTrips.length}), pass valid until ${newEndDate.toISOString()}`
+            );
+        } else {
+            console.warn(`[v0] No existing booking found for pass ${basePass._id} during renewal; trips generated but not linked.`);
+        }
+    } catch (bookingError) {
+        console.error("[v0] Renewal booking extension failed:", bookingError.message);
+    }
+
+    return { alreadyApplied: false, tripResult, newEndDate };
+};
+
+// ----------------------------------------------------------------------------
+// Settings: get / update / cancel
+// ----------------------------------------------------------------------------
+
 export const updateSubscriptionSettings = async (req, res) => {
     try {
         const userId = req.userId;
@@ -11,158 +406,235 @@ export const updateSubscriptionSettings = async (req, res) => {
             autoRenewal,
             renewalReminderDays,
             renewalPaymentMethod,
+            paymentMethod, // frontend alias
             emailNotifications,
             smsNotifications,
-            pushNotifications
+            pushNotifications,
         } = req.body;
 
-        // Find or create subscription settings
         let settings = await SubscriptionSettings.findOne({ userId });
-        
         if (!settings) {
             settings = new SubscriptionSettings({ userId });
         }
 
-        // Update settings
         if (autoRenewal !== undefined) settings.autoRenewal = autoRenewal;
-        if (renewalReminderDays !== undefined) settings.renewalReminderDays = renewalReminderDays;
-        if (renewalPaymentMethod !== undefined) settings.renewalPaymentMethod = renewalPaymentMethod;
-        
-        if (emailNotifications) {
-            settings.emailNotifications = { ...settings.emailNotifications, ...emailNotifications };
+        if (renewalReminderDays !== undefined) settings.renewalReminderDays = Number(renewalReminderDays);
+
+        const incomingMethod = renewalPaymentMethod || paymentMethod;
+        if (incomingMethod !== undefined) {
+            settings.renewalPaymentMethod = normalizeRenewalMethod(incomingMethod);
         }
-        if (smsNotifications) {
-            settings.smsNotifications = { ...settings.smsNotifications, ...smsNotifications };
+
+        // The frontend sends booleans; the model stores per-event objects.
+        if (emailNotifications !== undefined) {
+            if (typeof emailNotifications === "boolean") {
+                settings.emailNotifications = {
+                    renewalReminder: emailNotifications,
+                    renewalSuccess: emailNotifications,
+                    renewalFailed: emailNotifications,
+                    paymentFailed: emailNotifications,
+                };
+            } else {
+                settings.emailNotifications = { ...settings.emailNotifications, ...emailNotifications };
+            }
         }
-        if (pushNotifications) {
+        if (smsNotifications !== undefined) {
+            if (typeof smsNotifications === "boolean") {
+                settings.smsNotifications = {
+                    renewalReminder: smsNotifications,
+                    renewalSuccess: smsNotifications,
+                    renewalFailed: smsNotifications,
+                };
+            } else {
+                settings.smsNotifications = { ...settings.smsNotifications, ...smsNotifications };
+            }
+        }
+        if (pushNotifications && typeof pushNotifications === "object") {
             settings.pushNotifications = { ...settings.pushNotifications, ...pushNotifications };
         }
 
-        // Calculate next renewal date if auto-renewal is enabled
-        if (autoRenewal) {
-            const activePass = await B2CMonthlyPass.findOne({
+        // Link the chosen (or latest-expiring) active pass and set next renewal date.
+        // The frontend can pass `selectedPassId` to target one of several passes.
+        const { selectedPassId } = req.body;
+        let activePass = null;
+        if (selectedPassId) {
+            activePass = await B2CMonthlyPass.findOne({
+                _id: selectedPassId,
                 passengerId: userId,
-                status: "ACTIVE"
+                status: "ACTIVE",
+            });
+        }
+        if (!activePass) {
+            activePass = await B2CMonthlyPass.findOne({
+                passengerId: userId,
+                status: "ACTIVE",
             }).sort({ endDate: -1 });
-            
-            if (activePass) {
-                settings.nextRenewalDate = new Date(activePass.endDate);
-            }
-        } else {
+        }
+
+        if (activePass) {
+            settings.linkedPassId = activePass._id;
+            settings.nextRenewalDate = settings.autoRenewal ? new Date(activePass.endDate) : null;
+            // keep pass auto-renewal flag in sync for visibility
+            activePass.autoRenewal = !!settings.autoRenewal;
+            await activePass.save();
+        } else if (!settings.autoRenewal) {
             settings.nextRenewalDate = null;
         }
 
         await settings.save();
 
+        const activePasses = await loadActivePasses(userId);
+        const responsePass = activePasses.find(
+            (p) => activePass && String(p._id) === String(activePass._id)
+        ) || activePasses[0] || null;
+
         res.status(200).json({
             success: true,
             message: "Subscription settings updated successfully",
-            data: {
-                settings: {
-                    autoRenewal: settings.autoRenewal,
-                    renewalReminderDays: settings.renewalReminderDays,
-                    renewalPaymentMethod: settings.renewalPaymentMethod,
-                    nextRenewalDate: settings.nextRenewalDate,
-                    emailNotifications: settings.emailNotifications,
-                    smsNotifications: settings.smsNotifications,
-                    pushNotifications: settings.pushNotifications
-                }
-            }
+            data: { settings: buildSettingsResponse(settings, responsePass, activePasses) },
         });
-
     } catch (error) {
-        console.error("Error updating subscription settings:", error);
+        console.error("[v0] Error updating subscription settings:", error);
         res.status(500).json({
             success: false,
             message: "Error updating subscription settings",
-            error: error.message
+            error: error.message,
         });
     }
 };
 
-// Get subscription settings
+// Serialize a monthly pass into the lightweight shape the UI needs, including
+// route label (e.g. "Deira City Centre -> BurJuman") so commuters can tell
+// their multiple passes apart.
+const serializePass = (pass, route) => ({
+    _id: pass._id,
+    endDate: pass.endDate,
+    startDate: pass.startDate,
+    totalAmount: pass.totalAmount,
+    currency: pass.currency,
+    passType: pass.passType,
+    status: pass.status,
+    daysRemaining: pass.daysRemaining,
+    autoRenewal: pass.autoRenewal,
+    routeId: pass.routeId,
+    fromLocation: route?.fromLocation || pass.pickupLocation || null,
+    toLocation: route?.toLocation || pass.dropoffLocation || null,
+    routeLabel: route
+        ? `${route.fromLocation} -> ${route.toLocation}`
+        : pass.pickupLocation && pass.dropoffLocation
+            ? `${pass.pickupLocation} -> ${pass.dropoffLocation}`
+            : "Monthly Pass",
+});
+
+const buildSettingsResponse = (settings, activePass, activePasses = []) => ({
+    autoRenewal: settings.autoRenewal,
+    renewalReminderDays: settings.renewalReminderDays,
+    renewalPaymentMethod: settings.renewalPaymentMethod,
+    nextRenewalDate: settings.nextRenewalDate,
+    lastRenewalDate: settings.lastRenewalDate,
+    emailNotifications: settings.emailNotifications,
+    smsNotifications: settings.smsNotifications,
+    pushNotifications: settings.pushNotifications,
+    renewalHistory: settings.renewalHistory,
+    cancellationReason: settings.cancellationReason,
+    cancellationDate: settings.cancellationDate,
+    currentRenewalAttempts: settings.currentRenewalAttempts,
+    maxRenewalAttempts: settings.maxRenewalAttempts,
+    pendingCashRenewal: settings.pendingCashRenewal,
+    // Backwards-compatible single pass (the latest-expiring one)
+    activePass: activePass || null,
+    // Full list so the commuter can choose which pass to renew
+    activePasses,
+});
+
+// Load every active pass for a passenger, newest expiry first, with route info.
+const loadActivePasses = async (userId) => {
+    const passes = await B2CMonthlyPass.find({
+        passengerId: userId,
+        status: "ACTIVE",
+    }).sort({ endDate: -1 });
+
+    if (!passes.length) return [];
+
+    const routeIds = [...new Set(passes.map((p) => String(p.routeId)))];
+    const routes = await B2CPartnerRoute.find({ _id: { $in: routeIds } }).select(
+        "fromLocation toLocation"
+    );
+    const routeMap = new Map(routes.map((r) => [String(r._id), r]));
+
+    return passes.map((p) => serializePass(p, routeMap.get(String(p.routeId))));
+};
+
 export const getSubscriptionSettings = async (req, res) => {
     try {
         const userId = req.userId;
-        
+
         let settings = await SubscriptionSettings.findOne({ userId });
-        
-        // If no settings exist, create default settings
         if (!settings) {
             settings = new SubscriptionSettings({ userId });
             await settings.save();
         }
 
+        const activePasses = await loadActivePasses(userId);
+        const activePass = activePasses[0] || null;
+
+        // Get wallet balance so the UI can show whether wallet renewal is affordable
+        const wallet = await Wallet.findOne({ userId });
+
         res.status(200).json({
             success: true,
             data: {
-                settings: {
-                    autoRenewal: settings.autoRenewal,
-                    renewalReminderDays: settings.renewalReminderDays,
-                    renewalPaymentMethod: settings.renewalPaymentMethod,
-                    nextRenewalDate: settings.nextRenewalDate,
-                    lastRenewalDate: settings.lastRenewalDate,
-                    emailNotifications: settings.emailNotifications,
-                    smsNotifications: settings.smsNotifications,
-                    pushNotifications: settings.pushNotifications,
-                    renewalHistory: settings.renewalHistory,
-                    cancellationReason: settings.cancellationReason,
-                    cancellationDate: settings.cancellationDate
-                }
-            }
+                settings: buildSettingsResponse(settings, activePass, activePasses),
+                walletBalance: wallet?.balance || 0,
+                walletCurrency: wallet?.currency || "AED",
+            },
         });
-
     } catch (error) {
-        console.error("Error getting subscription settings:", error);
+        console.error("[v0] Error getting subscription settings:", error);
         res.status(500).json({
             success: false,
             message: "Error retrieving subscription settings",
-            error: error.message
+            error: error.message,
         });
     }
 };
 
-// Cancel subscription
 export const cancelSubscription = async (req, res) => {
     try {
         const userId = req.userId;
         const { reason, immediateEffect } = req.body;
 
-        const settings = await SubscriptionSettings.findOne({ userId });
+        let settings = await SubscriptionSettings.findOne({ userId });
         if (!settings) {
-            return res.status(404).json({
-                success: false,
-                message: "Subscription settings not found"
-            });
+            settings = new SubscriptionSettings({ userId });
         }
 
-        // Update cancellation settings
         settings.autoRenewal = false;
-        settings.cancellationReason = reason;
+        settings.nextRenewalDate = null;
+        settings.cancellationReason = reason || "Not specified";
         settings.cancellationDate = new Date();
 
-        await settings.save();
-
-        // If immediate effect, cancel active passes
         if (immediateEffect) {
             await B2CMonthlyPass.updateMany(
                 { passengerId: userId, status: "ACTIVE" },
-                { status: "CANCELLED", updatedAt: new Date() }
+                { status: "CANCELLED", autoRenewal: false, updatedAt: new Date() }
+            );
+        } else {
+            await B2CMonthlyPass.updateMany(
+                { passengerId: userId, status: "ACTIVE" },
+                { autoRenewal: false, updatedAt: new Date() }
             );
         }
 
-        // Add to renewal history
         settings.renewalHistory.push({
             date: new Date(),
             status: "CANCELLED",
             amount: 0,
             paymentMethod: "CANCELLATION",
-            failureReason: reason
+            failureReason: reason || null,
         });
 
         await settings.save();
-
-        // Send confirmation email
         await sendCancellationEmail(userId, reason);
 
         res.status(200).json({
@@ -170,325 +642,741 @@ export const cancelSubscription = async (req, res) => {
             message: "Subscription cancelled successfully",
             data: {
                 cancellationDate: settings.cancellationDate,
-                immediateEffect,
-                autoRenewal: false
-            }
+                immediateEffect: !!immediateEffect,
+                autoRenewal: false,
+            },
         });
-
     } catch (error) {
-        console.error("Error cancelling subscription:", error);
+        console.error("[v0] Error cancelling subscription:", error);
         res.status(500).json({
             success: false,
             message: "Error cancelling subscription",
-            error: error.message
+            error: error.message,
         });
     }
 };
 
-// Manually renew subscription
+// ----------------------------------------------------------------------------
+// Manual / on-demand renewal (commuter clicks "Renew now")
+//   WALLET -> debit immediately and activate
+//   CARD   -> create a fresh payment session, activate on gateway success
+//   CASH   -> create a pending cash request for admin to confirm
+// ----------------------------------------------------------------------------
+
+// Resolve which pass to renew. If the commuter selected a specific passId,
+// renew that exact pass; otherwise fall back to the latest-expiring one.
+const resolveBasePassForRenewal = async (userId, passId) => {
+    if (passId) {
+        const chosen = await B2CMonthlyPass.findOne({
+            _id: passId,
+            passengerId: userId,
+            status: { $in: ["ACTIVE", "EXPIRED"] },
+        });
+        if (chosen) return chosen;
+    }
+    return B2CMonthlyPass.findOne({
+        passengerId: userId,
+        status: { $in: ["ACTIVE", "EXPIRED"] },
+    }).sort({ endDate: -1 });
+};
+
 export const renewSubscription = async (req, res) => {
     try {
         const userId = req.userId;
-        const { paymentMethod } = req.body;
+        const method = normalizeRenewalMethod(req.body.paymentMethod || req.body.renewalPaymentMethod);
 
-        const settings = await SubscriptionSettings.findOne({ userId });
-        if (!settings) {
+        let settings = await SubscriptionSettings.findOne({ userId });
+        if (!settings) settings = new SubscriptionSettings({ userId });
+
+        const basePass = await resolveBasePassForRenewal(userId, req.body.passId);
+
+        if (!basePass) {
             return res.status(404).json({
                 success: false,
-                message: "Subscription settings not found"
+                message: "No active or recently expired monthly pass found to renew.",
             });
         }
 
-        // Find active pass to renew
-        const activePass = await B2CMonthlyPass.findOne({
-            passengerId: userId,
-            status: { $in: ["ACTIVE", "EXPIRED"] }
-        }).sort({ endDate: -1 });
-
-        if (!activePass) {
-            return res.status(404).json({
-                success: false,
-                message: "No active or recently expired subscription found to renew"
-            });
+        if (method === "CASH") {
+            return await createCashRenewalRequest(req, res, settings, basePass);
         }
 
-        // Create new monthly pass
-        const startDate = new Date() > new Date(activePass.endDate) 
-            ? new Date() 
-            : new Date(activePass.endDate);
-        const newEndDate = new Date(startDate);
-        newEndDate.setMonth(newEndDate.getMonth() + 1);
-
-        const newPass = new B2CMonthlyPass({
-            passengerId: activePass.passengerId,
-            routeId: activePass.routeId,
-            scheduleId: activePass.scheduleId,
-            partnerId: activePass.partnerId,
-            passType: activePass.passType,
-            outboundTripTime: activePass.outboundTripTime,
-            returnTripTime: activePass.returnTripTime,
-            pickupLocation: activePass.pickupLocation,
-            dropoffLocation: activePass.dropoffLocation,
-            returnPickupLocation: activePass.returnPickupLocation,
-            returnDropoffLocation: activePass.returnDropoffLocation,
-            startDate: startDate,
-            endDate: newEndDate,
-            durationMonths: 1,
-            totalAmount: activePass.totalAmount,
-            paymentMethod: paymentMethod || activePass.paymentMethod,
-            adminCommission: activePass.totalAmount * 0.2,
-            partnerEarnings: activePass.totalAmount * 0.8,
-            status: "ACTIVE"
-        });
-
-        await newPass.save();
-
-        // Update old pass
-        if (activePass.status === "ACTIVE") {
-            activePass.status = "RENEWED";
-            await activePass.save();
+        if (method === "WALLET") {
+            return await renewWithWallet(req, res, settings, basePass, true);
         }
 
-        // Update subscription settings
-        settings.autoRenewal = true;
-        settings.lastRenewalDate = new Date();
-        settings.nextRenewalDate = newEndDate;
-        settings.cancellationReason = null;
-        settings.cancellationDate = null;
-        settings.currentRenewalAttempts = 0;
-
-        settings.renewalHistory.push({
-            date: new Date(),
-            status: "SUCCESS",
-            amount: activePass.totalAmount,
-            paymentMethod: paymentMethod || settings.renewalPaymentMethod
-        });
-
-        await settings.save();
-
-        res.status(200).json({
-            success: true,
-            message: "Subscription renewed successfully",
-            data: {
-                newPass,
-                nextRenewalDate: newEndDate,
-                amount: activePass.totalAmount
-            }
-        });
-
+        // SAME_CARD / MANUAL fall through to card payment session
+        return await renewWithCard(req, res, settings, basePass);
     } catch (error) {
-        console.error("Error renewing subscription:", error);
+        console.error("[v0] Error renewing subscription:", error);
         res.status(500).json({
             success: false,
             message: "Error renewing subscription",
-            error: error.message
+            error: error.message,
         });
     }
 };
 
-// Process renewals (cron job function)
-export const processRenewals = async () => {
+// Wallet renewal: validate balance, debit, activate, settle earnings
+const renewWithWallet = async (req, res, settings, basePass, isManual) => {
+    const userId = basePass.passengerId;
+    const amount = basePass.totalAmount;
+    const currency = basePass.currency || "AED";
+
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet || (wallet.balance || 0) < amount) {
+        settings.renewalHistory.push({
+            date: new Date(),
+            status: "FAILED",
+            amount,
+            paymentMethod: "WALLET",
+            failureReason: "Insufficient wallet balance",
+        });
+        settings.currentRenewalAttempts += 1;
+        await settings.save();
+
+        return res.status(400).json({
+            success: false,
+            message: `Insufficient wallet balance. Required: ${currency} ${amount.toFixed(2)}, Available: ${currency} ${(wallet?.balance || 0).toFixed(2)}.`,
+            walletBalance: wallet?.balance || 0,
+            requiredAmount: amount,
+        });
+    }
+
+    // Debit commuter wallet
+    const balanceBefore = wallet.balance;
+    wallet.balance -= amount;
+    wallet.transactions.push({
+        type: "EMI_PAYMENT",
+        amount,
+        description: `Monthly pass renewal (wallet) - pass ${basePass._id}`,
+        reference: basePass._id.toString(),
+        status: "COMPLETED",
+    });
+    await wallet.save();
+
+    await Transaction.create({
+        walletId: wallet._id,
+        userId,
+        type: "DEBIT",
+        category: "BOOKING_PAYMENT",
+        amount,
+        currency,
+        balanceBefore,
+        balanceAfter: wallet.balance,
+        referenceId: basePass._id,
+        description: `Monthly pass renewal (wallet) - pass ${basePass._id}`,
+        metadata: { monthlyPassId: basePass._id, type: "RENEWAL" },
+    });
+
+    await settleRenewalEarnings(basePass);
+    const { newEndDate } = await applyRenewalToPass(basePass, { paymentMethod: "WALLET" });
+
+    settings.linkedPassId = basePass._id;
+    settings.lastRenewalDate = new Date();
+    settings.nextRenewalDate = settings.autoRenewal ? newEndDate : null;
+    settings.currentRenewalAttempts = 0;
+    settings.cancellationReason = null;
+    settings.cancellationDate = null;
+    settings.renewalHistory.push({
+        date: new Date(),
+        status: "SUCCESS",
+        amount,
+        paymentMethod: "WALLET",
+    });
+    await settings.save();
+
+    await sendRenewalSuccessEmail(settings, basePass);
+
+    return res.status(200).json({
+        success: true,
+        message: "Monthly pass renewed successfully using wallet balance.",
+        data: { newPass: basePass, nextRenewalDate: newEndDate, amount, walletBalance: wallet.balance },
+    });
+};
+
+// Card renewal: create a fresh payment session each cycle. The pass is extended
+// in place only after the gateway confirms payment (see activateCardRenewalPass),
+// so no duplicate pass is ever created.
+const renewWithCard = async (req, res, settings, basePass) => {
+    const userId = basePass.passengerId;
+    const amount = basePass.totalAmount;
+    const currency = basePass.currency || "AED";
+
     try {
-        console.log("Processing subscription renewals...");
-        
+        const passenger = await User.findById(userId);
+        const session = await PaymentGatewayService.createPaymentSession({
+            gateway: "STRIPE",
+            amount,
+            currency,
+            customer: {
+                email: passenger?.email,
+                name: passenger?.fullName || `${passenger?.firstName || ""} ${passenger?.lastName || ""}`.trim(),
+                phone: passenger?.phoneNumber || passenger?.whatsappNumber,
+            },
+            contractId: basePass._id.toString(),
+            redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/payment-success`,
+            webhookUrl: `${process.env.BACKEND_URL}/api/webhook/payment`,
+            metadata: {
+                passengerId: userId.toString(),
+                routeId: basePass.routeId.toString(),
+                passType: basePass.passType,
+                renewal: "true",
+                // Explicitly include the pass id in metadata as well so the verify
+                // and webhook flows can resolve it even if client_reference_id is
+                // unavailable for the chosen gateway.
+                contractId: basePass._id.toString(),
+            },
+        });
+
+        // Remember the in-flight session on the pass so activation is idempotent and
+        // the verify endpoint can resolve which pass to extend.
+        basePass.gatewaySessionId = session.sessionId;
+        basePass.paymentGateway = session.provider;
+        await basePass.save();
+
+        settings.linkedPassId = basePass._id;
+        settings.pendingRenewalSessionId = session.sessionId;
+        settings.renewalHistory.push({
+            date: new Date(),
+            status: "PENDING_PAYMENT",
+            amount,
+            paymentMethod: "SAME_CARD",
+            gatewaySessionId: session.sessionId,
+        });
+        await settings.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Payment session created. Complete payment to activate your renewed pass.",
+            data: {
+                newPass: basePass,
+                payment: {
+                    paymentUrl: session.paymentUrl,
+                    sessionId: session.sessionId,
+                    provider: session.provider,
+                    amount,
+                    currency,
+                },
+                paymentRequired: true,
+            },
+        });
+    } catch (paymentError) {
+        settings.renewalHistory.push({
+            date: new Date(),
+            status: "FAILED",
+            amount,
+            paymentMethod: "SAME_CARD",
+            failureReason: paymentError.message,
+        });
+        settings.currentRenewalAttempts += 1;
+        await settings.save();
+
+        return res.status(400).json({
+            success: false,
+            message: "Failed to create payment session for renewal.",
+            error: paymentError.message,
+        });
+    }
+};
+
+// ----------------------------------------------------------------------------
+// Activate a card renewal once the gateway confirms payment.
+// Called from the payment verify flow (paymentController.verifyPayment).
+// Extends the existing pass in place + appends trips to the existing booking.
+// Idempotent via the gateway session id, so re-verifying never double-applies.
+// ----------------------------------------------------------------------------
+export const activateCardRenewalPass = async (passId, sessionId = null) => {
+    const basePass = await B2CMonthlyPass.findById(passId);
+    if (!basePass) {
+        console.error("[v0] activateCardRenewalPass: pass not found", passId);
+        return null;
+    }
+
+    await settleRenewalEarnings(basePass);
+
+    const { alreadyApplied, newEndDate } = await applyRenewalToPass(basePass, {
+        paymentMethod: "STRIPE",
+        sessionId: sessionId || basePass.gatewaySessionId,
+    });
+
+    // Update subscription settings bookkeeping + flip the PENDING_PAYMENT history row
+    const settings = await SubscriptionSettings.findOne({ userId: basePass.passengerId });
+    if (settings) {
+        if (!alreadyApplied) {
+            const appliedSession = sessionId || basePass.gatewaySessionId;
+            // Flip the most recent matching PENDING_PAYMENT row to SUCCESS.
+            const pendingRow = [...settings.renewalHistory]
+                .reverse()
+                .find(
+                    (h) =>
+                        h.status === "PENDING_PAYMENT" &&
+                        (!appliedSession || !h.gatewaySessionId || h.gatewaySessionId === appliedSession)
+                );
+            if (pendingRow) {
+                pendingRow.status = "SUCCESS";
+            } else {
+                settings.renewalHistory.push({
+                    date: new Date(),
+                    status: "SUCCESS",
+                    amount: basePass.totalAmount,
+                    paymentMethod: "SAME_CARD",
+                });
+            }
+            settings.linkedPassId = basePass._id;
+            settings.lastRenewalDate = new Date();
+            settings.nextRenewalDate = settings.autoRenewal ? newEndDate : null;
+            settings.currentRenewalAttempts = 0;
+            settings.pendingRenewalSessionId = null;
+            await settings.save();
+
+            await sendRenewalSuccessEmail(settings, basePass);
+        }
+    }
+
+    return basePass;
+};
+
+// ----------------------------------------------------------------------------
+// Cash renewal: commuter requests, admin confirms
+// ----------------------------------------------------------------------------
+
+const createCashRenewalRequest = async (req, res, settings, basePass) => {
+    if (settings.pendingCashRenewal?.requested) {
+        return res.status(400).json({
+            success: false,
+            message: "You already have a pending cash renewal awaiting admin confirmation.",
+            data: { pendingCashRenewal: settings.pendingCashRenewal },
+        });
+    }
+
+    settings.pendingCashRenewal = {
+        requested: true,
+        passId: basePass._id,
+        amount: basePass.totalAmount,
+        requestedAt: new Date(),
+    };
+    settings.renewalHistory.push({
+        date: new Date(),
+        status: "PENDING",
+        amount: basePass.totalAmount,
+        paymentMethod: "CASH",
+        failureReason: "Awaiting admin cash confirmation",
+    });
+    await settings.save();
+
+    await sendCashRequestEmail(settings, basePass);
+
+    return res.status(200).json({
+        success: true,
+        message: "Cash renewal requested. Please pay the admin; your pass activates once the admin confirms.",
+        data: { pendingCashRenewal: settings.pendingCashRenewal, pass: basePass },
+    });
+};
+
+// Explicit endpoint for the commuter "Renew with cash" button
+export const requestCashRenewal = async (req, res) => {
+    try {
+        const userId = req.userId;
+        let settings = await SubscriptionSettings.findOne({ userId });
+        if (!settings) settings = new SubscriptionSettings({ userId });
+
+        const basePass = await resolveBasePassForRenewal(userId, req.body.passId);
+
+        if (!basePass) {
+            return res.status(404).json({
+                success: false,
+                message: "No active or recently expired monthly pass found to renew.",
+            });
+        }
+
+        return await createCashRenewalRequest(req, res, settings, basePass);
+    } catch (error) {
+        console.error("[v0] Error requesting cash renewal:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error requesting cash renewal",
+            error: error.message,
+        });
+    }
+};
+
+// Admin confirms cash was collected -> activate the pass and credit admin wallet
+export const confirmCashRenewal = async (req, res) => {
+    try {
+        const { userId, passId } = req.body;
+
+        const settings = await SubscriptionSettings.findOne({ userId });
+        if (!settings || !settings.pendingCashRenewal?.requested) {
+            return res.status(404).json({
+                success: false,
+                message: "No pending cash renewal found for this user.",
+            });
+        }
+
+        const targetPassId = passId || settings.pendingCashRenewal.passId;
+        const basePass = await B2CMonthlyPass.findById(targetPassId);
+        if (!basePass) {
+            return res.status(404).json({
+                success: false,
+                message: "Pending renewal pass not found.",
+            });
+        }
+
+        // Settle earnings (admin holds the cash, so credit admin commission;
+        // partner earnings are recorded as owed/earned just like other cash flows)
+        await settleRenewalEarnings(basePass);
+
+        // Extend the existing pass in place + append trips to the existing booking.
+        const { newEndDate } = await applyRenewalToPass(basePass, { paymentMethod: "CASH" });
+
+        settings.linkedPassId = basePass._id;
+        settings.lastRenewalDate = new Date();
+        settings.nextRenewalDate = settings.autoRenewal ? newEndDate : null;
+        settings.currentRenewalAttempts = 0;
+        settings.pendingCashRenewal = { requested: false, passId: null, amount: 0, requestedAt: null };
+        settings.renewalHistory.push({
+            date: new Date(),
+            status: "SUCCESS",
+            amount: basePass.totalAmount,
+            paymentMethod: "CASH",
+        });
+        await settings.save();
+
+        await sendRenewalSuccessEmail(settings, basePass);
+
+        res.status(200).json({
+            success: true,
+            message: "Cash renewal confirmed and monthly pass activated.",
+            data: { pass: basePass },
+        });
+    } catch (error) {
+        console.error("[v0] Error confirming cash renewal:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error confirming cash renewal",
+            error: error.message,
+        });
+    }
+};
+
+// Admin view: all pending cash renewals
+export const getPendingCashRenewals = async (req, res) => {
+    try {
+        const pending = await SubscriptionSettings.find({
+            "pendingCashRenewal.requested": true,
+        }).populate("userId", "fullName email phoneNumber");
+
+        const data = pending.map((s) => ({
+            userId: s.userId?._id,
+            userName: s.userId?.fullName,
+            userEmail: s.userId?.email,
+            userPhone: s.userId?.phoneNumber,
+            passId: s.pendingCashRenewal.passId,
+            amount: s.pendingCashRenewal.amount,
+            requestedAt: s.pendingCashRenewal.requestedAt,
+        }));
+
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error("[v0] Error fetching pending cash renewals:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching pending cash renewals",
+            error: error.message,
+        });
+    }
+};
+
+// ----------------------------------------------------------------------------
+// Cron jobs
+// ----------------------------------------------------------------------------
+
+export const processRenewals = async (req, res) => {
+    const result = { processed: 0, succeeded: 0, failed: 0, pendingPayment: 0, skipped: 0 };
+    try {
+        console.log("[v0] Processing subscription renewals...");
+
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        // Find subscriptions due for renewal
         const dueSubscriptions = await SubscriptionSettings.find({
             autoRenewal: true,
-            nextRenewalDate: {
-                $gte: today,
-                $lt: tomorrow
-            }
-        }).populate('userId');
+            renewalPaymentMethod: { $in: ["SAME_CARD", "WALLET"] },
+            nextRenewalDate: { $gte: today, $lt: tomorrow },
+        });
 
         for (const subscription of dueSubscriptions) {
+            result.processed += 1;
             try {
-                // Get active monthly pass
-                const activePass = await B2CMonthlyPass.findOne({
-                    passengerId: subscription.userId._id,
-                    status: "ACTIVE",
-                    endDate: { $lte: subscription.nextRenewalDate }
-                });
-
-                if (activePass) {
-                    // Process renewal
-                    await processSingleRenewal(subscription, activePass);
+                if (subscription.currentRenewalAttempts >= subscription.maxRenewalAttempts) {
+                    result.skipped += 1;
+                    continue;
                 }
-            } catch (error) {
-                console.error(`Error processing renewal for user ${subscription.userId._id}:`, error);
+
+                const basePass = await B2CMonthlyPass.findOne({
+                    passengerId: subscription.userId,
+                    status: "ACTIVE",
+                }).sort({ endDate: -1 });
+
+                if (!basePass) {
+                    result.skipped += 1;
+                    continue;
+                }
+
+                if (subscription.renewalPaymentMethod === "WALLET") {
+                    const outcome = await autoRenewWallet(subscription, basePass);
+                    outcome === "SUCCESS" ? result.succeeded++ : result.failed++;
+                } else if (subscription.renewalPaymentMethod === "SAME_CARD") {
+                    await autoRenewCard(subscription, basePass);
+                    result.pendingPayment++;
+                }
+            } catch (err) {
+                result.failed += 1;
+                console.error(`[v0] Renewal failed for user ${subscription.userId}:`, err.message);
             }
         }
 
-        console.log(`Processed ${dueSubscriptions.length} subscription renewals`);
-
+        console.log("[v0] Renewal run complete:", result);
+        if (res) return res.status(200).json({ success: true, data: result });
+        return result;
     } catch (error) {
-        console.error("Error processing renewals:", error);
+        console.error("[v0] Error processing renewals:", error);
+        if (res) return res.status(500).json({ success: false, message: error.message });
+        return result;
     }
 };
 
-// Send renewal reminders
-export const sendRenewalReminders = async () => {
-    try {
-        console.log("Sending renewal reminders...");
-        
-        const reminderDate = new Date();
-        reminderDate.setDate(reminderDate.getDate() + 7); // 7 days from now
+// Auto wallet renewal used by cron (no res object)
+const autoRenewWallet = async (subscription, basePass) => {
+    const userId = basePass.passengerId;
+    const amount = basePass.totalAmount;
+    const wallet = await Wallet.findOne({ userId });
 
-        // Find subscriptions due for reminder
-        const dueForReminder = await SubscriptionSettings.find({
-            autoRenewal: true,
-            nextRenewalDate: {
-                $gte: reminderDate,
-                $lt: new Date(reminderDate.getTime() + 24 * 60 * 60 * 1000) // Within 24 hours
-            }
-        }).populate('userId');
-
-        for (const subscription of dueForReminder) {
-            try {
-                await sendRenewalReminderEmail(subscription);
-            } catch (error) {
-                console.error(`Error sending reminder for user ${subscription.userId._id}:`, error);
-            }
-        }
-
-        console.log(`Sent ${dueForReminder.length} renewal reminders`);
-
-    } catch (error) {
-        console.error("Error sending renewal reminders:", error);
-    }
-};
-
-// Helper functions
-const processSingleRenewal = async (subscription, activePass) => {
-    try {
-        // Create new monthly pass
-        const newEndDate = new Date(activePass.endDate);
-        newEndDate.setMonth(newEndDate.getMonth() + 1);
-
-        const newPass = new B2CMonthlyPass({
-            passengerId: activePass.passengerId,
-            routeId: activePass.routeId,
-            scheduleId: activePass.scheduleId,
-            partnerId: activePass.partnerId,
-            passType: activePass.passType,
-            outboundTripTime: activePass.outboundTripTime,
-            returnTripTime: activePass.returnTripTime,
-            pickupLocation: activePass.pickupLocation,
-            dropoffLocation: activePass.dropoffLocation,
-            returnPickupLocation: activePass.returnPickupLocation,
-            returnDropoffLocation: activePass.returnDropoffLocation,
-            startDate: activePass.endDate,
-            endDate: newEndDate,
-            durationMonths: 1,
-            totalAmount: activePass.totalAmount,
-            paymentMethod: activePass.paymentMethod,
-            adminCommission: activePass.totalAmount * 0.2,
-            partnerEarnings: activePass.totalAmount * 0.8,
-            status: "ACTIVE"
-        });
-
-        await newPass.save();
-
-        // Update old pass status
-        activePass.status = "RENEWED";
-        await activePass.save();
-
-        // Update subscription settings
-        subscription.lastRenewalDate = new Date();
-        subscription.nextRenewalDate = newEndDate;
-        subscription.currentRenewalAttempts = 0;
-
-        subscription.renewalHistory.push({
-            date: new Date(),
-            status: "SUCCESS",
-            amount: activePass.totalAmount,
-            paymentMethod: subscription.renewalPaymentMethod
-        });
-
-        await subscription.save();
-
-        // Send success notification
-        await sendRenewalSuccessEmail(subscription, newPass);
-
-    } catch (error) {
-        // Update renewal history with failure
+    if (!wallet || (wallet.balance || 0) < amount) {
+        subscription.currentRenewalAttempts += 1;
         subscription.renewalHistory.push({
             date: new Date(),
             status: "FAILED",
-            amount: activePass.totalAmount,
-            paymentMethod: subscription.renewalPaymentMethod,
-            failureReason: error.message
+            amount,
+            paymentMethod: "WALLET",
+            failureReason: "Insufficient wallet balance",
         });
-        subscription.currentRenewalAttempts += 1;
+        await subscription.save();
+        await sendRenewalFailedEmail(subscription, "Insufficient wallet balance");
+        return "FAILED";
+    }
+
+    const balanceBefore = wallet.balance;
+    wallet.balance -= amount;
+    wallet.transactions.push({
+        type: "EMI_PAYMENT",
+        amount,
+        description: `Auto monthly pass renewal (wallet) - pass ${basePass._id}`,
+        reference: basePass._id.toString(),
+        status: "COMPLETED",
+    });
+    await wallet.save();
+
+    await Transaction.create({
+        walletId: wallet._id,
+        userId,
+        type: "DEBIT",
+        category: "BOOKING_PAYMENT",
+        amount,
+        currency: basePass.currency || "AED",
+        balanceBefore,
+        balanceAfter: wallet.balance,
+        referenceId: basePass._id,
+        description: `Auto monthly pass renewal (wallet) - pass ${basePass._id}`,
+        metadata: { monthlyPassId: basePass._id, type: "AUTO_RENEWAL" },
+    });
+
+    await settleRenewalEarnings(basePass);
+    const { newEndDate } = await applyRenewalToPass(basePass, { paymentMethod: "WALLET" });
+
+    subscription.linkedPassId = basePass._id;
+    subscription.lastRenewalDate = new Date();
+    subscription.nextRenewalDate = newEndDate;
+    subscription.currentRenewalAttempts = 0;
+    subscription.renewalHistory.push({
+        date: new Date(),
+        status: "SUCCESS",
+        amount,
+        paymentMethod: "WALLET",
+    });
+    await subscription.save();
+    await sendRenewalSuccessEmail(subscription, basePass);
+    return "SUCCESS";
+};
+
+// Auto card renewal used by cron -> creates a payment session + emails the link.
+// The pass is extended in place only after payment is confirmed.
+const autoRenewCard = async (subscription, basePass) => {
+    const userId = basePass.passengerId;
+    const amount = basePass.totalAmount;
+    const currency = basePass.currency || "AED";
+
+    try {
+        const passenger = await User.findById(userId);
+        const session = await PaymentGatewayService.createPaymentSession({
+            gateway: "STRIPE",
+            amount,
+            currency,
+            customer: {
+                email: passenger?.email,
+                name: passenger?.fullName || `${passenger?.firstName || ""} ${passenger?.lastName || ""}`.trim(),
+                phone: passenger?.phoneNumber || passenger?.whatsappNumber,
+            },
+            contractId: basePass._id,
+            redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/payment-success`,
+            webhookUrl: `${process.env.BACKEND_URL}/api/webhook/payment`,
+            metadata: {
+                passengerId: userId.toString(),
+                routeId: basePass.routeId.toString(),
+                passType: basePass.passType,
+                renewal: "true",
+                auto: "true",
+            },
+        });
+
+        basePass.gatewaySessionId = session.sessionId;
+        basePass.paymentGateway = session.provider;
+        await basePass.save();
+
+        subscription.linkedPassId = basePass._id;
+        subscription.pendingRenewalSessionId = session.sessionId;
+        subscription.renewalHistory.push({
+            date: new Date(),
+            status: "PENDING_PAYMENT",
+            amount,
+            paymentMethod: "SAME_CARD",
+            gatewaySessionId: session.sessionId,
+        });
         await subscription.save();
 
-        throw error;
+        await sendCardRenewalLinkEmail(subscription, basePass, session.paymentUrl);
+    } catch (paymentError) {
+        subscription.currentRenewalAttempts += 1;
+        subscription.renewalHistory.push({
+            date: new Date(),
+            status: "FAILED",
+            amount,
+            paymentMethod: "SAME_CARD",
+            failureReason: paymentError.message,
+        });
+        await subscription.save();
+        await sendRenewalFailedEmail(subscription, paymentError.message);
     }
 };
 
-const sendRenewalReminderEmail = async (subscription) => {
+export const sendRenewalReminders = async (req, res) => {
+    let sent = 0;
     try {
-        const user = await User.findById(subscription.userId._id);
-        if (user && subscription.emailNotifications.renewalReminder) {
-            await sendEmail({
-                to: user.email,
-                subject: "Subscription Renewal Reminder",
-                template: "renewalReminder",
-                data: {
-                    userName: user.fullName,
-                    renewalDate: subscription.nextRenewalDate,
-                    daysLeft: Math.ceil((subscription.nextRenewalDate - new Date()) / (1000 * 60 * 60 * 24)),
-                    autoRenewal: subscription.autoRenewal,
-                    renewalPaymentMethod: subscription.renewalPaymentMethod
+        console.log("[v0] Sending renewal reminders...");
+
+        const subscriptions = await SubscriptionSettings.find({
+            autoRenewal: true,
+            nextRenewalDate: { $ne: null },
+        });
+
+        const now = new Date();
+        for (const subscription of subscriptions) {
+            try {
+                const days = Math.ceil(
+                    (new Date(subscription.nextRenewalDate) - now) / (1000 * 60 * 60 * 24)
+                );
+                if (days === subscription.renewalReminderDays) {
+                    await sendRenewalReminderEmail(subscription, days);
+                    sent += 1;
                 }
-            });
+            } catch (err) {
+                console.error(`[v0] Reminder failed for user ${subscription.userId}:`, err.message);
+            }
         }
+
+        console.log(`[v0] Sent ${sent} renewal reminders`);
+        if (res) return res.status(200).json({ success: true, data: { sent } });
+        return sent;
     } catch (error) {
-        console.error("Error sending renewal reminder email:", error);
+        console.error("[v0] Error sending renewal reminders:", error);
+        if (res) return res.status(500).json({ success: false, message: error.message });
+        return sent;
     }
+};
+
+// ----------------------------------------------------------------------------
+// Email helpers
+// ----------------------------------------------------------------------------
+
+const safeSendEmail = async (userId, allowed, subject, html) => {
+    try {
+        if (!allowed) return;
+        const user = await User.findById(userId);
+        if (user?.email) {
+            await sendEmail(user.email, subject, html);
+        }
+    } catch (err) {
+        console.error("[v0] Email send error:", err.message);
+    }
+};
+
+const sendRenewalReminderEmail = async (subscription, daysLeft) => {
+    const html = `<p>Your DriveMego monthly pass renews in <strong>${daysLeft} day(s)</strong> on ${new Date(
+        subscription.nextRenewalDate
+    ).toDateString()} via ${subscription.renewalPaymentMethod.replace("_", " ")}.</p>`;
+    await safeSendEmail(
+        subscription.userId,
+        subscription.emailNotifications?.renewalReminder,
+        "Monthly Pass Renewal Reminder",
+        html
+    );
 };
 
 const sendRenewalSuccessEmail = async (subscription, newPass) => {
-    try {
-        const user = await User.findById(subscription.userId._id);
-        if (user && subscription.emailNotifications.renewalSuccess) {
-            await sendEmail({
-                to: user.email,
-                subject: "Subscription Renewed Successfully",
-                template: "renewalSuccess",
-                data: {
-                    userName: user.fullName,
-                    renewalDate: new Date(),
-                    nextRenewalDate: newPass.endDate,
-                    amount: newPass.totalAmount,
-                    paymentMethod: subscription.renewalPaymentMethod
-                }
-            });
-        }
-    } catch (error) {
-        console.error("Error sending renewal success email:", error);
-    }
+    const html = `<p>Your monthly pass has been renewed successfully. Valid until <strong>${new Date(
+        newPass.endDate
+    ).toDateString()}</strong>. Amount: ${newPass.currency} ${newPass.totalAmount}.</p>`;
+    await safeSendEmail(
+        subscription.userId,
+        subscription.emailNotifications?.renewalSuccess,
+        "Monthly Pass Renewed Successfully",
+        html
+    );
+};
+
+const sendRenewalFailedEmail = async (subscription, reason) => {
+    const html = `<p>We couldn't renew your monthly pass automatically. Reason: ${reason}. Please update your payment method or top up your wallet.</p>`;
+    await safeSendEmail(
+        subscription.userId,
+        subscription.emailNotifications?.renewalFailed,
+        "Monthly Pass Renewal Failed",
+        html
+    );
+};
+
+const sendCardRenewalLinkEmail = async (subscription, newPass, paymentUrl) => {
+    const html = `<p>Your monthly pass is due for renewal. Please complete payment of ${newPass.currency} ${newPass.totalAmount} using the secure link below:</p><p><a href="${paymentUrl}">Pay & Renew Now</a></p>`;
+    await safeSendEmail(
+        subscription.userId,
+        subscription.emailNotifications?.renewalReminder,
+        "Action Required: Renew Your Monthly Pass",
+        html
+    );
+};
+
+const sendCashRequestEmail = async (subscription, newPass) => {
+    const html = `<p>Your cash renewal request has been received. Please pay ${newPass.currency} ${newPass.totalAmount} to the admin. Your pass activates once the admin confirms the payment.</p>`;
+    await safeSendEmail(
+        subscription.userId,
+        subscription.emailNotifications?.renewalReminder,
+        "Cash Renewal Requested",
+        html
+    );
 };
 
 const sendCancellationEmail = async (userId, reason) => {
-    try {
-        const user = await User.findById(userId);
-        if (user) {
-            await sendEmail({
-                to: user.email,
-                subject: "Subscription Cancelled",
-                template: "subscriptionCancelled",
-                data: {
-                    userName: user.fullName,
-                    cancellationDate: new Date(),
-                    reason: reason
-                }
-            });
-        }
-    } catch (error) {
-        console.error("Error sending cancellation email:", error);
-    }
+    const html = `<p>Your subscription auto-renewal has been cancelled. Reason: ${reason || "Not specified"}.</p>`;
+    await safeSendEmail(userId, true, "Subscription Cancelled", html);
 };

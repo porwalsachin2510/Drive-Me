@@ -5777,13 +5777,73 @@ export const getCommuterRoutes = async (req, res) => {
     try {
         const userId = req.userId;
 
+        // Determine the commuter's country so we only show routes that belong
+        // to the same country (UAE user -> only UAE routes, Kuwait user -> only
+        // Kuwait routes). This mirrors the home page (commute search) behaviour.
+        let userCountry = null;
+        try {
+            const commuter = await User.findById(userId).select('country nationality');
+            const countryMapping = {
+                'UAE': 'UAE',
+                'AE': 'UAE',
+                'United Arab Emirates': 'UAE',
+                'KW': 'Kuwait',
+                'Kuwait': 'Kuwait'
+            };
+            const rawCountry = commuter?.country || commuter?.nationality;
+            userCountry = countryMapping[rawCountry] || rawCountry || null;
+        } catch (e) {
+            // If we cannot resolve the country, fall back to showing all routes
+        }
+
+        // Helper to derive a route's country from its location names
+        const getRouteCountry = (fromLocation, toLocation) => {
+            const allLocations = `${fromLocation || ''} ${toLocation || ''}`.toLowerCase();
+
+            const kuwaitIndicators = ['kuwait', 'salwa', 'jahra', 'salmiya', 'hawally', 'farwaniya', 'ahmadi', 'mangaf', 'fahaheel', 'fintas', 'mahboula', 'khaitan', 'jleeb', 'mubarak', 'reggae'];
+            const uaeIndicators = ['dubai', 'abu dhabi', 'sharjah', 'ajman', 'fujairah', 'ras al', 'umm al', 'al ain', 'deira', 'bur dubai', 'jumeirah', 'marina', 'jebel ali', 'silicon oasis', 'business bay', 'creek', 'mall of emirates', 'burjuman', 'ghubaiba', 'oud metha'];
+
+            for (const indicator of kuwaitIndicators) {
+                if (allLocations.includes(indicator)) return 'Kuwait';
+            }
+            for (const indicator of uaeIndicators) {
+                if (allLocations.includes(indicator)) return 'UAE';
+            }
+            return null; // Unknown country
+        };
+
         // Fetch real active B2C routes from database
-        const routes = await B2CPartnerRoute.find({ status: 'Active' })
+        const allActiveRoutes = await B2CPartnerRoute.find({ status: 'Active' })
             .populate('b2cPartnerId', 'fullName companyName email')
             .sort({ createdAt: -1 });
 
+        // Filter routes by the commuter's country (UAE/Kuwait only). Routes from
+        // an unknown country are hidden from UAE/Kuwait users so they only ever
+        // see verified routes operating in their own country.
+        const routes = allActiveRoutes.filter(route => {
+            if (userCountry === 'UAE' || userCountry === 'Kuwait') {
+                const routeCountry = getRouteCountry(route.fromLocation, route.toLocation);
+                return routeCountry === userCountry;
+            }
+            return true;
+        });
+
         // Fetch all active schedules for these routes
         const routeIds = routes.map(r => r._id);
+
+        // Find which of these routes the commuter currently has an ACTIVE booking on.
+        // "Active" = an upcoming/in-progress booking that is not cancelled/rejected/completed.
+        let bookedRouteIds = new Set();
+        try {
+            const activeBookings = await B2CPassengerBooking.find({
+                passengerId: userId,
+                routeId: { $in: routeIds },
+                bookingStatus: { $in: ['PENDING', 'CONFIRMED', 'ACCEPTED', 'IN_PROGRESS'] }
+            }).select('routeId');
+            bookedRouteIds = new Set(activeBookings.map(b => b.routeId?.toString()).filter(Boolean));
+        } catch (e) {
+            // Booking lookup is best-effort; routes still render without it
+        }
         let schedules = [];
         try {
             schedules = await B2CPartnerSchedule.find({
@@ -5878,22 +5938,29 @@ export const getCommuterRoutes = async (req, res) => {
                 }
             }
 
-            // Check if current user is a member of this route
-            const isMember = (route.members || []).some(
+            // Check if current user has SAVED this route (members array = saved routes)
+            const isSaved = (route.members || []).some(
                 m => m.userId && m.userId.toString() === userId.toString() && m.status === 'ACTIVE'
             );
+
+            // Check if current user has an ACTIVE booking on this route
+            const isBooked = bookedRouteIds.has(route._id.toString());
 
             return {
                 _id: route._id,
                 name: route.routeName || `${route.fromLocation || 'Unknown'} to ${route.toLocation || 'Unknown'}`,
                 startPoint: route.fromLocation || 'Not set',
                 endPoint: route.toLocation || 'Not set',
+                // Raw location fields required by the BookingModal
+                fromLocation: route.fromLocation || '',
+                toLocation: route.toLocation || '',
                 distance: estimatedDistance,
                 estimatedTime: estimatedDuration,
                 price: route.pricing?.oneWayPrice || 0,
                 roundTripPrice: route.pricing?.roundTripPrice || 0,
-                status: isMember ? 'active' : (route.status?.toLowerCase() || 'inactive'),
-                isMember,
+                status: route.status?.toLowerCase() || 'inactive',
+                isSaved,
+                isBooked,
                 partnerName: route.b2cPartnerId?.companyName || route.b2cPartnerId?.fullName || 'Unknown',
                 departureTime,
                 arrivalTime,
@@ -5902,6 +5969,9 @@ export const getCommuterRoutes = async (req, res) => {
                 stops: route.stopPoints || [],
                 tripType: route.tripType || 'One Way',
                 operatingDays: route.availableDays || [],
+                availableDays: route.availableDays || [],
+                startDate: route.startDate,
+                currency: route.pricing?.currency || 'KWD',
                 pricing: route.pricing || {},
                 createdAt: route.createdAt
             };
@@ -5920,7 +5990,7 @@ export const getCommuterRoutes = async (req, res) => {
     }
 };
 
-// Join route
+// Save route (add to commuter's saved/favourite routes - does NOT block a seat)
 export const joinRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
@@ -5944,11 +6014,11 @@ export const joinRoute = async (req, res) => {
         if (route.status !== 'Active') {
             return res.status(400).json({
                 success: false,
-                message: "Route is not active for joining"
+                message: "Route is not active"
             });
         }
 
-        // Check if user is already an active member using the members array
+        // Check if user already saved this route
         const existingMember = (route.members || []).find(
             m => m.userId && m.userId.toString() === userId.toString() && m.status === 'ACTIVE'
         );
@@ -5956,32 +6026,36 @@ export const joinRoute = async (req, res) => {
         if (existingMember) {
             return res.status(400).json({
                 success: false,
-                message: "User is already a member of this route"
+                message: "Route is already saved"
             });
         }
 
-        if (route.availableSeats <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: "No available seats on this route"
-            });
-        }
+        // If the user previously left/removed, re-activate that entry; otherwise push a new one.
+        // Saving a route does NOT decrement available seats - seats are only reserved on real bookings.
+        const previousMember = (route.members || []).find(
+            m => m.userId && m.userId.toString() === userId.toString()
+        );
 
-        // Add member to route's members array and decrement available seats
-        await B2CPartnerRoute.findByIdAndUpdate(routeId, {
-            $inc: { availableSeats: -1 },
-            $push: {
-                members: {
-                    userId: userId,
-                    joinedAt: new Date(),
-                    status: 'ACTIVE'
+        if (previousMember) {
+            await B2CPartnerRoute.updateOne(
+                { _id: routeId, 'members.userId': userId },
+                { $set: { 'members.$.status': 'ACTIVE', 'members.$.joinedAt': new Date() } }
+            );
+        } else {
+            await B2CPartnerRoute.findByIdAndUpdate(routeId, {
+                $push: {
+                    members: {
+                        userId: userId,
+                        joinedAt: new Date(),
+                        status: 'ACTIVE'
+                    }
                 }
-            }
-        });
+            });
+        }
 
         res.status(200).json({
             success: true,
-            message: "Successfully joined route",
+            message: "Route saved successfully",
             routeInfo: {
                 routeId: route._id,
                 routeName: `${route.fromLocation} to ${route.toLocation}`,
@@ -5989,21 +6063,21 @@ export const joinRoute = async (req, res) => {
                 toLocation: route.toLocation,
                 pricing: route.pricing,
                 availableDays: route.availableDays,
-                joinedAt: new Date()
+                savedAt: new Date()
             }
         });
 
     } catch (error) {
-        console.error("Error joining route:", error);
+        console.error("Error saving route:", error);
         res.status(500).json({
             success: false,
-            message: "Error joining route",
+            message: "Error saving route",
             error: error.message
         });
     }
 };
 
-// Leave route
+// Unsave route (remove from commuter's saved routes - does NOT change seats)
 export const leaveRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
@@ -6024,7 +6098,7 @@ export const leaveRoute = async (req, res) => {
             });
         }
 
-        // Check membership in the route's members array
+        // Check if the route is currently saved
         const activeMember = (route.members || []).find(
             m => m.userId && m.userId.toString() === userId.toString() && m.status === 'ACTIVE'
         );
@@ -6032,34 +6106,31 @@ export const leaveRoute = async (req, res) => {
         if (!activeMember) {
             return res.status(400).json({
                 success: false,
-                message: "User is not a member of this route"
+                message: "Route is not saved"
             });
         }
 
-        // Update the member status to LEFT and increment available seats
+        // Mark as LEFT. Saving never reserved a seat, so we do NOT change availableSeats here.
         await B2CPartnerRoute.updateOne(
             { _id: routeId, 'members.userId': userId, 'members.status': 'ACTIVE' },
-            {
-                $set: { 'members.$.status': 'LEFT' },
-                $inc: { availableSeats: 1 }
-            }
+            { $set: { 'members.$.status': 'LEFT' } }
         );
 
         res.status(200).json({
             success: true,
-            message: "Successfully left route",
+            message: "Route removed from saved",
             routeInfo: {
                 routeId: route._id,
                 routeName: `${route.fromLocation} to ${route.toLocation}`,
-                leftAt: new Date()
+                removedAt: new Date()
             }
         });
 
     } catch (error) {
-        console.error("Error leaving route:", error);
+        console.error("Error unsaving route:", error);
         res.status(500).json({
             success: false,
-            message: "Error leaving route",
+            message: "Error unsaving route",
             error: error.message
         });
     }

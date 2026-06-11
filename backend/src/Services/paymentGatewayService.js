@@ -61,6 +61,18 @@ export const detectCountryFromCurrency = (currency) => {
     return currencyToCountry[currency] || "UAE"
 }
 
+// Coerce every metadata value to a Stripe-safe string. Stripe silently drops
+// metadata keys whose values are not strings (e.g. Mongoose ObjectIds, numbers,
+// nested objects), so we stringify them and skip null/undefined entries.
+const normalizeStripeMetadata = (metadata = {}) => {
+    const safe = {}
+    for (const [key, value] of Object.entries(metadata)) {
+        if (value === undefined || value === null) continue
+        safe[key] = typeof value === "string" ? value : value.toString()
+    }
+    return safe
+}
+
 // Get appropriate gateway based on country
 export const getPaymentGateway = (country) => {
     // UAE → Stripe
@@ -112,6 +124,20 @@ class PaymentGatewayService {
             const urlSeparator = data.redirectUrl.includes('?') ? '&' : '?'
             const cancelSeparator = data.redirectUrl.includes('?') ? '&' : '?'
 
+            // Stripe metadata only accepts flat string values. Passing a Mongoose
+            // ObjectId (or any non-string) causes Stripe to silently drop the key,
+            // which previously broke monthly-pass renewals (contractId was lost,
+            // producing "missing pass id in session metadata"). Normalize every
+            // value to a string so nothing is dropped.
+            const contractIdStr =
+                data.contractId !== undefined && data.contractId !== null
+                    ? data.contractId.toString()
+                    : undefined
+            const safeMetadata = normalizeStripeMetadata({
+                contractId: contractIdStr,
+                ...data.metadata,
+            })
+
             const session = await stripe.checkout.sessions.create({
                 payment_method_types: ["card"],
                 line_items: [
@@ -120,7 +146,7 @@ class PaymentGatewayService {
                             currency: data.currency.toLowerCase(),
                             product_data: {
                                 name: "Fleet Contract Payment",
-                                description: `Payment for contract ${data.contractId}`,
+                                description: `Payment for contract ${contractIdStr || "N/A"}`,
                             },
                             unit_amount: Math.round(data.amount * 100), // Convert to cents
                         },
@@ -131,15 +157,12 @@ class PaymentGatewayService {
                 success_url: `${data.redirectUrl}${urlSeparator}session_id={CHECKOUT_SESSION_ID}&status=success`,
                 cancel_url: `${data.redirectUrl}${cancelSeparator}status=cancelled`,
                 customer_email: data.customer.email,
-                metadata: {
-                    contractId: data.contractId,
-                    ...data.metadata,
-                },
+                // client_reference_id is a reliable fallback for resolving the pass
+                // even if metadata is ever stripped or truncated.
+                ...(contractIdStr ? { client_reference_id: contractIdStr } : {}),
+                metadata: safeMetadata,
                 payment_intent_data: {
-                    metadata: {
-                        contractId: data.contractId,
-                        ...data.metadata,
-                    },
+                    metadata: safeMetadata,
                 },
             })
 
@@ -173,6 +196,15 @@ class PaymentGatewayService {
             }
             const countryCode = countryCodeMap[data.currency] || "+971"
 
+            const contractIdStr =
+                data.contractId !== undefined && data.contractId !== null
+                    ? data.contractId.toString()
+                    : undefined
+            const safeMetadata = normalizeStripeMetadata({
+                contractId: contractIdStr,
+                ...data.metadata,
+            })
+
             const charge = await tapPayments.createCharge({
                 amount: data.amount,
                 currency: data.currency,
@@ -185,11 +217,8 @@ class PaymentGatewayService {
                 },
                 redirectUrl: data.redirectUrl,
                 webhookUrl: data.webhookUrl,
-                metadata: {
-                    contractId: data.contractId,
-                    ...data.metadata,
-                },
-                description: `Payment for contract ${data.contractId}`,
+                metadata: safeMetadata,
+                description: `Payment for contract ${contractIdStr || "N/A"}`,
             })
 
             console.log("[v0] Tap charge created:", charge.id)

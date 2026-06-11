@@ -14,7 +14,9 @@ import { verifyToken, checkCommuterRole } from "../middleware/auth.js"
 // Commuter Routes Management
 router.get("/routes", verifyToken, checkCommuterRole, getCommuterRoutes)
 router.post("/routes/:routeId/join", verifyToken, checkCommuterRole, joinRoute)
+router.post("/routes/:routeId/save", verifyToken, checkCommuterRole, joinRoute)
 router.post("/routes/:routeId/leave", verifyToken, checkCommuterRole, leaveRoute)
+router.post("/routes/:routeId/unsave", verifyToken, checkCommuterRole, leaveRoute)
 
 // Commuter Stats
 router.get("/stats", verifyToken, checkCommuterRole, getCommuterStats)

@@ -157,6 +157,12 @@ const menuConfigs = {
       icon: "payment",
       moduleKey: "paymentVerification",
     },
+    {
+      id: "cash-renewals",
+      label: "Cash Renewals",
+      icon: "payment",
+      moduleKey: "paymentVerification",
+    },
     { id: "content", label: "Content", icon: "content", moduleKey: "content" },
     {
       id: "admin-management",

@@ -39,10 +39,31 @@ const PaymentCallback = () => {
             }),
           ).unwrap();
 
-          setVerificationStatus("success");
+          // Monthly pass renewal: pass was extended in place + trips generated.
+          if (result.paymentType === "renewal") {
+            const renewalRedirect =
+              result.data?.redirectUrl ||
+              "/commuter-profile?tab=subscription-settings";
 
-          // Check if this is a booking payment or contract payment
-          if (result.paymentType === "booking") {
+            if (result.success) {
+              setVerificationStatus("success");
+              setMessage(
+                "Renewal successful! Your monthly pass has been extended and your upcoming trips are now scheduled.",
+              );
+            } else {
+              setVerificationStatus("failed");
+              setMessage(
+                result.message ||
+                  "We could not activate your renewal automatically. Please check your subscription or contact support.",
+              );
+            }
+
+            setTimeout(() => {
+              navigate(renewalRedirect);
+            }, 3000);
+          } else if (result.paymentType === "booking") {
+            setVerificationStatus("success");
+            // Check if this is a booking payment or contract payment
             setMessage(
               "Payment completed successfully! Your booking is confirmed.",
             );
@@ -54,6 +75,7 @@ const PaymentCallback = () => {
               navigate(redirectUrl);
             }, 3000);
           } else {
+            setVerificationStatus("success");
             setMessage(
               "Payment completed successfully! Your contract is now active.",
             );

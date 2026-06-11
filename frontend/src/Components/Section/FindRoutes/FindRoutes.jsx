@@ -2,12 +2,18 @@
 import { useState, useEffect } from "react";
 import "./find-routes.css";
 import api from "../../../utils/api";
+import BookingModal from "../../BookingModal/BookingModal";
 
 export default function FindRoutes() {
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [savingId, setSavingId] = useState(null);
+
+  // Booking modal state
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   useEffect(() => {
     fetchRoutes();
@@ -16,7 +22,7 @@ export default function FindRoutes() {
   const fetchRoutes = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/commuter/routes');
+      const response = await api.get("/commuter/routes");
       setRoutes(response.data.routes || []);
     } catch (error) {
       console.error("Error fetching routes:", error);
@@ -25,49 +31,70 @@ export default function FindRoutes() {
     }
   };
 
-  const handleJoinRoute = async (routeId) => {
+  const handleOpenBooking = (route) => {
+    setSelectedRoute(route);
+    setShowBookingModal(true);
+  };
+
+  const handleCloseBooking = () => {
+    setShowBookingModal(false);
+    setSelectedRoute(null);
+  };
+
+  const handleBookingSuccess = () => {
+    handleCloseBooking();
+    // Refresh so the booked route reflects its new "Booked" status
+    fetchRoutes();
+  };
+
+  const handleToggleSave = async (route) => {
+    setSavingId(route._id);
     try {
-      await api.post(`/commuter/routes/${routeId}/join`);
-      alert("Successfully joined route!");
+      if (route.isSaved) {
+        await api.post(`/commuter/routes/${route._id}/leave`);
+      } else {
+        await api.post(`/commuter/routes/${route._id}/save`);
+      }
+      // Optimistically update local state, then refetch to stay in sync
+      setRoutes((prev) =>
+        prev.map((r) =>
+          r._id === route._id ? { ...r, isSaved: !r.isSaved } : r,
+        ),
+      );
       fetchRoutes();
     } catch (error) {
-      console.error("Error joining route:", error);
-      alert(error.response?.data?.message || "Failed to join route");
+      console.error("Error updating saved route:", error);
+      alert(error.response?.data?.message || "Failed to update saved route");
+    } finally {
+      setSavingId(null);
     }
   };
 
-  const handleLeaveRoute = async (routeId) => {
-    if (!window.confirm("Are you sure you want to leave this route?")) return;
-    try {
-      await api.post(`/commuter/routes/${routeId}/leave`);
-      alert("Successfully left route!");
-      fetchRoutes();
-    } catch (error) {
-      console.error("Error leaving route:", error);
-      const msg = error.response?.data?.message || "Failed to leave route";
-      alert(msg);
-    }
-  };
-
-  const filteredRoutes = routes.filter(route => {
-    const name = (route.name || '').toLowerCase();
-    const start = (route.startPoint || '').toLowerCase();
-    const end = (route.endPoint || '').toLowerCase();
+  const filteredRoutes = routes.filter((route) => {
+    const name = (route.name || "").toLowerCase();
+    const start = (route.startPoint || "").toLowerCase();
+    const end = (route.endPoint || "").toLowerCase();
     const query = searchQuery.toLowerCase();
-    const matchesSearch = !searchQuery || name.includes(query) || start.includes(query) || end.includes(query);
-    
+    const matchesSearch =
+      !searchQuery ||
+      name.includes(query) ||
+      start.includes(query) ||
+      end.includes(query);
+
     if (filterStatus === "all") return matchesSearch;
-    if (filterStatus === "active") return matchesSearch && route.isMember;
-    if (filterStatus === "available") return matchesSearch && !route.isMember;
+    if (filterStatus === "saved") return matchesSearch && route.isSaved;
+    if (filterStatus === "booked") return matchesSearch && route.isBooked;
+    if (filterStatus === "available") return matchesSearch && !route.isBooked;
     return matchesSearch;
   });
 
-  const activeCount = routes.filter(r => r.isMember).length;
+  const bookedCount = routes.filter((r) => r.isBooked).length;
+  const savedCount = routes.filter((r) => r.isSaved).length;
 
   if (loading) {
     return (
       <div className="fr-find-routes-section">
-        <h2>My Active Routes</h2>
+        <h2>Find Routes</h2>
         <div className="fr-loading">Loading routes...</div>
       </div>
     );
@@ -75,8 +102,10 @@ export default function FindRoutes() {
 
   return (
     <div className="fr-find-routes-section">
-      <h2>My Active Routes</h2>
-      <p className="fr-routes-count">{activeCount} Active</p>
+      <h2>Find Routes</h2>
+      <p className="fr-routes-count">
+        {bookedCount} Booked &bull; {savedCount} Saved
+      </p>
 
       <div className="fr-routes-controls">
         <div className="fr-search-box">
@@ -95,7 +124,8 @@ export default function FindRoutes() {
             className="fr-filter-select"
           >
             <option value="all">All Routes</option>
-            <option value="active">My Routes</option>
+            <option value="booked">My Booked</option>
+            <option value="saved">Saved</option>
             <option value="available">Available</option>
           </select>
         </div>
@@ -121,14 +151,22 @@ export default function FindRoutes() {
               <div className="fr-route-header">
                 <div className="fr-route-info">
                   <h3>{route.name}</h3>
-                  <span
-                    className={`fr-route-status ${route.isMember ? "fr-active" : "fr-available"}`}
-                  >
-                    {route.isMember ? "Active" : "Available"}
-                  </span>
+                  <div className="fr-route-badges">
+                    {route.isBooked && (
+                      <span className="fr-route-status fr-booked">Booked</span>
+                    )}
+                    {route.isSaved && (
+                      <span className="fr-route-status fr-saved">Saved</span>
+                    )}
+                    {!route.isBooked && !route.isSaved && (
+                      <span className="fr-route-status fr-available">
+                        Available
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="fr-route-price">
-                  {route.pricing?.currency || "KWD"}{" "}
+                  {route.pricing?.currency || route.currency || "KWD"}{" "}
                   {route.price || route.pricing?.oneWayPrice || 0}
                 </div>
               </div>
@@ -202,27 +240,39 @@ export default function FindRoutes() {
               </div>
 
               <div className="fr-route-actions">
-                {route.isMember ? (
-                  <button
-                    className="fr-leave-btn"
-                    onClick={() => handleLeaveRoute(route._id)}
-                  >
-                    Leave Route
-                  </button>
-                ) : (
-                  <button
-                    className="fr-join-btn"
-                    onClick={() => handleJoinRoute(route._id)}
-                    disabled={route.availableSeats <= 0}
-                  >
-                    {route.availableSeats <= 0 ? "Full" : "Join Route"}
-                  </button>
-                )}
+                <button
+                  className="fr-save-btn"
+                  onClick={() => handleToggleSave(route)}
+                  disabled={savingId === route._id}
+                >
+                  {savingId === route._id
+                    ? "..."
+                    : route.isSaved
+                      ? "Unsave"
+                      : "Save"}
+                </button>
+                <button
+                  className="fr-book-btn"
+                  onClick={() => handleOpenBooking(route)}
+                  disabled={route.availableSeats <= 0}
+                >
+                  {route.availableSeats <= 0 ? "Full" : "Book This Route"}
+                </button>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {selectedRoute && (
+        <BookingModal
+          route={selectedRoute}
+          isOpen={showBookingModal}
+          onClose={handleCloseBooking}
+          isCorporate={false}
+          onSuccess={handleBookingSuccess}
+        />
+      )}
     </div>
   );
 }
