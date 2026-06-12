@@ -1547,48 +1547,8 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
                   className="b2c-form-input"
                 />
                 <small className="b2c-form-help">
-                  Daily price per round trip
+                  Daily price per round trip (charged per travel day)
                 </small>
-              </div>
-            </div>
-
-            <div className="b2c-form-row">
-              <div className="b2c-form-group">
-                <label htmlFor="monthlyOneWayPrice" className="b2c-form-label">
-                  Monthly Pass (One Way) ({getCurrencySymbol(currency)})
-                </label>
-                <input
-                  type="number"
-                  id="monthlyOneWayPrice"
-                  name="monthlyOneWayPrice"
-                  placeholder="Auto-calculated"
-                  value={formData.monthlyOneWayPrice}
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                  className="b2c-form-input"
-                  readOnly
-                />
-                <small className="b2c-form-help">Auto-calculated</small>
-              </div>
-
-              <div className="b2c-form-group">
-                <label className="b2c-form-label">
-                  Monthly Pass (Round Trip) ({getCurrencySymbol(currency)})
-                </label>
-                <input
-                  type="number"
-                  id="monthlyRoundTripPrice"
-                  name="monthlyRoundTripPrice"
-                  placeholder="Auto-calculated"
-                  value={formData.monthlyRoundTripPrice}
-                  onChange={handleChange}
-                  min="0"
-                  step={decimals === 3 ? "0.001" : "0.01"}
-                  className="b2c-form-input"
-                  readOnly
-                />
-                <small className="b2c-form-help">Auto-calculated</small>
               </div>
             </div>
 

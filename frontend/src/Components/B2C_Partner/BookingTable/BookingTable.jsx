@@ -732,24 +732,25 @@ function BookingTable() {
                             <path d="M22 12c-2.667 4.667-6 7-10 7s-7.333-2.333-10-7c2.667-4.667 6-7 10-7s7.333 2.333 10 7" />
                           </svg>
                         </button>
-                        {booking.bookingStatus === "CONFIRMED" && (
-                          <>
-                            <button
-                              className="b2c-btn-accept"
-                              onClick={() => handleAccept(booking)}
-                              title="Accept Booking"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              className="b2c-btn-reject"
-                              onClick={() => handleRejectClick(booking)}
-                              title="Reject Booking"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
+                        {booking.bookingStatus === "CONFIRMED" &&
+                          !booking.acceptedAt && (
+                            <>
+                              <button
+                                className="b2c-btn-accept"
+                                onClick={() => handleAccept(booking)}
+                                title="Accept Booking"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                className="b2c-btn-reject"
+                                onClick={() => handleRejectClick(booking)}
+                                title="Reject Booking"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
                       </div>
                     </td>
                   </tr>

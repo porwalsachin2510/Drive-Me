@@ -27,6 +27,36 @@ import {
 } from "react-icons/fa";
 import "./bookingmodal.css";
 
+// ---- Monthly pass date helpers (module scope) ----
+// Format a Date to YYYY-MM-DD using LOCAL time (avoids UTC timezone shifts).
+const formatLocalDate = (d) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+// Add `months` whole calendar months to a date. The day-of-month is clamped
+// for shorter target months (e.g. Jan 31 + 1 month -> Feb 28).
+const addMonths = (date, months) => {
+  const d = new Date(date);
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, lastDay));
+  return d;
+};
+
+// End date for an N-month pass: add N whole months then step back ONE day so
+// the inclusive day-count equals the real number of days in those calendar
+// months (28/29/30/31). e.g. Jun 12 -> Jul 11 = 30 days (June has 30 days).
+const computeEndDateForMonths = (start, months) => {
+  const end = addMonths(start, months);
+  end.setDate(end.getDate() - 1);
+  return end;
+};
+
 const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const dispatch = useDispatch();
   const { loading, error, currentBooking, bookingCreated, paymentData } =
@@ -67,17 +97,31 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     return `${year}-${month}-${day}`; // Format: YYYY-MM-DD in local timezone
   }); // Custom start date
   const [passEndDate, setPassEndDate] = useState(() => {
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 1);
-    // Use local date formatting to avoid timezone shift issues
-    const year = endDate.getFullYear();
-    const month = String(endDate.getMonth() + 1).padStart(2, "0");
-    const day = String(endDate.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // Format: YYYY-MM-DD in local timezone
+    // Default to a 1-month pass. End date = start + 1 month - 1 day so the
+    // inclusive day-count matches the actual calendar month length.
+    const end = computeEndDateForMonths(new Date(), 1);
+    return formatLocalDate(end);
   }); // Custom end date
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedDays, setSelectedDays] = useState([]); // Selected travel days (Mon-Sun)
+
+  // Keep the month count (passDuration) in sync with the selected date range
+  // so the stepper, summary, and backend durationMonths always agree — even
+  // when the user edits the End Date manually.
+  useEffect(() => {
+    const start = new Date(passStartDate);
+    const end = new Date(passEndDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return;
+    let months = 0;
+    while (months < 120) {
+      const candidateEnd = computeEndDateForMonths(start, months + 1);
+      if (candidateEnd <= end) months += 1;
+      else break;
+    }
+    const derived = Math.max(1, months);
+    setPassDuration((prev) => (prev === derived ? prev : derived));
+  }, [passStartDate, passEndDate]);
 
   // Fetch payment settings to check if online payments are enabled
   useEffect(() => {
@@ -426,19 +470,46 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     return count;
   };
 
-  // Calculate duration in months from custom dates
+  // Calculate duration in WHOLE calendar months from the custom date range.
+  // A pass is billed per calendar month, so we count how many full months fit
+  // between the start and (inclusive) end date. Minimum is always 1 month.
   const calculateDurationFromDates = () => {
     const start = new Date(passStartDate);
     const end = new Date(passEndDate);
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    // Round to nearest 0.5 month
-    return Math.max(0.5, Math.round((diffDays / 30) * 2) / 2);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+      return 1;
+    }
+    let months = 0;
+    // Increase the month count while an N-month pass still ends on/before the
+    // selected end date (computeEndDateForMonths is inclusive-aware).
+    while (months < 120) {
+      const candidateEnd = computeEndDateForMonths(start, months + 1);
+      if (candidateEnd <= end) {
+        months += 1;
+      } else {
+        break;
+      }
+    }
+    return Math.max(1, months);
   };
 
   // Use custom date calculation for actual travel days
   const actualTravelDays = calculateActualTravelDays();
   const effectiveDuration = calculateDurationFromDates();
+
+  // Per-day rate for a specific pass type (route pricing is stored per-day).
+  const getPerDayPriceFor = (passType) => {
+    if (passType === "ONE_WAY") {
+      return route.pricing?.oneWayPrice || route.oneWayPrice || 0;
+    }
+    return route.pricing?.roundTripPrice || route.roundTripPrice || 0;
+  };
+
+  // Computed amount for a pass type over the currently-selected pass period.
+  // This is what the commuter actually pays = perDay × actual travel days × seats.
+  // It keeps the "Select Pass Type" cards consistent with the final total below.
+  const getPassTypeAmount = (passType) =>
+    getPerDayPriceFor(passType) * actualTravelDays * numberOfSeats;
 
   // Calculate total based on per-day price and actual travel days
   const totalAmount = (perDayPrice * actualTravelDays * numberOfSeats).toFixed(
@@ -447,17 +518,15 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const adminCommission = (totalAmount * 0.2).toFixed(currencyDecimals);
   const driverEarnings = (totalAmount * 0.8).toFixed(currencyDecimals);
 
-  // Update end date when passDuration changes (from dropdown)
+  // Update end date when passDuration changes (from quick-select / stepper).
+  // End date = start + N months - 1 day, so the inclusive day-count equals the
+  // real number of days in those calendar months (28/29/30/31).
   const handleDurationChange = (months) => {
-    setPassDuration(months);
+    const safeMonths = Math.max(1, Math.round(Number(months) || 1));
+    setPassDuration(safeMonths);
     const start = new Date(passStartDate);
-    const newEnd = new Date(start);
-    newEnd.setMonth(newEnd.getMonth() + months);
-    // Use local date formatting to avoid timezone shift issues
-    const year = newEnd.getFullYear();
-    const month = String(newEnd.getMonth() + 1).padStart(2, "0");
-    const day = String(newEnd.getDate()).padStart(2, "0");
-    setPassEndDate(`${year}-${month}-${day}`);
+    const newEnd = computeEndDateForMonths(start, safeMonths);
+    setPassEndDate(formatLocalDate(newEnd));
   };
 
   // Get min date (today)
@@ -1719,12 +1788,18 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                         </div>
                         <div className="pass-type-price">
                           {currency}{" "}
-                          {(
-                            route.pricing?.monthlyOneWayPrice ||
-                            route.monthlyPrice ||
-                            3000
-                          ).toFixed(currencyDecimals)}
-                          /month
+                          {getPerDayPriceFor("ONE_WAY").toFixed(
+                            currencyDecimals,
+                          )}
+                          /day
+                        </div>
+                        <div className="pass-type-subprice">
+                          ≈ {currency}{" "}
+                          {getPassTypeAmount("ONE_WAY").toFixed(
+                            currencyDecimals,
+                          )}{" "}
+                          for {actualTravelDays} day
+                          {actualTravelDays !== 1 ? "s" : ""}
                         </div>
                         <div className="pass-type-description">
                           Travel in one direction only (e.g., morning to work)
@@ -1774,10 +1849,18 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                         </div>
                         <div className="pass-type-price">
                           {currency}{" "}
-                          {(
-                            route.pricing?.monthlyRoundTripPrice || 6000
-                          ).toFixed(currencyDecimals)}
-                          /month
+                          {getPerDayPriceFor("ROUND_TRIP").toFixed(
+                            currencyDecimals,
+                          )}
+                          /day
+                        </div>
+                        <div className="pass-type-subprice">
+                          ≈ {currency}{" "}
+                          {getPassTypeAmount("ROUND_TRIP").toFixed(
+                            currencyDecimals,
+                          )}{" "}
+                          for {actualTravelDays} day
+                          {actualTravelDays !== 1 ? "s" : ""}
                         </div>
                         <div className="pass-type-description">
                           Travel both directions (e.g., morning to work +
@@ -1969,6 +2052,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                     >
                       {[
                         { months: 1, label: "1 Month" },
+                        { months: 2, label: "2 Months" },
                         { months: 3, label: "3 Months" },
                         { months: 6, label: "6 Months" },
                         { months: 12, label: "12 Months" },
@@ -1996,6 +2080,107 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                           {label}
                         </button>
                       ))}
+                    </div>
+
+                    {/* Flexible month stepper — pick ANY number of months
+                        (2, 4, 5, 7, 8 ... or more). Minimum is 1 month. */}
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "13px",
+                          color: "#374151",
+                          fontWeight: "500",
+                        }}
+                      >
+                        Or choose number of months:
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDurationChange(Math.max(1, passDuration - 1))
+                          }
+                          disabled={passDuration <= 1}
+                          aria-label="Decrease months"
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "8px",
+                            border: "1px solid #d1d5db",
+                            backgroundColor:
+                              passDuration <= 1 ? "#f3f4f6" : "#fff",
+                            color: "#374151",
+                            cursor:
+                              passDuration <= 1 ? "not-allowed" : "pointer",
+                            fontSize: "16px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <FaMinus />
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          max={60}
+                          value={passDuration}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val))
+                              handleDurationChange(
+                                Math.min(60, Math.max(1, val)),
+                              );
+                          }}
+                          style={{
+                            width: "64px",
+                            height: "36px",
+                            textAlign: "center",
+                            borderRadius: "8px",
+                            border: "1px solid #d1d5db",
+                            fontSize: "14px",
+                            fontWeight: "600",
+                            color: "#111827",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleDurationChange(passDuration + 1)}
+                          aria-label="Increase months"
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "8px",
+                            border: "1px solid #d1d5db",
+                            backgroundColor: "#fff",
+                            color: "#374151",
+                            cursor: "pointer",
+                            fontSize: "16px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <FaPlus />
+                        </button>
+                        <span style={{ fontSize: "13px", color: "#6b7280" }}>
+                          month{passDuration !== 1 ? "s" : ""}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -2042,16 +2227,19 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                           value={passStartDate}
                           min={getMinDate()}
                           onChange={(e) => {
-                            setPassStartDate(e.target.value);
-                            // Ensure end date is after start date
-                            if (
-                              new Date(e.target.value) >= new Date(passEndDate)
-                            ) {
-                              const newEnd = new Date(e.target.value);
-                              newEnd.setMonth(newEnd.getMonth() + 1);
-                              setPassEndDate(
-                                newEnd.toISOString().split("T")[0],
+                            const newStart = e.target.value;
+                            setPassStartDate(newStart);
+                            // Re-anchor the end date so the pass keeps its
+                            // selected month count from the new start date
+                            // (minimum 1 month, calendar-accurate).
+                            const startObj = new Date(newStart);
+                            if (!isNaN(startObj.getTime())) {
+                              const months = Math.max(1, passDuration);
+                              const newEnd = computeEndDateForMonths(
+                                startObj,
+                                months,
                               );
+                              setPassEndDate(formatLocalDate(newEnd));
                             }
                           }}
                           style={{
@@ -2077,8 +2265,28 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                         <input
                           type="date"
                           value={passEndDate}
-                          min={passStartDate}
-                          onChange={(e) => setPassEndDate(e.target.value)}
+                          min={formatLocalDate(
+                            computeEndDateForMonths(new Date(passStartDate), 1),
+                          )}
+                          onChange={(e) => {
+                            const chosenEnd = e.target.value;
+                            // Enforce a minimum of one full calendar month. If
+                            // the user picks an earlier date, snap to the
+                            // 1-month minimum end date.
+                            const minEnd = computeEndDateForMonths(
+                              new Date(passStartDate),
+                              1,
+                            );
+                            const chosenObj = new Date(chosenEnd);
+                            if (
+                              isNaN(chosenObj.getTime()) ||
+                              chosenObj < minEnd
+                            ) {
+                              setPassEndDate(formatLocalDate(minEnd));
+                            } else {
+                              setPassEndDate(chosenEnd);
+                            }
+                          }}
                           style={{
                             width: "100%",
                             padding: "10px 12px",
@@ -2087,6 +2295,15 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                             fontSize: "14px",
                           }}
                         />
+                        <p
+                          style={{
+                            fontSize: "11px",
+                            color: "#9ca3af",
+                            marginTop: "4px",
+                          }}
+                        >
+                          Minimum pass duration is 1 month.
+                        </p>
                       </div>
                     </div>
 

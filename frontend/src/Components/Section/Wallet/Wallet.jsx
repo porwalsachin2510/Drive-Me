@@ -9,9 +9,20 @@ export default function Wallet() {
   const [loading, setLoading] = useState(true);
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [addAmount, setAddAmount] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  // Get currency from wallet data or default to KWD
-  const walletCurrency = walletData?.currency || "KWD";
+  // Currency is driven entirely by the wallet record (which is derived from the
+  // user's country on the backend). Defaults to AED until data loads.
+  const walletCurrency = walletData?.currency || "AED";
+
+  // Number of decimals to display: 3 for KWD/BHD/OMR, 2 for everything else.
+  const currencyDecimals = ["KWD", "BHD", "OMR"].includes(walletCurrency)
+    ? 3
+    : 2;
+
+  // Format a numeric amount with the correct currency code and decimals.
+  const formatAmount = (value) =>
+    `${walletCurrency} ${Number(value || 0).toFixed(currencyDecimals)}`;
 
   useEffect(() => {
     fetchWalletData();
@@ -20,11 +31,22 @@ export default function Wallet() {
   const fetchWalletData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/wallet/balance');
-      setWalletData(response.data.data?.wallet || response.data.wallet || { balance: 0 });
-      
-      const transactionsResponse = await api.get('/wallet/transactions');
-      setTransactions(transactionsResponse.data.data?.transactions || transactionsResponse.data.transactions || []);
+      const response = await api.get("/wallet/balance");
+      const data = response.data.data || response.data;
+      const wallet = data?.wallet || { balance: 0 };
+      // Surface the spend stats computed by the backend onto the wallet object.
+      setWalletData({
+        ...wallet,
+        last30DaysSpent: data?.last30DaysSpent ?? wallet.last30DaysSpent ?? 0,
+        totalSpent: data?.totalSpent ?? wallet.totalSpent ?? 0,
+      });
+
+      const transactionsResponse = await api.get("/wallet/transactions");
+      setTransactions(
+        transactionsResponse.data.data?.transactions ||
+          transactionsResponse.data.transactions ||
+          [],
+      );
     } catch (error) {
       console.error("Error fetching wallet data:", error);
     } finally {
@@ -39,22 +61,28 @@ export default function Wallet() {
     }
 
     try {
-      // Create a payment session first, then redirect to payment gateway
-      const response = await api.post('/wallet/create-payment-session', {
+      setSubmitting(true);
+      // Create a payment session first, then redirect to payment gateway.
+      // Currency is resolved on the backend from the user's wallet/country.
+      const response = await api.post("/wallet/create-payment-session", {
         amount: parseFloat(addAmount),
-        paymentMethod: 'card',
+        paymentMethod: "card",
         currency: walletCurrency,
       });
 
       const data = response.data;
-      if (data.success && data.data?.paymentSession?.paymentUrl) {
-        window.location.href = data.data.paymentSession.paymentUrl;
+      const paymentUrl =
+        data.data?.paymentSession?.paymentUrl || data.data?.paymentUrl;
+      if (data.success && paymentUrl) {
+        window.location.href = paymentUrl;
       } else {
         alert("Failed to create payment session. Please try again.");
       }
     } catch (error) {
       console.error("Error adding funds:", error);
       alert("Failed to add funds. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -77,9 +105,13 @@ export default function Wallet() {
     switch (type) {
       case "RIDE_PAYMENT":
       case "PENALTY":
+      case "WITHDRAWAL":
+      case "CANCELLATION_FEE":
         return "#dc3545";
       case "WALLET_TOPUP":
+      case "DEPOSIT":
       case "REFUND":
+      case "COMMISSION_REFUND":
         return "#28a745";
       default:
         return "#6c757d";
@@ -113,29 +145,26 @@ export default function Wallet() {
         <div className="balance-header">
           <h3>Current Balance</h3>
           <div className="balance-amount">
-            {walletCurrency} {walletData.balance?.toFixed(3) || "0.000"}
+            {formatAmount(walletData.balance)}
           </div>
         </div>
-        
+
         <div className="balance-stats">
           <div className="stat-item">
             <span className="stat-label">Last 30 Days</span>
             <span className="stat-value">
-              {walletCurrency} {walletData.last30DaysSpent?.toFixed(3) || "0.000"}
+              {formatAmount(walletData.last30DaysSpent)}
             </span>
           </div>
           <div className="stat-item">
             <span className="stat-label">Total Spent</span>
             <span className="stat-value">
-              {walletCurrency} {walletData.totalSpent?.toFixed(3) || "0.000"}
+              {formatAmount(walletData.totalSpent)}
             </span>
           </div>
         </div>
 
-        <button
-          className="add-funds-btn"
-          onClick={() => setShowAddFunds(true)}
-        >
+        <button className="add-funds-btn" onClick={() => setShowAddFunds(true)}>
           + Add Funds
         </button>
       </div>
@@ -161,7 +190,7 @@ export default function Wallet() {
                 <label>Amount ({walletCurrency})</label>
                 <input
                   type="number"
-                  step="0.001"
+                  step={currencyDecimals === 3 ? "0.001" : "0.01"}
                   min="1"
                   max="1000"
                   value={addAmount}
@@ -210,9 +239,13 @@ export default function Wallet() {
               <button
                 className="confirm-btn"
                 onClick={handleAddFunds}
-                disabled={!addAmount || parseFloat(addAmount) <= 0}
+                disabled={
+                  !addAmount || parseFloat(addAmount) <= 0 || submitting
+                }
               >
-                Add KWD {addAmount}
+                {submitting
+                  ? "Processing..."
+                  : `Add ${walletCurrency} ${addAmount || ""}`.trim()}
               </button>
             </div>
           </div>
@@ -222,7 +255,7 @@ export default function Wallet() {
       {/* Transactions History */}
       <div className="transactions-section">
         <h3>Transaction History</h3>
-        
+
         {transactions.length === 0 ? (
           <div className="no-transactions">
             <div className="no-transactions-icon">📋</div>
@@ -235,40 +268,52 @@ export default function Wallet() {
                 <div className="transaction-icon">
                   {getTransactionIcon(transaction.type)}
                 </div>
-                
+
                 <div className="transaction-details">
                   <div className="transaction-info">
                     <h4>{transaction.description}</h4>
                     <p className="transaction-date">
-                      {new Date(transaction.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
+                      {new Date(transaction.createdAt).toLocaleDateString(
+                        "en-US",
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )}
                     </p>
                   </div>
-                  
+
                   <div className="transaction-amount">
                     <span
                       className="amount"
                       style={{ color: getTransactionColor(transaction.type) }}
                     >
-                      {transaction.type === "WALLET_TOPUP" || transaction.type === "REFUND"
-                        ? `+KWD ${transaction.amount.toFixed(3)}`
-                        : `-KWD ${transaction.amount.toFixed(3)}`}
+                      {transaction.type === "WALLET_TOPUP" ||
+                      transaction.type === "DEPOSIT" ||
+                      transaction.type === "REFUND" ||
+                      transaction.type === "COMMISSION_REFUND"
+                        ? `+${formatAmount(transaction.amount)}`
+                        : `-${formatAmount(transaction.amount)}`}
                     </span>
-                    <span className={`status ${transaction.status.toLowerCase()}`}>
-                      {transaction.status}
-                    </span>
+                    {transaction.status && (
+                      <span
+                        className={`status ${transaction.status.toLowerCase()}`}
+                      >
+                        {transaction.status}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <div className="transaction-reference">
-                  <span className="ref-label">Ref:</span>
-                  <span className="ref-number">{transaction.reference}</span>
-                </div>
+                {transaction.reference && (
+                  <div className="transaction-reference">
+                    <span className="ref-label">Ref:</span>
+                    <span className="ref-number">{transaction.reference}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>

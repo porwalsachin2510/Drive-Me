@@ -320,6 +320,31 @@ export const createB2CMonthlyPass = async (req, res) => {
             });
         }
 
+        // Enforce a MINIMUM pass duration of one full calendar month. A monthly
+        // pass cannot be shorter than the month it starts in (28/29/30/31 days).
+        // We compute the earliest valid end date (start + 1 month - 1 day) and
+        // reject anything shorter than that.
+        const minEndDate = new Date(startDate);
+        const startDay = minEndDate.getDate();
+        minEndDate.setDate(1);
+        minEndDate.setMonth(minEndDate.getMonth() + 1);
+        const lastDayOfTargetMonth = new Date(
+            minEndDate.getFullYear(),
+            minEndDate.getMonth() + 1,
+            0
+        ).getDate();
+        minEndDate.setDate(Math.min(startDay, lastDayOfTargetMonth));
+        minEndDate.setDate(minEndDate.getDate() - 1);
+        minEndDate.setHours(23, 59, 59, 999);
+
+        if (endDate < minEndDate) {
+            return res.status(400).json({
+                success: false,
+                message: "Minimum monthly pass duration is 1 month. Please select an end date at least one month after the start date.",
+                error: "MINIMUM_DURATION_NOT_MET"
+            });
+        }
+
         // ==================== SERVER-SIDE PRICING (AUTHORITATIVE) ====================
         // A monthly pass ALWAYS bills for the route's full weekly availability,
         // regardless of how many days the commuter personally intends to travel.
@@ -1328,10 +1353,61 @@ export const renewB2CMonthlyPass = async (req, res) => {
 
         // Calculate new amount
         const route = await B2CPartnerRoute.findById(monthlyPass.routeId);
-        const pricePerMonth = monthlyPass.passType === "ROUND_TRIP"
-            ? route.pricing.monthlyRoundTripPrice
-            : route.pricing.monthlyOneWayPrice;
-        const newTotalAmount = pricePerMonth * durationMonths;
+
+        // ===== Per-day pricing (authoritative) =====
+        // Renewal cost = per-day rate × number of operating days in the renewal
+        // period × seats. This mirrors the booking-creation logic so a renewal
+        // costs exactly the same as the original booking would for those days,
+        // instead of relying on a stale flat "monthly" price.
+        const RENEWAL_ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const RENEWAL_DAY_MAP = {
+            mon: 'Monday', monday: 'Monday',
+            tue: 'Tuesday', tues: 'Tuesday', tuesday: 'Tuesday',
+            wed: 'Wednesday', weds: 'Wednesday', wednesday: 'Wednesday',
+            thu: 'Thursday', thur: 'Thursday', thurs: 'Thursday', thursday: 'Thursday',
+            fri: 'Friday', friday: 'Friday',
+            sat: 'Saturday', saturday: 'Saturday',
+            sun: 'Sunday', sunday: 'Sunday'
+        };
+        const normalizeRenewalDay = (d) => RENEWAL_DAY_MAP[String(d).trim().toLowerCase()] || null;
+        const rawRenewalDays = (Array.isArray(route?.availableDays) ? route.availableDays : []) || [];
+        const normalizedRenewalDays = rawRenewalDays.map(normalizeRenewalDay).filter(Boolean);
+        const renewalBillingDays = RENEWAL_ALL_DAYS.filter((d) => normalizedRenewalDays.includes(d));
+        const renewalDays = renewalBillingDays.length > 0 ? renewalBillingDays : RENEWAL_ALL_DAYS;
+        const renewalDaysLower = renewalDays.map((d) => d.toLowerCase());
+        const renewalDayIdx = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        // The renewal period starts the day after the current end date.
+        const renewalStart = new Date(monthlyPass.endDate);
+        renewalStart.setDate(renewalStart.getDate() + 1);
+        renewalStart.setHours(0, 0, 0, 0);
+        const renewalEnd = new Date(newEndDate);
+        renewalEnd.setHours(23, 59, 59, 999);
+
+        let renewalTravelDays = 0;
+        const renewalCursor = new Date(renewalStart);
+        while (renewalCursor <= renewalEnd) {
+            if (renewalDaysLower.includes(renewalDayIdx[renewalCursor.getDay()].toLowerCase())) {
+                renewalTravelDays++;
+            }
+            renewalCursor.setDate(renewalCursor.getDate() + 1);
+        }
+
+        const renewalPerDayRate = monthlyPass.passType === "ROUND_TRIP"
+            ? (route.pricing?.roundTripPrice ?? route.roundTripPrice ?? 0)
+            : (route.pricing?.oneWayPrice ?? route.oneWayPrice ?? 0);
+        const renewalSeats = Number(monthlyPass.numberOfSeats) > 0 ? Number(monthlyPass.numberOfSeats) : 1;
+        const newTotalAmount = Number(
+            (renewalPerDayRate * renewalTravelDays * renewalSeats).toFixed(3)
+        );
+
+        console.log("[v0] Renewal per-day pricing recompute:", {
+            renewalDays,
+            renewalTravelDays,
+            renewalPerDayRate,
+            renewalSeats,
+            newTotalAmount
+        });
 
         // Get dynamic commission rate for B2C Partner
         const renewalCommissionRate = await getB2CPartnerCommissionRate(monthlyPass.partnerId);

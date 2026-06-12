@@ -1,6 +1,7 @@
 import Wallet from "../models/Wallet.js"
 import User from "../models/User.js"
 import Transaction from "../models/Transaction.js"
+import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
 import WithdrawalRequest from "../models/WithdrawalRequest.js"
 import ProcessedPayment from "../models/ProcessedPayment.js"
 import { sendRealTimeNotification, notifyAdminsWalletEvent } from "../Services/socketService.js"
@@ -14,7 +15,7 @@ import crypto from "crypto"
 export const createPaymentSession = async (req, res) => {
     try {
         const userId = req.userId
-        const { amount, paymentMethod, currency = "KWD" } = req.body
+        const { amount, paymentMethod } = req.body
 
         if (!amount || amount <= 0) {
             return res.status(400).json({
@@ -39,7 +40,13 @@ export const createPaymentSession = async (req, res) => {
             })
         }
 
-        // Detect country and get gateway
+        // ===== Determine currency from the source of truth =====
+        // Prefer the user's existing wallet currency, then their country, and
+        // only fall back to the request body. Never trust a hardcoded default.
+        const existingWallet = await Wallet.findOne({ userId })
+        const currency = existingWallet?.currency || getCountryCurrency(user.country) || req.body.currency || "AED"
+
+        // Detect country and get gateway from the resolved currency
         const country = detectCountryFromCurrency(currency)
         const gateway = getPaymentGateway(country)
 
@@ -150,11 +157,64 @@ export const getWalletBalance = async (req, res) => {
             await wallet.save()
         }
 
+        // ===== Compute real "spent" statistics =====
+        // A commuter mostly pays for rides/passes directly through the payment
+        // gateway (Stripe/TAP), so those amounts are NOT in the wallet's
+        // transaction array. We therefore derive spend from completed passenger
+        // bookings AND from any debit-type wallet transactions (to cover wallet
+        // payments / penalties), without double counting.
+        const now = new Date()
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+        let totalSpent = 0
+        let last30DaysSpent = 0
+
+        // 1) Completed passenger bookings paid by this user (gateway payments)
+        try {
+            const bookings = await B2CPassengerBooking.find({
+                passengerId: userId,
+                paymentStatus: "COMPLETED"
+            }).select("paymentAmount createdAt bookingDate")
+
+            bookings.forEach((b) => {
+                const amount = Number(b.paymentAmount) || 0
+                totalSpent += amount
+                const when = b.createdAt || b.bookingDate
+                if (when && new Date(when) >= thirtyDaysAgo) {
+                    last30DaysSpent += amount
+                }
+            })
+        } catch (bookingErr) {
+            console.error("[v0] Error summing passenger bookings for wallet stats:", bookingErr.message)
+        }
+
+        // 2) Debit-type wallet transactions (money leaving the commuter's wallet)
+        const DEBIT_TYPES = ["WITHDRAWAL", "PAYOUT", "TRANSFER", "PENALTY", "CANCELLATION_FEE", "COMMISSION_DEDUCTION", "EMI_PAYMENT"]
+            ; (wallet.transactions || []).forEach((t) => {
+                if (t.status === "FAILED") return
+                if (DEBIT_TYPES.includes(t.type)) {
+                    const amount = Number(t.amount) || 0
+                    totalSpent += amount
+                    if (t.createdAt && new Date(t.createdAt) >= thirtyDaysAgo) {
+                        last30DaysSpent += amount
+                    }
+                }
+            })
+
+        const walletObj = wallet.toObject ? wallet.toObject() : wallet
+
         return res.status(200).json({
             success: true,
             data: {
-                wallet,
-                balance: wallet.balance
+                wallet: {
+                    ...walletObj,
+                    totalSpent,
+                    last30DaysSpent
+                },
+                balance: wallet.balance,
+                currency: wallet.currency,
+                totalSpent,
+                last30DaysSpent
             }
         })
     } catch (error) {
@@ -180,19 +240,91 @@ export const getWalletTransactions = async (req, res) => {
             })
         }
 
-        const transactions = wallet.transactions
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .slice((page - 1) * limit, page * limit)
+        const walletCurrency = wallet.currency || "AED"
+
+        // ===== Build a unified transaction history =====
+        // Sources:
+        //  1. Embedded wallet.transactions (top-ups, withdrawals, etc.)
+        //  2. Transaction collection records scoped to this user
+        //  3. Completed passenger bookings (gateway ride/pass payments that
+        //     never touch the wallet balance but are still spend the user made)
+        const merged = []
+
+            // 1) Embedded wallet transactions
+            ; (wallet.transactions || []).forEach((t) => {
+                const obj = t.toObject ? t.toObject() : t
+                merged.push({
+                    _id: String(obj._id),
+                    type: obj.type === "DEPOSIT" ? "WALLET_TOPUP" : obj.type,
+                    amount: obj.amount,
+                    description: obj.description,
+                    status: obj.status || "COMPLETED",
+                    reference: obj.reference,
+                    currency: walletCurrency,
+                    createdAt: obj.createdAt,
+                })
+            })
+
+        // 2) Transaction collection records for this user
+        try {
+            const ledger = await Transaction.find({ userId }).lean()
+            ledger.forEach((t) => {
+                const isCredit = t.type === "CREDIT"
+                merged.push({
+                    _id: String(t._id),
+                    type: isCredit ? "WALLET_TOPUP" : "RIDE_PAYMENT",
+                    amount: t.amount,
+                    description: t.description,
+                    status: "COMPLETED",
+                    reference: t.referenceId ? String(t.referenceId) : undefined,
+                    currency: t.currency || walletCurrency,
+                    createdAt: t.createdAt,
+                })
+            })
+        } catch (ledgerErr) {
+            console.error("[v0] Error loading Transaction ledger:", ledgerErr.message)
+        }
+
+        // 3) Completed passenger bookings (gateway payments)
+        try {
+            const bookings = await B2CPassengerBooking.find({
+                passengerId: userId,
+                paymentStatus: "COMPLETED"
+            }).select("paymentAmount currency createdAt bookingDate pickupLocation dropoffLocation isMonthlyPass transactionId").lean()
+
+            bookings.forEach((b) => {
+                merged.push({
+                    _id: `booking-${String(b._id)}`,
+                    type: "RIDE_PAYMENT",
+                    amount: b.paymentAmount,
+                    description: b.isMonthlyPass
+                        ? `Monthly pass payment (${b.pickupLocation} ↔ ${b.dropoffLocation})`
+                        : `Ride payment (${b.pickupLocation} → ${b.dropoffLocation})`,
+                    status: "COMPLETED",
+                    reference: b.transactionId,
+                    currency: b.currency || walletCurrency,
+                    createdAt: b.createdAt || b.bookingDate,
+                })
+            })
+        } catch (bookingErr) {
+            console.error("[v0] Error loading bookings for transactions:", bookingErr.message)
+        }
+
+        // Sort newest first and paginate the merged list
+        merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        const pageNum = parseInt(page, 10) || 1
+        const limitNum = parseInt(limit, 10) || 20
+        const transactions = merged.slice((pageNum - 1) * limitNum, pageNum * limitNum)
 
         return res.status(200).json({
             success: true,
             data: {
                 transactions,
                 pagination: {
-                    page,
-                    limit,
-                    total: wallet.transactions.length,
-                    pages: Math.ceil(wallet.transactions.length / limit)
+                    page: pageNum,
+                    limit: limitNum,
+                    total: merged.length,
+                    pages: Math.ceil(merged.length / limitNum)
                 }
             }
         })

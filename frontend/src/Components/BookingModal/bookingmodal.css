@@ -556,6 +556,17 @@
   margin-bottom: 5px;
 }
 
+.pass-type-subprice {
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+  margin-bottom: 6px;
+}
+
+.pass-type-option.disabled .pass-type-subprice {
+  color: #9ca3af;
+}
+
 .pass-type-description {
   font-size: 12px;
   color: #6c757d;

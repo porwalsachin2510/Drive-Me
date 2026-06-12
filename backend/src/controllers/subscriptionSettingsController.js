@@ -368,6 +368,14 @@ const applyRenewalToPass = async (basePass, { paymentMethod, sessionId } = {}) =
     }
     await basePass.save();
 
+    // Credit admin commission + partner earnings exactly once per renewal.
+    // This is intentionally placed AFTER the idempotency guard above (and after the
+    // session id is recorded) so that re-entrant calls — e.g. the payment-verify
+    // endpoint AND the Stripe webhook both firing for the same renewal — can never
+    // double-credit the admin/partner wallets. Previously settlement ran before the
+    // guard at every call site, which is what tripled the wallet balances.
+    await settleRenewalEarnings(basePass);
+
     // Append the new trips to the commuter's existing booking so My Rides shows them.
     try {
         const booking = await B2CPassengerBooking.findOne({ monthlyPassId: basePass._id }).sort({ createdAt: -1 });
@@ -380,7 +388,16 @@ const applyRenewalToPass = async (basePass, { paymentMethod, sessionId } = {}) =
             booking.existingTripsCount = (booking.existingTripsCount || 0) + tripResult.existingCount;
             booking.passEndDate = newEndDate;
             booking.paymentStatus = "COMPLETED";
-            booking.bookingStatus = "CONFIRMED";
+            // A renewal is a continuation of the SAME booking. If the partner has
+            // already accepted (or started/finished) this booking, we must NOT
+            // revert it back to CONFIRMED — doing so makes the partner see the
+            // Accept/Reject buttons again for a booking they already handled.
+            // Only promote a not-yet-handled booking (PENDING) to CONFIRMED, and
+            // revive a previously REJECTED/CANCELLED booking on a fresh renewal.
+            const handledStatuses = ["ACCEPTED", "IN_PROGRESS", "COMPLETED"];
+            if (!handledStatuses.includes(booking.bookingStatus)) {
+                booking.bookingStatus = "CONFIRMED";
+            }
             await booking.save();
             console.log(
                 `[v0] Renewal extended booking ${booking._id}: +${newTripIds.length} trips (total ${booking.monthlyTrips.length}), pass valid until ${newEndDate.toISOString()}`
@@ -769,7 +786,6 @@ const renewWithWallet = async (req, res, settings, basePass, isManual) => {
         metadata: { monthlyPassId: basePass._id, type: "RENEWAL" },
     });
 
-    await settleRenewalEarnings(basePass);
     const { newEndDate } = await applyRenewalToPass(basePass, { paymentMethod: "WALLET" });
 
     settings.linkedPassId = basePass._id;
@@ -892,8 +908,6 @@ export const activateCardRenewalPass = async (passId, sessionId = null) => {
         console.error("[v0] activateCardRenewalPass: pass not found", passId);
         return null;
     }
-
-    await settleRenewalEarnings(basePass);
 
     const { alreadyApplied, newEndDate } = await applyRenewalToPass(basePass, {
         paymentMethod: "STRIPE",
@@ -1023,10 +1037,9 @@ export const confirmCashRenewal = async (req, res) => {
             });
         }
 
-        // Settle earnings (admin holds the cash, so credit admin commission;
-        // partner earnings are recorded as owed/earned just like other cash flows)
-        await settleRenewalEarnings(basePass);
-
+        // Settlement (admin commission + partner earnings) is now performed inside
+        // applyRenewalToPass under the idempotency guard so it can never run twice
+        // for the same renewal.
         // Extend the existing pass in place + append trips to the existing booking.
         const { newEndDate } = await applyRenewalToPass(basePass, { paymentMethod: "CASH" });
 
@@ -1193,7 +1206,6 @@ const autoRenewWallet = async (subscription, basePass) => {
         metadata: { monthlyPassId: basePass._id, type: "AUTO_RENEWAL" },
     });
 
-    await settleRenewalEarnings(basePass);
     const { newEndDate } = await applyRenewalToPass(basePass, { paymentMethod: "WALLET" });
 
     subscription.linkedPassId = basePass._id;
