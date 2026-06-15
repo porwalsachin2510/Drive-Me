@@ -27,6 +27,8 @@ const SubscriptionSettings = () => {
   const [activePass, setActivePass] = useState(null);
   const [activePasses, setActivePasses] = useState([]);
   const [selectedPassId, setSelectedPassId] = useState("");
+  // How many months the commuter wants to renew for (minimum 1, no fixed max).
+  const [renewalMonths, setRenewalMonths] = useState(1);
   const [walletBalance, setWalletBalance] = useState(0);
   const [walletCurrency, setWalletCurrency] = useState("AED");
   const [pendingCash, setPendingCash] = useState(null);
@@ -131,6 +133,7 @@ const SubscriptionSettings = () => {
       const response = await api.post("/subscription-settings/renew", {
         paymentMethod: backendMethod,
         passId: selectedPassId || undefined,
+        renewalMonths: Number(renewalMonths) || 1,
       });
       if (response.data.success) {
         const data = response.data.data;
@@ -210,10 +213,20 @@ const SubscriptionSettings = () => {
     activePasses.find((p) => String(p._id) === String(selectedPassId)) ||
     activePass;
 
+  // Per-month price (fall back to dividing the stored total by its duration).
+  const perMonthAmount = selectedPass
+    ? (selectedPass.monthlyAmount ??
+      (selectedPass.totalAmount || 0) /
+        Math.max(1, selectedPass.durationMonths || 1))
+    : 0;
+
+  // The renewal amount is the per-month price multiplied by the chosen months.
+  const computedRenewalAmount = perMonthAmount * (Number(renewalMonths) || 1);
+
   const walletInsufficient =
     settings.paymentMethod === "WALLET" &&
     selectedPass &&
-    walletBalance < (selectedPass.totalAmount || 0);
+    walletBalance < computedRenewalAmount;
 
   return (
     <div className="ss-subscription-settings-container">
@@ -282,11 +295,69 @@ const SubscriptionSettings = () => {
               <span className="ss-status-label">Renewal Amount</span>
               <span className="ss-status-value">
                 {selectedPass.currency}{" "}
-                {Number(selectedPass.totalAmount || 0).toFixed(2)}
+                {Number(computedRenewalAmount || 0).toFixed(2)}
               </span>
             </div>
           </div>
-        ) : (
+        ) : // placeholder branch handled below
+        null}
+
+        {selectedPass && !pendingCash && (
+          <div className="ss-setting-item ss-renewal-duration">
+            <label>Renew for how many months?</label>
+            <div className="ss-duration-control">
+              <button
+                type="button"
+                className="ss-duration-btn"
+                onClick={() =>
+                  setRenewalMonths((m) => Math.max(1, Number(m) - 1))
+                }
+                disabled={Number(renewalMonths) <= 1}
+                aria-label="Decrease months"
+              >
+                {"\u2212"}
+              </button>
+              <input
+                type="number"
+                min="1"
+                max="12"
+                value={renewalMonths}
+                onChange={(e) => {
+                  const v = Math.floor(Number(e.target.value));
+                  if (!Number.isFinite(v)) return setRenewalMonths(1);
+                  setRenewalMonths(Math.min(12, Math.max(1, v)));
+                }}
+                className="ss-duration-input"
+              />
+              <button
+                type="button"
+                className="ss-duration-btn"
+                onClick={() =>
+                  setRenewalMonths((m) => Math.min(12, Number(m) + 1))
+                }
+                disabled={Number(renewalMonths) >= 12}
+                aria-label="Increase months"
+              >
+                +
+              </button>
+              <span className="ss-duration-suffix">
+                month{Number(renewalMonths) > 1 ? "s" : ""}
+              </span>
+            </div>
+            <p className="ss-setting-description">
+              Choose any number of months (minimum 1). You&apos;ll be charged{" "}
+              {selectedPass.currency} {Number(perMonthAmount || 0).toFixed(2)} ×{" "}
+              {renewalMonths} ={" "}
+              <strong>
+                {selectedPass.currency}{" "}
+                {Number(computedRenewalAmount || 0).toFixed(2)}
+              </strong>
+              . Your pass will be extended from its current expiry date.
+            </p>
+          </div>
+        )}
+
+        {!selectedPass && (
           <p className="ss-setting-description">
             You don&apos;t have an active monthly pass yet. Purchase a pass to
             manage renewals here.

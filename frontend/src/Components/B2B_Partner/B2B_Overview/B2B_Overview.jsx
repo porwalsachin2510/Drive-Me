@@ -1,32 +1,32 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import B2B_MetricsCard from "../B2B_Common/B2B_MetricsCard/B2B_MetricsCard"
-import B2B_ContractCard from "../B2B_Common/B2B_ContractCard/B2B_ContractCard"
-import B2B_BarChart from "../B2B_Common/B2B_BarChart/B2B_BarChart"
-import B2B_LineChart from "../B2B_Common/B2B_LineChart/B2B_LineChart"
-import "./b2b_overview.css"
-import api from "../../../utils/api"
+import { useState, useEffect } from "react";
+import B2B_MetricsCard from "../B2B_Common/B2B_MetricsCard/B2B_MetricsCard";
+import B2B_ContractCard from "../B2B_Common/B2B_ContractCard/B2B_ContractCard";
+import B2B_BarChart from "../B2B_Common/B2B_BarChart/B2B_BarChart";
+import B2B_LineChart from "../B2B_Common/B2B_LineChart/B2B_LineChart";
+import "./b2b_overview.css";
+import api from "../../../utils/api";
 
 function B2B_Overview() {
-  const [overview, setOverview] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchOverviewData()
-  }, [])
+    fetchOverviewData();
+  }, []);
 
   const fetchOverviewData = async () => {
     try {
-      setLoading(true)
-      const response = await api.get('/b2b-partner/overview')
-      setOverview(response.data.data.overview)
+      setLoading(true);
+      const response = await api.get("/b2b-partner/overview");
+      setOverview(response.data.data.overview);
     } catch (error) {
-      console.error("Error fetching overview data:", error)
+      console.error("Error fetching overview data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -49,7 +49,7 @@ function B2B_Overview() {
   }
 
   const currency = overview.revenue?.currency || "AED";
-  
+
   const metrics = [
     {
       label: "ACTIVE VEHICLES",
@@ -73,12 +73,26 @@ function B2B_Overview() {
     },
   ];
 
-  // Use real chart data from backend, fallback to empty data if none available
+  // Use real chart data from backend, fallback to zero-filled full year if none available
   const chartData = overview.revenue?.chartData || {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    revenue: [0, 0, 0, 0, 0, 0],
-    profit: [0, 0, 0, 0, 0, 0],
-  }
+    labels: [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ],
+    revenue: new Array(12).fill(0),
+    expenses: new Array(12).fill(0),
+    profit: new Array(12).fill(0),
+  };
 
   return (
     <div className="drivemego-b2b_overview-b2b-overview">
@@ -116,4 +130,4 @@ function B2B_Overview() {
   );
 }
 
-export default B2B_Overview
+export default B2B_Overview;

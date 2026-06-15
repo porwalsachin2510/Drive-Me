@@ -3638,11 +3638,48 @@ export const cancelBooking = async (req, res) => {
             })
         }
 
-        // Check if trip is already in progress
-        if (currentStatus === "IN_PROGRESS") {
+        // ===== BLOCK CANCELLATION ONCE ANY TRIP HAS EVER STARTED =====
+        // A commuter may cancel their booking ONLY before ANY trip/service starts.
+        // Once the driver — whether a self-driving B2C_PARTNER or an assigned B2C_PARTNER_DRIVER —
+        // has STARTED (or COMPLETED) ANY trip, the entire booking can no longer be cancelled.
+        // This is a permanent lock: even if the first trip completes and the next trip hasn't started,
+        // the booking remains locked.
+        //
+        // For monthly passes / ROUND_TRIP bookings the top-level bookingStatus stays ACCEPTED
+        // while individual daily trips run, so we must also inspect the trip-level statuses and
+        // the actual B2CPartnerTrip documents to detect if any trip has ever started.
+        let hasAnyTripEverStarted =
+            currentStatus === "IN_PROGRESS" ||
+            currentStatus === "COMPLETED" ||
+            booking.outboundTripStatus === "IN_PROGRESS" ||
+            booking.outboundTripStatus === "COMPLETED" ||
+            booking.returnTripStatus === "IN_PROGRESS" ||
+            booking.returnTripStatus === "COMPLETED"
+
+        if (bookingType === "B2C" && !hasAnyTripEverStarted) {
+            const activeTripIds = []
+            if (Array.isArray(booking.monthlyTrips)) activeTripIds.push(...booking.monthlyTrips)
+            if (booking.linkedTrip) activeTripIds.push(booking.linkedTrip)
+            if (booking.linkedReturnTrip) activeTripIds.push(booking.linkedReturnTrip)
+
+            if (activeTripIds.length > 0) {
+                // Check for any trip that has EVER been started (IN_PROGRESS or COMPLETED)
+                const anyStartedTrip = await B2CPartnerTrip.findOne({
+                    _id: { $in: activeTripIds },
+                    $or: [
+                        { status: "In Progress" },
+                        { status: "Completed" },
+                        { tripStarted: true }, // Even if tripCompleted is also true, it started
+                    ],
+                }).select("_id")
+                if (anyStartedTrip) hasAnyTripEverStarted = true
+            }
+        }
+
+        if (hasAnyTripEverStarted) {
             return res.status(400).json({
                 success: false,
-                message: "Cannot cancel a trip that is already in progress",
+                message: "Your trip has already started, so this booking can no longer be cancelled. Cancellations are only allowed before the driver starts any trip.",
             })
         }
 
@@ -3666,16 +3703,44 @@ export const cancelBooking = async (req, res) => {
         const paymentAmount = booking.paymentAmount || booking.totalAmount || 0
         const isPaid = booking.paymentStatus === "COMPLETED" || booking.paymentStatus === "PAID"
 
-        // ===== PRO-RATA: figure out how many trips were already used =====
-        // For monthly passes / multi-trip bookings, the commuter may have already travelled
-        // for several days. They are only entitled to a refund for the UNUSED (remaining) trips.
+        // ===== REFUNDABLE BASE: FULL PASS AMOUNT =====
+        // Cancellation is only allowed BEFORE the driver starts a trip, so the entire pass is
+        // treated as refundable. The commuter is refunded the FULL amount they paid; the only
+        // thing that ever reduces the refund is the time-based cancellation fee below.
+        // We still compute used/remaining trip counts purely for informational notifications.
         const todayStart = new Date()
         todayStart.setHours(0, 0, 0, 0)
+
+        // CRITICAL: For CASH bookings, check if cash was actually collected yet.
+        // Cash is only collected during the first trip. If cancellation happens BEFORE
+        // the first trip date has arrived, no cash was exchanged, so refund = 0.
+        let isCashCollected = true // assume collected for online payments
+        if (booking.paymentMethod === "CASH" && booking.isMonthlyPass && Array.isArray(booking.monthlyTrips) && booking.monthlyTrips.length > 0) {
+            try {
+                const firstTrip = await B2CPartnerTrip.findById(booking.monthlyTrips[0]).select("tripDate status")
+                if (firstTrip) {
+                    const firstTripDate = new Date(firstTrip.tripDate)
+                    firstTripDate.setHours(0, 0, 0, 0)
+                    const isFirstTripPast = firstTripDate < todayStart
+                    const isFirstTripInProgress = ["Completed", "In Progress"].includes(firstTrip.status)
+                    isCashCollected = isFirstTripPast || isFirstTripInProgress
+                    console.log("[cancelBooking] Cash collection check:", {
+                        firstTripDate,
+                        today: todayStart,
+                        isFirstTripPast,
+                        isFirstTripInProgress,
+                        isCashCollected
+                    })
+                }
+            } catch (cashCheckErr) {
+                console.error("[cancelBooking] Failed to check if cash collected:", cashCheckErr)
+                isCashCollected = false // Assume not collected on error (safer for commuter)
+            }
+        }
 
         if (bookingType === "B2C" && booking.isMonthlyPass && Array.isArray(booking.monthlyTrips) && booking.monthlyTrips.length > 0) {
             try {
                 const passTrips = await B2CPartnerTrip.find({ _id: { $in: booking.monthlyTrips } }).select("tripDate status")
-                const totalTrips = passTrips.length || booking.totalTripsCount || booking.monthlyTrips.length
 
                 for (const t of passTrips) {
                     const tDate = new Date(t.tripDate)
@@ -3687,34 +3752,46 @@ export const cancelBooking = async (req, res) => {
                         remainingTripsCount++
                     }
                 }
-
-                const perTripValue = totalTrips > 0 ? paymentAmount / totalTrips : 0
-                refundableBase = perTripValue * remainingTripsCount
-
-                console.log("[cancelBooking] Pro-rata monthly pass calc:", {
-                    totalTrips, usedTripsCount, remainingTripsCount, perTripValue, refundableBase
-                })
-            } catch (proRataErr) {
-                console.error("[cancelBooking] Pro-rata calculation failed, falling back to full amount:", proRataErr)
-                refundableBase = paymentAmount
-                remainingTripsCount = 0
+            } catch (countErr) {
+                console.error("[cancelBooking] Trip count (informational) failed:", countErr)
             }
         } else {
-            // Single-trip booking: the whole payment is refundable (minus fee), no trips used yet
-            refundableBase = paymentAmount
             remainingTripsCount = 1
         }
 
-        // Cancellation fee applied ONLY on the refundable (unused) portion
+        // Full pass amount is refundable (minus the timing fee) — BUT ONLY IF PAYMENT WAS MADE.
+        // For CASH bookings, payment is made during the first trip. If cancelled before first trip,
+        // no refund is due (cash was never collected).
+        refundableBase = (booking.paymentMethod === "CASH" && !isCashCollected) ? 0 : paymentAmount
+
+        console.log("[cancelBooking] Full-refund monthly pass calc:", {
+            paymentAmount,
+            paymentMethod: booking.paymentMethod,
+            isCashCollected,
+            refundableBase,
+            usedTripsCount,
+            remainingTripsCount
+        })
+
+        // Cancellation fee applied on the FULL refundable amount.
+        // IMPORTANT: the tiers must be evaluated in order of customer-favorability so the
+        // free window always wins. Order of precedence (matches the email/PDF policy):
+        //   1. Within 12 hours of booking            -> FREE (no fee)        [checked first]
+        //   2. Within 24 hours of travel             -> 30% fee
+        //   3. After the operator accepted           -> 20% fee
+        //   4. Otherwise (more than 12h since booking) -> 10% fee
+        // Previously (2) was checked before the free window, so a pass whose first travel day
+        // was within 24h wrongly charged 30% even when cancelled minutes after booking.
         if (isPaid && refundableBase > 0) {
-            if (hoursUntilTravel <= 24) {
+            if (hoursSinceBooking <= 12) {
+                cancellationFee = 0
+            } else if (hoursUntilTravel <= 24) {
                 cancellationFee = refundableBase * 0.30
             } else if (wasAccepted) {
                 cancellationFee = refundableBase * 0.20
-            } else if (hoursSinceBooking > 12) {
+            } else {
                 cancellationFee = refundableBase * 0.10
             }
-            // Else: Free cancellation (within 12 hours)
             refundAmount = Math.max(0, refundableBase - cancellationFee)
         }
 
@@ -3829,8 +3906,8 @@ export const cancelBooking = async (req, res) => {
                     wallet.balance += refundAmount
 
                     let description = `Refund for cancelled booking #${booking.bookingNumber || bookingId}`
-                    if (booking.isMonthlyPass && remainingTripsCount >= 0) {
-                        description += ` (refund for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'}; ${usedTripsCount} already used)`
+                    if (booking.isMonthlyPass) {
+                        description += ` (full pass refund)`
                     }
                     if (cancellationFee > 0) {
                         description += ` (${booking.currency || 'AED'} ${cancellationFee.toFixed(2)} cancellation fee deducted)`
@@ -4071,28 +4148,21 @@ export const cancelBooking = async (req, res) => {
             // which previously prevented partner/admin reversals from ever running.
             if ((booking.paymentMethod === "STRIPE" || booking.paymentMethod === "TAP" || booking.paymentMethod === "WALLET") && isPaid) {
                 // ONLINE (STRIPE/TAP/WALLET): during acceptance the platform split the commuter's payment
-                // into partner earnings + admin commission. On cancellation we must reverse BOTH,
-                // but ONLY for the unused (remaining) trips so the commuter can be refunded the full
-                // unused value. Money already earned for travelled trips stays with partner/admin.
-                const totalTripsForReversal = (usedTripsCount + remainingTripsCount) || 1
-                const earningsToReverse = booking.isMonthlyPass
-                    ? Math.max(0, (driverEarnings / totalTripsForReversal) * remainingTripsCount)
-                    : driverEarnings
-                const commissionToReverse = booking.isMonthlyPass
-                    ? Math.max(0, (adminCommission / totalTripsForReversal) * remainingTripsCount)
-                    : adminCommission
+                // into partner earnings + admin commission. Because the commuter is refunded the FULL
+                // pass amount, we must reverse BOTH the full partner earnings and the full admin
+                // commission so the platform books stay balanced.
+                const earningsToReverse = driverEarnings
+                const commissionToReverse = adminCommission
 
-                console.log("[cancelBooking] ONLINE booking - pro-rata reversal:", {
+                console.log("[cancelBooking] ONLINE booking - full reversal:", {
                     paymentMethod: booking.paymentMethod,
-                    fullDriverEarnings: driverEarnings,
-                    fullAdminCommission: adminCommission,
                     earningsToReverse,
                     commissionToReverse,
                     usedTripsCount,
                     remainingTripsCount
                 })
 
-                // 1. Reverse partner earnings (pro-rata for unused trips)
+                // 1. Reverse partner earnings (full - commuter is refunded the full pass amount)
                 if (partnerWallet && earningsToReverse > 0) {
                     const partnerBalanceBefore = partnerWallet.balance
                     partnerWallet.balance = Math.max(0, partnerWallet.balance - earningsToReverse)
@@ -4100,7 +4170,7 @@ export const cancelBooking = async (req, res) => {
                     partnerWallet.transactions.push({
                         type: 'EARNINGS_REVERSAL',
                         amount: earningsToReverse,
-                        description: `Earnings reversed for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'} - booking cancelled by passenger (Booking #${booking.bookingNumber || booking._id})`,
+                        description: `Earnings reversed (full) - booking cancelled by passenger (Booking #${booking.bookingNumber || booking._id})`,
                         status: 'COMPLETED',
                         createdAt: new Date()
                     })
@@ -4113,7 +4183,7 @@ export const cancelBooking = async (req, res) => {
                         amount: earningsToReverse,
                         currency: booking.currency || "AED",
                         category: "EARNINGS_REVERSAL",
-                        description: `Earnings reversed for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'} - booking cancelled by passenger`,
+                        description: `Earnings reversed (full) - booking cancelled by passenger`,
                         referenceId: booking._id,
                         referenceModel: "B2CPassengerBooking",
                         balanceBefore: partnerBalanceBefore,
@@ -4131,8 +4201,7 @@ export const cancelBooking = async (req, res) => {
                     console.log("[cancelBooking] Reversed partner earnings (pro-rata):", earningsToReverse)
                 }
 
-                // 2. Reverse admin commission (pro-rata for unused trips) so the commuter gets the
-                //    full unused value back. Used-trip commission stays with the admin.
+                // 2. Reverse admin commission (full) so the commuter gets the full pass amount back.
                 if (commissionToReverse > 0) {
                     const adminUser = await User.findOne({ role: 'ADMIN' })
                     if (adminUser) {
@@ -4144,7 +4213,7 @@ export const cancelBooking = async (req, res) => {
                             adminWallet.transactions.push({
                                 type: 'COMMISSION_REVERSAL',
                                 amount: commissionToReverse,
-                                description: `Commission reversed for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'} - online booking cancelled by passenger (Booking #${booking.bookingNumber || booking._id})`,
+                                description: `Commission reversed (full) - online booking cancelled by passenger (Booking #${booking.bookingNumber || booking._id})`,
                                 status: 'COMPLETED',
                                 createdAt: new Date()
                             })
@@ -4157,7 +4226,7 @@ export const cancelBooking = async (req, res) => {
                                 amount: commissionToReverse,
                                 currency: booking.currency || "AED",
                                 category: "COMMISSION_REVERSAL",
-                                description: `Commission reversed for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'} - online booking cancelled by passenger`,
+                                description: `Commission reversed (full) - online booking cancelled by passenger`,
                                 referenceId: booking._id,
                                 referenceModel: "B2CPassengerBooking",
                                 balanceBefore: adminBalanceBefore,
@@ -4178,18 +4247,13 @@ export const cancelBooking = async (req, res) => {
                 }
             } else if (booking.paymentMethod === "CASH") {
                 // CASH Payment: B2C Partner already paid commission to admin during acceptance.
-                // On cancellation the partner gets commission refunded — but only for the UNUSED
-                // (remaining) trips. Commission for already-travelled trips stays with the admin.
-                let commissionToRefund = adminCommission
-                if (booking.isMonthlyPass) {
-                    const totalTripsForCommission = (usedTripsCount + remainingTripsCount) || 1
-                    const perTripCommission = adminCommission / totalTripsForCommission
-                    commissionToRefund = Math.max(0, perTripCommission * remainingTripsCount)
-                }
+                // Because the commuter is refunded the FULL pass amount, the partner gets the FULL
+                // commission refunded back from the admin.
+                const commissionToRefund = adminCommission
 
                 if (commissionToRefund > 0) {
-                    const adminCommission = commissionToRefund // shadow so existing logic reuses pro-rata value
-                    console.log("[cancelBooking] CASH booking cancelled - Refunding pro-rata commission to B2C Partner:", {
+                    const adminCommission = commissionToRefund // shadow so existing logic reuses full value
+                    console.log("[cancelBooking] CASH booking cancelled - Refunding full commission to B2C Partner:", {
                         fullCommission: booking.adminCommissionAmount,
                         commissionToRefund,
                         usedTripsCount,
@@ -4197,7 +4261,7 @@ export const cancelBooking = async (req, res) => {
                         partnerId
                     })
 
-                    // 1. Refund commission to B2C Partner's wallet for the unused trips.
+                    // 1. Refund the full commission to B2C Partner's wallet.
                     if (partnerWallet) {
                         const partnerBalanceBefore = partnerWallet.balance
                         partnerWallet.balance = Math.round((partnerWallet.balance + adminCommission) * 100) / 100
@@ -4298,14 +4362,11 @@ export const cancelBooking = async (req, res) => {
             try {
                 // Build notification message with commission refund info if applicable
                 let notifMessage = `Booking #${booking.bookingNumber || bookingId} has been cancelled by the passenger.`
-                if (booking.isMonthlyPass && (usedTripsCount > 0 || remainingTripsCount > 0)) {
-                    notifMessage += ` (${usedTripsCount} trip${usedTripsCount === 1 ? '' : 's'} already used, ${remainingTripsCount} unused.)`
-                }
                 if (booking.commissionRefunded && booking.commissionRefundAmount > 0) {
                     notifMessage += ` Your commission of ${booking.currency || 'AED'} ${booking.commissionRefundAmount.toFixed(2)} has been refunded to your wallet.`
                 }
                 if (booking.refundMethod === "CASH_FROM_PARTNER" && booking.cashRefundDueFromPartner > 0) {
-                    notifMessage += ` Please return ${booking.currency || 'AED'} ${booking.cashRefundDueFromPartner.toFixed(2)} in cash to the passenger for their ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'}.`
+                    notifMessage += ` Please return ${booking.currency || 'AED'} ${booking.cashRefundDueFromPartner.toFixed(2)} in cash to the passenger (full pass refund).`
                 }
                 if (cancellationFee > 0) {
                     notifMessage += ` Cancellation fee: ${booking.currency || 'AED'} ${cancellationFee.toFixed(2)}`
@@ -4346,12 +4407,12 @@ export const cancelBooking = async (req, res) => {
 
         // Build the commuter-facing message based on how the refund is settled
         let responseMessage = "Booking cancelled successfully"
-        if (booking.refundMethod === "WALLET" && refundAmount > 0) {
-            responseMessage = `Booking cancelled. ${booking.currency || 'AED'} ${refundAmount.toFixed(2)} has been refunded to your wallet${booking.isMonthlyPass ? ` for ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'}` : ''}.`
+        if (booking.paymentMethod === "CASH" && !isCashCollected && refundAmount === 0) {
+            responseMessage = `Booking cancelled. Since you cancelled before your first trip, no payment was collected. No refund is due.`
+        } else if (booking.refundMethod === "WALLET" && refundAmount > 0) {
+            responseMessage = `Booking cancelled. ${booking.currency || 'AED'} ${refundAmount.toFixed(2)} has been refunded to your wallet${cancellationFee > 0 ? ` (after a ${booking.currency || 'AED'} ${cancellationFee.toFixed(2)} cancellation fee)` : ''}.`
         } else if (booking.refundMethod === "CASH_FROM_PARTNER" && refundAmount > 0) {
-            responseMessage = `Booking cancelled. Since you paid by cash, the operator will return ${booking.currency || 'AED'} ${refundAmount.toFixed(2)} to you for your ${remainingTripsCount} unused trip${remainingTripsCount === 1 ? '' : 's'}.`
-        } else if (booking.isMonthlyPass && usedTripsCount > 0 && refundAmount === 0) {
-            responseMessage = "Booking cancelled. No refund is due as all paid trips have been used."
+            responseMessage = `Booking cancelled. Since you paid by cash, the operator will return ${booking.currency || 'AED'} ${refundAmount.toFixed(2)} to you${cancellationFee > 0 ? ` (after a ${booking.currency || 'AED'} ${cancellationFee.toFixed(2)} cancellation fee)` : ''}.`
         }
 
         res.status(200).json({

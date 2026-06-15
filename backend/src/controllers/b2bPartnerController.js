@@ -6,6 +6,7 @@ import Driver from "../models/Driver.js"
 import Route from "../models/Route.js"
 import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
 import Trip from "../models/Trip.js"
+import EMIPayment from "../models/EMIPayment.js"
 import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js"
 
 // Get B2B Partner Overview
@@ -44,19 +45,18 @@ export const getB2BPartnerOverview = async (req, res) => {
         // Get currency from the first active contract or default to AED
         const currency = contracts.find(c => c.financials?.currency)?.financials?.currency || 'AED'
 
-        // Calculate monthly revenue data for charts
-        const monthlyRevenue = []
-        const monthlyProfit = []
+        // Calculate monthly revenue / expense / profit data for charts (real data)
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         const currentYear = new Date().getFullYear()
 
-        // Initialize monthly data
-        months.forEach(month => {
-            monthlyRevenue.push(0)
-            monthlyProfit.push(0)
-        })
+        // Initialize 12 months of data
+        const monthlyRevenue = new Array(12).fill(0)
+        const monthlyExpenses = new Array(12).fill(0)
+        const monthlyProfit = new Array(12).fill(0)
 
-        // Calculate actual monthly revenue from contracts using rentalPeriod dates
+        // Revenue is recognized across the contract's rental period (real contract value).
+        // Expenses for the partner = the admin commission that is deducted from that revenue
+        // (real per-contract commission rate, default 20%).
         contracts.forEach(contract => {
             const startDate = contract.rentalPeriod?.startDate || contract.startDate
             const endDate = contract.rentalPeriod?.endDate || contract.endDate
@@ -65,20 +65,43 @@ export const getB2BPartnerOverview = async (req, res) => {
                 const contractStartDate = new Date(startDate)
                 const contractEndDate = endDate ? new Date(endDate) : new Date()
 
-                // Only count contracts from current year
+                // Only count contracts that overlap the current year
                 if (contractStartDate.getFullYear() === currentYear || contractEndDate.getFullYear() === currentYear) {
                     const startMonth = contractStartDate.getFullYear() === currentYear ? contractStartDate.getMonth() : 0
                     const endMonth = contractEndDate.getFullYear() === currentYear ? contractEndDate.getMonth() : 11
                     const durationMonths = Math.max(endMonth - startMonth + 1, 1)
                     const monthlyAmount = (contract.financials?.totalAmount || 0) / durationMonths
 
+                    // Real commission rate charged by admin on this contract
+                    const commissionRate = contract.adminCommission?.b2bPartner?.rate ?? 20
+                    const monthlyCommission = monthlyAmount * (commissionRate / 100)
+
                     for (let i = startMonth; i <= endMonth && i < 12; i++) {
-                        monthlyRevenue[i] += Math.round(monthlyAmount)
-                        monthlyProfit[i] += Math.round(monthlyAmount * 0.8) // 80% profit margin
+                        monthlyRevenue[i] += monthlyAmount
+                        monthlyExpenses[i] += monthlyCommission
                     }
                 }
             }
         })
+
+        // Add real vehicle-financing (EMI) installments as expenses in the month they are due
+        const emiPlans = await EMIPayment.find({ fleetOwnerId: userId })
+        emiPlans.forEach(plan => {
+            (plan.installments || []).forEach(inst => {
+                if (!inst.dueDate) return
+                const due = new Date(inst.dueDate)
+                if (due.getFullYear() === currentYear) {
+                    monthlyExpenses[due.getMonth()] += inst.amount || 0
+                }
+            })
+        })
+
+        // Profit = revenue - expenses, rounded for display
+        for (let i = 0; i < 12; i++) {
+            monthlyRevenue[i] = Math.round(monthlyRevenue[i])
+            monthlyExpenses[i] = Math.round(monthlyExpenses[i])
+            monthlyProfit[i] = monthlyRevenue[i] - monthlyExpenses[i]
+        }
 
         // Get vehicles and drivers from proper tables
         const vehicles = await Vehicle.find({ fleetOwnerId: userId })
@@ -110,10 +133,10 @@ export const getB2BPartnerOverview = async (req, res) => {
                 currency: currency,
                 growth: calculateRevenueGrowth(contracts),
                 chartData: {
-                    labels: months.slice(0, 6), // Show first 6 months
-                    revenue: monthlyRevenue.slice(0, 6),
-                    profit: monthlyProfit.slice(0, 6),
-                    expenses: monthlyRevenue.slice(0, 6).map(r => Math.round(r * 0.2)) // 20% expenses
+                    labels: months, // Full year, Jan - Dec
+                    revenue: monthlyRevenue,
+                    profit: monthlyProfit,
+                    expenses: monthlyExpenses
                 }
             },
             vehicles: {

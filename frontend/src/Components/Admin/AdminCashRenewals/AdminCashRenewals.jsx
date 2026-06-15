@@ -118,6 +118,7 @@ function AdminCashRenewals() {
                 <th>Commuter</th>
                 <th>Email</th>
                 <th>Phone</th>
+                <th>Duration</th>
                 <th>Amount</th>
                 <th>Requested At</th>
                 <th>Action</th>
@@ -129,6 +130,10 @@ function AdminCashRenewals() {
                   <td>{req.userName || "N/A"}</td>
                   <td>{req.userEmail || "N/A"}</td>
                   <td>{req.userPhone || "N/A"}</td>
+                  <td>
+                    {req.renewalMonths || 1} month
+                    {(req.renewalMonths || 1) > 1 ? "s" : ""}
+                  </td>
                   <td className="acr-amount">{formatCurrency(req.amount)}</td>
                   <td>{formatDate(req.requestedAt)}</td>
                   <td>

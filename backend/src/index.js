@@ -57,6 +57,7 @@ import { seedDropdownOptions } from "./controllers/dropdownController.js"
 import { processDailyRenewals, sendDailyRenewalReminders } from "./cron/subscriptionCron.js"
 import { bookingWarningsCron, bookingAutoCancellationCron, runImmediateBookingTimeoutCheck } from "./cron/bookingTimeoutCron.js"
 import { initEMICronJobs } from "./cron/emiCronJobs.js"
+import { monthlySettlementJob } from "./cron/settlementCron.js"
 
 dotenv.config()
 
@@ -863,4 +864,9 @@ server.listen(PORT, async () => {
     } catch (error) {
         console.error(`[v0] Error initializing EMI cron jobs:`, error.message)
     }
+
+    // Monthly settlement auto-calculation cron (starts on import)
+    console.log(`[v0] Monthly settlement cron ENABLED`)
+    console.log(`- Auto-calculate settlement: 02:00 on the 1st of each month`)
+    void monthlySettlementJob;
 })

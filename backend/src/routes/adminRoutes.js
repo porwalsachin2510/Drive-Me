@@ -54,7 +54,9 @@ import {
     getRidePoolingStats,
     getPassengerInterests,
     getUserSuggestedRoutes,
+    getB2CPartnersForAssignment,
     approveSuggestedRoute,
+    openSuggestedRouteToMarketplace,
     rejectSuggestedRoute,
     getB2BStats,
     getB2BProviders,
@@ -226,7 +228,9 @@ router.get("/ride-pooling/stats", verifyToken, checkAdminRole, getRidePoolingSta
 router.get("/ride-pooling/passenger-interests", verifyToken, checkAdminRole, getPassengerInterests)
 router.put("/ride-pooling/passenger-interests/:interestId/status", verifyToken, checkAdminRole, updatePassengerInterestStatus)
 router.get("/ride-pooling/suggested-routes", verifyToken, checkAdminRole, getUserSuggestedRoutes)
+router.get("/ride-pooling/b2c-partners", verifyToken, checkAdminRole, getB2CPartnersForAssignment)
 router.put("/ride-pooling/suggested-routes/:routeId/approve", verifyToken, checkAdminRole, approveSuggestedRoute)
+router.put("/ride-pooling/suggested-routes/:routeId/open", verifyToken, checkAdminRole, openSuggestedRouteToMarketplace)
 router.put("/ride-pooling/suggested-routes/:routeId/reject", verifyToken, checkAdminRole, rejectSuggestedRoute)
 
 // B2B Listings Management

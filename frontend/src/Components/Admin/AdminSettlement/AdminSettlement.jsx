@@ -2,35 +2,79 @@ import React, { useState, useEffect, useCallback } from "react";
 import api from "../../../utils/api";
 import "./adminsettlement.css";
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const STATUS_LABELS = {
+  CALCULATED: "Calculated",
+  PENDING_PAYOUT: "Pending Payout",
+  SETTLED: "Settled",
+  DEBT_OUTSTANDING: "Debt Outstanding",
+};
+
 function AdminSettlement() {
+  const now = new Date();
   const [settlements, setSettlements] = useState([]);
+  const [summary, setSummary] = useState({
+    totalNetPayable: 0,
+    totalCommissionCollected: 0,
+    totalCommissionDebt: 0,
+    totalGrossEarnings: 0,
+    activePartners: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
   const [selectedPayout, setSelectedPayout] = useState(null);
   const [payoutAmount, setPayoutAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("bank");
-  const [bankAccount, setBankAccount] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
+  const [bankName, setBankName] = useState("");
+  const [iban, setIban] = useState("");
+  const [accountHolderName, setAccountHolderName] = useState("");
+  const [payoutNotes, setPayoutNotes] = useState("");
+
+  const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(now.getFullYear());
+  const [filterStatus, setFilterStatus] = useState("all");
+
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
+    pages: 0,
   });
-  // eslint-disable-next-line no-unused-vars
-  const [filter, setFilter] = useState("all");
 
   const fetchSettlements = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get(
-        `/settlement/all?page=${pagination.page}&limit=${pagination.limit}`,
-      );
+      const params = new URLSearchParams({
+        page: String(pagination.page),
+        limit: String(pagination.limit),
+      });
+      if (filterStatus !== "all") params.append("status", filterStatus);
+      if (filterMonth) params.append("month", String(filterMonth));
+      if (filterYear) params.append("year", String(filterYear));
 
+      const response = await api.get(`/settlement/all?${params.toString()}`);
       if (response.data.success) {
-        setSettlements(response.data.settlements);
+        setSettlements(response.data.settlements || []);
+        setSummary(response.data.summary || summary);
         setPagination((prev) => ({
           ...prev,
           total: response.data.pagination.total,
+          pages: response.data.pagination.pages,
         }));
         setError(null);
       }
@@ -40,120 +84,184 @@ function AdminSettlement() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    pagination.page,
+    pagination.limit,
+    filterStatus,
+    filterMonth,
+    filterYear,
+  ]);
 
   useEffect(() => {
     fetchSettlements();
   }, [fetchSettlements]);
 
-  const processMonthlySettlement = async () => {
+  const calculateMonthlySettlement = async () => {
     try {
       setActionLoading(true);
-      const currentDate = new Date();
-      const month = currentDate.getMonth() + 1;
-      const year = currentDate.getFullYear();
-
       const response = await api.post(
-        `/settlement/monthly-settlement?month=${month}&year=${year}`,
+        `/settlement/monthly-settlement?month=${filterMonth}&year=${filterYear}`,
       );
-
       if (response.data.success) {
-        alert(
-          `Settlement calculated for ${response.data.settlements.length} partners`,
-        );
+        alert(response.data.message);
+        setPagination((prev) => ({ ...prev, page: 1 }));
         fetchSettlements();
       }
     } catch (err) {
-      console.error("Error processing settlement:", err);
-      alert("Failed to process settlement");
+      console.error("Error calculating settlement:", err);
+      alert(err.response?.data?.message || "Failed to calculate settlement");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const processAutoDebit = async () => {
+  const collectDebt = async () => {
+    if (
+      !window.confirm(
+        "Notify all partners with outstanding commission balances to settle?",
+      )
+    ) {
+      return;
+    }
     try {
       setActionLoading(true);
-      const response = await api.post(`/settlement/auto-debit`);
-
+      const response = await api.post(`/settlement/collect-debt`);
       if (response.data.success) {
         alert(response.data.message);
         fetchSettlements();
       }
     } catch (err) {
-      console.error("Error processing auto-debit:", err);
-      alert("Failed to process auto-debit");
+      console.error("Error collecting debt:", err);
+      alert(err.response?.data?.message || "Failed to run debt collection");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const processPayout = async (partnerId) => {
-    if (!payoutAmount || !bankAccount) {
-      alert("Please fill all required fields");
+  const openPayout = (settlement) => {
+    setSelectedPayout(settlement);
+    setPayoutAmount(String(settlement.netPayable || 0));
+    setAccountHolderName(settlement.partnerName || "");
+    setBankName("");
+    setIban("");
+    setPayoutNotes("");
+  };
+
+  const submitPayout = async () => {
+    if (!payoutAmount || Number(payoutAmount) <= 0) {
+      alert("Please enter a valid payout amount");
       return;
     }
-
     try {
       setActionLoading(true);
-      const response = await api.post(`/settlement/payout/${partnerId}`, {
-        amount: Number(payoutAmount),
-        bankAccount,
-        paymentMethod,
-      });
-
+      const response = await api.post(
+        `/settlement/payout/${selectedPayout._id}`,
+        {
+          amount: Number(payoutAmount),
+          bankName,
+          iban,
+          accountHolderName,
+          notes: payoutNotes,
+        },
+      );
       if (response.data.success) {
         alert("Payout processed successfully!");
         setSelectedPayout(null);
-        setPayoutAmount("");
-        setBankAccount("");
-        setPaymentMethod("bank");
         fetchSettlements();
       }
     } catch (err) {
       console.error("Error processing payout:", err);
-      alert("Failed to process payout");
+      alert(err.response?.data?.message || "Failed to process payout");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const getTotalStats = () => {
-    return settlements.reduce(
-      (acc, settlement) => ({
-        totalBalance: acc.totalBalance + settlement.balance,
-        totalPending: acc.totalPending + settlement.pendingAmount,
-        totalCommission: acc.totalCommission + settlement.commissionDebt,
-      }),
-      { totalBalance: 0, totalPending: 0, totalCommission: 0 },
-    );
-  };
+  const fmt = (n) => Number(n || 0).toFixed(2);
 
-  const stats = getTotalStats();
-
-  if (loading) {
-    return <div className="settlement-loading">Loading settlements...</div>;
-  }
+  const yearOptions = [];
+  for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--)
+    yearOptions.push(y);
 
   return (
     <div className="admin-settlement">
       <div className="settlement-header">
-        <h2>Settlement Management</h2>
+        <div>
+          <h2>Settlement Management</h2>
+          <p className="settlement-subtitle">
+            Monthly reconciliation statements for partners. Commission is
+            collected in real time at booking; this is the payout &amp; debt
+            ledger.
+          </p>
+        </div>
         <div className="header-actions">
           <button
             className="btn-calculate"
-            onClick={processMonthlySettlement}
+            onClick={calculateMonthlySettlement}
             disabled={actionLoading}
           >
-            Calculate Monthly Settlement
+            {actionLoading ? "Working..." : "Calculate Monthly Settlement"}
           </button>
           <button
             className="btn-auto-debit"
-            onClick={processAutoDebit}
+            onClick={collectDebt}
             disabled={actionLoading}
           >
-            Process Auto-Debit
+            Collect Commission Debt
           </button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="settlement-filters">
+        <div className="filter-group">
+          <label>Month</label>
+          <select
+            value={filterMonth}
+            onChange={(e) => {
+              setFilterMonth(Number(e.target.value));
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
+          >
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label>Year</label>
+          <select
+            value={filterYear}
+            onChange={(e) => {
+              setFilterYear(Number(e.target.value));
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label>Status</label>
+          <select
+            value={filterStatus}
+            onChange={(e) => {
+              setFilterStatus(e.target.value);
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
+          >
+            <option value="all">All</option>
+            <option value="CALCULATED">Calculated</option>
+            <option value="PENDING_PAYOUT">Pending Payout</option>
+            <option value="SETTLED">Settled</option>
+            <option value="DEBT_OUTSTANDING">Debt Outstanding</option>
+          </select>
         </div>
       </div>
 
@@ -162,75 +270,97 @@ function AdminSettlement() {
       {/* Summary Stats */}
       <div className="settlement-stats">
         <div className="stat-card">
-          <div className="stat-label">Total Balance</div>
-          <div className="stat-value">{stats.totalBalance.toFixed(2)} AED</div>
+          <div className="stat-label">Gross Earnings</div>
+          <div className="stat-value">
+            {fmt(summary.totalGrossEarnings)} AED
+          </div>
         </div>
         <div className="stat-card pending">
           <div className="stat-label">Pending Payout</div>
-          <div className="stat-value">{stats.totalPending.toFixed(2)} AED</div>
+          <div className="stat-value">{fmt(summary.totalNetPayable)} AED</div>
         </div>
         <div className="stat-card commission">
           <div className="stat-label">Commission Debt</div>
           <div className="stat-value">
-            {stats.totalCommission.toFixed(2)} AED
+            {fmt(summary.totalCommissionDebt)} AED
           </div>
         </div>
         <div className="stat-card partners">
-          <div className="stat-label">Active Partners</div>
-          <div className="stat-value">{settlements.length}</div>
+          <div className="stat-label">Partners In Period</div>
+          <div className="stat-value">{summary.activePartners}</div>
         </div>
       </div>
 
-      {settlements.length === 0 ? (
+      {loading ? (
+        <div className="settlement-loading">Loading settlements...</div>
+      ) : settlements.length === 0 ? (
         <div className="no-settlements">
-          <p>No settlements to display</p>
+          <p>No settlements to display.</p>
+          <p className="no-settlements-hint">
+            Click &quot;Calculate Monthly Settlement&quot; to generate
+            statements for the selected period.
+          </p>
         </div>
       ) : (
         <div className="settlements-table">
           <table>
             <thead>
               <tr>
-                <th>Partner Name</th>
+                <th>Partner</th>
                 <th>Role</th>
-                <th>Balance</th>
-                <th>Pending</th>
+                <th>Period</th>
+                <th>Gross Earnings</th>
                 <th>Commission</th>
-                <th>Earnings</th>
-                <th>Last Updated</th>
+                <th>Net Payable</th>
+                <th>Debt</th>
+                <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {settlements.map((settlement) => (
-                <tr key={settlement.partnerId}>
-                  <td>{settlement.partnerName}</td>
+              {settlements.map((s) => (
+                <tr key={s._id}>
                   <td>
-                    <span className="badge">{settlement.role}</span>
+                    <div className="partner-name">{s.partnerName}</div>
+                    <div className="partner-email">{s.partnerEmail}</div>
                   </td>
-                  <td className="amount">{settlement.balance.toFixed(2)}</td>
-                  <td className="amount pending">
-                    {settlement.pendingAmount.toFixed(2)}
-                  </td>
-                  <td className="amount">
-                    {settlement.commissionDebt.toFixed(2)}
-                  </td>
-                  <td className="amount">
-                    {settlement.totalEarnings.toFixed(2)}
+                  <td>
+                    <span className="badge">{s.role}</span>
                   </td>
                   <td className="date">
-                    {new Date(settlement.lastUpdated).toLocaleDateString()}
+                    {MONTHS[s.month - 1]?.slice(0, 3)} {s.year}
+                  </td>
+                  <td className="amount">{fmt(s.grossEarnings)}</td>
+                  <td className="amount neutral">
+                    {fmt(s.commissionCollected)}
+                  </td>
+                  <td className="amount pending">{fmt(s.netPayable)}</td>
+                  <td
+                    className={`amount ${s.commissionDebt > 0 ? "debt" : "neutral"}`}
+                  >
+                    {fmt(s.commissionDebt)}
                   </td>
                   <td>
-                    <button
-                      className="btn-payout"
-                      onClick={() => {
-                        setSelectedPayout(settlement);
-                        setPayoutAmount(settlement.pendingAmount.toString());
-                      }}
-                      disabled={settlement.pendingAmount === 0}
+                    <span
+                      className={`status-badge status-${s.status?.toLowerCase()}`}
                     >
-                      Payout
-                    </button>
+                      {STATUS_LABELS[s.status] || s.status}
+                    </span>
+                  </td>
+                  <td>
+                    {s.status === "SETTLED" ? (
+                      <span className="settled-text">
+                        Paid {fmt(s.payoutAmount)}
+                      </span>
+                    ) : (
+                      <button
+                        className="btn-payout"
+                        onClick={() => openPayout(s)}
+                        disabled={!s.netPayable || s.netPayable <= 0}
+                      >
+                        Payout
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -251,7 +381,8 @@ function AdminSettlement() {
               <div className="form-group">
                 <label>Partner: {selectedPayout.partnerName}</label>
                 <p className="info-text">
-                  Pending Amount: {selectedPayout.pendingAmount.toFixed(2)} AED
+                  Available for payout: {fmt(selectedPayout.netPayable)}{" "}
+                  {selectedPayout.currency || "AED"}
                 </p>
               </div>
 
@@ -261,30 +392,48 @@ function AdminSettlement() {
                   type="number"
                   value={payoutAmount}
                   onChange={(e) => setPayoutAmount(e.target.value)}
-                  max={selectedPayout.pendingAmount}
+                  max={selectedPayout.netPayable}
                   step="0.01"
                 />
               </div>
 
               <div className="form-group">
-                <label>Payment Method</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                >
-                  <option value="bank">Bank Transfer</option>
-                  <option value="check">Check</option>
-                  <option value="wallet">Wallet Transfer</option>
-                </select>
+                <label>Account Holder Name</label>
+                <input
+                  type="text"
+                  value={accountHolderName}
+                  onChange={(e) => setAccountHolderName(e.target.value)}
+                  placeholder="Account holder name"
+                />
               </div>
 
               <div className="form-group">
-                <label>Bank Account / Reference</label>
+                <label>Bank Name</label>
                 <input
                   type="text"
-                  value={bankAccount}
-                  onChange={(e) => setBankAccount(e.target.value)}
-                  placeholder="Enter bank account or reference number"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="Bank name"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>IBAN / Account Number</label>
+                <input
+                  type="text"
+                  value={iban}
+                  onChange={(e) => setIban(e.target.value)}
+                  placeholder="IBAN or account number"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Notes (optional)</label>
+                <input
+                  type="text"
+                  value={payoutNotes}
+                  onChange={(e) => setPayoutNotes(e.target.value)}
+                  placeholder="Reference or notes"
                 />
               </div>
             </div>
@@ -299,7 +448,7 @@ function AdminSettlement() {
               </button>
               <button
                 className="btn-process-payout"
-                onClick={() => processPayout(selectedPayout.partnerId)}
+                onClick={submitPayout}
                 disabled={actionLoading || !payoutAmount}
               >
                 {actionLoading ? "Processing..." : "Process Payout"}
@@ -310,7 +459,7 @@ function AdminSettlement() {
       )}
 
       {/* Pagination */}
-      {pagination.total > pagination.limit && (
+      {pagination.pages > 1 && (
         <div className="pagination">
           <button
             disabled={pagination.page === 1}
@@ -321,13 +470,10 @@ function AdminSettlement() {
             Previous
           </button>
           <span>
-            Page {pagination.page} of{" "}
-            {Math.ceil(pagination.total / pagination.limit)}
+            Page {pagination.page} of {pagination.pages}
           </span>
           <button
-            disabled={
-              pagination.page >= Math.ceil(pagination.total / pagination.limit)
-            }
+            disabled={pagination.page >= pagination.pages}
             onClick={() =>
               setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
             }

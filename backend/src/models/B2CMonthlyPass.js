@@ -255,6 +255,15 @@ const b2CMonthlyPassSchema = new mongoose.Schema({
         default: null,
     },
 
+    // Number of months the commuter chose for an IN-FLIGHT card renewal. Stored
+    // when the payment session is created so the same duration is applied once
+    // the gateway confirms payment (the commuter may renew for a different number
+    // of months than the original pass duration). Cleared after activation.
+    pendingRenewalMonths: {
+        type: Number,
+        default: null,
+    },
+
     // Gateway session ids that have already been applied as renewals to this
     // pass. Used to guarantee a card renewal is never double-applied even if
     // the payment-verify endpoint is hit more than once.

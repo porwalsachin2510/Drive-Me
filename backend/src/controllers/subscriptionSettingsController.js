@@ -34,13 +34,40 @@ const normalizeRenewalMethod = (value) => {
     return map[value] || "SAME_CARD";
 };
 
-// Settle a paid renewal: credit admin commission + partner earnings into their wallets
-const settleRenewalEarnings = async (pass) => {
+// Compute the price + commission/earnings for a renewal of `renewalMonths`.
+// A monthly pass stores totals for its ORIGINAL duration (durationMonths), so we
+// derive a per-month rate and scale it by the number of months the commuter chose
+// to renew for. This lets a commuter renew for any number of months (min 1),
+// independent of how many months the original pass covered.
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+const computeRenewalPricing = (basePass, renewalMonths) => {
+    const baseMonths = Math.max(1, Number(basePass.durationMonths) || 1);
+    const months = Math.max(1, Math.floor(Number(renewalMonths) || baseMonths));
+
+    const perMonthAmount = (basePass.totalAmount || 0) / baseMonths;
+    const perMonthAdmin = (basePass.adminCommission || 0) / baseMonths;
+    const perMonthPartner = (basePass.partnerEarnings || 0) / baseMonths;
+
+    return {
+        months,
+        amount: round2(perMonthAmount * months),
+        adminCommission: round2(perMonthAdmin * months),
+        partnerEarnings: round2(perMonthPartner * months),
+    };
+};
+
+// Settle a paid renewal: credit admin commission + partner earnings into their wallets.
+// `overrides` lets callers pass amounts scaled to the chosen renewal duration
+// instead of the pass's stored (original-duration) totals.
+const settleRenewalEarnings = async (pass, overrides = {}) => {
     const currency = pass.currency || "KWD";
+    const adminCommission = overrides.adminCommission ?? pass.adminCommission;
+    const partnerEarnings = overrides.partnerEarnings ?? pass.partnerEarnings;
 
     // Credit admin commission
     const adminUserId = process.env.ADMIN_USER_ID;
-    if (adminUserId && pass.adminCommission > 0) {
+    if (adminUserId && adminCommission > 0) {
         let adminWallet = await Wallet.findOne({ userId: adminUserId });
         if (!adminWallet) {
             adminWallet = await Wallet.create({
@@ -51,15 +78,15 @@ const settleRenewalEarnings = async (pass) => {
             });
         }
         const adminBefore = adminWallet.balance;
-        adminWallet.balance += pass.adminCommission;
-        adminWallet.totalEarnings += pass.adminCommission;
+        adminWallet.balance += adminCommission;
+        adminWallet.totalEarnings += adminCommission;
         await adminWallet.save();
 
         await Transaction.create({
             walletId: adminWallet._id,
             userId: adminUserId,
             type: "CREDIT",
-            amount: pass.adminCommission,
+            amount: adminCommission,
             currency,
             category: "COMMISSION_EARNED",
             description: `Commission from monthly pass renewal ${pass._id}`,
@@ -71,7 +98,7 @@ const settleRenewalEarnings = async (pass) => {
     }
 
     // Credit partner earnings
-    if (pass.partnerId && pass.partnerEarnings > 0) {
+    if (pass.partnerId && partnerEarnings > 0) {
         let partnerWallet = await Wallet.findOne({ userId: pass.partnerId });
         if (!partnerWallet) {
             partnerWallet = await Wallet.create({
@@ -82,15 +109,15 @@ const settleRenewalEarnings = async (pass) => {
             });
         }
         const partnerBefore = partnerWallet.balance;
-        partnerWallet.balance += pass.partnerEarnings;
-        partnerWallet.totalEarnings += pass.partnerEarnings;
+        partnerWallet.balance += partnerEarnings;
+        partnerWallet.totalEarnings += partnerEarnings;
         await partnerWallet.save();
 
         await Transaction.create({
             walletId: partnerWallet._id,
             userId: pass.partnerId,
             type: "CREDIT",
-            amount: pass.partnerEarnings,
+            amount: partnerEarnings,
             currency,
             category: "PAYMENT_RECEIVED",
             description: `Monthly pass renewal earnings ${pass._id}`,
@@ -319,7 +346,7 @@ const generateRenewalTrips = async (newPass, numberOfSeats, windowStart, windowE
 //
 // `sessionId` (optional) is the gateway checkout session for card renewals and is
 // used to guarantee the same payment is never applied twice.
-const applyRenewalToPass = async (basePass, { paymentMethod, sessionId } = {}) => {
+const applyRenewalToPass = async (basePass, { paymentMethod, sessionId, renewalMonths } = {}) => {
     // Idempotency guard for card renewals: if this session was already applied,
     // do nothing and report the already-extended state.
     if (sessionId && Array.isArray(basePass.appliedRenewalSessions) && basePass.appliedRenewalSessions.includes(sessionId)) {
@@ -327,7 +354,11 @@ const applyRenewalToPass = async (basePass, { paymentMethod, sessionId } = {}) =
         return { alreadyApplied: true, tripResult: { tripIds: [], createdCount: 0, existingCount: 0 } };
     }
 
-    const durationMonths = basePass.durationMonths || 1;
+    // The commuter chooses how many months to renew for (minimum 1). When no
+    // explicit value is provided (e.g. cron auto-renewal) we fall back to the
+    // pass's original duration so existing behaviour is preserved.
+    const pricing = computeRenewalPricing(basePass, renewalMonths);
+    const extensionMonths = pricing.months;
 
     // The extension starts the day after the current end date (or today if the pass
     // has already lapsed) so trips never overlap with the original period.
@@ -338,7 +369,7 @@ const applyRenewalToPass = async (basePass, { paymentMethod, sessionId } = {}) =
     extensionStart.setHours(0, 0, 0, 0);
 
     const newEndDate = new Date(previousEndDate);
-    newEndDate.setMonth(newEndDate.getMonth() + durationMonths);
+    newEndDate.setMonth(newEndDate.getMonth() + extensionMonths);
     newEndDate.setHours(23, 59, 59, 999);
 
     const numberOfSeats = await resolveRenewalSeatCount(basePass);
@@ -358,6 +389,8 @@ const applyRenewalToPass = async (basePass, { paymentMethod, sessionId } = {}) =
     if (paymentMethod) basePass.paymentMethod = paymentMethod;
     basePass.renewalCount = (basePass.renewalCount || 0) + 1;
     basePass.lastRenewedAt = new Date();
+    // Clear any in-flight renewal duration now that it has been applied.
+    basePass.pendingRenewalMonths = null;
     // Grow the pass's trip allowance by the trips generated for the extension
     // window so usage tracking (usedTrips / totalTrips) stays accurate.
     if (tripResult.tripIds.length > 0) {
@@ -374,7 +407,11 @@ const applyRenewalToPass = async (basePass, { paymentMethod, sessionId } = {}) =
     // endpoint AND the Stripe webhook both firing for the same renewal — can never
     // double-credit the admin/partner wallets. Previously settlement ran before the
     // guard at every call site, which is what tripled the wallet balances.
-    await settleRenewalEarnings(basePass);
+    // Commission + partner earnings are scaled to the chosen renewal duration.
+    await settleRenewalEarnings(basePass, {
+        adminCommission: pricing.adminCommission,
+        partnerEarnings: pricing.partnerEarnings,
+    });
 
     // Append the new trips to the commuter's existing booking so My Rides shows them.
     try {
@@ -409,7 +446,7 @@ const applyRenewalToPass = async (basePass, { paymentMethod, sessionId } = {}) =
         console.error("[v0] Renewal booking extension failed:", bookingError.message);
     }
 
-    return { alreadyApplied: false, tripResult, newEndDate };
+    return { alreadyApplied: false, tripResult, newEndDate, pricing };
 };
 
 // ----------------------------------------------------------------------------
@@ -528,6 +565,9 @@ const serializePass = (pass, route) => ({
     endDate: pass.endDate,
     startDate: pass.startDate,
     totalAmount: pass.totalAmount,
+    durationMonths: pass.durationMonths || 1,
+    // Per-month price so the UI can price any chosen renewal duration.
+    monthlyAmount: round2((pass.totalAmount || 0) / Math.max(1, pass.durationMonths || 1)),
     currency: pass.currency,
     passType: pass.passType,
     status: pass.status,
@@ -702,6 +742,19 @@ export const renewSubscription = async (req, res) => {
         const userId = req.userId;
         const method = normalizeRenewalMethod(req.body.paymentMethod || req.body.renewalPaymentMethod);
 
+        // The commuter chooses how many months to renew for. Minimum is 1 month;
+        // there is no fixed upper limit (capped at 12 to match the pass model).
+        const requestedMonths = Math.floor(Number(req.body.renewalMonths));
+        if (req.body.renewalMonths !== undefined && (!Number.isFinite(requestedMonths) || requestedMonths < 1)) {
+            return res.status(400).json({
+                success: false,
+                message: "Renewal duration must be at least 1 month.",
+            });
+        }
+        const renewalMonths = Number.isFinite(requestedMonths) && requestedMonths >= 1
+            ? Math.min(requestedMonths, 12)
+            : undefined;
+
         let settings = await SubscriptionSettings.findOne({ userId });
         if (!settings) settings = new SubscriptionSettings({ userId });
 
@@ -715,15 +768,15 @@ export const renewSubscription = async (req, res) => {
         }
 
         if (method === "CASH") {
-            return await createCashRenewalRequest(req, res, settings, basePass);
+            return await createCashRenewalRequest(req, res, settings, basePass, renewalMonths);
         }
 
         if (method === "WALLET") {
-            return await renewWithWallet(req, res, settings, basePass, true);
+            return await renewWithWallet(req, res, settings, basePass, true, renewalMonths);
         }
 
         // SAME_CARD / MANUAL fall through to card payment session
-        return await renewWithCard(req, res, settings, basePass);
+        return await renewWithCard(req, res, settings, basePass, renewalMonths);
     } catch (error) {
         console.error("[v0] Error renewing subscription:", error);
         res.status(500).json({
@@ -735,9 +788,10 @@ export const renewSubscription = async (req, res) => {
 };
 
 // Wallet renewal: validate balance, debit, activate, settle earnings
-const renewWithWallet = async (req, res, settings, basePass, isManual) => {
+const renewWithWallet = async (req, res, settings, basePass, isManual, renewalMonths) => {
     const userId = basePass.passengerId;
-    const amount = basePass.totalAmount;
+    const pricing = computeRenewalPricing(basePass, renewalMonths);
+    const amount = pricing.amount;
     const currency = basePass.currency || "AED";
 
     const wallet = await Wallet.findOne({ userId });
@@ -786,7 +840,7 @@ const renewWithWallet = async (req, res, settings, basePass, isManual) => {
         metadata: { monthlyPassId: basePass._id, type: "RENEWAL" },
     });
 
-    const { newEndDate } = await applyRenewalToPass(basePass, { paymentMethod: "WALLET" });
+    const { newEndDate } = await applyRenewalToPass(basePass, { paymentMethod: "WALLET", renewalMonths });
 
     settings.linkedPassId = basePass._id;
     settings.lastRenewalDate = new Date();
@@ -806,17 +860,18 @@ const renewWithWallet = async (req, res, settings, basePass, isManual) => {
 
     return res.status(200).json({
         success: true,
-        message: "Monthly pass renewed successfully using wallet balance.",
-        data: { newPass: basePass, nextRenewalDate: newEndDate, amount, walletBalance: wallet.balance },
+        message: `Monthly pass renewed for ${pricing.months} month${pricing.months > 1 ? "s" : ""} using wallet balance.`,
+        data: { newPass: basePass, nextRenewalDate: newEndDate, amount, renewalMonths: pricing.months, walletBalance: wallet.balance },
     });
 };
 
 // Card renewal: create a fresh payment session each cycle. The pass is extended
 // in place only after the gateway confirms payment (see activateCardRenewalPass),
 // so no duplicate pass is ever created.
-const renewWithCard = async (req, res, settings, basePass) => {
+const renewWithCard = async (req, res, settings, basePass, renewalMonths) => {
     const userId = basePass.passengerId;
-    const amount = basePass.totalAmount;
+    const pricing = computeRenewalPricing(basePass, renewalMonths);
+    const amount = pricing.amount;
     const currency = basePass.currency || "AED";
 
     try {
@@ -846,9 +901,11 @@ const renewWithCard = async (req, res, settings, basePass) => {
         });
 
         // Remember the in-flight session on the pass so activation is idempotent and
-        // the verify endpoint can resolve which pass to extend.
+        // the verify endpoint can resolve which pass to extend. Also store the chosen
+        // renewal duration so the correct number of months is applied on payment.
         basePass.gatewaySessionId = session.sessionId;
         basePass.paymentGateway = session.provider;
+        basePass.pendingRenewalMonths = pricing.months;
         await basePass.save();
 
         settings.linkedPassId = basePass._id;
@@ -909,9 +966,11 @@ export const activateCardRenewalPass = async (passId, sessionId = null) => {
         return null;
     }
 
-    const { alreadyApplied, newEndDate } = await applyRenewalToPass(basePass, {
+    const { alreadyApplied, newEndDate, pricing } = await applyRenewalToPass(basePass, {
         paymentMethod: "STRIPE",
         sessionId: sessionId || basePass.gatewaySessionId,
+        // Apply the duration the commuter chose when the session was created.
+        renewalMonths: basePass.pendingRenewalMonths || undefined,
     });
 
     // Update subscription settings bookkeeping + flip the PENDING_PAYMENT history row
@@ -933,7 +992,7 @@ export const activateCardRenewalPass = async (passId, sessionId = null) => {
                 settings.renewalHistory.push({
                     date: new Date(),
                     status: "SUCCESS",
-                    amount: basePass.totalAmount,
+                    amount: pricing?.amount ?? basePass.totalAmount,
                     paymentMethod: "SAME_CARD",
                 });
             }
@@ -955,7 +1014,7 @@ export const activateCardRenewalPass = async (passId, sessionId = null) => {
 // Cash renewal: commuter requests, admin confirms
 // ----------------------------------------------------------------------------
 
-const createCashRenewalRequest = async (req, res, settings, basePass) => {
+const createCashRenewalRequest = async (req, res, settings, basePass, renewalMonths) => {
     if (settings.pendingCashRenewal?.requested) {
         return res.status(400).json({
             success: false,
@@ -964,16 +1023,19 @@ const createCashRenewalRequest = async (req, res, settings, basePass) => {
         });
     }
 
+    const pricing = computeRenewalPricing(basePass, renewalMonths);
+
     settings.pendingCashRenewal = {
         requested: true,
         passId: basePass._id,
-        amount: basePass.totalAmount,
+        amount: pricing.amount,
+        renewalMonths: pricing.months,
         requestedAt: new Date(),
     };
     settings.renewalHistory.push({
         date: new Date(),
         status: "PENDING",
-        amount: basePass.totalAmount,
+        amount: pricing.amount,
         paymentMethod: "CASH",
         failureReason: "Awaiting admin cash confirmation",
     });
@@ -983,7 +1045,7 @@ const createCashRenewalRequest = async (req, res, settings, basePass) => {
 
     return res.status(200).json({
         success: true,
-        message: "Cash renewal requested. Please pay the admin; your pass activates once the admin confirms.",
+        message: `Cash renewal for ${pricing.months} month${pricing.months > 1 ? "s" : ""} requested. Please pay the admin; your pass activates once the admin confirms.`,
         data: { pendingCashRenewal: settings.pendingCashRenewal, pass: basePass },
     });
 };
@@ -1004,7 +1066,12 @@ export const requestCashRenewal = async (req, res) => {
             });
         }
 
-        return await createCashRenewalRequest(req, res, settings, basePass);
+        const requestedMonths = Math.floor(Number(req.body.renewalMonths));
+        const renewalMonths = Number.isFinite(requestedMonths) && requestedMonths >= 1
+            ? Math.min(requestedMonths, 12)
+            : undefined;
+
+        return await createCashRenewalRequest(req, res, settings, basePass, renewalMonths);
     } catch (error) {
         console.error("[v0] Error requesting cash renewal:", error);
         res.status(500).json({
@@ -1040,18 +1107,24 @@ export const confirmCashRenewal = async (req, res) => {
         // Settlement (admin commission + partner earnings) is now performed inside
         // applyRenewalToPass under the idempotency guard so it can never run twice
         // for the same renewal.
-        // Extend the existing pass in place + append trips to the existing booking.
-        const { newEndDate } = await applyRenewalToPass(basePass, { paymentMethod: "CASH" });
+        // Extend the existing pass in place by the number of months the commuter
+        // requested + append trips to the existing booking.
+        const cashRenewalMonths = settings.pendingCashRenewal.renewalMonths || undefined;
+        const cashAmount = settings.pendingCashRenewal.amount;
+        const { newEndDate } = await applyRenewalToPass(basePass, {
+            paymentMethod: "CASH",
+            renewalMonths: cashRenewalMonths,
+        });
 
         settings.linkedPassId = basePass._id;
         settings.lastRenewalDate = new Date();
         settings.nextRenewalDate = settings.autoRenewal ? newEndDate : null;
         settings.currentRenewalAttempts = 0;
-        settings.pendingCashRenewal = { requested: false, passId: null, amount: 0, requestedAt: null };
+        settings.pendingCashRenewal = { requested: false, passId: null, amount: 0, renewalMonths: 1, requestedAt: null };
         settings.renewalHistory.push({
             date: new Date(),
             status: "SUCCESS",
-            amount: basePass.totalAmount,
+            amount: cashAmount ?? basePass.totalAmount,
             paymentMethod: "CASH",
         });
         await settings.save();
@@ -1087,6 +1160,7 @@ export const getPendingCashRenewals = async (req, res) => {
             userPhone: s.userId?.phoneNumber,
             passId: s.pendingCashRenewal.passId,
             amount: s.pendingCashRenewal.amount,
+            renewalMonths: s.pendingCashRenewal.renewalMonths || 1,
             requestedAt: s.pendingCashRenewal.requestedAt,
         }));
 

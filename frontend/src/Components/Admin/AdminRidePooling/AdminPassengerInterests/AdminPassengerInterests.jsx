@@ -1,74 +1,89 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import "./AdminPassengerInterests.css"
-import api from "../../../../utils/api"
+import { useState, useEffect, useCallback } from "react";
+import "./AdminPassengerInterests.css";
+import api from "../../../../utils/api";
 
 const AdminPassengerInterests = () => {
-  const [interests, setInterests] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedInterest, setSelectedInterest] = useState(null)
-  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [interests, setInterests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedInterest, setSelectedInterest] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const fetchPassengerInterests = useCallback(async () => {
     try {
-      setLoading(true)
-      const response = await api.get('/admin/ride-pooling/passenger-interests', {
-        params: { status: statusFilter !== "all" ? statusFilter : undefined }
-      })
-      setInterests(response.data.interests)
+      setLoading(true);
+      const response = await api.get(
+        "/admin/ride-pooling/passenger-interests",
+        {
+          params: { status: statusFilter !== "all" ? statusFilter : undefined },
+        },
+      );
+      setInterests(response.data.interests);
     } catch (error) {
-      console.error("Error fetching passenger interests:", error)
+      console.error("Error fetching passenger interests:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [statusFilter])
+  }, [statusFilter]);
 
   useEffect(() => {
-    fetchPassengerInterests()
-  }, [fetchPassengerInterests])
+    fetchPassengerInterests();
+  }, [fetchPassengerInterests]);
 
   const handleStatusChange = async (interestId, newStatus) => {
     try {
-      await api.put(`/admin/ride-pooling/passenger-interests/${interestId}/status`, {
-        status: newStatus
-      })
-      fetchPassengerInterests()
+      await api.put(
+        `/admin/ride-pooling/passenger-interests/${interestId}/status`,
+        {
+          status: newStatus,
+        },
+      );
+      fetchPassengerInterests();
     } catch (error) {
-      console.error("Error updating status:", error)
+      console.error("Error updating status:", error);
     }
-  }
+  };
 
-  const filteredInterests = interests.filter(interest => 
-    interest.passengerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    interest.pickupLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    interest.dropoffLocation.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredInterests = interests.filter(
+    (interest) =>
+      interest.passengerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      interest.pickupLocation
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      interest.dropoffLocation.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "approved": return "#28a745"
-      case "pending": return "#ffc107"
-      case "under_review": return "#17a2b8"
-      case "rejected": return "#dc3545"
-      case "completed": return "#6f42c1"
-      default: return "#6c757d"
+      case "approved":
+        return "#28a745";
+      case "pending":
+        return "#ffc107";
+      case "under_review":
+        return "#17a2b8";
+      case "rejected":
+        return "#dc3545";
+      case "completed":
+        return "#6f42c1";
+      default:
+        return "#6c757d";
     }
-  }
+  };
 
   const formatStatus = (status) => {
-    if (!status) return "Pending"
-    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ")
-  }
+    if (!status) return "Pending";
+    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
+  };
 
   if (loading) {
     return (
       <div className="admin-passenger-interests">
         <div className="loading">Loading passenger interests...</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -76,8 +91,8 @@ const AdminPassengerInterests = () => {
       <div className="interests-header">
         <h3>Passenger Interests</h3>
         <div className="interests-filters">
-          <select 
-            value={statusFilter} 
+          <select
+            value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="all">All Status</option>
@@ -111,11 +126,13 @@ const AdminPassengerInterests = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredInterests.map(interest => (
+            {filteredInterests.map((interest) => (
               <tr key={interest._id}>
                 <td>
                   <div className="passenger-info">
-                    <span className="passenger-name">{interest.passengerName}</span>
+                    <span className="passenger-name">
+                      {interest.passengerName}
+                    </span>
                     <span className="passenger-id">{interest.passengerId}</span>
                   </div>
                 </td>
@@ -124,8 +141,8 @@ const AdminPassengerInterests = () => {
                 <td>{interest.preferredTime}</td>
                 <td>{interest.frequency}</td>
                 <td>
-                  <span 
-                    className="status-badge" 
+                  <span
+                    className="status-badge"
                     style={{ backgroundColor: getStatusColor(interest.status) }}
                   >
                     {formatStatus(interest.status)}
@@ -134,27 +151,41 @@ const AdminPassengerInterests = () => {
                 <td>{interest.matchedRoutes}</td>
                 <td>
                   <div className="action-buttons">
-                    <button className="view-btn" onClick={() => { setSelectedInterest(interest); setShowDetailModal(true) }}>View Details</button>
-                    {interest.status === 'pending' && (
+                    <button
+                      className="view-btn"
+                      onClick={() => {
+                        setSelectedInterest(interest);
+                        setShowDetailModal(true);
+                      }}
+                    >
+                      View Details
+                    </button>
+                    {interest.status === "pending" && (
                       <>
-                        <button 
+                        <button
                           className="approve-btn"
-                          onClick={() => handleStatusChange(interest._id, 'APPROVED')}
+                          onClick={() =>
+                            handleStatusChange(interest._id, "APPROVED")
+                          }
                         >
                           Approve
                         </button>
-                        <button 
+                        <button
                           className="reject-btn"
-                          onClick={() => handleStatusChange(interest._id, 'REJECTED')}
+                          onClick={() =>
+                            handleStatusChange(interest._id, "REJECTED")
+                          }
                         >
                           Reject
                         </button>
                       </>
                     )}
-                    {interest.status === 'approved' && (
-                      <button 
+                    {interest.status === "approved" && (
+                      <button
                         className="deactivate-btn"
-                        onClick={() => handleStatusChange(interest._id, 'REJECTED')}
+                        onClick={() =>
+                          handleStatusChange(interest._id, "REJECTED")
+                        }
                       >
                         Deactivate
                       </button>
@@ -174,47 +205,76 @@ const AdminPassengerInterests = () => {
       )}
 
       {showDetailModal && selectedInterest && (
-        <div className="interest-modal-overlay" onClick={() => setShowDetailModal(false)}>
+        <div
+          className="interest-modal-overlay"
+          onClick={() => setShowDetailModal(false)}
+        >
           <div className="interest-modal" onClick={(e) => e.stopPropagation()}>
             <div className="interest-modal-header">
               <h3>Passenger Interest Details</h3>
-              <button className="interest-modal-close" onClick={() => setShowDetailModal(false)}>X</button>
+              <button
+                className="interest-modal-close"
+                onClick={() => setShowDetailModal(false)}
+              >
+                X
+              </button>
             </div>
             <div className="interest-modal-body">
               <div className="interest-detail-grid">
                 <div className="interest-detail-row">
                   <span className="detail-label">Passenger</span>
-                  <span className="detail-value">{selectedInterest.passengerName}</span>
+                  <span className="detail-value">
+                    {selectedInterest.passengerName}
+                  </span>
                 </div>
                 <div className="interest-detail-row">
                   <span className="detail-label">Pickup</span>
-                  <span className="detail-value">{selectedInterest.pickupLocation}</span>
+                  <span className="detail-value">
+                    {selectedInterest.pickupLocation}
+                  </span>
                 </div>
                 <div className="interest-detail-row">
                   <span className="detail-label">Dropoff</span>
-                  <span className="detail-value">{selectedInterest.dropoffLocation}</span>
+                  <span className="detail-value">
+                    {selectedInterest.dropoffLocation}
+                  </span>
                 </div>
                 <div className="interest-detail-row">
                   <span className="detail-label">Preferred Time</span>
-                  <span className="detail-value">{selectedInterest.preferredTime}</span>
+                  <span className="detail-value">
+                    {selectedInterest.preferredTime}
+                  </span>
                 </div>
                 <div className="interest-detail-row">
                   <span className="detail-label">Frequency</span>
-                  <span className="detail-value">{selectedInterest.frequency}</span>
+                  <span className="detail-value">
+                    {selectedInterest.frequency}
+                  </span>
                 </div>
                 <div className="interest-detail-row">
                   <span className="detail-label">Status</span>
-                  <span className="status-badge" style={{ backgroundColor: getStatusColor(selectedInterest.status) }}>
+                  <span
+                    className="status-badge"
+                    style={{
+                      backgroundColor: getStatusColor(selectedInterest.status),
+                    }}
+                  >
                     {formatStatus(selectedInterest.status)}
                   </span>
                 </div>
                 <div className="interest-detail-row">
                   <span className="detail-label">Matched Routes</span>
-                  <span className="detail-value">{selectedInterest.matchedRoutes || 0}</span>
+                  <span className="detail-value">
+                    {selectedInterest.matchedRoutes || 0}
+                  </span>
                 </div>
                 <div className="interest-detail-row">
                   <span className="detail-label">Created</span>
-                  <span className="detail-value">{selectedInterest.createdAt ? new Date(selectedInterest.createdAt).toLocaleString() : 'N/A'}</span>
+                  <span className="detail-value">
+                    {selectedInterest.createdAt
+                      ? new Date(selectedInterest.createdAt).toLocaleString()
+                      : "N/A"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -222,7 +282,7 @@ const AdminPassengerInterests = () => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default AdminPassengerInterests
+export default AdminPassengerInterests;

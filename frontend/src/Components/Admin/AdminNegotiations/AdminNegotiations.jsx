@@ -63,6 +63,8 @@ const AdminNegotiations = () => {
   const [actionMessage, setActionMessage] = useState("");
   const [proposedPrice, setProposedPrice] = useState("");
   const [corporateCommissionRate, setCorporateCommissionRate] = useState(25);
+  // Source of the prefilled commission rate (custom_rule | configured | default | stored)
+  const [commissionRateSource, setCommissionRateSource] = useState("default");
 
   const statusOptions = [
     { value: "ALL", label: "All Status" },
@@ -141,7 +143,7 @@ const AdminNegotiations = () => {
       socket.off("negotiation_counter_offer", handleNegotiationUpdate);
     };
   }, [socket, user?._id, fetchNegotiations]);
-  
+
   useEffect(() => {
     let filtered = negotiations || [];
 
@@ -250,9 +252,20 @@ const AdminNegotiations = () => {
         setProposedPrice(
           latestPrice || response.negotiation.originalPrice || "",
         );
-        setCorporateCommissionRate(
-          response.negotiation.adminCommissionFromCorporate?.rate || 25,
-        );
+        // Prefill with the Corporate user's EFFECTIVE configured negotiation
+        // commission rate (active custom rule -> configured rate -> default),
+        // resolved by the backend. Fall back to any rate already stored on a
+        // completed negotiation, then 25%. Admin can still rewrite this value.
+        const resolvedRate =
+          response.negotiation.status === "COMPLETED"
+            ? (response.negotiation.adminCommissionFromCorporate?.rate ??
+              response.effectiveCommissionRate ??
+              25)
+            : (response.effectiveCommissionRate ??
+              response.negotiation.adminCommissionFromCorporate?.rate ??
+              25);
+        setCorporateCommissionRate(resolvedRate);
+        setCommissionRateSource(response.commissionRateSource || "default");
       }
     } catch (error) {
       console.error("Error fetching negotiation details:", error);
@@ -1000,19 +1013,41 @@ const AdminNegotiations = () => {
                         <input
                           type="number"
                           min="0"
-                          max="35"
+                          max="100"
                           value={corporateCommissionRate}
-                          onChange={(e) =>
-                            setCorporateCommissionRate(e.target.value)
-                          }
+                          onChange={(e) => {
+                            setCorporateCommissionRate(e.target.value);
+                            setCommissionRateSource("admin_override");
+                          }}
                           placeholder="Commission rate"
                         />
                         <span className="drivemego-negotiation-form-hint">
+                          {commissionRateSource === "custom_rule" && (
+                            <>
+                              Using the Corporate&apos;s active custom
+                              negotiation rule rate. You can rewrite it below.
+                              <br />
+                            </>
+                          )}
+                          {commissionRateSource === "configured" && (
+                            <>
+                              Using the Corporate&apos;s configured negotiation
+                              commission rate. You can rewrite it below.
+                              <br />
+                            </>
+                          )}
+                          {commissionRateSource === "default" && (
+                            <>
+                              No custom rate set for this Corporate &mdash;
+                              using the default rate. You can rewrite it below.
+                              <br />
+                            </>
+                          )}
                           You will earn{" "}
                           {formatCurrency(
                             ((selectedNegotiation.originalPrice -
                               parseFloat(proposedPrice || 0)) *
-                              corporateCommissionRate) /
+                              parseFloat(corporateCommissionRate || 0)) /
                               100,
                             selectedNegotiation.currency,
                           )}{" "}
@@ -1106,6 +1141,6 @@ const AdminNegotiations = () => {
       )}
     </div>
   );
-};;
+};
 
 export default AdminNegotiations;

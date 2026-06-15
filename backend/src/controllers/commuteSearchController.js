@@ -796,6 +796,7 @@ export const searchCommuteRoutes = async (req, res) => {
                 scheduleStops: intermediateStopsFromPath, // Only stops between pickup and dropoff
                 allStops: intermediateStopsFromPath, // Only stops between pickup and dropoff
                 tags: route.tags || [], // Include tags for filtering and display
+                isFeatured: route.isFeatured || false, // Admin-curated featured flag
                 type: "b2c",
             })
         }
@@ -1134,6 +1135,7 @@ export const publicSearchRoutes = async (req, res) => {
                 allStops: intermediateStopsFromPath, // Only stops between pickup and dropoff
                 tags: route.tags || [], // Include tags for filtering and display
                 images: (route.images || []).map(img => typeof img === 'string' ? img : img?.url).filter(Boolean),
+                isFeatured: route.isFeatured || false, // Admin-curated featured flag
                 type: "b2c",
             })
         }
@@ -1289,26 +1291,42 @@ export const getB2CPartnerRouteRequests = async (req, res) => {
         const partnerId = req.userId
         const { status, page = 1, limit = 20 } = req.query
 
+        // In the Open Marketplace model partners see demand that is open to everyone:
+        // PENDING / UNDER_REVIEW / OPEN requests, plus any where they already showed interest.
         const query = {
             $or: [
-                { assignedProviderId: partnerId },
-                { assignedProviderId: null },
+                { status: { $in: ["PENDING", "UNDER_REVIEW", "OPEN"] } },
+                { "interestedPartners.partnerId": partnerId },
             ],
         }
         if (status) query.status = status.toUpperCase()
 
         const routeRequests = await RouteRequest.find(query)
             .populate('passengerId', 'fullName email phone profileImage')
-            .sort({ createdAt: -1 })
+            .sort({ marketplaceOpenedAt: -1, demandCount: -1, createdAt: -1 })
             .limit(limit * 1)
             .skip((page - 1) * limit)
+            .lean()
+
+        // Annotate each request with this partner's own interest state so the UI can react.
+        const annotated = routeRequests.map((r) => {
+            const mine = (r.interestedPartners || []).find(
+                (p) => String(p.partnerId) === String(partnerId)
+            )
+            return {
+                ...r,
+                myInterestStatus: mine ? mine.status : null,
+                interestedCount: (r.interestedPartners || []).length,
+                isOpenToMarketplace: r.status === "OPEN" || !!r.marketplaceOpenedAt,
+            }
+        })
 
         const total = await RouteRequest.countDocuments(query)
 
         return res.status(200).json({
             success: true,
             data: {
-                routeRequests,
+                routeRequests: annotated,
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages: Math.ceil(total / limit),
@@ -1327,22 +1345,17 @@ export const getB2CPartnerRouteRequests = async (req, res) => {
 }
 
 /* ======================================================
-   RESPOND TO ROUTE REQUEST
+   EXPRESS INTEREST IN A ROUTE REQUEST (Open Marketplace)
+   Multiple partners can show interest in the same corridor.
+   No single partner is exclusively assigned.
 ====================================================== */
 export const respondToRouteRequest = async (req, res) => {
     try {
         const { requestId } = req.params
-        const { status, response } = req.body
+        const { status, response, estimatedPrice } = req.body
         const partnerId = req.userId
 
-        const routeRequest = await RouteRequest.findOne({
-            _id: requestId,
-            $or: [
-                { assignedProviderId: partnerId },
-                { assignedProviderId: null },
-            ],
-        })
-
+        const routeRequest = await RouteRequest.findById(requestId)
         if (!routeRequest) {
             return res.status(404).json({
                 success: false,
@@ -1350,51 +1363,76 @@ export const respondToRouteRequest = async (req, res) => {
             })
         }
 
-        routeRequest.status = status.toUpperCase()
-        routeRequest.providerResponse = response || ""
-        routeRequest.assignedProviderId = partnerId
-        await routeRequest.save()
+        if (["REJECTED", "COMPLETED"].includes(routeRequest.status)) {
+            return res.status(400).json({
+                success: false,
+                message: "This route request is no longer accepting partner interest",
+            })
+        }
+
+        const wantsWithdraw = String(status || "").toUpperCase() === "REJECTED"
+        const price = estimatedPrice != null && estimatedPrice !== "" ? Number(estimatedPrice) : null
+
+        // Apply interest to the whole corridor cluster (case-insensitive match).
+        const escapeRegex = (str = "") => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        const clusterRequests = await RouteRequest.find({
+            pickupLocation: { $regex: `^${escapeRegex(routeRequest.pickupLocation)}$`, $options: "i" },
+            dropoffLocation: { $regex: `^${escapeRegex(routeRequest.dropoffLocation)}$`, $options: "i" },
+            status: { $nin: ["REJECTED", "COMPLETED"] },
+        })
+
+        for (const request of clusterRequests) {
+            const existing = (request.interestedPartners || []).find(
+                (p) => String(p.partnerId) === String(partnerId)
+            )
+            if (wantsWithdraw) {
+                if (existing && existing.status !== "ROUTE_PUBLISHED") existing.status = "WITHDRAWN"
+            } else if (existing) {
+                if (existing.status !== "ROUTE_PUBLISHED") existing.status = "INTERESTED"
+                existing.message = response || existing.message
+                existing.estimatedPrice = price ?? existing.estimatedPrice
+                existing.respondedAt = new Date()
+            } else {
+                request.interestedPartners.push({
+                    partnerId,
+                    message: response || null,
+                    estimatedPrice: price,
+                    status: "INTERESTED",
+                    respondedAt: new Date(),
+                })
+            }
+            // Surface partner interest to Admin without claiming the route.
+            if (request.status === "PENDING") request.status = "UNDER_REVIEW"
+            await request.save()
+        }
 
         // Get partner info for notification
         const partner = await User.findById(partnerId).select("fullName companyName")
-        const partnerName = partner?.fullName || partner?.companyName || "Transport Provider"
+        const partnerName = partner?.companyName || partner?.fullName || "A transport provider"
 
-        // Determine notification message based on status
-        const statusMessages = {
-            APPROVED: `Great news! ${partnerName} has approved your route request from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}`,
-            REJECTED: `${partnerName} was unable to fulfill your route request from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}`,
-            UNDER_REVIEW: `${partnerName} is reviewing your route request from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}`,
+        if (!wantsWithdraw) {
+            await createNotification({
+                userId: routeRequest.passengerId,
+                type: "ROUTE_REQUEST_RESPONSE",
+                title: "A Partner is Interested in Your Route!",
+                message: `${partnerName} expressed interest in serving your route from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}. We'll notify you once it's available to book.`,
+                data: {
+                    requestId: routeRequest._id,
+                    pickupLocation: routeRequest.pickupLocation,
+                    dropoffLocation: routeRequest.dropoffLocation,
+                    status: "UNDER_REVIEW",
+                    providerId: partnerId,
+                    providerName: partnerName,
+                },
+            })
         }
-
-        const statusTitles = {
-            APPROVED: "Route Request Approved!",
-            REJECTED: "Route Request Update",
-            UNDER_REVIEW: "Route Request Under Review",
-        }
-
-        // Send real-time notification to commuter
-        await createNotification({
-            userId: routeRequest.passengerId,
-            type: "ROUTE_REQUEST_RESPONSE",
-            title: statusTitles[routeRequest.status] || "Route Request Update",
-            message: statusMessages[routeRequest.status] || `Your route request has been updated to ${routeRequest.status}`,
-            data: {
-                requestId: routeRequest._id,
-                pickupLocation: routeRequest.pickupLocation,
-                dropoffLocation: routeRequest.dropoffLocation,
-                status: routeRequest.status,
-                providerResponse: routeRequest.providerResponse,
-                providerId: partnerId,
-                providerName: partnerName,
-            },
-        })
-
-        console.log(`[v0] Route request response notification sent to commuter: ${routeRequest.passengerId}`)
 
         return res.status(200).json({
             success: true,
-            message: `Route request ${status.toLowerCase()} successfully`,
-            routeRequest,
+            message: wantsWithdraw
+                ? "Interest withdrawn successfully"
+                : "Interest submitted. The admin reviews demand and opens routes to all interested partners.",
+            data: { requestId: routeRequest._id, clusterSize: clusterRequests.length },
         })
     } catch (error) {
         console.error("respondToRouteRequest error:", error)

@@ -18,6 +18,7 @@ import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import AdminNegotiation from "../models/AdminNegotiation.js";
+import CorporateBooking from "../models/CorporateBooking.js";
 import EMIPayment from "../models/EMIPayment.js";
 import WithdrawalRequest from "../models/WithdrawalRequest.js";
 import { uploadToCloudinary } from "../Config/Cloudinary.js";
@@ -3076,19 +3077,38 @@ export const toggleAdCampaignStatus = async (req, res) => {
     }
 };
 
+// Escape user-provided strings before using them inside a RegExp
+const escapeRegex = (str = "") => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // Get ride pooling statistics for admin
 export const getRidePoolingStats = async (req, res) => {
     try {
-        const [totalPassengers, activeRoutes, suggestedRoutes, matchedRides] = await Promise.all([
-            User.countDocuments({ role: "COMMUTER" }),
+        const [totalPassengers, activeRoutes, matchedRides, suggestedClusters] = await Promise.all([
+            // Distinct commuters who have raised at least one route request
+            RouteRequest.distinct("passengerId").then((ids) => ids.length),
             B2CPartnerRoute.countDocuments({ status: "Active", isActive: true }),
-            RouteRequest.countDocuments({ status: { $in: ["PENDING", "UNDER_REVIEW"] } }),
-            B2CPassengerBooking.countDocuments({ bookingStatus: { $in: ["CONFIRMED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"] } })
+            // Requests that have been converted into a real route = matched rides
+            RouteRequest.countDocuments({ convertedRouteId: { $ne: null } }),
+            // Distinct open corridors (pickup -> dropoff) still awaiting a route
+            RouteRequest.aggregate([
+                { $match: { status: { $in: ["PENDING", "UNDER_REVIEW"] }, convertedRouteId: null } },
+                {
+                    $group: {
+                        _id: {
+                            pickup: { $toLower: "$pickupLocation" },
+                            dropoff: { $toLower: "$dropoffLocation" },
+                        },
+                    },
+                },
+                { $count: "count" },
+            ]),
         ]);
+
+        const suggestedRoutes = suggestedClusters[0]?.count || 0;
 
         res.status(200).json({
             success: true,
-            stats: { totalPassengers, activeRoutes, suggestedRoutes, matchedRides }
+            stats: { totalPassengers, activeRoutes, suggestedRoutes, matchedRides },
         });
     } catch (error) {
         console.error("Error fetching ride pooling stats:", error);
@@ -3100,13 +3120,13 @@ export const getRidePoolingStats = async (req, res) => {
     }
 };
 
-// Get passenger interests for admin
+// Get passenger interests for admin (raw individual demand)
 export const getPassengerInterests = async (req, res) => {
     try {
         const { status, page = 1, limit = 20 } = req.query;
         const query = {};
 
-        if (status && status !== "All Status") {
+        if (status && status !== "All Status" && status !== "all") {
             query.status = status.toUpperCase();
         }
 
@@ -3115,10 +3135,11 @@ export const getPassengerInterests = async (req, res) => {
         const [interests, total] = await Promise.all([
             RouteRequest.find(query)
                 .populate("passengerId", "fullName email whatsappNumber")
+                .populate("convertedRouteId", "fromLocation toLocation status")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(Number.parseInt(limit)),
-            RouteRequest.countDocuments(query)
+            RouteRequest.countDocuments(query),
         ]);
 
         // Find matched routes count for each interest
@@ -3128,13 +3149,14 @@ export const getPassengerInterests = async (req, res) => {
                     fromLocation: { $regex: interest.pickupLocation, $options: "i" },
                     toLocation: { $regex: interest.dropoffLocation, $options: "i" },
                     status: "Active",
-                    isActive: true
+                    isActive: true,
                 });
 
                 return {
                     _id: interest._id,
                     passengerId: interest.passengerId?._id || interest.passengerId,
                     passengerName: interest.passengerId?.fullName || "Unknown",
+                    passengerEmail: interest.passengerId?.email || "",
                     pickupLocation: interest.pickupLocation,
                     dropoffLocation: interest.dropoffLocation,
                     preferredTime: interest.preferredTime,
@@ -3143,7 +3165,10 @@ export const getPassengerInterests = async (req, res) => {
                     createdAt: interest.createdAt,
                     matchedRoutes,
                     travelDays: interest.travelDays,
-                    expectedStartDate: interest.expectedStartDate
+                    expectedStartDate: interest.expectedStartDate,
+                    demandCount: interest.demandCount || 1,
+                    convertedRouteId: interest.convertedRouteId?._id || null,
+                    adminNotes: interest.adminNotes || null,
                 };
             })
         );
@@ -3167,53 +3192,126 @@ export const getPassengerInterests = async (req, res) => {
     }
 };
 
-// Get user suggested routes for admin
+// Get user suggested routes for admin (aggregated demand clusters by corridor)
 export const getUserSuggestedRoutes = async (req, res) => {
     try {
-        const { status, page = 1, limit = 20 } = req.query;
-        const query = {};
+        const { status } = req.query;
 
-        if (status && status !== "all") {
-            query.status = status.toUpperCase();
+        // Build the match stage. We aggregate the raw requests into corridor clusters.
+        const matchStage = {};
+        if (status && status !== "all" && status !== "All Status") {
+            matchStage.status = status.toUpperCase();
         }
 
-        const skip = (Number.parseInt(page) - 1) * Number.parseInt(limit);
-
-        const [requests, total] = await Promise.all([
-            RouteRequest.find(query)
-                .populate("passengerId", "fullName email whatsappNumber")
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(Number.parseInt(limit)),
-            RouteRequest.countDocuments(query)
+        const clusters = await RouteRequest.aggregate([
+            ...(Object.keys(matchStage).length ? [{ $match: matchStage }] : []),
+            {
+                $group: {
+                    _id: {
+                        pickup: { $toLower: "$pickupLocation" },
+                        dropoff: { $toLower: "$dropoffLocation" },
+                    },
+                    primaryRequestId: { $first: "$_id" },
+                    requestIds: { $addToSet: "$_id" },
+                    passengerIds: { $addToSet: "$passengerId" },
+                    pickupLocation: { $first: "$pickupLocation" },
+                    dropoffLocation: { $first: "$dropoffLocation" },
+                    preferredTimes: { $addToSet: "$preferredTime" },
+                    estimatedPrice: { $max: "$estimatedPrice" },
+                    convertedRouteIds: { $addToSet: "$convertedRouteId" },
+                    statuses: { $addToSet: "$status" },
+                    interestedPartners: { $push: "$interestedPartners" },
+                    marketplaceOpenedAt: { $max: "$marketplaceOpenedAt" },
+                    createdAt: { $min: "$createdAt" },
+                },
+            },
+            { $sort: { createdAt: -1 } },
         ]);
 
-        const formattedRoutes = requests.map((req) => ({
-            _id: req._id,
-            userId: req.passengerId?._id || req.passengerId,
-            userName: req.passengerId?.fullName || "Unknown",
-            routeName: `${req.pickupLocation} to ${req.dropoffLocation}`,
-            startPoint: req.pickupLocation,
-            endPoint: req.dropoffLocation,
-            waypoints: [],
-            estimatedTime: "N/A",
-            distance: "N/A",
-            suggestedPrice: req.estimatedPrice || 0,
-            status: req.status ? req.status.toLowerCase().replace("_", "-") : "pending",
-            votes: req.demandCount || 1,
-            createdAt: req.createdAt,
-            requestType: req.requestType,
-            travelDays: req.travelDays,
-            preferredTime: req.preferredTime
-        }));
+        // Derive a representative status for each cluster + resolve names.
+        const formattedRoutes = await Promise.all(
+            clusters.map(async (cluster) => {
+                // A cluster is "converted" if any request in it produced a route.
+                const convertedRouteId = (cluster.convertedRouteIds || []).find((id) => id);
+
+                // Representative status priority: converted -> approved -> open -> rejected -> under_review -> pending
+                let status = "pending";
+                if (convertedRouteId) status = "approved";
+                else if (cluster.statuses.includes("APPROVED")) status = "approved";
+                else if (cluster.statuses.includes("OPEN") || cluster.marketplaceOpenedAt) status = "open";
+                else if (cluster.statuses.includes("UNDER_REVIEW")) status = "under_review";
+                else if (cluster.statuses.every((s) => s === "REJECTED")) status = "rejected";
+                else status = "pending";
+
+                // Flatten + dedupe interested partners across the cluster (latest interest per partner).
+                const partnerMap = new Map();
+                for (const arr of cluster.interestedPartners || []) {
+                    for (const ip of arr || []) {
+                        if (!ip?.partnerId) continue;
+                        const key = String(ip.partnerId);
+                        const prev = partnerMap.get(key);
+                        if (!prev || new Date(ip.respondedAt) > new Date(prev.respondedAt)) {
+                            partnerMap.set(key, ip);
+                        }
+                    }
+                }
+                const interestedPartners = await Promise.all(
+                    Array.from(partnerMap.values()).map(async (ip) => {
+                        const partner = await User.findById(ip.partnerId).select("fullName companyName email");
+                        return {
+                            partnerId: ip.partnerId,
+                            name: partner?.companyName || partner?.fullName || "Unknown Partner",
+                            email: partner?.email || "",
+                            message: ip.message || null,
+                            estimatedPrice: ip.estimatedPrice ?? null,
+                            status: ip.status || "INTERESTED",
+                            publishedRouteId: ip.publishedRouteId || null,
+                        };
+                    })
+                );
+
+                // Use the first passenger as the "suggested by" label.
+                const firstPassenger = cluster.passengerIds?.[0]
+                    ? await User.findById(cluster.passengerIds[0]).select("fullName")
+                    : null;
+                const extraPassengers = (cluster.passengerIds?.length || 1) - 1;
+                const userName = firstPassenger
+                    ? extraPassengers > 0
+                        ? `${firstPassenger.fullName} +${extraPassengers} more`
+                        : firstPassenger.fullName
+                    : "Unknown";
+
+                return {
+                    _id: cluster.primaryRequestId,
+                    requestIds: cluster.requestIds,
+                    userId: cluster.passengerIds?.[0] || null,
+                    userName,
+                    routeName: `${cluster.pickupLocation} to ${cluster.dropoffLocation}`,
+                    startPoint: cluster.pickupLocation,
+                    endPoint: cluster.dropoffLocation,
+                    preferredTime: (cluster.preferredTimes || []).join(", "),
+                    suggestedPrice: cluster.estimatedPrice || 0,
+                    status,
+                    // Votes = number of distinct commuters who want this corridor
+                    votes: cluster.passengerIds?.length || 1,
+                    requestCount: cluster.requestIds?.length || 1,
+                    convertedRouteId: convertedRouteId || null,
+                    interestedPartners,
+                    interestedCount: interestedPartners.length,
+                    publishedCount: interestedPartners.filter((p) => p.status === "ROUTE_PUBLISHED").length,
+                    marketplaceOpened: !!cluster.marketplaceOpenedAt,
+                    createdAt: cluster.createdAt,
+                };
+            })
+        );
 
         res.status(200).json({
             success: true,
             routes: formattedRoutes,
             pagination: {
-                total,
-                page: Number.parseInt(page),
-                pages: Math.ceil(total / Number.parseInt(limit)),
+                total: formattedRoutes.length,
+                page: 1,
+                pages: 1,
             },
         });
     } catch (error) {
@@ -3226,25 +3324,126 @@ export const getUserSuggestedRoutes = async (req, res) => {
     }
 };
 
-// Approve user suggested route
+// Get active B2C partners for route assignment dropdown
+export const getB2CPartnersForAssignment = async (req, res) => {
+    try {
+        const partners = await User.find({ role: "B2C_PARTNER", status: "ACTIVE" })
+            .select("fullName email companyName")
+            .sort({ fullName: 1 });
+
+        res.status(200).json({
+            success: true,
+            partners: partners.map((p) => ({
+                _id: p._id,
+                name: p.companyName || p.fullName,
+                email: p.email,
+            })),
+        });
+    } catch (error) {
+        console.error("Error fetching B2C partners:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching B2C partners",
+            error: error.message,
+        });
+    }
+};
+
+// Approve user suggested route -> create a real B2C route and notify all commuters
 export const approveSuggestedRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
+        const {
+            b2cPartnerId,
+            oneWayPrice,
+            monthlyOneWayPrice,
+            totalSeats = 15,
+            routeStartDate,
+            startTime,
+            availableDays,
+            currency = "KWD",
+        } = req.body;
 
-        const routeRequest = await RouteRequest.findByIdAndUpdate(
-            routeId,
-            { status: "APPROVED" },
-            { new: true }
-        ).populate("passengerId", "fullName email");
-
-        if (!routeRequest) {
+        const primaryRequest = await RouteRequest.findById(routeId).populate("passengerId", "fullName email");
+        if (!primaryRequest) {
             return res.status(404).json({ success: false, message: "Route request not found" });
+        }
+
+        if (!b2cPartnerId) {
+            return res.status(400).json({ success: false, message: "A B2C Partner must be selected to create the route" });
+        }
+        if (!oneWayPrice || Number(oneWayPrice) <= 0) {
+            return res.status(400).json({ success: false, message: "A valid one-way price is required" });
+        }
+
+        const partner = await User.findOne({ _id: b2cPartnerId, role: "B2C_PARTNER" });
+        if (!partner) {
+            return res.status(404).json({ success: false, message: "Selected B2C Partner not found" });
+        }
+
+        // Find every request in this corridor (case-insensitive) so the whole cluster converts together.
+        const clusterRequests = await RouteRequest.find({
+            pickupLocation: { $regex: `^${escapeRegex(primaryRequest.pickupLocation)}$`, $options: "i" },
+            dropoffLocation: { $regex: `^${escapeRegex(primaryRequest.dropoffLocation)}$`, $options: "i" },
+        }).populate("passengerId", "fullName email");
+
+        // Create the real B2C route from the aggregated demand.
+        const newRoute = await B2CPartnerRoute.create({
+            b2cPartnerId,
+            fromLocation: primaryRequest.pickupLocation,
+            toLocation: primaryRequest.dropoffLocation,
+            routeStartDate: routeStartDate ? new Date(routeStartDate) : new Date(),
+            totalSeats: Number(totalSeats),
+            availableSeats: Number(totalSeats),
+            pricing: {
+                oneWayPrice: Number(oneWayPrice),
+                monthlyOneWayPrice: monthlyOneWayPrice ? Number(monthlyOneWayPrice) : 0,
+                currency,
+            },
+            startTime: startTime || primaryRequest.preferredTime || "",
+            availableDays: availableDays?.length ? availableDays : primaryRequest.travelDays,
+            status: "Active",
+            isActive: true,
+            description: `Route created from pooled commuter demand (${clusterRequests.length} request(s)).`,
+        });
+
+        // Mark all cluster requests as converted/approved.
+        await RouteRequest.updateMany(
+            { _id: { $in: clusterRequests.map((r) => r._id) } },
+            {
+                status: "APPROVED",
+                convertedRouteId: newRoute._id,
+                assignedProviderId: b2cPartnerId,
+                adminReviewedBy: req.userId,
+                adminReviewedAt: new Date(),
+            }
+        );
+
+        // Notify every commuter in the cluster that their requested route is now live.
+        for (const request of clusterRequests) {
+            const passenger = request.passengerId;
+            if (!passenger?._id) continue;
+            await createNotification({
+                userId: passenger._id,
+                type: "ROUTE_REQUEST_RESPONSE",
+                title: "Your Requested Route is Now Available!",
+                message: `Good news! A new route from ${primaryRequest.pickupLocation} to ${primaryRequest.dropoffLocation} has been created and is ready to book.`,
+                data: {
+                    requestId: request._id,
+                    routeId: newRoute._id,
+                    pickupLocation: primaryRequest.pickupLocation,
+                    dropoffLocation: primaryRequest.dropoffLocation,
+                    status: "APPROVED",
+                    partnerId: b2cPartnerId,
+                },
+            });
         }
 
         res.status(200).json({
             success: true,
-            message: "Route approved successfully",
-            route: routeRequest
+            message: `Route created and ${clusterRequests.length} commuter(s) notified`,
+            route: newRoute,
+            convertedRequests: clusterRequests.length,
         });
     } catch (error) {
         console.error("Error approving suggested route:", error);
@@ -3256,26 +3455,127 @@ export const approveSuggestedRoute = async (req, res) => {
     }
 };
 
-// Reject user suggested route
+// Open user suggested route to the marketplace -> notify all (or selected) B2C partners
+// so they can publish their own competing routes. No single partner is assigned.
+export const openSuggestedRouteToMarketplace = async (req, res) => {
+    try {
+        const { routeId } = req.params;
+        const { partnerIds } = req.body || {};
+
+        const primaryRequest = await RouteRequest.findById(routeId);
+        if (!primaryRequest) {
+            return res.status(404).json({ success: false, message: "Route request not found" });
+        }
+
+        // Whole corridor cluster (not yet converted) opens together.
+        const clusterRequests = await RouteRequest.find({
+            pickupLocation: { $regex: `^${escapeRegex(primaryRequest.pickupLocation)}$`, $options: "i" },
+            dropoffLocation: { $regex: `^${escapeRegex(primaryRequest.dropoffLocation)}$`, $options: "i" },
+            convertedRouteId: null,
+            status: { $nin: ["REJECTED", "COMPLETED"] },
+        });
+
+        await RouteRequest.updateMany(
+            { _id: { $in: clusterRequests.map((r) => r._id) } },
+            {
+                status: "OPEN",
+                marketplaceOpenedAt: new Date(),
+                adminReviewedBy: req.userId,
+                adminReviewedAt: new Date(),
+            }
+        );
+
+        // Decide which partners to notify: explicit selection, else all active B2C partners.
+        let partners;
+        if (Array.isArray(partnerIds) && partnerIds.length > 0) {
+            partners = await User.find({ _id: { $in: partnerIds }, role: "B2C_PARTNER", status: "ACTIVE" });
+        } else {
+            partners = await User.find({ role: "B2C_PARTNER", status: "ACTIVE" });
+        }
+
+        const demandCount = clusterRequests.length;
+        for (const partner of partners) {
+            await createNotification({
+                userId: partner._id,
+                type: "NEW_ROUTE_REQUEST",
+                title: "New Route Open for You to Serve!",
+                message: `${demandCount} commuter(s) want a route from ${primaryRequest.pickupLocation} to ${primaryRequest.dropoffLocation}. Publish your route to win these riders.`,
+                data: {
+                    requestId: primaryRequest._id,
+                    pickupLocation: primaryRequest.pickupLocation,
+                    dropoffLocation: primaryRequest.dropoffLocation,
+                    demandCount,
+                    marketplace: true,
+                },
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Route opened to ${partners.length} partner(s). ${demandCount} commuter request(s) marked open.`,
+            notifiedPartners: partners.length,
+            openedRequests: demandCount,
+        });
+    } catch (error) {
+        console.error("Error opening suggested route to marketplace:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error opening route to marketplace",
+            error: error.message,
+        });
+    }
+};
+
+// Reject user suggested route -> mark the cluster rejected and notify commuters
 export const rejectSuggestedRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
         const { reason } = req.body;
 
-        const routeRequest = await RouteRequest.findByIdAndUpdate(
-            routeId,
-            { status: "REJECTED", providerResponse: reason || "Rejected by admin" },
-            { new: true }
-        ).populate("passengerId", "fullName email");
-
-        if (!routeRequest) {
+        const primaryRequest = await RouteRequest.findById(routeId);
+        if (!primaryRequest) {
             return res.status(404).json({ success: false, message: "Route request not found" });
+        }
+
+        const clusterRequests = await RouteRequest.find({
+            pickupLocation: { $regex: `^${escapeRegex(primaryRequest.pickupLocation)}$`, $options: "i" },
+            dropoffLocation: { $regex: `^${escapeRegex(primaryRequest.dropoffLocation)}$`, $options: "i" },
+            convertedRouteId: null,
+        }).populate("passengerId", "fullName email");
+
+        await RouteRequest.updateMany(
+            { _id: { $in: clusterRequests.map((r) => r._id) } },
+            {
+                status: "REJECTED",
+                providerResponse: reason || "Rejected by admin",
+                adminNotes: reason || "Rejected by admin",
+                adminReviewedBy: req.userId,
+                adminReviewedAt: new Date(),
+            }
+        );
+
+        // Notify commuters of the rejection.
+        for (const request of clusterRequests) {
+            const passenger = request.passengerId;
+            if (!passenger?._id) continue;
+            await createNotification({
+                userId: passenger._id,
+                type: "ROUTE_REQUEST_RESPONSE",
+                title: "Update on Your Route Request",
+                message: `We're unable to create a route from ${primaryRequest.pickupLocation} to ${primaryRequest.dropoffLocation} at this time.${reason ? ` Reason: ${reason}` : ""}`,
+                data: {
+                    requestId: request._id,
+                    pickupLocation: primaryRequest.pickupLocation,
+                    dropoffLocation: primaryRequest.dropoffLocation,
+                    status: "REJECTED",
+                },
+            });
         }
 
         res.status(200).json({
             success: true,
-            message: "Route rejected successfully",
-            route: routeRequest
+            message: `Route suggestion rejected and ${clusterRequests.length} commuter(s) notified`,
+            rejectedRequests: clusterRequests.length,
         });
     } catch (error) {
         console.error("Error rejecting suggested route:", error);
@@ -3709,33 +4009,71 @@ export const getB2CRoutes = async (req, res) => {
 
         const total = await B2CPartnerRoute.countDocuments(query);
 
+        // ===== Compute REAL booking counts per route =====
+        // Count active/valid passenger bookings grouped by routeId so the admin
+        // can see demand for every B2C partner route and decide what to feature.
+        const routeIds = routes.map(r => r._id);
+        const bookingCountsAgg = await B2CPassengerBooking.aggregate([
+            {
+                $match: {
+                    routeId: { $in: routeIds },
+                    bookingStatus: { $in: ["PENDING", "CONFIRMED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"] }
+                }
+            },
+            {
+                $group: {
+                    _id: "$routeId",
+                    totalBookings: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const bookingCountMap = {};
+        bookingCountsAgg.forEach(item => {
+            bookingCountMap[item._id.toString()] = item.totalBookings;
+        });
+
+        // Booking criteria thresholds: low / medium / high demand
+        const getBookingCriteria = (count) => {
+            if (count >= 20) return "high";
+            if (count >= 5) return "medium";
+            return "low";
+        };
+
         // Format routes for frontend compatibility
-        const formattedRoutes = routes.map(route => ({
-            _id: route._id,
-            name: `${route.fromLocation} to ${route.toLocation}`,
-            startPoint: route.fromLocation,
-            endPoint: route.toLocation,
-            providerName: route.b2cPartnerId?.fullName || route.b2cPartnerId?.companyName || 'Unknown Provider',
-            providerId: route.b2cPartnerId?._id,
-            departureTime: route.startTime,
-            arrivalTime: "N/A", // Can be calculated based on route duration
-            capacity: route.totalSeats,
-            bookedSeats: route.totalSeats - route.availableSeats,
-            status: route.status || "Active",
-            featured: false,
-            price: route.pricing?.oneWayPrice || 0,
-            distance: "N/A",
-            duration: "N/A",
-            createdAt: route.createdAt,
-            // Additional B2C specific fields
-            tripType: route.tripType,
-            availableDays: route.availableDays,
-            routeStartDate: route.routeStartDate,
-            pricing: route.pricing,
-            description: route.description,
-            assignedVehicle: route.assignedVehicle,
-            assignedDriver: route.assignedDriver
-        }));
+        const formattedRoutes = routes.map(route => {
+            const totalBookings = bookingCountMap[route._id.toString()] || 0;
+            return {
+                _id: route._id,
+                name: `${route.fromLocation} to ${route.toLocation}`,
+                startPoint: route.fromLocation,
+                endPoint: route.toLocation,
+                providerName: route.b2cPartnerId?.fullName || route.b2cPartnerId?.companyName || 'Unknown Provider',
+                providerId: route.b2cPartnerId?._id,
+                departureTime: route.startTime,
+                arrivalTime: "N/A", // Can be calculated based on route duration
+                capacity: route.totalSeats,
+                bookedSeats: route.totalSeats - route.availableSeats,
+                status: route.status || "Active",
+                featured: route.isFeatured || false,
+                featuredAt: route.featuredAt || null,
+                // Real booking demand data for admin decision-making
+                totalBookings,
+                bookingCriteria: getBookingCriteria(totalBookings),
+                price: route.pricing?.oneWayPrice || 0,
+                distance: "N/A",
+                duration: "N/A",
+                createdAt: route.createdAt,
+                // Additional B2C specific fields
+                tripType: route.tripType,
+                availableDays: route.availableDays,
+                routeStartDate: route.routeStartDate,
+                pricing: route.pricing,
+                description: route.description,
+                assignedVehicle: route.assignedVehicle,
+                assignedDriver: route.assignedDriver
+            };
+        });
 
         res.status(200).json({
             success: true,
@@ -3859,6 +4197,15 @@ export const updateB2CRoute = async (req, res) => {
             updateData.status = statusMap[updateData.status] || 'Active';
         }
 
+        // Map the frontend `featured` flag to the model field `isFeatured`.
+        // Admin uses this to curate which routes appear in the Commuter
+        // "Featured Routes & Trips" section.
+        if (typeof updateData.featured !== "undefined") {
+            updateData.isFeatured = !!updateData.featured;
+            updateData.featuredAt = updateData.isFeatured ? new Date() : null;
+            delete updateData.featured;
+        }
+
         // Update actual route in database - use b2cPartnerId (correct field name)
         const updatedRoute = await B2CPartnerRoute.findByIdAndUpdate(
             routeId,
@@ -3892,6 +4239,8 @@ export const updateB2CRoute = async (req, res) => {
             availableSeats: updatedRoute.availableSeats,
             status: updatedRoute.status,
             isActive: updatedRoute.isActive,
+            featured: updatedRoute.isFeatured || false,
+            featuredAt: updatedRoute.featuredAt || null,
             pricing: updatedRoute.pricing,
             tripType: updatedRoute.tripType,
             availableDays: updatedRoute.availableDays,
@@ -5780,20 +6129,38 @@ export const getCommuterRoutes = async (req, res) => {
         // Determine the commuter's country so we only show routes that belong
         // to the same country (UAE user -> only UAE routes, Kuwait user -> only
         // Kuwait routes). This mirrors the home page (commute search) behaviour.
+        //
+        // Resolution order (same as the home page):
+        //   1. The `nationality` query param sent by the client. The home page /
+        //      Find Routes tab detects the user's location via /location/detect
+        //      (IP based) and forwards it here, so this is the most accurate.
+        //   2. The stored country / nationality on the user document (fallback).
+        const countryMapping = {
+            'UAE': 'UAE',
+            'AE': 'UAE',
+            'United Arab Emirates': 'UAE',
+            'KW': 'Kuwait',
+            'Kuwait': 'Kuwait'
+        };
+
         let userCountry = null;
-        try {
-            const commuter = await User.findById(userId).select('country nationality');
-            const countryMapping = {
-                'UAE': 'UAE',
-                'AE': 'UAE',
-                'United Arab Emirates': 'UAE',
-                'KW': 'Kuwait',
-                'Kuwait': 'Kuwait'
-            };
-            const rawCountry = commuter?.country || commuter?.nationality;
-            userCountry = countryMapping[rawCountry] || rawCountry || null;
-        } catch (e) {
-            // If we cannot resolve the country, fall back to showing all routes
+
+        // 1️⃣ Prefer the nationality passed by the client (IP-detected on the
+        //    home page / Find Routes tab).
+        const { nationality } = req.query;
+        if (nationality) {
+            userCountry = countryMapping[nationality] || nationality;
+        }
+
+        // 2️⃣ Fall back to the value stored on the user document.
+        if (!userCountry) {
+            try {
+                const commuter = await User.findById(userId).select('country nationality');
+                const rawCountry = commuter?.country || commuter?.nationality;
+                userCountry = countryMapping[rawCountry] || rawCountry || null;
+            } catch (e) {
+                // If we cannot resolve the country, fall back to showing all routes
+            }
         }
 
         // Helper to derive a route's country from its location names
@@ -8077,38 +8444,78 @@ export const getMonthlyRevenue = async (req, res) => {
         const currentYear = new Date().getFullYear();
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        // Get monthly revenue data
-        const monthlyRevenue = await Payment.aggregate([
+        // Admin revenue = the admin's own wallet earnings recorded in the Transaction ledger.
+        // This matches the "Total Revenue" stat (admin wallet totalEarnings) instead of only
+        // counting B2B contract Payment documents.
+        const adminUserId = new mongoose.Types.ObjectId(req.userId);
+
+        // Reference models that belong to the corporate side; everything else (B2C bookings,
+        // monthly pass renewals, etc.) is counted as B2C revenue.
+        const CORPORATE_REFS = ["Payment", "Contract", "AdminNegotiation", "CorporateBooking"];
+
+        const monthlyRevenue = await Transaction.aggregate([
             {
                 $match: {
-                    status: "COMPLETED",
+                    userId: adminUserId,
                     createdAt: {
                         $gte: new Date(currentYear, 0, 1),
-                        $lte: new Date(currentYear, 11, 31)
+                        $lte: new Date(currentYear, 11, 31, 23, 59, 59, 999)
                     }
                 }
             },
             {
                 $group: {
                     _id: { $month: "$createdAt" },
-                    total: { $sum: "$amount" },
-                    count: { $sum: 1 }
+                    // Net total = credited earnings minus any debited reversals/refunds
+                    total: {
+                        $sum: {
+                            $cond: [{ $eq: ["$type", "CREDIT"] }, "$amount", { $multiply: ["$amount", -1] }]
+                        }
+                    },
+                    corporate: {
+                        $sum: {
+                            $cond: [
+                                {
+                                    $and: [
+                                        { $eq: ["$type", "CREDIT"] },
+                                        { $in: [{ $ifNull: ["$referenceModel", "none"] }, CORPORATE_REFS] }
+                                    ]
+                                },
+                                "$amount",
+                                0
+                            ]
+                        }
+                    },
+                    b2c: {
+                        $sum: {
+                            $cond: [
+                                {
+                                    $and: [
+                                        { $eq: ["$type", "CREDIT"] },
+                                        { $not: [{ $in: [{ $ifNull: ["$referenceModel", "none"] }, CORPORATE_REFS] }] }
+                                    ]
+                                },
+                                "$amount",
+                                0
+                            ]
+                        }
+                    }
                 }
             },
-            {
-                $sort: { "_id": 1 }
-            }
+            { $sort: { "_id": 1 } }
         ]);
 
-        // Format data for frontend
+        // Format data for frontend (zero-filled for months with no data)
         const data = months.map((month, index) => {
             const monthData = monthlyRevenue.find(item => item._id === index + 1);
+            const total = Math.round((monthData?.total || 0) * 100) / 100;
+            const corporate = Math.round((monthData?.corporate || 0) * 100) / 100;
+            const b2c = Math.round((monthData?.b2c || 0) * 100) / 100;
             return {
                 month,
-                total: monthData?.total || 0,
-                corporate: Math.floor((monthData?.total || 0) * 0.6), // 60% from corporate
-                b2c: Math.floor((monthData?.total || 0) * 0.3), // 30% from B2C
-                commission: Math.floor((monthData?.total || 0) * 0.1) // 10% commission
+                total: total < 0 ? 0 : total,
+                corporate,
+                b2c
             };
         });
 
@@ -8130,48 +8537,50 @@ export const getMonthlyRevenue = async (req, res) => {
 export const getBookingTrends = async (req, res) => {
     try {
         const { period = "12" } = req.query;
-        const monthsToShow = parseInt(period);
-        const currentYear = new Date().getFullYear();
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthsToShow = Math.min(Math.max(parseInt(period) || 12, 1), 12);
 
-        // Get booking data for the specified period
-        const startDate = new Date(currentYear, 12 - monthsToShow, 1);
-        const endDate = new Date(currentYear, 11, 31);
+        // Build a rolling window ending with the current month so trends are always relevant.
+        const now = new Date();
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        // Aggregate bookings by month
-        const bookingTrends = await Payment.aggregate([
-            {
-                $match: {
-                    status: "COMPLETED",
-                    createdAt: {
-                        $gte: startDate,
-                        $lte: endDate
-                    }
-                }
-            },
-            {
-                $group: {
-                    _id: { $month: "$createdAt" },
-                    bookings: { $sum: 1 },
-                    revenue: { $sum: "$amount" }
-                }
-            },
-            {
-                $sort: { "_id": 1 }
-            }
+        const windowStart = new Date(now.getFullYear(), now.getMonth() - (monthsToShow - 1), 1);
+        const windowEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        // Count real bookings from both booking sources, grouped by year+month
+        const groupByYearMonth = (collectionMatch) => ({
+            _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+            ...collectionMatch
+        });
+
+        const [b2cTrends, corporateTrends] = await Promise.all([
+            B2CPassengerBooking.aggregate([
+                { $match: { createdAt: { $gte: windowStart, $lte: windowEnd } } },
+                { $group: groupByYearMonth({ count: { $sum: 1 } }) }
+            ]),
+            CorporateBooking.aggregate([
+                { $match: { createdAt: { $gte: windowStart, $lte: windowEnd } } },
+                { $group: groupByYearMonth({ count: { $sum: 1 } }) }
+            ])
         ]);
 
-        // Format data for frontend
-        const data = months
-            .slice(-monthsToShow)
-            .map((month, index) => {
-                const monthData = bookingTrends.find(item => item._id === (13 - monthsToShow + index + 1));
-                return {
-                    month,
-                    bookings: monthData?.bookings || 0,
-                    revenue: monthData?.revenue || 0
-                };
+        const lookup = (trends, year, month) =>
+            trends.find(t => t._id.year === year && t._id.month === month)?.count || 0;
+
+        // Build the ordered list of months in the rolling window (oldest -> newest)
+        const data = [];
+        for (let i = 0; i < monthsToShow; i++) {
+            const d = new Date(windowStart.getFullYear(), windowStart.getMonth() + i, 1);
+            const year = d.getFullYear();
+            const monthNum = d.getMonth() + 1;
+            const b2cCount = lookup(b2cTrends, year, monthNum);
+            const corporateCount = lookup(corporateTrends, year, monthNum);
+            data.push({
+                month: monthNames[d.getMonth()],
+                bookings: b2cCount + corporateCount,
+                b2cBookings: b2cCount,
+                corporateBookings: corporateCount
             });
+        }
 
         res.status(200).json({
             success: true,

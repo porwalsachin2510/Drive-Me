@@ -101,22 +101,26 @@ export default function Wallet() {
     }
   };
 
-  const getTransactionColor = (type) => {
-    switch (type) {
-      case "RIDE_PAYMENT":
-      case "PENALTY":
-      case "WITHDRAWAL":
-      case "CANCELLATION_FEE":
-        return "#dc3545";
-      case "WALLET_TOPUP":
-      case "DEPOSIT":
-      case "REFUND":
-      case "COMMISSION_REFUND":
-        return "#28a745";
-      default:
-        return "#6c757d";
-    }
+  // The backend sends an explicit `direction` ("CREDIT" | "DEBIT") per transaction.
+  // Trust it for sign/colour; fall back to a type check for older payloads.
+  const CREDIT_TYPES = [
+    "CREDIT",
+    "WALLET_TOPUP",
+    "DEPOSIT",
+    "REFUND",
+    "BOOKING_EARNING",
+    "COMMISSION",
+    "COMMISSION_REFUND",
+    "SECURITY_DEPOSIT_REFUND",
+  ];
+  const isCredit = (transaction) => {
+    if (!transaction) return false;
+    if (transaction.direction) return transaction.direction === "CREDIT";
+    return CREDIT_TYPES.includes(transaction.type);
   };
+
+  const getTransactionColor = (transaction) =>
+    isCredit(transaction) ? "#28a745" : "#dc3545";
 
   if (loading) {
     return (
@@ -289,12 +293,9 @@ export default function Wallet() {
                   <div className="transaction-amount">
                     <span
                       className="amount"
-                      style={{ color: getTransactionColor(transaction.type) }}
+                      style={{ color: getTransactionColor(transaction) }}
                     >
-                      {transaction.type === "WALLET_TOPUP" ||
-                      transaction.type === "DEPOSIT" ||
-                      transaction.type === "REFUND" ||
-                      transaction.type === "COMMISSION_REFUND"
+                      {isCredit(transaction)
                         ? `+${formatAmount(transaction.amount)}`
                         : `-${formatAmount(transaction.amount)}`}
                     </span>

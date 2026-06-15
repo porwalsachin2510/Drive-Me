@@ -17,7 +17,17 @@
   font-size: 14px;
   color: #E85D5D;
   font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.fr-routes-location {
+  font-size: 14px;
+  color: #475569;
   margin-bottom: 30px;
+}
+
+.fr-routes-location strong {
+  color: #0f172a;
 }
 
 /* Search & Filter Controls */

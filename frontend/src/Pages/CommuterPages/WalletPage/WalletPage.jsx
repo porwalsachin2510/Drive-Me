@@ -128,11 +128,13 @@ function WalletPage() {
     return "#ef4444";
   };
 
-  // Embedded wallet transactions use types like DEPOSIT/REFUND/WITHDRAWAL (not CREDIT/DEBIT).
-  // Money coming IN = credit (+), money going OUT = debit (-).
+  // The backend now sends an explicit `direction` ("CREDIT" | "DEBIT") for every
+  // transaction, computed from the authoritative type/category. Always trust it.
+  // (Fallback to a type list only for older payloads that predate the `direction` field.)
   const CREDIT_TYPES = [
     "CREDIT",
     "DEPOSIT",
+    "WALLET_TOPUP",
     "REFUND",
     "BOOKING_EARNING",
     "COMMISSION",
@@ -141,13 +143,29 @@ function WalletPage() {
     "TRANSFER_IN",
   ];
   const isCreditTransaction = (transaction) => {
-    if (!transaction || !transaction.type) return false;
+    if (!transaction) return false;
+    if (transaction.direction) return transaction.direction === "CREDIT";
+    if (!transaction.type) return false;
     return CREDIT_TYPES.includes(transaction.type);
   };
   const signedAmount = (transaction) =>
     isCreditTransaction(transaction)
       ? Math.abs(transaction.amount)
       : -Math.abs(transaction.amount);
+
+  // "This Month" = net movement (credits minus debits) for the current calendar month.
+  const thisMonthNet = () => {
+    const now = new Date();
+    return transactions
+      .filter((t) => {
+        const d = new Date(t.createdAt);
+        return (
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        );
+      })
+      .reduce((sum, t) => sum + signedAmount(t), 0);
+  };
 
   return (
     <>
@@ -229,13 +247,7 @@ function WalletPage() {
                   <div className="drivemego-wp-card-icon">📈</div>
                   <div className="drivemego-wp-card-content">
                     <h3>This Month</h3>
-                    <p>
-                      {formatCurrency(
-                        transactions
-                          .slice(0, 10)
-                          .reduce((sum, t) => sum + signedAmount(t), 0),
-                      )}
-                    </p>
+                    <p>{formatCurrency(thisMonthNet())}</p>
                   </div>
                 </div>
               </div>

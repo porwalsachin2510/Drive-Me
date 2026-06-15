@@ -247,7 +247,9 @@ export default function CommuterHomePage() {
     fetchRoutes(params);
   };
 
-  const featuredRoutes = firstloadroutes.slice(0, 6);
+  // Only show routes that an admin has explicitly marked as featured.
+  // This prevents the page from rendering thousands of B2C partner cards.
+  const featuredRoutes = firstloadroutes.filter((route) => route.isFeatured);
 
   // eslint-disable-next-line no-unused-vars
   const goToSearchFleetPage = () => {

@@ -244,18 +244,44 @@ export const getWalletTransactions = async (req, res) => {
 
         // ===== Build a unified transaction history =====
         // Sources:
-        //  1. Embedded wallet.transactions (top-ups, withdrawals, etc.)
-        //  2. Transaction collection records scoped to this user
-        //  3. Completed passenger bookings (gateway ride/pass payments that
-        //     never touch the wallet balance but are still spend the user made)
+        //  1. Embedded wallet.transactions (top-ups, withdrawals, earnings, refunds, etc.)
+        //  2. Transaction collection records scoped to this user (a "better tracking" copy
+        //     of many of the same events -> must be de-duplicated against source 1)
+        //  3. Completed passenger bookings (gateway ride/pass payments that never touch the
+        //     wallet balance but are still spend the user made)
+        //
+        // CRITICAL: every emitted row carries an explicit `direction` ("CREDIT" | "DEBIT")
+        // computed here from the authoritative transaction type/category. The frontend must
+        // rely on this field for the +/- sign and red/green colour instead of guessing from
+        // a remapped `type`, which previously caused earnings/refunds to render as red debits.
+
+        // Embedded transaction types that represent money coming INTO the wallet.
+        const EMBEDDED_CREDIT_TYPES = new Set([
+            "DEPOSIT",
+            "REFUND",
+            "COMMISSION_REFUND",
+            "SECURITY_DEPOSIT_REFUND",
+            "BOOKING_EARNING",
+            "COMMISSION",
+            "NEGOTIATION_COMMISSION",
+        ])
+
         const merged = []
+        // Dedup keys built from embedded transactions so the Transaction-collection twin of the
+        // same event (identical amount + description on the same wallet) is not shown twice.
+        const seenTwins = new Set()
+        const twinKey = (amount, description) =>
+            `${Number(amount || 0).toFixed(2)}|${(description || "").trim()}`
 
             // 1) Embedded wallet transactions
             ; (wallet.transactions || []).forEach((t) => {
                 const obj = t.toObject ? t.toObject() : t
+                const direction = EMBEDDED_CREDIT_TYPES.has(obj.type) ? "CREDIT" : "DEBIT"
+                seenTwins.add(twinKey(obj.amount, obj.description))
                 merged.push({
                     _id: String(obj._id),
                     type: obj.type === "DEPOSIT" ? "WALLET_TOPUP" : obj.type,
+                    direction,
                     amount: obj.amount,
                     description: obj.description,
                     status: obj.status || "COMPLETED",
@@ -265,14 +291,17 @@ export const getWalletTransactions = async (req, res) => {
                 })
             })
 
-        // 2) Transaction collection records for this user
+        // 2) Transaction collection records for this user (skip twins already shown above)
         try {
             const ledger = await Transaction.find({ userId }).lean()
             ledger.forEach((t) => {
+                if (seenTwins.has(twinKey(t.amount, t.description))) return
+                seenTwins.add(twinKey(t.amount, t.description))
                 const isCredit = t.type === "CREDIT"
                 merged.push({
                     _id: String(t._id),
                     type: isCredit ? "WALLET_TOPUP" : "RIDE_PAYMENT",
+                    direction: isCredit ? "CREDIT" : "DEBIT",
                     amount: t.amount,
                     description: t.description,
                     status: "COMPLETED",
@@ -285,7 +314,7 @@ export const getWalletTransactions = async (req, res) => {
             console.error("[v0] Error loading Transaction ledger:", ledgerErr.message)
         }
 
-        // 3) Completed passenger bookings (gateway payments)
+        // 3) Completed passenger bookings (gateway payments) - always money OUT (debit)
         try {
             const bookings = await B2CPassengerBooking.find({
                 passengerId: userId,
@@ -296,6 +325,7 @@ export const getWalletTransactions = async (req, res) => {
                 merged.push({
                     _id: `booking-${String(b._id)}`,
                     type: "RIDE_PAYMENT",
+                    direction: "DEBIT",
                     amount: b.paymentAmount,
                     description: b.isMonthlyPass
                         ? `Monthly pass payment (${b.pickupLocation} ↔ ${b.dropoffLocation})`

@@ -13,6 +13,7 @@ import B2B_PartnerNegotiations from "../../../Components/B2B_Partner/B2B_Partner
 import RequirementsView from "../../../Components/B2B_Partner/RequirementsView/RequirementsView";
 import B2B_Invoices from "../../../Components/B2B_Partner/B2B_Invoices/B2B_Invoices";
 import MyCommission from "../../../Components/MyCommission/MyCommission";
+import MySettlements from "../../../Components/MySettlements/MySettlements";
 import "./b2b_partnerprofilepage.css";
 
 function B2B_PartnerProfilePage() {
@@ -67,6 +68,8 @@ function B2B_PartnerProfilePage() {
         return <B2B_Invoices />;
       case "my-commission":
         return <MyCommission />;
+      case "settlements":
+        return <MySettlements />;
       case "settings":
         return <B2B_Settings />;
       default:

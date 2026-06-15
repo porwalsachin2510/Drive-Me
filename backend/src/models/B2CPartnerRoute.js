@@ -104,6 +104,17 @@ const b2cPartnerRouteSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        // Admin-curated featured flag. Only featured routes are shown in the
+        // Commuter Home Page "Featured Routes & Trips" section.
+        isFeatured: {
+            type: Boolean,
+            default: false,
+        },
+        // Timestamp of when the route was marked featured by an admin
+        featuredAt: {
+            type: Date,
+            default: null,
+        },
         // Driver assignment for route
         assignedDriverId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -186,7 +197,7 @@ const b2cPartnerRouteSchema = new mongoose.Schema(
             }
         }
     },
-    { 
+    {
         timestamps: true,
         toJSON: { virtuals: true },
         toObject: { virtuals: true }
@@ -195,23 +206,24 @@ const b2cPartnerRouteSchema = new mongoose.Schema(
 
 // Index for search optimization
 b2cPartnerRouteSchema.index({ b2cPartnerId: 1, status: 1 });
+b2cPartnerRouteSchema.index({ isFeatured: 1, status: 1 });
 b2cPartnerRouteSchema.index({ fromLocation: 1, toLocation: 1 });
 b2cPartnerRouteSchema.index({ assignedVehicle: 1 });
 b2cPartnerRouteSchema.index({ assignedDriver: 1 });
 
 // Virtual for route description
-b2cPartnerRouteSchema.virtual('routeDescription').get(function() {
+b2cPartnerRouteSchema.virtual('routeDescription').get(function () {
     return `${this.fromLocation} to ${this.toLocation} (${this.tripType})`;
 });
 
 // Virtual for seat utilization
-b2cPartnerRouteSchema.virtual('seatUtilization').get(function() {
+b2cPartnerRouteSchema.virtual('seatUtilization').get(function () {
     if (this.totalSeats === 0) return 0;
     return ((this.totalSeats - this.availableSeats) / this.totalSeats) * 100;
 });
 
 // Pre-save middleware to ensure availableSeats doesn't exceed totalSeats
-b2cPartnerRouteSchema.pre('save', function(next) {
+b2cPartnerRouteSchema.pre('save', function (next) {
     if (this.availableSeats > this.totalSeats) {
         this.availableSeats = this.totalSeats;
     }

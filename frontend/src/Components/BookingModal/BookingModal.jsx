@@ -792,6 +792,28 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   };
 
   const handleContinueToPayment = () => {
+    // A trip time (schedule) MUST be selected before continuing. Previously a
+    // One-Way pass could proceed without choosing any outbound schedule and the
+    // code silently fell back to the first available trip.
+    if (outboundTrips.length > 0 && !selectedTrip) {
+      alert("Please select a trip time before continuing.");
+      return;
+    }
+
+    // For a Round Trip pass the return schedule must also be selected.
+    if (selectedPassType === "ROUND_TRIP") {
+      if (returnTrips.length === 0) {
+        alert(
+          "No return trips available for this route. Please select One-Way Monthly Pass instead.",
+        );
+        return;
+      }
+      if (!selectedReturnTrip) {
+        alert("Please select a return trip time before continuing.");
+        return;
+      }
+    }
+
     if (isCorporate) {
       handleCorporateBooking();
     } else {
@@ -809,16 +831,18 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       routeId: route._id || route.id || route.routeId,
       scheduleId: scheduleData?._id || route.scheduleId || route._id, // Use schedule data ID
       passType: selectedPassType,
+      // Use the commuter's explicit selection. Validation in
+      // handleContinueToPayment guarantees a trip is selected when trips exist,
+      // so we no longer silently fall back to the first available trip.
       outboundTripTime:
         selectedTrip?.departureTime ||
         outboundTrips[0]?.departureTime ||
         allTrips[0]?.departureTime ||
-        "8:00 AM",
-      returnTripTime:
-        selectedReturnTrip?.departureTime ||
-        returnTrips[0]?.departureTime ||
-        allTrips.find((t) => t.direction === "return")?.departureTime ||
         "",
+      returnTripTime:
+        selectedPassType === "ROUND_TRIP"
+          ? selectedReturnTrip?.departureTime || ""
+          : "",
       pickupLocation: selectedPickupPoint || route.fromLocation,
       dropoffLocation: selectedDropoffPoint || route.toLocation,
       returnPickupLocation:
@@ -831,6 +855,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       numberOfSeats: numberOfSeats,
       selectedDays: routeAllowedDays, // Pass covers the route's full weekly availability
       totalAmount: Number.parseFloat(totalAmount),
+      // Send the route's currency so the backend charges in the correct
+      // currency (AED for UAE / KWD for Kuwait) and picks the right gateway.
+      currency: currency,
       paymentMethod: method,
       notes: notes,
       // Custom date range
@@ -2467,17 +2494,21 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   disabled={
                     loading ||
                     isProcessing ||
+                    (outboundTrips.length > 0 && !selectedTrip) ||
                     (selectedPassType === "ROUND_TRIP" &&
                       returnTrips.length === 0) ||
                     (selectedPassType === "ROUND_TRIP" && !selectedReturnTrip)
                   }
                   title={
-                    selectedPassType === "ROUND_TRIP" &&
-                    returnTrips.length === 0
-                      ? "No return trips available for this route. Please select One-Way Monthly Pass instead."
-                      : selectedPassType === "ROUND_TRIP" && !selectedReturnTrip
-                        ? "Please select a return trip to continue."
-                        : ""
+                    outboundTrips.length > 0 && !selectedTrip
+                      ? "Please select a trip time to continue."
+                      : selectedPassType === "ROUND_TRIP" &&
+                          returnTrips.length === 0
+                        ? "No return trips available for this route. Please select One-Way Monthly Pass instead."
+                        : selectedPassType === "ROUND_TRIP" &&
+                            !selectedReturnTrip
+                          ? "Please select a return trip to continue."
+                          : ""
                   }
                 >
                   {loading || isProcessing ? (
@@ -2525,50 +2556,60 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   </div>
                 ) : (
                   <div className="payment-options">
-                    {/* Online Payment Methods - Only show if enabled by admin */}
+                    {/* Online Payment Methods - Only show if enabled by admin.
+                        The online gateway is country specific:
+                          - UAE routes (AED) -> Stripe (Credit/Debit Card)
+                          - Kuwait routes (KWD) -> Tap Payments
+                        so a UAE commuter never sees Tap and a Kuwait commuter
+                        never sees Stripe. */}
                     {onlinePaymentsEnabled && (
                       <>
-                        <div
-                          className={`payment-option ${paymentMethod === "STRIPE" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
-                          onClick={() =>
-                            !isProcessing && handleSelectPaymentMethod("STRIPE")
-                          }
-                        >
-                          <div className="option-icon">
-                            <FaCreditCard />
+                        {currency !== "KWD" && (
+                          <div
+                            className={`payment-option ${paymentMethod === "STRIPE" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
+                            onClick={() =>
+                              !isProcessing &&
+                              handleSelectPaymentMethod("STRIPE")
+                            }
+                          >
+                            <div className="option-icon">
+                              <FaCreditCard />
+                            </div>
+                            <div className="option-info">
+                              <span className="option-title">
+                                Credit/Debit Card
+                              </span>
+                              <span className="option-desc">
+                                Pay securely with Stripe
+                              </span>
+                            </div>
+                            {paymentMethod === "STRIPE" && isProcessing && (
+                              <FaSpinner className="processing-spinner" />
+                            )}
                           </div>
-                          <div className="option-info">
-                            <span className="option-title">
-                              Credit/Debit Card
-                            </span>
-                            <span className="option-desc">
-                              Pay securely with Stripe
-                            </span>
-                          </div>
-                          {paymentMethod === "STRIPE" && isProcessing && (
-                            <FaSpinner className="processing-spinner" />
-                          )}
-                        </div>
+                        )}
 
-                        <div
-                          className={`payment-option ${paymentMethod === "TAP" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
-                          onClick={() =>
-                            !isProcessing && handleSelectPaymentMethod("TAP")
-                          }
-                        >
-                          <div className="option-icon">
-                            <FaUniversity />
+                        {currency === "KWD" && (
+                          <div
+                            className={`payment-option ${paymentMethod === "TAP" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
+                            onClick={() =>
+                              !isProcessing && handleSelectPaymentMethod("TAP")
+                            }
+                          >
+                            <div className="option-icon">
+                              <FaUniversity />
+                            </div>
+                            <div className="option-info">
+                              <span className="option-title">Tap Payments</span>
+                              <span className="option-desc">
+                                Card, Apple Pay, Google Pay
+                              </span>
+                            </div>
+                            {paymentMethod === "TAP" && isProcessing && (
+                              <FaSpinner className="processing-spinner" />
+                            )}
                           </div>
-                          <div className="option-info">
-                            <span className="option-title">Tap Payments</span>
-                            <span className="option-desc">
-                              Card, Apple Pay, Google Pay
-                            </span>
-                          </div>
-                          {paymentMethod === "TAP" && isProcessing && (
-                            <FaSpinner className="processing-spinner" />
-                          )}
-                        </div>
+                        )}
                       </>
                     )}
 

@@ -1,43 +1,43 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import "./AdminRidePooling.css"
-import AdminPassengerInterests from "./AdminPassengerInterests/AdminPassengerInterests"
-import AdminUserSuggestedRoutes from "./AdminUserSuggestedRoutes/AdminUserSuggestedRoutes"
-import api from "../../../utils/api"
+import { useState, useEffect } from "react";
+import "./AdminRidePooling.css";
+import AdminPassengerInterests from "./AdminPassengerInterests/AdminPassengerInterests";
+import AdminUserSuggestedRoutes from "./AdminUserSuggestedRoutes/AdminUserSuggestedRoutes";
+import api from "../../../utils/api";
 
 function AdminRidePooling() {
-  const [activeSubTab, setActiveSubTab] = useState("passenger-interests")
+  const [activeSubTab, setActiveSubTab] = useState("passenger-interests");
   const [stats, setStats] = useState({
     totalPassengers: 0,
     activeRoutes: 0,
     suggestedRoutes: 0,
-    matchedRides: 0
-  })
+    matchedRides: 0,
+  });
 
   const fetchRidePoolingStats = async () => {
     try {
-      const response = await api.get('/admin/ride-pooling/stats')
-      setStats(response.data.stats)
+      const response = await api.get("/admin/ride-pooling/stats");
+      setStats(response.data.stats);
     } catch (error) {
-      console.error("Error fetching ride pooling stats:", error)
+      console.error("Error fetching ride pooling stats:", error);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchRidePoolingStats()
-  }, [])
+    fetchRidePoolingStats();
+  }, []);
 
   const renderSubContent = () => {
     switch (activeSubTab) {
       case "passenger-interests":
-        return <AdminPassengerInterests />
+        return <AdminPassengerInterests />;
       case "user-suggested-routes":
-        return <AdminUserSuggestedRoutes />
+        return <AdminUserSuggestedRoutes />;
       default:
-        return <AdminPassengerInterests />
+        return <AdminPassengerInterests />;
     }
-  }
+  };
 
   return (
     <div className="admin-ride-pooling">
@@ -78,11 +78,9 @@ function AdminRidePooling() {
         </button>
       </div>
 
-      <div className="ride-pooling-content">
-        {renderSubContent()}
-      </div>
+      <div className="ride-pooling-content">{renderSubContent()}</div>
     </div>
-  )
+  );
 }
 
-export default AdminRidePooling
+export default AdminRidePooling;

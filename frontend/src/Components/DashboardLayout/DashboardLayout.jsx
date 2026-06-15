@@ -36,6 +36,7 @@ const menuConfigs = {
     { id: "route-requests", label: "Route Requests", icon: "requests" },
     { id: "ratings", label: "My Ratings", icon: "ratings" },
     { id: "my-commission", label: "My Commission", icon: "commission" },
+    { id: "settlements", label: "Settlements", icon: "settlement" },
     { id: "account", label: "Account", icon: "account" },
   ],
   B2B_PARTNER: [
@@ -48,6 +49,7 @@ const menuConfigs = {
     { id: "analytics", label: "Analytics", icon: "analytics" },
     { id: "invoices", label: "Invoices", icon: "invoices" },
     { id: "my-commission", label: "My Commission", icon: "commission" },
+    { id: "settlements", label: "Settlements", icon: "settlement" },
     { id: "settings", label: "Settings", icon: "settings" },
   ],
   CORPORATE: [

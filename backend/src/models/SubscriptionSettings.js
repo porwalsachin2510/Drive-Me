@@ -162,6 +162,12 @@ const subscriptionSettingsSchema = new mongoose.Schema({
             type: Number,
             default: 0
         },
+        // Number of months the commuter chose to renew for. The admin's
+        // confirmation extends the pass by exactly this many months.
+        renewalMonths: {
+            type: Number,
+            default: 1
+        },
         requestedAt: {
             type: Date,
             default: null

@@ -7,7 +7,7 @@ const routeRequestSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
-    
+
     // Route Details
     pickupLocation: {
         type: String,
@@ -19,7 +19,7 @@ const routeRequestSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
-    
+
     // Travel Preferences
     preferredTime: {
         type: String,
@@ -31,7 +31,7 @@ const routeRequestSchema = new mongoose.Schema({
         required: true,
         enum: ["MONTHLY", "WEEKLY", "ONE_TIME"]
     },
-    
+
     // Additional Details
     travelDays: {
         type: [String],
@@ -42,14 +42,14 @@ const routeRequestSchema = new mongoose.Schema({
         type: Date,
         required: true
     },
-    
+
     // Status & Tracking
     status: {
         type: String,
-        enum: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED", "COMPLETED"],
+        enum: ["PENDING", "UNDER_REVIEW", "OPEN", "APPROVED", "FULFILLED", "REJECTED", "COMPLETED"],
         default: "PENDING"
     },
-    
+
     // Provider Response
     assignedProviderId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -64,7 +64,64 @@ const routeRequestSchema = new mongoose.Schema({
         type: Number,
         default: null
     },
-    
+
+    // Open Marketplace: every B2C partner who expressed interest in serving this corridor.
+    // Instead of assigning the route to a single partner, Admin "opens" the demand and any
+    // interested partner can publish their own competing route listing.
+    interestedPartners: [{
+        partnerId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
+        message: {
+            type: String,
+            default: null
+        },
+        estimatedPrice: {
+            type: Number,
+            default: null
+        },
+        // INTERESTED = partner raised hand; ROUTE_PUBLISHED = partner created a live listing
+        status: {
+            type: String,
+            enum: ["INTERESTED", "ROUTE_PUBLISHED", "WITHDRAWN"],
+            default: "INTERESTED"
+        },
+        publishedRouteId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "B2CPartnerRoute",
+            default: null
+        },
+        respondedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    // True once Admin opens this demand to the marketplace so partners can publish routes.
+    marketplaceOpenedAt: {
+        type: Date,
+        default: null
+    },
+
+    // Published partner routes that satisfy this corridor's demand.
+    fulfilledByRoutes: [{
+        routeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "B2CPartnerRoute",
+            required: true
+        },
+        partnerId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null
+        },
+        publishedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+
     // Demand Analytics
     demandCount: {
         type: Number,
@@ -74,13 +131,34 @@ const routeRequestSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "RouteRequest"
     }],
-    
+
     // Communication
     notificationSent: {
         type: Boolean,
         default: false
     },
-    
+
+    // Admin review tracking (Ride Pooling Management)
+    adminReviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+    adminReviewedAt: {
+        type: Date,
+        default: null
+    },
+    adminNotes: {
+        type: String,
+        default: null
+    },
+    // The actual B2C route created from this demand once Admin approves it
+    convertedRouteId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "B2CPartnerRoute",
+        default: null
+    },
+
     // Metadata
     coordinates: {
         pickup: {

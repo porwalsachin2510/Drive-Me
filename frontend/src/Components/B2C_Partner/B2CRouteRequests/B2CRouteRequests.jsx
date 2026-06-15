@@ -17,6 +17,8 @@ function B2CRouteRequests() {
   });
   const [respondingId, setRespondingId] = useState(null);
   const [responseText, setResponseText] = useState("");
+  const [estimatedPrice, setEstimatedPrice] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const socket = useSocket();
 
@@ -72,27 +74,34 @@ function B2CRouteRequests() {
     }
   }, [socket, fetchRouteRequests, pagination.currentPage]);
 
-  const handleRespond = async (requestId, status) => {
+  const handleExpressInterest = async (requestId, withdraw = false) => {
     try {
-      setRespondingId(requestId);
+      setSubmitting(true);
       const response = await api.put(
         `/b2c-partner/route-requests/${requestId}/respond`,
         {
-          status,
+          // "REJECTED" tells the backend to withdraw this partner's interest.
+          status: withdraw ? "REJECTED" : "INTERESTED",
           response: responseText,
+          estimatedPrice: withdraw ? undefined : estimatedPrice,
         },
       );
       if (response.data.success) {
-        alert(`Request ${status.toLowerCase()} successfully`);
+        alert(
+          withdraw
+            ? "Interest withdrawn."
+            : "Interest submitted. The admin reviews demand and opens routes to all interested partners.",
+        );
         setResponseText("");
+        setEstimatedPrice("");
         setRespondingId(null);
         fetchRouteRequests(pagination.currentPage);
       }
     } catch (err) {
-      console.error("Error responding to request:", err);
-      alert("Failed to respond to request");
+      console.error("Error expressing interest:", err);
+      alert(err.response?.data?.message || "Failed to submit interest");
     } finally {
-      setRespondingId(null);
+      setSubmitting(false);
     }
   };
 
@@ -106,10 +115,16 @@ function B2CRouteRequests() {
 
   const getStatusBadge = (status) => {
     const config = {
-      PENDING: { bg: "#fff3e0", color: "#e65100", label: "Pending" },
-      UNDER_REVIEW: { bg: "#e8f4fd", color: "#0d6efd", label: "Under Review" },
+      PENDING: { bg: "#fff3e0", color: "#e65100", label: "New Demand" },
+      UNDER_REVIEW: {
+        bg: "#e8f4fd",
+        color: "#0d6efd",
+        label: "Partners Interested",
+      },
+      OPEN: { bg: "#e0f2fe", color: "#0369a1", label: "Open to Partners" },
       APPROVED: { bg: "#e8f8ee", color: "#198754", label: "Approved" },
-      REJECTED: { bg: "#fce4ec", color: "#d32f2f", label: "Rejected" },
+      FULFILLED: { bg: "#e8f8ee", color: "#198754", label: "Fulfilled" },
+      REJECTED: { bg: "#fce4ec", color: "#d32f2f", label: "Closed" },
       COMPLETED: { bg: "#e0f7fa", color: "#00838f", label: "Completed" },
     };
     return config[status] || { bg: "#f5f5f5", color: "#666", label: status };
@@ -128,8 +143,12 @@ function B2CRouteRequests() {
     <div className="route-requests">
       <div className="requests-header">
         <div>
-          <h2>Passenger Route Requests</h2>
-          <p>Review and respond to new route requests from passengers</p>
+          <h2>Open Route Demand</h2>
+          <p>
+            Express interest in passenger demand. The admin opens routes to
+            every interested partner &mdash; publish a route to win these
+            riders.
+          </p>
         </div>
         <div className="filter-group">
           <select
@@ -137,10 +156,11 @@ function B2CRouteRequests() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="status-filter"
           >
-            <option value="">All Requests</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
+            <option value="">All Demand</option>
+            <option value="PENDING">New Demand</option>
+            <option value="UNDER_REVIEW">Partners Interested</option>
+            <option value="OPEN">Open to Partners</option>
+            <option value="FULFILLED">Fulfilled</option>
           </select>
         </div>
       </div>
@@ -242,12 +262,72 @@ function B2CRouteRequests() {
                   )}
                 </div>
 
-                {request.status === "PENDING" && (
+                {(request.interestedCount > 0 || request.myInterestStatus) && (
+                  <div className="interest-summary">
+                    <span className="interest-count">
+                      {request.interestedCount || 0} partner
+                      {request.interestedCount === 1 ? "" : "s"} interested
+                    </span>
+                    {request.myInterestStatus === "ROUTE_PUBLISHED" && (
+                      <span className="my-interest published">
+                        You published a route
+                      </span>
+                    )}
+                    {request.myInterestStatus === "INTERESTED" && (
+                      <span className="my-interest">
+                        You expressed interest
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {["FULFILLED", "COMPLETED", "REJECTED"].includes(
+                  request.status,
+                ) ? (
+                  <div className="provider-response">
+                    {request.status === "FULFILLED"
+                      ? "A route has been published for this demand."
+                      : request.status === "REJECTED"
+                        ? "This demand has been closed by the admin."
+                        : "This demand is completed."}
+                  </div>
+                ) : request.myInterestStatus === "INTERESTED" ? (
                   <div className="request-actions">
-                    <div className="response-input">
+                    <p className="interest-note">
+                      You&apos;ve expressed interest. Once the admin opens this
+                      route, publish a route from your dashboard to serve these
+                      riders.
+                    </p>
+                    <div className="action-buttons">
+                      <button
+                        onClick={() => handleExpressInterest(request._id, true)}
+                        disabled={submitting}
+                        className="btn-reject"
+                      >
+                        Withdraw Interest
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="request-actions">
+                    <div className="response-input interest-inputs">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        placeholder="Estimated price (KWD, optional)"
+                        value={
+                          respondingId === request._id ? estimatedPrice : ""
+                        }
+                        onChange={(e) => {
+                          setRespondingId(request._id);
+                          setEstimatedPrice(e.target.value);
+                        }}
+                        className="response-field"
+                      />
                       <input
                         type="text"
-                        placeholder="Add a response message (optional)..."
+                        placeholder="Add a note to the admin (optional)..."
                         value={respondingId === request._id ? responseText : ""}
                         onChange={(e) => {
                           setRespondingId(request._id);
@@ -258,26 +338,15 @@ function B2CRouteRequests() {
                     </div>
                     <div className="action-buttons">
                       <button
-                        onClick={() => handleRespond(request._id, "APPROVED")}
-                        disabled={respondingId === request._id}
+                        onClick={() =>
+                          handleExpressInterest(request._id, false)
+                        }
+                        disabled={submitting}
                         className="btn-approve"
                       >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleRespond(request._id, "REJECTED")}
-                        disabled={respondingId === request._id}
-                        className="btn-reject"
-                      >
-                        Reject
+                        Express Interest
                       </button>
                     </div>
-                  </div>
-                )}
-
-                {request.providerResponse && (
-                  <div className="provider-response">
-                    <strong>Your Response:</strong> {request.providerResponse}
                   </div>
                 )}
               </div>

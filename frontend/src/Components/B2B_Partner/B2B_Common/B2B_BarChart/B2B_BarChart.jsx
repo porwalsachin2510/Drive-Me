@@ -22,7 +22,7 @@ function B2B_BarChart({ data }) {
     if (!data || !data.labels || !Array.isArray(data.labels)) {
       return;
     }
-    
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsAnimating(false);
     setChartData([]);
@@ -48,7 +48,7 @@ function B2B_BarChart({ data }) {
           <p className="tooltip-label">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }}>
-              {entry.name}: {entry.value}
+              {entry.name}: AED {Number(entry.value).toLocaleString()}
             </p>
           ))}
         </div>
@@ -62,12 +62,34 @@ function B2B_BarChart({ data }) {
       <ResponsiveContainer width="100%" height={300}>
         <RechartsBarChart
           data={chartData}
-          margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+          margin={{ top: 20, right: 30, left: 15, bottom: 25 }}
           className={isAnimating ? "animate-in" : ""}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e8e8e8" />
-          <XAxis dataKey="name" stroke="#999" />
-          <YAxis stroke="#999" />
+          <XAxis
+            dataKey="name"
+            stroke="#999"
+            label={{
+              value: "Month",
+              position: "insideBottom",
+              offset: -10,
+              fill: "#6b7280",
+              fontSize: 12,
+            }}
+          />
+          <YAxis
+            stroke="#999"
+            width={70}
+            tickFormatter={(value) =>
+              value >= 1000 ? `${(value / 1000).toFixed(1)}k` : `${value}`
+            }
+            label={{
+              value: "Amount (AED)",
+              angle: -90,
+              position: "insideLeft",
+              style: { textAnchor: "middle", fill: "#6b7280", fontSize: 12 },
+            }}
+          />
           <Tooltip
             // eslint-disable-next-line react-hooks/static-components
             content={<CustomTooltip />}

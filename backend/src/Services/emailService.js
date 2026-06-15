@@ -15,7 +15,7 @@ const createTransporter = () => {
 };
 
 // Send Pass Email
-export const sendPassEmail = async (email, monthlyPass, type) => {
+export const sendPassEmail = async (email, monthlyPass, type, options = {}) => {
     try {
         let subject, htmlContent;
 
@@ -43,6 +43,10 @@ export const sendPassEmail = async (email, monthlyPass, type) => {
             to: email,
             subject,
             html: htmlContent,
+            // Optionally attach the monthly pass certificate PDF (and any other files)
+            ...(Array.isArray(options.attachments) && options.attachments.length > 0
+                ? { attachments: options.attachments }
+                : {}),
         };
 
         await transporter.sendMail(mailOptions);
@@ -52,6 +56,69 @@ export const sendPassEmail = async (email, monthlyPass, type) => {
         console.error(`[v0] Error sending ${type} email:`, error);
         throw error;
     }
+};
+
+// Build a shared, accurate Cancellation & Refund policy block for monthly pass emails.
+// Mirrors the backend logic in bookingController.cancelBooking:
+//  - Cancellation is allowed ONLY before the driver starts the trip.
+//  - You are refunded the FULL amount paid for the pass; a time-based cancellation fee
+//    is then deducted from that full amount (the only thing that ever reduces the refund).
+//  - Online/Wallet payments are refunded to the in-app wallet; CASH is returned by the operator.
+const generateCancellationPolicySection = (monthlyPass) => {
+    const currency = monthlyPass?.currency || 'AED';
+    const totalAmount = Number(monthlyPass?.totalAmount || 0);
+    const travelDays = Number(
+        monthlyPass?.travelDaysCount || monthlyPass?.totalTrips || 0
+    );
+    const perDay = travelDays > 0 ? totalAmount / travelDays : 0;
+    const isCash = (monthlyPass?.paymentMethod || '').toUpperCase() === 'CASH';
+
+    const fmt = (amt) => `${currency} ${Number(amt || 0).toFixed(2)}`;
+    const totalText = totalAmount > 0 ? ` (${fmt(totalAmount)})` : '';
+    const perDayNote = perDay > 0
+        ? `<li style="color:#777;">For reference, your pass works out to about <strong>${fmt(perDay)} per travel day</strong> across ${travelDays} travel day${travelDays === 1 ? '' : 's'} &mdash; but you are refunded for the whole pass, not per day.</li>`
+        : '';
+
+    const refundChannelText = isCash
+        ? `Because this pass was paid in <strong>CASH</strong>, the operator will return the refundable amount to you directly (offline). Any cancellation fee is retained by the platform.`
+        : `Your refund will be credited to your <strong>DriveMe wallet</strong> automatically after cancellation.`;
+
+    return `
+        <div class="pass-details" style="border-left:4px solid #e53e3e;background:#fff5f5;padding:16px;border-radius:8px;margin:20px 0;">
+            <h3 style="color:#e53e3e;margin-top:0;">🛑 Cancellation &amp; Refund Policy</h3>
+            <p style="margin:6px 0 12px;color:#444;">
+                You can cancel this pass <strong>only before the driver starts your trip</strong>.
+                Once the driver (your operator or their assigned driver) starts a trip, that booking
+                can no longer be cancelled.
+            </p>
+
+            <p style="margin:6px 0;color:#444;"><strong>How much do I get back?</strong></p>
+            <ul style="margin:6px 0 12px;padding-left:20px;color:#444;">
+                <li>You are refunded the <strong>full amount you paid</strong> for this pass${totalText}.
+                    Because you can only cancel before your trip starts, the entire pass is treated as refundable.</li>
+                <li>A cancellation fee is then deducted from that full amount based on timing:</li>
+                ${perDayNote}
+            </ul>
+
+            <table style="width:100%;border-collapse:collapse;margin:8px 0;color:#444;">
+                <tr><td style="padding:4px 0;">Within 12 hours of booking</td><td style="text-align:right;"><strong>FREE (no fee)</strong></td></tr>
+                <tr><td style="padding:4px 0;">After 12 hours of booking</td><td style="text-align:right;"><strong>10% fee</strong></td></tr>
+                <tr><td style="padding:4px 0;">After the operator accepts</td><td style="text-align:right;"><strong>20% fee</strong></td></tr>
+                <tr><td style="padding:4px 0;">Within 24 hours of travel</td><td style="text-align:right;"><strong>30% fee</strong></td></tr>
+            </table>
+
+            <p style="margin:12px 0 6px;color:#444;"><strong>You get a FULL refund (no fee) when:</strong></p>
+            <ul style="margin:6px 0 12px;padding-left:20px;color:#444;">
+                <li>The operator/driver <strong>rejects</strong> your booking.</li>
+                <li>You change your mind and cancel <strong>before the service starts</strong> within the free window above.</li>
+                <li>The operator <strong>stops/cancels the route</strong> midway or for any operational reason.</li>
+            </ul>
+
+            <p style="margin:8px 0 0;color:#444;">
+                <strong>💳 How your refund is paid:</strong> ${refundChannelText}
+            </p>
+        </div>
+    `;
 };
 
 // Generate Activation Email
@@ -125,6 +192,8 @@ const generateActivationEmail = (monthlyPass) => {
                         <strong>📍 Important:</strong> Your pass is now active! You can travel daily at your scheduled times. Please show this email or your pass certificate when boarding.
                     </div>
 
+                    ${generateCancellationPolicySection(monthlyPass)}
+                    
                     <div style="text-align: center;">
                         <a href="#" class="cta-button">View My Passes</a>
                     </div>
@@ -1859,7 +1928,7 @@ export const sendEmail = async (recipientEmail, subject, body, options = {}) => 
 
         const result = await transporter.sendMail(mailOptions);
         console.log(`[v0] Email sent to: ${recipientEmail}, Message ID: ${result.messageId}`);
-        
+
         return {
             success: true,
             messageId: result.messageId,

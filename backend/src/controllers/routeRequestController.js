@@ -222,19 +222,13 @@ export const getRouteRequestsForProviders = async (req, res) => {
     }
 };
 
-// Provider responds to route request
+// Provider expresses interest in serving a route request (Open Marketplace model).
+// Multiple partners can express interest in the same corridor; no exclusive assignment.
 export const respondToRouteRequest = async (req, res) => {
     try {
         const { requestId } = req.params;
-        const { response, estimatedPrice, status } = req.body;
+        const { response, estimatedPrice, message } = req.body;
         const providerId = req.userId;
-
-        if (!requestId || !response) {
-            return res.status(400).json({
-                success: false,
-                message: "Missing required fields"
-            });
-        }
 
         const routeRequest = await RouteRequest.findById(requestId);
         if (!routeRequest) {
@@ -244,30 +238,62 @@ export const respondToRouteRequest = async (req, res) => {
             });
         }
 
-        if (routeRequest.status !== "PENDING") {
+        // Cannot express interest once the demand is closed/rejected/completed.
+        if (["REJECTED", "COMPLETED"].includes(routeRequest.status)) {
             return res.status(400).json({
                 success: false,
-                message: "Route request is no longer pending"
+                message: "This route request is no longer accepting partner interest"
             });
         }
 
-        // Update route request
-        routeRequest.assignedProviderId = providerId;
-        routeRequest.providerResponse = response;
-        routeRequest.estimatedPrice = estimatedPrice;
-        routeRequest.status = status || "UNDER_REVIEW";
+        const partnerMessage = message || response || null;
+        const price = estimatedPrice != null && estimatedPrice !== "" ? Number(estimatedPrice) : null;
 
-        await routeRequest.save();
+        // Apply interest to the whole corridor cluster so every matching request reflects it.
+        const escapeRegex = (str = "") => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const clusterRequests = await RouteRequest.find({
+            pickupLocation: { $regex: `^${escapeRegex(routeRequest.pickupLocation)}$`, $options: "i" },
+            dropoffLocation: { $regex: `^${escapeRegex(routeRequest.dropoffLocation)}$`, $options: "i" },
+            status: { $nin: ["REJECTED", "COMPLETED"] },
+        });
 
-        // Notify passenger
-        await notifyPassengerOfResponse(routeRequest);
+        for (const request of clusterRequests) {
+            const existing = (request.interestedPartners || []).find(
+                (p) => String(p.partnerId) === String(providerId)
+            );
+            if (existing) {
+                // Update the partner's existing interest (don't downgrade a published route).
+                if (existing.status !== "ROUTE_PUBLISHED") {
+                    existing.status = "INTERESTED";
+                }
+                existing.message = partnerMessage;
+                existing.estimatedPrice = price;
+                existing.respondedAt = new Date();
+            } else {
+                request.interestedPartners.push({
+                    partnerId: providerId,
+                    message: partnerMessage,
+                    estimatedPrice: price,
+                    status: "INTERESTED",
+                    respondedAt: new Date(),
+                });
+            }
+            // Surface partner interest to Admin (unless already opened/approved).
+            if (request.status === "PENDING") {
+                request.status = "UNDER_REVIEW";
+            }
+            await request.save();
+        }
+
+        // Notify the commuters in this cluster that a partner showed interest.
+        await notifyPassengersOfInterest(routeRequest, providerId);
 
         res.status(200).json({
             success: true,
-            message: "Response submitted successfully",
+            message: "Interest submitted successfully. The admin will review demand and open this route to partners.",
             data: {
                 requestId: routeRequest._id,
-                status: routeRequest.status
+                clusterSize: clusterRequests.length,
             }
         });
 
@@ -275,7 +301,7 @@ export const respondToRouteRequest = async (req, res) => {
         console.error("Error responding to route request:", error);
         res.status(500).json({
             success: false,
-            message: "Error submitting response",
+            message: "Error submitting interest",
             error: error.message
         });
     }
@@ -302,7 +328,7 @@ const notifyNearbyProviders = async (pickupLocation, dropoffLocation, routeReque
 
         // Send notifications to relevant providers
         for (const provider of nearbyProviders) {
-            
+
             // Fetch B2C partner routes from the separate collection
             const providerRoutes = await B2CPartnerRoute.find({
                 partnerId: provider._id,
@@ -413,6 +439,33 @@ const notifyPassengerOfResponse = async (routeRequest) => {
         }
     } catch (error) {
         console.error("Error notifying passenger:", error);
+    }
+};
+
+// Notify commuters in a corridor that a B2C partner expressed interest.
+const notifyPassengersOfInterest = async (routeRequest, providerId) => {
+    try {
+        const provider = await User.findById(providerId);
+        const providerName = provider?.companyName || provider?.fullName || "A transport provider";
+        const passenger = await User.findById(routeRequest.passengerId);
+        if (passenger) {
+            await createNotification({
+                userId: passenger._id,
+                type: "ROUTE_REQUEST_RESPONSE",
+                title: "A Partner is Interested in Your Route!",
+                message: `${providerName} expressed interest in serving the route from ${routeRequest.pickupLocation} to ${routeRequest.dropoffLocation}. We'll notify you once it's available to book.`,
+                data: {
+                    requestId: routeRequest._id,
+                    pickupLocation: routeRequest.pickupLocation,
+                    dropoffLocation: routeRequest.dropoffLocation,
+                    status: "UNDER_REVIEW",
+                    providerId,
+                    providerName,
+                },
+            });
+        }
+    } catch (error) {
+        console.error("Error notifying passengers of interest:", error);
     }
 };
 

@@ -462,6 +462,23 @@
   background: #fff5f5;
 }
 
+.cbdp-cancel-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #f7fafc;
+  color: #718096;
+  border: 1px dashed #cbd5e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cbdp-cancel-locked svg {
+  flex-shrink: 0;
+}
+
 .cbdp-btn-secondary {
   padding: 12px 24px;
   background: white;

@@ -6,6 +6,8 @@ import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import User from "../models/User.js";
+import RouteRequest from "../models/RouteRequest.js";
+import { createNotification } from "../Services/notificationService.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
 
 // Helper function to convert time string to minutes for comparison
@@ -319,6 +321,61 @@ export const createB2CPartnerRoute = async (req, res) => {
         const route = await B2CPartnerRoute.create(routeData);
 
         console.log("[v0] B2C Partner Route created successfully:", route._id);
+
+        // ---- Link this published route back to the open marketplace demand ----
+        // Find open RouteRequests on the same corridor and notify the commuters
+        // who created that demand, plus mark this partner's interest as fulfilled.
+        try {
+            const escapeRegex = (str = "") => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const matchedRequests = await RouteRequest.find({
+                pickupLocation: { $regex: `^${escapeRegex(fromLocation)}$`, $options: "i" },
+                dropoffLocation: { $regex: `^${escapeRegex(toLocation)}$`, $options: "i" },
+                status: { $nin: ["REJECTED", "COMPLETED"] },
+            });
+
+            for (const request of matchedRequests) {
+                // Record the published route on the demand record.
+                if (!Array.isArray(request.fulfilledByRoutes)) request.fulfilledByRoutes = [];
+                request.fulfilledByRoutes.push({
+                    routeId: route._id,
+                    partnerId: req.userId,
+                    publishedAt: new Date(),
+                });
+
+                // Mark this partner's interest entry as published.
+                const mine = (request.interestedPartners || []).find(
+                    (p) => String(p.partnerId) === String(req.userId)
+                );
+                if (mine) mine.status = "ROUTE_PUBLISHED";
+
+                request.status = "FULFILLED";
+                await request.save();
+
+                // Notify the commuter their requested route is now bookable.
+                if (request.passengerId) {
+                    await createNotification({
+                        userId: request.passengerId,
+                        type: "ROUTE_REQUEST_RESPONSE",
+                        title: "Your Requested Route is Now Available!",
+                        message: `A route from ${request.pickupLocation} to ${request.dropoffLocation} is now live and ready to book.`,
+                        data: {
+                            requestId: request._id,
+                            routeId: route._id,
+                            pickupLocation: request.pickupLocation,
+                            dropoffLocation: request.dropoffLocation,
+                            status: "FULFILLED",
+                        },
+                    });
+                }
+            }
+
+            if (matchedRequests.length > 0) {
+                console.log(`[v0] Linked published route ${route._id} to ${matchedRequests.length} open demand request(s)`);
+            }
+        } catch (linkErr) {
+            // Linking is best-effort; never block route creation on it.
+            console.error("[v0] Failed to link route to open demand:", linkErr);
+        }
 
         // Create schedule for the route if startTime and availableDays are provided
         if (startTime && availableDays && availableDays.length > 0) {

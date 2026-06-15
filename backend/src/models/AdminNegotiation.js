@@ -44,7 +44,7 @@ const adminNegotiationSchema = new mongoose.Schema(
             rate: {
                 type: Number,
                 min: 0,
-                max: 35,
+                max: 100,
                 default: 25, // Default 25% of savings
             },
             amount: {

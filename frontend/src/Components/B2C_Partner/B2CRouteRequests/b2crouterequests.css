@@ -277,6 +277,51 @@
   color: #6c757d;
 }
 
+.interest-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-top: 1px solid #f1f3f5;
+}
+
+.interest-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.my-interest {
+  font-size: 13px;
+  font-weight: 600;
+  color: #198754;
+}
+
+.my-interest.published {
+  color: #0f5132;
+}
+
+.interest-note {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.interest-inputs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.interest-inputs .response-field {
+  flex: 1;
+  min-width: 160px;
+}
+
 @media (max-width: 768px) {
   .requests-header {
     flex-direction: column;

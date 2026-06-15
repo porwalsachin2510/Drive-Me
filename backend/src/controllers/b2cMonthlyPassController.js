@@ -79,6 +79,58 @@ export const createB2CMonthlyPass = async (req, res) => {
             });
         }
 
+        // ==================== TRIP TIME VALIDATION ====================
+        // A trip time (schedule) must be explicitly selected. The frontend used
+        // to silently fall back to the first available trip, allowing a pass to
+        // be created without the commuter actually choosing a schedule.
+        const hasScheduleTripTimes =
+            schedule && Array.isArray(schedule.tripTimes) && schedule.tripTimes.length > 0;
+
+        if (hasScheduleTripTimes) {
+            // Outbound trip time is always required.
+            if (!outboundTripTime) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Please select a trip time before booking."
+                });
+            }
+            const outboundExists = schedule.tripTimes.some(
+                (tt) => tt.departureTime === outboundTripTime
+            );
+            if (!outboundExists) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Selected trip time is not available for this route."
+                });
+            }
+
+            // Round trip passes additionally require a valid return trip time.
+            if (passType === "ROUND_TRIP") {
+                if (!returnTripTime) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Please select a return trip time before booking."
+                    });
+                }
+                // The frontend derives a round-trip's return departureTime from
+                // the schedule's arrivalTime, so match against every plausible
+                // field to avoid rejecting valid bookings.
+                const returnExists = schedule.tripTimes.some(
+                    (tt) =>
+                        tt.returnDepartureTime === returnTripTime ||
+                        tt.arrivalTime === returnTripTime ||
+                        tt.departureTime === returnTripTime
+                );
+                if (!returnExists) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Selected return trip time is not available for this route."
+                    });
+                }
+            }
+        }
+        // ==============================================================
+
         console.log("[v0] Creating B2C Monthly Pass:", {
             passengerId,
             routeId,
@@ -584,7 +636,7 @@ export const createB2CMonthlyPass = async (req, res) => {
             paymentAmount: totalAmount,
             currency: routeCurrency,
             paymentMethod: normalizedPaymentMethod,
-            paymentStatus: ["CASH", "WALLET"].includes(normalizedPaymentMethod) ? "COMPLETED" : "PENDING",
+            paymentStatus: "PENDING", // All bookings start pending. STRIPE/TAP become COMPLETED on webhook. CASH/WALLET require explicit confirmation.
             transactionId: monthlyPass._id.toString(),
             bookingStatus: "CONFIRMED",
             adminCommissionAmount: adminCommission,
@@ -967,20 +1019,32 @@ export const createB2CMonthlyPass = async (req, res) => {
         console.log(`[v0] B2C_PARTNER will accept this ONE booking and manage all ${allTrips.length} trips`);
         console.log(`[v0] Total seats booked across all trips: ${allTrips.length * numberOfSeats}`);
 
-        // Send confirmation email
+        // Generate pass certificate FIRST so we can attach it to the activation email
+        let passCertificatePath = null;
         try {
-            await sendPassEmail(passenger.email, monthlyPass, 'ACTIVATION');
-            console.log("[v0] Activation email sent to:", passenger.email);
-        } catch (emailError) {
-            console.error("[v0] Error sending activation email:", emailError);
-        }
-
-        // Generate pass certificate
-        try {
-            await generatePassCertificate(monthlyPass);
+            passCertificatePath = await generatePassCertificate(monthlyPass, {
+                passengerName: passenger?.name,
+            });
             console.log("[v0] Pass certificate generated for:", monthlyPass._id);
         } catch (certError) {
             console.error("[v0] Error generating pass certificate:", certError);
+        }
+
+        // Send confirmation email (with the certificate PDF + cancellation/refund policy)
+        try {
+            const emailAttachments = passCertificatePath
+                ? [{
+                    filename: `monthly-pass-${monthlyPass._id}.pdf`,
+                    path: passCertificatePath,
+                    contentType: 'application/pdf'
+                }]
+                : [];
+            await sendPassEmail(passenger.email, monthlyPass, 'ACTIVATION', {
+                attachments: emailAttachments
+            });
+            console.log("[v0] Activation email sent to:", passenger.email);
+        } catch (emailError) {
+            console.error("[v0] Error sending activation email:", emailError);
         }
 
         // WALLET payment: debit the commuter's wallet immediately. Balance was already
@@ -1050,14 +1114,21 @@ export const createB2CMonthlyPass = async (req, res) => {
         let paymentSessionData = null;
         if (["STRIPE", "TAP", "CARD"].includes(normalizedPaymentMethod) && finalTotalAmount > 0) {
             try {
-                const country = detectCountryFromCurrency(currency || "AED");
+                // The online gateway is determined by the route's country, NOT by
+                // whatever the client sent. This guarantees:
+                //   - UAE routes (AED)  -> Stripe
+                //   - Kuwait routes (KWD) -> Tap Payments
+                // and prevents mismatches like a Kuwait booking being charged
+                // through Stripe (or in the wrong currency).
+                const country = detectCountryFromCurrency(routeCurrency); // "UAE" | "KUWAIT"
+                const enforcedGateway = country === "KUWAIT" ? "TAP" : "STRIPE";
                 const passenger = await User.findById(passengerId);
 
                 // Create payment session using PaymentGatewayService
                 paymentSessionData = await PaymentGatewayService.createPaymentSession({
-                    gateway: normalizedPaymentMethod === "CARD" ? "STRIPE" : normalizedPaymentMethod,
+                    gateway: enforcedGateway,
                     amount: finalTotalAmount,
-                    currency: currency || "AED",
+                    currency: routeCurrency,
                     customer: {
                         email: passenger?.email,
                         name: passenger?.firstName + " " + passenger?.lastName,
@@ -1142,7 +1213,7 @@ export const createB2CMonthlyPass = async (req, res) => {
                 sessionId: paymentSessionData.sessionId,
                 provider: paymentSessionData.provider,
                 amount: finalTotalAmount,
-                currency: currency || "AED"
+                currency: routeCurrency
             } : null,
             paymentRequired: !!paymentSessionData,
             paymentMethod: normalizedPaymentMethod

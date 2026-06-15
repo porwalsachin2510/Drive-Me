@@ -11,18 +11,60 @@ export default function FindRoutes() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [savingId, setSavingId] = useState(null);
 
+  // Commuter's detected country (UAE / Kuwait). We only show routes that
+  // belong to this country, mirroring the home page behaviour.
+  const [userNationality, setUserNationality] = useState(null);
+
   // Booking modal state
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
 
+  // Detect the commuter's location the same way the home page does, so the
+  // Find Routes tab shows the same country-filtered routes.
   useEffect(() => {
-    fetchRoutes();
+    const detectUserLocation = async () => {
+      try {
+        const response = await api.get("/location/detect", {
+          withCredentials: true,
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (response.data?.success) {
+          const countryName = response.data.nationality;
+          let nationality = countryName;
+          if (countryName === "United Arab Emirates") {
+            nationality = "UAE";
+          } else if (countryName === "Kuwait") {
+            nationality = "Kuwait";
+          }
+          setUserNationality(nationality || "Kuwait");
+        } else {
+          setUserNationality("Kuwait");
+        }
+      } catch (error) {
+        console.error("Error detecting location:", error);
+        setUserNationality("Kuwait");
+      }
+    };
+
+    detectUserLocation();
   }, []);
+
+  // Fetch routes once we know the commuter's country.
+  useEffect(() => {
+    if (userNationality) {
+      fetchRoutes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userNationality]);
 
   const fetchRoutes = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/commuter/routes");
+      const query = userNationality
+        ? `?nationality=${encodeURIComponent(userNationality)}`
+        : "";
+      const response = await api.get(`/commuter/routes${query}`);
       setRoutes(response.data.routes || []);
     } catch (error) {
       console.error("Error fetching routes:", error);
@@ -106,6 +148,12 @@ export default function FindRoutes() {
       <p className="fr-routes-count">
         {bookedCount} Booked &bull; {savedCount} Saved
       </p>
+      {userNationality && (
+        <p className="fr-routes-location">
+          {"\uD83D\uDCCD"} Showing routes for:{" "}
+          <strong>{userNationality}</strong>
+        </p>
+      )}
 
       <div className="fr-routes-controls">
         <div className="fr-search-box">

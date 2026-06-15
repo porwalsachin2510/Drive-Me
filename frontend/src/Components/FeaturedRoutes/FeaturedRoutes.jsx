@@ -470,6 +470,20 @@ const FeaturedRoutes = ({ routes, loading }) => {
         </div>
       )}
 
+      {/* Empty state when no routes have been featured by an admin yet */}
+      {!loading && filteredRoutes.length === 0 && (
+        <div className="drivemego-featuredroutes-empty">
+          <span className="drivemego-featuredroutes-empty-icon">★</span>
+          <h3 className="drivemego-featuredroutes-empty-title">
+            No featured routes yet
+          </h3>
+          <p className="drivemego-featuredroutes-empty-text">
+            Curated routes will appear here once our team highlights the best
+            commutes for you. Browse all available routes below in the meantime.
+          </p>
+        </div>
+      )}
+
       {showBookingModal && selectedRoute && (
         <BookingModal
           route={selectedRoute}

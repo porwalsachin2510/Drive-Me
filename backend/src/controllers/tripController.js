@@ -625,7 +625,7 @@ export const getMyBookings = async (req, res) => {
                 { "passengers.passengerId": employeeId },
                 { "passengers.employeeId": employeeId }
             ],
-            status: { $in: ['SCHEDULED', 'IN_PROGRESS'] }
+            status: { $in: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED'] }
         };
 
         if (status) {

@@ -2,7 +2,7 @@ import AdminNegotiation from "../models/AdminNegotiation.js"
 import Quotation from "../models/Quotation.js"
 import User from "../models/User.js"
 import CommissionSettings from "../models/CommissionSettings.js"
-import { calculateNegotiationCommission } from "../Services/HelperUtilities.js"
+import { calculateNegotiationCommission, resolveNegotiationCommissionRate, DEFAULT_NEGOTIATION_COMMISSION_RATE } from "../Services/HelperUtilities.js"
 import { sendNegotiationRequestEmail, sendNegotiationUpdateEmail } from "../Services/emailService.js"
 import { createNotification, sendAdminNotification, sendRealTimeNotification } from "../Services/notificationService.js"
 
@@ -60,6 +60,11 @@ export const requestNegotiation = async (req, res) => {
             })
         }
 
+        // Resolve the Corporate user's effective negotiation commission rate now,
+        // so the negotiation is seeded with the rate Admin actually configured
+        // (active custom NEGOTIATION rule -> configured rate -> default).
+        const { rate: seededCommissionRate } = await resolveNegotiationCommissionRate(corporateId)
+
         // Create negotiation
         const negotiation = new AdminNegotiation({
             quotationId,
@@ -71,6 +76,11 @@ export const requestNegotiation = async (req, res) => {
                 requestedAt: new Date(),
                 message,
                 expectedPrice,
+            },
+            adminCommissionFromCorporate: {
+                rate: seededCommissionRate,
+                amount: 0,
+                status: "PENDING",
             },
             status: "REQUESTED",
         })
@@ -228,9 +238,17 @@ export const getNegotiationDetails = async (req, res) => {
             await negotiation.quotationId.populate("vehicles.vehicleId")
         }
 
+        // Resolve the Corporate user's effective negotiation commission rate
+        // (active custom NEGOTIATION rule first, then their configured rate, then default).
+        // This is what the completion form should pre-fill — NOT the static default.
+        const { rate: effectiveCommissionRate, source: commissionRateSource } =
+            await resolveNegotiationCommissionRate(negotiation.corporateId?._id || negotiation.corporateId)
+
         res.json({
             success: true,
             negotiation,
+            effectiveCommissionRate,
+            commissionRateSource,
         })
     } catch (error) {
         console.error("Error getting negotiation details:", error)
@@ -538,25 +556,38 @@ export const completeNegotiation = async (req, res) => {
         }
 
         // Calculate commission from savings - use dynamic rate from CommissionSettings
-        let commissionRate = 25; // Default
+        // Priority:
+        //   1. Explicit rate passed in the request body (Admin can override/rewrite it)
+        //   2. The Corporate user's effective configured rate (active custom NEGOTIATION
+        //      rule first, then their configured negotiationCommissionRate)
+        //   3. The rate already stored on this negotiation
+        //   4. System default (25%)
+        let commissionRate = DEFAULT_NEGOTIATION_COMMISSION_RATE
+        let commissionRateSource = "default"
 
-        // Priority: 1. Request body rate, 2. CommissionSettings, 3. Stored rate, 4. Default 25%
-        if (corporateCommissionRate !== undefined) {
-            commissionRate = corporateCommissionRate;
+        if (corporateCommissionRate !== undefined && corporateCommissionRate !== null && corporateCommissionRate !== "") {
+            commissionRate = Number(corporateCommissionRate)
+            commissionRateSource = "admin_override"
         } else {
-            // Fetch from CommissionSettings for this Corporate user
-            const corporateSettings = await CommissionSettings.findOne({
-                userId: negotiation.corporateOwnerId,
-                isActive: true
-            });
-            if (corporateSettings) {
-                commissionRate = corporateSettings.negotiationCommissionRate || 25;
+            // NOTE: the negotiation's Corporate user field is `corporateId` (not corporateOwnerId)
+            const resolved = await resolveNegotiationCommissionRate(negotiation.corporateId?._id || negotiation.corporateId)
+            if (resolved.source !== "default") {
+                commissionRate = resolved.rate
+                commissionRateSource = resolved.source
+            } else if (negotiation.adminCommissionFromCorporate?.rate) {
+                commissionRate = negotiation.adminCommissionFromCorporate.rate
+                commissionRateSource = "stored"
             } else {
-                commissionRate = negotiation.adminCommissionFromCorporate.rate || 25;
+                commissionRate = resolved.rate
+                commissionRateSource = resolved.source
             }
         }
 
-        console.log("[v0] Using Negotiation Commission Rate:", commissionRate, "%");
+        // Clamp to a valid 0-100 range
+        if (Number.isNaN(commissionRate) || commissionRate < 0) commissionRate = 0
+        if (commissionRate > 100) commissionRate = 100
+
+        console.log("[v0] Negotiation Commission Rate:", commissionRate, "% (source:", commissionRateSource + ")")
         const commissionAmount = (priceSaved * commissionRate) / 100
 
         // Update negotiation
@@ -620,7 +651,7 @@ export const completeNegotiation = async (req, res) => {
             quotation.adminNegotiation.originalPrice = negotiation.originalPrice
             quotation.adminNegotiation.adminCommission = commissionAmount
             quotation.adminNegotiation.adminCommissionRate = commissionRate
-            
+
             await quotation.save()
         }
 
@@ -688,7 +719,7 @@ export const completeNegotiation = async (req, res) => {
         });
 
         console.log("[v0] Real-time notifications sent to Corporate and B2B Partner for negotiation completion");
-        
+
         res.json({
             success: true,
             message: "Negotiation completed successfully. Quotation price has been updated.",

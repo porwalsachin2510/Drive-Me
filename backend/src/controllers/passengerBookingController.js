@@ -356,6 +356,20 @@ export const getPassengerBookings = async (req, res) => {
                 });
             }
 
+            // NEW: Check if ANY trip has ever been started (even if now completed).
+            // This is the permanent cancellation lock: once any trip starts, no cancellations allowed.
+            const outboundStarted = bookingObj.outboundTripStatus === 'IN_PROGRESS' || bookingObj.outboundTripStatus === 'COMPLETED';
+            const returnStarted = bookingObj.returnTripStatus === 'IN_PROGRESS' || bookingObj.returnTripStatus === 'COMPLETED';
+            const hasAnyTripEverStarted = outboundStarted || returnStarted;
+
+            if (hasAnyTripEverStarted) {
+                console.log("[v0] Booking has ANY trip ever started (permanent lock):", {
+                    bookingId: bookingObj._id,
+                    outboundTripStatus: bookingObj.outboundTripStatus,
+                    returnTripStatus: bookingObj.returnTripStatus
+                });
+            }
+
             for (const tripId of bookingTripIds) {
                 const status = tripStatusMap[tripId];
                 const tripData = tripDataMap[tripId];
@@ -404,6 +418,7 @@ export const getPassengerBookings = async (req, res) => {
             }
 
             bookingObj.hasActiveTripInProgress = hasActiveTripInProgress;
+            bookingObj.hasAnyTripEverStarted = hasAnyTripEverStarted;
             bookingObj.activeTripInfo = activeTripInfo;
 
             // CRITICAL: For ROUND_TRIP bookings with COMPLETED status, also add a flag

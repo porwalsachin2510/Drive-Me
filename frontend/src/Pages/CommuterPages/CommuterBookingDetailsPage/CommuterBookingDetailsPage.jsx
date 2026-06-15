@@ -29,29 +29,28 @@ const CommuterBookingDetailsPage = () => {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelLoading, setCancelLoading] = useState(false);
 
+  // Poll booking status to catch real-time trip starts and cancellations
+  // This ensures when a driver starts the trip or completes it, the UI updates immediately
   useEffect(() => {
     const fetchBookingDetails = async () => {
       try {
-        setLoading(true);
-        setError(null);
         const response = await commuterBookingAPI.getBookingDetails(bookingId);
         if (response.success && response.data?.booking) {
           setBooking(response.data.booking);
-        } else {
-          setError("Booking not found");
         }
       } catch (err) {
-        console.error("Error fetching booking details:", err);
-        setError(
-          err.response?.data?.message || "Failed to load booking details",
-        );
-      } finally {
-        setLoading(false);
+        console.error("[v0] Error polling booking details:", err);
       }
     };
 
+    // Initial fetch on mount
     if (bookingId && auth.user) {
-      fetchBookingDetails();
+      setLoading(true);
+      fetchBookingDetails().finally(() => setLoading(false));
+
+      // Poll every 5 seconds to catch trip status changes in real-time
+      const pollInterval = setInterval(fetchBookingDetails, 5000);
+      return () => clearInterval(pollInterval);
     }
   }, [bookingId, auth.user]);
 
@@ -135,120 +134,98 @@ const CommuterBookingDetailsPage = () => {
     navigate("/commuter-profile?tab=my-rides");
   };
 
-  // Socket listener for driver location updates
+  // Join socket room on page load to receive real-time booking updates
   useEffect(() => {
-    if (socket?.socket && booking && showTracking) {
-      // Join booking room for this specific booking
+    if (socket?.socket && booking) {
+      // Join the booking room to receive trip status updates
       socket.socket.emit("join_booking_room", booking._id);
       socket.socket.emit("join-booking-room", booking._id);
-
-      // Also join notification room
-      if (auth?.user?._id) {
-        socket.socket.emit("join-notification-room", auth.user._id);
-      }
-
-      // CRITICAL: For ROUND_TRIP bookings, build a list of all possible driver IDs
-      // This ensures we receive location updates for either outbound or return driver
-      const possibleDriverIds = [];
-
-      if (booking.bookingType === "ROUND_TRIP") {
-        // Add outbound driver IDs
-        if (booking.outboundDriverId) {
-          possibleDriverIds.push(
-            booking.outboundDriverId?._id || booking.outboundDriverId,
-          );
-        }
-        if (booking.outboundIsSelfDriver && booking.b2cPartnerId) {
-          possibleDriverIds.push(
-            booking.b2cPartnerId?._id || booking.b2cPartnerId,
-          );
-        }
-
-        // Add return driver IDs
-        if (booking.returnDriverId) {
-          possibleDriverIds.push(
-            booking.returnDriverId?._id || booking.returnDriverId,
-          );
-        }
-        if (booking.returnIsSelfDriver && booking.b2cPartnerId) {
-          possibleDriverIds.push(
-            booking.b2cPartnerId?._id || booking.b2cPartnerId,
-          );
-        }
-      } else {
-        // ONE_WAY trip
-        if (booking.isSelfDriver) {
-          possibleDriverIds.push(
-            booking.b2cPartnerId?._id || booking.b2cPartnerId,
-          );
-        } else {
-          possibleDriverIds.push(
-            booking.assignedDriverId?._id || booking.assignedDriverId,
-          );
-        }
-      }
-
-      // Add b2cPartnerId as fallback
-      if (booking.b2cPartnerId) {
-        possibleDriverIds.push(
-          booking.b2cPartnerId?._id || booking.b2cPartnerId,
-        );
-      }
-
-      // Filter out nulls/undefined and convert to strings for comparison
-      const driverIdSet = new Set(
-        possibleDriverIds
-          .filter(Boolean)
-          .map((id) => (id?.toString ? id.toString() : id)),
+      console.log(
+        "[v0] Joined booking room for real-time updates:",
+        booking._id,
       );
-
-      // Listen for driver location updates
-      const handleLocationUpdate = (locationData) => {
-        // Extract location - handle both nested and flat formats
-        const lat =
-          locationData.location?.lat ||
-          locationData.lat ||
-          locationData.latitude;
-        const lng =
-          locationData.location?.lng ||
-          locationData.lng ||
-          locationData.longitude;
-
-        if (!lat || !lng) {
-          return;
-        }
-
-        // Check if this location update is for any of our booking's drivers
-        const locationDriverId = locationData.driverId?.toString
-          ? locationData.driverId.toString()
-          : locationData.driverId;
-        const isOurDriver =
-          driverIdSet.has(locationDriverId) ||
-          locationData.bookingId === booking._id ||
-          locationData.tripId === booking.linkedTrip ||
-          locationData.tripId === booking.linkedReturnTrip;
-
-        if (isOurDriver || !locationData.driverId) {
-          setDriverLocation({
-            lat: lat,
-            lng: lng,
-            lastUpdate: Date.now(),
-          });
-          setIsDriverOnline(true);
+    }
+  }, [socket, booking]);
+  useEffect(() => {
+    if (socket?.socket && booking) {
+      // Listen for trip started event from the driver
+      const handleTripStarted = (data) => {
+        if (data.bookingId === booking._id) {
+          console.log(
+            "[v0] Received trip started event, updating booking status",
+          );
+          setBooking((prevBooking) => ({
+            ...prevBooking,
+            outboundTripStatus:
+              data.status === "IN_PROGRESS"
+                ? "IN_PROGRESS"
+                : prevBooking.outboundTripStatus,
+            hasActiveTripInProgress: true,
+            hasAnyTripEverStarted: true, // Lock: once any trip starts, permanent lock
+          }));
         }
       };
 
-      socket.socket.on("driver-location-update", handleLocationUpdate);
-      socket.socket.on("b2c-driver-location", handleLocationUpdate);
-      socket.socket.on("location-update", handleLocationUpdate);
+      const handleTripCompleted = (data) => {
+        if (data.bookingId === booking._id) {
+          console.log("[v0] Received trip completed event");
+          // Re-fetch booking to get the accurate final status
+          commuterBookingAPI.getBookingDetails(booking._id).then((res) => {
+            if (res.success && res.data?.booking) {
+              setBooking(res.data.booking);
+            }
+          });
+        }
+      };
+
+      // Subscribe to booking-specific events
+      socket.socket.on("b2c-trip-started", handleTripStarted);
+      socket.socket.on("trip-completed", handleTripCompleted);
 
       return () => {
-        socket.socket.off("driver-location-update", handleLocationUpdate);
-        socket.socket.off("b2c-driver-location", handleLocationUpdate);
-        socket.socket.off("location-update", handleLocationUpdate);
+        socket.socket.off("b2c-trip-started", handleTripStarted);
+        socket.socket.off("trip-completed", handleTripCompleted);
       };
     }
-  }, [socket, booking, showTracking, auth?.user?._id]);
+  }, [socket, booking]);
+
+  // Socket listener for driver location updates (only when tracking is active)
+  useEffect(() => {
+    if (!socket?.socket || !booking || !showTracking) return;
+
+    // Join booking room for location updates
+    socket.socket.emit("join_booking_room", booking._id);
+    socket.socket.emit("join-booking-room", booking._id);
+
+    // Listen for driver location updates
+    const handleLocationUpdate = (locationData) => {
+      const lat =
+        locationData.location?.lat || locationData.lat || locationData.latitude;
+      const lng =
+        locationData.location?.lng ||
+        locationData.lng ||
+        locationData.longitude;
+
+      if (!lat || !lng) return;
+
+      setDriverLocation({
+        lat: lat,
+        lng: lng,
+        lastUpdate: Date.now(),
+      });
+      setIsDriverOnline(true);
+    };
+
+    socket.socket.on("driver-location-update", handleLocationUpdate);
+    socket.socket.on("b2c-driver-location", handleLocationUpdate);
+    socket.socket.on("location-update", handleLocationUpdate);
+
+    return () => {
+      socket.socket.off("driver-location-update", handleLocationUpdate);
+      socket.socket.off("b2c-driver-location", handleLocationUpdate);
+      socket.socket.off("location-update", handleLocationUpdate);
+    };
+  }, [socket, booking, showTracking]);
 
   // Handle track driver click
   const handleTrackDriver = async () => {
@@ -933,16 +910,59 @@ const CommuterBookingDetailsPage = () => {
               </button>
             ) : null;
           })()}
-          {["PENDING", "CONFIRMED", "ACCEPTED"].includes(
-            booking.bookingStatus,
-          ) && (
-            <button
-              className="cbdp-btn-cancel"
-              onClick={() => setShowCancelModal(true)}
-            >
-              Cancel Booking
-            </button>
-          )}
+          {(() => {
+            // A commuter can cancel ONLY before ANY trip in the booking has started.
+            // Once ANY trip has ever been IN_PROGRESS or COMPLETED (even if return trip pending),
+            // cancellation is permanently locked for the entire booking.
+            // This applies to monthly/round-trip passes which may have multiple trip legs.
+            const cancellableStatus = [
+              "PENDING",
+              "CONFIRMED",
+              "ACCEPTED",
+            ].includes(booking.bookingStatus);
+
+            // PERMANENT LOCK: Check if ANY trip has ever started (not just currently active)
+            const tripStartedOrCompleted =
+              booking.bookingStatus === "IN_PROGRESS" ||
+              booking.outboundTripStatus === "IN_PROGRESS" ||
+              booking.outboundTripStatus === "COMPLETED" ||
+              booking.returnTripStatus === "IN_PROGRESS" ||
+              booking.returnTripStatus === "COMPLETED" ||
+              booking.hasActiveTripInProgress === true ||
+              booking.hasAnyTripEverStarted === true;
+
+            if (cancellableStatus && !tripStartedOrCompleted) {
+              return (
+                <button
+                  className="cbdp-btn-cancel"
+                  onClick={() => setShowCancelModal(true)}
+                >
+                  Cancel Booking
+                </button>
+              );
+            }
+
+            if (tripStartedOrCompleted) {
+              return (
+                <span className="cbdp-cancel-locked">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  Trip in progress — cancellation is no longer available
+                </span>
+              );
+            }
+
+            return null;
+          })()}
           <button className="cbdp-btn-secondary" onClick={handleBackClick}>
             Back to My Rides
           </button>

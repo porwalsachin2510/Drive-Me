@@ -1,196 +1,259 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import "./AdminRouteManagement.css"
-import api from "../../../../utils/api"
+import { useState, useEffect, useCallback } from "react";
+import "./AdminRouteManagement.css";
+import api from "../../../../utils/api";
 
 function AdminRouteManagement() {
-  const [routes, setRoutes] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [initialLoad, setInitialLoad] = useState(true)
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [searchTerm, setSearchTerm] = useState("")
+  const [routes, setRoutes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [criteriaFilter, setCriteriaFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [stats, setStats] = useState({
     totalRoutes: 0,
     activeRoutes: 0,
     inactiveRoutes: 0,
-    maintenanceRoutes: 0
-  })
-  const [notification, setNotification] = useState(null)
+    maintenanceRoutes: 0,
+  });
+  const [notification, setNotification] = useState(null);
 
   const fetchRouteStats = useCallback(async (routeData) => {
     try {
-      const response = await api.get('/admin/b2c/stats')
-      
+      const response = await api.get("/admin/b2c/stats");
+
       if (response.data.success && response.data.stats) {
-        const data = response.data.stats.routes || {}
+        const data = response.data.stats.routes || {};
         setStats({
           totalRoutes: data.totalRoutes || 0,
           activeRoutes: data.activeRoutes || 0,
           inactiveRoutes: data.inactiveRoutes || 0,
-          maintenanceRoutes: data.maintenanceRoutes || 0
-        })
+          maintenanceRoutes: data.maintenanceRoutes || 0,
+        });
       }
     } catch (error) {
-      console.error("Error fetching route stats:", error)
-      
-      // Fallback: Calculate stats from current routes data
-      const currentRoutes = routeData || routes
-      if (currentRoutes.length > 0) {
-        const calculatedStats = currentRoutes.reduce((acc, route) => {
-          acc.totalRoutes++
-          if (route.status === 'Active' || route.status === 'active') acc.activeRoutes++
-          else if (route.status === 'Inactive' || route.status === 'inactive') acc.inactiveRoutes++
-          else if (route.status === 'Scheduled' || route.status === 'maintenance') acc.maintenanceRoutes++
-          return acc
-        }, { totalRoutes: 0, activeRoutes: 0, inactiveRoutes: 0, maintenanceRoutes: 0 })
-        
-        setStats(calculatedStats)
-      }
-    }
-  }, []) // removed routes dependency to prevent loop
+      console.error("Error fetching route stats:", error);
 
-  const fetchRoutes = useCallback(async (isInitial = false) => {
-    try {
-      // Only show loading spinner on the very first load
-      if (isInitial) {
-        setLoading(true)
-      }
-      const response = await api.get('/admin/b2c/routes', {
-        params: { status: statusFilter !== "all" ? statusFilter : undefined }
-      })
-      
-      if (response.data.success) {
-        const routeData = response.data.routes || []
-        setRoutes(routeData)
-        await fetchRouteStats(routeData)
-      }
-    } catch (error) {
-      console.error("Error fetching routes:", error)
-      if (isInitial) {
-        setRoutes([])
-      }
-    } finally {
-      if (isInitial) {
-        setLoading(false)
-        setInitialLoad(false)
+      // Fallback: Calculate stats from current routes data
+      const currentRoutes = routeData || routes;
+      if (currentRoutes.length > 0) {
+        const calculatedStats = currentRoutes.reduce(
+          (acc, route) => {
+            acc.totalRoutes++;
+            if (route.status === "Active" || route.status === "active")
+              acc.activeRoutes++;
+            else if (route.status === "Inactive" || route.status === "inactive")
+              acc.inactiveRoutes++;
+            else if (
+              route.status === "Scheduled" ||
+              route.status === "maintenance"
+            )
+              acc.maintenanceRoutes++;
+            return acc;
+          },
+          {
+            totalRoutes: 0,
+            activeRoutes: 0,
+            inactiveRoutes: 0,
+            maintenanceRoutes: 0,
+          },
+        );
+
+        setStats(calculatedStats);
       }
     }
-  }, [statusFilter, fetchRouteStats])
+  }, []); // removed routes dependency to prevent loop
+
+  const fetchRoutes = useCallback(
+    async (isInitial = false) => {
+      try {
+        // Only show loading spinner on the very first load
+        if (isInitial) {
+          setLoading(true);
+        }
+        const response = await api.get("/admin/b2c/routes", {
+          params: { status: statusFilter !== "all" ? statusFilter : undefined },
+        });
+
+        if (response.data.success) {
+          const routeData = response.data.routes || [];
+          setRoutes(routeData);
+          await fetchRouteStats(routeData);
+        }
+      } catch (error) {
+        console.error("Error fetching routes:", error);
+        if (isInitial) {
+          setRoutes([]);
+        }
+      } finally {
+        if (isInitial) {
+          setLoading(false);
+          setInitialLoad(false);
+        }
+      }
+    },
+    [statusFilter, fetchRouteStats],
+  );
 
   useEffect(() => {
-    fetchRoutes(initialLoad)
-  }, [fetchRoutes])
+    fetchRoutes(initialLoad);
+  }, [fetchRoutes]);
 
   const handleEditClick = (route) => {
     // Admin can only view route details, not edit
-    setNotification({ 
-      type: 'info', 
-      message: 'Route details view only. B2C Partner manages their own routes.' 
-    })
-    setTimeout(() => setNotification(null), 3000)
-  }
+    setNotification({
+      type: "info",
+      message: "Route details view only. B2C Partner manages their own routes.",
+    });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   const handleSuspendRoute = async (routeId, action) => {
     try {
-      setNotification({ type: 'info', message: `${action === 'suspend' ? 'Suspending' : 'Activating'} route...` })
-      
-      const response = await api.put(`/admin/b2c/routes/${routeId}/${action}`)
-      
+      setNotification({
+        type: "info",
+        message: `${action === "suspend" ? "Suspending" : "Activating"} route...`,
+      });
+
+      const response = await api.put(`/admin/b2c/routes/${routeId}/${action}`);
+
       if (response.data.success) {
-        setNotification({ type: 'success', message: `Route ${action}d successfully!` })
-        await fetchRoutes()
+        setNotification({
+          type: "success",
+          message: `Route ${action}d successfully!`,
+        });
+        await fetchRoutes();
       } else {
-        throw new Error(response.data.message || `Failed to ${action} route`)
+        throw new Error(response.data.message || `Failed to ${action} route`);
       }
     } catch (error) {
-      console.error(`Error ${action}ing route:`, error)
-      setNotification({ type: 'error', message: error.message || `Failed to ${action} route` })
+      console.error(`Error ${action}ing route:`, error);
+      setNotification({
+        type: "error",
+        message: error.message || `Failed to ${action} route`,
+      });
     } finally {
-      setTimeout(() => setNotification(null), 3000)
+      setTimeout(() => setNotification(null), 3000);
     }
-  }
+  };
 
   const handleDeleteRoute = async (routeId) => {
     if (window.confirm("Are you sure you want to delete this route?")) {
       try {
-        setNotification({ type: 'info', message: 'Deleting route...' })
-        const response = await api.delete(`/admin/b2c/routes/${routeId}`)
-        
+        setNotification({ type: "info", message: "Deleting route..." });
+        const response = await api.delete(`/admin/b2c/routes/${routeId}`);
+
         if (response.data.success) {
-          setNotification({ type: 'success', message: 'Route deleted successfully!' })
-          await Promise.all([fetchRoutes(), fetchRouteStats()])
+          setNotification({
+            type: "success",
+            message: "Route deleted successfully!",
+          });
+          await Promise.all([fetchRoutes(), fetchRouteStats()]);
         } else {
-          throw new Error(response.data.message || 'Failed to delete route')
+          throw new Error(response.data.message || "Failed to delete route");
         }
       } catch (error) {
-        console.error("Error deleting route:", error)
-        setNotification({ type: 'error', message: error.message || 'Failed to delete route' })
+        console.error("Error deleting route:", error);
+        setNotification({
+          type: "error",
+          message: error.message || "Failed to delete route",
+        });
       } finally {
-        setTimeout(() => setNotification(null), 3000)
+        setTimeout(() => setNotification(null), 3000);
       }
     }
-  }
+  };
 
   const handleToggleStatus = async (routeId, currentStatus) => {
     try {
       // Normalize status comparison (handle both cases)
-      const isActive = currentStatus?.toLowerCase() === "active"
-      const newStatus = isActive ? "Inactive" : "Active"
-      setNotification({ type: 'info', message: `Updating route status to ${newStatus}...` })
-      const response = await api.put(`/admin/b2c/routes/${routeId}`, { status: newStatus })
-      
+      const isActive = currentStatus?.toLowerCase() === "active";
+      const newStatus = isActive ? "Inactive" : "Active";
+      setNotification({
+        type: "info",
+        message: `Updating route status to ${newStatus}...`,
+      });
+      const response = await api.put(`/admin/b2c/routes/${routeId}`, {
+        status: newStatus,
+      });
+
       if (response.data.success) {
-        setNotification({ type: 'success', message: `Route ${newStatus} successfully!` })
-        await Promise.all([fetchRoutes(), fetchRouteStats()])
+        setNotification({
+          type: "success",
+          message: `Route ${newStatus} successfully!`,
+        });
+        await Promise.all([fetchRoutes(), fetchRouteStats()]);
       } else {
-        throw new Error(response.data.message || 'Failed to update route status')
+        throw new Error(
+          response.data.message || "Failed to update route status",
+        );
       }
     } catch (error) {
-      console.error("Error updating route status:", error)
-      setNotification({ type: 'error', message: error.message || 'Failed to update route status' })
+      console.error("Error updating route status:", error);
+      setNotification({
+        type: "error",
+        message: error.message || "Failed to update route status",
+      });
     } finally {
-      setTimeout(() => setNotification(null), 3000)
+      setTimeout(() => setNotification(null), 3000);
     }
-  }
+  };
 
   const handleToggleFeatured = async (routeId, currentFeatured) => {
     try {
-      setNotification({ type: 'info', message: 'Updating featured status...' })
-      const response = await api.put(`/admin/b2c/routes/${routeId}`, { featured: !currentFeatured })
-      
+      setNotification({ type: "info", message: "Updating featured status..." });
+      const response = await api.put(`/admin/b2c/routes/${routeId}`, {
+        featured: !currentFeatured,
+      });
+
       if (response.data.success) {
-        setNotification({ 
-          type: 'success', 
-          message: `Route ${!currentFeatured ? 'featured' : 'unfeatured'} successfully!` 
-        })
-        await Promise.all([fetchRoutes(), fetchRouteStats()])
+        setNotification({
+          type: "success",
+          message: `Route ${!currentFeatured ? "featured" : "unfeatured"} successfully!`,
+        });
+        await Promise.all([fetchRoutes(), fetchRouteStats()]);
       } else {
-        throw new Error(response.data.message || 'Failed to update featured status')
+        throw new Error(
+          response.data.message || "Failed to update featured status",
+        );
       }
     } catch (error) {
-      console.error("Error updating featured status:", error)
-      setNotification({ type: 'error', message: error.message || 'Failed to update featured status' })
+      console.error("Error updating featured status:", error);
+      setNotification({
+        type: "error",
+        message: error.message || "Failed to update featured status",
+      });
     } finally {
-      setTimeout(() => setNotification(null), 3000)
+      setTimeout(() => setNotification(null), 3000);
     }
-  }
+  };
 
-  const filteredRoutes = routes.filter(route => 
-    route.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    route.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    route.startPoint.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    route.endPoint.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredRoutes = routes.filter((route) => {
+    const matchesSearch =
+      route.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      route.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      route.startPoint.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      route.endPoint.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCriteria =
+      criteriaFilter === "all" || route.bookingCriteria === criteriaFilter;
+
+    return matchesSearch && matchesCriteria;
+  });
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "active": return "#28a745"
-      case "inactive": return "#dc3545"
-      case "pending": return "#ffc107"
-      default: return "#6c757d"
+      case "active":
+        return "#28a745";
+      case "inactive":
+        return "#dc3545";
+      case "pending":
+        return "#ffc107";
+      default:
+        return "#6c757d";
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -200,7 +263,7 @@ function AdminRouteManagement() {
           <p>Loading routes...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -299,6 +362,17 @@ function AdminRouteManagement() {
             <option value="inactive">Inactive</option>
             <option value="maintenance">Maintenance</option>
           </select>
+
+          <select
+            className="route-management-filter-select"
+            value={criteriaFilter}
+            onChange={(e) => setCriteriaFilter(e.target.value)}
+          >
+            <option value="all">All Demand</option>
+            <option value="high">🔥 High Demand</option>
+            <option value="medium">📈 Medium Demand</option>
+            <option value="low">🌱 Low Demand</option>
+          </select>
         </div>
       </div>
 
@@ -312,6 +386,18 @@ function AdminRouteManagement() {
                   {route.featured && (
                     <span className="route-management-featured-badge">
                       ⭐ Featured
+                    </span>
+                  )}
+                  {route.bookingCriteria && (
+                    <span
+                      className={`route-management-criteria-badge route-management-criteria-${route.bookingCriteria}`}
+                      title={`${route.totalBookings || 0} booking(s) on this route`}
+                    >
+                      {route.bookingCriteria === "high"
+                        ? "🔥 High demand"
+                        : route.bookingCriteria === "medium"
+                          ? "📈 Medium demand"
+                          : "🌱 Low demand"}
                     </span>
                   )}
                 </div>
@@ -395,13 +481,13 @@ function AdminRouteManagement() {
                   </div>
 
                   <div className="route-management-detail-item">
-                    <span className="route-management-detail-icon">📏</span>
+                    <span className="route-management-detail-icon">📊</span>
                     <div className="route-management-detail-content">
                       <span className="route-management-detail-label">
-                        Distance
+                        Bookings
                       </span>
                       <span className="route-management-detail-value">
-                        {route.distance}
+                        {route.totalBookings || 0}
                       </span>
                     </div>
                   </div>
@@ -454,4 +540,4 @@ function AdminRouteManagement() {
   );
 }
 
-export default AdminRouteManagement
+export default AdminRouteManagement;

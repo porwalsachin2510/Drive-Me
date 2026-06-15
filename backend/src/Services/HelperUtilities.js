@@ -97,6 +97,56 @@ export const calculateDynamicDriverCommission = async (b2cPartnerId, amount) => 
     return calculateDynamicCommission(b2cPartnerId, amount, "BOOKING")
 }
 
+// Default negotiation commission rate (fallback if no settings found)
+export const DEFAULT_NEGOTIATION_COMMISSION_RATE = 25
+
+/**
+ * Resolve the effective negotiation commission rate for a Corporate user.
+ *
+ * Priority (mirrors the Commission Management list logic):
+ *   1. An ACTIVE custom rate rule of type "NEGOTIATION" (the rule Admin set,
+ *      e.g. 40% effective for a date window) — highest priority.
+ *   2. The user's configured `negotiationCommissionRate`.
+ *   3. The system default (25%).
+ *
+ * @param {string} corporateId - The Corporate user ID
+ * @returns {Promise<{ rate: number, source: string }>} Resolved rate + its source
+ */
+export const resolveNegotiationCommissionRate = async (corporateId) => {
+    try {
+        const settings = await CommissionSettings.findOne({ userId: corporateId, isActive: true })
+
+        if (!settings) {
+            return { rate: DEFAULT_NEGOTIATION_COMMISSION_RATE, source: "default" }
+        }
+
+        // 1. Highest priority: an active custom NEGOTIATION rule
+        if (settings.customRates?.length > 0) {
+            const now = new Date()
+            const customRate = settings.customRates.find(
+                (r) =>
+                    r.rateType === "NEGOTIATION" &&
+                    new Date(r.effectiveFrom) <= now &&
+                    (!r.effectiveUntil || new Date(r.effectiveUntil) >= now)
+            )
+            if (customRate && customRate.rate !== undefined && customRate.rate !== null) {
+                return { rate: customRate.rate, source: "custom_rule" }
+            }
+        }
+
+        // 2. Configured negotiation commission rate
+        if (settings.negotiationCommissionRate !== undefined && settings.negotiationCommissionRate !== null) {
+            return { rate: settings.negotiationCommissionRate, source: "configured" }
+        }
+
+        // 3. Fallback
+        return { rate: DEFAULT_NEGOTIATION_COMMISSION_RATE, source: "default" }
+    } catch (error) {
+        console.error("Error resolving negotiation commission rate:", error)
+        return { rate: DEFAULT_NEGOTIATION_COMMISSION_RATE, source: "default" }
+    }
+}
+
 /**
  * Calculate negotiation commission (from savings amount)
  * @param {string} corporateId - The Corporate user ID
@@ -105,10 +155,7 @@ export const calculateDynamicDriverCommission = async (b2cPartnerId, amount) => 
  */
 export const calculateNegotiationCommission = async (corporateId, savingsAmount) => {
     try {
-        const settings = await CommissionSettings.findOne({ userId: corporateId, isActive: true })
-
-        // Use negotiation-specific rate or default to 25%
-        const rate = settings?.negotiationCommissionRate || 25
+        const { rate } = await resolveNegotiationCommissionRate(corporateId)
 
         const commission = (savingsAmount * rate) / 100
 
@@ -120,7 +167,7 @@ export const calculateNegotiationCommission = async (corporateId, savingsAmount)
         }
     } catch (error) {
         console.error("Error calculating negotiation commission:", error)
-        const defaultRate = 25
+        const defaultRate = DEFAULT_NEGOTIATION_COMMISSION_RATE
         const commission = (savingsAmount * defaultRate) / 100
         return {
             savingsAmount: savingsAmount,
