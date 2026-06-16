@@ -442,6 +442,34 @@ export const searchCommuteRoutes = async (req, res) => {
                NORMAL / B2C COMMUTER ROUTES
             ====================================================== */
 
+        // Service is currently only available in these countries.
+        const SERVICE_COUNTRIES = ["UAE", "Kuwait"];
+        const resolveUserCountry = (nat) => {
+            const countryMapping = {
+                "UAE": "UAE",
+                "United Arab Emirates": "UAE",
+                "AE": "UAE",
+                "Kuwait": "Kuwait",
+                "KW": "Kuwait",
+            };
+            return countryMapping[nat] || nat;
+        };
+
+        // If the commuter is located in a country where the service is not
+        // available (e.g. India), do NOT return any routes. Previously routes
+        // were only filtered for UAE/Kuwait users, so unsupported-country users
+        // saw every route on the platform.
+        if (nationality && !SERVICE_COUNTRIES.includes(resolveUserCountry(nationality))) {
+            return res.status(200).json({
+                success: true,
+                userType: "commuter",
+                serviceAvailable: false,
+                message: `Drive Me Go is not available in ${nationality} yet.`,
+                totalRoutes: 0,
+                routes: [],
+            });
+        }
+
         // Helper function to determine route country from location names
         const getRouteCountry = (fromLocation, toLocation) => {
             const allLocations = `${fromLocation || ''} ${toLocation || ''}`.toLowerCase();
@@ -843,6 +871,31 @@ export const publicSearchRoutes = async (req, res) => {
         }
 
         const routes = []
+
+        // Service is currently only available in these countries.
+        const SERVICE_COUNTRIES = ["UAE", "Kuwait"];
+        const resolveUserCountry = (nat) => {
+            const countryMapping = {
+                "UAE": "UAE",
+                "United Arab Emirates": "UAE",
+                "AE": "UAE",
+                "Kuwait": "Kuwait",
+                "KW": "Kuwait",
+            };
+            return countryMapping[nat] || nat;
+        };
+
+        // If the visitor is located in a country where the service is not
+        // available (e.g. India), do NOT return any routes.
+        if (nationality && !SERVICE_COUNTRIES.includes(resolveUserCountry(nationality))) {
+            return res.status(200).json({
+                success: true,
+                serviceAvailable: false,
+                message: `Drive Me Go is not available in ${nationality} yet.`,
+                totalRoutes: 0,
+                routes: [],
+            });
+        }
 
         // Helper function to determine route country from location names
         const getRouteCountry = (fromLocation, toLocation) => {

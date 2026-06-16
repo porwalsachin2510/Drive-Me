@@ -7,6 +7,7 @@ import AvailableSection from "../../../Components/AvailableSection/AvailableSect
 import RouteRequest from "../../../Components/RouteRequest/RouteRequest";
 import Navbar from "../../../Components/Navbar/Navbar";
 import CampaignBanner from "../../../Components/CampaignBanner/CampaignBanner";
+import ServiceUnavailable from "../../../Components/ServiceUnavailable/ServiceUnavailable";
 import { useNavigate } from "react-router-dom";
 import {
   isServiceAvailable,
@@ -194,9 +195,16 @@ export default function CommuterHomePage() {
   );
 
   useEffect(() => {
-    if (userNationality) {
+    // Only fetch routes when the user is located in a country we actually
+    // serve. Commuters in unsupported countries (e.g. India) should not see
+    // any routes at all.
+    if (userNationality && isServiceAvailable(userNationality)) {
       fetchRoutes({ filterType: "all" });
       setCurrentFilterType("all");
+    } else if (userNationality) {
+      // Clear any previously loaded routes for unsupported countries.
+      setFirstLoadRoutes([]);
+      setRoutes([]);
     }
   }, [fetchRoutes, userNationality]);
 
@@ -260,89 +268,91 @@ export default function CommuterHomePage() {
 
   // ============ COMMUTERS VIEW ============
 
+  // Whether the detected country is one we currently serve (UAE / Kuwait).
+  const serviceAvailable =
+    !!userNationality && isServiceAvailable(userNationality);
+
   return (
     <div>
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="commuterhomepage-homepage">
         <div className="commuterhomepage-commuters-container">
-          <div className="commuterhomepage-page-title">
-            <h1>We Are Drive Me Go.</h1>
-            <p>
-              We have the power to move the future not simply by getting from
-              one place to another, but by opening
-              <br />
-              new possibilities Drive Me Go gives you the freedom to go
-              anywhere.
-            </p>
-            {userNationality && (
-              <>
-                {isServiceAvailable(userNationality) ? (
+          {/* Commuters located in a country we don't serve yet get a
+              dedicated "coming soon" experience instead of the route search. */}
+          {userNationality && !serviceAvailable ? (
+            <ServiceUnavailable
+              country={getDisplayCountry(userNationality)}
+              onRequestRoute={() => setShowRouteRequest(true)}
+            />
+          ) : (
+            <>
+              <div className="commuterhomepage-page-title">
+                <h1>We Are Drive Me Go.</h1>
+                <p>
+                  We have the power to move the future not simply by getting
+                  from one place to another, but by opening
+                  <br />
+                  new possibilities Drive Me Go gives you the freedom to go
+                  anywhere.
+                </p>
+                {serviceAvailable && (
                   <p className="commuterhomepage-location-indicator commuterhomepage-available">
                     📍 Showing routes for:{" "}
                     <strong>{getDisplayCountry(userNationality)}</strong>
                   </p>
-                ) : (
-                  <div className="commuterhomepage-location-indicator commuterhomepage-unavailable">
-                    🚫 Our service is currently not available in{" "}
-                    <span className="commuterhomepage-country-highlight">
-                      {userNationality}
-                    </span>
-                    .
-                    <p className="commuterhomepage-expansion-text">
-                      We are expanding soon to more countries.
-                    </p>
-                    <button
-                      className="commuterhomepage-notify-btn"
-                      onClick={() => setShowRouteRequest(true)}
-                    >
-                      Request This Route
-                    </button>
-                  </div>
                 )}
-              </>
-            )}
 
-            {userNationality === null && (
-              <p className="commuterhomepage-location-indicator commuterhomepage-available">
-                📍
-                <strong>Location Not Found</strong>
-              </p>
-            )}
-          </div>
+                {userNationality === null && (
+                  <p className="commuterhomepage-location-indicator commuterhomepage-available">
+                    📍
+                    <strong>Location Not Found</strong>
+                  </p>
+                )}
+              </div>
 
-          <CommuteSearchForm
-            onSearch={handleSearch}
-            onRequestRoute={() => setShowRouteRequest(true)}
-            userCountry={userNationality}
-          />
+              {/* Search form and route listings are only shown for commuters
+              located in a country we currently serve. */}
+              {serviceAvailable && (
+                <>
+                  <CommuteSearchForm
+                    onSearch={handleSearch}
+                    onRequestRoute={() => setShowRouteRequest(true)}
+                    userCountry={userNationality}
+                  />
 
-          {/* Campaign Banner - Top Banner (matches Admin placement: "top") */}
-          <CampaignBanner placement="top" />
+                  {/* Campaign Banner - Top Banner (matches Admin placement: "top") */}
+                  <CampaignBanner placement="top" />
 
-          <FeaturedRoutes routes={featuredRoutes} loading={loading} />
+                  <FeaturedRoutes routes={featuredRoutes} loading={loading} />
 
-          <div
-            ref={availableSectionRef}
-            className="commuterhomepage-available-section-wrapper"
-          >
-            {/* Sidebar Campaign Banner */}
-            <CampaignBanner placement="sidebar" />
-            <AvailableSection
-              routes={
-                currentFilterType === "matched" ? routes : firstloadroutes
-              }
-              loading={loading}
-              onFilterChange={handleFilterChange}
-              searchParams={searchParams}
-              currentFilterType={currentFilterType}
-            />
-          </div>
+                  <div
+                    ref={availableSectionRef}
+                    className="commuterhomepage-available-section-wrapper"
+                  >
+                    {/* Sidebar Campaign Banner */}
+                    <CampaignBanner placement="sidebar" />
+                    <AvailableSection
+                      routes={
+                        currentFilterType === "matched"
+                          ? routes
+                          : firstloadroutes
+                      }
+                      loading={loading}
+                      onFilterChange={handleFilterChange}
+                      searchParams={searchParams}
+                      currentFilterType={currentFilterType}
+                    />
+                  </div>
 
-          {/* Footer Campaign Banner */}
-          <CampaignBanner placement="footer" />
+                  {/* Footer Campaign Banner */}
+                  <CampaignBanner placement="footer" />
 
-          {/* Popup Campaign Banner */}
-          <CampaignBanner placement="popup" />
+                  {/* Popup Campaign Banner */}
+                  <CampaignBanner placement="popup" />
+                </>
+              )}
+            </>
+          )}
         </div>
 
         <RouteRequest

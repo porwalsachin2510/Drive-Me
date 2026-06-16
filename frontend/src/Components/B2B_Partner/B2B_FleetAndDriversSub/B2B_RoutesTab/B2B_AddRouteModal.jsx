@@ -345,11 +345,8 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
   };
 
   return (
-    <div className="drivemego-btobarm-b2b-modal-overlay" onClick={onClose}>
-      <div
-        className="drivemego-btobarm-b2b-add-route-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="drivemego-btobarm-b2b-modal-overlay">
+      <div className="drivemego-btobarm-b2b-add-route-modal">
         <div className="drivemego-btobarm-b2b-modal-header">
           <h2>Add New Route</h2>
           <button

@@ -39,6 +39,7 @@ import requirementRoutes from "./routes/requirementRoutes.js"
 import bankRoutes from "./routes/bankRoutes.js"
 import currencyRoutes from "./routes/currencyRoutes.js"
 import routeRequestRoutes from "./routes/routeRequestRoutes.js"
+import expansionWaitlistRoutes from "./routes/expansionWaitlistRoutes.js"
 import noShowRoutes from "./routes/noShowRoutes.js"
 import subscriptionSettingsRoutes from "./routes/subscriptionSettingsRoutes.js"
 import travelHistoryRoutes from "./routes/travelHistoryRoutes.js"
@@ -799,6 +800,7 @@ app.use("/api/currency", currencyRoutes)
 app.use('/api/monthly-pass', b2cMonthlyPassRoutes)
 app.use('/api/b2c-bookings', b2cBookingRoutes)
 app.use("/api/route-requests", routeRequestRoutes)
+app.use("/api/expansion-waitlist", expansionWaitlistRoutes)
 app.use("/api/no-show", noShowRoutes)
 app.use("/api/subscription-settings", subscriptionSettingsRoutes)
 app.use("/api/travel-history", travelHistoryRoutes)

@@ -7,7 +7,10 @@ import {
   clearDriverError,
   clearDriverSuccess,
 } from "../../../../Redux/slices/driverSlice";
-import { useDropdownOptions, DROPDOWN_CATEGORIES } from "../../../../hooks/useDropdownOptions";
+import {
+  useDropdownOptions,
+  DROPDOWN_CATEGORIES,
+} from "../../../../hooks/useDropdownOptions";
 import "./b2b_adddrivermodal.css";
 
 function B2B_AddDriverModal({ onClose }) {
@@ -285,14 +288,8 @@ function B2B_AddDriverModal({ onClose }) {
   }, []);
 
   return (
-    <div
-      className="b2b-operator-dashboard-add-driver-modal-overlay"
-      onClick={handleModalClose}
-    >
-      <div
-        className="b2b-operator-dashboard-add-driver-modal-content"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="b2b-operator-dashboard-add-driver-modal-overlay">
+      <div className="b2b-operator-dashboard-add-driver-modal-content">
         <div className="b2b-operator-dashboard-add-driver-modal-header">
           <h2>Add New Driver</h2>
           <button

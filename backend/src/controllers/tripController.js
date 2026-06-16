@@ -618,19 +618,31 @@ export const getMyBookings = async (req, res) => {
         const employeeId = req.userId;
         const { status, date } = req.query;
 
-        // Build query - only show upcoming active bookings, not completed
-        // Check both passengerId (User ID) and employeeId (CorporateEmployee ID)
+        // Determine which trip statuses to return.
+        // - Default (My Scheduled Trips): only upcoming/active bookings.
+        // - Trip History passes ?status=COMPLETED (comma-separated values supported,
+        //   e.g. ?status=COMPLETED,CANCELLED) so finished trips can be listed.
+        let statusFilter = ['SCHEDULED', 'IN_PROGRESS'];
+        if (status) {
+            statusFilter = status
+                .split(',')
+                .map((s) => s.trim().toUpperCase())
+                .filter(Boolean);
+        }
+
+        // Show history (completed/cancelled) newest-first, upcoming trips earliest-first
+        const isHistoryView = statusFilter.some((s) =>
+            ['COMPLETED', 'CANCELLED'].includes(s)
+        );
+
+        // Build query - check both passengerId (User ID) and employeeId (CorporateEmployee ID)
         const query = {
             $or: [
                 { "passengers.passengerId": employeeId },
                 { "passengers.employeeId": employeeId }
             ],
-            status: { $in: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED'] }
+            status: { $in: statusFilter }
         };
-
-        if (status) {
-            query.status = status;
-        }
 
         if (date) {
             const targetDate = new Date(date);
@@ -645,7 +657,7 @@ export const getMyBookings = async (req, res) => {
         const trips = await Trip.find(query)
             .populate('routeId', 'fromLocation toLocation stopPoints')
             .populate('vehicleId', 'vehicleName registrationNumber vehicleCategory model licensePlate')
-            .sort({ tripDate: 1, startTime: 1 });
+            .sort(isHistoryView ? { tripDate: -1, startTime: -1 } : { tripDate: 1, startTime: 1 });
 
         // Resolve driver names and add seat info
         const myBookings = await Promise.all(trips.map(async (trip) => {
