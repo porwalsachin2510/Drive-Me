@@ -51,6 +51,10 @@ const expansionWaitlistSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        notifiedAt: {
+            type: Date,
+            default: null,
+        },
     },
     { timestamps: true }
 );

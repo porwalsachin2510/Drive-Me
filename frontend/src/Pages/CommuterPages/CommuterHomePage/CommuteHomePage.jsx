@@ -272,9 +272,16 @@ export default function CommuterHomePage() {
   const serviceAvailable =
     !!userNationality && isServiceAvailable(userNationality);
 
+  // Commuters in an unsupported country (e.g. India) should only see the
+  // "coming soon" experience — hide the navbar so they cannot navigate to
+  // other pages of an app that isn't available in their region.
+  const isUnsupportedCountry = !!userNationality && !serviceAvailable;
+
   return (
     <div>
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {!isUnsupportedCountry && (
+        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      )}
       <div className="commuterhomepage-homepage">
         <div className="commuterhomepage-commuters-container">
           {/* Commuters located in a country we don't serve yet get a

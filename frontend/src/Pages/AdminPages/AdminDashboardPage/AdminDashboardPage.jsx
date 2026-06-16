@@ -22,6 +22,7 @@ import AdminCommissionSettings from "../../../Components/Admin/AdminCommissionSe
 import AdminNegotiations from "../../../Components/Admin/AdminNegotiations/AdminNegotiations";
 import AdminTermsManagement from "../../../Components/Admin/AdminTermsManagement/AdminTermsManagement";
 import AdminCashRenewals from "../../../Components/Admin/AdminCashRenewals/AdminCashRenewals";
+import ExpansionManagement from "../ExpansionManagement/ExpansionManagement";
 import "./admindashboardpage.css";
 
 function AdminDashboardPage() {
@@ -69,6 +70,8 @@ function AdminDashboardPage() {
         return <AdminNegotiations />;
       case "terms-management":
         return <AdminTermsManagement />;
+      case "expansion-management":
+        return <ExpansionManagement />;
       default:
         return <AdminOverview />;
     }
