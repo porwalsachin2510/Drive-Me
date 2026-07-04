@@ -162,6 +162,13 @@ const subscriptionSettingsSchema = new mongoose.Schema({
             type: Number,
             default: 0
         },
+        // Native currency of the pass being renewed (e.g. AED for a UAE
+        // commuter, KWD for a Kuwait commuter). Stored so the admin dashboard
+        // can convert the cash-to-collect into the admin's chosen currency.
+        currency: {
+            type: String,
+            default: "AED"
+        },
         // Number of months the commuter chose to renew for. The admin's
         // confirmation extends the pass by exactly this many months.
         renewalMonths: {

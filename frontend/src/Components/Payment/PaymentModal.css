@@ -279,6 +279,30 @@
   line-height: 1.4;
 }
 
+/* Secure-redirect notice (replaces the old inline card-detail fields) */
+.drivemego-wppm-redirect-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  margin-top: 20px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+}
+
+.drivemego-wppm-redirect-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.drivemego-wppm-redirect-text {
+  font-size: 13px;
+  color: #1e40af;
+  line-height: 1.5;
+}
+
 /* Responsive Design */
 @media (max-width: 640px) {
   .drivemego-wppm-payment-modal {

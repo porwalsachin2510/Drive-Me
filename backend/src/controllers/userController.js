@@ -1,5 +1,6 @@
 import User from "../models/User.js"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
+import { withOwnerPermissions } from "../Services/ownerService.js"
 
 export const getAllUsers = async (req, res) => {
     try {
@@ -34,7 +35,9 @@ export const getCurrentUser = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "User retrieved successfully",
-            user: user.toJSON(),
+            // Force the real platform owner to always carry full super-admin
+            // permissions + an isPrimaryOwner flag so the UI never locks them out.
+            user: withOwnerPermissions(user.toJSON()),
         })
     } catch (error) {
         console.error("Get current user error:", error)
@@ -117,8 +120,8 @@ export const updateUserProfileLogo = async (req, res) => {
 
         // Upload to Cloudinary
         const uploadResult = await uploadToCloudinary(
-            req.file, 
-            `driveme/company-logos/${userId}`, 
+            req.file,
+            `driveme/company-logos/${userId}`,
             'companyLogo'
         )
 

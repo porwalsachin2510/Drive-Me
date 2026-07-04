@@ -1,7 +1,13 @@
 /* eslint-disable no-unused-vars */
+import { getActiveCurrency } from "../../../config/localeConfig";
 import "./PaymentBreakdown.css";
 
-const PaymentBreakdown = ({ contract, payment, paymentType = "advance" }) => {
+const PaymentBreakdown = ({
+  contract,
+  payment,
+  paymentType = "advance",
+  commissionPreview = null,
+}) => {
   // Handle both contract and payment props
   // If payment is provided (Admin view), use payment data
   // If contract is provided (Corporate view), use contract data
@@ -17,11 +23,14 @@ const PaymentBreakdown = ({ contract, payment, paymentType = "advance" }) => {
   }
 
   let totalAmount = 0;
-  let currency = "AED";
+  let currency = getActiveCurrency();
   let negotiationCommission = 0;
   let negotiationCommissionStatus = null;
   let hasNegotiationCommission = false;
-  let commissionRate = 30; // Default 30% (admin's B2B commission rate), will be overridden by actual rate
+  // Platform default is 20% (matches backend DEFAULT_COMMISSION_PERCENTAGE and the
+  // Commission Management screen). This is only a placeholder — the real applied
+  // rate comes from `commissionPreview`, `payment`, or the contract below.
+  let commissionRate = 20;
 
   // Use actual amounts from payment if available (already calculated with correct rates)
   let actualAdminCommission = null;
@@ -35,7 +44,9 @@ const PaymentBreakdown = ({ contract, payment, paymentType = "advance" }) => {
       payment.amount ||
       0;
     currency =
-      payment.currency || payment.contractId?.financials?.currency || "AED";
+      payment.currency ||
+      payment.contractId?.financials?.currency ||
+      getActiveCurrency();
     negotiationCommission =
       payment.negotiationCommissionAmount ||
       payment.contractId?.negotiationCommission?.adminCommission ||
@@ -49,7 +60,7 @@ const PaymentBreakdown = ({ contract, payment, paymentType = "advance" }) => {
       payment.appliedCommissionRate ||
       payment.adminCommission?.percentage ||
       payment.contractId?.appliedCommissionRate ||
-      30;
+      20;
 
     // Use actual calculated amounts from payment if available
     if (
@@ -70,10 +81,21 @@ const PaymentBreakdown = ({ contract, payment, paymentType = "advance" }) => {
       quotation.totalAmount ||
       quotation?.quotedPrice?.totalAmount ||
       0;
-    currency = financials.currency || quotation.currency || "AED";
-    // Get commission rate from contract if available
+    currency = financials.currency || quotation.currency || getActiveCurrency();
+    // Prefer the live backend preview (the exact rate that will be charged),
+    // then any rate stored on the contract, then the platform default.
     commissionRate =
-      contract.appliedCommissionRate || financials.appliedCommissionRate || 30;
+      commissionPreview?.appliedCommissionRate ||
+      contract.appliedCommissionRate ||
+      financials.appliedCommissionRate ||
+      20;
+
+    // When the preview is available, use its exact split so the modal shows the
+    // same admin/fleet-owner amounts the backend will actually apply.
+    if (commissionPreview) {
+      actualAdminCommission = commissionPreview.adminCommission;
+      actualFleetOwnerAmount = commissionPreview.fleetOwnerAmount;
+    }
 
     // Check for negotiation commission on contract
     if (contract.negotiationCommission) {
@@ -113,7 +135,7 @@ const PaymentBreakdown = ({ contract, payment, paymentType = "advance" }) => {
     actualFleetOwnerAmount !== null
       ? actualFleetOwnerAmount
       : advanceAmount - adminCommission;
-  
+
   return (
     <div className="payment-breakdown">
       <h3 className="breakdown-title">Payment Breakdown</h3>
@@ -309,13 +331,13 @@ const PaymentBreakdown = ({ contract, payment, paymentType = "advance" }) => {
       )}
     </div>
   );
-};;;
+};
 
 // EMI Payment Breakdown Component for Admin Verification
 const EMIPaymentBreakdown = ({ payment }) => {
-  const currency = payment.currency || "AED";
+  const currency = payment.currency || getActiveCurrency();
   const emiData = payment.emiData || {};
-  
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -323,20 +345,24 @@ const EMIPaymentBreakdown = ({ payment }) => {
       minimumFractionDigits: 2,
     }).format(amount || 0);
   };
-  
+
   const totalEMIAmount = payment.amount || 0;
-  const contractAmountPortion = emiData.contractAmountPortion || (totalEMIAmount - (emiData.negotiationCommissionPortion || 0));
+  const contractAmountPortion =
+    emiData.contractAmountPortion ||
+    totalEMIAmount - (emiData.negotiationCommissionPortion || 0);
   const adminCommissionRate = emiData.adminCommission?.rate || 20;
   const adminCommissionAmount = emiData.adminCommission?.amount || 0;
-  const negotiationCommissionPortion = emiData.negotiationCommissionPortion || 0;
+  const negotiationCommissionPortion =
+    emiData.negotiationCommissionPortion || 0;
   const fleetOwnerAmount = emiData.fleetOwnerAmount || 0;
   const tenure = emiData.tenure || 6;
   const totalEMIPlanAmount = emiData.totalAmount || 0;
   const monthlyEMI = emiData.monthlyEMI || 0;
-  
+
   // Total admin earnings from this installment
-  const totalAdminEarnings = adminCommissionAmount + negotiationCommissionPortion;
-  
+  const totalAdminEarnings =
+    adminCommissionAmount + negotiationCommissionPortion;
+
   return (
     <div className="payment-breakdown emi-breakdown">
       <h3 className="breakdown-title">EMI Installment Breakdown</h3>
@@ -386,7 +412,7 @@ const EMIPaymentBreakdown = ({ payment }) => {
               {formatCurrency(negotiationCommissionPortion)}
             </span>
             <span className="breakdown-note">
-              (Total AED 1,000 spread across {tenure} installments)
+              (Total {currency} 1,000 spread across {tenure} installments)
             </span>
           </div>
         )}
@@ -474,6 +500,5 @@ const EMIPaymentBreakdown = ({ payment }) => {
     </div>
   );
 };
-
 
 export default PaymentBreakdown;

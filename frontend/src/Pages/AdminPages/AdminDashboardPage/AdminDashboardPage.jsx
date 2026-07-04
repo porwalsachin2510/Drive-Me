@@ -19,6 +19,7 @@ import AdminWalletManagement from "../../../Components/Admin/AdminWalletManageme
 import AdminDropdownManagement from "../../../Components/Admin/AdminDropdownManagement/AdminDropdownManagement";
 import AdminManagement from "../../../Components/Admin/AdminManagement/AdminManagement";
 import AdminCommissionSettings from "../../../Components/Admin/AdminCommissionSettings/AdminCommissionSettings";
+import AdminCancellationSettings from "../../../Components/Admin/AdminCancellationSettings/AdminCancellationSettings";
 import AdminNegotiations from "../../../Components/Admin/AdminNegotiations/AdminNegotiations";
 import AdminTermsManagement from "../../../Components/Admin/AdminTermsManagement/AdminTermsManagement";
 import AdminCashRenewals from "../../../Components/Admin/AdminCashRenewals/AdminCashRenewals";
@@ -66,6 +67,8 @@ function AdminDashboardPage() {
         return <AdminManagement />;
       case "commission-settings":
         return <AdminCommissionSettings />;
+      case "cancellation-settings":
+        return <AdminCancellationSettings />;
       case "negotiations":
         return <AdminNegotiations />;
       case "terms-management":

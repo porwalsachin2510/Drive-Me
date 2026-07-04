@@ -1,9 +1,22 @@
 "use client";
+import { getActiveCurrency } from "../../../config/localeConfig";
+import ManagedServiceBrief from "../../Corporate/ManagedServiceBrief/ManagedServiceBrief";
 import "./QuotationDetailsModal.css";
 
 const QuotationDetailsModal = ({ quotation, onClose }) => {
-  const currency = quotation.currency || quotation.vehicles?.[0]?.vehicleId?.pricing?.currency || "AED";
-  
+  // Managed-service requests always carry an operations brief submitted by the
+  // corporate at request time. Show it read-only here so the partner can review
+  // the routes, work locations & shifts and employee roster before it prices.
+  const isManaged =
+    quotation.serviceMode === "MANAGED" ||
+    quotation.serviceType === "MANAGED_SERVICES" ||
+    quotation.hasBrief === true;
+  const quotationId = quotation._id || quotation.id;
+  const currency =
+    quotation.currency ||
+    quotation.vehicles?.[0]?.vehicleId?.pricing?.currency ||
+    getActiveCurrency();
+
   const mapStatus = (status) => {
     const statusMap = {
       REQUESTED: "pending",
@@ -241,6 +254,11 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
             <div className="b2b-quotation-details-vehicles-list">
               {quotation.vehicles.map((vehicle, index) => {
                 const vehicleData = vehicle.vehicleId;
+                // Goods carriers report cargo capacity (tons), not seats.
+                const isGoodsCarrier =
+                  vehicleData?.serviceType === "GOODS_CARRIER" ||
+                  (!vehicleData?.capacity?.seatingCapacity &&
+                    !!vehicleData?.capacity?.cargoCapacity);
                 return (
                   <div
                     key={index}
@@ -291,11 +309,16 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                         </div>
                         <div className="b2b-quotation-details-vehicle-info-item">
                           <span className="b2b-quotation-details-label">
-                            Seating Capacity:
+                            {isGoodsCarrier
+                              ? "Cargo Capacity:"
+                              : "Seating Capacity:"}
                           </span>
                           <span className="b2b-quotation-details-value">
-                            {vehicleData?.capacity?.seatingCapacity || "N/A"}{" "}
-                            Seats
+                            {isGoodsCarrier
+                              ? vehicleData?.capacity?.cargoCapacity
+                                ? `${vehicleData.capacity.cargoCapacity} tons`
+                                : "N/A"
+                              : `${vehicleData?.capacity?.seatingCapacity || "N/A"} Seats`}
                           </span>
                         </div>
                         <div className="b2b-quotation-details-vehicle-info-item">
@@ -487,6 +510,23 @@ const QuotationDetailsModal = ({ quotation, onClose }) => {
                 )}
               </div>
             )}
+
+          {/* Managed Service Brief — the operational requirements the corporate
+              submitted with the request. Read-only for the partner here so it
+              can confirm it can serve these routes/locations before quoting. */}
+          {isManaged && quotationId && (
+            <div className="b2b-quotation-details-detail-section">
+              <h3 className="b2b-quotation-details-section-title">
+                <span className="b2b-quotation-details-section-icon">📋</span>
+                Managed Service Brief
+              </h3>
+              <p className="b2b-quotation-details-brief-hint">
+                Review the requested routes, work locations &amp; shifts and
+                employee roster below before you submit a quote.
+              </p>
+              <ManagedServiceBrief quotationId={quotationId} mode="partner" />
+            </div>
+          )}
 
           {/* Rejection Message */}
           {quotation.status === "REJECTED" && quotation.responseMessage && (

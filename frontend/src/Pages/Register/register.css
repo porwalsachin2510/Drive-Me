@@ -245,6 +245,22 @@
   box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
+/* Locked (auto-detected) dial code — no dropdown affordance, not editable. */
+.register-country-code-locked {
+  cursor: not-allowed;
+}
+
+.register-country-code-locked .register-country-code-display {
+  padding: 12px;
+  background-image: none;
+}
+
+.register-country-code-locked:hover .register-country-code-display {
+  border-color: #E2E8F0;
+  background-color: #F8FAFC;
+  box-shadow: none;
+}
+
 .register-phone-number-input {
   flex: 1;
   min-width: 0;
@@ -801,6 +817,19 @@ textarea.register-form-input {
   color: #888;
   font-weight: 400;
   font-size: 12px;
+}
+
+.register-kyc-help {
+  color: #6b7280;
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+
+.register-kyc-note {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 8px 0 0;
 }
 
 .register-error-message {

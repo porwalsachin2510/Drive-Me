@@ -520,3 +520,13 @@
     max-width: 100%;
   }
 }
+
+/* Secondary line showing the original (native) payment amount when the admin
+   is viewing the dashboard in a different currency. */
+.drivemego-paymentverification-native-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #94a3b8;
+}

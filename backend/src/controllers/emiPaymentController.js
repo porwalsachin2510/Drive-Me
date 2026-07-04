@@ -1,6 +1,7 @@
 import EMIPayment from "../models/EMIPayment.js"
 import Contract from "../models/Contract.js"
 import Wallet from "../models/Wallet.js"
+import { getOrCreateWallet } from "../Services/walletService.js"
 import Transaction from "../models/Transaction.js"
 import CommissionSettings from "../models/CommissionSettings.js"
 import User from "../models/User.js"
@@ -914,8 +915,25 @@ export const verifyEMIPayment = async (req, res) => {
                 installment.negotiationCommissionCreditedAt = new Date()
             }
 
+            // All EMI wallet movements settle in the EMI's own currency.
+            // NOTE: the currency lives at emiPlan.currency — there is NO top-level
+            // `emiPayment.currency` field, so reading that always yielded undefined
+            // and silently defaulted to "AED". That misrouted every Kuwait (KWD)
+            // EMI commission into the admin's AED wallet, so a KWD-viewing admin
+            // never saw the money. Resolve from the authoritative emiPlan currency,
+            // falling back to the contract's stored currency.
+            const emiCurrency =
+                emiPayment.emiPlan?.currency ||
+                emiPayment.contractId?.financials?.currency ||
+                emiPayment.contractId?.currency ||
+                "AED"
+            console.log("[v0] EMI settlement currency resolved:", emiCurrency)
+
             // Credit B2B Partner wallet (only the fleet owner's portion of contract amount)
-            const fleetOwnerWallet = await Wallet.findOne({ userId: emiPayment.fleetOwnerId._id })
+            const fleetOwnerWallet = await getOrCreateWallet(emiPayment.fleetOwnerId._id, {
+                currency: emiCurrency,
+                role: "B2B_PARTNER",
+            })
             if (fleetOwnerWallet) {
                 fleetOwnerWallet.balance += installment.fleetOwnerAmount
                 fleetOwnerWallet.totalEarnings += installment.fleetOwnerAmount
@@ -932,7 +950,10 @@ export const verifyEMIPayment = async (req, res) => {
             }
 
             // Credit Admin wallet - TWO parts: Contract Commission + Negotiation Commission
-            const adminWallet = await Wallet.findOne({ role: "ADMIN" })
+            const adminWallet = await getOrCreateWallet(process.env.ADMIN_USER_ID, {
+                currency: emiCurrency,
+                role: "ADMIN",
+            })
             if (adminWallet) {
                 // 1. Credit contract commission (from B2B partner's share)
                 if (installment.adminCommission.amount > 0) {
@@ -2106,8 +2127,18 @@ export const verifyEMIOnlinePayment = async (req, res) => {
 
             // Credit B2B Partner wallet - ONLY if not already credited
             // This is an additional safeguard even though atomic update above should prevent duplicates
+            // Online EMI wallet movements settle in the EMI's own currency.
+            // Currency lives at emiPlan.currency (there is no top-level field).
+            const emiCurrency =
+                emiPayment.emiPlan?.currency ||
+                emiPayment.contractId?.financials?.currency ||
+                emiPayment.contractId?.currency ||
+                "AED"
             if (!installment.fleetOwnerCredited) {
-                const fleetOwnerWallet = await Wallet.findOne({ userId: emiPayment.fleetOwnerId._id })
+                const fleetOwnerWallet = await getOrCreateWallet(emiPayment.fleetOwnerId._id, {
+                    currency: emiCurrency,
+                    role: "B2B_PARTNER",
+                })
                 if (fleetOwnerWallet) {
                     fleetOwnerWallet.balance += installment.fleetOwnerAmount
                     fleetOwnerWallet.totalEarnings += installment.fleetOwnerAmount
@@ -2131,7 +2162,10 @@ export const verifyEMIOnlinePayment = async (req, res) => {
             // Credit Admin wallet - Contract Commission + Negotiation Commission
             // ONLY if not already credited
             if (installment.adminCommission?.status !== "CREDITED") {
-                const adminWallet = await Wallet.findOne({ role: "ADMIN" })
+                const adminWallet = await getOrCreateWallet(process.env.ADMIN_USER_ID, {
+                    currency: emiCurrency,
+                    role: "ADMIN",
+                })
                 if (adminWallet) {
                     // Contract commission
                     if (installment.adminCommission.amount > 0) {
@@ -2768,9 +2802,21 @@ export const handleEMIStripeWebhook = async (req, res) => {
             updatedInstallment.gatewaySessionId = session.id
             updatedInstallment.verificationStatus = "VERIFIED"
 
+            // Webhook EMI wallet movements settle in the EMI's currency.
+            // Currency lives at emiPlan.currency (there is no top-level field).
+            const emiCurrency =
+                currency ||
+                emiPayment.emiPlan?.currency ||
+                emiPayment.contractId?.financials?.currency ||
+                emiPayment.contractId?.currency ||
+                "AED"
+
             // Credit fleet owner wallet - ONLY if not already credited
             if (!updatedInstallment.fleetOwnerCredited) {
-                const fleetOwnerWallet = await Wallet.findOne({ userId: emiPayment.fleetOwnerId._id })
+                const fleetOwnerWallet = await getOrCreateWallet(emiPayment.fleetOwnerId._id, {
+                    currency: emiCurrency,
+                    role: "B2B_PARTNER",
+                })
                 if (fleetOwnerWallet && updatedInstallment.fleetOwnerAmount > 0) {
                     fleetOwnerWallet.balance += updatedInstallment.fleetOwnerAmount
                     fleetOwnerWallet.totalEarnings += updatedInstallment.fleetOwnerAmount
@@ -2791,7 +2837,10 @@ export const handleEMIStripeWebhook = async (req, res) => {
 
             // Credit admin wallet - ONLY if not already credited
             if (updatedInstallment.adminCommission?.status !== "CREDITED") {
-                const adminWallet = await Wallet.findOne({ role: "ADMIN" })
+                const adminWallet = await getOrCreateWallet(process.env.ADMIN_USER_ID, {
+                    currency: emiCurrency,
+                    role: "ADMIN",
+                })
                 if (adminWallet) {
                     // Contract commission
                     if (updatedInstallment.adminCommission.amount > 0) {

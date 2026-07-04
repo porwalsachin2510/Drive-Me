@@ -11,9 +11,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { getActiveCurrency } from "../../../../config/localeConfig";
 import "./b2b_barchart.css";
 
-function B2B_BarChart({ data }) {
+function B2B_BarChart({ data, currency }) {
+  const cur = currency || getActiveCurrency();
   const [chartData, setChartData] = useState([]);
   const [isAnimating, setIsAnimating] = useState(true);
 
@@ -48,7 +50,7 @@ function B2B_BarChart({ data }) {
           <p className="tooltip-label">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }}>
-              {entry.name}: AED {Number(entry.value).toLocaleString()}
+              {entry.name}: {cur} {Number(entry.value).toLocaleString()}
             </p>
           ))}
         </div>
@@ -84,7 +86,7 @@ function B2B_BarChart({ data }) {
               value >= 1000 ? `${(value / 1000).toFixed(1)}k` : `${value}`
             }
             label={{
-              value: "Amount (AED)",
+              value: `Amount (${cur})`,
               angle: -90,
               position: "insideLeft",
               style: { textAnchor: "middle", fill: "#6b7280", fontSize: 12 },

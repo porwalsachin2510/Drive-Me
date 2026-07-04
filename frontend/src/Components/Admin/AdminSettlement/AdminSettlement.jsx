@@ -1,4 +1,6 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
 import api from "../../../utils/api";
 import "./adminsettlement.css";
 
@@ -38,6 +40,13 @@ function AdminSettlement() {
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Currency the admin has chosen to view the dashboard in. The backend already
+  // converts every settlement amount + summary total into this currency and
+  // returns it as `displayCurrency`, so the UI just needs to render with the
+  // right symbol and decimal places.
+  const activeCurrency = useSelector((state) => state.locale?.currency);
+  const [displayCurrency, setDisplayCurrency] = useState(getActiveCurrency());
+
   const [selectedPayout, setSelectedPayout] = useState(null);
   const [payoutAmount, setPayoutAmount] = useState("");
   const [bankName, setBankName] = useState("");
@@ -71,6 +80,11 @@ function AdminSettlement() {
       if (response.data.success) {
         setSettlements(response.data.settlements || []);
         setSummary(response.data.summary || summary);
+        setDisplayCurrency(
+          response.data.displayCurrency ||
+            response.data.summary?.currency ||
+            getActiveCurrency(),
+        );
         setPagination((prev) => ({
           ...prev,
           total: response.data.pagination.total,
@@ -91,6 +105,7 @@ function AdminSettlement() {
     filterStatus,
     filterMonth,
     filterYear,
+    activeCurrency,
   ]);
 
   useEffect(() => {
@@ -178,7 +193,21 @@ function AdminSettlement() {
     }
   };
 
-  const fmt = (n) => Number(n || 0).toFixed(2);
+  // KWD/BHD/OMR are 3-decimal currencies; everything else uses 2.
+  const decimalsFor = (c) =>
+    ["KWD", "BHD", "OMR"].includes((c || "").toUpperCase()) ? 3 : 2;
+
+  // Format an amount that is ALREADY in the admin's selected display currency
+  // (summary totals + the per-row display* fields the backend converts).
+  const money = (n) =>
+    `${Number(n || 0).toFixed(decimalsFor(displayCurrency))} ${displayCurrency}`;
+
+  // Format an amount in its own native currency (used for payout actions, which
+  // are processed against the partner's wallet in its native currency).
+  const fmtNative = (n, c) => {
+    const cur = c || displayCurrency;
+    return `${Number(n || 0).toFixed(decimalsFor(cur))} ${cur}`;
+  };
 
   const yearOptions = [];
   for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--)
@@ -271,19 +300,15 @@ function AdminSettlement() {
       <div className="settlement-stats">
         <div className="stat-card">
           <div className="stat-label">Gross Earnings</div>
-          <div className="stat-value">
-            {fmt(summary.totalGrossEarnings)} AED
-          </div>
+          <div className="stat-value">{money(summary.totalGrossEarnings)}</div>
         </div>
         <div className="stat-card pending">
           <div className="stat-label">Pending Payout</div>
-          <div className="stat-value">{fmt(summary.totalNetPayable)} AED</div>
+          <div className="stat-value">{money(summary.totalNetPayable)}</div>
         </div>
         <div className="stat-card commission">
           <div className="stat-label">Commission Debt</div>
-          <div className="stat-value">
-            {fmt(summary.totalCommissionDebt)} AED
-          </div>
+          <div className="stat-value">{money(summary.totalCommissionDebt)}</div>
         </div>
         <div className="stat-card partners">
           <div className="stat-label">Partners In Period</div>
@@ -330,15 +355,19 @@ function AdminSettlement() {
                   <td className="date">
                     {MONTHS[s.month - 1]?.slice(0, 3)} {s.year}
                   </td>
-                  <td className="amount">{fmt(s.grossEarnings)}</td>
-                  <td className="amount neutral">
-                    {fmt(s.commissionCollected)}
+                  <td className="amount">
+                    {money(s.displayGrossEarnings ?? s.grossEarnings)}
                   </td>
-                  <td className="amount pending">{fmt(s.netPayable)}</td>
+                  <td className="amount neutral">
+                    {money(s.displayCommissionCollected ?? s.commissionCollected)}
+                  </td>
+                  <td className="amount pending">
+                    {money(s.displayNetPayable ?? s.netPayable)}
+                  </td>
                   <td
                     className={`amount ${s.commissionDebt > 0 ? "debt" : "neutral"}`}
                   >
-                    {fmt(s.commissionDebt)}
+                    {money(s.displayCommissionDebt ?? s.commissionDebt)}
                   </td>
                   <td>
                     <span
@@ -350,7 +379,7 @@ function AdminSettlement() {
                   <td>
                     {s.status === "SETTLED" ? (
                       <span className="settled-text">
-                        Paid {fmt(s.payoutAmount)}
+                        Paid {fmtNative(s.payoutAmount, s.currency)}
                       </span>
                     ) : (
                       <button
@@ -381,8 +410,11 @@ function AdminSettlement() {
               <div className="form-group">
                 <label>Partner: {selectedPayout.partnerName}</label>
                 <p className="info-text">
-                  Available for payout: {fmt(selectedPayout.netPayable)}{" "}
-                  {selectedPayout.currency || "AED"}
+                  Available for payout:{" "}
+                  {fmtNative(
+                    selectedPayout.netPayable,
+                    selectedPayout.currency || getActiveCurrency(),
+                  )}
                 </p>
               </div>
 

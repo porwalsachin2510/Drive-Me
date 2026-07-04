@@ -7,8 +7,9 @@ import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import User from "../models/User.js";
 import RouteRequest from "../models/RouteRequest.js";
-import { createNotification } from "../Services/notificationService.js";
+import { createNotification, notifyDriverAssignedForRoute } from "../Services/notificationService.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
+import { computeRouteSeatAvailability } from "../Services/seatAvailabilityService.js";
 
 // Helper function to convert time string to minutes for comparison
 const timeToMinutes = (timeString) => {
@@ -657,6 +658,20 @@ export const updateB2CPartnerRoute = async (req, res) => {
                 );
                 console.log(`[v0] Updated ${bookingUpdateResult.modifiedCount} active bookings with new driver`);
             }
+
+            // Notify all confirmed passengers (and the driver) about the assignment
+            try {
+                const driverDocForNotify = isSelfDriver
+                    ? { name: driverName, phoneNumber: driverPhone }
+                    : await B2CPartnerDriver.findById(newDriverId);
+                // Self-drivers ARE a user account; external drivers have a linked userId if any
+                const driverUserId = isSelfDriver
+                    ? req.userId
+                    : (driverDocForNotify?.userId || null);
+                await notifyDriverAssignedForRoute(routeId, driverDocForNotify, driverUserId);
+            } catch (notifyErr) {
+                console.error("[v0] Failed to send driver-assigned notifications:", notifyErr.message);
+            }
         }
 
         console.log(`[v0] Successfully updated B2C route: ${route.fromLocation} to ${route.toLocation}`);
@@ -831,7 +846,6 @@ export const getPublicRouteTripSeatAvailability = async (req, res) => {
 
         console.log("[v0] Getting PUBLIC seat availability for route:", routeId);
 
-        // Get route details
         const route = await B2CPartnerRoute.findById(routeId);
         if (!route) {
             return res.status(404).json({
@@ -840,150 +854,20 @@ export const getPublicRouteTripSeatAvailability = async (req, res) => {
             });
         }
 
-        console.log("[v0] Route found for public access:", {
-            routeId: route._id,
-            fromLocation: route.fromLocation,
-            toLocation: route.toLocation,
-            b2cPartnerId: route.b2cPartnerId
-        });
+        // Seat availability is computed authoritatively from ACTIVE monthly
+        // passes per trip-leg (a pass holds a seat for the whole month), NOT
+        // from a single day's generated trip row. This guarantees the number
+        // drops as soon as a commuter books.
+        const { seatAvailability } = await computeRouteSeatAvailability(route);
 
-        // Get all trips for this route (public access - no auth check)
-        console.log("[v0] DEBUG: Querying trips for routeId:", routeId);
-
-        // First try without any filters to see what exists
-        const allTrips = await B2CPartnerTrip.find({ routeId: routeId });
-        console.log(`[v0] DEBUG: Found ${allTrips.length} total trips for route (no filters)`);
-
-        allTrips.forEach(trip => {
-            console.log(`[v0] DEBUG: Trip ${trip._id}: isActive=${trip.isActive}, tripDate=${trip.tripDate}, startTime=${trip.startTime}`);
-        });
-
-        // Fix timezone issue - use local date comparison
-        const today = new Date();
-        const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate()); // Start of day in local timezone
-
-        console.log("[v0] Today's date (local start of day):", todayLocal);
-        console.log("[v0] Today's date (UTC):", today);
-
-        // Remove isActive filter since it's undefined, and fix date filter
-        const trips = await B2CPartnerTrip.find({
-            routeId: routeId,
-            tripDate: { $gte: todayLocal.toISOString() } // Use local date
-        }).sort({ tripDate: 1, startTime: 1 });
-
-        console.log(`[v0] Found ${trips.length} trips for public seat availability (with fixed filters)`);
-
-        // Debug: Log found trips
-        trips.forEach(trip => {
-            console.log(`[v0] Found trip: ${trip._id}, date: ${trip.tripDate}, time: ${trip.startTime}, seats: ${trip.availableSeats}/${trip.totalSeats}`);
-        });
-
-        // Group trips by time and direction for seat availability
-        const seatAvailability = {};
-
-        trips.forEach(trip => {
-            // Create trip keys matching frontend format
-            const direction = trip.fromLocation === route.fromLocation ? 'outbound' : 'return';
-            const tripKey = `${trip.startTime}_${direction}`;
-
-            seatAvailability[tripKey] = {
-                tripId: trip._id,
-                availableSeats: trip.availableSeats,
-                totalSeats: trip.totalSeats,
-                bookedSeats: trip.bookedSeats,
-                tripDate: trip.tripDate,
-                startTime: trip.startTime,
-                fromLocation: trip.fromLocation,
-                toLocation: trip.toLocation,
-                status: trip.status
-            };
-
-            console.log(`[v0] PUBLIC Seat availability for ${tripKey}: ${trip.availableSeats}/${trip.totalSeats} seats`);
-        });
-
-        console.log("[v0] Final PUBLIC seat availability keys:", Object.keys(seatAvailability));
-
-        // If no real trips exist yet, build availability from the route's
-        // schedule trip-times so each trip key reflects the ACTUAL vehicle
-        // assigned to it (different trips can use different vehicles with
-        // different seating capacities). Keys match the frontend format
-        // `${departureTime}_${direction}`.
-        if (Object.keys(seatAvailability).length === 0) {
-            const schedules = await B2CPartnerSchedule.find({ routeId: routeId });
-
-            // Subtract active monthly passes from capacity for a realistic number.
-            const { default: B2CMonthlyPass } = await import("../models/B2CMonthlyPass.js");
-            const activePassCount = await B2CMonthlyPass.countDocuments({
-                routeId: routeId,
-                status: { $in: ['ACTIVE', 'active', 'Active'] },
-                endDate: { $gte: new Date() }
-            });
-
-            // Collect all per-trip vehicle ids for a single batch lookup.
-            const vehicleIds = new Set();
-            for (const sch of schedules) {
-                for (const tt of (sch.tripTimes || [])) {
-                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
-                }
-            }
-            if (route.assignedVehicle) vehicleIds.add(route.assignedVehicle.toString());
-
-            const vehicles = vehicleIds.size > 0
-                ? await B2CPartnerVehicle.find({ _id: { $in: Array.from(vehicleIds) } }).select('seatingCapacity')
-                : [];
-            const vehicleCapMap = {};
-            vehicles.forEach(v => { vehicleCapMap[v._id.toString()] = v.seatingCapacity; });
-
-            const routeDefaultCap =
-                (route.assignedVehicle && vehicleCapMap[route.assignedVehicle.toString()]) ||
-                route.totalSeats || 35;
-
-            for (const sch of schedules) {
-                for (const tt of (sch.tripTimes || [])) {
-                    const tripVehicleCap =
-                        (tt.assignedVehicle && vehicleCapMap[tt.assignedVehicle.toString()]) ||
-                        routeDefaultCap;
-                    const available = Math.max(0, tripVehicleCap - activePassCount);
-
-                    if (tt.tripType === "Round Trip") {
-                        // Round trip exposes both an outbound and a return leg.
-                        if (tt.departureTime) {
-                            seatAvailability[`${tt.departureTime}_outbound`] = {
-                                availableSeats: available,
-                                totalSeats: tripVehicleCap,
-                                bookedSeats: activePassCount,
-                                status: "Available"
-                            };
-                        }
-                        if (tt.arrivalTime) {
-                            seatAvailability[`${tt.arrivalTime}_return`] = {
-                                availableSeats: available,
-                                totalSeats: tripVehicleCap,
-                                bookedSeats: activePassCount,
-                                status: "Available"
-                            };
-                        }
-                    } else if (tt.departureTime) {
-                        // One Way trips are always outbound.
-                        seatAvailability[`${tt.departureTime}_outbound`] = {
-                            availableSeats: available,
-                            totalSeats: tripVehicleCap,
-                            bookedSeats: activePassCount,
-                            status: "Available"
-                        };
-                    }
-                }
-            }
-
-            console.log("[v0] Built schedule-based availability (PUBLIC):", Object.keys(seatAvailability));
-        }
+        console.log("[v0] PUBLIC seat availability keys:", Object.keys(seatAvailability));
 
         res.status(200).json({
             success: true,
             message: "Seat availability retrieved successfully (PUBLIC)",
             routeId: routeId,
             routeName: `${route.fromLocation} → ${route.toLocation}`,
-            totalTrips: trips.length,
+            totalTrips: Object.keys(seatAvailability).length,
             seatAvailability: seatAvailability
         });
 
@@ -1030,116 +914,19 @@ export const getRouteTripSeatAvailability = async (req, res) => {
             });
         }
 
-        // Get all trips for this route
-        const trips = await B2CPartnerTrip.find({
-            routeId: routeId,
-            isActive: true,
-            tripDate: { $gte: new Date() }
-        }).sort({ tripDate: 1, startTime: 1 });
+        // Compute availability per trip-leg from ACTIVE monthly passes (shared
+        // with the public endpoint) so partner and commuter always see the
+        // same, up-to-date seat counts.
+        const { seatAvailability } = await computeRouteSeatAvailability(route);
 
-        console.log(`[v0] Found ${trips.length} trips for seat availability`);
-
-        // Group trips by time and direction for seat availability
-        const seatAvailability = {};
-
-        trips.forEach(trip => {
-            // Create trip keys matching frontend format
-            const direction = trip.fromLocation === route.fromLocation ? 'outbound' : 'return';
-            const tripKey = `${trip.startTime}_${direction}`;
-
-            seatAvailability[tripKey] = {
-                tripId: trip._id,
-                availableSeats: trip.availableSeats,
-                totalSeats: trip.totalSeats,
-                bookedSeats: trip.bookedSeats,
-                tripDate: trip.tripDate,
-                startTime: trip.startTime,
-                fromLocation: trip.fromLocation,
-                toLocation: trip.toLocation,
-                status: trip.status
-            };
-
-            console.log(`[v0] Seat availability for ${tripKey}: ${trip.availableSeats}/${trip.totalSeats} seats`);
-        });
-
-        console.log("[v0] Final seat availability keys:", Object.keys(seatAvailability));
-
-        // If no real trips exist yet, build availability from the route's
-        // schedule trip-times so each trip key reflects the ACTUAL vehicle
-        // assigned to it. Keys match the frontend format
-        // `${departureTime}_${direction}`.
-        if (Object.keys(seatAvailability).length === 0) {
-            const schedules = await B2CPartnerSchedule.find({ routeId: routeId });
-
-            const { default: B2CMonthlyPass } = await import("../models/B2CMonthlyPass.js");
-            const activePassCount = await B2CMonthlyPass.countDocuments({
-                routeId: routeId,
-                status: { $in: ['ACTIVE', 'active', 'Active'] },
-                endDate: { $gte: new Date() }
-            });
-
-            const vehicleIds = new Set();
-            for (const sch of schedules) {
-                for (const tt of (sch.tripTimes || [])) {
-                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
-                }
-            }
-            if (route.assignedVehicle) vehicleIds.add(route.assignedVehicle.toString());
-
-            const vehicles = vehicleIds.size > 0
-                ? await B2CPartnerVehicle.find({ _id: { $in: Array.from(vehicleIds) } }).select('seatingCapacity')
-                : [];
-            const vehicleCapMap = {};
-            vehicles.forEach(v => { vehicleCapMap[v._id.toString()] = v.seatingCapacity; });
-
-            const routeDefaultCap =
-                (route.assignedVehicle && vehicleCapMap[route.assignedVehicle.toString()]) ||
-                route.totalSeats || 35;
-
-            for (const sch of schedules) {
-                for (const tt of (sch.tripTimes || [])) {
-                    const tripVehicleCap =
-                        (tt.assignedVehicle && vehicleCapMap[tt.assignedVehicle.toString()]) ||
-                        routeDefaultCap;
-                    const available = Math.max(0, tripVehicleCap - activePassCount);
-
-                    if (tt.tripType === "Round Trip") {
-                        if (tt.departureTime) {
-                            seatAvailability[`${tt.departureTime}_outbound`] = {
-                                availableSeats: available,
-                                totalSeats: tripVehicleCap,
-                                bookedSeats: activePassCount,
-                                status: "Available"
-                            };
-                        }
-                        if (tt.arrivalTime) {
-                            seatAvailability[`${tt.arrivalTime}_return`] = {
-                                availableSeats: available,
-                                totalSeats: tripVehicleCap,
-                                bookedSeats: activePassCount,
-                                status: "Available"
-                            };
-                        }
-                    } else if (tt.departureTime) {
-                        seatAvailability[`${tt.departureTime}_outbound`] = {
-                            availableSeats: available,
-                            totalSeats: tripVehicleCap,
-                            bookedSeats: activePassCount,
-                            status: "Available"
-                        };
-                    }
-                }
-            }
-
-            console.log("[v0] Built schedule-based availability:", Object.keys(seatAvailability));
-        }
+        console.log("[v0] Seat availability keys:", Object.keys(seatAvailability));
 
         res.status(200).json({
             success: true,
             message: "Seat availability retrieved successfully",
             routeId: routeId,
             routeName: `${route.fromLocation} → ${route.toLocation}`,
-            totalTrips: trips.length,
+            totalTrips: Object.keys(seatAvailability).length,
             seatAvailability: seatAvailability
         });
 

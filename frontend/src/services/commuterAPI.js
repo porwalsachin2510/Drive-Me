@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../config/localeConfig";
 import api from "../utils/api";
 
 // Public search for routes (no auth required) - used on landing page for guests
@@ -82,7 +83,7 @@ export const addWalletMoney = async (amount, paymentMethod) => {
     const response = await api.post("/wallet/create-payment-session", {
       amount,
       paymentMethod,
-      currency: "KWD"
+      currency: getActiveCurrency()
     });
     return response.data;
   } catch (error) {

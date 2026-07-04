@@ -154,9 +154,19 @@ export const LOCAL_PAYMENT_METHODS = {
   ],
 };
 
+// Resolve any country variant ("KW", "Kuwait", "AE", "UAE", ...) to the keys
+// used in this config object ("UAE" / "KUWAIT"), so callers can pass canonical
+// codes safely.
+const toConfigKey = (country) => {
+  const c = (country || "").toString().trim().toUpperCase();
+  if (["KW", "KWT", "KUWAIT"].includes(c)) return "KUWAIT";
+  if (["AE", "UAE", "ARE"].includes(c)) return "UAE";
+  return c; // already a config key or unknown
+};
+
 // Get payment gateway by country and method
 export const getPaymentGateway = (country, paymentMethod) => {
-  const countryConfig = PAYMENT_GATEWAYS[country];
+  const countryConfig = PAYMENT_GATEWAYS[toConfigKey(country)];
   if (!countryConfig) {
     throw new Error(`Payment gateway not configured for country: ${country}`);
   }
@@ -176,12 +186,12 @@ export const getPaymentGateway = (country, paymentMethod) => {
 
 // Get available payment methods for a country
 export const getAvailablePaymentMethods = (country) => {
-  return LOCAL_PAYMENT_METHODS[country] || [];
+  return LOCAL_PAYMENT_METHODS[toConfigKey(country)] || [];
 };
 
-// Detect country from currency
+// Detect country from currency (returns config key "UAE" / "KUWAIT")
 export const detectCountryFromCurrency = (currency) => {
-  switch (currency.toUpperCase()) {
+  switch ((currency || "").toUpperCase()) {
     case 'AED':
       return 'UAE';
     case 'KWD':
@@ -216,7 +226,7 @@ export const calculateCommission = (amount, paymentMethod, country) => {
     },
   };
 
-  const countryRates = commissionRates[country];
+  const countryRates = commissionRates[toConfigKey(country)];
   if (countryRates && countryRates[paymentMethod]) {
     commissionRate = countryRates[paymentMethod];
   }

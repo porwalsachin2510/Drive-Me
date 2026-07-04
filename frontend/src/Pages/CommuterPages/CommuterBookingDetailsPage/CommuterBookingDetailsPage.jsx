@@ -5,6 +5,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import commuterBookingAPI from "../../../services/commuterBookingAPI";
 import { useSocket } from "../../../hooks/useSocket";
+import { useLocale } from "../../../hooks/useLocale";
+import { getCurrencyDecimals } from "../../../config/localeConfig";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import "./commuterBookingDetailsPage.css";
@@ -13,6 +15,7 @@ const CommuterBookingDetailsPage = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const auth = useSelector((state) => state.auth);
+  const { currency: localeCurrency } = useLocale();
   const socket = useSocket();
 
   const [booking, setBooking] = useState(null);
@@ -28,6 +31,8 @@ const CommuterBookingDetailsPage = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelPreview, setCancelPreview] = useState(null);
+  const [cancelPreviewLoading, setCancelPreviewLoading] = useState(false);
 
   // Poll booking status to catch real-time trip starts and cancellations
   // This ensures when a driver starts the trip or completes it, the UI updates immediately
@@ -88,8 +93,9 @@ const CommuterBookingDetailsPage = () => {
     });
   };
 
-  const formatCurrency = (amount, currency = "KWD") => {
-    return `${currency} ${parseFloat(amount || 0).toFixed(2)}`;
+  const formatCurrency = (amount, currency) => {
+    const cur = currency || localeCurrency;
+    return `${cur} ${parseFloat(amount || 0).toFixed(getCurrencyDecimals(cur))}`;
   };
 
   // Get travel time from booking or schedule data
@@ -125,6 +131,28 @@ const CommuterBookingDetailsPage = () => {
     if (bookingData?.schedule?.tripTimes?.[0]) {
       const tripTime = bookingData.schedule.tripTimes[0];
       return tripTime.departureTime;
+    }
+
+    return "N/A";
+  };
+
+  // Get the RETURN trip time for ROUND_TRIP bookings.
+  // The booking stores the return leg's time separately in returnTripTime.
+  const getReturnTime = (bookingData) => {
+    if (bookingData?.returnTripTime) return bookingData.returnTripTime;
+    if (bookingData?.returnTime) return bookingData.returnTime;
+
+    // Fall back to schedule return stop points matching the return pickup.
+    const schedule = bookingData?.linkedSchedule || bookingData?.schedule;
+    if (schedule?.tripTimes?.[0]) {
+      const tripTime = schedule.tripTimes[0];
+      const returnPickup =
+        bookingData?.returnPickupLocation || bookingData?.dropoffLocation;
+      const returnStop = tripTime.returnStopPoints?.find(
+        (stop) => stop.location === returnPickup,
+      );
+      if (returnStop?.time) return returnStop.time;
+      if (tripTime.returnDepartureTime) return tripTime.returnDepartureTime;
     }
 
     return "N/A";
@@ -227,6 +255,85 @@ const CommuterBookingDetailsPage = () => {
     };
   }, [socket, booking, showTracking]);
 
+  // Resolve the OUTBOUND leg driver id (handles self-driver vs assigned driver).
+  const getOutboundDriverId = () => {
+    if (!booking) return null;
+    if (booking.outboundIsSelfDriver) {
+      return booking.b2cPartnerId?._id || booking.b2cPartnerId;
+    }
+    return (
+      booking.outboundDriverId?._id ||
+      booking.outboundDriverId ||
+      booking.assignedDriverId?._id ||
+      booking.assignedDriverId ||
+      booking.b2cPartnerId?._id ||
+      booking.b2cPartnerId
+    );
+  };
+
+  // Resolve the RETURN leg driver id, falling back to the outbound driver when the
+  // partner did not assign a dedicated return-leg driver.
+  const getReturnDriverId = () => {
+    if (!booking) return null;
+    if (booking.returnIsSelfDriver) {
+      return booking.b2cPartnerId?._id || booking.b2cPartnerId;
+    }
+    return (
+      booking.returnDriverId?._id ||
+      booking.returnDriverId ||
+      getOutboundDriverId()
+    );
+  };
+
+  // CRITICAL: For ROUND_TRIP, track the driver of the ACTIVE leg and auto-switch.
+  // While the outbound (jaane) leg is scheduled/in-progress we track the outbound
+  // driver; once the return (aane) leg becomes active we track the return driver.
+  const resolveActiveLegDriverId = () => {
+    if (!booking) return null;
+
+    if (booking.bookingType !== "ROUND_TRIP") {
+      // ONE_WAY
+      if (booking.isSelfDriver) {
+        return booking.b2cPartnerId?._id || booking.b2cPartnerId;
+      }
+      return (
+        booking.assignedDriverId?._id ||
+        booking.assignedDriverId ||
+        getOutboundDriverId()
+      );
+    }
+
+    const outboundDriverId = getOutboundDriverId();
+    const returnDriverId = getReturnDriverId();
+    const ob = booking.outboundTripStatus;
+    const rb = booking.returnTripStatus;
+
+    // 1) Whichever leg is actively running wins.
+    if (rb === "IN_PROGRESS") return returnDriverId;
+    if (ob === "IN_PROGRESS") return outboundDriverId;
+    // 2) Otherwise track the next pending leg (outbound first).
+    if (ob !== "COMPLETED" && ob !== "CANCELLED") return outboundDriverId;
+    if (rb !== "COMPLETED" && rb !== "CANCELLED") return returnDriverId;
+    // 3) Both legs finished - default to the return (last) leg.
+    return returnDriverId || outboundDriverId;
+  };
+
+  // Human-readable label for which leg is currently being tracked.
+  const getActiveLegLabel = () => {
+    if (!booking || booking.bookingType !== "ROUND_TRIP") return null;
+    const rb = booking.returnTripStatus;
+    const ob = booking.outboundTripStatus;
+    const trackingReturn =
+      rb === "IN_PROGRESS" ||
+      ((ob === "COMPLETED" || ob === "CANCELLED") &&
+        rb !== "COMPLETED" &&
+        rb !== "CANCELLED") ||
+      (rb !== "COMPLETED" && ob === "COMPLETED");
+    return trackingReturn
+      ? "Return leg (To → From)"
+      : "Outbound leg (From → To)";
+  };
+
   // Handle track driver click
   const handleTrackDriver = async () => {
     setShowTracking(true);
@@ -235,38 +342,8 @@ const CommuterBookingDetailsPage = () => {
       socket.socket.emit("join_booking_room", booking._id);
       socket.socket.emit("join-booking-room", booking._id);
 
-      // CRITICAL: For ROUND_TRIP bookings, determine which driver to track
-      // The correct driver depends on which trip (outbound or return) is currently active
-      let driverId;
-
-      if (booking.bookingType === "ROUND_TRIP") {
-        // For ROUND_TRIP, use the most relevant driver ID
-        // The API will determine which trip is actually in progress
-        if (booking.returnDriverId && !booking.returnIsSelfDriver) {
-          driverId = booking.returnDriverId?._id || booking.returnDriverId;
-        } else if (booking.returnIsSelfDriver && booking.b2cPartnerId) {
-          driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
-        } else if (booking.outboundIsSelfDriver && booking.b2cPartnerId) {
-          driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
-        } else if (booking.outboundDriverId) {
-          driverId = booking.outboundDriverId?._id || booking.outboundDriverId;
-        } else {
-          driverId =
-            booking.assignedDriverId?._id ||
-            booking.assignedDriverId ||
-            booking.b2cPartnerId?._id ||
-            booking.b2cPartnerId;
-        }
-      } else {
-        // ONE_WAY trip - use the standard logic
-        if (booking.isSelfDriver) {
-          // When isSelfDriver is true, the partner is driving, use b2cPartnerId
-          driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
-        } else {
-          // When isSelfDriver is false, use assignedDriverId (from b2cpartnerdrivers table)
-          driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
-        }
-      }
+      // Determine which driver to track based on the active leg (auto-switch).
+      const driverId = resolveActiveLegDriverId();
 
       // Request current driver location via socket
       if (driverId) {
@@ -285,34 +362,9 @@ const CommuterBookingDetailsPage = () => {
   const fetchDriverLocationFromAPI = async () => {
     if (!booking) return;
 
-    // CRITICAL: For ROUND_TRIP bookings, determine which driver to track
-    let driverId;
-
-    if (booking.bookingType === "ROUND_TRIP") {
-      // For ROUND_TRIP, use the most relevant driver ID
-      if (booking.returnDriverId && !booking.returnIsSelfDriver) {
-        driverId = booking.returnDriverId?._id || booking.returnDriverId;
-      } else if (booking.returnIsSelfDriver && booking.b2cPartnerId) {
-        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
-      } else if (booking.outboundIsSelfDriver && booking.b2cPartnerId) {
-        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
-      } else if (booking.outboundDriverId) {
-        driverId = booking.outboundDriverId?._id || booking.outboundDriverId;
-      } else {
-        driverId =
-          booking.assignedDriverId?._id ||
-          booking.assignedDriverId ||
-          booking.b2cPartnerId?._id ||
-          booking.b2cPartnerId;
-      }
-    } else {
-      // ONE_WAY trip
-      if (booking.isSelfDriver) {
-        driverId = booking.b2cPartnerId?._id || booking.b2cPartnerId;
-      } else {
-        driverId = booking.assignedDriverId?._id || booking.assignedDriverId;
-      }
-    }
+    // Determine which driver to track based on the active leg (auto-switch
+    // between outbound and return drivers for ROUND_TRIP bookings).
+    const driverId = resolveActiveLegDriverId();
 
     if (!driverId) {
       return;
@@ -351,7 +403,7 @@ const CommuterBookingDetailsPage = () => {
     } catch (err) {
       console.error("Error fetching driver location from API:", err);
     }
-  };
+  };;
 
   // Poll driver location via API when tracking is active (as fallback to socket)
   useEffect(() => {
@@ -383,6 +435,24 @@ const CommuterBookingDetailsPage = () => {
   };
 
   // Handle cancel booking
+  // Open the cancel modal and fetch the dynamic cancellation charge preview
+  // so the commuter sees the exact fee/refund (per the admin's policy) up front.
+  const openCancelModal = async () => {
+    setShowCancelModal(true);
+    setCancelPreview(null);
+    try {
+      setCancelPreviewLoading(true);
+      const res = await commuterBookingAPI.getCancellationPreview(booking._id);
+      if (res.success) {
+        setCancelPreview(res.preview);
+      }
+    } catch (err) {
+      console.error("[v0] Error fetching cancellation preview:", err);
+    } finally {
+      setCancelPreviewLoading(false);
+    }
+  };
+
   const handleCancelBooking = async () => {
     if (!cancelReason.trim()) {
       alert("Please provide a reason for cancellation");
@@ -451,6 +521,24 @@ const CommuterBookingDetailsPage = () => {
   const statusInfo = getStatusBadge(booking.bookingStatus);
   const driverInfo = booking.driverInfo;
   const vehicleInfo = booking.vehicleInfo;
+  const isRoundTripBooking = booking.bookingType === "ROUND_TRIP";
+  // Per-leg driver/vehicle (populated by backend for ROUND_TRIP bookings)
+  const outboundDriverInfo = booking.outboundDriverInfo || driverInfo;
+  const returnDriverInfo = booking.returnDriverInfo || driverInfo;
+  const outboundVehicleInfo = booking.outboundVehicleInfo || vehicleInfo;
+  const returnVehicleInfo = booking.returnVehicleInfo || vehicleInfo;
+  // Whether the two legs actually use different drivers/vehicles
+  const hasDistinctReturnDriver =
+    isRoundTripBooking &&
+    returnDriverInfo &&
+    outboundDriverInfo &&
+    (returnDriverInfo.name !== outboundDriverInfo.name ||
+      returnDriverInfo.phone !== outboundDriverInfo.phone);
+  const hasDistinctReturnVehicle =
+    isRoundTripBooking &&
+    returnVehicleInfo &&
+    outboundVehicleInfo &&
+    returnVehicleInfo.licensePlate !== outboundVehicleInfo.licensePlate;
   const partnerInfo = booking.partnerInfo;
 
   return (
@@ -584,11 +672,23 @@ const CommuterBookingDetailsPage = () => {
                 </span>
               </div>
               <div className="cbdp-detail-item">
-                <span className="cbdp-detail-label">Travel Time</span>
+                <span className="cbdp-detail-label">
+                  {booking.bookingType === "ROUND_TRIP"
+                    ? "Onward Time"
+                    : "Travel Time"}
+                </span>
                 <span className="cbdp-detail-value">
                   {getTravelTime(booking)}
                 </span>
               </div>
+              {booking.bookingType === "ROUND_TRIP" && (
+                <div className="cbdp-detail-item">
+                  <span className="cbdp-detail-label">Return Time</span>
+                  <span className="cbdp-detail-value">
+                    {getReturnTime(booking)}
+                  </span>
+                </div>
+              )}
               <div className="cbdp-detail-item">
                 <span className="cbdp-detail-label">Booking Type</span>
                 <span className="cbdp-detail-value">
@@ -646,7 +746,9 @@ const CommuterBookingDetailsPage = () => {
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-              Driver Information
+              {isRoundTripBooking && hasDistinctReturnDriver
+                ? "Driver Information — Outbound (From → To)"
+                : "Driver Information"}
             </h2>
             {driverInfo || booking.driverName ? (
               <div className="cbdp-driver-card">
@@ -694,6 +796,63 @@ const CommuterBookingDetailsPage = () => {
             )}
           </div>
 
+          {/* Return Driver Information Card (Round Trip with a different return driver) */}
+          {isRoundTripBooking &&
+            hasDistinctReturnDriver &&
+            returnDriverInfo && (
+              <div className="cbdp-card">
+                <h2 className="cbdp-card-title">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  Driver Information — Return (To → From)
+                </h2>
+                <div className="cbdp-driver-card">
+                  <div className="cbdp-driver-avatar">
+                    {returnDriverInfo.profileImage ? (
+                      <img
+                        src={returnDriverInfo.profileImage}
+                        alt={returnDriverInfo.name}
+                      />
+                    ) : (
+                      <div className="cbdp-avatar-placeholder">
+                        {returnDriverInfo.name?.charAt(0) || "D"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="cbdp-driver-details">
+                    <h3>{returnDriverInfo.name || "Driver Name"}</h3>
+                    {returnDriverInfo.isSelfDriver && (
+                      <span className="cbdp-self-driver-badge">
+                        Partner Driver
+                      </span>
+                    )}
+                    <p className="cbdp-driver-contact">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                      </svg>
+                      {returnDriverInfo.phone || "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
           {/* Vehicle Information Card */}
           <div className="cbdp-card">
             <h2 className="cbdp-card-title">
@@ -710,7 +869,9 @@ const CommuterBookingDetailsPage = () => {
                 <circle cx="5.5" cy="18.5" r="2.5" />
                 <circle cx="18.5" cy="18.5" r="2.5" />
               </svg>
-              Vehicle Information
+              {isRoundTripBooking && hasDistinctReturnVehicle
+                ? "Vehicle Information — Outbound (From → To)"
+                : "Vehicle Information"}
             </h2>
             {vehicleInfo ? (
               <div className="cbdp-vehicle-info">
@@ -759,6 +920,72 @@ const CommuterBookingDetailsPage = () => {
             )}
           </div>
 
+          {/* Return Vehicle Information Card (Round Trip with a different return vehicle) */}
+          {isRoundTripBooking &&
+            hasDistinctReturnVehicle &&
+            returnVehicleInfo && (
+              <div className="cbdp-card">
+                <h2 className="cbdp-card-title">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <rect x="1" y="3" width="15" height="13" />
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                    <circle cx="5.5" cy="18.5" r="2.5" />
+                    <circle cx="18.5" cy="18.5" r="2.5" />
+                  </svg>
+                  Vehicle Information — Return (To → From)
+                </h2>
+                <div className="cbdp-vehicle-info">
+                  {returnVehicleInfo.image && (
+                    <div className="cbdp-vehicle-image">
+                      <img
+                        src={returnVehicleInfo.image}
+                        alt={returnVehicleInfo.model}
+                      />
+                    </div>
+                  )}
+                  <div className="cbdp-vehicle-details-grid">
+                    <div className="cbdp-vehicle-item">
+                      <span className="cbdp-vehicle-label">Model</span>
+                      <span className="cbdp-vehicle-value">
+                        {returnVehicleInfo.model || "N/A"}
+                      </span>
+                    </div>
+                    <div className="cbdp-vehicle-item">
+                      <span className="cbdp-vehicle-label">Plate Number</span>
+                      <span className="cbdp-vehicle-value">
+                        {returnVehicleInfo.licensePlate || "N/A"}
+                      </span>
+                    </div>
+                    <div className="cbdp-vehicle-item">
+                      <span className="cbdp-vehicle-label">Type</span>
+                      <span className="cbdp-vehicle-value">
+                        {returnVehicleInfo.vehicleType || "N/A"}
+                      </span>
+                    </div>
+                    <div className="cbdp-vehicle-item">
+                      <span className="cbdp-vehicle-label">Color</span>
+                      <span className="cbdp-vehicle-value">
+                        {returnVehicleInfo.vehicleColor || "N/A"}
+                      </span>
+                    </div>
+                    <div className="cbdp-vehicle-item">
+                      <span className="cbdp-vehicle-label">Capacity</span>
+                      <span className="cbdp-vehicle-value">
+                        {returnVehicleInfo.seatingCapacity || "N/A"} seats
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          
           {/* Payment Information Card */}
           <div className="cbdp-card">
             <h2 className="cbdp-card-title">
@@ -933,10 +1160,7 @@ const CommuterBookingDetailsPage = () => {
 
             if (cancellableStatus && !tripStartedOrCompleted) {
               return (
-                <button
-                  className="cbdp-btn-cancel"
-                  onClick={() => setShowCancelModal(true)}
-                >
+                <button className="cbdp-btn-cancel" onClick={openCancelModal}>
                   Cancel Booking
                 </button>
               );
@@ -956,7 +1180,7 @@ const CommuterBookingDetailsPage = () => {
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
-                  Trip in progress — cancellation is no longer available
+                  cancellation is no longer available
                 </span>
               );
             }
@@ -973,7 +1197,20 @@ const CommuterBookingDetailsPage = () => {
           <div className="cbdp-tracking-overlay">
             <div className="cbdp-tracking-modal cbdp-tracking-modal-large">
               <div className="cbdp-tracking-header">
-                <h3>Live Driver Tracking</h3>
+                <div>
+                  <h3>Live Driver Tracking</h3>
+                  {getActiveLegLabel() && (
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        color: "#64748b",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Tracking: {getActiveLegLabel()}
+                    </span>
+                  )}
+                </div>
                 <button
                   className="cbdp-close-btn"
                   onClick={handleCloseTracking}
@@ -1195,6 +1432,99 @@ const CommuterBookingDetailsPage = () => {
                 <p className="cbdp-warning-text">
                   This action cannot be undone.
                 </p>
+
+                {/* Dynamic cancellation charge breakdown (admin-configured policy) */}
+                {cancelPreviewLoading && (
+                  <div className="cbdp-cancel-preview cbdp-cancel-preview-loading">
+                    Calculating cancellation charges...
+                  </div>
+                )}
+                {!cancelPreviewLoading &&
+                  cancelPreview &&
+                  cancelPreview.isCashUncollected && (
+                    <div className="cbdp-cancel-preview">
+                      {cancelPreview.cashCancellationDue > 0 ? (
+                        <>
+                          <div className="cbdp-cancel-preview-row">
+                            <span>Total Fare</span>
+                            <span>
+                              {formatCurrency(
+                                cancelPreview.paymentAmount,
+                                cancelPreview.currency,
+                              )}
+                            </span>
+                          </div>
+                          <div className="cbdp-cancel-preview-row cbdp-cancel-preview-total">
+                            <span>
+                              Cancellation Fee Due
+                              {cancelPreview.chargePercentage > 0
+                                ? ` (${cancelPreview.chargePercentage}%)`
+                                : ""}
+                            </span>
+                            <span className="cbdp-cancel-fee">
+                              {formatCurrency(
+                                cancelPreview.cashCancellationDue,
+                                cancelPreview.currency,
+                              )}
+                            </span>
+                          </div>
+                          <p className="cbdp-cancel-preview-note cbdp-cancel-preview-warning">
+                            {`You paid by cash, so this fee (${cancelPreview.cashDueTierLabel}) will be deducted from your wallet. If your balance goes negative, add money to clear it — you will not be able to make a new booking until your wallet is back to zero.`}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="cbdp-cancel-preview-note">
+                          Free cancellation - you are within the free window, so
+                          no fee is due.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                {!cancelPreviewLoading &&
+                  cancelPreview &&
+                  !cancelPreview.isCashUncollected && (
+                    <div className="cbdp-cancel-preview">
+                      <div className="cbdp-cancel-preview-row">
+                        <span>Amount Paid</span>
+                        <span>
+                          {formatCurrency(
+                            cancelPreview.paymentAmount,
+                            cancelPreview.currency,
+                          )}
+                        </span>
+                      </div>
+                      <div className="cbdp-cancel-preview-row">
+                        <span>
+                          Cancellation Charge
+                          {cancelPreview.chargePercentage > 0
+                            ? ` (${cancelPreview.chargePercentage}%)`
+                            : ""}
+                        </span>
+                        <span className="cbdp-cancel-fee">
+                          -{" "}
+                          {formatCurrency(
+                            cancelPreview.cancellationFee,
+                            cancelPreview.currency,
+                          )}
+                        </span>
+                      </div>
+                      <div className="cbdp-cancel-preview-row cbdp-cancel-preview-total">
+                        <span>You Will Receive</span>
+                        <span className="cbdp-cancel-refund">
+                          {formatCurrency(
+                            cancelPreview.refundAmount,
+                            cancelPreview.currency,
+                          )}
+                        </span>
+                      </div>
+                      <p className="cbdp-cancel-preview-note">
+                        {cancelPreview.isFree
+                          ? "Free cancellation - full refund."
+                          : cancelPreview.appliedTierLabel}
+                      </p>
+                    </div>
+                  )}
+
                 <div className="cbdp-form-group">
                   <label>Reason for cancellation *</label>
                   <select
@@ -1244,6 +1574,6 @@ const CommuterBookingDetailsPage = () => {
       <Footer />
     </div>
   );
-};
+};;
 
 export default CommuterBookingDetailsPage;

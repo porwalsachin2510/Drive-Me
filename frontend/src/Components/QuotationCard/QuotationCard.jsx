@@ -1,4 +1,5 @@
 "use client";
+import { getActiveCurrency } from "../../config/localeConfig";
 import { useNavigate } from "react-router-dom";
 import "./QuotationCard.css";
 
@@ -69,7 +70,7 @@ const QuotationCard = ({ quotation }) => {
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "KWD",
+      currency: getActiveCurrency(),
       minimumFractionDigits: 0,
     }).format(price);
   };

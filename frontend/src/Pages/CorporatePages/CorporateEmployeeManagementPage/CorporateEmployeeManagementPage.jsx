@@ -3,9 +3,22 @@ import { useSelector } from "react-redux";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import "./corporateemployeemanagement.css";
-import api from "../../../utils/api";
+import api, { getOnBehalfContract } from "../../../utils/api";
 
-export default function CorporateEmployeeManagementPage() {
+const emptyAddEmpForm = {
+  fullName: "",
+  email: "",
+  contactNumber: "",
+  department: "",
+  designation: "",
+  workLocation: "",
+  homeAddress: "",
+  briefItemId: "",
+};
+
+export default function CorporateEmployeeManagementPage({
+  embedded = false,
+} = {}) {
   const token = useSelector((state) => state.auth.token);
   const userId = useSelector((state) => state.auth.userId);
 
@@ -30,16 +43,21 @@ export default function CorporateEmployeeManagementPage() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
   const [sendingInvitations, setSendingInvitations] = useState(false);
 
- 
-
+  // Managed-service: when a B2B partner is onboarding an employee on behalf of a
+  // corporate to fulfil a specific brief roster item, we surface an "Add employee"
+  // form that links the new employee to that item (auto-fulfill on creation).
+  const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
+  const [addingEmployee, setAddingEmployee] = useState(false);
+  const [briefRosterItems, setBriefRosterItems] = useState([]);
+  const [addEmpForm, setAddEmpForm] = useState(emptyAddEmpForm);
 
   const fetchEmployees = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get(
-        `/corporate-employees?page=1&limit=1000`,
+      const response = await api.get(`/corporate-employees?page=1&limit=1000`);
+      setEmployees(
+        response.data.data?.employees || response.data.employees || [],
       );
-      setEmployees(response.data.data?.employees || response.data.employees || []);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching employees:", error);
@@ -55,13 +73,103 @@ export default function CorporateEmployeeManagementPage() {
       console.error("Error fetching routes:", error);
     }
   }, []);
-    
+
+  // Load the brief's employee roster so the partner can pick which roster item a
+  // new employee fulfils. Only relevant in embedded/on-behalf mode.
+  const fetchBriefRosterItems = useCallback(async () => {
+    if (!embedded) return;
+    const contractId = getOnBehalfContract();
+    if (!contractId) return;
+    try {
+      const res = await api.get(`/managed-service-brief/${contractId}`);
+      if (res.data?.success) {
+        setBriefRosterItems(res.data.data.brief?.employeeRoster || []);
+      }
+    } catch (error) {
+      setBriefRosterItems([]);
+    }
+  }, [embedded]);
+
   useEffect(() => {
     if (token && userId) {
       fetchEmployees();
       fetchRoutes();
     }
   }, [token, userId, fetchEmployees, fetchRoutes]);
+
+  useEffect(() => {
+    if (embedded) fetchBriefRosterItems();
+  }, [embedded, fetchBriefRosterItems]);
+
+  // Pre-fill the add-employee form from a selected brief roster item so the
+  // partner doesn't retype what the corporate already specified.
+  const handleSelectBriefRosterItem = (briefItemId) => {
+    const item = briefRosterItems.find((r) => r._id === briefItemId);
+    if (!item) {
+      setAddEmpForm((prev) => ({ ...prev, briefItemId }));
+      return;
+    }
+    setAddEmpForm({
+      fullName: item.name || "",
+      email: item.email || "",
+      contactNumber: item.phone || "",
+      department: item.department || "",
+      designation: "",
+      workLocation: item.workLocation || "",
+      homeAddress: item.homeAddress || "",
+      briefItemId,
+    });
+  };
+
+  const handleAddEmployeeFromBrief = async (e) => {
+    e.preventDefault();
+    if (!addEmpForm.fullName || !addEmpForm.email) {
+      alert("Please provide at least the employee's name and email.");
+      return;
+    }
+    try {
+      setAddingEmployee(true);
+      const res = await api.post("/corporate-employees/bulk-upload", {
+        employees: [
+          {
+            fullName: addEmpForm.fullName,
+            email: addEmpForm.email,
+            contactNumber: addEmpForm.contactNumber,
+            department: addEmpForm.department,
+            designation: addEmpForm.designation,
+            workLocation: addEmpForm.workLocation,
+            homeAddress: addEmpForm.homeAddress,
+            briefItemId: addEmpForm.briefItemId || undefined,
+          },
+        ],
+      });
+
+      const summary = res.data?.data?.summary;
+      const linked = res.data?.data?.results?.success?.[0]?.briefAutoFulfilled;
+      if (summary?.successful > 0) {
+        alert(
+          linked
+            ? "Employee added and linked to the brief. It's now awaiting the corporate's approval."
+            : "Employee added successfully.",
+        );
+        setShowAddEmployeeModal(false);
+        setAddEmpForm(emptyAddEmpForm);
+        fetchEmployees();
+        if (embedded) fetchBriefRosterItems();
+      } else if (summary?.duplicates > 0) {
+        alert("That employee already exists.");
+      } else {
+        const err = res.data?.data?.results?.errors?.[0]?.error;
+        alert(err || "Failed to add employee.");
+      }
+    } catch (error) {
+      alert(
+        `Failed to add employee: ${error.response?.data?.message || error.message}`,
+      );
+    } finally {
+      setAddingEmployee(false);
+    }
+  };
 
   const filteredEmployees = useMemo(() => {
     let filtered = employees;
@@ -81,7 +189,6 @@ export default function CorporateEmployeeManagementPage() {
 
     return filtered;
   }, [employees, searchTerm, filterDepartment]);
-
 
   const handleFileUpload = async (e) => {
     e.preventDefault();
@@ -172,10 +279,7 @@ export default function CorporateEmployeeManagementPage() {
 
   const handleDeactivateEmployee = async (employeeId) => {
     try {
-      await api.put(
-        `/corporate-employees/${employeeId}/deactivate`,
-        {},
-      );
+      await api.put(`/corporate-employees/${employeeId}/deactivate`, {});
       alert("Employee deactivated successfully!");
       fetchEmployees();
     } catch (error) {
@@ -191,32 +295,39 @@ export default function CorporateEmployeeManagementPage() {
       return;
     }
 
-    if (!window.confirm(`Send invitation emails to ${selectedEmployeeIds.length} selected employee(s)?`)) {
+    if (
+      !window.confirm(
+        `Send invitation emails to ${selectedEmployeeIds.length} selected employee(s)?`,
+      )
+    ) {
       return;
     }
 
     try {
       setSendingInvitations(true);
-      const response = await api.post(
-        `/corporate-employees/send-invitations`,
-        { employeeIds: selectedEmployeeIds },
-      );
+      const response = await api.post(`/corporate-employees/send-invitations`, {
+        employeeIds: selectedEmployeeIds,
+      });
 
       const { summary } = response.data.data;
-      alert(`Invitations sent successfully!\nSent: ${summary.sent}\nFailed: ${summary.failed}`);
+      alert(
+        `Invitations sent successfully!\nSent: ${summary.sent}\nFailed: ${summary.failed}`,
+      );
       setSelectedEmployeeIds([]);
     } catch (error) {
-      alert(`Failed to send invitations: ${error.response?.data?.message || error.message}`);
+      alert(
+        `Failed to send invitations: ${error.response?.data?.message || error.message}`,
+      );
     } finally {
       setSendingInvitations(false);
     }
   };
 
   const toggleEmployeeSelection = (employeeId) => {
-    setSelectedEmployeeIds(prev =>
+    setSelectedEmployeeIds((prev) =>
       prev.includes(employeeId)
-        ? prev.filter(id => id !== employeeId)
-        : [...prev, employeeId]
+        ? prev.filter((id) => id !== employeeId)
+        : [...prev, employeeId],
     );
   };
 
@@ -224,7 +335,7 @@ export default function CorporateEmployeeManagementPage() {
     if (selectedEmployeeIds.length === currentEmployees.length) {
       setSelectedEmployeeIds([]);
     } else {
-      setSelectedEmployeeIds(currentEmployees.map(emp => emp._id));
+      setSelectedEmployeeIds(currentEmployees.map((emp) => emp._id));
     }
   };
 
@@ -241,7 +352,9 @@ export default function CorporateEmployeeManagementPage() {
 
   return (
     <div className="corporate-employee-management">
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {!embedded && (
+        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      )}
 
       <div className="employee-management-container">
         <div className="management-header">
@@ -249,14 +362,19 @@ export default function CorporateEmployeeManagementPage() {
             <h1>Employee Management</h1>
             <p>Manage and assign routes to your employees</p>
           </div>
-          <div className="header-actions" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <div
+            className="header-actions"
+            style={{ display: "flex", gap: "10px", alignItems: "center" }}
+          >
             {selectedEmployeeIds.length > 0 && (
               <button
                 className="btn btn-primary"
                 onClick={handleSendInvitations}
                 disabled={sendingInvitations}
                 style={{
-                  background: sendingInvitations ? "#9e9e9e" : "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
+                  background: sendingInvitations
+                    ? "#9e9e9e"
+                    : "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
                   color: "#fff",
                   border: "none",
                   padding: "10px 20px",
@@ -269,6 +387,18 @@ export default function CorporateEmployeeManagementPage() {
                 {sendingInvitations
                   ? "Sending..."
                   : `Send Invitations (${selectedEmployeeIds.length})`}
+              </button>
+            )}
+            {embedded && (
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setAddEmpForm(emptyAddEmpForm);
+                  fetchBriefRosterItems();
+                  setShowAddEmployeeModal(true);
+                }}
+              >
+                Add Employee
               </button>
             )}
             <button
@@ -339,7 +469,11 @@ export default function CorporateEmployeeManagementPage() {
                     <th style={{ width: "40px" }}>
                       <input
                         type="checkbox"
-                        checked={selectedEmployeeIds.length === currentEmployees.length && currentEmployees.length > 0}
+                        checked={
+                          selectedEmployeeIds.length ===
+                            currentEmployees.length &&
+                          currentEmployees.length > 0
+                        }
                         onChange={toggleSelectAll}
                         title="Select all"
                       />
@@ -362,7 +496,9 @@ export default function CorporateEmployeeManagementPage() {
                           <input
                             type="checkbox"
                             checked={selectedEmployeeIds.includes(employee._id)}
-                            onChange={() => toggleEmployeeSelection(employee._id)}
+                            onChange={() =>
+                              toggleEmployeeSelection(employee._id)
+                            }
                           />
                         </td>
                         <td className="employee-id">{employee.employeeId}</td>
@@ -605,7 +741,163 @@ export default function CorporateEmployeeManagementPage() {
         </div>
       )}
 
-      <Footer />
+      {/* Add Employee (managed-service, on-behalf) Modal */}
+      {showAddEmployeeModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowAddEmployeeModal(false)}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Add Employee</h2>
+              <button
+                className="close-btn"
+                onClick={() => setShowAddEmployeeModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleAddEmployeeFromBrief}
+              className="assignment-form"
+            >
+              {briefRosterItems.length > 0 && (
+                <div className="form-group">
+                  <label>Fulfills brief roster item (optional)</label>
+                  <select
+                    value={addEmpForm.briefItemId}
+                    onChange={(e) =>
+                      handleSelectBriefRosterItem(e.target.value)
+                    }
+                    className="form-select"
+                  >
+                    <option value="">— Not linked to a brief item —</option>
+                    {briefRosterItems.map((r) => {
+                      const done =
+                        r.fulfillment?.status === "FULFILLED" &&
+                        r.fulfillment?.approvalStatus === "APPROVED";
+                      return (
+                        <option key={r._id} value={r._id} disabled={done}>
+                          {(r.name || "Employee") +
+                            (r.email ? ` (${r.email})` : "") +
+                            (done ? " — already approved" : "")}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <p className="helper-text">
+                    Selecting one pre-fills the details and auto-marks that
+                    brief item fulfilled for the corporate to approve.
+                  </p>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label>Full Name *</label>
+                <input
+                  type="text"
+                  value={addEmpForm.fullName}
+                  onChange={(e) =>
+                    setAddEmpForm({ ...addEmpForm, fullName: e.target.value })
+                  }
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Email *</label>
+                <input
+                  type="email"
+                  value={addEmpForm.email}
+                  onChange={(e) =>
+                    setAddEmpForm({ ...addEmpForm, email: e.target.value })
+                  }
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Contact Number</label>
+                <input
+                  type="text"
+                  value={addEmpForm.contactNumber}
+                  onChange={(e) =>
+                    setAddEmpForm({
+                      ...addEmpForm,
+                      contactNumber: e.target.value,
+                    })
+                  }
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Department</label>
+                <input
+                  type="text"
+                  value={addEmpForm.department}
+                  onChange={(e) =>
+                    setAddEmpForm({ ...addEmpForm, department: e.target.value })
+                  }
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Work Location</label>
+                <input
+                  type="text"
+                  value={addEmpForm.workLocation}
+                  onChange={(e) =>
+                    setAddEmpForm({
+                      ...addEmpForm,
+                      workLocation: e.target.value,
+                    })
+                  }
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Home Address</label>
+                <input
+                  type="text"
+                  value={addEmpForm.homeAddress}
+                  onChange={(e) =>
+                    setAddEmpForm({
+                      ...addEmpForm,
+                      homeAddress: e.target.value,
+                    })
+                  }
+                  className="form-input"
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={addingEmployee}
+                >
+                  {addingEmployee ? "Adding..." : "Add Employee"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowAddEmployeeModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {!embedded && <Footer />}
     </div>
   );
 }

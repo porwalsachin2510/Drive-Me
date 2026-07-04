@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import React, {
   useState,
   useEffect,
@@ -944,7 +945,7 @@ function B2CPartnerDriverDashboard() {
                         <td className="drivemego-btoc-dd-td-amount">
                           <span className="drivemego-btoc-dd-amount-text">
                             {booking.paymentAmount?.toLocaleString() || "0"}{" "}
-                            {booking.currency || "AED"}
+                            {booking.currency || getActiveCurrency()}
                           </span>
                         </td>
                         <td className="drivemego-btoc-dd-td-status">

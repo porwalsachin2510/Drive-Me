@@ -45,6 +45,7 @@ import subscriptionSettingsRoutes from "./routes/subscriptionSettingsRoutes.js"
 import travelHistoryRoutes from "./routes/travelHistoryRoutes.js"
 import settlementRoutes from "./routes/settlementRoutes.js"
 import corporateOperationsRoutes from "./routes/corporateOperationsRoutes.js"
+import managedServiceBriefRoutes from "./routes/managedServiceBriefRoutes.js"
 import driverLocationRoutes from "./routes/driverLocationRoutes.js"
 import corporateRoutes from "./routes/corporateRoutes.js"
 import pageRoutes from "./routes/pageRoutes.js"
@@ -59,6 +60,7 @@ import { processDailyRenewals, sendDailyRenewalReminders } from "./cron/subscrip
 import { bookingWarningsCron, bookingAutoCancellationCron, runImmediateBookingTimeoutCheck } from "./cron/bookingTimeoutCron.js"
 import { initEMICronJobs } from "./cron/emiCronJobs.js"
 import { monthlySettlementJob } from "./cron/settlementCron.js"
+import { initNotificationCronJobs } from "./cron/notificationCron.js"
 
 dotenv.config()
 
@@ -92,7 +94,16 @@ const corsOptions = {
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    // NOTE: "x-onbehalf-contract" is a custom header sent by B2B partners
+    // when running MANAGED-service operations on behalf of a corporate client.
+    // It MUST be whitelisted here or the browser preflight (OPTIONS) will fail
+    // with "Request header field x-onbehalf-contract is not allowed by
+    // Access-Control-Allow-Headers".
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "x-onbehalf-contract",
+    ],
 };
 
 app.use(cors(corsOptions));
@@ -117,6 +128,9 @@ export { io };
 const activeDrivers = new Map()
 // Store passenger connections
 const passengerConnections = new Map()
+// Throttle "bus near stop" checks per trip so we don't run them on every ping
+const busNearStopThrottle = new Map() // tripId -> last-check timestamp (ms)
+const BUS_NEAR_STOP_INTERVAL_MS = 60 * 1000 // at most once per minute per trip
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
@@ -281,6 +295,21 @@ io.on('connection', (socket) => {
                 }
             } catch (dbErr) {
                 console.error('[v0] Error broadcasting B2C location to booking rooms:', dbErr.message)
+            }
+        }
+
+        // Proximity-based "bus near stop" alerts (throttled, real coords only).
+        // Safe no-op for B2C trips that store locations as strings without coords.
+        if (tripId) {
+            const lastCheck = busNearStopThrottle.get(tripId) || 0
+            if (Date.now() - lastCheck > BUS_NEAR_STOP_INTERVAL_MS) {
+                busNearStopThrottle.set(tripId, Date.now())
+                try {
+                    const { sendBusNearStopNotification } = await import('./Services/notificationService.js')
+                    await sendBusNearStopNotification(tripId, driverId, { lat, lng })
+                } catch (nearErr) {
+                    console.error('[v0] bus-near-stop check failed:', nearErr.message)
+                }
             }
         }
 
@@ -806,6 +835,7 @@ app.use("/api/subscription-settings", subscriptionSettingsRoutes)
 app.use("/api/travel-history", travelHistoryRoutes)
 app.use("/api/settlement", settlementRoutes)
 app.use("/api/corporate-operations", corporateOperationsRoutes)
+app.use("/api/managed-service-brief", managedServiceBriefRoutes)
 app.use("/api/corporate", corporateRoutes)
 app.use("/api/driver", driverLocationRoutes)
 app.use("/api/pages", pageRoutes)
@@ -871,4 +901,13 @@ server.listen(PORT, async () => {
     console.log(`[v0] Monthly settlement cron ENABLED`)
     console.log(`- Auto-calculate settlement: 02:00 on the 1st of each month`)
     void monthlySettlementJob;
+
+    // Notification cron jobs (trip reminders + contract expiry warnings)
+    console.log(`[v0] Initializing notification cron jobs...`)
+    try {
+        initNotificationCronJobs();
+        console.log(`[v0] Notification cron jobs initialized successfully`)
+    } catch (error) {
+        console.error(`[v0] Error initializing notification cron jobs:`, error.message)
+    }
 })

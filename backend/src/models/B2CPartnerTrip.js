@@ -30,6 +30,19 @@ const b2cPartnerTripSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        // Scheduled time the bus REACHES this trip's destination (toLocation).
+        endTime: {
+            type: String,
+            default: "",
+        },
+        // Orientation of this generated trip relative to its parent route.
+        //   "outbound" => running From -> To
+        //   "return"   => running To -> From
+        direction: {
+            type: String,
+            enum: ["outbound", "return"],
+            default: "outbound",
+        },
         actualStartTime: {
             type: Date,
         },

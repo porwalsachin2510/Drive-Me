@@ -6,9 +6,13 @@ import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CMonthlyPass from "../models/B2CMonthlyPass.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
 import User from "../models/User.js";
+import Wallet from "../models/Wallet.js";
+import Transaction from "../models/Transaction.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
 import { getCountryCurrency, getCurrencyDecimals, validateCountryPrice } from "../Services/countryLocalizationService.js";
-import { broadcastVehicleAvailabilityChange, broadcastDriverAvailabilityChange, broadcastSelfDriverAvailabilityChange } from "../Services/socketService.js";
+import { broadcastVehicleAvailabilityChange, broadcastDriverAvailabilityChange, broadcastSelfDriverAvailabilityChange, sendRealTimeNotification } from "../Services/socketService.js";
+import { createNotification } from "../Services/notificationService.js";
+import { sendEmail } from "../Services/emailService.js";
 
 // Helper function to convert time string to minutes for comparison
 const timeToMinutes = (timeString) => {
@@ -348,10 +352,24 @@ export const createB2CPartnerSchedule = async (req, res) => {
         const formattedTripTimes = tripTimes.map(time => ({
             departureTime: convertToAMPMFormat(time.departureTime),
             arrivalTime: time.arrivalTime ? convertToAMPMFormat(time.arrivalTime) : null,
+            // Time the bus reaches the destination of the forward/outbound journey
+            destinationArrivalTime: time.destinationArrivalTime ? convertToAMPMFormat(time.destinationArrivalTime) : null,
+            // Round Trip only: time the bus reaches back the origin after the return leg
+            returnArrivalTime: time.returnArrivalTime ? convertToAMPMFormat(time.returnArrivalTime) : null,
             tripType: time.tripType || "One Way",
+            // Direction for One Way trips ("outbound" From->To or "return" To->From). Defaults to outbound.
+            direction: time.direction === "return" ? "return" : "outbound",
             // Per-trip driver/vehicle assignment (optional - falls back to schedule/route default)
+            // For Round Trip this is the OUTBOUND (From->To / "jaane") leg assignment.
             assignedDriver: time.assignedDriver || null,
             assignedVehicle: time.assignedVehicle || null,
+
+            // Round Trip only: dedicated RETURN (To->From / "aane") leg assignment (optional, falls back to outbound).
+            returnDriver: time.returnDriver || null,
+            returnVehicle: time.returnVehicle || null,
+            outboundIsSelfDriver: time.outboundIsSelfDriver === true,
+            returnIsSelfDriver: time.returnIsSelfDriver === true,
+
             outboundStopPoints: time.outboundStopPoints ? time.outboundStopPoints.map(stop => ({
                 location: stop.location,
                 time: convertToAMPMFormat(stop.time)
@@ -421,10 +439,12 @@ export const createB2CPartnerSchedule = async (req, res) => {
             // UPDATE existing schedule - append new trip times to existing tripTimes array
             console.log("[v0] Found existing schedule for route:", existingSchedule._id, "- Appending new trip times");
 
-            // Merge new trip times with existing ones (avoid duplicates based on departureTime)
-            const existingDepartureTimes = existingSchedule.tripTimes.map(t => t.departureTime);
+            // Merge new trip times with existing ones (avoid duplicates based on departureTime + direction).
+            // Direction is included so an outbound and a reverse-direction trip can share a departure time.
+            const tripKey = (t) => `${t.departureTime}__${t.direction || "outbound"}`;
+            const existingTripKeys = existingSchedule.tripTimes.map(tripKey);
             const uniqueNewTripTimes = formattedTripTimes.filter(newTrip =>
-                !existingDepartureTimes.includes(newTrip.departureTime)
+                !existingTripKeys.includes(tripKey(newTrip))
             );
 
             if (uniqueNewTripTimes.length === 0) {
@@ -646,7 +666,7 @@ export const createB2CPartnerSchedule = async (req, res) => {
             console.error("[v0] Error updating vehicle availability:", vehicleAvailabilityError);
             // Don't fail schedule creation if vehicle availability update fails
         }
-        
+
         // PROPAGATE DRIVER ASSIGNMENT: Sync route's assignedDriverId and update existing bookings
         if (finalDriver) {
             console.log(`[v0] Propagating driver ${finalDriver} to route and existing bookings for schedule ${schedule._id}`);
@@ -1045,13 +1065,60 @@ export const getB2CPartnerSchedules = async (req, res) => {
                     }
                 }
 
+                // Round Trip only: resolve the dedicated RETURN (To->From / "aane") leg driver/vehicle.
+                let returnDriverInfo = null;
+                let returnVehicleInfo = null;
+
+                if (tripTime.returnDriver) {
+                    const rtDriver = await B2CPartnerDriver.findById(tripTime.returnDriver)
+                        .select('name phoneNumber driverImage');
+                    if (rtDriver) {
+                        returnDriverInfo = {
+                            _id: rtDriver._id,
+                            name: rtDriver.name,
+                            phoneNumber: rtDriver.phoneNumber,
+                            image: rtDriver.driverImage?.url
+                        };
+                    } else if (tripTime.returnDriver.toString() === req.userId.toString()) {
+                        returnDriverInfo = {
+                            _id: partnerUser._id,
+                            name: partnerUser.fullName || "Self",
+                            phoneNumber: partnerUser.whatsappNumber,
+                            image: partnerUser.profileImage,
+                            isSelfDriver: true
+                        };
+                    }
+                }
+
+                if (tripTime.returnVehicle) {
+                    const rtVehicle = await B2CPartnerVehicle.findById(tripTime.returnVehicle)
+                        .select('model licensePlate seatingCapacity vehicleType vehicleImage');
+                    if (rtVehicle) {
+                        returnVehicleInfo = {
+                            _id: rtVehicle._id,
+                            model: rtVehicle.model,
+                            licensePlate: rtVehicle.licensePlate,
+                            seatingCapacity: rtVehicle.seatingCapacity,
+                            vehicleType: rtVehicle.vehicleType,
+                            image: rtVehicle.vehicleImage?.url
+                        };
+                    }
+                }
+
+                const isRoundTrip = (tripTime.tripType === "Round Trip");
+
                 return {
                     ...tripTime,
-                    // Per-trip driver/vehicle info (populated)
+                    // Per-trip OUTBOUND driver/vehicle info (populated)
                     effectiveDriver: tripDriverInfo || driverInfo, // Fall back to schedule-level driver
                     effectiveVehicle: tripVehicleInfo || scheduleObj.assignedVehicle, // Fall back to schedule-level vehicle
                     tripDriverInfo: tripDriverInfo,
-                    tripVehicleInfo: tripVehicleInfo
+                    tripVehicleInfo: tripVehicleInfo,
+                    // Round Trip RETURN leg info (falls back to outbound when not set)
+                    returnDriverInfo: returnDriverInfo,
+                    returnVehicleInfo: returnVehicleInfo,
+                    effectiveReturnDriver: isRoundTrip ? (returnDriverInfo || tripDriverInfo || driverInfo) : null,
+                    effectiveReturnVehicle: isRoundTrip ? (returnVehicleInfo || tripVehicleInfo || scheduleObj.assignedVehicle) : null
                 };
             }));
 
@@ -1105,7 +1172,16 @@ export const updateB2CPartnerSchedule = async (req, res) => {
             updateData.tripTimes = updateData.tripTimes.map(time => ({
                 departureTime: convertToAMPMFormat(time.departureTime),
                 arrivalTime: time.arrivalTime ? convertToAMPMFormat(time.arrivalTime) : null,
+                destinationArrivalTime: time.destinationArrivalTime ? convertToAMPMFormat(time.destinationArrivalTime) : null,
+                returnArrivalTime: time.returnArrivalTime ? convertToAMPMFormat(time.returnArrivalTime) : null,
                 tripType: time.tripType || "One Way",
+                direction: time.direction === "return" ? "return" : "outbound",
+                assignedDriver: time.assignedDriver || null,
+                assignedVehicle: time.assignedVehicle || null,
+                returnDriver: time.returnDriver || null,
+                returnVehicle: time.returnVehicle || null,
+                outboundIsSelfDriver: time.outboundIsSelfDriver === true,
+                returnIsSelfDriver: time.returnIsSelfDriver === true,
                 outboundStopPoints: time.outboundStopPoints ? time.outboundStopPoints.map(stop => ({
                     location: stop.location,
                     time: convertToAMPMFormat(stop.time)
@@ -1228,13 +1304,28 @@ export const updateB2CPartnerSchedule = async (req, res) => {
             }
         }
 
-        // Also update per-trip driver assignments status to busy
+        // Also update per-trip driver/vehicle assignments status to busy.
+        // IMPORTANT: for Round Trips the OUTBOUND (assignedDriver/assignedVehicle)
+        // and the RETURN (returnDriver/returnVehicle) legs can use DIFFERENT
+        // drivers/vehicles, so every distinct asset used by any leg must be
+        // marked busy — otherwise a return-leg driver/vehicle would wrongly stay
+        // "available" after being assigned.
         if (updateData.tripTimes && updateData.tripTimes.length > 0) {
             const driversToMarkBusy = new Set();
+            const vehiclesToMarkBusy = new Set();
 
             for (const trip of updateData.tripTimes) {
                 if (trip.assignedDriver) {
                     driversToMarkBusy.add(trip.assignedDriver.toString());
+                }
+                if (trip.returnDriver) {
+                    driversToMarkBusy.add(trip.returnDriver.toString());
+                }
+                if (trip.assignedVehicle) {
+                    vehiclesToMarkBusy.add(trip.assignedVehicle.toString());
+                }
+                if (trip.returnVehicle) {
+                    vehiclesToMarkBusy.add(trip.returnVehicle.toString());
                 }
             }
 
@@ -1263,8 +1354,21 @@ export const updateB2CPartnerSchedule = async (req, res) => {
                     console.log(`[v0] Updated driver status to BUSY (trip level) for: ${driverId}`);
                 }
             }
+
+            for (const vehicleId of vehiclesToMarkBusy) {
+                await B2CPartnerVehicle.findByIdAndUpdate(
+                    vehicleId,
+                    {
+                        $set: {
+                            availabilityStatus: 'busy',
+                            lastAvailabilityUpdate: new Date()
+                        }
+                    }
+                );
+                console.log(`[v0] Updated vehicle status to BUSY (trip level) for: ${vehicleId}`);
+            }
         }
-        
+
         res.status(200).json({
             success: true,
             message: "B2C Partner Schedule updated successfully",
@@ -1319,6 +1423,390 @@ export const deleteB2CPartnerSchedule = async (req, res) => {
             message: "Error deleting B2C partner schedule",
             error: error.message,
         });
+    }
+};
+
+// Round currency value to 2 decimals to avoid floating point drift in wallets
+export const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+/**
+ * Refund a commuter for the UNUSED portion of their monthly pass when a B2C
+ * Partner DELETES the route. This is NOT a normal cancellation:
+ *   - It is the partner's fault, so NO cancellation fee is charged.
+ *   - The commuter is refunded ONLY for unused trips (pro-rata of remaining trips).
+ *   - The partner keeps earnings ONLY for the trips the commuter actually used;
+ *     the unused-trip earnings are clawed back (DEBIT) from the partner wallet.
+ *   - The admin keeps commission ONLY for the trips the commuter actually used;
+ *     the unused-trip commission is clawed back (DEBIT) from the admin wallet.
+ *
+ * Money conservation (ONLINE): commuter credit == partner debit + admin debit,
+ * because paymentAmount == partnerEarnings + adminCommission.
+ *
+ * Returns a summary object describing what was settled (or null if nothing to do).
+ */
+export const processRouteDeletionRefundForPass = async (pass, route, adminUserCache) => {
+    try {
+        // `passengerId` is populated on the pass (a User doc), so normalize to the raw
+        // ObjectId for wallet/notification lookups. `partnerId` is not populated.
+        const passengerId = pass.passengerId?._id || pass.passengerId;
+
+        // Locate the originating booking so we can read accurate trip usage + the
+        // exact partner/admin split that was applied at acceptance time.
+        let booking = await B2CPassengerBooking.findOne({
+            monthlyPassId: pass._id,
+            isMonthlyPass: true,
+        });
+
+        // Fallback for legacy passes without a linked booking
+        if (!booking) {
+            booking = await B2CPassengerBooking.findOne({
+                routeId: pass.routeId,
+                passengerId: passengerId,
+                isMonthlyPass: true,
+            });
+        }
+
+        const currency = (booking?.currency) || pass.currency || route?.pricing?.currency || "AED";
+        const paymentMethod = (booking?.paymentMethod) || pass.paymentMethod || "WALLET";
+
+        // Was money actually collected by the platform/partner?
+        const bookingPaid = booking
+            ? ["COMPLETED", "PAID"].includes(booking.paymentStatus)
+            : ["PAID"].includes(pass.paymentStatus);
+
+        // The full amount the commuter paid, and the split that was credited out.
+        const paymentAmount = round2(booking?.paymentAmount || pass.totalAmount || 0);
+        const fullPartnerEarnings = round2(
+            (booking?.driverEarnings != null ? booking.driverEarnings : pass.partnerEarnings) || 0
+        );
+        const fullAdminCommission = round2(
+            (booking?.adminCommissionAmount != null ? booking.adminCommissionAmount : pass.adminCommission) || 0
+        );
+
+        // ===== USED vs REMAINING (UNUSED) TRIPS =====
+        // Prefer counting the real trip documents (past/in-progress/completed = used).
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        let usedTripsCount = 0;
+        let remainingTripsCount = 0;
+
+        if (booking && Array.isArray(booking.monthlyTrips) && booking.monthlyTrips.length > 0) {
+            const passTrips = await B2CPartnerTrip.find({
+                _id: { $in: booking.monthlyTrips },
+            }).select("tripDate status");
+
+            for (const t of passTrips) {
+                const isPast = new Date(t.tripDate) < todayStart;
+                const isDone = ["Completed", "In Progress"].includes(t.status);
+                if (isPast || isDone) usedTripsCount++;
+                else remainingTripsCount++;
+            }
+        } else {
+            // Fallback to the pass counters
+            const total = pass.totalTrips || 0;
+            usedTripsCount = Math.min(pass.usedTrips || 0, total);
+            remainingTripsCount = Math.max(0, total - usedTripsCount);
+        }
+
+        const totalTrips = usedTripsCount + remainingTripsCount;
+        // Fraction of the pass that is UNUSED and therefore refundable.
+        const unusedFraction = totalTrips > 0 ? remainingTripsCount / totalTrips : 1;
+
+        // Pro-rata amounts for the unused portion.
+        const refundToCommuter = round2(unusedFraction * paymentAmount);
+        let earningsToReverse = round2(unusedFraction * fullPartnerEarnings);
+        // Force the admin debit so that (partner debit + admin debit) === commuter refund.
+        let commissionToReverse = round2(refundToCommuter - earningsToReverse);
+        if (commissionToReverse < 0) {
+            commissionToReverse = 0;
+            earningsToReverse = refundToCommuter;
+        }
+
+        const summary = {
+            passId: pass._id,
+            bookingId: booking?._id || null,
+            passengerId: passengerId,
+            partnerId: pass.partnerId || route?.b2cPartnerId,
+            currency,
+            paymentMethod,
+            usedTripsCount,
+            remainingTripsCount,
+            totalTrips,
+            refundToCommuter,
+            earningsReversed: 0,
+            commissionReversed: 0,
+            refundMethod: "NONE",
+        };
+
+        // Nothing to refund (no payment, or commuter used everything already)
+        if (!bookingPaid || refundToCommuter <= 0) {
+            // Still mark records cancelled by the caller; just no money movement.
+            if (booking) {
+                booking.refundMethod = "NONE";
+                booking.refundAmount = 0;
+                booking.cancellationFee = 0;
+                booking.usedTripsCount = usedTripsCount;
+                booking.remainingTripsCount = remainingTripsCount;
+                await booking.save();
+            }
+            return summary;
+        }
+
+        const isCash = paymentMethod === "CASH";
+        const partnerId = pass.partnerId || route?.b2cPartnerId;
+
+        // Resolve admin user/wallet once (cached across passes)
+        let adminUser = adminUserCache.user;
+        if (adminUser === undefined) {
+            adminUser = await User.findOne({ role: "ADMIN" });
+            adminUserCache.user = adminUser;
+        }
+
+        // ===== 1. REFUND THE COMMUTER (unused-trip amount, NO cancellation fee) =====
+        if (!isCash) {
+            // ONLINE / WALLET: platform held the money -> credit commuter wallet
+            // in the pass's currency (never a mismatched-currency wallet).
+            const commuterWallet = await Wallet.findOne({ userId: passengerId, currency });
+            if (commuterWallet) {
+                const balanceBefore = commuterWallet.balance;
+                commuterWallet.balance = round2(commuterWallet.balance + refundToCommuter);
+                const description = `Refund for ${remainingTripsCount} unused trip(s) - route "${route.fromLocation} to ${route.toLocation}" deleted by operator (no cancellation fee)`;
+                commuterWallet.transactions.push({
+                    type: "REFUND",
+                    amount: refundToCommuter,
+                    description,
+                    reference: String(booking?._id || pass._id),
+                    status: "COMPLETED",
+                    createdAt: new Date(),
+                });
+                await commuterWallet.save();
+
+                await Transaction.create({
+                    walletId: commuterWallet._id,
+                    userId: passengerId,
+                    type: "CREDIT",
+                    amount: refundToCommuter,
+                    currency,
+                    category: "REFUND",
+                    description,
+                    referenceId: booking?._id,
+                    referenceModel: booking ? "B2CPassengerBooking" : undefined,
+                    balanceBefore,
+                    balanceAfter: commuterWallet.balance,
+                    metadata: {
+                        passId: pass._id,
+                        bookingId: booking?._id,
+                        reason: "route_deleted_by_partner",
+                        usedTripsCount,
+                        remainingTripsCount,
+                        cancellationFee: 0,
+                    },
+                });
+                summary.refundMethod = "WALLET";
+            }
+        } else {
+            // CASH: platform never held the money. Partner must return the unused-trip
+            // cash to the commuter offline. Record the amount due (no fee).
+            summary.refundMethod = "CASH_FROM_PARTNER";
+            if (booking) {
+                booking.refundMethod = "CASH_FROM_PARTNER";
+                booking.cashRefundDueFromPartner = refundToCommuter;
+                booking.cashRefundSettled = false;
+            }
+        }
+
+        // ===== 2. CLAW BACK PARTNER EARNINGS FOR UNUSED TRIPS =====
+        // ONLINE/WALLET: partner was credited earnings at acceptance -> DEBIT the unused part.
+        // CASH: the partner physically holds the commuter's cash and returns it directly,
+        //       so there is no wallet earning to reverse (handled offline above).
+        const partnerWallet = await Wallet.findOne({ userId: partnerId, currency });
+        if (!isCash && partnerWallet && earningsToReverse > 0) {
+            const partnerBalanceBefore = partnerWallet.balance;
+            partnerWallet.balance = round2(partnerWallet.balance - earningsToReverse);
+            partnerWallet.totalEarnings = Math.max(0, round2((partnerWallet.totalEarnings || 0) - earningsToReverse));
+            const description = `Earnings reversed for ${remainingTripsCount} unused trip(s) - you deleted route "${route.fromLocation} to ${route.toLocation}"`;
+            partnerWallet.transactions.push({
+                type: "EARNINGS_REVERSAL",
+                amount: earningsToReverse,
+                description,
+                status: "COMPLETED",
+                createdAt: new Date(),
+            });
+            await partnerWallet.save();
+
+            await Transaction.create({
+                walletId: partnerWallet._id,
+                userId: partnerId,
+                type: "DEBIT",
+                amount: earningsToReverse,
+                currency,
+                category: "EARNINGS_REVERSAL",
+                description,
+                referenceId: booking?._id,
+                referenceModel: booking ? "B2CPassengerBooking" : undefined,
+                balanceBefore: partnerBalanceBefore,
+                balanceAfter: partnerWallet.balance,
+                metadata: {
+                    passId: pass._id,
+                    bookingId: booking?._id,
+                    reason: "route_deleted_by_partner",
+                    usedTripsCount,
+                    remainingTripsCount,
+                    fullPartnerEarnings,
+                },
+            });
+            summary.earningsReversed = earningsToReverse;
+        }
+
+        // ===== 3. CLAW BACK ADMIN COMMISSION FOR UNUSED TRIPS =====
+        if (adminUser && commissionToReverse > 0) {
+            const adminWallet = await Wallet.findOne({ userId: adminUser._id, currency });
+            if (adminWallet) {
+                if (!isCash) {
+                    // ONLINE/WALLET: admin was credited commission -> DEBIT the unused part.
+                    const adminBalanceBefore = adminWallet.balance;
+                    adminWallet.balance = round2(adminWallet.balance - commissionToReverse);
+                    adminWallet.totalEarnings = Math.max(0, round2((adminWallet.totalEarnings || 0) - commissionToReverse));
+                    const description = `Commission reversed for ${remainingTripsCount} unused trip(s) - route "${route.fromLocation} to ${route.toLocation}" deleted by operator`;
+                    adminWallet.transactions.push({
+                        type: "COMMISSION_REVERSAL",
+                        amount: commissionToReverse,
+                        description,
+                        status: "COMPLETED",
+                        createdAt: new Date(),
+                    });
+                    await adminWallet.save();
+
+                    await Transaction.create({
+                        walletId: adminWallet._id,
+                        userId: adminUser._id,
+                        type: "DEBIT",
+                        amount: commissionToReverse,
+                        currency,
+                        category: "COMMISSION_REVERSAL",
+                        description,
+                        referenceId: booking?._id,
+                        referenceModel: booking ? "B2CPassengerBooking" : undefined,
+                        balanceBefore: adminBalanceBefore,
+                        balanceAfter: adminWallet.balance,
+                        metadata: {
+                            passId: pass._id,
+                            bookingId: booking?._id,
+                            reason: "route_deleted_by_partner",
+                            usedTripsCount,
+                            remainingTripsCount,
+                            fullAdminCommission,
+                        },
+                    });
+                    summary.commissionReversed = commissionToReverse;
+                } else if (partnerWallet) {
+                    // CASH: at acceptance the admin commission was DEDUCTED from the partner
+                    // wallet and credited to admin. Since the partner now returns the unused
+                    // cash to the commuter, the partner over-paid commission on the unused
+                    // trips -> admin refunds that commission portion back to the partner.
+                    const partnerBalanceBefore = partnerWallet.balance;
+                    partnerWallet.balance = round2(partnerWallet.balance + commissionToReverse);
+                    partnerWallet.transactions.push({
+                        type: "COMMISSION_REFUND",
+                        amount: commissionToReverse,
+                        description: `Commission refunded for ${remainingTripsCount} unused trip(s) - cash route deleted`,
+                        status: "COMPLETED",
+                        createdAt: new Date(),
+                    });
+                    await partnerWallet.save();
+
+                    await Transaction.create({
+                        walletId: partnerWallet._id,
+                        userId: partnerId,
+                        type: "CREDIT",
+                        amount: commissionToReverse,
+                        currency,
+                        category: "COMMISSION_REFUND",
+                        description: `Commission refunded for ${remainingTripsCount} unused trip(s) - cash route deleted by operator`,
+                        referenceId: booking?._id,
+                        referenceModel: booking ? "B2CPassengerBooking" : undefined,
+                        balanceBefore: partnerBalanceBefore,
+                        balanceAfter: partnerWallet.balance,
+                        metadata: { passId: pass._id, bookingId: booking?._id, reason: "route_deleted_by_partner_cash" },
+                    });
+
+                    const adminBalanceBefore = adminWallet.balance;
+                    adminWallet.balance = round2(adminWallet.balance - commissionToReverse);
+                    adminWallet.totalEarnings = Math.max(0, round2((adminWallet.totalEarnings || 0) - commissionToReverse));
+                    adminWallet.transactions.push({
+                        type: "COMMISSION_REVERSAL",
+                        amount: commissionToReverse,
+                        description: `Commission reversed for ${remainingTripsCount} unused trip(s) - cash route deleted by operator`,
+                        status: "COMPLETED",
+                        createdAt: new Date(),
+                    });
+                    await adminWallet.save();
+
+                    await Transaction.create({
+                        walletId: adminWallet._id,
+                        userId: adminUser._id,
+                        type: "DEBIT",
+                        amount: commissionToReverse,
+                        currency,
+                        category: "COMMISSION_REVERSAL",
+                        description: `Commission reversed for ${remainingTripsCount} unused trip(s) - cash route deleted by operator`,
+                        referenceId: booking?._id,
+                        referenceModel: booking ? "B2CPassengerBooking" : undefined,
+                        balanceBefore: adminBalanceBefore,
+                        balanceAfter: adminWallet.balance,
+                        metadata: { passId: pass._id, bookingId: booking?._id, reason: "route_deleted_by_partner_cash" },
+                    });
+                    summary.commissionReversed = commissionToReverse;
+                }
+            }
+        }
+
+        // ===== 4. PERSIST REFUND STATE ON THE BOOKING =====
+        if (booking) {
+            booking.usedTripsCount = usedTripsCount;
+            booking.remainingTripsCount = remainingTripsCount;
+            booking.refundAmount = refundToCommuter;
+            booking.cancellationFee = 0;
+            booking.refundStatus = isCash ? "PENDING" : "COMPLETED";
+            if (!isCash) {
+                booking.paymentStatus = "REFUNDED";
+                booking.refundMethod = "WALLET";
+            }
+            booking.bookingStatus = "CANCELLED";
+            booking.cancellationReason = "Route deleted by operator";
+            booking.cancelledAt = new Date();
+            await booking.save();
+        }
+
+        // ===== 5. NOTIFY THE COMMUTER =====
+        try {
+            const msg = isCash
+                ? `The route "${route.fromLocation} to ${route.toLocation}" was cancelled by the operator. You will receive ${currency} ${refundToCommuter.toFixed(2)} in cash for your ${remainingTripsCount} unused trip(s). No cancellation fee was charged.`
+                : `The route "${route.fromLocation} to ${route.toLocation}" was cancelled by the operator. ${currency} ${refundToCommuter.toFixed(2)} for your ${remainingTripsCount} unused trip(s) has been refunded to your wallet. No cancellation fee was charged.`;
+
+            await createNotification({
+                userId: passengerId,
+                type: "REFUND_PROCESSED",
+                title: "Route Cancelled - Refund Processed",
+                message: msg,
+                category: "PAYMENT",
+            });
+            sendRealTimeNotification(passengerId, {
+                type: "REFUND_PROCESSED",
+                title: "Route Cancelled - Refund Processed",
+                message: msg,
+                data: { passId: pass._id, refundAmount: refundToCommuter, remainingTripsCount, refundMethod: summary.refundMethod },
+            });
+        } catch (notifErr) {
+            console.error("[deleteB2CPartnerRoute] Refund notification failed:", notifErr.message);
+        }
+
+        console.log("[deleteB2CPartnerRoute] Pass refund settled:", summary);
+        return summary;
+    } catch (err) {
+        console.error("[deleteB2CPartnerRoute] Error refunding pass:", pass?._id, err.message);
+        return null;
     }
 };
 
@@ -1435,7 +1923,53 @@ export const deleteB2CPartnerRoute = async (req, res) => {
             });
         }
 
-        // Delete associated schedules and trips
+        // ===== PROCESS REFUNDS BEFORE DELETING ANYTHING =====
+        // CRITICAL: refunds must run BEFORE trips are deleted, because the refund math
+        // counts used vs unused trips from the actual trip documents. The commuter is
+        // refunded for unused trips, the partner's unused-trip earnings are clawed back,
+        // and the admin's unused-trip commission is clawed back. NO cancellation fee is
+        // charged because the operator (not the commuter) cancelled the route.
+        const refundSummaries = [];
+        let totalRefundedToCommuters = 0;
+        const adminUserCache = {}; // resolve the ADMIN user only once across all passes
+
+        if (forceDelete === 'true' && activePasses.length > 0) {
+            for (const pass of activePasses) {
+                const summary = await processRouteDeletionRefundForPass(pass, route, adminUserCache);
+                if (summary) {
+                    refundSummaries.push(summary);
+                    totalRefundedToCommuters += summary.refundToCommuter || 0;
+                }
+            }
+        }
+
+        // Notify the operator (partner) of the total earnings reversed for unused trips.
+        const totalEarningsReversed = round2(
+            refundSummaries.reduce((s, r) => s + (r.earningsReversed || 0), 0)
+        );
+        if (totalEarningsReversed > 0) {
+            try {
+                const partnerCurrency = refundSummaries[0]?.currency || route.pricing?.currency || "AED";
+                const partnerMsg = `You deleted the route "${route.fromLocation} to ${route.toLocation}". ${partnerCurrency} ${totalEarningsReversed.toFixed(2)} in earnings for commuters' unused trips was reversed from your wallet and refunded to them. You keep earnings only for trips that were actually used.`;
+                await createNotification({
+                    userId: route.b2cPartnerId,
+                    type: "WALLET_UPDATED",
+                    title: "Earnings Reversed - Route Deleted",
+                    message: partnerMsg,
+                    category: "WALLET",
+                });
+                sendRealTimeNotification(route.b2cPartnerId, {
+                    type: "WALLET_UPDATED",
+                    title: "Earnings Reversed - Route Deleted",
+                    message: partnerMsg,
+                    data: { totalEarningsReversed },
+                });
+            } catch (notifErr) {
+                console.error("[deleteB2CPartnerRoute] Partner notification failed:", notifErr.message);
+            }
+        }
+
+        // Delete associated schedules and trips (AFTER refunds have been calculated)
         const schedules = await B2CPartnerSchedule.find({
             routeId: routeId,
         });
@@ -1450,20 +1984,22 @@ export const deleteB2CPartnerRoute = async (req, res) => {
         // Also delete any trips directly linked to route (without schedule)
         await B2CPartnerTrip.deleteMany({ routeId: routeId });
 
-        // Update monthly passes to mark them as CANCELLED if force deleting
+        // Mark monthly passes as REFUNDED/CANCELLED after the wallet settlements above.
         if (forceDelete === 'true' && activePasses.length > 0) {
             await B2CMonthlyPass.updateMany(
                 { routeId: routeId, status: { $in: ["ACTIVE", "PENDING"] } },
                 {
                     $set: {
                         status: "CANCELLED",
-                        notes: `${new Date().toISOString()} - Route deleted by partner. Pass cancelled.`
+                        paymentStatus: "REFUNDED",
+                        notes: `${new Date().toISOString()} - Route deleted by operator. Unused trips refunded to commuter; partner earnings and admin commission for unused trips reversed. No cancellation fee charged.`
                     }
                 }
             );
         }
 
-        // Update bookings to mark them as CANCELLED if force deleting
+        // Update any remaining bookings (e.g. non-pass bookings) to CANCELLED. Pass-linked
+        // bookings already had their refund state persisted inside the refund helper.
         if (forceDelete === 'true' && pendingBookings.length > 0) {
             await B2CPassengerBooking.updateMany(
                 {
@@ -1473,7 +2009,7 @@ export const deleteB2CPartnerRoute = async (req, res) => {
                 {
                     $set: {
                         bookingStatus: "CANCELLED",
-                        autoCancelReason: "Route deleted by partner"
+                        autoCancelReason: "Route deleted by operator"
                     }
                 }
             );
@@ -1484,12 +2020,19 @@ export const deleteB2CPartnerRoute = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "B2C Partner Route deleted successfully",
+            message: totalRefundedToCommuters > 0
+                ? `Route deleted. Commuters were refunded for their unused trips (no cancellation fee). Earnings and commission for unused trips were reversed from the operator and admin wallets.`
+                : "B2C Partner Route deleted successfully",
             deletedData: {
                 schedulesDeleted: schedules.length,
                 tripsDeleted: totalTrips,
                 passesCancelled: forceDelete === 'true' ? activePasses.length : 0,
                 bookingsCancelled: forceDelete === 'true' ? pendingBookings.length : 0
+            },
+            refunds: {
+                passesRefunded: refundSummaries.length,
+                totalRefundedToCommuters: round2(totalRefundedToCommuters),
+                details: refundSummaries
             }
         });
     } catch (error) {
@@ -1688,23 +2231,37 @@ export const checkRouteDependencies = async (req, res) => {
             dependencies: {
                 activePasses: {
                     count: activePasses.length,
-                    totalValue: activePasses.reduce((sum, p) => sum + (p.totalAmount || 0), 0),
+                    totalValue: round2(activePasses.reduce((sum, p) => sum + (p.totalAmount || 0), 0)),
+                    // Estimated total the commuters will be refunded for their UNUSED trips.
+                    totalEstimatedRefund: round2(activePasses.reduce((sum, p) => {
+                        const total = p.totalTrips || 0;
+                        const remaining = Math.max(0, total - (p.usedTrips || 0));
+                        const fraction = total > 0 ? remaining / total : 1;
+                        return sum + fraction * (p.totalAmount || 0);
+                    }, 0)),
                     currency: activePasses[0]?.currency || route.pricing?.currency || "AED",
-                    details: activePasses.map(pass => ({
-                        passId: pass._id,
-                        passengerName: pass.passengerId?.fullName || 'Unknown',
-                        passengerPhone: pass.passengerId?.contactPhone || 'N/A',
-                        passengerEmail: pass.passengerId?.email || 'N/A',
-                        passType: pass.passType,
-                        startDate: pass.startDate,
-                        endDate: pass.endDate,
-                        totalAmount: pass.totalAmount,
-                        currency: pass.currency,
-                        usedTrips: pass.usedTrips,
-                        totalTrips: pass.totalTrips,
-                        remainingTrips: (pass.totalTrips || 0) - (pass.usedTrips || 0),
-                        status: pass.status
-                    }))
+                    details: activePasses.map(pass => {
+                        const totalTrips = pass.totalTrips || 0;
+                        const remainingTrips = Math.max(0, totalTrips - (pass.usedTrips || 0));
+                        const fraction = totalTrips > 0 ? remainingTrips / totalTrips : 1;
+                        return {
+                            passId: pass._id,
+                            passengerName: pass.passengerId?.fullName || 'Unknown',
+                            passengerPhone: pass.passengerId?.contactPhone || 'N/A',
+                            passengerEmail: pass.passengerId?.email || 'N/A',
+                            passType: pass.passType,
+                            startDate: pass.startDate,
+                            endDate: pass.endDate,
+                            totalAmount: pass.totalAmount,
+                            currency: pass.currency,
+                            usedTrips: pass.usedTrips,
+                            totalTrips: pass.totalTrips,
+                            remainingTrips,
+                            // Estimated refund for this commuter's unused trips (no cancellation fee).
+                            estimatedRefund: round2(fraction * (pass.totalAmount || 0)),
+                            status: pass.status
+                        };
+                    })
                 },
                 upcomingTripsWithBookings: {
                     count: upcomingTripsWithBookings.length,
@@ -2076,5 +2633,940 @@ export const mergeAllPartnerSchedules = async (req, res) => {
             message: "Error merging schedules",
             error: error.message,
         });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Change Driver / Vehicle for an ENTIRE B2C route.
+// When a driver becomes sick or a vehicle breaks down, the B2C Partner can swap
+// the assignment. The change cascades to EVERY place the old driver/vehicle was
+// used on this route: schedule trip-times, the route record, future generated
+// daily trips, and active commuter bookings (so the new driver starts/completes
+// those booked trips). Completed / in-progress / cancelled trips are left alone.
+// ---------------------------------------------------------------------------
+
+// Active booking statuses whose driver/vehicle should be re-pointed.
+const ACTIVE_BOOKING_STATUSES = ["PENDING", "CONFIRMED", "ACCEPTED", "IN_PROGRESS"];
+// Daily-trip statuses that are still re-assignable (not yet started/finished).
+const REASSIGNABLE_TRIP_STATUSES = ["Scheduled", "Delayed"];
+
+// Resolve a driver (B2CPartnerDriver OR the partner acting as Self) into a
+// normalized info object used for snapshots & notifications.
+const resolveDriverInfo = async (driverId, partnerId) => {
+    if (!driverId) return null;
+    const driverIdStr = driverId.toString();
+    const partnerIdStr = partnerId.toString();
+
+    if (driverIdStr === partnerIdStr) {
+        const partner = await User.findById(partnerId).select("fullName name whatsappNumber phone profileImage");
+        if (!partner) return null;
+        return {
+            _id: partner._id,
+            name: partner.fullName || partner.name || "Self",
+            phoneNumber: partner.whatsappNumber || partner.phone || "",
+            licenseNumber: null,
+            image: partner.profileImage || null,
+            isSelfDriver: true,
+        };
+    }
+
+    const driver = await B2CPartnerDriver.findOne({ _id: driverId, b2cPartnerId: partnerId })
+        .select("name phoneNumber licenseNumber driverImage");
+    if (!driver) return null;
+    return {
+        _id: driver._id,
+        name: driver.name,
+        phoneNumber: driver.phoneNumber || "",
+        licenseNumber: driver.licenseNumber || null,
+        image: driver.driverImage?.url || null,
+        isSelfDriver: false,
+    };
+};
+
+const setDriverBusy = async (driverId, partnerId) => {
+    if (!driverId) return;
+    if (driverId.toString() === partnerId.toString()) {
+        await User.findByIdAndUpdate(partnerId, {
+            $set: { "selfDriverAvailability.status": "busy", "selfDriverAvailability.lastUpdate": new Date() },
+        });
+    } else {
+        await B2CPartnerDriver.findByIdAndUpdate(driverId, {
+            $set: { availabilityStatus: "busy", lastAvailabilityUpdate: new Date() },
+        });
+    }
+};
+
+// Mark a driver available ONLY if they no longer have any re-assignable trip
+// today or in the future across this partner's fleet.
+const refreshDriverAvailability = async (driverId, partnerId) => {
+    if (!driverId) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const remaining = await B2CPartnerTrip.countDocuments({
+        driverId,
+        status: { $in: REASSIGNABLE_TRIP_STATUSES },
+        tripDate: { $gte: today },
+    });
+    if (remaining > 0) return; // still busy elsewhere
+    if (driverId.toString() === partnerId.toString()) {
+        await User.findByIdAndUpdate(partnerId, {
+            $set: { "selfDriverAvailability.status": "available", "selfDriverAvailability.lastUpdate": new Date() },
+        });
+    } else {
+        await B2CPartnerDriver.findByIdAndUpdate(driverId, {
+            $set: { availabilityStatus: "available", lastAvailabilityUpdate: new Date() },
+        });
+    }
+};
+
+const refreshVehicleAvailability = async (vehicleId) => {
+    if (!vehicleId) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const remaining = await B2CPartnerTrip.countDocuments({
+        vehicleId,
+        status: { $in: REASSIGNABLE_TRIP_STATUSES },
+        tripDate: { $gte: today },
+    });
+    if (remaining > 0) return;
+    await B2CPartnerVehicle.findByIdAndUpdate(vehicleId, {
+        $set: { availabilityStatus: "available", lastAvailabilityUpdate: new Date() },
+    });
+};
+
+export const changeRouteDriver = async (req, res) => {
+    try {
+        const partnerId = req.userId;
+        const { routeId } = req.params;
+        const { oldDriverId, newDriverId } = req.body;
+
+        if (!newDriverId) {
+            return res.status(400).json({ success: false, message: "newDriverId is required" });
+        }
+
+        const route = await B2CPartnerRoute.findOne({ _id: routeId, b2cPartnerId: partnerId });
+        if (!route) {
+            return res.status(404).json({ success: false, message: "Route not found or access denied" });
+        }
+
+        // Validate the new driver belongs to this partner (or is the partner themselves).
+        const newDriverInfo = await resolveDriverInfo(newDriverId, partnerId);
+        if (!newDriverInfo) {
+            return res.status(404).json({ success: false, message: "New driver not found or doesn't belong to you" });
+        }
+
+        const newDriverIdStr = newDriverId.toString();
+        const oldDriverIdStr = oldDriverId ? oldDriverId.toString() : null;
+        // Match helper: a slot is affected if it matches the old driver, OR (when
+        // no old driver is specified) we replace every driver on the route.
+        const matchesOld = (id) => {
+            if (!id) return !oldDriverIdStr; // empty slot only replaced in "replace all" mode
+            if (!oldDriverIdStr) return true;
+            return id.toString() === oldDriverIdStr;
+        };
+
+        // 1) Cascade across all schedules + their trip-times for this route.
+        const schedules = await B2CPartnerSchedule.find({ routeId, b2cPartnerId: partnerId });
+        const scheduleIds = [];
+        for (const schedule of schedules) {
+            scheduleIds.push(schedule._id);
+            let changed = false;
+
+            if (schedule.assignedDriver && matchesOld(schedule.assignedDriver)) {
+                schedule.assignedDriver = newDriverId;
+                changed = true;
+            }
+            (schedule.tripTimes || []).forEach((tt) => {
+                if (matchesOld(tt.assignedDriver)) {
+                    tt.assignedDriver = newDriverId;
+                    changed = true;
+                }
+            });
+
+            if (changed) {
+                schedule.markModified("tripTimes");
+                await schedule.save();
+            }
+        }
+
+        // 2) Cascade on the route record itself.
+        let routeChanged = false;
+        if (route.assignedDriver && matchesOld(route.assignedDriver)) {
+            route.assignedDriver = newDriverId;
+            routeChanged = true;
+        }
+        if (route.assignedDriverId && matchesOld(route.assignedDriverId)) {
+            route.assignedDriverId = newDriverId;
+            routeChanged = true;
+        }
+        if (routeChanged) await route.save();
+
+        // 3) Cascade to future / not-yet-started generated daily trips.
+        const tripFilter = {
+            routeId,
+            b2cPartnerId: partnerId,
+            status: { $in: REASSIGNABLE_TRIP_STATUSES },
+        };
+        if (oldDriverIdStr) tripFilter.driverId = oldDriverId;
+        const tripUpdate = await B2CPartnerTrip.updateMany(tripFilter, {
+            $set: {
+                driverId: newDriverId,
+                "driverInfo.name": newDriverInfo.name,
+                "driverInfo.phoneNumber": newDriverInfo.phoneNumber,
+                "driverInfo.licenseNumber": newDriverInfo.licenseNumber,
+            },
+        });
+
+        // 4) Cascade to active commuter bookings on this route's schedules.
+        //    Outbound and return legs are updated independently so each booked
+        //    trip is served by the freshly-assigned driver.
+        const bookingBase = {
+            linkedSchedule: { $in: scheduleIds },
+            bookingStatus: { $in: ACTIVE_BOOKING_STATUSES },
+        };
+        const driverSnapshot = {
+            driverName: newDriverInfo.name,
+            driverImage: newDriverInfo.image,
+            driverPhoneNumber: newDriverInfo.phoneNumber,
+            isSelfDriver: newDriverInfo.isSelfDriver,
+        };
+
+        const outboundFilter = { ...bookingBase, outboundTripStatus: { $ne: "COMPLETED" } };
+        if (oldDriverIdStr) outboundFilter.outboundDriverId = oldDriverId;
+        await B2CPassengerBooking.updateMany(outboundFilter, {
+            $set: {
+                outboundDriverId: newDriverId,
+                outboundIsSelfDriver: newDriverInfo.isSelfDriver,
+                assignedDriverId: newDriverId,
+                ...driverSnapshot,
+            },
+        });
+
+        const returnFilter = { ...bookingBase, returnTripStatus: { $ne: "COMPLETED" } };
+        if (oldDriverIdStr) returnFilter.returnDriverId = oldDriverId;
+        await B2CPassengerBooking.updateMany(returnFilter, {
+            $set: {
+                returnDriverId: newDriverId,
+                returnIsSelfDriver: newDriverInfo.isSelfDriver,
+            },
+        });
+
+        // 5) Availability bookkeeping + notifications.
+        await setDriverBusy(newDriverId, partnerId);
+        if (oldDriverIdStr && oldDriverIdStr !== newDriverIdStr) {
+            await refreshDriverAvailability(oldDriverId, partnerId);
+        }
+
+        // Notify commuters with active bookings about the driver change (real-time + email).
+        const affectedBookings = await B2CPassengerBooking.find({
+            ...bookingBase,
+        }).select("userId").lean();
+        const commuterIds = [...new Set(affectedBookings.map((b) => b.userId?.toString()).filter(Boolean))];
+        await notifyCommutersOfAssignmentChange({
+            userIds: commuterIds,
+            route,
+            tripLabel: null,
+            changeType: "DRIVER_CHANGED",
+            newLabel: newDriverInfo.name,
+            metadata: { newDriverId },
+        });
+
+        // Notify the newly-assigned driver (and the outgoing driver) — real-time + email.
+        await notifyDriversOfAssignmentChange({
+            partnerId,
+            newDriverId,
+            oldDriverId,
+            route,
+            tripLabel: null,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Driver updated successfully across all schedules, trips and bookings",
+            tripsUpdated: tripUpdate.modifiedCount,
+            newDriver: newDriverInfo,
+        });
+    } catch (error) {
+        console.error("[v0] Error changing route driver:", error.message);
+        return res.status(500).json({ success: false, message: "Failed to change driver", error: error.message });
+    }
+};
+
+export const changeRouteVehicle = async (req, res) => {
+    try {
+        const partnerId = req.userId;
+        const { routeId } = req.params;
+        const { oldVehicleId, newVehicleId } = req.body;
+
+        if (!newVehicleId) {
+            return res.status(400).json({ success: false, message: "newVehicleId is required" });
+        }
+
+        const route = await B2CPartnerRoute.findOne({ _id: routeId, b2cPartnerId: partnerId });
+        if (!route) {
+            return res.status(404).json({ success: false, message: "Route not found or access denied" });
+        }
+
+        const newVehicle = await B2CPartnerVehicle.findOne({ _id: newVehicleId, b2cPartnerId: partnerId })
+            .select("model licensePlate seatingCapacity vehicleType");
+        if (!newVehicle) {
+            return res.status(404).json({ success: false, message: "New vehicle not found or doesn't belong to you" });
+        }
+
+        const newVehicleIdStr = newVehicleId.toString();
+        const oldVehicleIdStr = oldVehicleId ? oldVehicleId.toString() : null;
+        const matchesOld = (id) => {
+            if (!id) return !oldVehicleIdStr;
+            if (!oldVehicleIdStr) return true;
+            return id.toString() === oldVehicleIdStr;
+        };
+
+        // 1) Schedules + trip-times.
+        const schedules = await B2CPartnerSchedule.find({ routeId, b2cPartnerId: partnerId });
+        const scheduleIds = [];
+        for (const schedule of schedules) {
+            scheduleIds.push(schedule._id);
+            let changed = false;
+            if (schedule.assignedVehicle && matchesOld(schedule.assignedVehicle)) {
+                schedule.assignedVehicle = newVehicleId;
+                changed = true;
+            }
+            (schedule.tripTimes || []).forEach((tt) => {
+                if (matchesOld(tt.assignedVehicle)) {
+                    tt.assignedVehicle = newVehicleId;
+                    changed = true;
+                }
+            });
+            if (changed) {
+                schedule.markModified("tripTimes");
+                await schedule.save();
+            }
+        }
+
+        // 2) Route record.
+        if (route.assignedVehicle && matchesOld(route.assignedVehicle)) {
+            route.assignedVehicle = newVehicleId;
+            await route.save();
+        }
+
+        // 3) Future / not-yet-started daily trips (+ snapshot).
+        const tripFilter = {
+            routeId,
+            b2cPartnerId: partnerId,
+            status: { $in: REASSIGNABLE_TRIP_STATUSES },
+        };
+        if (oldVehicleIdStr) tripFilter.vehicleId = oldVehicleId;
+        const tripUpdate = await B2CPartnerTrip.updateMany(tripFilter, {
+            $set: {
+                vehicleId: newVehicleId,
+                "vehicleInfo.model": newVehicle.model,
+                "vehicleInfo.licensePlate": newVehicle.licensePlate,
+                "vehicleInfo.seatingCapacity": newVehicle.seatingCapacity,
+            },
+        });
+
+        // 4) Active commuter bookings (outbound + return legs).
+        const bookingBase = {
+            linkedSchedule: { $in: scheduleIds },
+            bookingStatus: { $in: ACTIVE_BOOKING_STATUSES },
+        };
+        const vehicleSnapshot = {
+            vehicleModel: newVehicle.model,
+            vehiclePlate: newVehicle.licensePlate,
+        };
+
+        const outboundFilter = { ...bookingBase, outboundTripStatus: { $ne: "COMPLETED" } };
+        if (oldVehicleIdStr) outboundFilter.outboundVehicleId = oldVehicleId;
+        await B2CPassengerBooking.updateMany(outboundFilter, {
+            $set: { outboundVehicleId: newVehicleId, ...vehicleSnapshot },
+        });
+
+        const returnFilter = { ...bookingBase, returnTripStatus: { $ne: "COMPLETED" } };
+        if (oldVehicleIdStr) returnFilter.returnVehicleId = oldVehicleId;
+        await B2CPassengerBooking.updateMany(returnFilter, {
+            $set: { returnVehicleId: newVehicleId },
+        });
+
+        // 5) Availability bookkeeping + notifications.
+        await B2CPartnerVehicle.findByIdAndUpdate(newVehicleId, {
+            $set: { availabilityStatus: "busy", lastAvailabilityUpdate: new Date() },
+        });
+        if (oldVehicleIdStr && oldVehicleIdStr !== newVehicleIdStr) {
+            await refreshVehicleAvailability(oldVehicleId);
+        }
+
+        const affectedBookings = await B2CPassengerBooking.find({ ...bookingBase }).select("userId").lean();
+        const newVehicleLabel = `${newVehicle.model} (${newVehicle.licensePlate})`;
+        const commuterIds = [...new Set(affectedBookings.map((b) => b.userId?.toString()).filter(Boolean))];
+        await notifyCommutersOfAssignmentChange({
+            userIds: commuterIds,
+            route,
+            tripLabel: null,
+            changeType: "VEHICLE_CHANGED",
+            newLabel: newVehicleLabel,
+            metadata: { newVehicleId },
+        });
+
+        // Notify every driver currently serving this route about their new vehicle.
+        const servingDriverIds = new Set();
+        if (route.assignedDriver) servingDriverIds.add(route.assignedDriver.toString());
+        if (route.assignedDriverId) servingDriverIds.add(route.assignedDriverId.toString());
+        for (const schedule of schedules) {
+            if (schedule.assignedDriver) servingDriverIds.add(schedule.assignedDriver.toString());
+            (schedule.tripTimes || []).forEach((tt) => {
+                if (tt.assignedDriver) servingDriverIds.add(tt.assignedDriver.toString());
+            });
+        }
+        for (const drvId of servingDriverIds) {
+            await notifyDriversOfAssignmentChange({
+                partnerId,
+                newDriverId: drvId,
+                oldDriverId: null,
+                route,
+                tripLabel: null,
+                vehicleLabel: newVehicleLabel,
+                vehicleOnly: true,
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Vehicle updated successfully across all schedules, trips and bookings",
+            tripsUpdated: tripUpdate.modifiedCount,
+            newVehicle: {
+                _id: newVehicle._id,
+                model: newVehicle.model,
+                licensePlate: newVehicle.licensePlate,
+                seatingCapacity: newVehicle.seatingCapacity,
+                vehicleType: newVehicle.vehicleType,
+            },
+        });
+    } catch (error) {
+        console.error("[v0] Error changing route vehicle:", error.message);
+        return res.status(500).json({ success: false, message: "Failed to change vehicle", error: error.message });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// PER-SCHEDULE-TRIP driver / vehicle change.
+//
+// Unlike changeRouteDriver / changeRouteVehicle (which cascade across the WHOLE
+// route), these target ONE specific trip-time inside ONE schedule. This lets a
+// partner re-assign, say, only the 11:00 AM One-Way trip without touching the
+// 7:00 AM Round Trip that happens to share the same driver/vehicle.
+//
+// Scoping rule: the daily trips & active bookings that belong to a trip-time are
+// matched by that trip-time's start time(s):
+//   • One Way    -> [departureTime]
+//   • Round Trip -> [departureTime (outbound), arrivalTime (return departure)]
+// ---------------------------------------------------------------------------
+
+// Build the list of generated-trip start times that belong to a trip-time.
+// ---------------------------------------------------------------------------
+// Assignment-change notification helpers (shared by the route-level and
+// per-trip change handlers).
+//
+// When a B2C Partner swaps the DRIVER or VEHICLE on a route/trip, three parties
+// must be kept in sync in real time AND by email:
+//   1. Every COMMUTER with an active booking/monthly-pass on the affected leg(s)
+//      — so they know who/what they'll be travelling with.
+//   2. The NEWLY-assigned driver (a B2C_PARTNER_DRIVER user, or the partner if
+//      self-driving) — so they know they now serve this route.
+//   3. The OUTGOING driver — so they know they were removed from this route.
+// ---------------------------------------------------------------------------
+
+// Lightweight inline HTML email wrapper so every assignment email looks
+// consistent without pulling in a templating dependency.
+const buildAssignmentEmailHtml = ({ heading, greetingName, bodyLines }) => {
+    const safe = (v) => (v == null ? "" : String(v));
+    const lines = (bodyLines || [])
+        .map((l) => `<p style="margin:0 0 12px;color:#374151;font-size:15px;line-height:1.6;">${safe(l)}</p>`)
+        .join("");
+    return `
+    <div style="background:#f3f4f6;padding:24px;font-family:Arial,Helvetica,sans-serif;">
+      <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+        <div style="background:#0f766e;padding:20px 24px;">
+          <h1 style="margin:0;color:#ffffff;font-size:18px;">DriveMe</h1>
+        </div>
+        <div style="padding:24px;">
+          <h2 style="margin:0 0 16px;color:#111827;font-size:18px;">${safe(heading)}</h2>
+          <p style="margin:0 0 12px;color:#374151;font-size:15px;">Hi ${safe(greetingName) || "there"},</p>
+          ${lines}
+          <p style="margin:20px 0 0;color:#6b7280;font-size:13px;">This is an automated message from DriveMe. Please do not reply.</p>
+        </div>
+      </div>
+    </div>`;
+};
+
+// Resolve the User account + email for a driver so we can notify them in real
+// time and by email. For a self-driving partner the driverId IS the partner's
+// user id; for a fleet driver we look up the linked B2C_PARTNER_DRIVER user.
+const resolveDriverUserAccount = async (driverId, partnerId) => {
+    if (!driverId) return null;
+    try {
+        if (driverId.toString() === partnerId.toString()) {
+            const partner = await User.findById(partnerId).select("fullName name email");
+            if (!partner) return null;
+            return { userId: partner._id, email: partner.email, name: partner.fullName || partner.name || "Driver" };
+        }
+        // Fleet driver -> linked user account (role B2C_PARTNER_DRIVER).
+        const driverUser = await User.findOne({ driverId, role: "B2C_PARTNER_DRIVER" }).select("fullName name email");
+        // Fall back to the driver record's own email for the email channel.
+        const driverDoc = await B2CPartnerDriver.findById(driverId).select("name email");
+        const email = driverUser?.email || driverDoc?.email || null;
+        const name = driverUser?.fullName || driverUser?.name || driverDoc?.name || "Driver";
+        return { userId: driverUser?._id || null, email, name };
+    } catch (err) {
+        console.error("[v0] resolveDriverUserAccount failed:", err.message);
+        return null;
+    }
+};
+
+// Notify all affected commuters (real-time + email) about a driver/vehicle change.
+const notifyCommutersOfAssignmentChange = async ({ userIds, route, tripLabel, changeType, newLabel, metadata }) => {
+    const isDriver = changeType === "DRIVER_CHANGED";
+    const legPart = tripLabel ? ` (${tripLabel})` : "";
+    const routePart = `${route.fromLocation} → ${route.toLocation}${legPart}`;
+    const title = isDriver ? "Driver Updated for Your Trip" : "Vehicle Updated for Your Trip";
+    const message = isDriver
+        ? `The driver for your ${routePart} trip has been updated to ${newLabel}.`
+        : `The vehicle for your ${routePart} trip has been updated to ${newLabel}.`;
+
+    for (const uid of userIds) {
+        if (!uid) continue;
+        const notification = await createNotification({
+            userId: uid,
+            type: "ASSIGNMENT_UPDATED",
+            title,
+            message,
+            metadata: { routeId: route._id, changeType, ...(metadata || {}) },
+        });
+        sendRealTimeNotification(uid, notification);
+
+        // Email (best-effort, never blocks the response).
+        try {
+            const commuter = await User.findById(uid).select("fullName name email");
+            if (commuter?.email) {
+                const html = buildAssignmentEmailHtml({
+                    heading: title,
+                    greetingName: commuter.fullName || commuter.name,
+                    bodyLines: [
+                        `There has been an update to your monthly pass trip on the <strong>${route.fromLocation} → ${route.toLocation}</strong> route${legPart ? ` for the <strong>${tripLabel}</strong> trip` : ""}.`,
+                        isDriver
+                            ? `Your new driver is <strong>${newLabel}</strong>.`
+                            : `Your new vehicle is <strong>${newLabel}</strong>.`,
+                        "You can view the full updated details anytime in the DriveMe app under your bookings.",
+                    ],
+                });
+                await sendEmail(commuter.email, title, html);
+            }
+        } catch (emailErr) {
+            console.error("[v0] Commuter assignment email failed:", emailErr.message);
+        }
+    }
+};
+
+// Notify the newly-assigned driver and (optionally) the outgoing driver.
+const notifyDriversOfAssignmentChange = async ({ partnerId, newDriverId, oldDriverId, route, tripLabel, vehicleLabel, vehicleOnly = false }) => {
+    const legPart = tripLabel ? ` (${tripLabel})` : "";
+    const routePart = `${route.fromLocation} → ${route.toLocation}${legPart}`;
+
+    // --- Newly assigned driver (or the serving driver, for a vehicle-only change) ---
+    try {
+        const newAcct = await resolveDriverUserAccount(newDriverId, partnerId);
+        if (newAcct) {
+            const title = vehicleOnly ? "Vehicle Updated for Your Route" : "New Route Assignment";
+            const message = vehicleOnly
+                ? `The vehicle for your ${routePart} trip has been updated${vehicleLabel ? ` to ${vehicleLabel}` : ""}.`
+                : `You have been assigned to the ${routePart} trip.${vehicleLabel ? ` Vehicle: ${vehicleLabel}.` : ""}`;
+            if (newAcct.userId) {
+                const notification = await createNotification({
+                    userId: newAcct.userId,
+                    type: "ASSIGNMENT_UPDATED",
+                    title,
+                    message,
+                    metadata: { routeId: route._id, changeType: vehicleOnly ? "VEHICLE_CHANGED" : "DRIVER_ASSIGNED" },
+                });
+                sendRealTimeNotification(newAcct.userId.toString(), notification);
+            }
+            if (newAcct.email) {
+                const html = buildAssignmentEmailHtml({
+                    heading: title,
+                    greetingName: newAcct.name,
+                    bodyLines: vehicleOnly
+                        ? [
+                            `The vehicle for the <strong>${route.fromLocation} → ${route.toLocation}</strong> route${legPart ? ` (<strong>${tripLabel}</strong> trip)` : ""} you operate has been updated${vehicleLabel ? ` to <strong>${vehicleLabel}</strong>` : ""}.`,
+                            "Please check the DriveMe app for the full schedule and passenger details.",
+                        ]
+                        : [
+                            `You have been assigned to operate the <strong>${route.fromLocation} → ${route.toLocation}</strong> route${legPart ? ` for the <strong>${tripLabel}</strong> trip` : ""}.`,
+                            vehicleLabel ? `Assigned vehicle: <strong>${vehicleLabel}</strong>.` : "",
+                            "Please check the DriveMe app for the full schedule and passenger details.",
+                        ].filter(Boolean),
+                });
+                await sendEmail(newAcct.email, title, html);
+            }
+        }
+    } catch (err) {
+        console.error("[v0] New driver assignment notification failed:", err.message);
+    }
+
+    // --- Outgoing driver (only if it actually changed) ---
+    try {
+        if (oldDriverId && oldDriverId.toString() !== newDriverId.toString()) {
+            const oldAcct = await resolveDriverUserAccount(oldDriverId, partnerId);
+            if (oldAcct) {
+                const title = "Route Assignment Removed";
+                const message = `You have been unassigned from the ${routePart} trip.`;
+                if (oldAcct.userId) {
+                    const notification = await createNotification({
+                        userId: oldAcct.userId,
+                        type: "ASSIGNMENT_UPDATED",
+                        title,
+                        message,
+                        metadata: { routeId: route._id, changeType: "DRIVER_UNASSIGNED" },
+                    });
+                    sendRealTimeNotification(oldAcct.userId.toString(), notification);
+                }
+                if (oldAcct.email) {
+                    const html = buildAssignmentEmailHtml({
+                        heading: title,
+                        greetingName: oldAcct.name,
+                        bodyLines: [
+                            `You have been unassigned from the <strong>${route.fromLocation} → ${route.toLocation}</strong> route${legPart ? ` for the <strong>${tripLabel}</strong> trip` : ""}.`,
+                            "No further action is needed. Check the DriveMe app for your current assignments.",
+                        ],
+                    });
+                    await sendEmail(oldAcct.email, title, html);
+                }
+            }
+        }
+    } catch (err) {
+        console.error("[v0] Outgoing driver notification failed:", err.message);
+    }
+};
+
+export const changeTripDriver = async (req, res) => {
+    try {
+        const partnerId = req.userId;
+        const { routeId } = req.params;
+        const { scheduleId, tripTimeId, newDriverId } = req.body;
+        // Which leg of a Round Trip is being changed: "outbound" (jaane / From→To)
+        // or "return" (aane / To→From). One-Way trips only have an outbound leg.
+        const legRaw = (req.body.leg || "outbound").toString().toLowerCase();
+
+        if (!scheduleId || !tripTimeId || !newDriverId) {
+            return res.status(400).json({ success: false, message: "scheduleId, tripTimeId and newDriverId are required" });
+        }
+
+        const route = await B2CPartnerRoute.findOne({ _id: routeId, b2cPartnerId: partnerId });
+        if (!route) {
+            return res.status(404).json({ success: false, message: "Route not found or access denied" });
+        }
+
+        const newDriverInfo = await resolveDriverInfo(newDriverId, partnerId);
+        if (!newDriverInfo) {
+            return res.status(404).json({ success: false, message: "New driver not found or doesn't belong to you" });
+        }
+
+        const schedule = await B2CPartnerSchedule.findOne({ _id: scheduleId, routeId, b2cPartnerId: partnerId });
+        if (!schedule) {
+            return res.status(404).json({ success: false, message: "Schedule not found or access denied" });
+        }
+
+        const tripTime = schedule.tripTimes.id(tripTimeId);
+        if (!tripTime) {
+            return res.status(404).json({ success: false, message: "Trip time not found in this schedule" });
+        }
+
+        const isRoundTrip = tripTime.tripType === "Round Trip" && !!tripTime.arrivalTime;
+        const isReturnLeg = isRoundTrip && legRaw === "return";
+
+        // The driver currently serving this specific leg (leg-level → outbound →
+        // schedule-level fallback). Freeing the right old driver matters for
+        // availability bookkeeping.
+        const oldDriverId = isReturnLeg
+            ? (tripTime.returnDriver || tripTime.assignedDriver || schedule.assignedDriver || null)
+            : (tripTime.assignedDriver || schedule.assignedDriver || null);
+        const oldDriverIdStr = oldDriverId ? oldDriverId.toString() : null;
+        const newDriverIdStr = newDriverId.toString();
+
+        // 1) Update ONLY the selected leg of this trip-time. The other leg (and
+        //    every other trip-time on the route) is left untouched.
+        if (isReturnLeg) {
+            tripTime.returnDriver = newDriverId;
+        } else {
+            tripTime.assignedDriver = newDriverId;
+        }
+        schedule.markModified("tripTimes");
+        await schedule.save();
+
+        // 2) Cascade to future / not-yet-started generated daily trips for THIS leg only.
+        //    Round Trips generate two trips: outbound (startTime = departureTime,
+        //    direction "outbound") and return (startTime = arrivalTime, direction
+        //    "return"). Scope the update so changing one leg doesn't hit the other.
+        const tripFilter = {
+            routeId,
+            b2cPartnerId: partnerId,
+            status: { $in: REASSIGNABLE_TRIP_STATUSES },
+        };
+        if (isRoundTrip) {
+            tripFilter.startTime = isReturnLeg ? tripTime.arrivalTime : tripTime.departureTime;
+            tripFilter.direction = isReturnLeg ? "return" : "outbound";
+        } else {
+            tripFilter.startTime = tripTime.departureTime;
+        }
+        const tripUpdate = await B2CPartnerTrip.updateMany(tripFilter, {
+            $set: {
+                driverId: newDriverId,
+                "driverInfo.name": newDriverInfo.name,
+                "driverInfo.phoneNumber": newDriverInfo.phoneNumber,
+                "driverInfo.licenseNumber": newDriverInfo.licenseNumber,
+            },
+        });
+
+        // 3) Cascade to active commuter bookings linked to THIS schedule's matching leg only.
+        const bookingBase = {
+            linkedSchedule: scheduleId,
+            bookingStatus: { $in: ACTIVE_BOOKING_STATUSES },
+        };
+        const driverSnapshot = {
+            driverName: newDriverInfo.name,
+            driverImage: newDriverInfo.image,
+            driverPhoneNumber: newDriverInfo.phoneNumber,
+            isSelfDriver: newDriverInfo.isSelfDriver,
+        };
+
+        if (isReturnLeg) {
+            // Return leg matches the return departure (arrivalTime).
+            await B2CPassengerBooking.updateMany(
+                { ...bookingBase, returnTripTime: tripTime.arrivalTime, returnTripStatus: { $ne: "COMPLETED" } },
+                {
+                    $set: {
+                        returnDriverId: newDriverId,
+                        returnIsSelfDriver: newDriverInfo.isSelfDriver,
+                    },
+                },
+            );
+        } else {
+            // Outbound leg matches the trip-time's departure time.
+            await B2CPassengerBooking.updateMany(
+                { ...bookingBase, outboundTripTime: tripTime.departureTime, outboundTripStatus: { $ne: "COMPLETED" } },
+                {
+                    $set: {
+                        outboundDriverId: newDriverId,
+                        outboundIsSelfDriver: newDriverInfo.isSelfDriver,
+                        assignedDriverId: newDriverId,
+                        ...driverSnapshot,
+                    },
+                },
+            );
+        }
+
+        // 4) Availability bookkeeping. Old driver only freed if no other re-assignable trip remains.
+        await setDriverBusy(newDriverId, partnerId);
+        if (oldDriverIdStr && oldDriverIdStr !== newDriverIdStr) {
+            await refreshDriverAvailability(oldDriverId, partnerId);
+        }
+
+        // 5) Notify commuters on the affected leg — real-time + email.
+        const legBookingMatch = isReturnLeg
+            ? { returnTripTime: tripTime.arrivalTime }
+            : { outboundTripTime: tripTime.departureTime };
+        const affectedBookings = await B2CPassengerBooking.find({ ...bookingBase, ...legBookingMatch })
+            .select("userId")
+            .lean();
+        const legWord = isReturnLeg ? " (Return)" : (isRoundTrip ? " (Onward)" : "");
+        const tripLabel =
+            (isRoundTrip
+                ? `${tripTime.departureTime} → ${tripTime.arrivalTime}`
+                : tripTime.departureTime) + legWord;
+        const commuterIds = [...new Set(affectedBookings.map((b) => b.userId?.toString()).filter(Boolean))];
+        await notifyCommutersOfAssignmentChange({
+            userIds: commuterIds,
+            route,
+            tripLabel,
+            changeType: "DRIVER_CHANGED",
+            newLabel: newDriverInfo.name,
+            metadata: { scheduleId, tripTimeId, newDriverId, leg: isReturnLeg ? "return" : "outbound" },
+        });
+
+        // 6) Notify the newly-assigned driver (and the outgoing driver) — real-time + email.
+        await notifyDriversOfAssignmentChange({
+            partnerId,
+            newDriverId,
+            oldDriverId,
+            route,
+            tripLabel,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `Driver updated for the ${isReturnLeg ? "return" : "onward"} leg of this schedule trip.`,
+            tripsUpdated: tripUpdate.modifiedCount,
+            newDriver: newDriverInfo,
+        });
+    } catch (error) {
+        console.error("[v0] Error changing trip driver:", error.message);
+        return res.status(500).json({ success: false, message: "Failed to change driver", error: error.message });
+    }
+};
+
+export const changeTripVehicle = async (req, res) => {
+    try {
+        const partnerId = req.userId;
+        const { routeId } = req.params;
+        const { scheduleId, tripTimeId, newVehicleId } = req.body;
+        // Which leg of a Round Trip is being changed: "outbound" or "return".
+        const legRaw = (req.body.leg || "outbound").toString().toLowerCase();
+
+        if (!scheduleId || !tripTimeId || !newVehicleId) {
+            return res.status(400).json({ success: false, message: "scheduleId, tripTimeId and newVehicleId are required" });
+        }
+
+        const route = await B2CPartnerRoute.findOne({ _id: routeId, b2cPartnerId: partnerId });
+        if (!route) {
+            return res.status(404).json({ success: false, message: "Route not found or access denied" });
+        }
+
+        const newVehicle = await B2CPartnerVehicle.findOne({ _id: newVehicleId, b2cPartnerId: partnerId })
+            .select("model licensePlate seatingCapacity vehicleType");
+        if (!newVehicle) {
+            return res.status(404).json({ success: false, message: "New vehicle not found or doesn't belong to you" });
+        }
+
+        const schedule = await B2CPartnerSchedule.findOne({ _id: scheduleId, routeId, b2cPartnerId: partnerId });
+        if (!schedule) {
+            return res.status(404).json({ success: false, message: "Schedule not found or access denied" });
+        }
+
+        const tripTime = schedule.tripTimes.id(tripTimeId);
+        if (!tripTime) {
+            return res.status(404).json({ success: false, message: "Trip time not found in this schedule" });
+        }
+
+        const isRoundTrip = tripTime.tripType === "Round Trip" && !!tripTime.arrivalTime;
+        const isReturnLeg = isRoundTrip && legRaw === "return";
+
+        const oldVehicleId = isReturnLeg
+            ? (tripTime.returnVehicle || tripTime.assignedVehicle || schedule.assignedVehicle || null)
+            : (tripTime.assignedVehicle || schedule.assignedVehicle || null);
+        const oldVehicleIdStr = oldVehicleId ? oldVehicleId.toString() : null;
+        const newVehicleIdStr = newVehicleId.toString();
+
+        // 1) Update ONLY the selected leg of this trip-time.
+        if (isReturnLeg) {
+            tripTime.returnVehicle = newVehicleId;
+        } else {
+            tripTime.assignedVehicle = newVehicleId;
+        }
+        schedule.markModified("tripTimes");
+        await schedule.save();
+
+        // 2) Cascade to future / not-yet-started generated daily trips for THIS leg only.
+        const tripFilter = {
+            routeId,
+            b2cPartnerId: partnerId,
+            status: { $in: REASSIGNABLE_TRIP_STATUSES },
+        };
+        if (isRoundTrip) {
+            tripFilter.startTime = isReturnLeg ? tripTime.arrivalTime : tripTime.departureTime;
+            tripFilter.direction = isReturnLeg ? "return" : "outbound";
+        } else {
+            tripFilter.startTime = tripTime.departureTime;
+        }
+        const tripUpdate = await B2CPartnerTrip.updateMany(tripFilter, {
+            $set: {
+                vehicleId: newVehicleId,
+                "vehicleInfo.model": newVehicle.model,
+                "vehicleInfo.licensePlate": newVehicle.licensePlate,
+                "vehicleInfo.seatingCapacity": newVehicle.seatingCapacity,
+            },
+        });
+
+        // 3) Cascade to active commuter bookings linked to THIS schedule's matching leg only.
+        const bookingBase = {
+            linkedSchedule: scheduleId,
+            bookingStatus: { $in: ACTIVE_BOOKING_STATUSES },
+        };
+        const vehicleSnapshot = {
+            vehicleModel: newVehicle.model,
+            vehiclePlate: newVehicle.licensePlate,
+        };
+
+        if (isReturnLeg) {
+            await B2CPassengerBooking.updateMany(
+                { ...bookingBase, returnTripTime: tripTime.arrivalTime, returnTripStatus: { $ne: "COMPLETED" } },
+                { $set: { returnVehicleId: newVehicleId } },
+            );
+        } else {
+            await B2CPassengerBooking.updateMany(
+                { ...bookingBase, outboundTripTime: tripTime.departureTime, outboundTripStatus: { $ne: "COMPLETED" } },
+                { $set: { outboundVehicleId: newVehicleId, ...vehicleSnapshot } },
+            );
+        }
+
+        // 4) Availability bookkeeping.
+        await B2CPartnerVehicle.findByIdAndUpdate(newVehicleId, {
+            $set: { availabilityStatus: "busy", lastAvailabilityUpdate: new Date() },
+        });
+        if (oldVehicleIdStr && oldVehicleIdStr !== newVehicleIdStr) {
+            await refreshVehicleAvailability(oldVehicleId);
+        }
+
+        // 5) Notify commuters on the affected leg — real-time + email.
+        const legBookingMatch = isReturnLeg
+            ? { returnTripTime: tripTime.arrivalTime }
+            : { outboundTripTime: tripTime.departureTime };
+        const affectedBookings = await B2CPassengerBooking.find({ ...bookingBase, ...legBookingMatch })
+            .select("userId")
+            .lean();
+        const legWord = isReturnLeg ? " (Return)" : (isRoundTrip ? " (Onward)" : "");
+        const tripLabel =
+            (isRoundTrip
+                ? `${tripTime.departureTime} → ${tripTime.arrivalTime}`
+                : tripTime.departureTime) + legWord;
+        const newVehicleLabel = `${newVehicle.model} (${newVehicle.licensePlate})`;
+        const commuterIds = [...new Set(affectedBookings.map((b) => b.userId?.toString()).filter(Boolean))];
+        await notifyCommutersOfAssignmentChange({
+            userIds: commuterIds,
+            route,
+            tripLabel,
+            changeType: "VEHICLE_CHANGED",
+            newLabel: newVehicleLabel,
+            metadata: { scheduleId, tripTimeId, newVehicleId, leg: isReturnLeg ? "return" : "outbound" },
+        });
+
+        // 6) Notify the driver currently serving this leg about their new vehicle.
+        const servingDriverId = isReturnLeg
+            ? (tripTime.returnDriver || tripTime.assignedDriver || schedule.assignedDriver || null)
+            : (tripTime.assignedDriver || schedule.assignedDriver || null);
+        if (servingDriverId) {
+            await notifyDriversOfAssignmentChange({
+                partnerId,
+                newDriverId: servingDriverId,
+                oldDriverId: null,
+                route,
+                tripLabel,
+                vehicleLabel: newVehicleLabel,
+                vehicleOnly: true,
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Vehicle updated for the ${isReturnLeg ? "return" : "onward"} leg of this schedule trip.`,
+            tripsUpdated: tripUpdate.modifiedCount,
+            newVehicle: {
+                _id: newVehicle._id,
+                model: newVehicle.model,
+                licensePlate: newVehicle.licensePlate,
+                seatingCapacity: newVehicle.seatingCapacity,
+                vehicleType: newVehicle.vehicleType,
+            },
+        });
+    } catch (error) {
+        console.error("[v0] Error changing trip vehicle:", error.message);
+        return res.status(500).json({ success: false, message: "Failed to change vehicle", error: error.message });
     }
 };

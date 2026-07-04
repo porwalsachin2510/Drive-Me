@@ -1,21 +1,24 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import "./AdminUsers.css"
-import AdminUserDetailsModal from "./AdminUserDetailsModal/AdminUserDetailsModal"
+import { useState, useEffect } from "react";
+import "./AdminUsers.css";
+import AdminUserDetailsModal from "./AdminUserDetailsModal/AdminUserDetailsModal";
 import SuspendUserModal from "./SuspendUserModal/SuspendUserModal";
 import ActivateUserModal from "./ActivateUserModal/ActivateUserModal";
-import api from "../../../utils/api"
+import api from "../../../utils/api";
 
 function AdminUsers() {
-  const [activeTab, setActiveTab] = useState("all-users")
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [showDetailsModal, setShowDetailsModal] = useState(false)
-   const [showSuspendModal, setShowSuspendModal] = useState(false);
-   const [showActivateModal, setShowActivateModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("")
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("all-users");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [showActivateModal, setShowActivateModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  // Whether the currently logged-in admin is a super admin. Only a super admin
+  // may suspend/delete another super admin, so this gates those actions in the UI.
+  const [currentIsSuperAdmin, setCurrentIsSuperAdmin] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
     commuters: 0,
@@ -24,34 +27,48 @@ function AdminUsers() {
     b2bPartners: 0,
     drivers: 0,
     activeUsers: 0,
-    suspendedUsers: 0
-  })
+    suspendedUsers: 0,
+  });
 
   useEffect(() => {
-    fetchUsers()
-    fetchUserStats()
-  }, [])
+    fetchUsers();
+    fetchUserStats();
+    fetchMyPermissions();
+  }, []);
+
+  const fetchMyPermissions = async () => {
+    try {
+      const response = await api.get("/admin/admins/my-permissions");
+      const isSuper =
+        response.data?.permissions?.isSuperAdmin === true ||
+        response.data?.admin?.isPrimaryOwner === true;
+      setCurrentIsSuperAdmin(isSuper);
+    } catch (error) {
+      console.error("Error fetching my permissions:", error);
+      setCurrentIsSuperAdmin(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
-      setLoading(true)
-      const response = await api.get('/admin/users')
-      setUsers(response.data.users)
+      setLoading(true);
+      const response = await api.get("/admin/users");
+      setUsers(response.data.users);
     } catch (error) {
-      console.error("Error fetching users:", error)
+      console.error("Error fetching users:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchUserStats = async () => {
     try {
-      const response = await api.get('/admin/users/stats')
-      setStats(response.data.stats)
+      const response = await api.get("/admin/users/stats");
+      setStats(response.data.stats);
     } catch (error) {
-      console.error("Error fetching user stats:", error)
+      console.error("Error fetching user stats:", error);
     }
-  }
+  };
 
   const handleUserAction = async (userId, action, data = {}) => {
     try {
@@ -87,81 +104,105 @@ function AdminUsers() {
     }
   };
 
-   const handleSuspendClick = (user) => {
-     setSelectedUser(user);
-     setShowSuspendModal(true);
-   };
+  const handleSuspendClick = (user) => {
+    setSelectedUser(user);
+    setShowSuspendModal(true);
+  };
 
-   const handleActivateClick = (user) => {
-     setSelectedUser(user);
-     setShowActivateModal(true);
-   };
+  const handleActivateClick = (user) => {
+    setSelectedUser(user);
+    setShowActivateModal(true);
+  };
 
-   const handleSuspendConfirm = async (suspensionData) => {
-     if (selectedUser) {
-       await handleUserAction(selectedUser._id, "suspend", suspensionData);
-     }
-   };
+  const handleSuspendConfirm = async (suspensionData) => {
+    if (selectedUser) {
+      await handleUserAction(selectedUser._id, "suspend", suspensionData);
+    }
+  };
 
-   const handleActivateConfirm = async (activationData) => {
-     if (selectedUser) {
-       await handleUserAction(selectedUser._id, "activate", activationData);
-     }
-   };
+  const handleActivateConfirm = async (activationData) => {
+    if (selectedUser) {
+      await handleUserAction(selectedUser._id, "activate", activationData);
+    }
+  };
 
-  const filteredUsers = users.filter(user => 
-    user.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.role?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredUsers = users.filter(
+    (user) =>
+      user.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.role?.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   const getUsersByTab = () => {
     switch (activeTab) {
       case "all-users":
-        return filteredUsers
+        return filteredUsers;
       case "commuters":
-        return filteredUsers.filter(user => user.role === "COMMUTER")
+        return filteredUsers.filter((user) => user.role === "COMMUTER");
       case "corporates":
-        return filteredUsers.filter(user => user.role === "CORPORATE")
+        return filteredUsers.filter((user) => user.role === "CORPORATE");
       case "b2c-partners":
-        return filteredUsers.filter(user => user.role === "B2C_PARTNER")
+        return filteredUsers.filter((user) => user.role === "B2C_PARTNER");
       case "b2b-partners":
-        return filteredUsers.filter(user => user.role === "B2B_PARTNER")
+        return filteredUsers.filter((user) => user.role === "B2B_PARTNER");
       case "drivers":
-        return filteredUsers.filter(user => 
-          user.role === "B2B_PARTNER_DRIVER" || user.role === "CORPORATE_DRIVER"
-        )
+        return filteredUsers.filter(
+          (user) =>
+            user.role === "B2B_PARTNER_DRIVER" ||
+            user.role === "CORPORATE_DRIVER",
+        );
       case "suspended":
-        return filteredUsers.filter(user => user.status === "SUSPENDED")
+        return filteredUsers.filter((user) => user.status === "SUSPENDED");
       default:
-        return filteredUsers
+        return filteredUsers;
     }
-  }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "ACTIVE": return "#28a745"
-      case "SUSPENDED": return "#dc3545"
-      case "PENDING": return "#ffc107"
-      default: return "#6c757d"
+      case "ACTIVE":
+        return "#28a745";
+      case "SUSPENDED":
+        return "#dc3545";
+      case "PENDING":
+        return "#ffc107";
+      default:
+        return "#6c757d";
     }
-  }
+  };
 
-  const getRoleColor = (role) => {
-    switch (role) {
-      case "COMMUTER": return "#007bff"
-      case "CORPORATE": return "#6f42c1"
-      case "B2C_PARTNER": return "#28a745"
-      case "B2B_PARTNER": return "#fd7e14"
+  // A super admin is stored with role "ADMIN" + adminPermissions.isSuperAdmin = true.
+  const isSuperAdmin = (user) =>
+    user?.role === "ADMIN" && user?.adminPermissions?.isSuperAdmin === true;
+
+  // Human-readable role label shown on the badge.
+  const getRoleLabel = (user) => {
+    if (isSuperAdmin(user)) return "SUPER ADMIN";
+    return (user.role || "").replace(/_/g, " ");
+  };
+
+  const getRoleColor = (user) => {
+    if (isSuperAdmin(user)) return "#dc3545";
+    switch (user?.role) {
+      case "COMMUTER":
+        return "#007bff";
+      case "CORPORATE":
+        return "#6f42c1";
+      case "B2C_PARTNER":
+        return "#28a745";
+      case "B2B_PARTNER":
+        return "#fd7e14";
       case "B2B_PARTNER_DRIVER":
-      case "CORPORATE_DRIVER": return "#20c997"
-      default: return "#6c757d"
+      case "CORPORATE_DRIVER":
+        return "#20c997";
+      default:
+        return "#6c757d";
     }
-  }
+  };
 
   const getInitial = (name) => {
-    return name ? name.charAt(0).toUpperCase() : "U"
-  }
+    return name ? name.charAt(0).toUpperCase() : "U";
+  };
 
   const tabData = [
     { id: "all-users", label: "All Users", count: stats.totalUsers },
@@ -171,7 +212,7 @@ function AdminUsers() {
     { id: "b2b-partners", label: "B2B Partners", count: stats.b2bPartners },
     { id: "drivers", label: "Drivers", count: stats.drivers },
     { id: "suspended", label: "Suspended", count: stats.suspendedUsers },
-  ]
+  ];
 
   return (
     <div className="admin-users">
@@ -234,7 +275,7 @@ function AdminUsers() {
                   ) : (
                     <div
                       className="avatar-circle"
-                      style={{ backgroundColor: getRoleColor(user.role) }}
+                      style={{ backgroundColor: getRoleColor(user) }}
                     >
                       {getInitial(user.fullName)}
                     </div>
@@ -252,9 +293,9 @@ function AdminUsers() {
                   <div className="user-badges">
                     <span
                       className="role-badge"
-                      style={{ backgroundColor: getRoleColor(user.role) }}
+                      style={{ backgroundColor: getRoleColor(user) }}
                     >
-                      {user.role.replace("_", " ")}
+                      {getRoleLabel(user)}
                     </span>
                     <span
                       className="status-badge"
@@ -308,35 +349,49 @@ function AdminUsers() {
                     View Details
                   </button>
 
-                  {user.status === "ACTIVE" ? (
-                    <button
-                      className="suspend-btn"
-                      onClick={() => handleSuspendClick(user)}
-                    >
-                      Suspend
-                    </button>
-                  ) : user.status === "SUSPENDED" ? (
-                    <button
-                      className="activate-btn"
-                      onClick={() => handleActivateClick(user)}
-                    >
-                      Activate
-                    </button>
-                  ) : (
-                    <button
-                      className="activate-btn"
-                      onClick={() => handleActivateClick(user)}
-                    >
-                      Activate
-                    </button>
-                  )}
+                  {(() => {
+                    // A super admin can only be suspended/deleted by another
+                    // super admin. Hide those actions from everyone else so the
+                    // platform's top-level owner account stays protected.
+                    const targetIsSuperAdmin = isSuperAdmin(user);
+                    const canManageThisUser =
+                      !targetIsSuperAdmin || currentIsSuperAdmin;
 
-                  <button
-                    className="delete-btn"
-                    onClick={() => handleUserAction(user._id, "delete")}
-                  >
-                    Delete
-                  </button>
+                    if (!canManageThisUser) {
+                      return (
+                        <span className="protected-account-note">
+                          Protected account
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <>
+                        {user.status === "ACTIVE" ? (
+                          <button
+                            className="suspend-btn"
+                            onClick={() => handleSuspendClick(user)}
+                          >
+                            Suspend
+                          </button>
+                        ) : (
+                          <button
+                            className="activate-btn"
+                            onClick={() => handleActivateClick(user)}
+                          >
+                            Activate
+                          </button>
+                        )}
+
+                        <button
+                          className="delete-btn"
+                          onClick={() => handleUserAction(user._id, "delete")}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
@@ -352,6 +407,10 @@ function AdminUsers() {
             setSelectedUser(null);
           }}
           onUpdate={fetchUsers}
+          onActivate={async (userId, message) => {
+            await handleUserAction(userId, "activate", { message });
+            setShowDetailsModal(false);
+          }}
         />
       )}
 
@@ -380,4 +439,4 @@ function AdminUsers() {
   );
 }
 
-export default AdminUsers
+export default AdminUsers;

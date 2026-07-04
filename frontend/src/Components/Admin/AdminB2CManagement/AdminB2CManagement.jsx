@@ -1,18 +1,20 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import "./AdminB2CManagement.css"
-import AdminServiceProviders from "./AdminServiceProviders/AdminServiceProviders"
-import AdminRouteManagement from "./AdminRouteManagement/AdminRouteManagement"
-import AdminTagsBadges from "./AdminTagsBadges/AdminTagsBadges"
-import AdminPassengersReassignments from "./AdminPassengersReassignments/AdminPassengersReassignments"
-import AdminEarningsPayments from "./AdminEarningsPayments/AdminEarningsPayments"
-import api from "../../../utils/api"
+import { getActiveCurrency } from "../../../config/localeConfig";
+import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import "./AdminB2CManagement.css";
+import AdminServiceProviders from "./AdminServiceProviders/AdminServiceProviders";
+import AdminRouteManagement from "./AdminRouteManagement/AdminRouteManagement";
+import AdminTagsBadges from "./AdminTagsBadges/AdminTagsBadges";
+import AdminPassengersReassignments from "./AdminPassengersReassignments/AdminPassengersReassignments";
+import AdminEarningsPayments from "./AdminEarningsPayments/AdminEarningsPayments";
+import api from "../../../utils/api";
 
 function AdminB2CManagement() {
-  const [activeSubTab, setActiveSubTab] = useState("service-providers")
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [activeSubTab, setActiveSubTab] = useState("service-providers");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [stats, setStats] = useState({
     totalProviders: 0,
     activeProviders: 0,
@@ -21,22 +23,29 @@ function AdminB2CManagement() {
     totalBookings: 0,
     totalRevenue: 0,
     totalPassengerBookings: 0,
-    activeTags: 0
-  })
+    activeTags: 0,
+  });
 
+  // The admin's selected display currency (drives all amount conversions).
+  const activeCurrency = useSelector((state) => state.locale?.currency);
+
+  // Re-fetch whenever the admin switches the dashboard currency so the headline
+  // figures come back converted into the newly selected currency — no manual
+  // page refresh required (mirrors the other admin tabs).
   useEffect(() => {
-    fetchB2CStats()
-  }, [])
+    fetchB2CStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCurrency]);
 
   const fetchB2CStats = async () => {
     try {
-      setLoading(true)
-      setError(null)
-      
-      const response = await api.get('/admin/b2c/stats')
-      
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get("/admin/b2c/stats");
+
       if (response.data.success) {
-        const data = response.data.stats
+        const data = response.data.stats;
         setStats({
           totalProviders: data.providers?.totalProviders || 0,
           activeProviders: data.providers?.activeProviders || 0,
@@ -45,14 +54,14 @@ function AdminB2CManagement() {
           totalBookings: data.bookings?.totalBookings || 0,
           totalRevenue: data.bookings?.totalRevenue || 0,
           totalPassengerBookings: data.passengers?.totalPassengerBookings || 0,
-          activeTags: data.tags?.activeTags || 0
-        })
+          activeTags: data.tags?.activeTags || 0,
+        });
       } else {
-        throw new Error(response.data.message || 'Failed to fetch B2C stats')
+        throw new Error(response.data.message || "Failed to fetch B2C stats");
       }
     } catch (error) {
-      console.error("Error fetching B2C stats:", error)
-      setError(error.message || 'Failed to load B2C statistics')
+      console.error("Error fetching B2C stats:", error);
+      setError(error.message || "Failed to load B2C statistics");
       // Set fallback data
       setStats({
         totalProviders: 0,
@@ -62,46 +71,58 @@ function AdminB2CManagement() {
         totalBookings: 0,
         totalRevenue: 0,
         totalPassengerBookings: 0,
-        activeTags: 0
-      })
+        activeTags: 0,
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED',
+    return new Intl.NumberFormat("en-AE", {
+      style: "currency",
+      currency: activeCurrency || getActiveCurrency(),
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   const subTabs = [
-    { id: "service-providers", label: "🚌 Service Providers", count: stats.activeProviders },
-    { id: "route-management", label: "🛣️ Route Management", count: stats.activeRoutes },
+    {
+      id: "service-providers",
+      label: "🚌 Service Providers",
+      count: stats.activeProviders,
+    },
+    {
+      id: "route-management",
+      label: "🛣️ Route Management",
+      count: stats.activeRoutes,
+    },
     { id: "tags-badges", label: "🏷️ Tags & Badges", count: stats.activeTags },
-    { id: "passengers", label: "👥 Passengers & Bookings", count: stats.totalPassengerBookings },
+    {
+      id: "passengers",
+      label: "👥 Passengers & Bookings",
+      count: stats.totalPassengerBookings,
+    },
     { id: "earnings", label: "💰 Earnings & Payments", count: null },
-  ]
+  ];
 
   const renderSubContent = () => {
     switch (activeSubTab) {
       case "service-providers":
-        return <AdminServiceProviders />
+        return <AdminServiceProviders />;
       case "route-management":
-        return <AdminRouteManagement />
+        return <AdminRouteManagement />;
       case "tags-badges":
-        return <AdminTagsBadges />
+        return <AdminTagsBadges />;
       case "passengers":
-        return <AdminPassengersReassignments />
+        return <AdminPassengersReassignments />;
       case "earnings":
-        return <AdminEarningsPayments />
+        return <AdminEarningsPayments />;
       default:
-        return <AdminServiceProviders />
+        return <AdminServiceProviders />;
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -111,7 +132,7 @@ function AdminB2CManagement() {
           <p>Loading B2C Management...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -149,10 +170,11 @@ function AdminB2CManagement() {
             B2C Management Console
           </h2>
           <p className="ad-dash-b2c-description">
-            Comprehensive control over providers, routes, passengers, and B2C financials.
+            Comprehensive control over providers, routes, passengers, and B2C
+            financials.
           </p>
         </div>
-        
+
         <div className="ad-dash-b2c-stats">
           <div className="stat-item">
             <div className="stat-icon">👥</div>
@@ -166,12 +188,16 @@ function AdminB2CManagement() {
           </div>
           <div className="stat-item">
             <div className="stat-icon">🎫</div>
-            <span className="stat-number">{stats.totalBookings.toLocaleString()}</span>
+            <span className="stat-number">
+              {stats.totalBookings.toLocaleString()}
+            </span>
             <span className="stat-label">Total Bookings</span>
           </div>
           <div className="stat-item">
             <div className="stat-icon">💰</div>
-            <span className="stat-number">{formatCurrency(stats.totalRevenue)}</span>
+            <span className="stat-number">
+              {formatCurrency(stats.totalRevenue)}
+            </span>
             <span className="stat-label">Total Revenue</span>
           </div>
         </div>
@@ -192,11 +218,9 @@ function AdminB2CManagement() {
         ))}
       </div>
 
-      <div className="ad-dash-b2c-content">
-        {renderSubContent()}
-      </div>
+      <div className="ad-dash-b2c-content">{renderSubContent()}</div>
     </div>
-  )
+  );
 }
 
-export default AdminB2CManagement
+export default AdminB2CManagement;

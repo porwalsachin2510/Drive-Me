@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -24,6 +25,8 @@ import PaymentOptionsComparison from "../../../Components/Corporate/PaymentOptio
 import LoadingSpinner from "../../../Components/LoadingSpinner/LoadingSpinner";
 import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
+import ManagedActivityLog from "../../../Components/Corporate/ManagedActivityLog/ManagedActivityLog";
+import ManagedServiceBrief from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBrief";
 import { syncNegotiationCommission } from "../../../services/corporateOperationsAPI";
 import "./CorporateContractDetails.css";
 
@@ -376,7 +379,7 @@ const CorporateContractDetails = () => {
           contractId: contract._id,
           paymentMethod,
           paymentType,
-          currency: contract.financials?.currency || "AED",
+          currency: contract.financials?.currency || getActiveCurrency(),
         }),
       ).unwrap();
 
@@ -584,6 +587,23 @@ const CorporateContractDetails = () => {
             </div>
           </div>
 
+          {/* Managed Services: the corporate fills in its operations brief here.
+              This is the "Managed Service Brief" form (work locations & shifts,
+              route/coverage requests, employee roster, SLA and messaging) that
+              the B2B partner then executes on the corporate's behalf. */}
+          {contract.serviceMode === "MANAGED" && (
+            <div className="drivemego-corporate-contract-section">
+              <ManagedServiceBrief contractId={contract._id} mode="corporate" />
+            </div>
+          )}
+
+          {/* Managed Services: operations performed by the B2B partner on behalf of corporate */}
+          {contract.serviceMode === "MANAGED" && (
+            <div className="drivemego-corporate-contract-section">
+              <ManagedActivityLog contractId={contract._id} />
+            </div>
+          )}
+
           {/* Contract Document */}
           {contract.contractDocument?.url && (
             <div className="drivemego-corporate-contract-section">
@@ -775,14 +795,27 @@ const CorporateContractDetails = () => {
               <div className="drivemego-financial-item">
                 <span className="drivemego-label">Total Amount:</span>
                 <span className="drivemego-value">
-                  {contract.financials?.currency || "AED"}{" "}
+                  {contract.financials?.currency || getActiveCurrency()}{" "}
                   {contract.financials?.totalAmount?.toFixed(2) || "0.00"}
                 </span>
               </div>
+
+              {contract.serviceMode === "MANAGED" && (
+                <div className="drivemego-financial-item">
+                  <span className="drivemego-label">
+                    Partner Management / Service Charge:
+                  </span>
+                  <span className="drivemego-value">
+                    {contract.financials?.currency || getActiveCurrency()}{" "}
+                    {contract.financials?.serviceCharge?.toFixed(2) || "0.00"}
+                  </span>
+                </div>
+              )}
+
               <div className="drivemego-financial-item">
                 <span className="drivemego-label">Advance Payment (50%):</span>
                 <span className="drivemego-value">
-                  {contract.financials?.currency || "AED"}{" "}
+                  {contract.financials?.currency || getActiveCurrency()}{" "}
                   {contract.financials?.advancePayment?.amount?.toFixed(2) ||
                     "0.00"}
                   {contract.financials?.advancePayment?.paidAt && " ✓ Paid"}
@@ -794,7 +827,7 @@ const CorporateContractDetails = () => {
                     Remaining Amount (50%):
                   </span>
                   <span className="drivemego-value">
-                    {contract.financials?.currency || "AED"}{" "}
+                    {contract.financials?.currency || getActiveCurrency()}{" "}
                     {contract.financials?.remainingAmount?.toFixed(2) || "0.00"}
                     {contract.financials?.finalPayment?.paidAt && " ✓ Paid"}
                   </span>
@@ -803,7 +836,7 @@ const CorporateContractDetails = () => {
               <div className="drivemego-financial-item">
                 <span className="drivemego-label">Security Deposit:</span>
                 <span className="drivemego-value">
-                  {contract.financials?.currency || "AED"}{" "}
+                  {contract.financials?.currency || getActiveCurrency()}{" "}
                   {contract.financials?.securityDeposit?.amount?.toFixed(2) ||
                     "0.00"}
                   {contract.financials?.securityDeposit?.paidAt && " ✓ Paid"}
@@ -863,7 +896,7 @@ const CorporateContractDetails = () => {
                     <div className="drivemego-financial-item">
                       <span className="drivemego-label">Original Price:</span>
                       <span className="drivemego-value">
-                        {contract.financials?.currency || "AED"}{" "}
+                        {contract.financials?.currency || getActiveCurrency()}{" "}
                         {contract.negotiationCommission.originalPrice?.toFixed(
                           2,
                         ) || "0.00"}
@@ -874,14 +907,14 @@ const CorporateContractDetails = () => {
                         Price After Negotiation:
                       </span>
                       <span className="drivemego-value">
-                        {contract.financials?.currency || "AED"}{" "}
+                        {contract.financials?.currency || getActiveCurrency()}{" "}
                         {contract.financials?.totalAmount?.toFixed(2) || "0.00"}
                       </span>
                     </div>
                     <div className="drivemego-financial-item drivemego-highlight-savings">
                       <span className="drivemego-label">Your Savings:</span>
                       <span className="drivemego-value drivemego-savings-value">
-                        {contract.financials?.currency || "AED"}{" "}
+                        {contract.financials?.currency || getActiveCurrency()}{" "}
                         {contract.negotiationCommission.priceSavings?.toFixed(
                           2,
                         ) || "0.00"}
@@ -900,7 +933,7 @@ const CorporateContractDetails = () => {
                         Negotiation Commission:
                       </span>
                       <span className="drivemego-value">
-                        {contract.financials?.currency || "AED"}{" "}
+                        {contract.financials?.currency || getActiveCurrency()}{" "}
                         {contract.negotiationCommission.adminCommission?.toFixed(
                           2,
                         ) || "0.00"}
@@ -1187,7 +1220,7 @@ const CorporateContractDetails = () => {
             contract.status === "PENDING_PAYMENT") && (
             <PaymentScheduleSection
               contractId={contract._id}
-              currency={contract.quotationId?.currency || "AED"}
+              currency={contract.quotationId?.currency || getActiveCurrency()}
               contract={contract}
             />
           )}

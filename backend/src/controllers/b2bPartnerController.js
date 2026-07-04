@@ -8,6 +8,7 @@ import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
 import Trip from "../models/Trip.js"
 import EMIPayment from "../models/EMIPayment.js"
 import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js"
+import { getEffectiveCountry, getCountryCurrency } from "../Config/localizationConfig.js"
 
 // Get B2B Partner Overview
 export const getB2BPartnerOverview = async (req, res) => {
@@ -42,8 +43,12 @@ export const getB2BPartnerOverview = async (req, res) => {
             .filter(c => c.status === 'ACTIVE')
             .reduce((sum, contract) => sum + (contract.financials?.totalAmount || 0), 0)
 
-        // Get currency from the first active contract or default to AED
-        const currency = contracts.find(c => c.financials?.currency)?.financials?.currency || 'AED'
+        // Currency must follow the partner's registered country (identity-locked
+        // earner), not a hard-coded 'AED'. A Kuwait partner with no contracts yet
+        // must still see KWD. A contract's own currency wins when one exists.
+        const partner = await User.findById(userId).select('country countryCode role adminPermissions')
+        const partnerCurrency = getCountryCurrency(getEffectiveCountry(partner))
+        const currency = contracts.find(c => c.financials?.currency)?.financials?.currency || partnerCurrency
 
         // Calculate monthly revenue / expense / profit data for charts (real data)
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -277,8 +282,11 @@ export const getB2BPartnerAnalytics = async (req, res) => {
 
         const periodContracts = contracts.filter(c => new Date(c.createdAt) >= startDate)
 
-        // Get currency from contracts
-        const currency = contracts.find(c => c.financials?.currency)?.financials?.currency || 'AED'
+        // Currency follows the partner's registered country, falling back from
+        // any contract's own currency (never a hard-coded 'AED').
+        const partner = await User.findById(userId).select('country countryCode role adminPermissions')
+        const partnerCurrency = getCountryCurrency(getEffectiveCountry(partner))
+        const currency = contracts.find(c => c.financials?.currency)?.financials?.currency || partnerCurrency
 
         const analytics = {
             revenue: {

@@ -50,7 +50,11 @@ const userSchema = new mongoose.Schema(
         country: {
             type: String,
             enum: ["UAE", "KW", "SA", "BH", "OM", "QA"],
-            default: "UAE",
+            // Platform base country (see PLATFORM_BASE_COUNTRY / DEFAULT_COUNTRY
+            // in localizationConfig.js). The real country is resolved & stamped
+            // at registration; this default is only a last-resort fallback and
+            // must match the platform base, NOT a hard-coded "UAE".
+            default: "KW",
         },
         level: {
             type: String,
@@ -63,7 +67,7 @@ const userSchema = new mongoose.Schema(
         },
         countryCode: {
             type: String,
-            default: "+971", // Default to UAE
+            default: "+965", // Platform base (Kuwait); real value comes from the form
         },
         status: {
             type: String,
@@ -113,6 +117,28 @@ const userSchema = new mongoose.Schema(
         nationality: {
             type: String,
             default: null,
+        },
+
+        // ===== Cash cancellation accountability (mirror of the identity ledger) =====
+        // Kept on the user for fast guard checks at booking time. The durable
+        // source of truth is CancellationLedger (survives account deletion) and is
+        // anchored to the user's registration identity (phone/email), NOT to any
+        // government ID.
+        cashCancellation: {
+            // Money the commuter owes for cash bookings cancelled past the free
+            // window. Blocks new bookings until cleared.
+            outstandingDue: { type: Number, default: 0 },
+            // Informational count of penalized cash cancellations (does NOT cap
+            // anything — a commuter may cancel any number of times, they are just
+            // charged each time).
+            strikeCount: { type: Number, default: 0 },
+            // When true, commuter cannot make ANY new booking until due cleared.
+            isBlocked: { type: Boolean, default: false },
+            blockedReason: { type: String, default: null },
+            // The identity key in the durable ledger this mirror belongs to.
+            identityKey: { type: String, default: null },
+            currency: { type: String, default: "KWD" },
+            lastUpdatedAt: { type: Date, default: null },
         },
         // Corporate specific
         tradeLicense: {

@@ -1,33 +1,34 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import B2B_BarChart from "../B2B_Common/B2B_BarChart/B2B_BarChart"
-import B2B_LineChart from "../B2B_Common/B2B_LineChart/B2B_LineChart"
-import "./b2b_analytics.css"
-import api from "../../../utils/api"
+import { getActiveCurrency } from "../../../config/localeConfig";
+import { useState, useEffect, useCallback } from "react";
+import B2B_BarChart from "../B2B_Common/B2B_BarChart/B2B_BarChart";
+import B2B_LineChart from "../B2B_Common/B2B_LineChart/B2B_LineChart";
+import "./b2b_analytics.css";
+import api from "../../../utils/api";
 
 function B2B_Analytics() {
-  const [analytics, setAnalytics] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState("monthly")
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState("monthly");
 
   const fetchAnalyticsData = useCallback(async () => {
     try {
-      setLoading(true)
-      const response = await api.get('/b2b-partner/analytics', {
-        params: { period }
-      })
-      setAnalytics(response.data.data.analytics)
+      setLoading(true);
+      const response = await api.get("/b2b-partner/analytics", {
+        params: { period },
+      });
+      setAnalytics(response.data.data.analytics);
     } catch (error) {
-      console.error("Error fetching analytics data:", error)
+      console.error("Error fetching analytics data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [period])
+  }, [period]);
 
   useEffect(() => {
-    fetchAnalyticsData()
-  }, [fetchAnalyticsData])
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
 
   if (loading) {
     return (
@@ -49,17 +50,19 @@ function B2B_Analytics() {
     );
   }
 
+  const currency = analytics.revenue?.currency || getActiveCurrency();
+
   // Use real chart data from backend analytics
   const revenueChartData = analytics.revenue?.chartData || {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
     revenue: [0, 0, 0, 0, 0, 0],
     profit: [0, 0, 0, 0, 0, 0],
-  }
+  };
 
   const contractsChartData = analytics.contracts?.chartData || {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
     data: [0, 0, 0, 0, 0, 0],
-  }
+  };
 
   return (
     <div className="drivemego-b2b_analytics-analytics">
@@ -91,8 +94,7 @@ function B2B_Analytics() {
               Total Revenue
             </p>
             <p className="drivemego-b2b_analytics-metric-value">
-              {analytics.revenue?.total?.toLocaleString() || 0}{" "}
-              {analytics.revenue?.currency || "AED"}
+              {analytics.revenue?.total?.toLocaleString() || 0} {currency}
             </p>
             <p className="drivemego-b2b_analytics-metric-change">
               {analytics.revenue?.growth || "+0%"}
@@ -142,11 +144,11 @@ function B2B_Analytics() {
       <div className="drivemego-b2b_analytics-charts-section">
         <div className="drivemego-b2b_analytics-chart-container">
           <h3>Revenue & Profit Trend</h3>
-          <B2B_BarChart data={revenueChartData} />
+          <B2B_BarChart data={revenueChartData} currency={currency} />
         </div>
         <div className="drivemego-b2b_analytics-chart-container">
           <h3>Contracts Trend</h3>
-          <B2B_LineChart data={contractsChartData} />
+          <B2B_LineChart data={contractsChartData} currency={currency} />
         </div>
       </div>
 
@@ -191,4 +193,4 @@ function B2B_Analytics() {
   );
 }
 
-export default B2B_Analytics
+export default B2B_Analytics;

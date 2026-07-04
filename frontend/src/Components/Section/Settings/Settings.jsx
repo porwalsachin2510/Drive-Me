@@ -3,14 +3,17 @@
 import { useState, useEffect } from "react";
 import "./settings.css";
 import api from "../../../utils/api";
+import { useLocale } from "../../../hooks/useLocale";
+import { getCurrencyOptions } from "../../../config/localeConfig";
 
 export default function Settings() {
+  const { currency: localeCurrency } = useLocale();
   const [profileData, setProfileData] = useState({
     fullName: "",
     email: "",
     phone: "",
     language: "en",
-    currency: "KWD"
+    currency: localeCurrency
   });
   
   const [preferences, setPreferences] = useState({
@@ -207,12 +210,11 @@ export default function Settings() {
                 }
                 className="drivemego-cst-form-select"
               >
-                <option value="KWD">Kuwaiti Dinar (KWD)</option>
-                <option value="AED">UAE Dirham (AED)</option>
-                <option value="SAR">Saudi Riyal (SAR)</option>
-                <option value="BHD">Bahraini Dinar (BHD)</option>
-                <option value="OMR">Omani Rial (OMR)</option>
-                <option value="QAR">Qatari Riyal (QAR)</option>
+                {getCurrencyOptions().map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

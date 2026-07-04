@@ -5,9 +5,11 @@ import BookingModal from "../BookingModal/BookingModal";
 import RoleRestrictionModal from "../RoleRestrictionModal/RoleRestrictionModal";
 import { normalizeTime } from "../../utils/helperutility";
 import { storeNavigationState } from "../../utils/loginRedirect";
+import { useLocale } from "../../hooks/useLocale";
 import "./featuredroutes.css";
 
 const FeaturedRoutes = ({ routes, loading }) => {
+  const { currency: localeCurrency } = useLocale();
   const [filters, setFilters] = useState({
     location: "",
     rating: "Any Rating",
@@ -70,6 +72,41 @@ const FeaturedRoutes = ({ routes, loading }) => {
   // };
   // END: FORMAT DATE
 
+  // Parse "7:30 AM" style strings to minutes for sorting trip times.
+  const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr || timeStr === "N/A") return Infinity;
+    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!match) return Infinity;
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const period = match[3]?.toUpperCase();
+    if (period === "PM" && hours !== 12) hours += 12;
+    else if (period === "AM" && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
+
+  // Distinct, time-sorted departure times for a route. Round-trip tripTimes
+  // contribute both their outbound and return leg times so every boardable time
+  // is shown.
+  const getRouteTripTimes = (route) => {
+    const times = new Set();
+    const source =
+      route.tripTimes && route.tripTimes.length > 0
+        ? route.tripTimes
+        : route.upcomingTrips || [];
+    source.forEach((trip) => {
+      if (trip.departureTime) times.add(trip.departureTime);
+      if (trip.tripType === "Round Trip") {
+        if (trip.returnDepartureTime) times.add(trip.returnDepartureTime);
+        else if (trip.arrivalTime) times.add(trip.arrivalTime);
+      }
+      if (!trip.departureTime && trip.time) times.add(trip.time);
+    });
+    return Array.from(times).sort(
+      (a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b),
+    );
+  };
+
   // START: CALCULATE DAYS OF WEEK FREQUENCY
   const getDaysFrequency = (daysArray) => {
     if (!daysArray || daysArray.length === 0) return "5 Days/Week";
@@ -82,7 +119,7 @@ const FeaturedRoutes = ({ routes, loading }) => {
     // If route already has monthlyPrice, use it
     if (route.monthlyPrice && route.monthlyPrice !== "N/A") {
       return typeof route.monthlyPrice === "number"
-        ? `${route.monthlyPrice.toFixed(2)} ${route.pricing?.currency || "KWD"}`
+        ? `${route.monthlyPrice.toFixed(2)} ${route.pricing?.currency || localeCurrency}`
         : route.monthlyPrice;
     }
 
@@ -98,7 +135,7 @@ const FeaturedRoutes = ({ routes, loading }) => {
 
     // Monthly price = one-way price * travel days per month
     const monthlyPrice = parseFloat(oneWayPrice) * travelDaysPerMonth;
-    const currency = route.pricing?.currency || "KWD";
+    const currency = route.pricing?.currency || localeCurrency;
     return `${monthlyPrice.toFixed(2)} ${currency}`;
   };
   // END: CALCULATE MONTHLY PRICE FROM ONE-WAY PRICE
@@ -381,58 +418,41 @@ const FeaturedRoutes = ({ routes, loading }) => {
                       Trip Times
                     </label>
                     <div className="drivemego-featuredroutes-trip-times">
-                      {route.tripTimes && route.tripTimes.length > 0 ? (
-                        route.tripTimes.slice(0, 3).map((trip, idx) => (
-                          <span
-                            key={idx}
-                            className="drivemego-featuredroutes-trip-time-badge"
-                          >
-                            {trip.departureTime || trip.time || "N/A"}
+                      {(() => {
+                        const allTimes = getRouteTripTimes(route);
+                        if (allTimes.length > 0) {
+                          return (
+                            <>
+                              {allTimes.slice(0, 3).map((time, idx) => (
+                                <span
+                                  key={idx}
+                                  className="drivemego-featuredroutes-trip-time-badge"
+                                >
+                                  {normalizeTime(time)}
+                                </span>
+                              ))}
+                              {allTimes.length > 3 && (
+                                <span className="drivemego-featuredroutes-more-times">
+                                  +{allTimes.length - 3} more
+                                </span>
+                              )}
+                            </>
+                          );
+                        }
+                        if (route.departureTime) {
+                          return (
+                            <span className="drivemego-featuredroutes-trip-time-badge">
+                              {normalizeTime(route.departureTime)}
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="drivemego-featuredroutes-no-time">
+                            Click to view times
                           </span>
-                        ))
-                      ) : route.departureTime ? (
-                        <span className="drivemego-featuredroutes-trip-time-badge">
-                          {normalizeTime(route.departureTime)}
-                        </span>
-                      ) : (
-                        <span className="drivemego-featuredroutes-no-time">
-                          Click to view times
-                        </span>
-                      )}
-                      {route.tripTimes && route.tripTimes.length > 3 && (
-                        <span className="drivemego-featuredroutes-more-times">
-                          +{route.tripTimes.length - 3} more
-                        </span>
-                      )}
+                        );
+                      })()}
                     </div>
-                  </div>
-
-                  {/* Timings */}
-                  <div className="drivemego-featuredroutes-featured-detail-group">
-                    <label className="drivemego-featuredroutes-detail-label">
-                      Arrival Time
-                    </label>
-                    <p className="drivemego-featuredroutes-detail-value">
-                      <span className="drivemego-featuredroutes-detail-icon">
-                        Clock
-                      </span>
-                      {route.pickupArrivalTime &&
-                      route.pickupArrivalTime !== "N/A" ? (
-                        <span className="drivemego-featuredroutes-arrival-time">
-                          {normalizeTime(route.pickupArrivalTime)}
-                        </span>
-                      ) : route.tripTimes &&
-                        route.tripTimes.length > 0 &&
-                        route.tripTimes[0].departureTime ? (
-                        <span className="drivemego-featuredroutes-arrival-time">
-                          {normalizeTime(route.tripTimes[0].departureTime)}
-                        </span>
-                      ) : (
-                        <span className="drivemego-featuredroutes-no-time">
-                          See trip details
-                        </span>
-                      )}
-                    </p>
                   </div>
 
                   {/* Pricing */}

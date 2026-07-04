@@ -6,6 +6,63 @@
   min-height: 100vh;
 }
 
+/* Negative balance warning banner */
+.drivemego-wp-negative-balance-warning {
+  background: #fef2f2;
+  border: 2px solid #fca5a5;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.drivemego-wp-warning-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drivemego-wp-warning-content h3 {
+  color: #dc2626;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.drivemego-wp-warning-content p {
+  color: #991b1b;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.drivemego-wp-warning-action-btn {
+  align-self: flex-start;
+  padding: 12px 24px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.drivemego-wp-warning-action-btn:hover {
+  background: #b91c1c;
+}
+
 .drivemego-wp-wallet-header {
   margin-bottom: 32px;
 }
@@ -220,6 +277,44 @@
   color: #6b7280;
 }
 
+.drivemego-wp-transaction-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.drivemego-wp-method-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.drivemego-wp-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.drivemego-wp-no-transactions {
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  padding: 32px 16px;
+}
+
 .drivemego-wp-transaction-amount {
   font-size: 16px;
   font-weight: 600;
@@ -231,6 +326,12 @@
 
 .drivemego-wp-transaction-amount.drivemego-wp-debit {
   color: #ef4444;
+}
+
+/* Neutral = cash pay-on-board fare; does not move the wallet, so it is shown
+   in a muted grey with no +/- sign instead of red/green. */
+.drivemego-wp-transaction-amount.drivemego-wp-neutral {
+  color: #6b7280;
 }
 
 .drivemego-wp-transactions-header {

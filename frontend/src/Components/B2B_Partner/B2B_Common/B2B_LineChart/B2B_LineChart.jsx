@@ -12,9 +12,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { getActiveCurrency } from "../../../../config/localeConfig";
 import "./b2b_linechart.css";
 
-function B2B_LineChart({ data }) {
+function B2B_LineChart({ data, currency }) {
+  const cur = currency || getActiveCurrency();
   const [chartData, setChartData] = useState([]);
   const [isAnimating, setIsAnimating] = useState(true);
 
@@ -48,7 +50,7 @@ function B2B_LineChart({ data }) {
           <p className="drivemego-b2b_linechart-tooltip-label">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }}>
-              {entry.name}: AED {Number(entry.value).toLocaleString()}
+              {entry.name}: {cur} {Number(entry.value).toLocaleString()}
             </p>
           ))}
         </div>
@@ -86,7 +88,7 @@ function B2B_LineChart({ data }) {
                 : `${value}`
             }
             label={{
-              value: "Profit (AED)",
+              value: `Profit (${cur})`,
               angle: -90,
               position: "insideLeft",
               style: { textAnchor: "middle", fill: "#6b7280", fontSize: 12 },

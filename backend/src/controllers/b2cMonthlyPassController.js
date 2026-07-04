@@ -10,8 +10,14 @@ import Transaction from "../models/Transaction.js";
 import CommissionSettings from "../models/CommissionSettings.js";
 import { generatePassCertificate } from "../Services/passCertificateService.js";
 import { sendPassEmail } from "../Services/emailService.js";
-import PaymentGatewayService from "../Services/paymentGatewayService.js";
-import { getPaymentGateway, detectCountryFromCurrency } from "../Config/paymentGateways.js";
+import PaymentGatewayService, { getPaymentGateway, detectCountryFromCurrency } from "../Services/paymentGatewayService.js";
+import { computeRouteSeatAvailability } from "../Services/seatAvailabilityService.js";
+import {
+    sendPassBookedNotification,
+    sendPassActivatedNotification,
+    sendPassCancelledNotification,
+} from "../Services/notificationService.js";
+import { checkBookingEligibility } from "../Services/cashCancellationService.js";
 
 // Helper function to get B2C Partner commission rate
 const getB2CPartnerCommissionRate = async (partnerId) => {
@@ -79,6 +85,21 @@ export const createB2CMonthlyPass = async (req, res) => {
             });
         }
 
+        // ===== CASH CANCELLATION ACCOUNTABILITY GUARD =====
+        // A commuter with an unpaid cash cancellation due (or a negative wallet,
+        // which IS the unpaid due) cannot create a new pass until they clear it.
+        // This is what stops the "book cash -> cancel -> repeat" abuse.
+        const passEligibility = await checkBookingEligibility(passengerId);
+        if (!passEligibility.allowed) {
+            return res.status(403).json({
+                success: false,
+                code: passEligibility.code,
+                outstandingDue: passEligibility.outstandingDue,
+                currency: passEligibility.currency,
+                message: passEligibility.message,
+            });
+        }
+
         // ==================== TRIP TIME VALIDATION ====================
         // A trip time (schedule) must be explicitly selected. The frontend used
         // to silently fall back to the first available trip, allowing a pass to
@@ -94,8 +115,18 @@ export const createB2CMonthlyPass = async (req, res) => {
                     message: "Please select a trip time before booking."
                 });
             }
+            // A commuter can book a ONE-WAY pass on EITHER leg of a route. When the
+            // partner created the trip as a "Round Trip", the frontend splits it into
+            // two selectable one-way legs: the outbound leg (departureTime) and the
+            // return leg, whose departure time is the original trip's arrivalTime
+            // (and/or returnDepartureTime). So the selected outbound time can legitimately
+            // match any of these fields — matching only departureTime wrongly rejected
+            // bookings made on the return leg (e.g. the 10:00 AM return of a 7:00→10:00 trip).
             const outboundExists = schedule.tripTimes.some(
-                (tt) => tt.departureTime === outboundTripTime
+                (tt) =>
+                    tt.departureTime === outboundTripTime ||
+                    tt.arrivalTime === outboundTripTime ||
+                    tt.returnDepartureTime === outboundTripTime
             );
             if (!outboundExists) {
                 return res.status(400).json({
@@ -130,6 +161,48 @@ export const createB2CMonthlyPass = async (req, res) => {
             }
         }
         // ==============================================================
+
+        // ==================== SEAT AVAILABILITY GUARD ====================
+        // Compute live per-trip-leg availability (active passes vs. each leg's
+        // own vehicle capacity) and refuse to oversell. Without this guard two
+        // commuters could each book the final seat on the same trip-leg.
+        try {
+            const { seatAvailability } = await computeRouteSeatAvailability(route);
+
+            // A leg key is `${time}_${direction}`. The selected outbound time may
+            // belong to an outbound OR a return leg (one-way passes can be booked
+            // on either leg), so accept any leg whose TIME matches and that still
+            // has at least the requested number of seats free.
+            const requestedSeats = Number(numberOfSeats) || 1;
+            const legHasSeats = (time) => {
+                if (!time) return true; // nothing to check
+                const matching = Object.entries(seatAvailability).filter(
+                    ([key]) => key.split("_")[0] === time
+                );
+                // If we have no availability record for this leg yet (e.g. brand
+                // new route), allow the booking — capacity is validated elsewhere.
+                if (matching.length === 0) return true;
+                return matching.some(([, info]) => (info.availableSeats || 0) >= requestedSeats);
+            };
+
+            if (!legHasSeats(outboundTripTime)) {
+                return res.status(409).json({
+                    success: false,
+                    message: "This trip time is fully booked. Please choose another time.",
+                });
+            }
+
+            if (passType === "ROUND_TRIP" && !legHasSeats(returnTripTime)) {
+                return res.status(409).json({
+                    success: false,
+                    message: "The selected return trip time is fully booked. Please choose another return time.",
+                });
+            }
+        } catch (seatErr) {
+            console.error("[v0] Seat availability guard error:", seatErr);
+            // Fail open so an unexpected service error does not block all bookings.
+        }
+        // =================================================================
 
         console.log("[v0] Creating B2C Monthly Pass:", {
             passengerId,
@@ -248,9 +321,25 @@ export const createB2CMonthlyPass = async (req, res) => {
         const outboundIsSelfDriver = outboundDriverId ? outboundDriverId.toString() === route.b2cPartnerId.toString() : true;
 
         // Get driver/vehicle for RETURN trip from tripTimes[returnTripTimeIndex]
-        // Fallback hierarchy: tripTime > schedule > route
-        const returnDriverId = returnTripTimeConfig?.assignedDriver || schedule?.assignedDriver || route.assignedDriverId || route.assignedDriver;
-        const returnVehicleId = returnTripTimeConfig?.assignedVehicle || schedule?.assignedVehicle || route.assignedVehicle;
+        // A Round Trip tripTime entry can carry a DEDICATED return-leg driver/vehicle
+        // (returnDriver / returnVehicle). When the return leg is the return portion of
+        // that same Round Trip entry, prefer the dedicated assignment so the partner can
+        // run the outbound (jaane) and return (aane) legs with different drivers/vehicles.
+        // Fallback hierarchy: dedicated returnDriver > tripTime outbound driver > schedule > route
+        const returnIsRoundTripLeg = !!(
+            returnTripTimeConfig &&
+            returnTripTimeConfig.tripType === "Round Trip" &&
+            returnTripTimeConfig.arrivalTime === returnTripTime
+        );
+
+        const returnDriverId =
+            (returnIsRoundTripLeg ? returnTripTimeConfig?.returnDriver : null) ||
+            returnTripTimeConfig?.assignedDriver ||
+            schedule?.assignedDriver || route.assignedDriverId || route.assignedDriver;
+        const returnVehicleId =
+            (returnIsRoundTripLeg ? returnTripTimeConfig?.returnVehicle : null) ||
+            returnTripTimeConfig?.assignedVehicle ||
+            schedule?.assignedVehicle || route.assignedVehicle;
         const returnIsSelfDriver = returnDriverId ? returnDriverId.toString() === route.b2cPartnerId.toString() : true;
 
         console.log("[v0] Driver/Vehicle Assignment from TripTimes:", {
@@ -397,6 +486,77 @@ export const createB2CMonthlyPass = async (req, res) => {
             });
         }
 
+        // ==================== DUPLICATE TRIP-LEG GUARD (runs BEFORE creation) =========
+        // A commuter must never end up on the SAME physical trip twice. Trips are
+        // keyed in the DB by route + date + startTime + direction (NOT by scheduleId
+        // — see the trip lookup later in this function), so a ROUND_TRIP pass whose
+        // 7:00 AM outbound leg is "A -> B" and a separate ONE_WAY pass on that same
+        // 7:00 AM "A -> B" leg resolve to the EXACT SAME B2CPartnerTrip. That makes
+        // the B2C partner see (and start) the same trip twice for the same passenger
+        // and double-charges the commuter.
+        //
+        // We therefore compare each pass as a set of leg signatures
+        // `${time}|${FROM}->${TO}` where FROM/TO are the canonical route endpoints
+        // (which encode direction). This must run BEFORE the pass/booking/trip docs
+        // are created below, and intentionally ignores scheduleId so it catches the
+        // cross-schedule duplicate the partner was seeing.
+        const canonicalLegsFor = ({ type, outTime, retTime, pickup, dropoff }) => {
+            const legs = [];
+            if (type === 'ROUND_TRIP') {
+                if (outTime) legs.push(`${outTime}|${route.fromLocation}->${route.toLocation}`);
+                if (retTime) legs.push(`${retTime}|${route.toLocation}->${route.fromLocation}`);
+            } else {
+                // ONE_WAY: derive direction from the submitted/stored pickup & dropoff.
+                const isReturnDir = dropoff === route.fromLocation || pickup === route.toLocation;
+                const from = isReturnDir ? route.toLocation : route.fromLocation;
+                const to = isReturnDir ? route.fromLocation : route.toLocation;
+                if (outTime) legs.push(`${outTime}|${from}->${to}`);
+            }
+            return legs;
+        };
+
+        const newPassLegs = canonicalLegsFor({
+            type: passType,
+            outTime: outboundTripTime,
+            retTime: returnTripTime,
+            pickup: pickupLocation,
+            dropoff: dropoffLocation
+        });
+
+        // Existing blocking passes: same passenger, same route, still active and
+        // paid/pending, with a validity range overlapping the new pass. scheduleId
+        // is intentionally NOT part of the filter.
+        const overlappingPasses = await B2CMonthlyPass.find({
+            passengerId,
+            routeId,
+            status: { $in: ['ACTIVE', 'SUSPENDED'] },
+            paymentStatus: { $in: ['PAID', 'PENDING'] },
+            startDate: { $lte: endDate },
+            endDate: { $gte: startDate }
+        }).lean();
+
+        for (const existing of overlappingPasses) {
+            const existingLegs = canonicalLegsFor({
+                type: existing.passType,
+                outTime: existing.outboundTripTime,
+                retTime: existing.returnTripTime,
+                pickup: existing.pickupLocation,
+                dropoff: existing.dropoffLocation
+            });
+            const clash = existingLegs.find((leg) => newPassLegs.includes(leg));
+            if (clash) {
+                const [clashTime, clashDirection] = clash.split('|');
+                return res.status(409).json({
+                    success: false,
+                    message: `You already have an active pass for the ${clashTime} (${clashDirection.replace('->', ' → ')}) trip on this route for an overlapping period. You cannot book the same trip twice.`,
+                    error: "DUPLICATE_PASS_LEG",
+                    conflictingPassId: existing._id,
+                    conflictingTripTime: clashTime
+                });
+            }
+        }
+        // ==============================================================================
+
         // ==================== SERVER-SIDE PRICING (AUTHORITATIVE) ====================
         // A monthly pass ALWAYS bills for the route's full weekly availability,
         // regardless of how many days the commuter personally intends to travel.
@@ -427,12 +587,23 @@ export const createB2CMonthlyPass = async (req, res) => {
         const billingDays = ALL_DAYS.filter((d) => normalizedRouteDays.includes(d));
         const routeBillingDays = billingDays.length > 0 ? billingDays : ALL_DAYS;
 
-        // Per-day rate based on pass type (route pricing is stored as a per-day rate).
-        const perDayRate = passType === 'ROUND_TRIP'
+        // FIXED MONTHLY PRICING (AUTHORITATIVE)
+        // The partner sets a fixed price PER MONTH for the route. The commuter is
+        // charged that fixed monthly price multiplied by the number of months in the
+        // pass period — NO matter whether a calendar month has 28, 29, 30 or 31 days,
+        // and regardless of how many travel days fall inside it.
+        const monthlyRate = passType === 'ROUND_TRIP'
+            ? (route.pricing?.monthlyRoundTripPrice ?? route.monthlyRoundTripPrice ?? 0)
+            : (route.pricing?.monthlyOneWayPrice ?? route.monthlyOneWayPrice ?? 0);
+
+        // Legacy per-day rate kept ONLY as a fallback for old routes that were created
+        // before monthly pricing existed (i.e. monthlyRate is 0/unset).
+        const legacyPerDayRate = passType === 'ROUND_TRIP'
             ? (route.pricing?.roundTripPrice ?? route.roundTripPrice ?? 0)
             : (route.pricing?.oneWayPrice ?? route.oneWayPrice ?? 0);
 
-        // Count every operating day within the pass period.
+        // Count every operating day within the pass period (display/info only — the
+        // amount no longer depends on this when monthly pricing is configured).
         const dayNamesIdx = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const billingDaysLower = routeBillingDays.map((d) => d.toLowerCase());
         let computedTravelDays = 0;
@@ -447,23 +618,50 @@ export const createB2CMonthlyPass = async (req, res) => {
             cursor.setDate(cursor.getDate() + 1);
         }
 
+        // Count the number of WHOLE calendar months between startDate and endDate,
+        // mirroring how the end date is built on the client (start + N months - 1 day,
+        // inclusive end-of-day). This makes every "month" a true calendar month
+        // anchored on the start day, so 28/29/30/31-day months all count as 1 month.
+        const countWholeMonths = (start, end) => {
+            let months = 0;
+            while (months < 600) {
+                const candidate = new Date(start);
+                candidate.setMonth(candidate.getMonth() + (months + 1));
+                candidate.setDate(candidate.getDate() - 1);
+                candidate.setHours(23, 59, 59, 999);
+                if (candidate <= end) {
+                    months++;
+                } else {
+                    break;
+                }
+            }
+            return Math.max(1, months);
+        };
+        const computedMonths = countWholeMonths(startDate, endDate);
+
         const safeSeats = Number(numberOfSeats) > 0 ? Number(numberOfSeats) : 1;
-        const computedTotalAmount = Number(
-            (perDayRate * computedTravelDays * safeSeats).toFixed(3)
-        );
+
+        // Primary pricing: fixed monthly price x number of months x seats.
+        // Fallback (legacy routes without monthly price): per-day x travel days x seats.
+        const computedTotalAmount = monthlyRate > 0
+            ? Number((monthlyRate * computedMonths * safeSeats).toFixed(3))
+            : Number((legacyPerDayRate * computedTravelDays * safeSeats).toFixed(3));
 
         // Authoritative values used for the rest of the flow.
         const finalTravelDays = computedTravelDays;
+        const finalMonths = computedMonths;
         const finalSelectedDays = routeBillingDays;
         const finalTotalAmount = computedTotalAmount > 0
             ? computedTotalAmount
             : Number(totalAmount) || 0;
 
-        console.log("[v0] Server-side pricing recompute:", {
+        console.log("[v0] Server-side pricing recompute (monthly):", {
             rawRouteDays,
             routeBillingDays,
             daysPerWeek: routeBillingDays.length,
-            perDayRate,
+            monthlyRate,
+            legacyPerDayRate,
+            computedMonths: finalMonths,
             computedTravelDays: finalTravelDays,
             numberOfSeats: safeSeats,
             clientTotalAmount: totalAmount,
@@ -488,12 +686,15 @@ export const createB2CMonthlyPass = async (req, res) => {
         // the pass / booking / trips so we never leave a half-created booking on failure.
         let commuterWallet = null;
         if (normalizedPaymentMethod === "WALLET") {
-            commuterWallet = await Wallet.findOne({ userId: passengerId });
+            // Pay from the wallet that matches the route's currency. A commuter
+            // in Kuwait can only spend their KWD balance on a KWD route, never a
+            // mismatched AED balance treated as if it were KWD.
+            commuterWallet = await Wallet.findOne({ userId: passengerId, currency: routeCurrency });
 
             if (!commuterWallet) {
                 return res.status(400).json({
                     success: false,
-                    message: "No wallet found. Please add funds to your wallet before paying with wallet balance."
+                    message: `No ${routeCurrency} wallet found. Please add ${routeCurrency} funds to your wallet before paying with wallet balance.`
                 });
             }
 
@@ -530,7 +731,7 @@ export const createB2CMonthlyPass = async (req, res) => {
             returnIsSelfDriver: passType === 'ROUND_TRIP' ? returnIsSelfDriver : false,
             startDate,
             endDate,
-            durationMonths,
+            durationMonths: finalMonths,
             totalAmount: finalTotalAmount,
             currency: routeCurrency,
             selectedDays: finalSelectedDays || [],
@@ -543,6 +744,19 @@ export const createB2CMonthlyPass = async (req, res) => {
         });
 
         await monthlyPass.save();
+
+        // Real-time notifications: confirm to the commuter and alert the B2C
+        // partner (admin gets an auto ADMIN_MONITOR copy). Non-blocking.
+        sendPassBookedNotification(monthlyPass._id).catch((e) =>
+            console.error("[v0] sendPassBookedNotification failed:", e?.message)
+        );
+        // For CASH/WALLET the pass is already PAID at creation, so it is active
+        // immediately — notify activation too. (STRIPE/TAP activate on webhook.)
+        if (monthlyPass.paymentStatus === "PAID") {
+            sendPassActivatedNotification(monthlyPass._id).catch((e) =>
+                console.error("[v0] sendPassActivatedNotification failed:", e?.message)
+            );
+        }
 
         // Update trip seats for the duration
         await updateTripSeats(monthlyPass);
@@ -630,13 +844,24 @@ export const createB2CMonthlyPass = async (req, res) => {
             returnVehicleId: passType === 'ROUND_TRIP' ? returnVehicleId : null,
             returnIsSelfDriver: passType === 'ROUND_TRIP' ? returnIsSelfDriver : false,
             returnTripTime: passType === 'ROUND_TRIP' ? returnTripTime : null,
+            // Denormalized return-leg driver display info (for commuter Track Driver / My Rides)
+            returnDriverName: passType === 'ROUND_TRIP' ? returnDriverName : null,
+            returnDriverImage: passType === 'ROUND_TRIP' ? returnDriverImage : null,
+            returnDriverPhoneNumber: passType === 'ROUND_TRIP' ? returnDriverPhone : null,
             bookingDate: new Date(), // Required field - when booking was made
-            travelDate: new Date(), // Required field - date of travel
+            // Date of travel = the FIRST day of the pass, NOT the booking-creation moment.
+            // Storing `new Date()` here made hoursUntilTravel collapse to ~0 on cancellation,
+            // which forced the most aggressive last-minute tier and broke the admin's
+            // time-based cancellation charges. Anchor it to the pass start date.
+            travelDate: startDate, // Required field - date of (first) travel
             numberOfSeats: 1,
-            paymentAmount: totalAmount,
+            // Use the authoritative server-computed amount (finalTotalAmount) so the booking's
+            // paymentAmount always matches the amount debited from the wallet AND the commission
+            // split (adminCommission + partnerEarnings) which are both derived from finalTotalAmount.
+            paymentAmount: finalTotalAmount,
             currency: routeCurrency,
             paymentMethod: normalizedPaymentMethod,
-            paymentStatus: "PENDING", // All bookings start pending. STRIPE/TAP become COMPLETED on webhook. CASH/WALLET require explicit confirmation.
+            paymentStatus: "PENDING", // All bookings start pending. STRIPE/TAP become COMPLETED on webhook. WALLET becomes COMPLETED right after the wallet is debited below. CASH requires explicit confirmation.
             transactionId: monthlyPass._id.toString(),
             bookingStatus: "CONFIRMED",
             adminCommissionAmount: adminCommission,
@@ -1051,8 +1276,8 @@ export const createB2CMonthlyPass = async (req, res) => {
         // validated above, but we re-check defensively in case it changed concurrently.
         if (normalizedPaymentMethod === "WALLET" && finalTotalAmount > 0) {
             try {
-                // Re-fetch to avoid acting on a stale balance
-                commuterWallet = await Wallet.findOne({ userId: passengerId });
+                // Re-fetch to avoid acting on a stale balance (same currency wallet)
+                commuterWallet = await Wallet.findOne({ userId: passengerId, currency: routeCurrency });
 
                 if (!commuterWallet || (commuterWallet.balance || 0) < finalTotalAmount) {
                     return res.status(400).json({
@@ -1095,10 +1320,27 @@ export const createB2CMonthlyPass = async (req, res) => {
                     }
                 });
 
+                // CRITICAL: the commuter's money is now held by the platform, so the booking is
+                // fully PAID. Mark it COMPLETED so the downstream wallet flows actually run:
+                //   - acceptB2CBooking credits the partner's earnings + the admin's commission
+                //     (its WALLET branch only runs when paymentStatus === "COMPLETED")
+                //   - rejectB2CBooking / cancelBooking refund the commuter and reverse the
+                //     partner earnings + admin commission (all gated on the booking being paid)
+                // Previously this stayed "PENDING", which silently skipped ALL of the above and
+                // left the partner/admin wallets untouched and the commuter without a refund.
+                passengerBooking.paymentStatus = "COMPLETED";
+                await passengerBooking.save();
+
+                // Keep the monthly pass record consistent (it is already "PAID" for WALLET, but
+                // set it defensively in case the model default ever changes).
+                monthlyPass.paymentStatus = "PAID";
+                await monthlyPass.save();
+
                 console.log("[v0] WALLET payment debited from commuter:", {
                     passengerId,
                     amount: finalTotalAmount,
-                    newBalance: commuterWallet.balance
+                    newBalance: commuterWallet.balance,
+                    bookingPaymentStatus: passengerBooking.paymentStatus
                 });
             } catch (walletError) {
                 console.error("[v0] WALLET payment processing failed:", walletError.message);
@@ -1120,8 +1362,8 @@ export const createB2CMonthlyPass = async (req, res) => {
                 //   - Kuwait routes (KWD) -> Tap Payments
                 // and prevents mismatches like a Kuwait booking being charged
                 // through Stripe (or in the wrong currency).
-                const country = detectCountryFromCurrency(routeCurrency); // "UAE" | "KUWAIT"
-                const enforcedGateway = country === "KUWAIT" ? "TAP" : "STRIPE";
+                const country = detectCountryFromCurrency(routeCurrency); // canonical: "UAE" | "KW"
+                const enforcedGateway = getPaymentGateway(country); // "STRIPE" | "TAP"
                 const passenger = await User.findById(passengerId);
 
                 // Create payment session using PaymentGatewayService
@@ -1163,8 +1405,48 @@ export const createB2CMonthlyPass = async (req, res) => {
                 await passengerBooking.save();
             } catch (paymentError) {
                 console.error("[v0] Payment session creation failed:", paymentError.message);
-                monthlyPass.paymentStatus = 'FAILED';
-                await monthlyPass.save();
+
+                // ROLLBACK: the online payment could NOT be initialized (e.g. the
+                // gateway API keys are missing and Tap/Stripe returned 401). Nothing
+                // was actually paid, so we must undo every record created above —
+                // otherwise the commuter keeps seeing a "CONFIRMED" booking in My Rides
+                // and the B2C partner keeps seeing it in Booking Management (and can
+                // even accept/reject it) for a payment that never happened.
+                try {
+                    // 1) Delete the trips that were freshly created for this pass.
+                    const createdTripIds = createdTrips.map((t) => t._id);
+                    if (createdTripIds.length > 0) {
+                        await B2CPartnerTrip.deleteMany({ _id: { $in: createdTripIds } });
+                    }
+
+                    // 2) Restore the seats we reserved on pre-existing trips.
+                    for (const existingTrip of existingTrips) {
+                        await B2CPartnerTrip.findByIdAndUpdate(existingTrip._id, {
+                            $inc: {
+                                bookedSeats: -numberOfSeats,
+                                availableSeats: numberOfSeats,
+                            },
+                        });
+                    }
+
+                    // 3) Remove the passenger booking so it never surfaces anywhere.
+                    await B2CPassengerBooking.findByIdAndDelete(passengerBooking._id);
+
+                    // 4) Remove the monthly pass itself (no payment => no pass).
+                    await B2CMonthlyPass.findByIdAndDelete(monthlyPass._id);
+
+                    console.log("[v0] Rolled back monthly pass after payment-init failure:", {
+                        monthlyPassId: monthlyPass._id?.toString(),
+                        bookingId: passengerBooking._id?.toString(),
+                        deletedCreatedTrips: createdTripIds.length,
+                        restoredExistingTrips: existingTrips.length,
+                    });
+                } catch (rollbackError) {
+                    console.error(
+                        "[v0] Rollback after payment-init failure encountered an error:",
+                        rollbackError.message
+                    );
+                }
 
                 return res.status(400).json({
                     success: false,
@@ -1418,6 +1700,22 @@ export const renewB2CMonthlyPass = async (req, res) => {
             });
         }
 
+        // ===== CASH CANCELLATION ACCOUNTABILITY GUARD =====
+        // Renewing an existing pass is a new paid booking, so it must respect the
+        // same block: a commuter with an unpaid cash-cancellation due / negative
+        // wallet cannot renew until they clear the due.
+        const renewPassengerId = monthlyPass.passengerId || monthlyPass.passenger || monthlyPass.userId;
+        const renewEligibility = await checkBookingEligibility(renewPassengerId);
+        if (!renewEligibility.allowed) {
+            return res.status(403).json({
+                success: false,
+                code: renewEligibility.code,
+                outstandingDue: renewEligibility.outstandingDue,
+                currency: renewEligibility.currency,
+                message: renewEligibility.message,
+            });
+        }
+
         // Calculate new dates
         const newEndDate = new Date(monthlyPass.endDate);
         newEndDate.setMonth(newEndDate.getMonth() + durationMonths);
@@ -1545,6 +1843,11 @@ export const cancelB2CMonthlyPass = async (req, res) => {
 
         // Release reserved seats
         await releaseReservedSeats(monthlyPass);
+
+        // Real-time notify commuter + partner that the pass was cancelled.
+        sendPassCancelledNotification(monthlyPass._id, reason || "").catch((e) =>
+            console.error("[v0] sendPassCancelledNotification failed:", e?.message)
+        );
 
         res.status(200).json({
             success: true,

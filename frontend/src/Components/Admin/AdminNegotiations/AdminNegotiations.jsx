@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useSelector } from "react-redux";
 import { SocketContext } from "../../../context/SocketContext";
@@ -38,6 +39,11 @@ import "./AdminNegotiations.css";
 const AdminNegotiations = () => {
   const { socket } = useContext(SocketContext) || {};
   const { user } = useSelector((state) => state.auth);
+  // Currency the admin chose to view the dashboard in. The backend converts
+  // every negotiation's native amounts into this currency and returns them as
+  // `display*` fields, so the UI just renders with the right symbol/decimals.
+  const activeCurrency = useSelector((state) => state.locale?.currency);
+  const [displayCurrency, setDisplayCurrency] = useState(getActiveCurrency());
   const [negotiations, setNegotiations] = useState([]);
   const [filteredNegotiations, setFilteredNegotiations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +92,7 @@ const AdminNegotiations = () => {
 
       if (response.success) {
         const negList = response.negotiations || [];
+        setDisplayCurrency(response.displayCurrency || getActiveCurrency());
         setNegotiations(negList);
         setFilteredNegotiations(negList);
         calculateStats(negList);
@@ -103,7 +110,7 @@ const AdminNegotiations = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, searchTerm]);
+  }, [statusFilter, searchTerm, activeCurrency]);
 
   useEffect(() => {
     fetchNegotiations();
@@ -125,7 +132,16 @@ const AdminNegotiations = () => {
       setTimeout(() => setMessage({ type: "", text: "" }), 5000);
     };
 
+    // Dedicated live-update event fired by the backend on EVERY negotiation
+    // mutation. Refresh quietly (no banner) so the open modal updates in
+    // real time via the modal-sync effect below.
+    const handleLiveUpdate = (data) => {
+      console.log("[v0] Admin received negotiation_updated:", data);
+      fetchNegotiations();
+    };
+
     // Listen for negotiation-related events
+    socket.on("negotiation_updated", handleLiveUpdate);
     socket.on("negotiation_request", handleNegotiationUpdate);
     socket.on("negotiation_accepted", handleNegotiationUpdate);
     socket.on("negotiation_rejected", handleNegotiationUpdate);
@@ -137,12 +153,25 @@ const AdminNegotiations = () => {
     });
 
     return () => {
+      socket.off("negotiation_updated", handleLiveUpdate);
       socket.off("negotiation_request", handleNegotiationUpdate);
       socket.off("negotiation_accepted", handleNegotiationUpdate);
       socket.off("negotiation_rejected", handleNegotiationUpdate);
       socket.off("negotiation_counter_offer", handleNegotiationUpdate);
     };
   }, [socket, user?._id, fetchNegotiations]);
+
+  // Keep the OPEN modal's negotiation in sync with the freshly fetched list, so
+  // real-time socket refreshes update the timeline/prices live without the admin
+  // having to close and reopen the modal.
+  useEffect(() => {
+    if (!showModal || !selectedNegotiation?._id) return;
+    const fresh = negotiations.find((n) => n._id === selectedNegotiation._id);
+    if (fresh && fresh !== selectedNegotiation) {
+      setSelectedNegotiation((prev) => ({ ...prev, ...fresh }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [negotiations]);
 
   useEffect(() => {
     let filtered = negotiations || [];
@@ -190,23 +219,22 @@ const AdminNegotiations = () => {
       (n) => n.status === "COMPLETED",
     );
 
-    // Calculate commission stats
+    // Sum the backend-converted display amounts so mixed-country (AED + KWD)
+    // negotiations are added together in the admin's chosen currency. Fall back
+    // to native fields only if the display fields are missing.
+    const commissionOf = (n) =>
+      n.displayCommissionAmount ?? n.adminCommissionFromCorporate?.amount ?? 0;
+
     const totalCommissionEarned = completedNegotiations.reduce(
-      (sum, n) => sum + (n.adminCommissionFromCorporate?.amount || 0),
+      (sum, n) => sum + commissionOf(n),
       0,
     );
     const pendingCommission = completedNegotiations
       .filter((n) => n.adminCommissionFromCorporate?.status === "PENDING")
-      .reduce(
-        (sum, n) => sum + (n.adminCommissionFromCorporate?.amount || 0),
-        0,
-      );
+      .reduce((sum, n) => sum + commissionOf(n), 0);
     const paidCommission = completedNegotiations
       .filter((n) => n.adminCommissionFromCorporate?.status === "PAID")
-      .reduce(
-        (sum, n) => sum + (n.adminCommissionFromCorporate?.amount || 0),
-        0,
-      );
+      .reduce((sum, n) => sum + commissionOf(n), 0);
 
     const stats = {
       total: negotiationsList.length,
@@ -215,7 +243,7 @@ const AdminNegotiations = () => {
         .length,
       completed: completedNegotiations.length,
       totalSavings: completedNegotiations.reduce(
-        (sum, n) => sum + (n.priceSaved || 0),
+        (sum, n) => sum + (n.displayPriceSaved ?? n.priceSaved ?? 0),
         0,
       ),
       totalCommissionEarned,
@@ -237,6 +265,33 @@ const AdminNegotiations = () => {
       }
     }
     return negotiation?.originalPrice || 0;
+  };
+
+  // The negotiation can only be COMPLETED once the B2B Partner has ACCEPTED the
+  // admin's latest offer. Rule (kept identical to the backend guard):
+  //   - the B2B Partner's most recent response must be "ACCEPTED"
+  //   - AND the admin must not have sent a new price offer after that acceptance.
+  const isB2BAccepted = (negotiation) => {
+    const responses = Array.isArray(negotiation?.b2bPartnerResponses)
+      ? negotiation.b2bPartnerResponses
+      : [];
+    if (responses.length === 0) return false;
+
+    const latestResponse = [...responses].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
+    )[0];
+    if (!latestResponse || latestResponse.response !== "ACCEPTED") return false;
+
+    const actions = Array.isArray(negotiation?.adminActions)
+      ? negotiation.adminActions
+      : [];
+    const acceptedAt = new Date(latestResponse.timestamp).getTime();
+    const hasLaterOffer = actions.some(
+      (a) =>
+        a.action === "SENT_OFFER" &&
+        new Date(a.timestamp).getTime() > acceptedAt,
+    );
+    return !hasLaterOffer;
   };
 
   const handleViewNegotiation = async (negotiation) => {
@@ -424,8 +479,18 @@ const AdminNegotiations = () => {
     );
   };
 
-  const formatCurrency = (amount, currency = "AED") => {
-    return `${currency} ${(amount || 0).toLocaleString()}`;
+  // Amounts passed here are ALREADY in `displayCurrency` (summary stats use the
+  // backend-converted display* fields). KWD/BHD/OMR are 3-decimal currencies.
+  const formatCurrency = (amount, currency = displayCurrency) => {
+    const decimals = ["KWD", "BHD", "OMR"].includes(
+      (currency || "").toUpperCase(),
+    )
+      ? 3
+      : 2;
+    return `${currency} ${(amount || 0).toLocaleString(undefined, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    })}`;
   };
 
   const formatDate = (date) => {
@@ -996,6 +1061,26 @@ const AdminNegotiations = () => {
                       When B2B Partner agrees, complete the negotiation to
                       update the quotation price.
                     </p>
+                    {/* Gate: only enabled once the B2B Partner has ACCEPTED the
+                        latest offer. Until then, show a clear waiting notice. */}
+                    {isB2BAccepted(selectedNegotiation) ? (
+                      <div className="drivemego-negotiation-complete-ready">
+                        <CheckCircle size={16} />
+                        <span>
+                          B2B Partner has accepted your offer. You can now
+                          complete &amp; update the quotation.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="drivemego-negotiation-complete-waiting">
+                        <Clock size={16} />
+                        <span>
+                          Waiting for the B2B Partner to accept your offer.
+                          &ldquo;Complete &amp; Update Quotation&rdquo; unlocks
+                          once they accept.
+                        </span>
+                      </div>
+                    )}
                     <div className="drivemego-negotiation-form-row">
                       <div className="drivemego-negotiation-form-group">
                         <label>
@@ -1059,7 +1144,16 @@ const AdminNegotiations = () => {
                       <button
                         className="drivemego-negotiation-action-btn drivemego-negotiation-success"
                         onClick={handleCompleteNegotiation}
-                        disabled={actionLoading || !proposedPrice}
+                        disabled={
+                          actionLoading ||
+                          !proposedPrice ||
+                          !isB2BAccepted(selectedNegotiation)
+                        }
+                        title={
+                          !isB2BAccepted(selectedNegotiation)
+                            ? "The B2B Partner must accept your offer before you can complete the negotiation."
+                            : undefined
+                        }
                       >
                         <CheckCircle size={16} />
                         Complete & Update Quotation

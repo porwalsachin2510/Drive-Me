@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -74,7 +75,6 @@ const FleetSearchResults = () => {
     );
   }
 
-
   const toggleVehicleSelection = (fleetOwnerId, vehicleId) => {
     setSelectedVehicles((prev) => {
       const key = `${fleetOwnerId}-${vehicleId}`;
@@ -85,7 +85,7 @@ const FleetSearchResults = () => {
     });
   };
 
-  const formatCurrency = (amount, currency = "AED") => {
+  const formatCurrency = (amount, currency = getActiveCurrency()) => {
     return `${amount?.toLocaleString() || 0} ${currency}`;
   };
 
@@ -97,6 +97,55 @@ const FleetSearchResults = () => {
     if (facilities.musicSystem) icons.push("Music");
     if (facilities.entertainmentScreen) icons.push("Screen");
     return icons;
+  };
+
+  // Goods carriers report cargo capacity (tons), passenger vehicles report seats.
+  const isGoodsVehicle = (vehicle) =>
+    vehicle?.serviceType === "GOODS_CARRIER" ||
+    (!vehicle?.capacity?.seatingCapacity && !!vehicle?.capacity?.cargoCapacity);
+
+  // Build the price shown on a card based on the rental duration the user
+  // actually searched for (daily / weekly / monthly / long-term), so a weekly
+  // search never shows the monthly rate.
+  const getPriceDisplay = (vehicle) => {
+    const pricing = vehicle.pricing || {};
+    const currency = pricing.currency || getActiveCurrency();
+    const duration = userfilters?.rentalDuration || "monthly";
+
+    switch (duration) {
+      case "daily":
+        return {
+          main: `${formatCurrency(pricing.dailyRate, currency)}/day`,
+          detail:
+            pricing.weeklyRate > 0
+              ? `${formatCurrency(pricing.weeklyRate, currency)}/week`
+              : null,
+        };
+      case "weekly":
+        return {
+          main: `${formatCurrency(
+            pricing.weeklyRate > 0 ? pricing.weeklyRate : pricing.dailyRate * 7,
+            currency,
+          )}/week`,
+          detail: `${formatCurrency(pricing.dailyRate, currency)}/day`,
+        };
+      case "long-term":
+        return {
+          main: `${formatCurrency(
+            pricing.yearlyRate > 0
+              ? pricing.yearlyRate
+              : pricing.monthlyRate * 12,
+            currency,
+          )}/year`,
+          detail: `${formatCurrency(pricing.monthlyRate, currency)}/month`,
+        };
+      case "monthly":
+      default:
+        return {
+          main: `${formatCurrency(pricing.monthlyRate, currency)}/month`,
+          detail: `${formatCurrency(pricing.dailyRate, currency)}/day`,
+        };
+    }
   };
 
   const handleViewAll = (result, userfilters) => {
@@ -179,7 +228,11 @@ const FleetSearchResults = () => {
           </div>
           <div className="drivemego-searchresults-search-param">
             <Users size={16} />
-            <span>{searchData.searchParams.minseatsrequired}+ Seats</span>
+            <span>
+              {searchData.searchParams.serviceType === "goods"
+                ? `${searchData.searchParams.minseatsrequired}+ tons`
+                : `${searchData.searchParams.minseatsrequired}+ Seats`}
+            </span>
           </div>
           <div className="drivemego-searchresults-search-param">
             <Calendar size={16} />
@@ -287,7 +340,11 @@ const FleetSearchResults = () => {
                           <div className="drivemego-searchresults-spec-item">
                             <Users size={14} />
                             <span>
-                              {vehicle.capacity.seatingCapacity} Seater
+                              {isGoodsVehicle(vehicle)
+                                ? vehicle.capacity?.cargoCapacity
+                                  ? `${vehicle.capacity.cargoCapacity} tons`
+                                  : "N/A"
+                                : `${vehicle.capacity?.seatingCapacity || 0} Seater`}
                             </span>
                           </div>
                           <div className="drivemego-searchresults-spec-item">
@@ -299,34 +356,13 @@ const FleetSearchResults = () => {
 
                         <div className="drivemego-searchresults-vehicle-price">
                           <span className="drivemego-searchresults-price-amount">
-                            {userfilters?.rentalDuration === "long-term" ? (
-                              <>
-                                {formatCurrency(
-                                  vehicle.pricing.yearlyRate &&
-                                    vehicle.pricing.yearlyRate > 0
-                                    ? vehicle.pricing.yearlyRate
-                                    : vehicle.pricing.monthlyRate * 12,
-                                  vehicle.pricing.currency || "AED",
-                                )}
-                                /year
-                              </>
-                            ) : (
-                              <>
-                                {formatCurrency(
-                                  vehicle.pricing.monthlyRate,
-                                  vehicle.pricing.currency || "AED",
-                                )}
-                                /month
-                              </>
-                            )}
+                            {getPriceDisplay(vehicle).main}
                           </span>
-                          <span className="drivemego-searchresults-price-detail">
-                            {formatCurrency(
-                              vehicle.pricing.dailyRate,
-                              vehicle.pricing.currency || "AED",
-                            )}
-                            /day
-                          </span>
+                          {getPriceDisplay(vehicle).detail && (
+                            <span className="drivemego-searchresults-price-detail">
+                              {getPriceDisplay(vehicle).detail}
+                            </span>
+                          )}
                         </div>
 
                         <div className="drivemego-searchresults-facilities-list">

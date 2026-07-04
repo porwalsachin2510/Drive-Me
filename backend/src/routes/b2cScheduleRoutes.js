@@ -12,7 +12,11 @@ import {
     getTodayTrips,
     createB2CPartnerTrip,
     checkSchedulingConflicts,
-    checkRouteDependencies
+    checkRouteDependencies,
+    changeRouteDriver,
+    changeRouteVehicle,
+    changeTripDriver,
+    changeTripVehicle
 } from "../controllers/b2cScheduleController.js";
 import { verifyToken, checkB2CPartnerRole } from "../middleware/auth.js";
 
@@ -24,6 +28,14 @@ router.delete("/routes/:routeId", verifyToken, checkB2CPartnerRole, deleteB2CPar
 
 // Route Dependency Check (call before deleting to get warning info)
 router.get("/routes/:routeId/dependencies", verifyToken, checkB2CPartnerRole, checkRouteDependencies);
+
+// Change driver / vehicle for an entire route (cascades to schedules, trips, bookings)
+router.put("/routes/:routeId/change-driver", verifyToken, checkB2CPartnerRole, changeRouteDriver);
+router.put("/routes/:routeId/change-vehicle", verifyToken, checkB2CPartnerRole, changeRouteVehicle);
+
+// Change driver / vehicle for a SINGLE schedule trip-time (does not affect other trips)
+router.put("/routes/:routeId/change-trip-driver", verifyToken, checkB2CPartnerRole, changeTripDriver);
+router.put("/routes/:routeId/change-trip-vehicle", verifyToken, checkB2CPartnerRole, changeTripVehicle);
 
 // Scheduling Conflict Check (call before creating route/schedule to validate)
 router.post("/check-conflicts", verifyToken, checkB2CPartnerRole, checkSchedulingConflicts);

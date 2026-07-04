@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -220,7 +221,7 @@ const ContractManagement = () => {
                     Total Amount:
                   </div>
                   <div className="drivemego-contractmanagement-info-value drivemego-contractmanagement-contract-amount">
-                    {contract.financials?.currency || "AED"}{" "}
+                    {contract.financials?.currency || getActiveCurrency()}{" "}
                     {(
                       contract.financials?.totalAmount || contract.totalAmount
                     )?.toFixed(2) || "0.00"}

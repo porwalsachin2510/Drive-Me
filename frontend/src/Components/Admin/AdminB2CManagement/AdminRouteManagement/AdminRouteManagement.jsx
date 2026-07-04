@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency, getCurrencyDecimals } from "../../../../config/localeConfig";
 import { useState, useEffect, useCallback } from "react";
 import "./AdminRouteManagement.css";
 import api from "../../../../utils/api";
@@ -468,13 +469,11 @@ function AdminRouteManagement() {
                         Price
                       </span>
                       <span className="route-management-detail-value">
-                        {route.pricing?.currency || route.currency || "AED"}{" "}
+                        {route.pricing?.currency || route.currency || getActiveCurrency()}{" "}
                         {route.price?.toFixed(
-                          route.pricing?.currency === "KWD" ||
-                            route.pricing?.currency === "BHD" ||
-                            route.pricing?.currency === "OMR"
-                            ? 3
-                            : 2,
+                          getCurrencyDecimals(
+                            route.pricing?.currency || route.currency || getActiveCurrency(),
+                          ),
                         )}
                       </span>
                     </div>

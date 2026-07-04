@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -169,6 +170,13 @@ const B2B_Partner_ContractManagement = () => {
                 </span>
               </div>
 
+              {contract.serviceMode === "MANAGED" && (
+                <div className="b2b-contracts-managed-banner">
+                  Managed Service — you run operations (routes, schedules,
+                  employees, trips, invitations) on behalf of this client.
+                </div>
+              )}
+
               <div className="b2b-contracts-card-body">
                 <div className="b2b-contracts-info-row">
                   <span className="b2b-contracts-label">Corporate Client:</span>
@@ -182,7 +190,7 @@ const B2B_Partner_ContractManagement = () => {
                 <div className="b2b-contracts-info-row">
                   <span className="b2b-contracts-label">Total Amount:</span>
                   <span className="b2b-contracts-value contract-amount">
-                    {contract.financials.currency || "AED"}{" "}
+                    {contract.financials.currency || getActiveCurrency()}{" "}
                     {contract.financials?.totalAmount?.toFixed(2) || "0.00"}
                   </span>
                 </div>
@@ -206,6 +214,22 @@ const B2B_Partner_ContractManagement = () => {
                 <button className="b2b-contracts-view-btn">
                   View Details →
                 </button>
+
+                {contract.status === "ACTIVE" &&
+                  contract.serviceMode === "MANAGED" && (
+                    <button
+                      className="b2b-contracts-manage-ops-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/b2b-partner/managed-operations", {
+                          state: { contractId: contract._id },
+                        });
+                      }}
+                    >
+                      Manage Operations
+                    </button>
+                  )}
+                
                 {contract.status === "ACTIVE" && (
                   <button
                     className="b2b-contracts-vehicles-btn"

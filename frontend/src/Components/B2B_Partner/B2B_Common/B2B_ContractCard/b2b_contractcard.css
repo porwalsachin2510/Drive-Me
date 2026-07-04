@@ -1,3 +1,23 @@
+drivemego-b2b_contractcard-managed-btn {
+  background: #2c47e0 !important;
+  color: #fff !important;
+  border: none !important;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.drivemego-b2b_contractcard-managed-tag {
+  font-size: 0.78rem;
+  color: #2c47e0;
+  background: #eef1ff;
+  border: 1px solid #d7ddff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-weight: 600;
+}
+
 .drivemego-b2b_contractcard-contract-card {
   padding: 20px;
   margin-bottom: 10px;

@@ -1,6 +1,11 @@
 import axios from "axios";
 import User from "../models/User.js";
 import { io } from "../index.js";
+import {
+    buildLocalePayload,
+    PLATFORM_BASE_COUNTRY,
+    isPlatformAdmin,
+} from "../Config/localizationConfig.js";
 
 // In-memory store for driver locations (for quick access)
 const driverLocations = new Map();
@@ -293,6 +298,8 @@ export const getDriverLocationById = async (req, res) => {
     }
 };
 
+// ISO country code -> human-readable name. "nationality" stays human-readable
+// for backward compatibility with existing consumers (search filters, UI).
 const COUNTRY_MAP = {
     IN: "India",
     KW: "Kuwait",
@@ -303,123 +310,155 @@ const COUNTRY_MAP = {
     BH: "Bahrain",
 };
 
+/**
+ * GET /api/location/detect
+ * Detects the requester's country via IP. When authenticated (optionalAuth),
+ * persists BOTH the canonical `country` code (source of truth for currency &
+ * payment gateway) and the human-readable `nationality` (used by search/UI).
+ *
+ * Response keeps `nationality` + `country` for backward compatibility and adds
+ * `countryCode`, `currency`, `currencySymbol` and `paymentGateway` so callers
+ * can hydrate locale in a single round-trip.
+ */
 export const detectUserLocation = async (req, res) => {
     try {
-        const userId = req.userId;
+        const userId = req.userId; // may be null (public route / optionalAuth)
 
-        // -----------------------------
-        // 1️⃣ Extract real client IP (Render-safe)
-        // -----------------------------
+        // 1) Extract real client IP (proxy-safe)
         const forwarded = req.headers["x-forwarded-for"];
-        let userIp = forwarded
-            ? forwarded.split(",")[0].trim()
-            : req.socket?.remoteAddress;
-
+        let userIp = forwarded ? forwarded.split(",")[0].trim() : req.socket?.remoteAddress;
         if (userIp === "::1") userIp = "127.0.0.1";
 
-        // -----------------------------
-        // 2️⃣ Development / local fallback
-        // -----------------------------
-        if (
+        // Resolve a human-readable country name from the IP.
+        let countryName = null;
+        let provider = null;
+        let isDevelopment = false;
+
+        const isLocal =
             !userIp ||
             userIp === "127.0.0.1" ||
             userIp.startsWith("192.168") ||
-            userIp.startsWith("10.")
-        ) {
-            await User.findByIdAndUpdate(userId, {
-                nationality: "UAE",
-            });
+            userIp.startsWith("10.");
 
-            return res.status(200).json({
-                success: true,
-                nationality: "UAE",
-                country: "UAE",
-                ip: userIp,
-                isDevelopment: true,
-            });
-        }
-
-        // -----------------------------
-        // 3️⃣ Provider #1 — ipinfo.io (BEST)
-        // -----------------------------
-        try {
-            const ipinfoRes = await axios.get(
-                `https://ipinfo.io/${userIp}?token=${process.env.IPINFO_TOKEN}`,
-                { timeout: 5000 }
-            );
-
-            const countryCode = ipinfoRes.data?.country;
-            const countryName = COUNTRY_MAP[countryCode];
-
-            if (countryName) {
-                await User.findByIdAndUpdate(userId, {
-                    nationality: countryName,
-                });
-
-                return res.status(200).json({
-                    success: true,
-                    nationality: countryName,
-                    country: countryName,
-                    ip: userIp,
-                    provider: "ipinfo",
-                });
+        // Testing override: set DEV_COUNTRY in the backend env (e.g. "Kuwait" or
+        // "UAE") to force a country during local/dev testing. Takes top priority
+        // over IP detection so you can switch flows without touching code.
+        if (process.env.DEV_COUNTRY) {
+            countryName = process.env.DEV_COUNTRY;
+            provider = "dev-override";
+            isDevelopment = true;
+        } else if (isLocal) {
+            countryName = "UAE";
+            provider = "development";
+            isDevelopment = true;
+        } else {
+            // Provider #1 - ipinfo.io
+            try {
+                const ipinfoRes = await axios.get(
+                    `https://ipinfo.io/${userIp}?token=${process.env.IPINFO_TOKEN}`,
+                    { timeout: 5000 }
+                );
+                const code = ipinfoRes.data?.country;
+                if (COUNTRY_MAP[code]) {
+                    countryName = COUNTRY_MAP[code];
+                    provider = "ipinfo";
+                }
+            } catch (err) {
+                console.warn("ipinfo failed:", err.response?.status || err.message);
             }
-        } catch (err) {
-            console.warn("ipinfo failed:", err.response?.status || err.message);
-        }
 
-        // -----------------------------
-        // 4️⃣ Provider #2 — ipapi.co (Fallback)
-        // -----------------------------
-        try {
-            const ipapiRes = await axios.get(
-                `https://ipapi.co/${userIp}/json/`,
-                { timeout: 5000 }
-            );
-
-            const countryName = ipapiRes.data?.country_name;
-
-            if (countryName) {
-                await User.findByIdAndUpdate(userId, {
-                    nationality: countryName,
-                });
-
-                return res.status(200).json({
-                    success: true,
-                    nationality: countryName,
-                    country: countryName,
-                    ip: userIp,
-                    provider: "ipapi",
-                });
+            // Provider #2 - ipapi.co
+            if (!countryName) {
+                try {
+                    const ipapiRes = await axios.get(`https://ipapi.co/${userIp}/json/`, {
+                        timeout: 5000,
+                    });
+                    if (ipapiRes.data?.country_name) {
+                        countryName = ipapiRes.data.country_name;
+                        provider = "ipapi";
+                    }
+                } catch (err) {
+                    console.warn("ipapi failed:", err.response?.status || err.message);
+                }
             }
-        } catch (err) {
-            console.warn("ipapi failed:", err.response?.status || err.message);
+
+            // Final fallback heuristic
+            if (!countryName) {
+                countryName = "India";
+                if (userIp.startsWith("5.")) countryName = "Kuwait";
+                if (userIp.startsWith("94.")) countryName = "UAE";
+                provider = "fallback";
+            }
         }
 
-        // -----------------------------
-        // 5️⃣ Final fallback (NEVER NULL)
-        // -----------------------------
-        let fallbackCountry = "India";
+        // Load the user once to detect platform admins (need role + perms).
+        let userDoc = null;
+        if (userId) {
+            userDoc = await User.findById(userId).select("role adminPermissions");
+        }
 
-        // Simple safe heuristics (optional)
-        if (userIp.startsWith("5.")) fallbackCountry = "Kuwait";
-        if (userIp.startsWith("94.")) fallbackCountry = "UAE";
+        // Admin query param override: admins can specify which country to view.
+        // They send ?country=KW from the frontend currency selector to dynamically
+        // switch their view currency without changing their profile.
+        const adminUser = isPlatformAdmin(userDoc);
+        if (adminUser && req.query.country) {
+            try {
+                const locale = buildLocalePayload(req.query.country);
+                if (locale.countryName) {
+                    countryName = locale.countryName;
+                    provider = "admin-override";
+                }
+            } catch (e) {
+                // invalid country, fall through to default
+            }
+        }
+        // Platform admins / super-admins are LOCATION-INDEPENDENT: when not
+        // overridden by query param, pin them to the stable platform base
+        // regardless of where they browse from. Their IP country is ignored and
+        // never persisted.
+        else if (adminUser) {
+            countryName = PLATFORM_BASE_COUNTRY;
+            provider = "admin-base";
+        }
 
-        await User.findByIdAndUpdate(userId, {
-            nationality: fallbackCountry,
-        });
+        // Normalize to canonical code and build the locale payload.
+        const locale = buildLocalePayload(countryName);
+
+        // Persist to the authenticated user's profile (real DB operation).
+        //
+        // Skipped for platform admins -- their country must stay stable and is
+        // never derived from where they happen to be browsing from.
+        //
+        // When DEV_COUNTRY is set (LOCAL/DEV ONLY) we DO persist the override so
+        // the test user behaves EXACTLY like a real user in that country: every
+        // endpoint that reads `user.country` from the DB (routes, wallet,
+        // payments, settlements) gets full production parity. This is safe
+        // because DEV_COUNTRY is never set in production, so this branch only
+        // ever runs against a development database.
+        if (userId && !adminUser) {
+            const update = { nationality: countryName };
+            // Only persist `country` when it's a served/known canonical code so
+            // we never overwrite a valid profile country with an unsupported one.
+            update.country = locale.country;
+            await User.findByIdAndUpdate(userId, update);
+        }
 
         return res.status(200).json({
             success: true,
-            nationality: fallbackCountry,
-            country: fallbackCountry,
+            nationality: countryName,
+            country: countryName, // legacy: human-readable (kept for old consumers)
+            countryCode: locale.country, // canonical code: "UAE" | "KW" | ...
+            currency: locale.currency,
+            currencySymbol: locale.currencySymbol,
+            currencyDecimals: locale.currencyDecimals,
+            paymentGateway: locale.paymentGateway,
+            serviceAvailable: locale.serviceAvailable,
             ip: userIp,
-            provider: "fallback",
-            warning: "Geo detection failed, fallback applied",
+            provider,
+            ...(isDevelopment ? { isDevelopment: true } : {}),
         });
     } catch (error) {
         console.error("detectUserLocation fatal:", error);
-
         return res.status(500).json({
             success: false,
             message: "Failed to detect user location",

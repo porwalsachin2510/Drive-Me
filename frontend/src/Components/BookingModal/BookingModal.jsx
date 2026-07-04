@@ -9,6 +9,11 @@ import {
   clearBookingData,
 } from "../../Redux/slices/bookingSlice";
 import { getWalletBalance } from "../../Redux/slices/walletSlice";
+import { useLocale } from "../../hooks/useLocale";
+import {
+  getGatewayForCurrency,
+  getCurrencyDecimals,
+} from "../../config/localeConfig";
 import api from "../../utils/api";
 import {
   FaTimes,
@@ -63,6 +68,8 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     useSelector((state) => state.booking);
   const { user } = useSelector((state) => state.auth);
   const walletBalance = useSelector((state) => state.wallet?.balance || 0);
+  // Active locale — used as the currency fallback when a route has no currency.
+  const { currency: localeCurrency } = useLocale();
 
   // State for schedule data - now supports multiple schedules
   const [scheduleData, setScheduleData] = useState(null);
@@ -361,15 +368,10 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
 
   if (!isOpen || !route) return null;
 
-  // MONTHLY PASS PRICING LOGIC - Per-day pricing
-  // oneWayPrice and roundTripPrice are PER DAY rates from route document
-  const getPerDayPrice = () => {
-    if (selectedPassType === "ONE_WAY") {
-      return route.pricing?.oneWayPrice || route.oneWayPrice || 100;
-    } else {
-      return route.pricing?.roundTripPrice || route.roundTripPrice || 200;
-    }
-  };
+  // MONTHLY PASS PRICING LOGIC - Fixed monthly pricing
+  // The partner sets a fixed price per month (monthlyOneWayPrice /
+  // monthlyRoundTripPrice). The commuter pays that fixed monthly price multiplied
+  // by the number of months, regardless of how many days are in each month.
 
   // Get the route's full weekly availability (normalized to full day names).
   // Billing is ALWAYS based on these days, regardless of which days the
@@ -437,10 +439,12 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const routeDaysPerWeek = routeAllowedDays.length;
 
   const availableSeats = route.availableSeats ?? route.totalSeats ?? 10;
-  const currency = route.pricing?.currency || route.currency || "KWD";
-  const currencyDecimals =
-    currency === "KWD" || currency === "BHD" || currency === "OMR" ? 3 : 2;
-  const perDayPrice = getPerDayPrice();
+  // Currency comes from the route data (routes are country-filtered), falling
+  // back to the viewing user's locale currency instead of a hardcoded value.
+  const currency = route.pricing?.currency || route.currency || localeCurrency;
+  const currencyDecimals = getCurrencyDecimals(currency);
+  // Gateway is resolved from the currency (data-driven, future-country safe).
+  const onlineGateway = getGatewayForCurrency(currency);
 
   // Calculate actual travel days based on selected date range and the route's
   // FULL weekly availability (not the commuter's personal day subset).
@@ -497,7 +501,8 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const actualTravelDays = calculateActualTravelDays();
   const effectiveDuration = calculateDurationFromDates();
 
-  // Per-day rate for a specific pass type (route pricing is stored per-day).
+  // Per-day rate for a specific pass type (LEGACY fallback only — used for old
+  // routes created before fixed monthly pricing existed).
   const getPerDayPriceFor = (passType) => {
     if (passType === "ONE_WAY") {
       return route.pricing?.oneWayPrice || route.oneWayPrice || 0;
@@ -505,16 +510,36 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     return route.pricing?.roundTripPrice || route.roundTripPrice || 0;
   };
 
-  // Computed amount for a pass type over the currently-selected pass period.
-  // This is what the commuter actually pays = perDay × actual travel days × seats.
-  // It keeps the "Select Pass Type" cards consistent with the final total below.
-  const getPassTypeAmount = (passType) =>
-    getPerDayPriceFor(passType) * actualTravelDays * numberOfSeats;
+  // FIXED MONTHLY price for a specific pass type. This is the price the partner
+  // sets and the authoritative basis for what the commuter pays.
+  const getMonthlyPriceFor = (passType) => {
+    if (passType === "ONE_WAY") {
+      return route.pricing?.monthlyOneWayPrice || route.monthlyOneWayPrice || 0;
+    }
+    return (
+      route.pricing?.monthlyRoundTripPrice || route.monthlyRoundTripPrice || 0
+    );
+  };
 
-  // Calculate total based on per-day price and actual travel days
-  const totalAmount = (perDayPrice * actualTravelDays * numberOfSeats).toFixed(
-    currencyDecimals,
-  );
+  // The monthly price for the currently-selected pass type.
+  const monthlyPrice = getMonthlyPriceFor(selectedPassType);
+
+  // Computed amount for a pass type over the currently-selected pass period.
+  // The commuter pays a FIXED monthly price x number of months x seats — the
+  // amount does NOT change with the number of calendar days (28/29/30/31) or the
+  // number of travel days in a month. Falls back to legacy per-day pricing only
+  // when a route has no monthly price configured.
+  const getPassTypeAmount = (passType) => {
+    const monthly = getMonthlyPriceFor(passType);
+    if (monthly > 0) {
+      return monthly * effectiveDuration * numberOfSeats;
+    }
+    return getPerDayPriceFor(passType) * actualTravelDays * numberOfSeats;
+  };
+
+  // Final total = fixed monthly price x months x seats (legacy fallback otherwise).
+  const totalAmount =
+    getPassTypeAmount(selectedPassType).toFixed(currencyDecimals);
   const adminCommission = (totalAmount * 0.2).toFixed(currencyDecimals);
   const driverEarnings = (totalAmount * 0.8).toFixed(currencyDecimals);
 
@@ -556,12 +581,16 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
 
   tripTimes.forEach((trip) => {
     if (trip.tripType === "One Way") {
-      // Add one way trip as is - always outbound for One Way trips
+      // Respect the direction stored on the schedule's trip time.
+      // A One Way trip can run in the route's default (outbound) direction
+      // (fromLocation -> toLocation) OR in the reverse (return) direction
+      // (toLocation -> fromLocation), depending on what the partner configured.
+      const isReturnDirection = trip.direction === "return";
       allTrips.push({
         ...trip,
-        direction: "outbound", // One Way trips are always outbound
-        fromLocation: route.fromLocation,
-        toLocation: route.toLocation,
+        direction: isReturnDirection ? "return" : "outbound",
+        fromLocation: isReturnDirection ? route.toLocation : route.fromLocation,
+        toLocation: isReturnDirection ? route.fromLocation : route.toLocation,
         stopPoints: trip.outboundStopPoints || trip.stopPoints || [],
       });
     } else if (trip.tripType === "Round Trip") {
@@ -582,7 +611,11 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       }
 
       if (trip.arrivalTime) {
-        // Return trip
+        // Return trip. A Round Trip can have a DEDICATED return-leg driver and
+        // vehicle (different from the outbound leg). The backend exposes these as
+        // effectiveReturnDriver / effectiveReturnVehicle, so remap the display
+        // fields here — otherwise the return leg would wrongly show the outbound
+        // driver/vehicle carried over by `...trip`.
         allTrips.push({
           ...trip,
           _id: `${trip._id}_return`,
@@ -593,6 +626,22 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
           departureTime: trip.arrivalTime,
           arrivalTime: null,
           stopPoints: trip.returnStopPoints || [],
+          // Show the return-leg (aane) assignment, falling back to the outbound
+          // leg only when no dedicated return driver/vehicle was configured.
+          effectiveDriver:
+            trip.effectiveReturnDriver ||
+            trip.returnDriverInfo ||
+            trip.effectiveDriver,
+          effectiveVehicle:
+            trip.effectiveReturnVehicle ||
+            trip.returnVehicleInfo ||
+            trip.effectiveVehicle,
+          tripDriverInfo: trip.returnDriverInfo || trip.tripDriverInfo,
+          tripVehicleInfo: trip.returnVehicleInfo || trip.tripVehicleInfo,
+          isSelfDriver:
+            typeof trip.returnIsSelfDriver === "boolean"
+              ? trip.returnIsSelfDriver
+              : trip.isSelfDriver,
         });
       }
     }
@@ -901,7 +950,14 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       }
     } catch (err) {
       console.error("Booking error:", err);
-      alert("Failed to create monthly pass. Please try again.");
+      // Surface the specific backend reason (e.g. the duplicate-trip guard's 409
+      // "You already have an active pass for the 7:00 AM ... trip") so the
+      // commuter understands why the booking was blocked, instead of a generic
+      // failure message.
+      const serverMessage = err?.response?.data?.message;
+      alert(
+        serverMessage || "Failed to create monthly pass. Please try again.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -1815,18 +1871,18 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                         </div>
                         <div className="pass-type-price">
                           {currency}{" "}
-                          {getPerDayPriceFor("ONE_WAY").toFixed(
+                          {getMonthlyPriceFor("ONE_WAY").toFixed(
                             currencyDecimals,
                           )}
-                          /day
+                          /month
                         </div>
                         <div className="pass-type-subprice">
-                          ≈ {currency}{" "}
+                          {currency}{" "}
                           {getPassTypeAmount("ONE_WAY").toFixed(
                             currencyDecimals,
                           )}{" "}
-                          for {actualTravelDays} day
-                          {actualTravelDays !== 1 ? "s" : ""}
+                          for {effectiveDuration} month
+                          {effectiveDuration !== 1 ? "s" : ""}
                         </div>
                         <div className="pass-type-description">
                           Travel in one direction only (e.g., morning to work)
@@ -1876,18 +1932,18 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                         </div>
                         <div className="pass-type-price">
                           {currency}{" "}
-                          {getPerDayPriceFor("ROUND_TRIP").toFixed(
+                          {getMonthlyPriceFor("ROUND_TRIP").toFixed(
                             currencyDecimals,
                           )}
-                          /day
+                          /month
                         </div>
                         <div className="pass-type-subprice">
-                          ≈ {currency}{" "}
+                          {currency}{" "}
                           {getPassTypeAmount("ROUND_TRIP").toFixed(
                             currencyDecimals,
                           )}{" "}
-                          for {actualTravelDays} day
-                          {actualTravelDays !== 1 ? "s" : ""}
+                          for {effectiveDuration} month
+                          {effectiveDuration !== 1 ? "s" : ""}
                         </div>
                         <div className="pass-type-description">
                           Travel both directions (e.g., morning to work +
@@ -2410,9 +2466,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   </span>
                 </div>
                 <div className="price-row">
-                  <span>Per Day Rate</span>
+                  <span>Monthly Price</span>
                   <span>
-                    {currency} {perDayPrice.toFixed(currencyDecimals)}/day
+                    {currency} {monthlyPrice.toFixed(currencyDecimals)}/month
                   </span>
                 </div>
                 <div className="price-row">
@@ -2452,23 +2508,13 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                   </>
                 )} */}
                 <div className="price-row total">
-                  <span>Total Amount ({actualTravelDays} days)</span>
+                  <span>
+                    Total Amount ({effectiveDuration} month
+                    {effectiveDuration !== 1 ? "s" : ""})
+                  </span>
                   <span>
                     {currency} {totalAmount}
                   </span>
-                </div>
-                <div className="savings-info">
-                  {effectiveDuration >= 3 && (
-                    <span className="savings-text">
-                      Save{" "}
-                      {effectiveDuration >= 12
-                        ? "15%"
-                        : effectiveDuration >= 6
-                          ? "10%"
-                          : "5%"}{" "}
-                      with longer duration!
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -2564,7 +2610,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                         never sees Stripe. */}
                     {onlinePaymentsEnabled && (
                       <>
-                        {currency !== "KWD" && (
+                        {onlineGateway === "STRIPE" && (
                           <div
                             className={`payment-option ${paymentMethod === "STRIPE" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
                             onClick={() =>
@@ -2589,7 +2635,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                           </div>
                         )}
 
-                        {currency === "KWD" && (
+                        {onlineGateway === "TAP" && (
                           <div
                             className={`payment-option ${paymentMethod === "TAP" ? "selected" : ""} ${isProcessing ? "disabled" : ""}`}
                             onClick={() =>

@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
-import { Provider } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import store from "./Redux/store";
+import { initLocale } from "./Redux/slices/localeSlice";
 import { SocketProvider } from "./context/SocketContext";
 import HomePage from "./Pages/HomePage/index";
 import CommuterProfilePage from "./Pages/CommuterPages/CommuterProfilePage/CommuterProfilePage";
@@ -50,6 +51,7 @@ import CorporateEmployeeManagementPage from "./Pages/CorporatePages/CorporateEmp
 import EmployeeDashboard from "./Pages/CommuterPages/EmployeeDashboard/EmployeeDashboard";
 import B2CPartnerDriverDashboard from "./Pages/DriverPages/B2CPartnerDriverDashboard/B2CPartnerDriverDashboard";
 import B2BPartnerDriverDashboard from "./Pages/DriverPages/B2BPartnerDriverDashboard/B2BPartnerDriverDashboard";
+import B2BManagedOperations from "./Pages/B2BPages/B2BManagedOperations/B2BManagedOperations";
 import CorporateDriverDashboard from "./Pages/DriverPages/CorporateDriverDashboard/CorporateDriverDashboard";
 import DriverLocationTracking from "./Pages/DriverPages/DriverLocationTracking/DriverLocationTracking";
 import Navbar from "./Components/Navbar/Navbar";
@@ -59,9 +61,24 @@ import DynamicPage from "./Pages/DynamicPage/DynamicPage";
 import ForgotPassword from "./Pages/ForgotPassword/ForgotPassword";
 import NotificationsPage from "./Pages/NotificationsPage/NotificationsPage";
 
+// Bootstraps the user's locale (country -> currency -> payment gateway) once on
+// load, and re-runs whenever auth state changes so the locale follows the
+// logged-in user's saved country (source of truth) or the detected location.
+function LocaleInitializer() {
+  const dispatch = useDispatch();
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+
+  useEffect(() => {
+    dispatch(initLocale());
+  }, [dispatch, isAuthenticated]);
+
+  return null;
+}
+
 function App() {
   return (
     <Provider store={store}>
+      <LocaleInitializer />
       <SocketProvider>
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -298,6 +315,16 @@ function App() {
               </ProtectedRoleBasedRoute>
             }
           />
+          
+          <Route
+            path="/b2b-partner/managed-operations"
+            element={
+              <ProtectedRoleBasedRoute allowedRoles={["B2B_PARTNER"]}>
+                <B2BManagedOperations />
+              </ProtectedRoleBasedRoute>
+            }
+          />
+
           <Route
             path="/corporate-profile"
             element={
@@ -470,7 +497,7 @@ function App() {
             path="/emi-payment/callback"
             element={<EMIPaymentCallback />}
           />
-          
+
           {/* Dynamic Pages - Terms, Privacy, Refund, Contact etc */}
           <Route path="/page/:slug" element={<DynamicPage />} />
           <Route path="/terms-and-conditions" element={<DynamicPage />} />

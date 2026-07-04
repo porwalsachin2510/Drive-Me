@@ -11,6 +11,7 @@ import {
 } from "../../Redux/slices/notificationSlice";
 import Navbar from "../../Components/Navbar/Navbar";
 import Footer from "../../Components/Footer/Footer";
+import { getNotificationRoute } from "../../utils/notificationRoute";
 import "./NotificationsPage.css";
 
 function NotificationsPage() {
@@ -53,55 +54,10 @@ function NotificationsPage() {
       );
     }
 
-    // Navigate based on notification type
-    switch (notification.type) {
-      case "TRIP_REMINDER":
-      case "TRIP_STARTED":
-      case "TRIP_COMPLETED":
-      case "LATE_TRIP_START":
-      case "TRIP_UPDATE":
-        navigate("/commuter/mybookings");
-        break;
-      case "WALLET_UPDATED":
-      case "PAYMENT_COMPLETED":
-      case "PAYMENT_SUBMITTED":
-      case "PAYMENT_RECEIVED":
-      case "PAYMENT_VERIFIED":
-      case "PAYMENT_REJECTED":
-        navigate("/wallet");
-        break;
-      case "SUBSCRIPTION_RENEWAL":
-        navigate("/commuter/mybookings");
-        break;
-      case "QUOTATION_REQUEST":
-      case "QUOTATION_RECEIVED":
-      case "QUOTATION_ACCEPTED":
-      case "QUOTATION_REJECTED":
-        if (user?.role === "B2B_PARTNER") {
-          navigate("/b2b-partner/contracts");
-        } else {
-          navigate("/corporate/contracts");
-        }
-        break;
-      case "CONTRACT_ACTIVATED":
-      case "CONTRACT_UPDATE":
-      case "ASSIGNMENT_UPDATED":
-      case "DRIVER_ASSIGNED":
-      case "VEHICLE_CHANGED":
-        if (user?.role === "B2B_PARTNER") {
-          navigate("/b2b-partner/contracts");
-        } else if (user?.role === "CORPORATE") {
-          navigate("/corporate/contracts");
-        }
-        break;
-      case "BOOKING_ACCEPTED":
-      case "BOOKING_REJECTED":
-      case "BOOKING_UPDATE":
-        navigate("/commuter/mybookings");
-        break;
-      default:
-        break;
-    }
+    // Navigate using the shared, role-aware notification routing helper so
+    // commuters land on the correct `/commuter-profile?tab=...` tab (and other
+    // roles on their dedicated pages) consistently with the navbar dropdown.
+    navigate(getNotificationRoute(notification, user));
   };
 
   const handleMarkAllAsRead = () => {
@@ -219,6 +175,10 @@ function NotificationsPage() {
       CONTRACT_UPDATE: "edit",
       ASSIGNMENT_UPDATED: "refresh-cw",
       DRIVER_ASSIGNED: "user",
+      TRIP_ASSIGNED: "user-check",
+      BUS_NEAR_STOP: "navigation",
+      CONTRACT_EXPIRY_WARNING: "alert-triangle",
+      NEW_USER_REGISTRATION: "user-plus",
       VEHICLE_CHANGED: "truck",
       BOOKING_ACCEPTED: "check-circle",
       BOOKING_REJECTED: "x-circle",
@@ -253,6 +213,10 @@ function NotificationsPage() {
       CONTRACT_UPDATE: "#6366f1",
       ASSIGNMENT_UPDATED: "#6366f1",
       DRIVER_ASSIGNED: "#3b82f6",
+      TRIP_ASSIGNED: "#3b82f6",
+      BUS_NEAR_STOP: "#10b981",
+      CONTRACT_EXPIRY_WARNING: "#f59e0b",
+      NEW_USER_REGISTRATION: "#6366f1",
       VEHICLE_CHANGED: "#f59e0b",
       BOOKING_ACCEPTED: "#10b981",
       BOOKING_REJECTED: "#ef4444",

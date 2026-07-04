@@ -106,11 +106,16 @@
   background-color: #ffffff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
-  overflow: hidden;
+  /* Always allow horizontal scrolling so the ACTIONS column is never clipped,
+     regardless of viewport width. */
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .ad-dash-pr-table table {
   width: 100%;
+  min-width: 980px;
   border-collapse: collapse;
 }
 
@@ -380,12 +385,5 @@
   }
 }
 
-@media (max-width: 768px) {
-  .ad-dash-pr-table {
-    overflow-x: auto;
-  }
-
-  .ad-dash-pr-table table {
-    min-width: 800px;
-  }
-}
+/* The table already scrolls horizontally at every breakpoint (see base rule),
+   so no breakpoint-specific overflow override is needed here. */

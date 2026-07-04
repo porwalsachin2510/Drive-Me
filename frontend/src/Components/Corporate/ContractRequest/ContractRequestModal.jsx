@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { createContractFromQuotation } from "../../../Redux/slices/contractSlice";
@@ -84,7 +85,7 @@ const ContractRequestModal = ({ quotation, onClose, onSuccess }) => {
             <div className="contract-request-summary-item">
               <span>Total Amount:</span>
               <strong>
-                {quotation.quotedPrice.currency || "AED"}{" "}
+                {quotation.quotedPrice.currency || getActiveCurrency()}{" "}
                 {quotation.quotedPrice?.totalAmount?.toFixed(2)}
               </strong>
             </div>

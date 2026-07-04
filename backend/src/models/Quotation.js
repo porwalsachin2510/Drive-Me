@@ -22,6 +22,14 @@ const quotationSchema = new mongoose.Schema(
             ref: "Requirement",
             default: null,
         },
+        // Service mode: STANDARD = corporate runs operations itself (passenger/goods),
+        // MANAGED = corporate selected "Managed Services" and the B2B partner runs
+        // all operations (routes, schedules, employees, trips, invitations) on their behalf.
+        serviceMode: {
+            type: String,
+            enum: ["STANDARD", "MANAGED"],
+            default: "STANDARD",
+        },
         vehicles: [
             {
                 vehicleId: {
@@ -66,6 +74,12 @@ const quotationSchema = new mongoose.Schema(
                 required: false, 
             },
             totalAmount: Number,
+            // B2B partner's management/service charge for MANAGED quotations.
+            // Lump-sum fee (can be 0 or any amount) added on top of the vehicle totals.
+            serviceCharge: {
+                type: Number,
+                default: 0,
+            },
             breakdown: {
                 vehicleRental: Number,
                 driverCharges: Number,

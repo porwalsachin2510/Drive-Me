@@ -1,6 +1,11 @@
 import Vehicle from "../models/Vehicle.js"
 import User from "../models/User.js"
 import { uploadToCloudinary, uploadMultipleSequential } from "../Config/Cloudinary.js"
+import {
+    getEffectiveCountry,
+    getCountryCurrency,
+    isLocationInCountry,
+} from "../Config/localizationConfig.js"
 
 export const addVehicle = async (req, res) => {
     try {
@@ -24,6 +29,31 @@ export const addVehicle = async (req, res) => {
             if (vehicleData[field] && typeof vehicleData[field] === "string") {
                 vehicleData[field] = JSON.parse(vehicleData[field])
             }
+        }
+
+        // ---- Multi-country integrity (server-side, defense in depth) ----
+        // A fleet owner is an identity-locked earner: their vehicle MUST be
+        // priced in their own country's currency and located in their own
+        // country. Never trust the client-provided currency/location blindly,
+        // otherwise cross-currency data (e.g. a Kuwait partner pricing in AED)
+        // would corrupt wallets and admin totals.
+        const owner = await User.findById(req.userId).select(
+            "country countryCode role adminPermissions"
+        )
+        const ownerCountry = getEffectiveCountry(owner)
+        const ownerCurrency = getCountryCurrency(ownerCountry)
+
+        if (!vehicleData.pricing || typeof vehicleData.pricing !== "object") {
+            vehicleData.pricing = {}
+        }
+        // Force the currency to the owner's country currency.
+        vehicleData.pricing.currency = ownerCurrency
+
+        if (vehicleData.location && !isLocationInCountry(vehicleData.location, ownerCountry)) {
+            return res.status(400).json({
+                success: false,
+                message: `Selected location is not available in your registered country (${ownerCountry}).`,
+            })
         }
 
         // ✅ IMAGES (SEQUENTIAL UPLOAD)
@@ -249,7 +279,7 @@ export const searchVehicles = async (req, res) => {
             limit = 12,
         } = req.query;
 
-       
+
 
 
         // Step 1: Find all B2B Partners (Fleet Owners)
@@ -472,7 +502,7 @@ export const searchVehicles = async (req, res) => {
             approvalStatus: v.approvalStatus,
             location: v.location
         })));
-        
+
         // Step 4: Group vehicles by fleet owner
         const fleetOwnerMap = {};
 
@@ -656,6 +686,26 @@ export const updateVehicle = async (req, res) => {
                     console.error(`[v0] Error parsing ${field}:`, parseError)
                 }
             }
+        }
+
+        // ---- Multi-country integrity (server-side, defense in depth) ----
+        // Keep the vehicle's currency locked to the owner's country currency and
+        // reject a location outside their country, mirroring addVehicle.
+        const owner = await User.findById(req.userId).select(
+            "country countryCode role adminPermissions"
+        )
+        const ownerCountry = getEffectiveCountry(owner)
+        const ownerCurrency = getCountryCurrency(ownerCountry)
+
+        if (updates.pricing && typeof updates.pricing === "object") {
+            updates.pricing.currency = ownerCurrency
+        }
+
+        if (updates.location && !isLocationInCountry(updates.location, ownerCountry)) {
+            return res.status(400).json({
+                success: false,
+                message: `Selected location is not available in your registered country (${ownerCountry}).`,
+            })
         }
 
         if (req.files && req.files.images && req.files.images.length > 0) {

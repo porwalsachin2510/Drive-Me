@@ -1,6 +1,18 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect, useCallback } from "react";
 import api from "../../../utils/api";
 import "./corporatebilling.css";
+
+const formatDate = (d) =>
+  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A";
+
+const TYPE_LABELS = {
+  ADVANCE: "Advance",
+  FINAL: "Final",
+  INSTALLMENT: "EMI",
+  SECURITY_DEPOSIT: "Deposit",
+  MONTHLY: "Full",
+};
 
 export default function CorporateBilling() {
   const [billingData, setBillingData] = useState(null);
@@ -8,6 +20,13 @@ export default function CorporateBilling() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("current");
   const [error, setError] = useState(null);
+  const [actionId, setActionId] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const fetchBillingData = useCallback(async () => {
     try {
@@ -41,6 +60,43 @@ export default function CorporateBilling() {
     fetchBillingData();
     fetchInvoices();
   }, [fetchBillingData, fetchInvoices]);
+
+  const handlePay = async (inv) => {
+    try {
+      setActionId(inv._id);
+      const res = await api.get(`/corporate/invoices/${inv._id}/payment-redirect`);
+      if (res.data.success && res.data.data?.redirectUrl) {
+        window.location.href = res.data.data.redirectUrl;
+      } else {
+        showToast("Could not initiate payment", "error");
+        setActionId(null);
+      }
+    } catch (err) {
+      console.error("Payment redirect failed:", err);
+      showToast(err.response?.data?.message || "Failed to initiate payment", "error");
+      setActionId(null);
+    }
+  };
+
+  const handleDownload = async (inv) => {
+    try {
+      setActionId(inv._id);
+      const res = await api.get(`/corporate/invoices/${inv._id}/pdf`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${inv.invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download failed:", err);
+      showToast("Failed to download PDF", "error");
+    } finally {
+      setActionId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -83,21 +139,21 @@ export default function CorporateBilling() {
             <div className="corp-billing-card-label">Total Billed</div>
             <div className="corp-billing-card-value">
               {billingData.summary?.totalBilled?.toLocaleString() || 0}{" "}
-              {billingData.summary?.currency || "KWD"}
+              {billingData.summary?.currency || getActiveCurrency()}
             </div>
           </div>
           <div className="corp-billing-card">
             <div className="corp-billing-card-label">Total Paid</div>
             <div className="corp-billing-card-value corp-billing-green">
               {billingData.summary?.totalPaid?.toLocaleString() || 0}{" "}
-              {billingData.summary?.currency || "KWD"}
+              {billingData.summary?.currency || getActiveCurrency()}
             </div>
           </div>
           <div className="corp-billing-card">
             <div className="corp-billing-card-label">Outstanding</div>
             <div className="corp-billing-card-value corp-billing-orange">
               {billingData.summary?.outstanding?.toLocaleString() || 0}{" "}
-              {billingData.summary?.currency || "KWD"}
+              {billingData.summary?.currency || getActiveCurrency()}
             </div>
           </div>
           <div className="corp-billing-card">
@@ -144,7 +200,7 @@ export default function CorporateBilling() {
                     <td>{item.vehicleCount || 0}</td>
                     <td className="corp-billing-amount">
                       {item.monthlyAmount?.toLocaleString() || 0}{" "}
-                      {item.currency || "KWD"}
+                      {item.currency || getActiveCurrency()}
                     </td>
                     <td>
                       <span
@@ -165,7 +221,7 @@ export default function CorporateBilling() {
 
       {/* Invoices */}
       <div className="corp-billing-section">
-        <h3 className="corp-billing-section-title">Recent Invoices</h3>
+        <h3 className="corp-billing-section-title">Invoices &amp; Payments</h3>
         {invoices.length === 0 ? (
           <div className="corp-billing-empty">No invoices found</div>
         ) : (
@@ -174,10 +230,13 @@ export default function CorporateBilling() {
               <thead>
                 <tr>
                   <th>Invoice #</th>
-                  <th>Contract</th>
-                  <th>Date</th>
+                  <th>Fleet Partner</th>
+                  <th>Type</th>
+                  <th>Period</th>
                   <th>Amount</th>
+                  <th>Due Date</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -186,16 +245,14 @@ export default function CorporateBilling() {
                     <td className="corp-billing-contract-num">
                       {inv.invoiceNumber}
                     </td>
-                    <td>{inv.contractNumber || "N/A"}</td>
-                    <td>
-                      {inv.createdAt
-                        ? new Date(inv.createdAt).toLocaleDateString()
-                        : "N/A"}
-                    </td>
+                    <td>{inv.fleetOwnerName || "N/A"}</td>
+                    <td>{TYPE_LABELS[inv.type] || inv.type || "N/A"}</td>
+                    <td>{inv.billingPeriod?.label || "N/A"}</td>
                     <td className="corp-billing-amount">
-                      {inv.amount?.toLocaleString() || 0}{" "}
-                      {inv.currency || "KWD"}
+                      {(inv.total ?? inv.amount ?? 0).toLocaleString()}{" "}
+                      {inv.currency || getActiveCurrency()}
                     </td>
+                    <td>{formatDate(inv.dueDate)}</td>
                     <td>
                       <span
                         className={`corp-billing-status corp-billing-status-${(
@@ -205,6 +262,26 @@ export default function CorporateBilling() {
                         {inv.status || "Pending"}
                       </span>
                     </td>
+                    <td>
+                      <div className="corp-billing-actions">
+                        <button
+                          className="corp-billing-act-btn"
+                          disabled={actionId === inv._id}
+                          onClick={() => handleDownload(inv)}
+                        >
+                          PDF
+                        </button>
+                        {inv.status !== "PAID" && inv.status !== "DRAFT" && (
+                          <button
+                            className="corp-billing-act-btn pay"
+                            disabled={actionId === inv._id}
+                            onClick={() => handlePay(inv)}
+                          >
+                            {actionId === inv._id ? "Paying..." : "Pay Now"}
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -212,6 +289,8 @@ export default function CorporateBilling() {
           </div>
         )}
       </div>
+
+      {toast && <div className={`corp-billing-toast ${toast.type}`}>{toast.msg}</div>}
     </div>
   );
 }

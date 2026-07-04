@@ -14,6 +14,7 @@ import {
   getDisplayCountry,
 } from "../../../utils/helperutility";
 import "./commuterhomepage.css";
+import { useLocale } from "../../../hooks/useLocale";
 
 import api from "../../../utils/api";
 
@@ -25,7 +26,15 @@ export default function CommuterHomePage() {
 
   const [currentFilterType, setCurrentFilterType] = useState("all");
 
-  const [userNationality, setUserNationality] = useState(null);
+  // The commuter's country now comes from the single source of truth (Redux
+  // locale), NOT a one-off IP probe. This is what makes the in-app country
+  // switcher work: when a commuter switches from Kuwait to the UAE, the locale
+  // slice updates, `userNationality` changes, and the routes refetch for the
+  // newly selected country (Uber/Careem-style one-account-many-countries).
+  // For anonymous/first-time visitors the locale is still IP-hydrated on load,
+  // so the default behaviour is unchanged.
+  const { displayName: localeDisplayName } = useLocale();
+  const userNationality = localeDisplayName || null;
   const [showRouteRequest, setShowRouteRequest] = useState(false);
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -38,43 +47,8 @@ export default function CommuterHomePage() {
   }, [activeTab]);
 
   const navigate = useNavigate();
-  const hasDetectedRef = useRef(false);
 
   const availableSectionRef = useRef(null);
-
-  useEffect(() => {
-    const detectUserLocation = async () => {
-      if (hasDetectedRef.current) return;
-
-      try {
-        const response = await api.get("/location/detect", {
-          withCredentials: true,
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (response.data.success) {
-          const countryName = response.data.nationality;
-
-          let nationality = countryName;
-
-          if (countryName === "Kuwait") {
-            nationality = "Kuwait";
-          } else if (countryName === "United Arab Emirates") {
-            nationality = "UAE";
-          }
-
-          setUserNationality(nationality);
-          hasDetectedRef.current = true;
-        }
-      } catch (error) {
-        console.error("Error detecting location:", error);
-        setUserNationality("Kuwait");
-        hasDetectedRef.current = true;
-      }
-    };
-
-    detectUserLocation();
-  }, []);
 
   const fetchRoutes = useCallback(
     async (params = {}) => {

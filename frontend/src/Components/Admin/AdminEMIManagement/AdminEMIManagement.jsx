@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -55,7 +56,7 @@ const AdminEMIManagement = () => {
     fetchEMIPayments();
   }, [fetchEMIPayments]);
 
-  const formatCurrency = (amount, currency = "AED") => {
+  const formatCurrency = (amount, currency = getActiveCurrency()) => {
     return `${currency} ${(amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
   };
 

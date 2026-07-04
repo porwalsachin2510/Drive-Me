@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
+import ManagedServiceBriefModal from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBriefModal";
 import { requestQuotation } from "../../../Redux/slices/quotationSlice";
 import "./SingleVehicleOwnerDetails.css";
 
@@ -22,6 +23,13 @@ const SingleVehicleOwnerDetails = () => {
   const [selectedVehicles, setSelectedVehicles] = useState({});
   const [filterType, setFilterType] = useState("ALL");
   const [activeTab, setActiveTab] = useState("commuters");
+
+  // Managed-service requests must carry an operations brief. We hold the built
+  // quotation payload here while the corporate fills the brief in the modal,
+  // then send both together in one atomic request.
+  const [showBriefModal, setShowBriefModal] = useState(false);
+  const [pendingQuotation, setPendingQuotation] = useState(null);
+  const [submittingRequest, setSubmittingRequest] = useState(false);
 
   console.log("selectedVehicles:-", selectedVehicles);
   // Handle card click to select/deselect vehicle
@@ -96,7 +104,7 @@ const SingleVehicleOwnerDetails = () => {
   const handleSelectAll = () => {
     const filteredVehicles = getFilteredVehicles();
     const allSelected = filteredVehicles.every(
-      (vehicle) => selectedVehicles[vehicle._id]?.quantity > 0
+      (vehicle) => selectedVehicles[vehicle._id]?.quantity > 0,
     );
 
     if (allSelected) {
@@ -127,9 +135,13 @@ const SingleVehicleOwnerDetails = () => {
     if (filterType === "PASSENGER")
       return ownerData.vehicles.filter((v) => v.serviceType === "PASSENGER");
     if (filterType === "GOODS")
-      return ownerData.vehicles.filter((v) => v.serviceType === "GOODS_CARRIER");
+      return ownerData.vehicles.filter(
+        (v) => v.serviceType === "GOODS_CARRIER",
+      );
     if (filterType === "MANAGED")
-      return ownerData.vehicles.filter((v) => v.serviceType === "MANAGED_SERVICES");
+      return ownerData.vehicles.filter(
+        (v) => v.serviceType === "MANAGED_SERVICES",
+      );
     if (filterType === "WITH_DRIVER")
       return ownerData.vehicles.filter((v) => v.driverAvailability?.withDriver);
     if (filterType === "FUEL_INCLUDED")
@@ -148,7 +160,7 @@ const SingleVehicleOwnerDetails = () => {
   const getTotalSelectedCount = () => {
     return Object.values(selectedVehicles).reduce(
       (total, item) => total + item.quantity,
-      0
+      0,
     );
   };
 
@@ -187,20 +199,33 @@ const SingleVehicleOwnerDetails = () => {
       if (typeLower === "daily" || typeLower === "day") return "DAILY";
       if (typeLower === "weekly" || typeLower === "week") return "WEEKLY";
       if (typeLower === "monthly" || typeLower === "month") return "MONTHLY";
-       if (
-         typeLower === "long-term" ||
-         typeLower === "yearly" ||
-         typeLower === "year"
-       )
-         return "LONG_TERM";
+      if (
+        typeLower === "long-term" ||
+        typeLower === "yearly" ||
+        typeLower === "year"
+      )
+        return "LONG_TERM";
       return "MONTHLY"; // Default
     };
 
     // Prepare quotation data matching the schema
+    // The corporate picked the service type back on the Service Selection
+    // screen; it travels here inside userfilters. A "managed" selection means
+    // this is a managed-service quotation, so the corporate must be able to
+    // hand the partner an operations brief BEFORE the partner prices it.
+    const isManaged =
+      String(corporateuserrequirements?.serviceType || "").toLowerCase() ===
+      "managed";
+
     const quotationData = {
       // User IDs
       corporateOwnerId: user._id, // Logged-in corporate user
       fleetOwnerId: ownerData.fleetOwnerId, // Fleet owner ID
+
+      // Standard vs managed service. Managed => a Managed Service Brief is
+      // created against this quotation so the partner sees the required routes,
+      // work locations, shifts and employee roster before quoting.
+      serviceMode: isManaged ? "MANAGED" : "STANDARD",
 
       // Vehicle IDs (array of ObjectIds) - FIXED: Access vehicle._id correctly
       vehicles: Object.values(selectedVehicles).map((item) => ({
@@ -214,7 +239,7 @@ const SingleVehicleOwnerDetails = () => {
         endDate: calculateEndDate(
           corporateuserrequirements.startDate,
           corporateuserrequirements.rentalDuration,
-          corporateuserrequirements.durationValue
+          corporateuserrequirements.durationValue,
         ),
         durationType: getDurationType(corporateuserrequirements.rentalDuration),
         duration: parseInt(corporateuserrequirements.durationValue),
@@ -233,32 +258,64 @@ const SingleVehicleOwnerDetails = () => {
       validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    handleQuotationSubmit(quotationData);
+    // For managed services the corporate must author an operations brief (work
+    // locations & shifts + the routes to operate) BEFORE the request reaches
+    // the partner. Open the brief modal and hold the quotation payload; the two
+    // are then submitted together so the partner never sees a request without a
+    // brief. Standard requests are submitted straight away.
+    if (isManaged) {
+      setPendingQuotation(quotationData);
+      setShowBriefModal(true);
+      return;
+    }
 
-    // Here you would make the API call to save the quotation
-    // Example:
-    // axios.post('/api/quotations', quotationData)
-    //   .then(response => {
-    //     console.log('Quotation created:', response.data);
-    //     alert('Quotation request submitted successfully!');
-    //   })
-    //   .catch(error => {
-    //     console.error('Error creating quotation:', error);
-    //     alert('Failed to submit quotation request');
-    //   });
-
-    alert(
-      `Quotation request prepared for ${getTotalSelectedCount()} vehicle(s)!\n\nCheck console for full details.`
-    );
+    handleQuotationSubmit(quotationData, false);
   };
 
-  const handleQuotationSubmit = async (quotationData) => {
-
+  // Called from the brief modal: merge the brief into the held quotation payload
+  // and submit both in a single atomic request.
+  const handleBriefSubmit = async (managedServiceBrief) => {
+    if (!pendingQuotation) return;
+    setSubmittingRequest(true);
     try {
-      await dispatch(requestQuotation(quotationData)).unwrap();
-      navigate("/corporate-profile?tab=my-quotations");
+      await handleQuotationSubmit(
+        { ...pendingQuotation, managedServiceBrief },
+        true,
+      );
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
+
+  const handleQuotationSubmit = async (quotationData, isManaged) => {
+    try {
+      const created = await dispatch(requestQuotation(quotationData)).unwrap();
+
+      // requestQuotation resolves to { quotation, quotationNumber, briefId }.
+      const newId =
+        created?.quotation?._id || created?.quotation?.id || created?._id;
+
+      setShowBriefModal(false);
+      setPendingQuotation(null);
+
+      // For managed services, send the corporate to the quotation they just
+      // created (with its submitted brief) so they can review/refine it. Falls
+      // back to the quotations list if the id is missing for any reason.
+      if (isManaged && newId) {
+        navigate(`/quotation/${newId}?brief=1`);
+      } else if (newId) {
+        navigate("/corporate-profile?tab=my-quotations");
+      } else {
+        navigate("/corporate-profile?tab=my-quotations");
+      }
     } catch (error) {
       console.error("Failed to create quotation:", error);
+      // Surface the backend validation message (e.g. missing brief fields).
+      alert(
+        typeof error === "string"
+          ? error
+          : error?.message || "Failed to create quotation. Please try again.",
+      );
     }
   };
 
@@ -597,6 +654,23 @@ const SingleVehicleOwnerDetails = () => {
           </div>
         )}
       </div>
+
+      {showBriefModal && (
+        <ManagedServiceBriefModal
+          fleetOwnerName={
+            ownerData.companyName || ownerData.fullName || "the partner"
+          }
+          defaultServiceStartDate={corporateuserrequirements.startDate || ""}
+          submitting={submittingRequest}
+          onSubmit={handleBriefSubmit}
+          onClose={() => {
+            if (submittingRequest) return;
+            setShowBriefModal(false);
+            setPendingQuotation(null);
+          }}
+        />
+      )}
+
       <Footer />
     </>
   );

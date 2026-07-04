@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  getActiveCurrency,
+  getActiveCountry,
+  getCountryLocations,
+} from "../../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import api from "../../../../utils/api";
 import LoadingSpinner from "../../../LoadingSpinner/LoadingSpinner";
@@ -59,7 +64,7 @@ const B2B_EditVehicleModal = ({ vehicle, onClose, onSuccess }) => {
       refrigeration: vehicle?.facilities?.refrigeration ?? false,
     },
     pricing: {
-      currency: vehicle?.pricing?.currency || "AED",
+      currency: vehicle?.pricing?.currency || getActiveCurrency(),
       dailyRate: vehicle?.pricing?.dailyRate || 0,
       weeklyRate: vehicle?.pricing?.weeklyRate || 0,
       monthlyRate: vehicle?.pricing?.monthlyRate || 0,
@@ -82,26 +87,10 @@ const B2B_EditVehicleModal = ({ vehicle, onClose, onSuccess }) => {
 
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Dynamic dropdown options from backend
-  const locations = dropdownOptions[
-    DROPDOWN_CATEGORIES.LOCATIONS
-  ]?.options?.map((opt) => opt.value) || [
-    "Dubai",
-    "Abu Dhabi",
-    "Sharjah",
-    "Ajman",
-    "Kuwait City",
-    "Doha",
-    "Riyadh",
-    "Jeddah",
-  ];
-
-  const currencies = dropdownOptions[DROPDOWN_CATEGORIES.CURRENCIES]
-    ?.options || [
-    { value: "AED", label: "AED - UAE Dirham" },
-    { value: "KWD", label: "KWD - Kuwaiti Dinar" },
-    { value: "SAR", label: "SAR - Saudi Riyal" },
-  ];
+  // Identity-locked earner: locations and currency scoped to partner's country.
+  const partnerCountry = getActiveCountry();
+  const partnerCurrency = getActiveCurrency();
+  const locations = getCountryLocations(partnerCountry);
 
   const vehicleCategories = {
     PASSENGER: dropdownOptions[DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_PASSENGER]
@@ -224,7 +213,7 @@ const B2B_EditVehicleModal = ({ vehicle, onClose, onSuccess }) => {
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  };;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -533,18 +522,20 @@ const B2B_EditVehicleModal = ({ vehicle, onClose, onSuccess }) => {
             <div className="b2b-operator-dashboard-add-vehicle-form-grid">
               <div className="b2b-operator-dashboard-add-vehicle-form-group">
                 <label>Currency *</label>
+                {/* Currency is locked to the partner's country currency. */}
                 <select
                   value={formData.pricing.currency}
-                  onChange={(e) =>
-                    handleNestedChange("pricing", "currency", e.target.value)
-                  }
+                  disabled
+                  aria-readonly="true"
                 >
-                  {currencies.map((curr) => (
-                    <option key={curr.value} value={curr.value}>
-                      {curr.label}
-                    </option>
-                  ))}
+                  <option value={formData.pricing.currency || partnerCurrency}>
+                    {formData.pricing.currency || partnerCurrency}
+                  </option>
                 </select>
+                <small className="b2b-operator-dashboard-add-vehicle-help-text">
+                  Pricing is set in your account currency (
+                  {formData.pricing.currency || partnerCurrency}).
+                </small>
               </div>
             </div>
           </div>

@@ -7,6 +7,7 @@ import "./navbar.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import WalletIcon from "./WalletIcon";
 import NotificationIcon from "./NotificationIcon";
+import CommuterLocationBadge from "./CommuterLocationBadge";
 import Logo from "../../assets/Logo.png";
 import {
   selectIsAuthenticated,
@@ -260,6 +261,14 @@ export default function Navbar({ activeTab, setActiveTab }) {
           {isAuthenticated ? (
             // After Login: Show user avatar with dropdown and notifications
             <div className="drivemego-topbar-nav-user-section">
+              {/* Commuter location badge — a commuter's country is AUTO-DETECTED
+                  from their real location (Uber/Careem style), so one account
+                  works across every served country but only ever shows the
+                  routes/prices of the country they are physically in. There is
+                  no manual country picker. Earners are excluded: their country
+                  is a locked business identity. */}
+              {user?.role === "COMMUTER" && <CommuterLocationBadge />}
+
               {user?.role &&
                 ["COMMUTER", "B2C_PARTNER", "B2B_PARTNER", "ADMIN"].includes(
                   user.role,

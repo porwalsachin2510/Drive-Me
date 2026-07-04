@@ -20,10 +20,12 @@ import commuterReducer from "./slices/commuterSlice"
 import corporateOperationsReducer from "./slices/corporateOperationsSlice"
 import corporateOperationsEnhancedReducer from "./slices/corporateOperationsSliceEnhanced"
 import emiPaymentReducer from "./slices/emiPaymentSlice"
+import localeReducer from "./slices/localeSlice"
 
 export const store = configureStore({
     reducer: {
         auth: authReducer,
+        locale: localeReducer,
         vehicles: vehicleReducer,
         quotation: quotationReducer,
         contract: contractReducer,

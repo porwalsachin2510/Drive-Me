@@ -162,6 +162,78 @@
   color: #0c5460;
 }
 
+.corp-billing-status-sent {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.corp-billing-status-draft {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+/* Invoice actions */
+.corp-billing-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.corp-billing-act-btn {
+  padding: 5px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.corp-billing-act-btn:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.corp-billing-act-btn.pay {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+
+.corp-billing-act-btn.pay:hover:not(:disabled) {
+  background: #15803d;
+  color: #fff;
+}
+
+.corp-billing-act-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Toast */
+.corp-billing-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 1100;
+}
+
+.corp-billing-toast.success {
+  background: #16a34a;
+}
+
+.corp-billing-toast.error {
+  background: #dc2626;
+}
+
 @media (max-width: 768px) {
   .corp-billing-header {
     flex-direction: column;

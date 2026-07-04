@@ -133,9 +133,21 @@ export const getB2CPartnerBookings = async (req, res) => {
         const partnerId = req.userId;
         console.log("[v0] getB2CPartnerBookings called for partnerId:", partnerId);
 
-        // Get all bookings for this partner
+        // Get all bookings for this partner.
+        // IMPORTANT: exclude bookings whose ONLINE payment was never completed.
+        // Gateway bookings (STRIPE/TAP/CARD) start as paymentStatus "PENDING" and
+        // only become "COMPLETED" via the payment webhook. If the commuter's payment
+        // failed or was abandoned (e.g. missing Tap keys -> 401), the booking must NOT
+        // appear here as something the partner can accept/reject. CASH (pay-on-board)
+        // and WALLET (debited immediately at creation) are unaffected.
         const bookings = await B2CPassengerBooking.find({
-            b2cPartnerId: partnerId
+            b2cPartnerId: partnerId,
+            $nor: [
+                {
+                    paymentMethod: { $in: ["STRIPE", "TAP", "CARD"] },
+                    paymentStatus: { $in: ["PENDING", "FAILED"] },
+                },
+            ],
         })
             .populate('passengerId', 'fullName email whatsappNumber profileImage country countryCode')
             .populate('routeId', 'fromLocation toLocation routeName')
@@ -866,6 +878,93 @@ export const getB2CBookingDetails = async (req, res) => {
             }
         }
 
+        // ----- ROUND_TRIP: build separate OUTBOUND (jaane) and RETURN (aane) leg info -----
+        // Each leg can have a different driver/vehicle, so expose both to the commuter UI.
+        let outboundDriverInfo = null;
+        let returnDriverInfo = null;
+        let outboundVehicleInfo = null;
+        let returnVehicleInfo = null;
+
+        if (booking.bookingType === 'ROUND_TRIP') {
+            // Outbound driver: prefer denormalized booking fields, then populated outboundDriverId,
+            // then self-driver partner, then the generic driverInfo computed above.
+            if (booking.driverName || booking.outboundDriverId || booking.outboundIsSelfDriver) {
+                if (booking.outboundIsSelfDriver && booking.b2cPartnerId) {
+                    outboundDriverInfo = {
+                        name: booking.b2cPartnerId.fullName || booking.b2cPartnerId.name || 'Self',
+                        phone: booking.b2cPartnerId.whatsappNumber || booking.b2cPartnerId.phone,
+                        profileImage: booking.b2cPartnerId.profileImage,
+                        isSelfDriver: true
+                    };
+                } else if (booking.outboundDriverId) {
+                    const od = booking.outboundDriverId;
+                    outboundDriverInfo = {
+                        name: booking.driverName || od.fullName || od.name,
+                        phone: booking.driverPhoneNumber || od.whatsappNumber || od.phoneNumber,
+                        profileImage: booking.driverImage || od.profileImage || od.driverImage?.url,
+                        isSelfDriver: false
+                    };
+                } else if (booking.driverName) {
+                    outboundDriverInfo = {
+                        name: booking.driverName,
+                        phone: booking.driverPhoneNumber,
+                        profileImage: booking.driverImage,
+                        isSelfDriver: booking.isSelfDriver || false
+                    };
+                }
+            }
+            if (!outboundDriverInfo) outboundDriverInfo = driverInfo;
+
+            // Return driver: prefer denormalized return fields, then populated returnDriverId,
+            // then self-driver partner; finally fall back to the outbound driver (shared driver case).
+            if (booking.returnIsSelfDriver && booking.b2cPartnerId) {
+                returnDriverInfo = {
+                    name: booking.b2cPartnerId.fullName || booking.b2cPartnerId.name || 'Self',
+                    phone: booking.b2cPartnerId.whatsappNumber || booking.b2cPartnerId.phone,
+                    profileImage: booking.b2cPartnerId.profileImage,
+                    isSelfDriver: true
+                };
+            } else if (booking.returnDriverId) {
+                const rd = booking.returnDriverId;
+                returnDriverInfo = {
+                    name: booking.returnDriverName || rd.fullName || rd.name,
+                    phone: booking.returnDriverPhoneNumber || rd.whatsappNumber || rd.phoneNumber,
+                    profileImage: booking.returnDriverImage || rd.profileImage || rd.driverImage?.url,
+                    isSelfDriver: false
+                };
+            } else if (booking.returnDriverName) {
+                returnDriverInfo = {
+                    name: booking.returnDriverName,
+                    phone: booking.returnDriverPhoneNumber,
+                    profileImage: booking.returnDriverImage,
+                    isSelfDriver: false
+                };
+            }
+            if (!returnDriverInfo) returnDriverInfo = outboundDriverInfo;
+
+            // Per-leg vehicles
+            const buildVehicleInfo = (vehicle) => vehicle ? {
+                model: vehicle.model,
+                licensePlate: vehicle.licensePlate,
+                vehicleType: vehicle.vehicleType,
+                vehicleColor: vehicle.vehicleColor,
+                seatingCapacity: vehicle.seatingCapacity,
+                image: vehicle.images?.[0]?.url || vehicle.vehicleImage?.url
+            } : null;
+
+            if (booking.outboundVehicleId) {
+                const ov = await B2CPartnerVehicle.findById(booking.outboundVehicleId);
+                outboundVehicleInfo = buildVehicleInfo(ov);
+            }
+            if (!outboundVehicleInfo) outboundVehicleInfo = vehicleInfo;
+
+            if (booking.returnVehicleId) {
+                const rv = await B2CPartnerVehicle.findById(booking.returnVehicleId);
+                returnVehicleInfo = buildVehicleInfo(rv);
+            }
+            if (!returnVehicleInfo) returnVehicleInfo = outboundVehicleInfo;
+        }
+
         res.status(200).json({
             success: true,
             data: {
@@ -873,6 +972,11 @@ export const getB2CBookingDetails = async (req, res) => {
                     ...booking,
                     driverInfo,
                     vehicleInfo,
+                    // Round Trip per-leg info (null for one-way bookings)
+                    outboundDriverInfo,
+                    returnDriverInfo,
+                    outboundVehicleInfo,
+                    returnVehicleInfo,
                     partnerInfo,
                     hasActiveTripInProgress,
                     hasScheduledReturnTripToday,

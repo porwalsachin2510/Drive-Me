@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import "./B2B_FleetVehicleAssignmentSection.css";
@@ -22,7 +23,7 @@ const B2B_FleetVehicleAssignmentSection = ({
     contract.financials?.securityDeposit?.status === "WAIVED_FOR_EMI";
   const isActive = contract.status === "ACTIVE";
   const currency =
-    contract.financials?.currency || contract.quotationId?.currency || "AED";
+    contract.financials?.currency || contract.quotationId?.currency || getActiveCurrency();
 
   // For EMI mode, contract is ready for vehicle assignment when ACTIVE
   // For STANDARD mode, advance payment must be completed

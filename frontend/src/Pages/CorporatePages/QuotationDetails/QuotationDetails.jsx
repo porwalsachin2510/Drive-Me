@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -11,6 +12,7 @@ import {
   negotiateQuotation,
 } from "../../../Redux/slices/quotationSlice";
 import ContractRequestModal from "../../../Components/Corporate/ContractRequest/ContractRequestModal";
+import ManagedServiceBrief from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBrief";
 import LoadingSpinner from "../../../Components/LoadingSpinner/LoadingSpinner";
 import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -34,16 +36,21 @@ const AdminNegotiationModal = ({ quotation, onClose, onSuccess }) => {
     setError("");
 
     try {
-      const response = await api.post(`/quotations/${quotation._id}/request-negotiation`, {
-        message,
-        expectedPrice: expectedPrice ? parseFloat(expectedPrice) : null,
-      });
+      const response = await api.post(
+        `/quotations/${quotation._id}/request-negotiation`,
+        {
+          message,
+          expectedPrice: expectedPrice ? parseFloat(expectedPrice) : null,
+        },
+      );
 
       if (response.data.success) {
         onSuccess(response.data.negotiation);
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit negotiation request");
+      setError(
+        err.response?.data?.message || "Failed to submit negotiation request",
+      );
     } finally {
       setLoading(false);
     }
@@ -51,7 +58,10 @@ const AdminNegotiationModal = ({ quotation, onClose, onSuccess }) => {
 
   return (
     <div className="single-quotation-modal-overlay" onClick={onClose}>
-      <div className="single-quotation-modal admin-negotiation-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="single-quotation-modal admin-negotiation-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="single-quotation-modal-header">
           <h2>Request Admin Negotiation</h2>
           <button className="single-quotation-modal-close" onClick={onClose}>
@@ -61,17 +71,28 @@ const AdminNegotiationModal = ({ quotation, onClose, onSuccess }) => {
         <div className="single-quotation-modal-body">
           <div className="admin-negotiation-info">
             <div className="negotiation-info-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="16" x2="12" y2="12"/>
-                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
               </svg>
             </div>
             <div className="negotiation-info-text">
               <strong>How Admin Negotiation Works:</strong>
               <ul>
-                <li>Admin will negotiate with the B2B Partner on your behalf</li>
-                <li>If a better price is achieved, the quotation will be updated</li>
+                <li>
+                  Admin will negotiate with the B2B Partner on your behalf
+                </li>
+                <li>
+                  If a better price is achieved, the quotation will be updated
+                </li>
                 <li>A commission of 0-35% may apply on the savings achieved</li>
                 <li>You can then accept or reject the updated quotation</li>
               </ul>
@@ -80,7 +101,10 @@ const AdminNegotiationModal = ({ quotation, onClose, onSuccess }) => {
 
           <div className="current-price-display">
             <span>Current Quoted Price:</span>
-            <strong>{quotation.quotedPrice?.currency || "AED"} {quotation.quotedPrice?.totalAmount?.toFixed(2) || "0.00"}</strong>
+            <strong>
+              {quotation.quotedPrice?.currency || getActiveCurrency()}{" "}
+              {quotation.quotedPrice?.totalAmount?.toFixed(2) || "0.00"}
+            </strong>
           </div>
 
           {error && <div className="negotiation-error">{error}</div>}
@@ -97,7 +121,9 @@ const AdminNegotiationModal = ({ quotation, onClose, onSuccess }) => {
               className="single-quotation-textarea"
               style={{ height: "auto", padding: "10px" }}
             />
-            <span className="form-hint">Leave blank if you want Admin to get the best possible price</span>
+            <span className="form-hint">
+              Leave blank if you want Admin to get the best possible price
+            </span>
           </div>
 
           <div className="form-group">
@@ -151,6 +177,15 @@ const QuotationDetails = () => {
       console.error("Invalid or missing quotation ID in URL params:", id);
     }
   }, [id, dispatch]);
+
+  // When the corporate lands here straight after requesting a managed-service
+  // quotation (?brief=1), scroll them to the brief so they can fill it in.
+  useEffect(() => {
+    if (!loading && window.location.search.includes("brief=1")) {
+      const el = document.getElementById("managed-service-brief");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [loading]);
 
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectMessage, setRejectMessage] = useState("");
@@ -288,14 +323,14 @@ const QuotationDetails = () => {
     // dispatch(getQuotationById(id));
   };
 
-   const handleAdminNegotiationSuccess = (negotiation) => {
-     setShowAdminNegotiationModal(false);
-     setAdminNegotiationStatus("REQUESTED");
-     alert(
-       "Admin Negotiation request submitted successfully! You will be notified when there are updates.",
-     );
-     dispatch(getQuotationById(id)); // Refresh quotation to show updated status
-   };
+  const handleAdminNegotiationSuccess = (negotiation) => {
+    setShowAdminNegotiationModal(false);
+    setAdminNegotiationStatus("REQUESTED");
+    alert(
+      "Admin Negotiation request submitted successfully! You will be notified when there are updates.",
+    );
+    dispatch(getQuotationById(id)); // Refresh quotation to show updated status
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -398,6 +433,16 @@ const QuotationDetails = () => {
           </div>
         </div>
 
+        {/* Managed Service Brief — only for managed-service quotations. The
+            corporate authors its operational requirements (work locations &
+            shifts, routes, employee roster) here so the partner sees exactly
+            what it is committing to BEFORE it prices and returns a quote. */}
+        {quotation.serviceMode === "MANAGED" && (
+          <div className="single-quotation-section" id="managed-service-brief">
+            <ManagedServiceBrief quotationId={quotation._id} mode="corporate" />
+          </div>
+        )}
+
         {/* Rental Period Details */}
         <div className="single-quotation-section">
           <h2>Rental Period Details</h2>
@@ -487,6 +532,14 @@ const QuotationDetails = () => {
                 const quantity = vehicleItem.quantity || 1;
                 const facilitiesList = getFacilitiesList(vehicle.facilities);
 
+                // Goods carriers have cargo capacity (in tons), not passenger
+                // seats. Detect via serviceType, falling back to the capacity
+                // shape so older records without serviceType still render right.
+                const isGoodsCarrier =
+                  vehicle.serviceType === "GOODS_CARRIER" ||
+                  (!vehicle.capacity?.seatingCapacity &&
+                    !!vehicle.capacity?.cargoCapacity);
+
                 return (
                   <div key={index} className="single-quotation-vehicle-card">
                     {/* Vehicle Images */}
@@ -515,12 +568,23 @@ const QuotationDetails = () => {
                           <span>Year:</span>
                           <strong>{vehicle.manufacturingYear || "N/A"}</strong>
                         </div>
-                        <div className="single-quotation-spec-item">
-                          <span>Seats:</span>
-                          <strong>
-                            {vehicle.capacity?.seatingCapacity || "N/A"}
-                          </strong>
-                        </div>
+                        {isGoodsCarrier ? (
+                          <div className="single-quotation-spec-item">
+                            <span>Cargo Capacity:</span>
+                            <strong>
+                              {vehicle.capacity?.cargoCapacity
+                                ? `${vehicle.capacity.cargoCapacity} tons`
+                                : "N/A"}
+                            </strong>
+                          </div>
+                        ) : (
+                          <div className="single-quotation-spec-item">
+                            <span>Seats:</span>
+                            <strong>
+                              {vehicle.capacity?.seatingCapacity || "N/A"}
+                            </strong>
+                          </div>
+                        )}
                         <div className="single-quotation-spec-item">
                           <span>Location:</span>
                           <strong>{vehicle.location || "N/A"}</strong>
@@ -577,7 +641,7 @@ const QuotationDetails = () => {
                   <div className="savings-detail-row">
                     <span className="savings-label">Original Price:</span>
                     <span className="savings-value original-price">
-                      {quotation.quotedPrice?.currency || "AED"}{" "}
+                      {quotation.quotedPrice?.currency || getActiveCurrency()}{" "}
                       {quotation.adminNegotiation.originalPrice?.toFixed(2) ||
                         "0.00"}
                     </span>
@@ -587,14 +651,14 @@ const QuotationDetails = () => {
                       Price After Negotiation:
                     </span>
                     <span className="savings-value new-price">
-                      {quotation.quotedPrice?.currency || "AED"}{" "}
+                      {quotation.quotedPrice?.currency || getActiveCurrency()}{" "}
                       {quotation.quotedPrice?.totalAmount?.toFixed(2) || "0.00"}
                     </span>
                   </div>
                   <div className="savings-detail-row highlight">
                     <span className="savings-label">Your Savings:</span>
                     <span className="savings-value savings-amount">
-                      {quotation.quotedPrice?.currency || "AED"}{" "}
+                      {quotation.quotedPrice?.currency || getActiveCurrency()}{" "}
                       {quotation.adminNegotiation.savingsAmount?.toFixed(2) ||
                         "0.00"}
                     </span>
@@ -629,7 +693,7 @@ const QuotationDetails = () => {
                       <div className="single-quotation-breakdown-row">
                         <span>Vehicle Rental:</span>
                         <strong>
-                          {quotedPrice.currency || "AED"}{" "}
+                          {quotedPrice.currency || getActiveCurrency()}{" "}
                           {quotedPrice.breakdown?.vehicleRental?.toFixed(2) ||
                             "0.00"}
                         </strong>
@@ -638,7 +702,7 @@ const QuotationDetails = () => {
                         <div className="single-quotation-breakdown-row">
                           <span>Driver Charges:</span>
                           <strong>
-                            {quotedPrice.currency || "AED"}{" "}
+                            {quotedPrice.currency || getActiveCurrency()}{" "}
                             {quotedPrice.breakdown?.driverCharges?.toFixed(2) ||
                               "0.00"}
                           </strong>
@@ -648,7 +712,7 @@ const QuotationDetails = () => {
                         <div className="single-quotation-breakdown-row">
                           <span>Fuel Charges:</span>
                           <strong>
-                            {quotedPrice.currency || "AED"}{" "}
+                            {quotedPrice.currency || getActiveCurrency()}{" "}
                             {quotedPrice.breakdown?.fuelCharges?.toFixed(2) ||
                               "0.00"}
                           </strong>
@@ -657,7 +721,7 @@ const QuotationDetails = () => {
                       <div className="single-quotation-breakdown-row single-quotation-breakdown-total">
                         <span>Total Amount:</span>
                         <strong>
-                          {quotedPrice.currency || "AED"}{" "}
+                          {quotedPrice.currency || getActiveCurrency()}{" "}
                           {quotedPrice.totalAmount?.toFixed(2) || "0.00"}
                         </strong>
                       </div>
@@ -688,7 +752,7 @@ const QuotationDetails = () => {
                               <div className="single-quotation-breakdown-row">
                                 <span>Base Rental:</span>
                                 <strong>
-                                  {quotedPrice.currency || "AED"}{" "}
+                                  {quotedPrice.currency || getActiveCurrency()}{" "}
                                   {breakdown.baseRental?.toFixed(2) || "0.00"}
                                 </strong>
                               </div>
@@ -697,7 +761,8 @@ const QuotationDetails = () => {
                                   <div className="single-quotation-breakdown-row">
                                     <span>Driver Charges:</span>
                                     <strong>
-                                      {quotedPrice.currency || "AED"}{" "}
+                                      {quotedPrice.currency ||
+                                        getActiveCurrency()}{" "}
                                       {breakdown.driverCharges?.toFixed(2) ||
                                         "0.00"}
                                     </strong>
@@ -708,7 +773,8 @@ const QuotationDetails = () => {
                                   <div className="single-quotation-breakdown-row">
                                     <span>Fuel Charges:</span>
                                     <strong>
-                                      {quotedPrice.currency || "AED"}{" "}
+                                      {quotedPrice.currency ||
+                                        getActiveCurrency()}{" "}
                                       {breakdown.fuelCharges?.toFixed(2) ||
                                         "0.00"}
                                     </strong>
@@ -717,7 +783,7 @@ const QuotationDetails = () => {
                               <div className="single-quotation-breakdown-row single-quotation-breakdown-subtotal">
                                 <span>Subtotal:</span>
                                 <strong>
-                                  {quotedPrice.currency || "AED"}{" "}
+                                  {quotedPrice.currency || getActiveCurrency()}{" "}
                                   {breakdown.totalAmount?.toFixed(2) || "0.00"}
                                 </strong>
                               </div>
@@ -781,14 +847,18 @@ const QuotationDetails = () => {
                           quotation.adminNegotiation.priceReduced && (
                             <p>
                               Great news! Price reduced from{" "}
-                              {quotation.quotedPrice?.currency || "AED"}{" "}
+                              {quotation.quotedPrice?.currency ||
+                                getActiveCurrency()}{" "}
                               {quotation.adminNegotiation.originalPrice?.toFixed(
                                 2,
                               )}{" "}
-                              to {quotation.quotedPrice?.currency || "AED"}{" "}
+                              to{" "}
+                              {quotation.quotedPrice?.currency ||
+                                getActiveCurrency()}{" "}
                               {quotation.quotedPrice?.totalAmount?.toFixed(2)}.
                               You saved{" "}
-                              {quotation.quotedPrice?.currency || "AED"}{" "}
+                              {quotation.quotedPrice?.currency ||
+                                getActiveCurrency()}{" "}
                               {quotation.adminNegotiation.savingsAmount?.toFixed(
                                 2,
                               )}
@@ -869,7 +939,7 @@ const QuotationDetails = () => {
                       Vehicle Rental:
                     </span>
                     <span className="single-quotation-price-value">
-                      {quotation.quotedPrice.currency || "AED"}{" "}
+                      {quotation.quotedPrice.currency || getActiveCurrency()}{" "}
                       {quotation.quotedPrice.breakdown?.vehicleRental?.toFixed(
                         2,
                       ) || "0.00"}
@@ -880,7 +950,7 @@ const QuotationDetails = () => {
                       Driver Charges:
                     </span>
                     <span className="single-quotation-price-value">
-                      {quotation.quotedPrice.currency || "AED"}{" "}
+                      {quotation.quotedPrice.currency || getActiveCurrency()}{" "}
                       {quotation.quotedPrice.breakdown?.driverCharges?.toFixed(
                         2,
                       ) || "0.00"}
@@ -891,7 +961,7 @@ const QuotationDetails = () => {
                       Fuel Charges:
                     </span>
                     <span className="single-quotation-price-value">
-                      {quotation.quotedPrice.currency || "AED"}{" "}
+                      {quotation.quotedPrice.currency || getActiveCurrency()}{" "}
                       {quotation.quotedPrice.breakdown?.fuelCharges?.toFixed(
                         2,
                       ) || "0.00"}
@@ -902,7 +972,7 @@ const QuotationDetails = () => {
                       Total Amount:
                     </span>
                     <span className="single-quotation-price-value single-quotation-total-value">
-                      {quotation.quotedPrice.currency || "AED"}{" "}
+                      {quotation.quotedPrice.currency || getActiveCurrency()}{" "}
                       {quotation.quotedPrice.totalAmount?.toFixed(2) || "0.00"}
                     </span>
                   </div>
@@ -1104,6 +1174,6 @@ const QuotationDetails = () => {
       <Footer />
     </>
   );
-};;
+};
 
 export default QuotationDetails;

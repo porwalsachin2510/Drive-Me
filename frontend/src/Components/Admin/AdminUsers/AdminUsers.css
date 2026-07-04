@@ -314,6 +314,19 @@ img.avatar-circle {
   background: #dc2626;
 }
 
+.protected-account-note {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
 .loading {
   display: flex;
   align-items: center;

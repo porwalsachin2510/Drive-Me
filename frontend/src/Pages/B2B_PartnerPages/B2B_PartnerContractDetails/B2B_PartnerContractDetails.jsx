@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -631,28 +632,28 @@ const B2B_PartnerContractDetails = () => {
               <div className="b2b-contract-info-item">
                 <span className="b2b-contract-label">Total Amount:</span>
                 <span className="b2b-contract-value b2b-contract-amount">
-                  {financials.currency || "AED"}{" "}
+                  {financials.currency || getActiveCurrency()}{" "}
                   {financials.totalAmount?.toFixed(2) || "0.00"}
                 </span>
               </div>
               <div className="b2b-contract-info-item">
                 <span className="b2b-contract-label">Advance Payment:</span>
                 <span className="b2b-contract-value b2b-contract-amount">
-                  {financials.currency || "AED"}{" "}
+                  {financials.currency || getActiveCurrency()}{" "}
                   {financials.advancePayment?.amount?.toFixed(2) || "0.00"}
                 </span>
               </div>
               <div className="b2b-contract-info-item">
                 <span className="b2b-contract-label">Remaining Amount:</span>
                 <span className="b2b-contract-value">
-                  {financials.currency || "AED"}{" "}
+                  {financials.currency || getActiveCurrency()}{" "}
                   {financials.remainingAmount?.toFixed(2) || "0.00"}
                 </span>
               </div>
               <div className="b2b-contract-info-item">
                 <span className="b2b-contract-label">Security Deposit:</span>
                 <span className="b2b-contract-value">
-                  {financials.currency || "AED"}{" "}
+                  {financials.currency || getActiveCurrency()}{" "}
                   {financials.securityDeposit?.amount?.toFixed(2) || "0.00"}
                 </span>
               </div>
@@ -675,7 +676,7 @@ const B2B_PartnerContractDetails = () => {
                   <div className="b2b-contract-info-item">
                     <span className="b2b-contract-label">Vehicle Rental:</span>
                     <span className="b2b-contract-value">
-                      {financials.currency || "AED"}{" "}
+                      {financials.currency || getActiveCurrency()}{" "}
                       {quotation.quotedPrice.breakdown?.vehicleRental?.toFixed(
                         2,
                       ) || "0.00"}
@@ -684,7 +685,7 @@ const B2B_PartnerContractDetails = () => {
                   <div className="b2b-contract-info-item">
                     <span className="b2b-contract-label">Driver Charges:</span>
                     <span className="b2b-contract-value">
-                      {financials.currency || "AED"}{" "}
+                      {financials.currency || getActiveCurrency()}{" "}
                       {quotation.quotedPrice.breakdown?.driverCharges?.toFixed(
                         2,
                       ) || "0.00"}
@@ -693,7 +694,7 @@ const B2B_PartnerContractDetails = () => {
                   <div className="b2b-contract-info-item">
                     <span className="b2b-contract-label">Fuel Charges:</span>
                     <span className="b2b-contract-value">
-                      {financials.currency || "AED"}{" "}
+                      {financials.currency || getActiveCurrency()}{" "}
                       {quotation.quotedPrice.breakdown?.fuelCharges?.toFixed(
                         2,
                       ) || "0.00"}

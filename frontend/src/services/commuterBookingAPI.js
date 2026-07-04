@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../config/localeConfig";
 import api from "../utils/api";
 
 // Commuter Booking API Service - Real backend integration
@@ -48,6 +49,20 @@ export const commuterBookingAPI = {
       return response.data;
     } catch (error) {
       console.error("Error cancelling booking:", error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * Preview cancellation fee/refund before confirming
+   * Backend: GET /api/bookings/:bookingId/cancellation-preview (bookingRoutes.js)
+   */
+  getCancellationPreview: async (bookingId) => {
+    try {
+      const response = await api.get(`/bookings/${bookingId}/cancellation-preview`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching cancellation preview:", error.message);
       throw error;
     }
   },
@@ -212,7 +227,7 @@ export const commuterBookingAPI = {
     try {
       const response = await api.post(`/wallet/create-payment-session`, {
         ...data,
-        currency: data.currency || "KWD"
+        currency: data.currency || getActiveCurrency()
       });
       return response.data;
     } catch (error) {

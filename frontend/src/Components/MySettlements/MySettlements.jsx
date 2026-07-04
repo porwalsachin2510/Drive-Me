@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../config/localeConfig";
 import { useState, useEffect, useCallback } from "react";
 import api from "../../utils/api";
 import "./mysettlements.css";
@@ -27,7 +28,7 @@ const STATUS_LABELS = {
   DEBT_OUTSTANDING: "Debt Outstanding",
 };
 
-const formatMoney = (value, currency = "AED") =>
+const formatMoney = (value, currency = getActiveCurrency()) =>
   `${Number(value || 0).toLocaleString("en-AE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -91,7 +92,7 @@ function MySettlements() {
     fetchSettlement();
   }, [fetchSettlement]);
 
-  const currency = settlement?.currency || "AED";
+  const currency = settlement?.currency || getActiveCurrency();
 
   return (
     <div className="mysettlements">

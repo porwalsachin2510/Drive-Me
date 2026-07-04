@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import api from "../../../utils/api";
 import "./RequirementManagement.css";
@@ -70,7 +71,7 @@ function RequirementManagement() {
       budgetRange: {
         min: 0,
         max: 0,
-        currency: "KWD",
+        currency: getActiveCurrency(),
       },
       paymentTerms: "MONTHLY",
     },
@@ -342,7 +343,7 @@ function RequirementManagement() {
         budgetRange: {
           min: 0,
           max: 0,
-          currency: "KWD",
+          currency: getActiveCurrency(),
         },
         paymentTerms: "MONTHLY",
       },
@@ -1288,7 +1289,7 @@ function RequirementManagement() {
                           >
                             {quotation.quotedPrice?.totalAmount?.toLocaleString() ||
                               0}{" "}
-                            {quotation.quotedPrice?.currency || "KWD"}
+                            {quotation.quotedPrice?.currency || getActiveCurrency()}
                           </div>
                         </div>
                         <div

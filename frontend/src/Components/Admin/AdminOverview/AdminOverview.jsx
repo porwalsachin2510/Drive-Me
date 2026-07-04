@@ -1,4 +1,6 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import "./AdminOverview.css";
 import AdminStatsCards from "../AdminStatsCards/AdminStatsCards";
 import AdminRevenueChart from "../AdminRevenueChart/AdminRevenueChart";
@@ -32,19 +34,28 @@ function AdminOverview() {
     toggledBy: null,
   });
 
+  // The admin's selected view country (driven by the navbar currency selector).
+  // When it changes, we refetch all dashboard data scoped to that country so the
+  // numbers AND the currency stay in sync.
+  const country = useSelector((state) => state.locale?.country);
+
   useEffect(() => {
     fetchDashboardData();
     fetchRecentActivity();
     fetchOnlinePaymentStatus();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch dashboard stats - now includes all user counts
-      const statsResponse = await api.get("/admin/dashboard/stats");
+      // Fetch dashboard stats scoped to the selected country so revenue, wallet
+      // balance and currency all reflect the chosen market.
+      const statsResponse = await api.get("/admin/dashboard/stats", {
+        params: country ? { country } : {},
+      });
 
       // Fetch recent activity
       const activityResponse = await api.get("/admin/recent-activity");
@@ -68,7 +79,7 @@ function AdminOverview() {
         suspendedUsers: dashboardStats.suspendedUsers || 0,
         adminBalance: dashboardStats.adminBalance || 0,
         totalEarnings: dashboardStats.totalEarnings || 0,
-        currency: dashboardStats.currency || "AED",
+        currency: dashboardStats.currency || getActiveCurrency(),
       };
 
       setStats(combinedStats);
@@ -136,7 +147,7 @@ function AdminOverview() {
   const _formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-AE", {
       style: "currency",
-      currency: "AED",
+      currency: getActiveCurrency(),
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);

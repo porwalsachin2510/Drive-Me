@@ -17,15 +17,24 @@ import Tag from "../models/Tag.js";
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
+import B2CMonthlyPass from "../models/B2CMonthlyPass.js";
+import { processRouteDeletionRefundForPass, round2 } from "./b2cScheduleController.js";
 import AdminNegotiation from "../models/AdminNegotiation.js";
 import CorporateBooking from "../models/CorporateBooking.js";
 import EMIPayment from "../models/EMIPayment.js";
 import WithdrawalRequest from "../models/WithdrawalRequest.js";
+import Report from "../models/Report.js";
 import { uploadToCloudinary } from "../Config/Cloudinary.js";
 import { createNotification, sendRealTimeNotification } from "../Services/notificationService.js";
 import { broadcastVehicleAvailabilityChange } from "../Services/socketService.js";
 import { creditAdminNegotiationCommission } from "./walletController.js";
+import { settleCashDuesOnTopUp } from "../Services/cashCancellationService.js";
 import paymentGatewayService, { getPaymentGateway, detectCountryFromCurrency } from "../Services/paymentGatewayService.js";
+import { computeRouteSeatAvailability } from "../Services/seatAvailabilityService.js";
+import { normalizeCountry, getCountryCurrency, getEffectiveCountry, getCurrencyDecimals, getServiceCountryCodes, isServedCountry } from "../Config/localizationConfig.js";
+import { resolveDisplayCurrency, convertForDisplay, sumByCurrency } from "../Services/displayCurrency.js";
+import { getOrCreateWallet } from "../Services/walletService.js";
+import { isPrimaryOwnerId, ALL_ADMIN_MODULES } from "../Services/ownerService.js";
 
 // Get all users for admin
 export const getAllUsers = async (req, res) => {
@@ -126,6 +135,36 @@ export const suspendUser = async (req, res) => {
         const { userId } = req.params;
         const { reason, durationDays, customEndDate } = req.body;
 
+        // OWNER PROTECTION: the primary owner can never be suspended.
+        if (isPrimaryOwnerId(userId)) {
+            return res.status(403).json({
+                success: false,
+                message: "The platform owner account cannot be suspended."
+            });
+        }
+
+        // SUPER ADMIN PROTECTION: a super admin account can only be suspended
+        // by another super admin. A regular admin must never be able to suspend
+        // a super admin (the platform's top-level user).
+        const targetToSuspend = await User.findById(userId).select("role adminPermissions");
+        if (!targetToSuspend) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+        if (targetToSuspend.role === "ADMIN" && targetToSuspend.adminPermissions?.isSuperAdmin) {
+            const requestingAdmin = await User.findById(req.userId).select("adminPermissions");
+            const requesterIsSuperAdmin =
+                isPrimaryOwnerId(req.userId) || requestingAdmin?.adminPermissions?.isSuperAdmin === true;
+            if (!requesterIsSuperAdmin) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Only super admins can suspend another super admin."
+                });
+            }
+        }
+
         // Calculate suspension end date
         const suspendedAt = new Date();
         let suspensionEndDate;
@@ -224,20 +263,22 @@ export const activateUser = async (req, res) => {
         const { message, isNewActivation } = req.body; // Optional message from admin and flag for new vs reactivation
 
         // Get previous user status to determine if this is a new activation or reactivation
-        const previousUser = await User.findById(userId).select('status suspensionReason').lean();
+        const previousUser = await User.findById(userId).select('status suspensionReason role').lean();
         const wasNewUser = previousUser?.status === "PENDING" || isNewActivation;
+
+        const updatePayload = {
+            status: "ACTIVE",
+            activatedAt: new Date(),
+            activatedBy: req.userId,
+            suspensionEndDate: null,
+            suspensionReason: null,
+            suspensionDuration: null,
+            reactivationMessage: message || null,
+        };
 
         const user = await User.findByIdAndUpdate(
             userId,
-            {
-                status: "ACTIVE",
-                activatedAt: new Date(),
-                activatedBy: req.userId,
-                suspensionEndDate: null,
-                suspensionReason: null,
-                suspensionDuration: null,
-                reactivationMessage: message || null
-            },
+            updatePayload,
             { new: true }
         ).select('-password');
 
@@ -314,6 +355,36 @@ export const activateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
     try {
         const { userId } = req.params;
+
+        // OWNER PROTECTION: the primary owner can never be deleted.
+        if (isPrimaryOwnerId(userId)) {
+            return res.status(403).json({
+                success: false,
+                message: "The platform owner account cannot be deleted."
+            });
+        }
+
+        // SUPER ADMIN PROTECTION: a super admin account can only be deleted by
+        // another super admin. A regular admin must never be able to delete a
+        // super admin (the platform's top-level user).
+        const targetToDelete = await User.findById(userId).select("role adminPermissions");
+        if (!targetToDelete) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+        if (targetToDelete.role === "ADMIN" && targetToDelete.adminPermissions?.isSuperAdmin) {
+            const requestingAdmin = await User.findById(req.userId).select("adminPermissions");
+            const requesterIsSuperAdmin =
+                isPrimaryOwnerId(req.userId) || requestingAdmin?.adminPermissions?.isSuperAdmin === true;
+            if (!requesterIsSuperAdmin) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Only super admins can delete another super admin."
+                });
+            }
+        }
 
         const user = await User.findByIdAndDelete(userId);
 
@@ -653,6 +724,11 @@ export const activateB2CProvider = async (req, res) => {
 // Get finance metrics for admin
 export const getFinanceMetrics = async (req, res) => {
     try {
+        // Currency the admin wants to view the dashboard in (e.g. KWD). Every
+        // amount below is stored in its NATIVE currency, so we group by currency
+        // and convert each bucket to `displayCurrency` before summing.
+        const displayCurrency = resolveDisplayCurrency(req);
+
         const [
             totalRevenue,
             netEarnings,
@@ -665,61 +741,43 @@ export const getFinanceMetrics = async (req, res) => {
         ] = await Promise.all([
             Transaction.aggregate([
                 { $match: { category: 'PAYMENT_RECEIVED' } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
+                { $group: { _id: '$currency', total: { $sum: '$amount' } } }
             ]),
             Transaction.aggregate([
                 { $match: { category: 'COMMISSION_EARNED' } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
+                { $group: { _id: '$currency', total: { $sum: '$amount' } } }
             ]),
             Transaction.aggregate([
                 { $match: { category: 'PAYOUT_REQUESTED' } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
+                { $group: { _id: '$currency', total: { $sum: '$amount' } } }
             ]),
             User.countDocuments({ role: "B2C_PARTNER", status: "ACTIVE" }),
             Transaction.countDocuments(),
             Transaction.aggregate([
                 { $match: { createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
+                { $group: { _id: '$currency', total: { $sum: '$amount' } } }
             ]),
             Transaction.aggregate([
                 { $match: { category: 'COMMISSION_EARNED' } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
+                { $group: { _id: '$currency', total: { $sum: '$amount' } } }
             ]),
             Wallet.aggregate([
-                { $group: { _id: null, total: { $sum: '$securityDepositHeld' } } }
-            ]),
-            // Get dominant currency
-            Wallet.aggregate([
-                { $group: { _id: "$currency", count: { $sum: 1 } } },
-                { $sort: { count: -1 } },
-                { $limit: 1 }
+                { $group: { _id: '$currency', total: { $sum: '$securityDepositHeld' } } }
             ])
         ]);
-
-        const currency = securityDeposits.length > 0 && securityDeposits[securityDeposits.length - 1]?.[0]?._id
-            ? securityDeposits[securityDeposits.length - 1][0]._id
-            : "AED";
-
-        // Get the actual currency from the last aggregation result (which is dominantCurrency)
-        const results = await Wallet.aggregate([
-            { $group: { _id: "$currency", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 1 }
-        ]);
-        const dominantCurrency = results[0]?._id || "AED";
 
         res.status(200).json({
             success: true,
             metrics: {
-                totalRevenue: totalRevenue[0]?.total || 0,
-                netEarnings: netEarnings[0]?.total || 0,
-                pendingPayouts: pendingPayouts[0]?.total || 0,
+                totalRevenue: sumByCurrency(totalRevenue, displayCurrency),
+                netEarnings: sumByCurrency(netEarnings, displayCurrency),
+                pendingPayouts: sumByCurrency(pendingPayouts, displayCurrency),
                 activeProviders,
                 totalTransactions,
-                monthlyRevenue: monthlyRevenue[0]?.total || 0,
-                commissionEarned: commissionEarned[0]?.total || 0,
-                securityDeposits: securityDeposits[0]?.total || 0,
-                currency: dominantCurrency
+                monthlyRevenue: sumByCurrency(monthlyRevenue, displayCurrency),
+                commissionEarned: sumByCurrency(commissionEarned, displayCurrency),
+                securityDeposits: sumByCurrency(securityDeposits, displayCurrency),
+                currency: displayCurrency
             }
         });
     } catch (error) {
@@ -736,6 +794,7 @@ export const getFinanceMetrics = async (req, res) => {
 export const getPayoutRequests = async (req, res) => {
     try {
         const { status, page = 1, limit = 20 } = req.query;
+        const displayCurrency = resolveDisplayCurrency(req);
         const query = {};
 
         if (status) query.status = status;
@@ -804,7 +863,9 @@ export const getPayoutRequests = async (req, res) => {
         const total = await WithdrawalRequest.countDocuments(query);
         const pendingCount = await WithdrawalRequest.countDocuments({ status: 'PENDING' });
 
-        // Transform data for frontend
+        // Transform data for frontend. We keep the NATIVE amount/currency for
+        // reference and add converted display fields so the admin sees every
+        // request in the currency they selected for the dashboard.
         const formattedPayouts = payouts.map(payout => ({
             _id: payout._id,
             requestId: payout.requestId,
@@ -818,6 +879,8 @@ export const getPayoutRequests = async (req, res) => {
             iban: payout.iban,
             accountHolderName: payout.accountHolderName,
             currency: payout.currency,
+            displayCurrency,
+            displayAmount: convertForDisplay(payout.amount, payout.currency, displayCurrency),
             createdAt: payout.createdAt,
             processedAt: payout.processedAt,
             completedAt: payout.completedAt,
@@ -831,6 +894,7 @@ export const getPayoutRequests = async (req, res) => {
         res.status(200).json({
             success: true,
             payouts: formattedPayouts,
+            displayCurrency,
             stats: {
                 total,
                 pending: pendingCount
@@ -855,6 +919,7 @@ export const getPayoutRequests = async (req, res) => {
 export const getTransactions = async (req, res) => {
     try {
         const { page = 1, limit = 50, type, status, startDate, endDate } = req.query;
+        const displayCurrency = resolveDisplayCurrency(req);
         const query = {};
 
         if (type) query.category = type;
@@ -918,12 +983,15 @@ export const getTransactions = async (req, res) => {
                 ...transaction,
                 from: fromDetails || '-',
                 to: toDetails || '-',
+                displayCurrency,
+                displayAmount: convertForDisplay(transaction.amount, transaction.currency, displayCurrency),
             };
         });
 
         res.status(200).json({
             success: true,
             transactions,
+            displayCurrency,
             pagination: {
                 total,
                 page: Number.parseInt(page),
@@ -1672,69 +1740,336 @@ export const investigateFraudAlert = async (req, res) => {
     }
 };
 
-// Generate custom report
+// Helper: format a date for report rows
+const fmtDate = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+
+// Generate custom report (persists a snapshot to the Report collection)
 export const generateCustomReport = async (req, res) => {
     try {
-        const { reportType, dateFrom, dateTo } = req.body;
+        const { reportType = "general", dateFrom, dateTo } = req.body;
+
+        // Build a createdAt date filter that can be reused across queries
         const dateFilter = {};
         if (dateFrom) dateFilter.$gte = new Date(dateFrom);
-        if (dateTo) dateFilter.$lte = new Date(dateTo);
+        if (dateTo) {
+            const end = new Date(dateTo);
+            end.setHours(23, 59, 59, 999);
+            dateFilter.$lte = end;
+        }
+        const hasDate = Boolean(dateFilter.$gte || dateFilter.$lte);
+        const createdAtQuery = hasDate ? { createdAt: dateFilter } : {};
 
-        let reportData = {};
+        const rangeLabel = dateFrom || dateTo
+            ? ` (${dateFrom || "start"} to ${dateTo || "today"})`
+            : "";
+
+        let title = "";
+        let description = "";
+        let columns = [];
+        let rows = [];
+        let summary = {};
+        let totalAmount = 0;
 
         switch (reportType) {
-            case 'revenue': {
-                const payments = await Payment.find(dateFilter.$gte ? { createdAt: dateFilter } : {});
-                const total = payments.reduce((s, p) => s + (p.amount || 0), 0);
-                reportData = { title: 'Revenue Report', recordCount: payments.length, totalRevenue: total, generatedAt: new Date() };
+            case "revenue": {
+                const payments = await Payment.find({ ...createdAtQuery, status: "COMPLETED" })
+                    .populate("corporateOwnerId", "fullName email companyName")
+                    .populate("contractId", "_id")
+                    .sort({ createdAt: -1 });
+
+                totalAmount = payments.reduce((s, p) => s + (p.amount || 0), 0);
+                const commissionTotal = payments.reduce((s, p) => {
+                    const c = typeof p.adminCommission === "number" ? p.adminCommission : 0;
+                    return s + c;
+                }, 0);
+
+                columns = ["Date", "Payer", "Type", "Method", "Amount (AED)", "Status"];
+                rows = payments.map((p) => ({
+                    Date: fmtDate(p.createdAt),
+                    Payer: p.corporateOwnerId?.companyName || p.corporateOwnerId?.fullName || "—",
+                    Type: p.paymentType || "—",
+                    Method: p.paymentMethod || "—",
+                    "Amount (AED)": (p.amount || 0).toFixed(2),
+                    Status: p.status,
+                }));
+
+                title = "Revenue Report" + rangeLabel;
+                description = `Completed payments collected${rangeLabel || " (all time)"}.`;
+                summary = {
+                    totalRevenue: Number(totalAmount.toFixed(2)),
+                    totalTransactions: payments.length,
+                    adminCommission: Number(commissionTotal.toFixed(2)),
+                };
                 break;
             }
-            case 'users': {
-                const users = await User.find(dateFilter.$gte ? { createdAt: dateFilter } : {}).select('-password');
-                reportData = { title: 'User Report', recordCount: users.length, users: users.slice(0, 50), generatedAt: new Date() };
+
+            case "users": {
+                const users = await User.find(createdAtQuery)
+                    .select("fullName email role status country companyName createdAt")
+                    .sort({ createdAt: -1 });
+
+                columns = ["Name", "Email", "Role", "Status", "Country", "Joined"];
+                rows = users.map((u) => ({
+                    Name: u.fullName || "—",
+                    Email: u.email || "—",
+                    Role: u.role || "—",
+                    Status: u.status || "—",
+                    Country: u.country || "—",
+                    Joined: fmtDate(u.createdAt),
+                }));
+
+                const byRole = {};
+                const byStatus = {};
+                users.forEach((u) => {
+                    byRole[u.role] = (byRole[u.role] || 0) + 1;
+                    byStatus[u.status] = (byStatus[u.status] || 0) + 1;
+                });
+
+                title = "User Report" + rangeLabel;
+                description = `Users registered${rangeLabel || " (all time)"}.`;
+                summary = { totalUsers: users.length, byRole, byStatus };
                 break;
             }
-            case 'bookings': {
-                const bookings = await B2CPassengerBooking.find(dateFilter.$gte ? { createdAt: dateFilter } : {});
-                reportData = { title: 'Bookings Report', recordCount: bookings.length, generatedAt: new Date() };
+
+            case "bookings": {
+                const bookings = await B2CPassengerBooking.find(createdAtQuery)
+                    .populate("passengerId", "fullName email")
+                    .populate("partnerId", "fullName companyName")
+                    .sort({ createdAt: -1 });
+
+                totalAmount = bookings.reduce((s, b) => s + (b.paymentAmount || 0), 0);
+
+                columns = ["Date", "Passenger", "Route", "Fare", "Payment", "Status"];
+                rows = bookings.map((b) => ({
+                    Date: fmtDate(b.createdAt),
+                    Passenger: b.passengerId?.fullName || "—",
+                    Route: `${b.pickupLocation || "—"} → ${b.dropoffLocation || "—"}`,
+                    Fare: (b.paymentAmount || 0).toFixed(2),
+                    Payment: b.paymentStatus || "—",
+                    Status: b.bookingStatus || "—",
+                }));
+
+                const byStatus = {};
+                bookings.forEach((b) => {
+                    byStatus[b.bookingStatus] = (byStatus[b.bookingStatus] || 0) + 1;
+                });
+
+                title = "Bookings Report" + rangeLabel;
+                description = `Passenger bookings created${rangeLabel || " (all time)"}.`;
+                summary = {
+                    totalBookings: bookings.length,
+                    totalFare: Number(totalAmount.toFixed(2)),
+                    byStatus,
+                };
                 break;
             }
+
+            case "commission": {
+                const payments = await Payment.find({ ...createdAtQuery, status: "COMPLETED" })
+                    .populate("corporateOwnerId", "fullName companyName")
+                    .sort({ createdAt: -1 });
+
+                const withCommission = payments.filter(
+                    (p) => typeof p.adminCommission === "number" && p.adminCommission > 0,
+                );
+                totalAmount = withCommission.reduce((s, p) => s + (p.adminCommission || 0), 0);
+
+                columns = ["Date", "Payer", "Payment (AED)", "Rate (%)", "Commission (AED)"];
+                rows = withCommission.map((p) => ({
+                    Date: fmtDate(p.createdAt),
+                    Payer: p.corporateOwnerId?.companyName || p.corporateOwnerId?.fullName || "—",
+                    "Payment (AED)": (p.amount || 0).toFixed(2),
+                    "Rate (%)": p.appliedCommissionRate ?? "—",
+                    "Commission (AED)": (p.adminCommission || 0).toFixed(2),
+                }));
+
+                title = "Commission Earned Report" + rangeLabel;
+                description = `Admin commission earned from completed payments${rangeLabel || " (all time)"}.`;
+                summary = {
+                    totalCommission: Number(totalAmount.toFixed(2)),
+                    transactions: withCommission.length,
+                };
+                break;
+            }
+
+            case "settlements": {
+                const withdrawals = await WithdrawalRequest.find(createdAtQuery)
+                    .populate("userId", "fullName companyName role")
+                    .sort({ createdAt: -1 });
+
+                totalAmount = withdrawals.reduce((s, w) => s + (w.amount || 0), 0);
+
+                columns = ["Date", "Requested By", "Amount", "Currency", "Method", "Status"];
+                rows = withdrawals.map((w) => ({
+                    Date: fmtDate(w.createdAt),
+                    "Requested By": w.userId?.companyName || w.userId?.fullName || "—",
+                    Amount: (w.amount || 0).toFixed(2),
+                    Currency: w.currency || "AED",
+                    Method: w.paymentMethod || "—",
+                    Status: w.status || "—",
+                }));
+
+                const byStatus = {};
+                withdrawals.forEach((w) => {
+                    byStatus[w.status] = (byStatus[w.status] || 0) + 1;
+                });
+
+                title = "Settlements Report" + rangeLabel;
+                description = `Withdrawal / settlement requests${rangeLabel || " (all time)"}.`;
+                summary = {
+                    totalRequests: withdrawals.length,
+                    totalAmount: Number(totalAmount.toFixed(2)),
+                    byStatus,
+                };
+                break;
+            }
+
             default: {
-                const users = await User.countDocuments();
-                const payments = await Payment.countDocuments();
-                const bookings = await B2CPassengerBooking.countDocuments();
-                reportData = { title: 'General Summary Report', recordCount: users + payments + bookings, summary: { users, payments, bookings }, generatedAt: new Date() };
+                // general summary
+                const [userCount, paymentAgg, bookingCount, commuters, corporates, partners] =
+                    await Promise.all([
+                        User.countDocuments(createdAtQuery),
+                        Payment.aggregate([
+                            { $match: { ...createdAtQuery, status: "COMPLETED" } },
+                            { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } },
+                        ]),
+                        B2CPassengerBooking.countDocuments(createdAtQuery),
+                        User.countDocuments({ ...createdAtQuery, role: "COMMUTER" }),
+                        User.countDocuments({ ...createdAtQuery, role: "CORPORATE" }),
+                        User.countDocuments({ ...createdAtQuery, role: "B2C_PARTNER" }),
+                    ]);
+
+                const revenue = paymentAgg[0]?.total || 0;
+                const paymentCount = paymentAgg[0]?.count || 0;
+                totalAmount = revenue;
+
+                columns = ["Metric", "Value"];
+                rows = [
+                    { Metric: "Total Users", Value: String(userCount) },
+                    { Metric: "Commuters", Value: String(commuters) },
+                    { Metric: "Corporate Users", Value: String(corporates) },
+                    { Metric: "B2C Partners", Value: String(partners) },
+                    { Metric: "Completed Payments", Value: String(paymentCount) },
+                    { Metric: "Total Revenue (AED)", Value: revenue.toFixed(2) },
+                    { Metric: "Passenger Bookings", Value: String(bookingCount) },
+                ];
+
+                title = "General Summary Report" + rangeLabel;
+                description = `Platform-wide summary${rangeLabel || " (all time)"}.`;
+                summary = {
+                    users: userCount,
+                    payments: paymentCount,
+                    bookings: bookingCount,
+                    totalRevenue: Number(revenue.toFixed(2)),
+                };
             }
         }
 
-        res.status(200).json({ success: true, report: reportData });
+        const report = await Report.create({
+            title,
+            description,
+            reportType,
+            filters: {
+                dateFrom: dateFrom ? new Date(dateFrom) : null,
+                dateTo: dateTo ? new Date(dateTo) : null,
+            },
+            recordCount: rows.length,
+            summary,
+            columns,
+            rows,
+            totalAmount: Number((totalAmount || 0).toFixed(2)),
+            currency: "AED",
+            generatedBy: req.userId || null,
+            generatedAt: new Date(),
+        });
+
+        res.status(201).json({ success: true, report });
     } catch (error) {
         console.error("[v0] Error generating report:", error);
         res.status(500).json({ success: false, message: "Error generating report", error: error.message });
     }
 };
 
-// Get custom reports for admin
+// Get saved custom reports for admin (list view - lightweight, no rows)
 export const getCustomReports = async (req, res) => {
     try {
-        // Fetch real reports from database
-        const reports = await Transaction.find({
-            category: 'REPORT'
-        })
+        const reports = await Report.find({})
+            .select("-rows")
             .sort({ createdAt: -1 })
-            .limit(50);
+            .limit(100);
 
-        res.status(200).json({
-            success: true,
-            reports: reports
-        });
+        res.status(200).json({ success: true, reports });
     } catch (error) {
         console.error("[v0] Error fetching custom reports:", error);
         res.status(500).json({
             success: false,
             message: "Error fetching custom reports",
-            error: error.message
+            error: error.message,
         });
+    }
+};
+
+// Get a single report with full row data (for View Details)
+export const getReportById = async (req, res) => {
+    try {
+        const report = await Report.findById(req.params.reportId).populate(
+            "generatedBy",
+            "fullName email",
+        );
+        if (!report) {
+            return res.status(404).json({ success: false, message: "Report not found" });
+        }
+        res.status(200).json({ success: true, report });
+    } catch (error) {
+        console.error("[v0] Error fetching report:", error);
+        res.status(500).json({ success: false, message: "Error fetching report", error: error.message });
+    }
+};
+
+// Download a report as CSV
+export const downloadReport = async (req, res) => {
+    try {
+        const report = await Report.findById(req.params.reportId);
+        if (!report) {
+            return res.status(404).json({ success: false, message: "Report not found" });
+        }
+
+        const columns = report.columns && report.columns.length ? report.columns : ["Data"];
+        const escapeCsv = (val) => {
+            const str = val === null || val === undefined ? "" : String(val);
+            if (/[",\n]/.test(str)) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        };
+
+        const headerLine = columns.map(escapeCsv).join(",");
+        const dataLines = (report.rows || []).map((row) =>
+            columns.map((col) => escapeCsv(row?.[col])).join(","),
+        );
+        const csv = [headerLine, ...dataLines].join("\n");
+
+        const safeName = (report.title || "report").replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader("Content-Disposition", `attachment; filename="${safeName}.csv"`);
+        res.status(200).send(csv);
+    } catch (error) {
+        console.error("[v0] Error downloading report:", error);
+        res.status(500).json({ success: false, message: "Error downloading report", error: error.message });
+    }
+};
+
+// Delete a saved report
+export const deleteReport = async (req, res) => {
+    try {
+        const report = await Report.findByIdAndDelete(req.params.reportId);
+        if (!report) {
+            return res.status(404).json({ success: false, message: "Report not found" });
+        }
+        res.status(200).json({ success: true, message: "Report deleted successfully" });
+    } catch (error) {
+        console.error("[v0] Error deleting report:", error);
+        res.status(500).json({ success: false, message: "Error deleting report", error: error.message });
     }
 };
 
@@ -4271,24 +4606,110 @@ export const deleteB2CRoute = async (req, res) => {
     try {
         const { routeId } = req.params;
 
-        // Delete actual route from database
-        const deletedRoute = await B2CPartnerRoute.findByIdAndDelete(routeId);
-
-        if (!deletedRoute) {
+        // Fetch the route first so we can settle refunds before removing it.
+        const route = await B2CPartnerRoute.findById(routeId);
+        if (!route) {
             return res.status(404).json({
                 success: false,
                 message: "Route not found"
             });
         }
 
-        console.log(`Successfully deleted B2C route: ${deletedRoute.name}`);
+        // ===== PROCESS REFUNDS BEFORE DELETING ANYTHING =====
+        // Admin deleting the route is treated the same as the operator cancelling it:
+        // commuters are refunded for their UNUSED trips with NO cancellation fee, the
+        // partner's unused-trip earnings are clawed back, and the admin's unused-trip
+        // commission is clawed back. Refunds must run BEFORE trips are deleted because
+        // the math counts used vs unused trips from the actual trip documents.
+        const activePasses = await B2CMonthlyPass.find({
+            routeId: routeId,
+            status: { $in: ["ACTIVE", "PENDING"] }
+        }).populate("passengerId", "fullName email contactPhone");
+
+        const refundSummaries = [];
+        let totalRefundedToCommuters = 0;
+        const adminUserCache = {};
+
+        for (const pass of activePasses) {
+            const summary = await processRouteDeletionRefundForPass(pass, route, adminUserCache);
+            if (summary) {
+                refundSummaries.push(summary);
+                totalRefundedToCommuters += summary.refundToCommuter || 0;
+            }
+        }
+
+        // Delete associated schedules and trips AFTER refunds are calculated.
+        const schedules = await B2CPartnerSchedule.find({ routeId: routeId });
+        for (const schedule of schedules) {
+            await B2CPartnerTrip.deleteMany({ scheduleId: schedule._id });
+            await B2CPartnerSchedule.findByIdAndDelete(schedule._id);
+        }
+        await B2CPartnerTrip.deleteMany({ routeId: routeId });
+
+        // Mark passes as cancelled/refunded after the wallet settlements above.
+        if (activePasses.length > 0) {
+            await B2CMonthlyPass.updateMany(
+                { routeId: routeId, status: { $in: ["ACTIVE", "PENDING"] } },
+                {
+                    $set: {
+                        status: "CANCELLED",
+                        paymentStatus: "REFUNDED",
+                        notes: `${new Date().toISOString()} - Route deleted by admin. Unused trips refunded to commuter; partner earnings and admin commission for unused trips reversed. No cancellation fee charged.`
+                    }
+                }
+            );
+        }
+
+        // Cancel any remaining (non-pass) bookings linked to this route.
+        await B2CPassengerBooking.updateMany(
+            { routeId: routeId, bookingStatus: { $in: ["PENDING", "ACCEPTED", "CONFIRMED"] } },
+            { $set: { bookingStatus: "CANCELLED", autoCancelReason: "Route deleted by admin" } }
+        );
+
+        // Notify the operator (partner) of total earnings reversed for unused trips.
+        const totalEarningsReversed = round2(
+            refundSummaries.reduce((s, r) => s + (r.earningsReversed || 0), 0)
+        );
+        if (totalEarningsReversed > 0 && route.b2cPartnerId) {
+            try {
+                const partnerCurrency = refundSummaries[0]?.currency || route.pricing?.currency || "AED";
+                const partnerMsg = `The admin deleted your route "${route.fromLocation} to ${route.toLocation}". ${partnerCurrency} ${totalEarningsReversed.toFixed(2)} in earnings for commuters' unused trips was reversed from your wallet and refunded to them. You keep earnings only for trips that were actually used.`;
+                await createNotification({
+                    userId: route.b2cPartnerId,
+                    type: "WALLET_UPDATED",
+                    title: "Earnings Reversed - Route Deleted by Admin",
+                    message: partnerMsg,
+                    category: "WALLET",
+                });
+                sendRealTimeNotification(route.b2cPartnerId, {
+                    type: "WALLET_UPDATED",
+                    title: "Earnings Reversed - Route Deleted by Admin",
+                    message: partnerMsg,
+                    data: { totalEarningsReversed },
+                });
+            } catch (notifErr) {
+                console.error("[v0] Admin delete partner notification failed:", notifErr.message);
+            }
+        }
+
+        // Finally delete the route.
+        const deletedRoute = await B2CPartnerRoute.findByIdAndDelete(routeId);
+
+        console.log(`Successfully deleted B2C route: ${deletedRoute?.fromLocation} to ${deletedRoute?.toLocation}`);
 
         res.status(200).json({
             success: true,
-            message: "B2C route deleted successfully",
+            message: totalRefundedToCommuters > 0
+                ? "B2C route deleted. Commuters were refunded for their unused trips (no cancellation fee). Earnings and commission for unused trips were reversed from the operator and admin wallets."
+                : "B2C route deleted successfully",
             route: {
                 _id: deletedRoute._id,
                 name: deletedRoute.name
+            },
+            refunds: {
+                passesRefunded: refundSummaries.length,
+                totalRefundedToCommuters: round2(totalRefundedToCommuters),
+                details: refundSummaries
             }
         });
     } catch (error) {
@@ -4673,38 +5094,60 @@ export const getB2CPassengerReassignments = async (req, res) => {
         const B2CPartnerVehicle = (await import("../models/B2CPartnerVehicle.js")).default;
         const B2CPartnerDriver = (await import("../models/B2CPartnerDriver.js")).default;
 
-        // Collect vehicle and driver IDs
-        const vehicleIds = bookings
-            .map(b => b.routeId?.assignedVehicle || b.linkedSchedule?.assignedVehicle)
-            .filter(Boolean);
-        const driverIds = bookings
-            .map(b => b.routeId?.assignedDriver || b.linkedSchedule?.assignedDriver || b.assignedDriverId)
-            .filter(Boolean);
+        // Collect candidate vehicle/driver IDs from BOTH the booking-time capture
+        // (outbound/return) AND the route/schedule assignment. Also gather partner
+        // IDs so we can fall back to a self-driving partner's own vehicle.
+        const vehicleIds = [];
+        const driverIds = [];
+        const partnerIds = [];
+        bookings.forEach(b => {
+            [b.outboundVehicleId, b.returnVehicleId, b.routeId?.assignedVehicle, b.linkedSchedule?.assignedVehicle]
+                .forEach(id => { if (id) vehicleIds.push(id.toString()); });
+            [b.routeId?.assignedDriver, b.linkedSchedule?.assignedDriver]
+                .forEach(id => { if (id) driverIds.push(id.toString()); });
+            if (b.b2cPartnerId?._id) partnerIds.push(b.b2cPartnerId._id.toString());
+        });
 
-        const [vehicles, drivers] = await Promise.all([
+        const [vehicles, drivers, partnerVehicles] = await Promise.all([
             vehicleIds.length > 0 ? B2CPartnerVehicle.find({ _id: { $in: vehicleIds } }) : [],
-            driverIds.length > 0 ? B2CPartnerDriver.find({ _id: { $in: driverIds } }) : []
+            driverIds.length > 0 ? B2CPartnerDriver.find({ _id: { $in: driverIds } }) : [],
+            partnerIds.length > 0 ? B2CPartnerVehicle.find({ b2cPartnerId: { $in: partnerIds } }) : []
         ]);
 
         const vehicleMap = {};
         vehicles.forEach(v => { vehicleMap[v._id.toString()] = v; });
         const driverMap = {};
         drivers.forEach(d => { driverMap[d._id.toString()] = d; });
+        // Fallback: first vehicle owned by each partner (for self-driving partners
+        // whose booking did not capture an explicit vehicle assignment).
+        const partnerVehicleMap = {};
+        partnerVehicles.forEach(v => {
+            const pid = v.b2cPartnerId?.toString();
+            if (pid && !partnerVehicleMap[pid]) partnerVehicleMap[pid] = v;
+        });
 
         const formattedBookings = bookings.map(booking => {
             // Get route info - use correct field names from B2CPartnerRoute
             const routeFromLocation = booking.routeId?.fromLocation || booking.pickupLocation || 'N/A';
             const routeToLocation = booking.routeId?.toLocation || booking.dropoffLocation || 'N/A';
 
-            // Get vehicle info
-            const vehicleId = booking.routeId?.assignedVehicle?.toString() || booking.linkedSchedule?.assignedVehicle?.toString();
-            const vehicleInfo = vehicleId ? vehicleMap[vehicleId] : null;
+            const partnerKey = booking.b2cPartnerId?._id?.toString();
 
-            // Get driver info
+            // Resolve vehicle: booking-time capture first, then route/schedule
+            // assignment, then the partner's own vehicle as a final fallback.
+            const vehicleId = booking.outboundVehicleId?.toString() ||
+                booking.returnVehicleId?.toString() ||
+                booking.routeId?.assignedVehicle?.toString() ||
+                booking.linkedSchedule?.assignedVehicle?.toString();
+            let vehicleInfo = vehicleId ? vehicleMap[vehicleId] : null;
+            if (!vehicleInfo && partnerKey) vehicleInfo = partnerVehicleMap[partnerKey] || null;
+
+            // Resolve driver from route/schedule assignment (B2CPartnerDriver).
             const driverId = booking.routeId?.assignedDriver?.toString() ||
-                booking.linkedSchedule?.assignedDriver?.toString() ||
-                booking.assignedDriverId?.toString();
+                booking.linkedSchedule?.assignedDriver?.toString();
             const driverInfo = driverId ? driverMap[driverId] : null;
+
+            const isSelfDriving = booking.isSelfDriver || booking.outboundIsSelfDriver || false;
 
             // Get pricing from route or booking
             const pricing = booking.routeId?.pricing || {};
@@ -4742,21 +5185,36 @@ export const getB2CPassengerReassignments = async (req, res) => {
                 providerPhone: booking.b2cPartnerId?.whatsappNumber || '',
                 vehicleInfo: vehicleInfo ? {
                     _id: vehicleInfo._id,
-                    model: vehicleInfo.model,
-                    licensePlate: vehicleInfo.licensePlate,
-                    vehicleType: vehicleInfo.vehicleType,
-                    vehicleColor: vehicleInfo.vehicleColor,
-                    seatingCapacity: vehicleInfo.seatingCapacity
-                } : null,
+                    model: vehicleInfo.model || 'N/A',
+                    licensePlate: vehicleInfo.licensePlate || 'N/A',
+                    vehicleType: vehicleInfo.vehicleType || 'N/A',
+                    vehicleColor: vehicleInfo.vehicleColor || 'N/A',
+                    seatingCapacity: vehicleInfo.seatingCapacity || booking.numberOfSeats || 'N/A'
+                } : ((booking.vehicleModel || booking.vehiclePlate) ? {
+                    // Fallback to the vehicle snapshot captured on the booking itself.
+                    model: booking.vehicleModel || 'N/A',
+                    licensePlate: booking.vehiclePlate || 'N/A',
+                    vehicleType: 'N/A',
+                    vehicleColor: 'N/A',
+                    seatingCapacity: booking.numberOfSeats || 'N/A'
+                } : null),
                 driverInfo: driverInfo ? {
                     _id: driverInfo._id,
                     name: driverInfo.name,
                     phoneNumber: driverInfo.phoneNumber,
                     driverImage: driverInfo.driverImage?.url
-                } : (booking.isSelfDriver ? {
-                    name: 'Self (Partner)',
+                } : (isSelfDriving ? {
+                    // Self-driving partner: surface the partner's own contact details.
+                    name: booking.b2cPartnerId?.fullName || booking.b2cPartnerId?.companyName || booking.driverName || 'Self (Partner)',
+                    phoneNumber: booking.driverPhoneNumber || booking.b2cPartnerId?.whatsappNumber || null,
+                    driverImage: booking.b2cPartnerId?.profileImage || booking.driverImage || null,
                     isSelf: true
-                } : null),
+                } : (booking.driverName ? {
+                    // Fallback to the driver snapshot captured on the booking.
+                    name: booking.driverName,
+                    phoneNumber: booking.driverPhoneNumber || null,
+                    driverImage: booking.driverImage || null
+                } : null)),
                 status: booking.bookingStatus || 'PENDING',
                 seats: booking.numberOfSeats || 1,
                 bookingDate: booking.bookingDate || booking.createdAt,
@@ -4931,75 +5389,234 @@ export const processPassengerReassignment = async (req, res) => {
 // Get B2C earnings and payments (real data)
 export const getB2CEarningsPayments = async (req, res) => {
     try {
-        const { period } = req.query;
+        const mongoose = (await import("mongoose")).default;
+        const { period = "monthly", providerId } = req.query;
 
-        // Real aggregation from payments
-        const [revenueData, bookingCount, providerData, recentPayments] = await Promise.all([
-            Payment.aggregate([
-                { $match: { type: { $in: ['B2C_BOOKING', 'B2C_SUBSCRIPTION', 'B2C_TRIP_EARNING'] }, status: { $in: ['COMPLETED', 'PROCESSING'] } } },
-                { $group: { _id: null, totalRevenue: { $sum: '$amount' }, count: { $sum: 1 } } }
-            ]),
-            B2CPassengerBooking.countDocuments(),
-            Payment.aggregate([
-                { $match: { type: { $in: ['B2C_BOOKING', 'B2C_SUBSCRIPTION', 'B2C_TRIP_EARNING'] }, status: { $in: ['COMPLETED', 'PROCESSING'] } } },
-                { $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'provider' } },
-                { $unwind: { path: '$provider', preserveNullAndEmptyArrays: true } },
+        // ── Resolve the admin's display currency (KWD/AED/...) so every amount
+        //    is converted from each booking's native currency before summing.
+        const displayCurrency = resolveDisplayCurrency(req);
+        const curDecimals = getCurrencyDecimals(displayCurrency);
+        const round = (val) => Number((val || 0).toFixed(curDecimals));
+
+        // ── Build the date range for the requested period (based on createdAt).
+        const now = new Date();
+        let startDate = null;
+        switch (String(period).toLowerCase()) {
+            case "daily":
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                break;
+            case "weekly": {
+                const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                d.setDate(d.getDate() - d.getDay());
+                startDate = d;
+                break;
+            }
+            case "yearly":
+                startDate = new Date(now.getFullYear(), 0, 1);
+                break;
+            case "monthly":
+            default:
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                break;
+        }
+
+        // ── Base match: only revenue-generating bookings (payment collected and
+        //    not rejected/cancelled). This mirrors getB2CStats so the Earnings
+        //    tab agrees with the B2C Management Console headline numbers.
+        const baseMatch = {
+            paymentStatus: "COMPLETED",
+            bookingStatus: { $nin: ["REJECTED", "CANCELLED"] },
+            createdAt: { $gte: startDate },
+        };
+
+        // Optional single-provider filter (matches either ownership field).
+        if (providerId && mongoose.Types.ObjectId.isValid(providerId)) {
+            const pid = new mongoose.Types.ObjectId(providerId);
+            baseMatch.$or = [{ b2cPartnerId: pid }, { partnerId: pid }];
+        }
+
+        // ── Commission/payout expressions with sensible fallbacks. Older bookings
+        //    may not have persisted adminCommissionAmount/driverEarnings, so we
+        //    derive them from the applied commission rate when missing.
+        const commissionExpr = {
+            $cond: [
+                { $gt: [{ $ifNull: ["$adminCommissionAmount", 0] }, 0] },
+                "$adminCommissionAmount",
+                {
+                    $multiply: [
+                        { $ifNull: ["$paymentAmount", 0] },
+                        { $divide: [{ $ifNull: ["$appliedCommissionRate", 20] }, 100] },
+                    ],
+                },
+            ],
+        };
+        const payoutExpr = {
+            $cond: [
+                { $gt: [{ $ifNull: ["$driverEarnings", 0] }, 0] },
+                "$driverEarnings",
+                { $subtract: [{ $ifNull: ["$paymentAmount", 0] }, commissionExpr] },
+            ],
+        };
+
+        const [
+            currencyBuckets,
+            payoutStatusBuckets,
+            providerBuckets,
+            recentBookings,
+        ] = await Promise.all([
+            // Totals grouped by native currency → convert + sum per bucket.
+            B2CPassengerBooking.aggregate([
+                { $match: baseMatch },
                 {
                     $group: {
-                        _id: '$userId',
-                        providerName: { $first: { $ifNull: ['$provider.companyName', '$provider.fullName'] } },
-                        revenue: { $sum: '$amount' },
-                        bookings: { $sum: 1 }
-                    }
+                        _id: "$currency",
+                        revenue: { $sum: { $ifNull: ["$paymentAmount", 0] } },
+                        commission: { $sum: commissionExpr },
+                        payout: { $sum: payoutExpr },
+                        count: { $sum: 1 },
+                    },
                 },
-                { $sort: { revenue: -1 } },
-                { $limit: 5 }
             ]),
-            Payment.find({ type: { $in: ['B2C_BOOKING', 'B2C_SUBSCRIPTION', 'B2C_TRIP_EARNING'] } })
-                .populate('userId', 'fullName companyName')
+            // Pending vs completed payouts: a payout is "completed" once the trip
+            // is COMPLETED, otherwise it is still pending (revenue collected, trip
+            // not finished). Grouped by currency for conversion.
+            B2CPassengerBooking.aggregate([
+                { $match: baseMatch },
+                {
+                    $group: {
+                        _id: {
+                            currency: "$currency",
+                            settled: { $cond: [{ $eq: ["$bookingStatus", "COMPLETED"] }, true, false] },
+                        },
+                        payout: { $sum: payoutExpr },
+                    },
+                },
+            ]),
+            // Per-provider breakdown (grouped by provider + currency for conversion).
+            B2CPassengerBooking.aggregate([
+                { $match: baseMatch },
+                {
+                    $group: {
+                        _id: {
+                            provider: { $ifNull: ["$b2cPartnerId", "$partnerId"] },
+                            currency: "$currency",
+                        },
+                        revenue: { $sum: { $ifNull: ["$paymentAmount", 0] } },
+                        commission: { $sum: commissionExpr },
+                        bookings: { $sum: 1 },
+                    },
+                },
+            ]),
+            // Recent transactions for the activity list.
+            B2CPassengerBooking.find(baseMatch)
+                .populate("b2cPartnerId", "fullName companyName")
+                .populate("partnerId", "fullName companyName")
                 .sort({ createdAt: -1 })
                 .limit(20)
+                .lean(),
         ]);
 
-        const totalRevenue = revenueData[0]?.totalRevenue || 0;
-        const totalPaymentCount = revenueData[0]?.count || 0;
-        const avgFare = totalPaymentCount > 0 ? totalRevenue / totalPaymentCount : 0;
-        // Note: Commission is calculated dynamically per user - this is an estimate for dashboard
-        // Actual commissions are tracked per payment/transaction
-        const estimatedCommissionRate = 0.15; // Average estimate
-        const commissionEarned = totalRevenue * estimatedCommissionRate;
+        // ── Headline totals (currency-converted).
+        const totalBookings = currencyBuckets.reduce((s, b) => s + (b.count || 0), 0);
+        const totalRevenue = sumByCurrency(
+            currencyBuckets.map((b) => ({ _id: b._id, total: b.revenue })),
+            displayCurrency
+        );
+        const commissionEarned = sumByCurrency(
+            currencyBuckets.map((b) => ({ _id: b._id, total: b.commission })),
+            displayCurrency
+        );
+        const providerPayouts = sumByCurrency(
+            currencyBuckets.map((b) => ({ _id: b._id, total: b.payout })),
+            displayCurrency
+        );
+        const averageFare = totalBookings > 0 ? totalRevenue / totalBookings : 0;
 
-        const topProviders = providerData.map(p => ({
-            providerId: p._id,
-            providerName: p.providerName || 'Unknown',
-            revenue: p.revenue,
-            bookings: p.bookings,
-            commission: p.revenue * estimatedCommissionRate // Estimated - actual varies per user
-        }));
+        // ── Pending / completed payout split.
+        const pendingPayouts = sumByCurrency(
+            payoutStatusBuckets
+                .filter((b) => !b._id.settled)
+                .map((b) => ({ _id: b._id.currency, total: b.payout })),
+            displayCurrency
+        );
+        const completedPayouts = sumByCurrency(
+            payoutStatusBuckets
+                .filter((b) => b._id.settled)
+                .map((b) => ({ _id: b._id.currency, total: b.payout })),
+            displayCurrency
+        );
 
-        const transactions = recentPayments.map(p => ({
-            _id: p._id,
-            providerName: p.userId?.companyName || p.userId?.fullName || 'Unknown',
-            amount: p.amount,
-            type: p.type,
-            status: p.status,
-            date: p.createdAt
-        }));
+        // ── Top performing providers: fold the per-currency buckets into one
+        //    converted total per provider, attach names, sort by revenue.
+        const providerMap = new Map();
+        for (const b of providerBuckets) {
+            const pid = b._id.provider ? String(b._id.provider) : "unknown";
+            const entry = providerMap.get(pid) || { revenue: 0, commission: 0, bookings: 0 };
+            entry.revenue += convertForDisplay(b.revenue, b._id.currency, displayCurrency);
+            entry.commission += convertForDisplay(b.commission, b._id.currency, displayCurrency);
+            entry.bookings += b.bookings || 0;
+            providerMap.set(pid, entry);
+        }
+
+        const providerIds = [...providerMap.keys()].filter(
+            (id) => id !== "unknown" && mongoose.Types.ObjectId.isValid(id)
+        );
+        const providerUsers = await User.find({ _id: { $in: providerIds } })
+            .select("fullName companyName")
+            .lean();
+        const nameById = new Map(
+            providerUsers.map((u) => [String(u._id), u.companyName || u.fullName || "Unknown"])
+        );
+
+        const topProviders = [...providerMap.entries()]
+            .map(([pid, v]) => ({
+                providerId: pid,
+                providerName: pid === "unknown" ? "Unknown" : nameById.get(pid) || "Unknown",
+                revenue: round(v.revenue),
+                bookings: v.bookings,
+                commission: round(v.commission),
+            }))
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 5);
+
+        // ── Recent transactions list.
+        const transactions = recentBookings.map((b) => {
+            const provider = b.b2cPartnerId || b.partnerId || {};
+            const commission =
+                b.adminCommissionAmount > 0
+                    ? b.adminCommissionAmount
+                    : (b.paymentAmount || 0) * ((b.appliedCommissionRate ?? 20) / 100);
+            const payout =
+                b.driverEarnings > 0
+                    ? b.driverEarnings
+                    : (b.paymentAmount || 0) - commission;
+            return {
+                _id: b._id,
+                providerName: provider.companyName || provider.fullName || "Unknown",
+                amount: convertForDisplay(b.paymentAmount || 0, b.currency, displayCurrency),
+                payout: convertForDisplay(payout, b.currency, displayCurrency),
+                commission: convertForDisplay(commission, b.currency, displayCurrency),
+                type: b.bookingType || "B2C_BOOKING",
+                status: b.bookingStatus,
+                date: b.createdAt,
+            };
+        });
 
         res.status(200).json({
             success: true,
             earnings: {
-                totalRevenue,
-                totalBookings: bookingCount,
-                averageFare: avgFare,
-                commissionEarned,
-                providerPayouts: totalRevenue - commissionEarned,
-                pendingPayouts: 0,
-                completedPayouts: totalRevenue - commissionEarned,
-                period: period || 'monthly',
+                totalRevenue: round(totalRevenue),
+                totalBookings,
+                averageFare: round(averageFare),
+                commissionEarned: round(commissionEarned),
+                providerPayouts: round(providerPayouts),
+                pendingPayouts: round(pendingPayouts),
+                completedPayouts: round(completedPayouts),
+                period: period || "monthly",
+                currency: displayCurrency,
                 topProviders,
-                transactions
-            }
+                transactions,
+            },
         });
     } catch (error) {
         console.error("[v0] Error fetching B2C earnings:", error);
@@ -5143,18 +5760,23 @@ export const getB2CPartnerEarnings = async (req, res) => {
             { $limit: 20 }
         ]);
 
-        // Get currency from user's routes or default to AED
-        const B2CPartnerRoute = (await import("../models/B2CPartnerRoute.js")).default;
-        const partnerRoute = await B2CPartnerRoute.findOne({ b2cPartnerId: userId });
-        const currency = partnerRoute?.currency || "AED";
+        // Currency a partner sees is ALWAYS derived from their own account country
+        // (the single source of truth), NEVER from a stored record currency (which can
+        // be stale, e.g. stamped "AED" while DEV_COUNTRY was UAE) and NEVER from a
+        // platform-wide toggle (PLATFORM_BASE_COUNTRY only applies to admins). A
+        // partner who registered/operates in Kuwait always sees KWD.
+        const earningsPartner = await User.findById(userId).select("country countryCode role adminPermissions");
+        const currency = getCountryCurrency(getEffectiveCountry(earningsPartner));
 
-        const fmt = (val) => `${(val || 0).toFixed(2)} ${currency}`;
+        // Respect the currency's decimal places (KWD/BHD/OMR -> 3, others -> 2).
+        const curDecimals = getCurrencyDecimals(currency);
+        const fmt = (val) => `${(val || 0).toFixed(curDecimals)} ${currency}`;
 
         const transactions = transactionHistory.map(t => ({
             date: t._id,
             trips: t.trips,
             // Net amount the partner keeps (kept for backwards compatibility)
-            amount: `+${(t.netAmount || 0).toFixed(2)} ${currency}`,
+            amount: `+${(t.netAmount || 0).toFixed(curDecimals)} ${currency}`,
             grossAmount: fmt(t.grossAmount),
             commissionAmount: fmt(t.commissionAmount),
             netAmount: fmt(t.netAmount),
@@ -6126,71 +6748,57 @@ export const getCommuterRoutes = async (req, res) => {
     try {
         const userId = req.userId;
 
-        // Determine the commuter's country so we only show routes that belong
-        // to the same country (UAE user -> only UAE routes, Kuwait user -> only
-        // Kuwait routes). This mirrors the home page (commute search) behaviour.
+        // Show a commuter ONLY the routes that operate in the country they are
+        // currently browsing. Two identity-based facts drive this — never the
+        // free-text stop names, and never a client-supplied param that could
+        // disagree with their currency:
         //
-        // Resolution order (same as the home page):
-        //   1. The `nationality` query param sent by the client. The home page /
-        //      Find Routes tab detects the user's location via /location/detect
-        //      (IP based) and forwards it here, so this is the most accurate.
-        //   2. The stored country / nationality on the user document (fallback).
-        const countryMapping = {
-            'UAE': 'UAE',
-            'AE': 'UAE',
-            'United Arab Emirates': 'UAE',
-            'KW': 'Kuwait',
-            'Kuwait': 'Kuwait'
-        };
+        //   • Commuter's active country: getEffectiveCountry(commuter). For a
+        //     commuter this returns their SWITCHABLE active country (the one
+        //     picked in the in-app country switcher and saved on their profile),
+        //     so a Kuwait-registered commuter who switches to the UAE now sees
+        //     UAE routes in AED — no second account, exactly like Uber/Careem.
+        //   • Route's country: getEffectiveCountry(owningPartner), i.e. the
+        //     partner's own registration country. A Kuwait partner's routes are
+        //     always Kuwait routes regardless of how the stops are spelled.
+        //   • A `nationality`/`country` query param is honored ONLY when it names
+        //     a served country. The in-app country switcher forwards the freshly
+        //     selected country, so the list updates instantly without waiting for
+        //     the profile write to land (no optimistic-update race). This is safe
+        //     because this route is commuter-scoped and country here is a travel
+        //     context, not a billing identity. It falls through to the stored
+        //     active country when absent/invalid.
+        const SERVICE_COUNTRY_CODES = getServiceCountryCodes();
 
-        let userCountry = null;
+        const commuter = await User.findById(userId).select('country nationality countryCode role adminPermissions');
 
-        // 1️⃣ Prefer the nationality passed by the client (IP-detected on the
-        //    home page / Find Routes tab).
-        const { nationality } = req.query;
-        if (nationality) {
-            userCountry = countryMapping[nationality] || nationality;
-        }
+        const requestedCountry = req.query.nationality || req.query.country;
+        const commuterCountry =
+            requestedCountry && isServedCountry(requestedCountry)
+                ? normalizeCountry(requestedCountry)
+                : getEffectiveCountry(commuter);
 
-        // 2️⃣ Fall back to the value stored on the user document.
-        if (!userCountry) {
-            try {
-                const commuter = await User.findById(userId).select('country nationality');
-                const rawCountry = commuter?.country || commuter?.nationality;
-                userCountry = countryMapping[rawCountry] || rawCountry || null;
-            } catch (e) {
-                // If we cannot resolve the country, fall back to showing all routes
-            }
-        }
-
-        // Helper to derive a route's country from its location names
-        const getRouteCountry = (fromLocation, toLocation) => {
-            const allLocations = `${fromLocation || ''} ${toLocation || ''}`.toLowerCase();
-
-            const kuwaitIndicators = ['kuwait', 'salwa', 'jahra', 'salmiya', 'hawally', 'farwaniya', 'ahmadi', 'mangaf', 'fahaheel', 'fintas', 'mahboula', 'khaitan', 'jleeb', 'mubarak', 'reggae'];
-            const uaeIndicators = ['dubai', 'abu dhabi', 'sharjah', 'ajman', 'fujairah', 'ras al', 'umm al', 'al ain', 'deira', 'bur dubai', 'jumeirah', 'marina', 'jebel ali', 'silicon oasis', 'business bay', 'creek', 'mall of emirates', 'burjuman', 'ghubaiba', 'oud metha'];
-
-            for (const indicator of kuwaitIndicators) {
-                if (allLocations.includes(indicator)) return 'Kuwait';
-            }
-            for (const indicator of uaeIndicators) {
-                if (allLocations.includes(indicator)) return 'UAE';
-            }
-            return null; // Unknown country
-        };
-
-        // Fetch real active B2C routes from database
+        // Fetch real active B2C routes; countryCode is populated so each route's
+        // country can be resolved from its owning partner's identity.
         const allActiveRoutes = await B2CPartnerRoute.find({ status: 'Active' })
-            .populate('b2cPartnerId', 'fullName companyName email')
+            .populate('b2cPartnerId', 'fullName companyName email country countryCode role')
             .sort({ createdAt: -1 });
 
-        // Filter routes by the commuter's country (UAE/Kuwait only). Routes from
-        // an unknown country are hidden from UAE/Kuwait users so they only ever
-        // see verified routes operating in their own country.
+        // Keep only routes whose owning-partner country matches the commuter's
+        // active country. Routes with no resolvable owner fall back to a location
+        // guess so legacy data still surfaces to the right country.
         const routes = allActiveRoutes.filter(route => {
-            if (userCountry === 'UAE' || userCountry === 'Kuwait') {
-                const routeCountry = getRouteCountry(route.fromLocation, route.toLocation);
-                return routeCountry === userCountry;
+            if (commuterCountry && SERVICE_COUNTRY_CODES.includes(commuterCountry)) {
+                let routeCountry = null;
+                const partner = route.b2cPartnerId;
+                if (partner && typeof partner === "object" && (partner.countryCode || partner.country)) {
+                    routeCountry = getEffectiveCountry(partner);
+                } else {
+                    const loc = `${route.fromLocation || ''} ${route.toLocation || ''}`.toLowerCase();
+                    if (['kuwait', 'salwa', 'jahra', 'salmiya', 'hawally', 'farwaniya', 'ahmadi', 'mangaf', 'fahaheel', 'fintas', 'mahboula', 'khaitan', 'jleeb', 'mubarak', 'reggae'].some(k => loc.includes(k))) routeCountry = 'KW';
+                    else if (['dubai', 'abu dhabi', 'sharjah', 'ajman', 'fujairah', 'ras al', 'umm al', 'al ain', 'deira', 'bur dubai', 'jumeirah', 'marina', 'jebel ali', 'silicon oasis', 'business bay', 'creek', 'mall of emirates', 'burjuman', 'ghubaiba', 'oud metha'].some(k => loc.includes(k))) routeCountry = 'UAE';
+                }
+                return routeCountry === commuterCountry;
             }
             return true;
         });
@@ -6199,16 +6807,34 @@ export const getCommuterRoutes = async (req, res) => {
         const routeIds = routes.map(r => r._id);
 
         // Find which of these routes the commuter currently has an ACTIVE booking on.
-        // "Active" = an upcoming/in-progress booking that is not cancelled/rejected/completed.
+        // "Active" = a monthly pass that is still valid (status ACTIVE, future endDate),
+        // regardless of booking status (which is metadata on the B2CPassengerBooking for
+        // the one-time transaction).
         let bookedRouteIds = new Set();
         try {
-            const activeBookings = await B2CPassengerBooking.find({
+            // First check for active monthly passes. A pass blocks seats as long as it's
+            // ACTIVE and hasn't expired, independent of booking status.
+            const { default: B2CMonthlyPass } = await import("../models/B2CMonthlyPass.js");
+            const activePassRouteIds = await B2CMonthlyPass.find({
                 passengerId: userId,
                 routeId: { $in: routeIds },
-                bookingStatus: { $in: ['PENDING', 'CONFIRMED', 'ACCEPTED', 'IN_PROGRESS'] }
+                status: "ACTIVE",
+                endDate: { $gte: new Date() }
+            }).distinct("routeId");
+            activePassRouteIds.forEach(id => bookedRouteIds.add(id.toString()));
+
+            // Also include any non-rejected/non-cancelled bookings (pending/confirmed/in-progress/completed).
+            // Completed bookings might be from day-passes, etc.
+            const otherBookings = await B2CPassengerBooking.find({
+                passengerId: userId,
+                routeId: { $in: routeIds },
+                bookingStatus: { $in: ['PENDING', 'CONFIRMED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] }
             }).select('routeId');
-            bookedRouteIds = new Set(activeBookings.map(b => b.routeId?.toString()).filter(Boolean));
+            otherBookings.forEach(b => { if (b.routeId) bookedRouteIds.add(b.routeId.toString()); });
+
+            console.log("[v0] Found booked routes for user (active passes + bookings):", Array.from(bookedRouteIds));
         } catch (e) {
+            console.error("[v0] Error fetching active bookings:", e.message);
             // Booking lookup is best-effort; routes still render without it
         }
         let schedules = [];
@@ -6249,8 +6875,28 @@ export const getCommuterRoutes = async (req, res) => {
             return null;
         };
 
+        // Compute LIVE seat availability for every route. A monthly pass holds a
+        // seat for its whole period, so availability must reflect active passes
+        // (not the static route.availableSeats which never changes on booking).
+        const seatInfoByRoute = {};
+        await Promise.all(
+            routes.map(async (route) => {
+                try {
+                    const { routeAvailableSeats, routeTotalSeats, seatAvailability } = await computeRouteSeatAvailability(route);
+                    seatInfoByRoute[route._id.toString()] = { routeAvailableSeats, routeTotalSeats, seatAvailability };
+                } catch (e) {
+                    seatInfoByRoute[route._id.toString()] = {
+                        routeAvailableSeats: route.availableSeats || 0,
+                        routeTotalSeats: route.totalSeats || 0,
+                        seatAvailability: {},
+                    };
+                }
+            })
+        );
+
         const formattedRoutes = routes.map(route => {
             const schedule = scheduleMap[route._id.toString()];
+            const liveSeats = seatInfoByRoute[route._id.toString()] || {};
 
             const stops = route.stopPoints || [];
             const sortedStops = [...stops].sort((a, b) => a.order - b.order);
@@ -6272,14 +6918,16 @@ export const getCommuterRoutes = async (req, res) => {
                 arrivalTime = lastStop?.time || 'Not set';
             }
 
-            // Estimate distance
-            const numStops = stops.length;
-            let estimatedDistance = 'Not available';
-            if (numStops > 1) {
-                estimatedDistance = `~${(numStops * 15)} km`;
-            } else if (numStops === 1 || route.fromLocation !== route.toLocation) {
-                estimatedDistance = '~15 km';
-            }
+            // Distance is intentionally NOT fabricated. The route schema has no
+            // distance field, no coordinates, and no maps integration, so any "~15 km"
+            // figure would be a made-up number. We only surface a distance when the
+            // route actually stores a real one; otherwise it is null and the UI hides
+            // the Distance row entirely. (Duration below IS real — derived from the
+            // real departure/arrival trip times.)
+            const realDistance =
+                route.distanceKm != null && Number(route.distanceKm) > 0
+                    ? `${Number(route.distanceKm)} km`
+                    : null;
 
             // Estimate duration
             let estimatedDuration = 'Not available';
@@ -6313,6 +6961,21 @@ export const getCommuterRoutes = async (req, res) => {
             // Check if current user has an ACTIVE booking on this route
             const isBooked = bookedRouteIds.has(route._id.toString());
 
+            // The card displays ONE specific trip (departureTime -> arrivalTime).
+            // Show the live seats for THAT exact outbound leg so the number stays
+            // consistent with what the commuter sees on the card (e.g. 4/5 after a
+            // booking), instead of the best-case max across every trip on the route.
+            const seatAvailability = liveSeats.seatAvailability || {};
+            const primaryLeg =
+                (departureTime && departureTime !== 'Not set' && seatAvailability[`${departureTime}_outbound`]) ||
+                null;
+            const cardTotalSeats = primaryLeg
+                ? primaryLeg.totalSeats
+                : (liveSeats.routeTotalSeats ?? route.totalSeats ?? 0);
+            const cardAvailableSeats = primaryLeg
+                ? primaryLeg.availableSeats
+                : (liveSeats.routeAvailableSeats ?? route.availableSeats ?? 0);
+
             return {
                 _id: route._id,
                 name: route.routeName || `${route.fromLocation || 'Unknown'} to ${route.toLocation || 'Unknown'}`,
@@ -6321,18 +6984,23 @@ export const getCommuterRoutes = async (req, res) => {
                 // Raw location fields required by the BookingModal
                 fromLocation: route.fromLocation || '',
                 toLocation: route.toLocation || '',
-                distance: estimatedDistance,
+                distance: realDistance,
                 estimatedTime: estimatedDuration,
-                price: route.pricing?.oneWayPrice || 0,
-                roundTripPrice: route.pricing?.roundTripPrice || 0,
+                // Authoritative FIXED MONTHLY prices (what the partner sets and the
+                // commuter pays). Fall back to the legacy per-day price only for old
+                // routes created before monthly pricing existed.
+                price: route.pricing?.monthlyOneWayPrice || route.pricing?.oneWayPrice || 0,
+                monthlyOneWayPrice: route.pricing?.monthlyOneWayPrice || route.pricing?.oneWayPrice || 0,
+                monthlyRoundTripPrice: route.pricing?.monthlyRoundTripPrice || route.pricing?.roundTripPrice || 0,
+                roundTripPrice: route.pricing?.monthlyRoundTripPrice || route.pricing?.roundTripPrice || 0,
                 status: route.status?.toLowerCase() || 'inactive',
                 isSaved,
                 isBooked,
                 partnerName: route.b2cPartnerId?.companyName || route.b2cPartnerId?.fullName || 'Unknown',
                 departureTime,
                 arrivalTime,
-                totalSeats: route.totalSeats || 0,
-                availableSeats: route.availableSeats || 0,
+                totalSeats: cardTotalSeats,
+                availableSeats: cardAvailableSeats,
                 stops: route.stopPoints || [],
                 tripType: route.tripType || 'One Way',
                 operatingDays: route.availableDays || [],
@@ -7207,20 +7875,17 @@ export const getB2BPartnerOverview = async (req, res) => {
 // Get payment statistics for admin (includes both regular payments and EMI installments)
 export const getPaymentStats = async (req, res) => {
     try {
-        // Get regular payment stats
-        const [regularPending, regularVerified, regularRejected, regularAmountResult, dominantCurrencyResult] = await Promise.all([
+        const displayCurrency = resolveDisplayCurrency(req);
+
+        // Get regular payment stats. Amounts are grouped by native currency so
+        // they can be converted to the admin's display currency before summing.
+        const [regularPending, regularVerified, regularRejected, regularAmountResult] = await Promise.all([
             Payment.countDocuments({ verificationStatus: 'PENDING' }),
             Payment.countDocuments({ verificationStatus: { $in: ['VERIFIED', 'AUTO_VERIFIED'] } }),
             Payment.countDocuments({ verificationStatus: 'REJECTED' }),
             Payment.aggregate([
                 { $match: { status: { $in: ['COMPLETED', 'PROCESSING'] } } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
-            ]),
-            // Get dominant currency from payments
-            Payment.aggregate([
-                { $group: { _id: "$currency", count: { $sum: 1 } } },
-                { $sort: { count: -1 } },
-                { $limit: 1 }
+                { $group: { _id: '$currency', total: { $sum: '$amount' } } }
             ])
         ]);
 
@@ -7266,7 +7931,7 @@ export const getPaymentStats = async (req, res) => {
                                 "installments.transactionId": { $exists: true }
                             }
                         },
-                        { $group: { _id: null, total: { $sum: "$installments.amount" } } }
+                        { $group: { _id: { $ifNull: ["$emiPlan.currency", "AED"] }, total: { $sum: "$installments.amount" } } }
                     ]
                 }
             }
@@ -7275,13 +7940,16 @@ export const getPaymentStats = async (req, res) => {
         const emiPending = emiStats[0]?.pending[0]?.count || 0;
         const emiVerified = emiStats[0]?.verified[0]?.count || 0;
         const emiRejected = emiStats[0]?.rejected[0]?.count || 0;
-        const emiAmount = emiStats[0]?.totalAmount[0]?.total || 0;
+
+        // Convert both regular and EMI amount buckets to the display currency.
+        const regularAmount = sumByCurrency(regularAmountResult, displayCurrency);
+        const emiAmount = sumByCurrency(emiStats[0]?.totalAmount || [], displayCurrency);
 
         const totalPending = regularPending + emiPending;
         const totalVerified = regularVerified + emiVerified;
         const totalRejected = regularRejected + emiRejected;
-        const totalAmount = (regularAmountResult[0]?.total || 0) + emiAmount;
-        const currency = dominantCurrencyResult[0]?._id || "AED";
+        const totalAmount = Math.round((regularAmount + emiAmount) * 1e6) / 1e6;
+        const currency = displayCurrency;
 
         res.status(200).json({
             success: true,
@@ -7396,6 +8064,8 @@ export const getRecentActivity = async (req, res) => {
 // Get all pending payments for admin verification (includes both regular payments and EMI installments)
 export const getPendingPayments = async (req, res) => {
     try {
+        const displayCurrency = resolveDisplayCurrency(req);
+
         // Query for regular payments that need verification
         const regularPayments = await Payment.find({
             verificationStatus: "PENDING",
@@ -7414,7 +8084,9 @@ export const getPendingPayments = async (req, res) => {
         const formattedRegularPayments = regularPayments.map(p => ({
             ...p,
             paymentSource: "REGULAR",
-            displayType: p.paymentType || "Contract Payment"
+            displayType: p.paymentType || "Contract Payment",
+            displayCurrency,
+            displayAmount: convertForDisplay(p.amount, p.currency, displayCurrency)
         }))
 
         // Query for EMI installments that need verification (cash/bank transfer payments with transactionId)
@@ -7450,6 +8122,8 @@ export const getPendingPayments = async (req, res) => {
                         fleetOwnerId: emiPayment.fleetOwnerId,
                         amount: installment.amount,
                         currency: emiPayment.emiPlan?.currency || "AED",
+                        displayCurrency,
+                        displayAmount: convertForDisplay(installment.amount, emiPayment.emiPlan?.currency || "AED", displayCurrency),
                         paymentType: "EMI",
                         paymentMethod: installment.paymentMethod,
                         paymentProvider: "MANUAL",
@@ -7483,6 +8157,7 @@ export const getPendingPayments = async (req, res) => {
         res.status(200).json({
             success: true,
             count: allPayments.length,
+            displayCurrency,
             payments: allPayments,
         })
     } catch (error) {
@@ -7565,16 +8240,19 @@ const verifyEMIInstallment = async (req, res, emiPaymentId, installmentNumber, a
             installment.verifiedBy = req.userId
             installment.verifiedAt = new Date()
 
-            // Credit B2B Partner wallet
-            let fleetWallet = await Wallet.findOne({ userId: emiPayment.fleetOwnerId._id })
-            if (!fleetWallet) {
-                fleetWallet = await Wallet.create({
-                    userId: emiPayment.fleetOwnerId._id,
-                    role: "B2B_PARTNER",
-                    balance: 0,
-                    totalEarnings: 0
-                })
-            }
+            // Credit B2B Partner wallet in the EMI's currency.
+            // Currency lives at emiPlan.currency (no top-level field), so the old
+            // `emiPayment.currency` always fell back to "AED" and misrouted KWD EMIs.
+            const emiCurrency =
+                emiPayment.emiPlan?.currency ||
+                emiPayment.contractId?.financials?.currency ||
+                emiPayment.contractId?.currency ||
+                "AED"
+            let fleetWallet = await getOrCreateWallet(emiPayment.fleetOwnerId._id, {
+                currency: emiCurrency,
+                role: "B2B_PARTNER",
+            })
+            if (fleetWallet.isNew) await fleetWallet.save()
 
             const fleetName = emiPayment.fleetOwnerId?.companyName || emiPayment.fleetOwnerId?.fullName || "Fleet Owner"
             const corporateName = emiPayment.corporateOwnerId?.companyName || emiPayment.corporateOwnerId?.fullName || "Corporate"
@@ -7597,16 +8275,13 @@ const verifyEMIInstallment = async (req, res, emiPaymentId, installmentNumber, a
 
             console.log(`[v0] EMI ${paymentMethodLabel} Payment - B2B Partner wallet credited:`, installment.fleetOwnerAmount)
 
-            // Credit Admin wallet - Commission + Negotiation Commission
-            let adminWallet = await Wallet.findOne({ role: "ADMIN" })
-            if (!adminWallet) {
-                adminWallet = await Wallet.create({
-                    userId: req.userId,
-                    role: "ADMIN",
-                    balance: 0,
-                    totalEarnings: 0
-                })
-            }
+            // Credit Admin wallet - Commission + Negotiation Commission, in the
+            // EMI's currency (never "any admin wallet regardless of currency").
+            let adminWallet = await getOrCreateWallet(req.userId, {
+                currency: emiCurrency,
+                role: "ADMIN",
+            })
+            if (adminWallet.isNew) await adminWallet.save()
 
             // Contract commission
             if (installment.adminCommission.amount > 0) {
@@ -7858,18 +8533,15 @@ export const verifyPayment = async (req, res) => {
             let adminSecurityBefore = 0, adminSecurityAfter = 0
             let fleetBalanceBefore = 0, fleetBalanceAfter = 0
 
+            const paymentCurrency = payment.currency || "AED"
             if (shouldCreditWallets) {
-                // Update Admin Wallet - Commission only
-                // First find by userId only (since userId is unique in the schema)
-                adminWallet = await Wallet.findOne({ userId: req.userId })
-                if (!adminWallet) {
-                    adminWallet = await Wallet.create({
-                        userId: req.userId,
-                        role: "ADMIN",
-                        balance: 0,
-                        securityDepositHeld: 0
-                    })
-                }
+                // Update Admin Wallet - Commission only, in the PAYMENT'S currency
+                // so UAE (AED) and Kuwait (KWD) commissions never share a balance.
+                adminWallet = await getOrCreateWallet(req.userId, {
+                    currency: paymentCurrency,
+                    role: "ADMIN",
+                })
+                if (adminWallet.isNew) await adminWallet.save()
 
                 adminBalanceBefore = adminWallet.balance
                 adminSecurityBefore = adminWallet.securityDepositHeld
@@ -7888,16 +8560,13 @@ export const verifyPayment = async (req, res) => {
                     securityDepositAmount,
                 )
 
-                // Update Fleet Owner Wallet - Only (100 - commissionRate)% of advance
-                // First find by userId only (since userId is unique in the schema)
-                fleetWallet = await Wallet.findOne({ userId: payment.fleetOwnerId })
-                if (!fleetWallet) {
-                    fleetWallet = await Wallet.create({
-                        userId: payment.fleetOwnerId,
-                        role: "B2B_PARTNER",
-                        balance: 0
-                    })
-                }
+                // Update Fleet Owner Wallet - Only (100 - commissionRate)% of advance,
+                // in the payment's currency (matches the admin commission wallet).
+                fleetWallet = await getOrCreateWallet(payment.fleetOwnerId, {
+                    currency: paymentCurrency,
+                    role: "B2B_PARTNER",
+                })
+                if (fleetWallet.isNew) await fleetWallet.save()
 
                 fleetBalanceBefore = fleetWallet.balance
                 fleetWallet.balance += fleetOwnerAmount
@@ -7960,8 +8629,8 @@ export const verifyPayment = async (req, res) => {
             } else {
                 console.log("[v0] Skipping wallet credit - already credited by payment gateway or not a manual payment")
                 // For gateway payments, just get the wallets for reference in notifications
-                adminWallet = await Wallet.findOne({ userId: req.userId })
-                fleetWallet = await Wallet.findOne({ userId: payment.fleetOwnerId })
+                adminWallet = await Wallet.findOne({ userId: req.userId, currency: paymentCurrency })
+                fleetWallet = await Wallet.findOne({ userId: payment.fleetOwnerId, currency: paymentCurrency })
             }
 
             const contract = payment.contractId
@@ -8318,6 +8987,15 @@ export const getAllContracts = async (req, res) => {
 // Get admin dashboard statistics
 export const getDashboardStats = async (req, res) => {
     try {
+        // The dashboard is viewed in the admin's selected display currency
+        // (?displayCurrency / ?currency / ?country — all handled by
+        // resolveDisplayCurrency). Revenue and wallet balance are the admin's
+        // earnings ACROSS ALL their currency wallets, each converted into the
+        // display currency with the live rate. This matches the navbar wallet
+        // pill: earnings held in a KWD wallet correctly show their AED value
+        // instead of 0 just because a separate empty AED wallet exists.
+        const displayCurrency = resolveDisplayCurrency(req);
+
         // Fetch all stats in parallel for performance
         const [
             // User counts
@@ -8343,9 +9021,8 @@ export const getDashboardStats = async (req, res) => {
             // Trip counts
             activeTrips,
 
-            // Wallet
-            adminWallet,
-            dominantCurrencyResult
+            // Wallet — all of the admin's currency wallets
+            adminWallets
         ] = await Promise.all([
             // User counts
             User.countDocuments(),
@@ -8381,21 +9058,36 @@ export const getDashboardStats = async (req, res) => {
                 }
             }),
 
-            // Admin wallet
-            Wallet.findOne({ userId: req.userId, role: "ADMIN" }),
-
-            // Get the dominant currency from wallets
-            Wallet.aggregate([
-                { $group: { _id: "$currency", count: { $sum: 1 } } },
-                { $sort: { count: -1 } },
-                { $limit: 1 }
-            ])
+            // All admin wallets for this user (one per currency/market). We sum
+            // and convert these into the display currency below.
+            Wallet.find({
+                userId: req.userId,
+                role: "ADMIN"
+            })
         ]);
 
-        const currency = dominantCurrencyResult[0]?._id || adminWallet?.currency || "AED";
+        // The dashboard renders everything in the resolved display currency.
+        const currency = displayCurrency;
 
-        // Total revenue is the admin wallet balance (commissions from all payments)
-        const totalRevenue = adminWallet?.totalEarnings || adminWallet?.balance || 0;
+        // Sum each admin wallet's earnings/balance converted to the display
+        // currency, so totals reflect the admin's REAL money regardless of which
+        // currency wallet it sits in (real conversion, not a relabel).
+        const safeWallets = Array.isArray(adminWallets) ? adminWallets : [];
+        const adminTotalEarnings = round2(
+            safeWallets.reduce(
+                (sum, w) => sum + convertForDisplay(w.totalEarnings || 0, w.currency || "AED", displayCurrency),
+                0
+            )
+        );
+        const adminBalance = round2(
+            safeWallets.reduce(
+                (sum, w) => sum + convertForDisplay(w.balance || 0, w.currency || "AED", displayCurrency),
+                0
+            )
+        );
+
+        // Total revenue = admin's earnings (fallback to balance if earnings not tracked).
+        const totalRevenue = adminTotalEarnings || adminBalance || 0;
 
         res.status(200).json({
             success: true,
@@ -8419,8 +9111,8 @@ export const getDashboardStats = async (req, res) => {
                 // Payment stats
                 pendingPayments,
                 totalRevenue: totalRevenue,
-                adminBalance: adminWallet?.balance || 0,
-                totalEarnings: adminWallet?.totalEarnings || 0,
+                adminBalance: adminBalance,
+                totalEarnings: adminTotalEarnings,
 
                 // Trip stats
                 activeTrips,
@@ -8449,6 +9141,16 @@ export const getMonthlyRevenue = async (req, res) => {
         // counting B2B contract Payment documents.
         const adminUserId = new mongoose.Types.ObjectId(req.userId);
 
+        // The chart renders in the admin's selected display currency (?country / ?currency
+        // / ?displayCurrency). Records are stored in their NATIVE currency (Kuwait earnings
+        // in KWD, UAE earnings in AED, ...). So — exactly like the "Total Revenue" stat card
+        // (getDashboardStats) — we DO NOT filter the ledger down to one exact currency
+        // (which made the chart empty for AED because every transaction was natively KWD).
+        // Instead we group per month AND per native currency, then convert each bucket into
+        // the display currency with the live rate and sum. This keeps the chart and the stat
+        // card perfectly consistent across every market.
+        const displayCurrency = resolveDisplayCurrency(req);
+
         // Reference models that belong to the corporate side; everything else (B2C bookings,
         // monthly pass renewals, etc.) is counted as B2C revenue.
         const CORPORATE_REFS = ["Payment", "Contract", "AdminNegotiation", "CorporateBooking"];
@@ -8465,7 +9167,8 @@ export const getMonthlyRevenue = async (req, res) => {
             },
             {
                 $group: {
-                    _id: { $month: "$createdAt" },
+                    // Group by month + native currency so each bucket can be converted.
+                    _id: { month: { $month: "$createdAt" }, currency: "$currency" },
                     // Net total = credited earnings minus any debited reversals/refunds
                     total: {
                         $sum: {
@@ -8501,16 +9204,26 @@ export const getMonthlyRevenue = async (req, res) => {
                         }
                     }
                 }
-            },
-            { $sort: { "_id": 1 } }
+            }
         ]);
+
+        // Accumulate per month, converting every native-currency bucket into the
+        // admin's selected display currency (real conversion, not a relabel).
+        const perMonth = months.map(() => ({ total: 0, corporate: 0, b2c: 0 }));
+        monthlyRevenue.forEach((bucket) => {
+            const monthIndex = (bucket?._id?.month || 0) - 1;
+            if (monthIndex < 0 || monthIndex > 11) return;
+            const native = bucket?._id?.currency || displayCurrency;
+            perMonth[monthIndex].total += convertForDisplay(bucket.total || 0, native, displayCurrency);
+            perMonth[monthIndex].corporate += convertForDisplay(bucket.corporate || 0, native, displayCurrency);
+            perMonth[monthIndex].b2c += convertForDisplay(bucket.b2c || 0, native, displayCurrency);
+        });
 
         // Format data for frontend (zero-filled for months with no data)
         const data = months.map((month, index) => {
-            const monthData = monthlyRevenue.find(item => item._id === index + 1);
-            const total = Math.round((monthData?.total || 0) * 100) / 100;
-            const corporate = Math.round((monthData?.corporate || 0) * 100) / 100;
-            const b2c = Math.round((monthData?.b2c || 0) * 100) / 100;
+            const total = Math.round((perMonth[index].total || 0) * 100) / 100;
+            const corporate = Math.round((perMonth[index].corporate || 0) * 100) / 100;
+            const b2c = Math.round((perMonth[index].b2c || 0) * 100) / 100;
             return {
                 month,
                 total: total < 0 ? 0 : total,
@@ -8648,23 +9361,25 @@ export const getB2CStats = async (req, res) => {
             }
         ]);
 
-        // Get B2C bookings stats
-        const bookingStats = await Payment.aggregate([
+        // Get B2C bookings revenue from the actual passenger-booking records.
+        // Using B2CPassengerBooking (not Payment) is essential because wallet- and
+        // cash-paid B2C bookings do NOT create a Payment document of these types,
+        // so the old Payment-only query reported 0 revenue. We only count bookings
+        // that represent real, collected revenue (payment completed and not
+        // rejected/cancelled), grouped by their native currency so we can convert
+        // each bucket to the admin's display currency.
+        const revenueBuckets = await B2CPassengerBooking.aggregate([
             {
                 $match: {
-                    status: "COMPLETED",
-                    paymentType: { $in: ["B2C_BOOKING", "B2C_MONTHLY_PASS", "B2C_SINGLE_JOURNEY"] },
-                    createdAt: {
-                        $gte: new Date(new Date().getFullYear(), 0, 1)
-                    }
+                    paymentStatus: "COMPLETED",
+                    bookingStatus: { $nin: ["REJECTED", "CANCELLED"] }
                 }
             },
             {
                 $group: {
-                    _id: null,
-                    totalBookings: { $sum: 1 },
-                    totalRevenue: { $sum: "$amount" },
-                    averageRevenue: { $avg: "$amount" }
+                    _id: "$currency",
+                    total: { $sum: "$paymentAmount" },
+                    count: { $sum: 1 }
                 }
             }
         ]);
@@ -8711,6 +9426,21 @@ export const getB2CStats = async (req, res) => {
             }
         ]);
         const tagStats = tagStatsResult[0] || { totalTags: 0, activeTags: 0 };
+
+        // Convert each currency bucket of B2C booking revenue into the admin's
+        // selected display currency and sum. Total bookings = count of revenue-
+        // generating bookings across all currencies.
+        const displayCurrency = resolveDisplayCurrency(req);
+        const b2cTotalBookings = revenueBuckets.reduce((s, b) => s + (b.count || 0), 0);
+        const b2cTotalRevenue = sumByCurrency(revenueBuckets, displayCurrency);
+        const bookingStats = [{
+            totalBookings: b2cTotalBookings,
+            totalRevenue: Number(b2cTotalRevenue.toFixed(2)),
+            averageRevenue: b2cTotalBookings > 0
+                ? Number((b2cTotalRevenue / b2cTotalBookings).toFixed(2))
+                : 0,
+            currency: displayCurrency
+        }];
 
         const stats = {
             providers: providerStats[0] || {
@@ -8919,6 +9649,7 @@ export const rejectVehicle = async (req, res) => {
 export const getAllWallets = async (req, res) => {
     try {
         const { role, page = 1, limit = 20, search, sortBy = "createdAt", sortOrder = "desc", minBalance, maxBalance } = req.query;
+        const displayCurrency = resolveDisplayCurrency(req);
         const query = {};
 
         if (role) query.role = role;
@@ -8926,7 +9657,7 @@ export const getAllWallets = async (req, res) => {
         if (maxBalance !== undefined) query.balance = { ...query.balance, $lte: Number(maxBalance) };
 
         const wallets = await Wallet.find(query)
-            .populate("userId", "fullName email whatsappNumber role companyName status profileImage")
+            .populate("userId", "fullName email whatsappNumber role companyName status profileImage adminPermissions")
             .sort({ [sortBy]: sortOrder === "desc" ? -1 : 1 })
             .limit(Number.parseInt(limit))
             .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
@@ -8945,9 +9676,28 @@ export const getAllWallets = async (req, res) => {
 
         const total = await Wallet.countDocuments(query);
 
+        // Attach converted display fields per wallet (native amounts preserved).
+        const walletsWithDisplay = filteredWallets.map((w) => {
+            const obj = w.toObject ? w.toObject() : w;
+            const native = obj.currency || "AED";
+            // Super admins are stored as role "ADMIN" with adminPermissions.isSuperAdmin = true.
+            const isSuperAdmin =
+                obj.userId?.role === "ADMIN" &&
+                obj.userId?.adminPermissions?.isSuperAdmin === true;
+            return {
+                ...obj,
+                isSuperAdmin,
+                displayCurrency,
+                displayBalance: convertForDisplay(obj.balance, native, displayCurrency),
+                displayTotalEarnings: convertForDisplay(obj.totalEarnings, native, displayCurrency),
+                displayTotalWithdrawals: convertForDisplay(obj.totalWithdrawals, native, displayCurrency),
+            };
+        });
+
         res.status(200).json({
             success: true,
-            wallets: filteredWallets,
+            wallets: walletsWithDisplay,
+            displayCurrency,
             pagination: {
                 total,
                 page: Number.parseInt(page),
@@ -8967,6 +9717,8 @@ export const getAllWallets = async (req, res) => {
 // Get wallet statistics for admin dashboard
 export const getWalletStats = async (req, res) => {
     try {
+        const displayCurrency = resolveDisplayCurrency(req);
+
         const [
             totalWallets,
             totalBalance,
@@ -8977,9 +9729,9 @@ export const getWalletStats = async (req, res) => {
             walletsByRole
         ] = await Promise.all([
             Wallet.countDocuments(),
-            Wallet.aggregate([{ $group: { _id: null, total: { $sum: "$balance" } } }]),
-            Wallet.aggregate([{ $group: { _id: null, total: { $sum: "$totalEarnings" } } }]),
-            Wallet.aggregate([{ $group: { _id: null, total: { $sum: "$totalWithdrawals" } } }]),
+            Wallet.aggregate([{ $group: { _id: "$currency", total: { $sum: "$balance" } } }]),
+            Wallet.aggregate([{ $group: { _id: "$currency", total: { $sum: "$totalEarnings" } } }]),
+            Wallet.aggregate([{ $group: { _id: "$currency", total: { $sum: "$totalWithdrawals" } } }]),
             Wallet.countDocuments({ balance: { $lt: 50 } }), // Wallets with less than 50 balance
             Wallet.countDocuments({ isActive: true }),
             Wallet.aggregate([
@@ -9012,25 +9764,17 @@ export const getWalletStats = async (req, res) => {
             }
         ]);
 
-        // Get the dominant currency from wallets (most common currency)
-        const currencyStats = await Wallet.aggregate([
-            { $group: { _id: "$currency", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 1 }
-        ]);
-        const dominantCurrency = currencyStats[0]?._id || "AED";
-
         res.status(200).json({
             success: true,
             stats: {
                 totalWallets,
-                totalBalance: totalBalance[0]?.total || 0,
-                totalDeposits: totalDeposits[0]?.total || 0,
-                totalWithdrawals: totalWithdrawals[0]?.total || 0,
+                totalBalance: sumByCurrency(totalBalance, displayCurrency),
+                totalDeposits: sumByCurrency(totalDeposits, displayCurrency),
+                totalWithdrawals: sumByCurrency(totalWithdrawals, displayCurrency),
                 lowBalanceWallets,
                 activeWallets,
                 walletsByRole,
-                currency: dominantCurrency
+                currency: displayCurrency
             },
             recentTransactions
         });
@@ -9050,7 +9794,7 @@ export const getWalletDetails = async (req, res) => {
         const { walletId } = req.params;
 
         const wallet = await Wallet.findById(walletId)
-            .populate("userId", "fullName email whatsappNumber role companyName status profileImage country");
+            .populate("userId", "fullName email whatsappNumber role companyName status profileImage country adminPermissions");
 
         if (!wallet) {
             return res.status(404).json({
@@ -9287,6 +10031,7 @@ export const sendBulkWalletNotifications = async (req, res) => {
 export const getLowBalanceWallets = async (req, res) => {
     try {
         const { threshold = 50, role, page = 1, limit = 20 } = req.query;
+        const displayCurrency = resolveDisplayCurrency(req);
         const query = {
             balance: { $lt: Number(threshold) }
         };
@@ -9294,16 +10039,34 @@ export const getLowBalanceWallets = async (req, res) => {
         if (role) query.role = role;
 
         const wallets = await Wallet.find(query)
-            .populate("userId", "fullName email whatsappNumber role companyName status")
+            .populate("userId", "fullName email whatsappNumber role companyName status adminPermissions")
             .sort({ balance: 1 })
             .limit(Number.parseInt(limit))
             .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
         const total = await Wallet.countDocuments(query);
 
+        const walletsWithDisplay = wallets.map((w) => {
+            const obj = w.toObject ? w.toObject() : w;
+            const native = obj.currency || "AED";
+            // Super admins are stored as role "ADMIN" with adminPermissions.isSuperAdmin = true.
+            const isSuperAdmin =
+                obj.userId?.role === "ADMIN" &&
+                obj.userId?.adminPermissions?.isSuperAdmin === true;
+            return {
+                ...obj,
+                isSuperAdmin,
+                displayCurrency,
+                displayBalance: convertForDisplay(obj.balance, native, displayCurrency),
+                displayTotalEarnings: convertForDisplay(obj.totalEarnings, native, displayCurrency),
+                displayTotalWithdrawals: convertForDisplay(obj.totalWithdrawals, native, displayCurrency),
+            };
+        });
+
         res.status(200).json({
             success: true,
-            wallets,
+            wallets: walletsWithDisplay,
+            displayCurrency,
             pagination: {
                 total,
                 page: Number.parseInt(page),
@@ -9324,6 +10087,7 @@ export const getLowBalanceWallets = async (req, res) => {
 export const getWalletActivityFeed = async (req, res) => {
     try {
         const { page = 1, limit = 50, type, startDate, endDate } = req.query;
+        const displayCurrency = resolveDisplayCurrency(req);
 
         let matchConditions = {};
 
@@ -9372,9 +10136,16 @@ export const getWalletActivityFeed = async (req, res) => {
             }
         ]);
 
+        const activitiesWithDisplay = activities.map((a) => ({
+            ...a,
+            displayCurrency,
+            displayAmount: convertForDisplay(a.amount, a.currency, displayCurrency),
+        }));
+
         res.status(200).json({
             success: true,
-            activities,
+            activities: activitiesWithDisplay,
+            displayCurrency,
             pagination: {
                 page: Number.parseInt(page),
                 limit: Number.parseInt(limit)
@@ -9521,6 +10292,23 @@ export const adjustWalletBalance = async (req, res) => {
         wallet.balance += adjustmentAmount;
         await wallet.save();
 
+        // If this CREDIT adjustment brought a commuter's wallet back to >= 0, it may
+        // have covered an outstanding cash-cancellation fee (the negative balance).
+        // Settle it now: credit the admin the fee, clear the identity ledger / user
+        // mirror block, and flag the related bookings as settled — otherwise the
+        // commuter stays wrongly blocked from booking even though they no longer owe
+        // anything. settleCashDuesOnTopUp is idempotent and no-ops when nothing is due.
+        if (type === "CREDIT" && wallet.balance >= 0) {
+            try {
+                const settlement = await settleCashDuesOnTopUp(wallet.userId._id || wallet.userId);
+                if (settlement.settled) {
+                    console.log("[adjustWalletBalance] Cash cancellation due settled on admin credit:", settlement);
+                }
+            } catch (settleErr) {
+                console.error("[adjustWalletBalance] settleCashDuesOnTopUp failed:", settleErr.message);
+            }
+        }
+
         // Notify user
         await createNotification({
             userId: wallet.userId._id,
@@ -9629,9 +10417,16 @@ export const getAllAdmins = async (req, res) => {
 
         const total = await User.countDocuments(query);
 
+        // Surface the primary-owner flag so the UI can protect the owner row
+        // (hide Suspend/Delete/Demote) and badge it distinctly from other admins.
+        const adminsWithOwnerFlag = admins.map((a) => ({
+            ...a.toObject(),
+            isPrimaryOwner: isPrimaryOwnerId(a._id),
+        }));
+
         res.status(200).json({
             success: true,
-            admins,
+            admins: adminsWithOwnerFlag,
             pagination: {
                 total,
                 page: Number.parseInt(page),
@@ -9873,6 +10668,34 @@ export const updateAdminPermissions = async (req, res) => {
             });
         }
 
+        // OWNER PROTECTION: the primary owner account is immutable to everyone
+        // except the owner themselves, and can never be demoted from super admin.
+        if (isPrimaryOwnerId(adminId)) {
+            if (adminId !== req.userId.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: "The platform owner account cannot be modified by other admins."
+                });
+            }
+            if (isSuperAdmin === false) {
+                return res.status(403).json({
+                    success: false,
+                    message: "The platform owner must always remain a super admin."
+                });
+            }
+            // Force the owner to keep full super-admin access regardless of payload.
+            adminToUpdate.adminPermissions = {
+                isSuperAdmin: true,
+                modules: { ...ALL_ADMIN_MODULES },
+            };
+            await adminToUpdate.save();
+            return res.status(200).json({
+                success: true,
+                message: "Owner permissions are fixed at full super-admin access.",
+                admin: { ...adminToUpdate.toObject(), isPrimaryOwner: true },
+            });
+        }
+
         // Prevent modifying own super admin status
         if (adminId === req.userId.toString() && adminToUpdate.adminPermissions?.isSuperAdmin && !isSuperAdmin) {
             return res.status(403).json({
@@ -9996,7 +10819,10 @@ export const getAdminDetails = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            admin,
+            admin: {
+                ...admin.toObject(),
+                isPrimaryOwner: isPrimaryOwnerId(admin._id),
+            },
             stats: {
                 usersActivated: usersCreated,
                 adminsCreated
@@ -10042,6 +10868,14 @@ export const suspendAdmin = async (req, res) => {
             return res.status(403).json({
                 success: false,
                 message: "You cannot suspend yourself"
+            });
+        }
+
+        // OWNER PROTECTION: the primary owner can never be suspended.
+        if (isPrimaryOwnerId(adminId)) {
+            return res.status(403).json({
+                success: false,
+                message: "The platform owner account cannot be suspended."
             });
         }
 
@@ -10185,6 +11019,14 @@ export const deleteAdmin = async (req, res) => {
             });
         }
 
+        // OWNER PROTECTION: the primary owner can never be deleted.
+        if (isPrimaryOwnerId(adminId)) {
+            return res.status(403).json({
+                success: false,
+                message: "The platform owner account cannot be deleted."
+            });
+        }
+
         const adminToDelete = await User.findOne({ _id: adminId, role: "ADMIN" });
         if (!adminToDelete) {
             return res.status(404).json({
@@ -10221,14 +11063,24 @@ export const getMyPermissions = async (req, res) => {
             });
         }
 
+        const owner = isPrimaryOwnerId(admin._id);
+
+        // The primary owner ALWAYS resolves to full super-admin access, even if
+        // their stored flags were somehow changed. This guarantees the real
+        // owner can never be locked out of any module.
+        const permissions = owner
+            ? { isSuperAdmin: true, modules: { ...ALL_ADMIN_MODULES } }
+            : admin.adminPermissions;
+
         res.status(200).json({
             success: true,
-            permissions: admin.adminPermissions,
+            permissions,
             admin: {
                 _id: admin._id,
                 fullName: admin.fullName,
                 email: admin.email,
-                role: admin.role
+                role: admin.role,
+                isPrimaryOwner: owner,
             }
         });
     } catch (error) {

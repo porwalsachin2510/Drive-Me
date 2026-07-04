@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FiUsers,
   FiUserPlus,
@@ -19,18 +19,18 @@ import {
   FiChevronDown,
   FiChevronUp,
 } from "react-icons/fi";
-import { toast } from 'react-hot-toast';
+import { toast } from "react-hot-toast";
 import {
-    getAllAdmins,
-    getAdminStats,
-    createAdmin,
-    updateAdminPermissions,
-    getAdminDetails,
-    suspendAdmin,
-    activateAdmin,
-    deleteAdmin
-} from '../../../services/adminAPI';
-import './AdminManagement.css';
+  getAllAdmins,
+  getAdminStats,
+  createAdmin,
+  updateAdminPermissions,
+  getAdminDetails,
+  suspendAdmin,
+  activateAdmin,
+  deleteAdmin,
+} from "../../../services/adminAPI";
+import "./AdminManagement.css";
 
 // Module definitions for permissions
 const MODULES = [
@@ -149,7 +149,7 @@ const AdminManagement = () => {
   // Password visibility state
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    
+
   // Dropdown menu state
   const [openDropdown, setOpenDropdown] = useState(null);
 
@@ -439,9 +439,9 @@ const AdminManagement = () => {
       modules: {},
     });
     setFormErrors({});
-      setSelectedAdmin(null);
-      setShowPassword(false);
-      setShowConfirmPassword(false);
+    setSelectedAdmin(null);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   // Toggle module permission
@@ -651,7 +651,11 @@ const AdminManagement = () => {
                   </td>
                   <td>{admin.email}</td>
                   <td>
-                    {admin.adminPermissions?.isSuperAdmin ? (
+                    {admin.isPrimaryOwner ? (
+                      <span className="drivemego-admin-management-role-badge drivemego-admin-management-super-admin">
+                        <FiShield /> Owner
+                      </span>
+                    ) : admin.adminPermissions?.isSuperAdmin ? (
                       <span className="drivemego-admin-management-role-badge drivemego-admin-management-super-admin">
                         <FiShield /> Super Admin
                       </span>
@@ -689,44 +693,52 @@ const AdminManagement = () => {
                           >
                             <FiEye /> View Details
                           </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditModal(admin);
-                            }}
-                          >
-                            <FiEdit2 /> Edit Permissions
-                          </button>
-                          {admin.status === "ACTIVE" ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSuspendAdmin(admin);
-                              }}
-                              className="drivemego-admin-management-danger"
-                            >
-                              <FiUserX /> Suspend
-                            </button>
+                          {admin.isPrimaryOwner ? (
+                            <span className="drivemego-admin-management-owner-note">
+                              <FiShield /> Protected owner account
+                            </span>
                           ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleActivateAdmin(admin);
-                              }}
-                              className="drivemego-admin-management-success"
-                            >
-                              <FiUserCheck /> Activate
-                            </button>
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditModal(admin);
+                                }}
+                              >
+                                <FiEdit2 /> Edit Permissions
+                              </button>
+                              {admin.status === "ACTIVE" ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSuspendAdmin(admin);
+                                  }}
+                                  className="drivemego-admin-management-danger"
+                                >
+                                  <FiUserX /> Suspend
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleActivateAdmin(admin);
+                                  }}
+                                  className="drivemego-admin-management-success"
+                                >
+                                  <FiUserCheck /> Activate
+                                </button>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDeleteModal(admin);
+                                }}
+                                className="drivemego-admin-management-danger"
+                              >
+                                <FiTrash2 /> Delete
+                              </button>
+                            </>
                           )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openDeleteModal(admin);
-                            }}
-                            className="drivemego-admin-management-danger"
-                          >
-                            <FiTrash2 /> Delete
-                          </button>
                         </div>
                       )}
                     </div>
@@ -765,17 +777,8 @@ const AdminManagement = () => {
 
       {/* Create Admin Modal */}
       {showCreateModal && (
-        <div
-          className="drivemego-admin-management-modal-overlay"
-          onClick={() => {
-            setShowCreateModal(false);
-            resetForm();
-          }}
-        >
-          <div
-            className="drivemego-admin-management-modal-content"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="drivemego-admin-management-modal-overlay">
+          <div className="drivemego-admin-management-modal-content">
             <div className="drivemego-admin-management-modal-header">
               <h2>
                 <FiUserPlus /> Create New Admin
@@ -1035,17 +1038,8 @@ const AdminManagement = () => {
 
       {/* Edit Permissions Modal */}
       {showEditModal && selectedAdmin && (
-        <div
-          className="drivemego-admin-management-modal-overlay"
-          onClick={() => {
-            setShowEditModal(false);
-            resetForm();
-          }}
-        >
-          <div
-            className="drivemego-admin-management-modal-content"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="drivemego-admin-management-modal-overlay">
+          <div className="drivemego-admin-management-modal-content">
             <div className="drivemego-admin-management-modal-header">
               <h2>
                 <FiEdit2 /> Edit Permissions - {selectedAdmin.fullName}
@@ -1211,9 +1205,11 @@ const AdminManagement = () => {
                     Role Type
                   </span>
                   <span className="drivemego-admin-management-detail-value">
-                    {adminDetails.admin.adminPermissions?.isSuperAdmin
-                      ? "Super Admin"
-                      : "Limited Admin"}
+                    {adminDetails.admin.isPrimaryOwner
+                      ? "Owner"
+                      : adminDetails.admin.adminPermissions?.isSuperAdmin
+                        ? "Super Admin"
+                        : "Limited Admin"}
                   </span>
                 </div>
                 <div className="drivemego-admin-management-detail-item">
@@ -1289,15 +1285,17 @@ const AdminManagement = () => {
               >
                 Close
               </button>
-              <button
-                className="drivemego-admin-management-btn-submit"
-                onClick={() => {
-                  setShowViewModal(false);
-                  openEditModal(adminDetails.admin);
-                }}
-              >
-                <FiEdit2 /> Edit Permissions
-              </button>
+              {!adminDetails.admin.isPrimaryOwner && (
+                <button
+                  className="drivemego-admin-management-btn-submit"
+                  onClick={() => {
+                    setShowViewModal(false);
+                    openEditModal(adminDetails.admin);
+                  }}
+                >
+                  <FiEdit2 /> Edit Permissions
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1364,6 +1362,6 @@ const AdminManagement = () => {
       )}
     </div>
   );
-};;
+};
 
 export default AdminManagement;

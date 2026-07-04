@@ -1,0 +1,133 @@
+.managed-activity-log {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.managed-activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.managed-activity-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+.managed-activity-refresh {
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.managed-activity-refresh:hover {
+  background: #eef2ff;
+}
+
+.managed-activity-subtitle {
+  margin: 8px 0 16px;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.managed-activity-charge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f5f7ff;
+  border: 1px solid #dbe2ff;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  color: #3a3f63;
+  font-size: 0.95rem;
+}
+
+.managed-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.managed-activity-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid #eef0f4;
+  border-radius: 10px;
+  background: #fbfbfd;
+}
+
+.managed-activity-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #2c47e0;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.managed-activity-content {
+  flex: 1;
+}
+
+.managed-activity-title {
+  color: #1f2937;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.managed-activity-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.managed-activity-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.managed-activity-badge.partner {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.managed-activity-badge.corporate {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.managed-activity-time {
+  font-size: 0.78rem;
+  color: #9ca3af;
+}
+
+.managed-activity-empty {
+  padding: 24px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.managed-activity-error {
+  color: #dc2626;
+}

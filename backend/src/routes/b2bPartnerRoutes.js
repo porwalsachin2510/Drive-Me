@@ -14,7 +14,12 @@ import {
     updateContractDriver,
 } from "../controllers/b2bPartnerController.js"
 import { verifyToken, checkFleetOwnerRole } from "../middleware/auth.js"
-import { getB2BPartnerInvoices } from "../controllers/billingController.js"
+import {
+    getB2BPartnerInvoices,
+    getInvoiceById,
+    downloadInvoicePdf,
+    sendInvoice,
+} from "../controllers/invoiceController.js"
 
 // B2B Partner Overview (Unique - not available in existing routes)
 router.get("/overview", verifyToken, checkFleetOwnerRole, getB2BPartnerOverview)
@@ -28,6 +33,9 @@ router.get("/analytics", verifyToken, checkFleetOwnerRole, getB2BPartnerAnalytic
 
 // B2B Partner Invoices
 router.get("/invoices", verifyToken, checkFleetOwnerRole, getB2BPartnerInvoices)
+router.get("/invoices/:id", verifyToken, checkFleetOwnerRole, getInvoiceById)
+router.get("/invoices/:id/pdf", verifyToken, checkFleetOwnerRole, downloadInvoicePdf)
+router.post("/invoices/:id/send", verifyToken, checkFleetOwnerRole, sendInvoice)
 
 // B2B Partner Routes Management
 router.get("/routes", verifyToken, checkFleetOwnerRole, getB2BPartnerRoutes)

@@ -486,6 +486,82 @@ export const sendBookingNotification = async (userEmail, userName, message, book
     }
 };
 
+// Send an invoice email to a corporate client (new issue or reminder).
+// `options.pdfBuffer` (Buffer) is attached as a PDF when provided.
+export const sendInvoiceEmail = async (toEmail, invoice, options = {}) => {
+    try {
+        if (!toEmail) {
+            console.log("[v0] sendInvoiceEmail skipped: no recipient email");
+            return { success: false, message: "No recipient email" };
+        }
+
+        const transporter = createTransporter();
+        const isReminder = options.isReminder;
+        const cur = invoice.currency || "AED";
+        const amount = (invoice.total || 0).toLocaleString();
+        const dueDate = invoice.dueDate
+            ? new Date(invoice.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+            : "N/A";
+        const frontendUrl = (process.env.FRONTEND_URL || "").split(",")[0] || "";
+
+        const subject = isReminder
+            ? `Payment Reminder: Invoice ${invoice.invoiceNumber} (${amount} ${cur})`
+            : `New Invoice ${invoice.invoiceNumber} from ${invoice.fleetOwnerName || "DriveMeGo"}`;
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER || '"DriveMeGo" <noreply@drivemekw.com>',
+            to: toEmail,
+            subject,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background:#dc2626; color:#fff; padding:20px; border-radius:10px;">
+                        <h2 style="margin:0;">DriveMeGo</h2>
+                        <p style="margin:4px 0 0; opacity:.9;">${isReminder ? "Payment Reminder" : "New Invoice"}</p>
+                    </div>
+                    <div style="background:#f8f9fa; padding:30px; border-radius:10px; margin:20px 0;">
+                        <p style="color:#333;">Dear ${invoice.corporateName || "Client"},</p>
+                        <p style="color:#666; line-height:1.6;">
+                            ${isReminder
+                    ? `This is a friendly reminder that the following invoice is awaiting payment.`
+                    : `A new invoice has been issued for your contract <strong>${invoice.contractNumber || ""}</strong>.`}
+                        </p>
+                        <div style="background:#fff; padding:20px; border-radius:8px; border-left:4px solid #dc2626; margin:20px 0;">
+                            <p style="margin:6px 0;"><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+                            <p style="margin:6px 0;"><strong>Amount:</strong> ${amount} ${cur}</p>
+                            <p style="margin:6px 0;"><strong>Due Date:</strong> ${dueDate}</p>
+                            <p style="margin:6px 0;"><strong>Status:</strong> ${invoice.status}</p>
+                        </div>
+                        ${frontendUrl
+                    ? `<div style="text-align:center; margin-top:20px;">
+                                 <a href="${frontendUrl}/corporate/billing" style="background:#dc2626; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; display:inline-block; font-weight:bold;">View & Pay Invoice</a>
+                               </div>`
+                    : ""}
+                    </div>
+                    <p style="color:#999; font-size:12px; text-align:center;">Secure Payments by Stripe</p>
+                </div>
+            `,
+            ...(options.pdfBuffer
+                ? {
+                    attachments: [
+                        {
+                            filename: `${invoice.invoiceNumber || "invoice"}.pdf`,
+                            content: options.pdfBuffer,
+                            contentType: "application/pdf",
+                        },
+                    ],
+                }
+                : {}),
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[v0] Invoice email sent to: ${toEmail} (${invoice.invoiceNumber})`);
+        return { success: true };
+    } catch (error) {
+        console.error("[v0] Error sending invoice email:", error.message);
+        return { success: false, message: error.message };
+    }
+};
+
 // Generate 6-digit OTP
 export const generateOTP = () => {
     return crypto.randomInt(100000, 999999).toString();

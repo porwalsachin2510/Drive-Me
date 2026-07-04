@@ -1,7 +1,9 @@
 /* eslint-disable no-unused-vars */
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
 import "./AdminWalletManagement.css";
 import api from "../../../utils/api";
 
@@ -51,6 +53,10 @@ function AdminWalletManagement() {
     reason: "",
   });
 
+  // The admin's selected display currency. All amounts are converted to it by
+  // the backend, so re-fetch everything whenever it changes.
+  const activeCurrency = useSelector((state) => state.locale?.currency);
+
   useEffect(() => {
     fetchData();
     setupSocketListeners();
@@ -64,7 +70,7 @@ function AdminWalletManagement() {
         socket.off("wallet-user-response");
       }
     };
-  }, []);
+  }, [activeCurrency]);
 
   useEffect(() => {
     if (activeTab === "all-wallets") {
@@ -76,7 +82,7 @@ function AdminWalletManagement() {
     } else if (activeTab === "pending") {
       fetchPendingNotifications();
     }
-  }, [activeTab, pagination.page, searchQuery, roleFilter]);
+  }, [activeTab, pagination.page, searchQuery, roleFilter, activeCurrency]);
 
   const setupSocketListeners = () => {
     const socket = api.getSocket();
@@ -288,11 +294,14 @@ function AdminWalletManagement() {
     }
   };
 
-  const formatCurrency = (amount, currency = "AED") => {
+  const formatCurrency = (amount, currency = getActiveCurrency()) => {
+    const curr = currency || getActiveCurrency();
+    const decimals = ["KWD", "BHD", "OMR"].includes(curr) ? 3 : 2;
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: currency,
-      minimumFractionDigits: 2,
+      currency: curr,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     }).format(amount || 0);
   };
 
@@ -323,6 +332,18 @@ function AdminWalletManagement() {
     return roleMap[role] || "commuter";
   };
 
+  // A super admin is stored with role "ADMIN" + adminPermissions.isSuperAdmin = true.
+  // The backend exposes a flat `isSuperAdmin` flag; fall back to the populated user.
+  const isSuperAdminWallet = (wallet) =>
+    wallet?.isSuperAdmin === true ||
+    (wallet?.role === "ADMIN" &&
+      wallet?.userId?.adminPermissions?.isSuperAdmin === true);
+
+  const getRoleLabel = (wallet) => {
+    if (isSuperAdminWallet(wallet)) return "SUPER ADMIN";
+    return wallet?.role?.replace(/_/g, " ");
+  };
+
   const getInitials = (name) => {
     if (!name) return "?";
     return name
@@ -335,17 +356,17 @@ function AdminWalletManagement() {
 
   // Get the dominant currency from wallets or default to AED
   const getDominantCurrency = () => {
-    if (wallets.length === 0) return stats.currency || "AED";
+    if (wallets.length === 0) return stats.currency || getActiveCurrency();
     // Count currencies from wallets
     const currencyCounts = wallets.reduce((acc, w) => {
-      const curr = w.currency || "AED";
+      const curr = w.currency || getActiveCurrency();
       acc[curr] = (acc[curr] || 0) + 1;
       return acc;
     }, {});
     // Return the most common currency
     return (
       Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-      "AED"
+      getActiveCurrency()
     );
   };
 
@@ -500,19 +521,30 @@ function AdminWalletManagement() {
                 </td>
                 <td>
                   <span className={`role-badge ${getRoleClass(wallet.role)}`}>
-                    {wallet.role?.replace(/_/g, " ")}
+                    {getRoleLabel(wallet)}
                   </span>
                 </td>
                 <td>
                   <span
                     className={`balance-cell ${getBalanceClass(wallet.balance)}`}
                   >
-                    {formatCurrency(wallet.balance, wallet.currency)}
+                    {formatCurrency(
+                      wallet.displayBalance ?? wallet.balance,
+                      wallet.displayCurrency || wallet.currency,
+                    )}
                   </span>
                 </td>
-                <td>{formatCurrency(wallet.totalEarnings, wallet.currency)}</td>
                 <td>
-                  {formatCurrency(wallet.totalWithdrawals, wallet.currency)}
+                  {formatCurrency(
+                    wallet.displayTotalEarnings ?? wallet.totalEarnings,
+                    wallet.displayCurrency || wallet.currency,
+                  )}
+                </td>
+                <td>
+                  {formatCurrency(
+                    wallet.displayTotalWithdrawals ?? wallet.totalWithdrawals,
+                    wallet.displayCurrency || wallet.currency,
+                  )}
                 </td>
                 <td>
                   <span
@@ -583,7 +615,7 @@ function AdminWalletManagement() {
       <div className="wallet-filters">
         <p style={{ margin: 0, color: "#64748b", fontSize: "14px" }}>
           Showing wallets with balance less than 100{" "}
-          {wallets[0]?.currency || "AED"}
+          {wallets[0]?.currency || getActiveCurrency()}
         </p>
         <button
           className="action-btn primary"
@@ -634,12 +666,15 @@ function AdminWalletManagement() {
                 </td>
                 <td>
                   <span className={`role-badge ${getRoleClass(wallet.role)}`}>
-                    {wallet.role?.replace(/_/g, " ")}
+                    {getRoleLabel(wallet)}
                   </span>
                 </td>
                 <td>
                   <span className="balance-cell low-balance">
-                    {formatCurrency(wallet.balance, wallet.currency)}
+                    {formatCurrency(
+                      wallet.displayBalance ?? wallet.balance,
+                      wallet.displayCurrency || wallet.currency,
+                    )}
                   </span>
                 </td>
                 <td>
@@ -716,7 +751,7 @@ function AdminWalletManagement() {
               </div>
               <div className="activity-description">
                 {activity.description ||
-                  `${activity.transactionType} of ${formatCurrency(Math.abs(activity.amount), activity.currency)}`}
+                  `${activity.transactionType} of ${formatCurrency(Math.abs(activity.displayAmount ?? activity.amount), activity.displayCurrency || activity.currency)}`}
               </div>
               <div className="activity-meta">
                 <span className="activity-time">
@@ -726,7 +761,10 @@ function AdminWalletManagement() {
                   className={`activity-amount ${activity.amount > 0 ? "positive" : "negative"}`}
                 >
                   {activity.amount > 0 ? "+" : ""}
-                  {formatCurrency(activity.amount, activity.currency)}
+                  {formatCurrency(
+                    activity.displayAmount ?? activity.amount,
+                    activity.displayCurrency || activity.currency,
+                  )}
                 </span>
               </div>
             </div>
@@ -836,15 +874,8 @@ function AdminWalletManagement() {
     if (!showWalletDetails || !selectedWallet) return null;
 
     return (
-      <div
-        className="notification-modal-overlay"
-        onClick={() => setShowWalletDetails(false)}
-      >
-        <div
-          className="notification-modal"
-          style={{ maxWidth: "700px" }}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <div className="notification-modal-overlay">
+        <div className="notification-modal" style={{ maxWidth: "700px" }}>
           <div className="notification-modal-header">
             <h3>Wallet Details</h3>
             <button
@@ -889,7 +920,7 @@ function AdminWalletManagement() {
               <div className="wallet-info-item">
                 <span className="info-label">Role</span>
                 <span className="info-value">
-                  {selectedWallet.role?.replace(/_/g, " ")}
+                  {getRoleLabel(selectedWallet)}
                 </span>
               </div>
               <div className="wallet-info-item">
@@ -1003,14 +1034,8 @@ function AdminWalletManagement() {
     if (!showNotificationModal) return null;
 
     return (
-      <div
-        className="notification-modal-overlay"
-        onClick={() => setShowNotificationModal(false)}
-      >
-        <div
-          className="notification-modal"
-          onClick={(e) => e.stopPropagation()}
-        >
+      <div className="notification-modal-overlay">
+        <div className="notification-modal">
           <div className="notification-modal-header">
             <h3>
               Send Notification
@@ -1172,14 +1197,8 @@ function AdminWalletManagement() {
     if (!showAdjustmentModal || !selectedWallet) return null;
 
     return (
-      <div
-        className="notification-modal-overlay"
-        onClick={() => setShowAdjustmentModal(false)}
-      >
-        <div
-          className="notification-modal"
-          onClick={(e) => e.stopPropagation()}
-        >
+      <div className="notification-modal-overlay">
+        <div className="notification-modal">
           <div className="notification-modal-header">
             <h3>Adjust Wallet Balance</h3>
             <button

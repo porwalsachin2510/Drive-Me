@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "../../../hooks/useLocale";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -27,6 +28,8 @@ function BookingTable() {
   const { partnerBookings, loading } = useSelector((state) => state.booking);
   const { user } = useSelector((state) => state.auth);
   const socket = useSocket();
+  // Active currency for the logged-in partner's country (e.g. KWD for Kuwait).
+  const { currency: activeCurrency } = useLocale();
 
   // Modal states
   const [showPassengerModal, setShowPassengerModal] = useState(false);
@@ -404,7 +407,10 @@ function BookingTable() {
               <path d="M16 10h.01" />
             </svg>
             <span>
-              Wallet: <strong>{walletBalance.toLocaleString()} AED</strong>
+              Wallet:{" "}
+              <strong>
+                {walletBalance.toLocaleString()} {activeCurrency}
+              </strong>
             </span>
           </div>
           <button
@@ -688,7 +694,7 @@ function BookingTable() {
                     <td className="b2c-td-amount">
                       <span className="b2c-amount-text">
                         {booking.paymentAmount?.toLocaleString() || "0"}{" "}
-                        {booking.currency || "AED"}
+                        {booking.currency || activeCurrency}
                       </span>
                     </td>
                     <td className="b2c-td-status">
@@ -704,7 +710,7 @@ function BookingTable() {
                             Refunded:{" "}
                             {booking.commissionRefundAmount?.toLocaleString() ||
                               0}{" "}
-                            {booking.currency || "AED"}
+                            {booking.currency || activeCurrency}
                           </span>
                         )}
                     </td>
@@ -923,7 +929,7 @@ function BookingTable() {
                 admin commission of{" "}
                 <strong>
                   {pendingAcceptBooking?.adminCommissionAmount || 0}{" "}
-                  {pendingAcceptBooking?.currency || "AED"}
+                  {pendingAcceptBooking?.currency || activeCurrency}
                 </strong>{" "}
                 will be deducted from your wallet.
               </p>
@@ -931,14 +937,15 @@ function BookingTable() {
                 <div className="b2c-wallet-info-row">
                   <span>Current Balance:</span>
                   <span className="b2c-wallet-balance">
-                    {walletBalance} {pendingAcceptBooking?.currency || "AED"}
+                    {walletBalance}{" "}
+                    {pendingAcceptBooking?.currency || activeCurrency}
                   </span>
                 </div>
                 <div className="b2c-wallet-info-row">
                   <span>Required Amount:</span>
                   <span className="b2c-wallet-required">
                     {(pendingAcceptBooking?.adminCommissionAmount || 0) + 50}{" "}
-                    {pendingAcceptBooking?.currency || "AED"}
+                    {pendingAcceptBooking?.currency || activeCurrency}
                   </span>
                 </div>
                 <div className="b2c-wallet-info-row b2c-wallet-shortage">
@@ -950,7 +957,7 @@ function BookingTable() {
                         50 -
                         walletBalance,
                     )}{" "}
-                    {pendingAcceptBooking?.currency || "AED"}
+                    {pendingAcceptBooking?.currency || activeCurrency}
                   </span>
                 </div>
               </div>
@@ -992,7 +999,7 @@ function BookingTable() {
           // After successful recharge, user can try accepting the booking again
         }}
         country={user?.country || "UAE"}
-        currency={pendingAcceptBooking?.currency || "AED"}
+        currency={pendingAcceptBooking?.currency || activeCurrency}
       />
     </div>
   );

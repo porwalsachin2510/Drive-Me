@@ -1,4 +1,6 @@
 "use client";
+import { getCurrencyDecimals } from "../../../config/localeConfig";
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import "./wallet.css";
 import api from "../../../utils/api";
@@ -13,12 +15,10 @@ export default function Wallet() {
 
   // Currency is driven entirely by the wallet record (which is derived from the
   // user's country on the backend). Defaults to AED until data loads.
-  const walletCurrency = walletData?.currency || "AED";
+  const walletCurrency = walletData?.currency || getActiveCurrency();
 
   // Number of decimals to display: 3 for KWD/BHD/OMR, 2 for everything else.
-  const currencyDecimals = ["KWD", "BHD", "OMR"].includes(walletCurrency)
-    ? 3
-    : 2;
+  const currencyDecimals = getCurrencyDecimals(walletCurrency);
 
   // Format a numeric amount with the correct currency code and decimals.
   const formatAmount = (value) =>

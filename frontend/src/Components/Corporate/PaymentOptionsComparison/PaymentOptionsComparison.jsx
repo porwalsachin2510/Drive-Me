@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import {
@@ -101,7 +102,7 @@ const PaymentOptionsComparison = ({
   const advanceAmount = contract?.financials?.advancePayment?.amount || 0;
   const securityDeposit = contract?.financials?.securityDeposit?.amount || 0;
   const finalPaymentAmount = contract?.financials?.finalPayment?.amount || 0;
-  const currency = contract?.financials?.currency || "AED";
+  const currency = contract?.financials?.currency || getActiveCurrency();
 
   // Negotiation Commission details
   const negotiationCommission =

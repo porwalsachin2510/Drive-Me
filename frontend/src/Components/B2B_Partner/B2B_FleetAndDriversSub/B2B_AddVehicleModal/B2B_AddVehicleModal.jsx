@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  getActiveCurrency,
+  getActiveCountry,
+  getCountryLocations,
+} from "../../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -55,7 +60,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       refrigeration: false,
     },
     pricing: {
-      currency: "AED",
+      currency: getActiveCurrency(),
       dailyRate: 0,
       weeklyRate: 0,
       monthlyRate: 0,
@@ -106,26 +111,13 @@ const B2B_AddVehicleModal = ({ onClose }) => {
   const [validationErrors, setValidationErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Dynamic dropdown options from backend
-  const locations = dropdownOptions[
-    DROPDOWN_CATEGORIES.LOCATIONS
-  ]?.options?.map((opt) => opt.value) || [
-    "Dubai",
-    "Abu Dhabi",
-    "Sharjah",
-    "Ajman",
-    "Kuwait City",
-    "Doha",
-    "Riyadh",
-    "Jeddah",
-  ];
-
-  const currencies = dropdownOptions[DROPDOWN_CATEGORIES.CURRENCIES]
-    ?.options || [
-    { value: "AED", label: "AED - UAE Dirham" },
-    { value: "KWD", label: "KWD - Kuwaiti Dinar" },
-    { value: "SAR", label: "SAR - Saudi Riyal" },
-  ];
+  // A B2B partner is an identity-locked earner: their country is fixed, so both
+  // their service locations and their pricing currency are scoped to it. A
+  // Kuwait partner only sees Kuwait cities and prices in KWD; a UAE partner only
+  // sees UAE cities and prices in AED. Data-driven via localeConfig.
+  const partnerCountry = getActiveCountry();
+  const partnerCurrency = getActiveCurrency();
+  const locations = getCountryLocations(partnerCountry);
 
   const vehicleCategories = {
     PASSENGER: dropdownOptions[DROPDOWN_CATEGORIES.VEHICLE_CATEGORIES_PASSENGER]
@@ -181,7 +173,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
         [name]: type === "checkbox" ? checked : value,
       });
     }
-  };;
+  };
 
   const handleNestedChange = (parent, field, value) => {
     setFormData({
@@ -316,7 +308,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  };;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -333,7 +325,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       return;
     }
 
-   // Set submitting state to show loading on button
+    // Set submitting state to show loading on button
     setIsSubmitting(true);
 
     try {
@@ -382,7 +374,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
         // Show error if submission failed
         alert(result.payload || "Failed to add vehicle. Please try again.");
       }
-    // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars
     } catch (err) {
       alert("An error occurred while adding the vehicle. Please try again.");
     } finally {
@@ -702,25 +694,18 @@ const B2B_AddVehicleModal = ({ onClose }) => {
               <div className="b2b-operator-dashboard-add-vehicle-form-grid">
                 <div className="b2b-operator-dashboard-add-vehicle-form-group">
                   <label>Currency *</label>
+                  {/* Currency is locked to the partner's country — an earner is
+                      always paid/settled in their own country's currency. */}
                   <select
                     value={formData.pricing.currency}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        pricing: {
-                          ...formData.pricing,
-                          currency: e.target.value,
-                        },
-                      })
-                    }
-                    required
+                    disabled
+                    aria-readonly="true"
                   >
-                    {currencies.map((currency) => (
-                      <option key={currency.value} value={currency.value}>
-                        {currency.label}
-                      </option>
-                    ))}
+                    <option value={partnerCurrency}>{partnerCurrency}</option>
                   </select>
+                  <small className="b2b-operator-dashboard-add-vehicle-help-text">
+                    Pricing is set in your account currency ({partnerCurrency}).
+                  </small>
                 </div>
               </div>
             </div>
@@ -1318,6 +1303,6 @@ const B2B_AddVehicleModal = ({ onClose }) => {
       </div>
     </>
   );
-};;
+};
 
 export default B2B_AddVehicleModal;

@@ -1288,11 +1288,15 @@ function CorporateEmployeeManagement() {
                                     <strong>Trip {trip.tripNumber}:</strong>{" "}
                                     {trip.departureTime} ({trip.tripType})
                                   </p>
+
+                                  {/* Outbound (morning) leg: Home -> Office */}
                                   {trip.outboundStopPoints &&
                                     trip.outboundStopPoints.length > 0 && (
                                       <div className="drivemego-cem-stop-points-list-info">
                                         <span className="drivemego-cem-stop-label drivemego-cem-outbound">
-                                          Pickup Stops:
+                                          {trip.tripType === "Round Trip"
+                                            ? "Outbound Pickup Stops (Home \u2192 Office):"
+                                            : "Pickup Stops:"}
                                         </span>
                                         <ul>
                                           {trip.outboundStopPoints.map(
@@ -1305,6 +1309,40 @@ function CorporateEmployeeManagement() {
                                         </ul>
                                       </div>
                                     )}
+
+                                  {/* Return (evening) leg: Office -> Home. Only for Round Trip */}
+                                  {trip.tripType === "Round Trip" && (
+                                    <>
+                                      <p className="drivemego-cem-return-departure-time">
+                                        <strong>Return Departure:</strong>{" "}
+                                        {trip.returnStartTime ||
+                                          trip.returnDepartureTime ||
+                                          "N/A"}
+                                        {(trip.returnEndTime ||
+                                          trip.returnArrivalTime) &&
+                                          ` (arrives ${trip.returnEndTime || trip.returnArrivalTime})`}
+                                      </p>
+                                      {trip.returnStopPoints &&
+                                        trip.returnStopPoints.length > 0 && (
+                                          <div className="drivemego-cem-stop-points-list-info">
+                                            <span className="drivemego-cem-stop-label drivemego-cem-return">
+                                              Drop-off Stops (Office &rarr;
+                                              Home):
+                                            </span>
+                                            <ul>
+                                              {trip.returnStopPoints.map(
+                                                (stop, sIdx) => (
+                                                  <li key={sIdx}>
+                                                    {stop.location} -{" "}
+                                                    {stop.time}
+                                                  </li>
+                                                ),
+                                              )}
+                                            </ul>
+                                          </div>
+                                        )}
+                                    </>
+                                  )}
                                 </div>
                               ),
                             )}

@@ -19,7 +19,20 @@ import {
   selectLoading,
   selectError,
 } from "../../Redux/selectors/authSelectors";
+import {
+  COUNTRY_CONFIG,
+  DEFAULT_COUNTRY,
+  normalizeCountry,
+  getCountryConfig,
+} from "../../config/localeConfig";
 import "./register.css";
+
+// Markets the platform is currently launched in. A visitor can only register
+// with the dial code of the country they are physically in, so a UAE visitor
+// can't register a Kuwait number and vice-versa.
+const SERVED_REGISTRATION_MARKETS = Object.values(COUNTRY_CONFIG)
+  .filter((c) => c.serviceAvailable)
+  .map((c) => c.code);
 
 const Register = () => {
   const [selectedRole, setSelectedRole] = useState("COMMUTER");
@@ -45,6 +58,21 @@ const Register = () => {
 
   const dispatch = useDispatch();
 
+  // Auto-detected country from the global locale (GPS/IP based, resolved by
+  // initLocale on app load). We lock the WhatsApp dial code to the served
+  // market the visitor is actually in so cross-country registration is
+  // impossible (a Kuwait visitor gets +965, a UAE visitor gets +971).
+  const detectedCountry = useSelector((state) => state.locale?.country);
+  const registrationCountry = (() => {
+    const normalized = normalizeCountry(detectedCountry);
+    return SERVED_REGISTRATION_MARKETS.includes(normalized)
+      ? normalized
+      : DEFAULT_COUNTRY;
+  })();
+  const lockedCountryConfig = getCountryConfig(registrationCountry);
+  const lockedPhoneCode = lockedCountryConfig.phoneCode;
+  const lockedCountryName = lockedCountryConfig.displayName;
+
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem("activeTab") || "commuters";
   });
@@ -65,28 +93,10 @@ const Register = () => {
     CORPORATE_EMPLOYEE: "/",
   };
 
-  // Country codes for UAE, Kuwait and other common countries
-  const countryCodes = [
-    { code: "+971", country: "UAE", flag: "AE" },
-    { code: "+965", country: "Kuwait", flag: "KW" },
-    { code: "+966", country: "Saudi Arabia", flag: "SA" },
-    { code: "+968", country: "Oman", flag: "OM" },
-    { code: "+973", country: "Bahrain", flag: "BH" },
-    { code: "+974", country: "Qatar", flag: "QA" },
-    { code: "+91", country: "India", flag: "IN" },
-    { code: "+92", country: "Pakistan", flag: "PK" },
-    { code: "+63", country: "Philippines", flag: "PH" },
-    { code: "+20", country: "Egypt", flag: "EG" },
-    { code: "+962", country: "Jordan", flag: "JO" },
-    { code: "+961", country: "Lebanon", flag: "LB" },
-    { code: "+1", country: "USA/Canada", flag: "US" },
-    { code: "+44", country: "UK", flag: "GB" },
-  ];
-
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    countryCode: "+971", // Default to UAE
+    countryCode: getCountryConfig(DEFAULT_COUNTRY).phoneCode, // Overwritten by detected market (locked)
     whatsappNumber: "",
     password: "",
     companyName: "",
@@ -160,6 +170,16 @@ const Register = () => {
   const requiresTerms = rolesRequiringTerms.includes(selectedRole);
 
   // Fetch commission range when role changes
+  // Keep the WhatsApp dial code locked to the visitor's detected served market.
+  // Runs on mount and whenever detection resolves/updates the locale country.
+  useEffect(() => {
+    setFormData((prev) =>
+      prev.countryCode === lockedPhoneCode
+        ? prev
+        : { ...prev, countryCode: lockedPhoneCode },
+    );
+  }, [lockedPhoneCode]);
+
   useEffect(() => {
     const fetchCommissionRange = async () => {
       if (requiresTerms) {
@@ -765,26 +785,16 @@ const Register = () => {
                     WhatsApp Number <span className="register-required">*</span>
                   </label>
                   <div className="register-phone-input-container">
-                    <div className="register-country-code-wrapper">
-                      <select
-                        className="register-country-code-select"
-                        name="countryCode"
-                        value={formData.countryCode}
-                        onChange={handleInputChange}
-                        title={
-                          countryCodes.find(
-                            (c) => c.code === formData.countryCode,
-                          )?.country || ""
-                        }
-                      >
-                        {countryCodes.map((country) => (
-                          <option key={country.code} value={country.code}>
-                            {country.code} - {country.country}
-                          </option>
-                        ))}
-                      </select>
+                    {/* Dial code is auto-selected from the visitor's detected
+                        country and locked — this prevents registering with a
+                        different country's number (e.g. UAE visitor using a
+                        Kuwait code). */}
+                    <div
+                      className="register-country-code-wrapper register-country-code-locked"
+                      title={`Country auto-detected: ${lockedCountryName}`}
+                    >
                       <span className="register-country-code-display">
-                        {formData.countryCode}
+                        {lockedPhoneCode}
                       </span>
                     </div>
                     <input
@@ -1283,6 +1293,6 @@ const Register = () => {
       <Footer />
     </div>
   );
-};;;
+};
 
 export default Register;

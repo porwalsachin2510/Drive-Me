@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -88,7 +89,7 @@ function RequirementsView() {
     },
     pricing: {
       monthlyRate: 0,
-      currency: "KWD",
+      currency: getActiveCurrency(),
       driverIncluded: true,
       fuelIncluded: true,
       additionalCharges: [],

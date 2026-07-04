@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { getActiveCurrency } from "../../../config/localeConfig";
+import ManagedServiceBrief from "../../Corporate/ManagedServiceBrief/ManagedServiceBrief";
 import "./QuotationResponseModal.css";
 
 const QuotationResponseModal = ({
@@ -15,12 +17,17 @@ const QuotationResponseModal = ({
   const [responseMessage, setResponseMessage] = useState("");
   const [terms, setTerms] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  const [serviceCharge, setServiceCharge] = useState("");
+
+  // Managed-service quotations let the partner add a management/service charge
+  // (any amount, including 0) for running operations on the corporate's behalf.
+  const isManaged = quotation.serviceMode === "MANAGED";
 
   const currency =
     quotation.currency ||
     quotation.vehicles?.[0]?.vehicleId?.pricing.currency ||
-    "AED";
-  
+    getActiveCurrency();
+
   const handleVehicleDataChange = (index, field, value) => {
     const updatedData = [...responseData];
     const numValue = Number.parseFloat(value) || 0;
@@ -55,10 +62,15 @@ const QuotationResponseModal = ({
     return total;
   };
 
-  const calculateGrandTotal = () => {
+  const vehiclesSubtotal = () => {
     return responseData.reduce((total, vehicle) => {
       return total + calculateVehicleTotal(vehicle);
     }, 0);
+  };
+
+  const calculateGrandTotal = () => {
+    const charge = isManaged ? Number.parseFloat(serviceCharge) || 0 : 0;
+    return vehiclesSubtotal() + charge;
   };
 
   const handleSubmit = () => {
@@ -130,6 +142,7 @@ const QuotationResponseModal = ({
 
       const quotedPriceData = {
         totalAmount: totalAmount,
+        serviceCharge: isManaged ? Number.parseFloat(serviceCharge) || 0 : 0,
         breakdown: {
           vehicleRental: totalVehicleRental,
           driverCharges: totalDriverCharges,
@@ -176,6 +189,18 @@ const QuotationResponseModal = ({
         </div>
 
         <div className="modal-body">
+          {/* Managed-service quotations arrive with an operations brief the
+              corporate authored: the routes, work locations & shifts and
+              employee roster you would be committing to. Read it BEFORE you
+              price so you can quote accurately (or reject if you can't cover
+              those routes). You can ask clarifying questions in the brief's
+              messaging thread without leaving this modal. */}
+          {isManaged && (
+            <div className="managed-brief-embed" style={{ marginBottom: 20 }}>
+              <ManagedServiceBrief quotationId={quotation._id} mode="partner" />
+            </div>
+          )}
+
           <div className="response-type-selector">
             <button
               className={`type-btn approve ${
@@ -455,8 +480,48 @@ const QuotationResponseModal = ({
                 ))}
               </div>
 
+              {isManaged && (
+                <div className="managed-service-charge-section">
+                  <div className="managed-service-charge-note">
+                    <strong>Managed Service request.</strong> This corporate
+                    wants you to run all operations (routes, schedules,
+                    employees, trips and invitations) on their behalf. You may
+                    add a management / service charge for this. Enter any
+                    amount, or 0 for no charge.
+                  </div>
+                  <div className="form-group">
+                    <label>Management / Service Charge ({currency})</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={serviceCharge}
+                      onChange={(e) => setServiceCharge(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="grand-total-section">
                 <h3>Total Quotation Amount</h3>
+                {isManaged && (
+                  <div className="grand-total-breakdown">
+                    <div className="breakdown-item">
+                      <span>Vehicles Subtotal:</span>
+                      <span>
+                        {currency} {vehiclesSubtotal().toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="breakdown-item">
+                      <span>Management / Service Charge:</span>
+                      <span>
+                        {currency}{" "}
+                        {(Number.parseFloat(serviceCharge) || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <p className="grand-total">
                   {currency} {calculateGrandTotal().toFixed(2)}
                 </p>

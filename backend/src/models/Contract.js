@@ -21,6 +21,49 @@ const contractSchema = new mongoose.Schema(
             ref: "User",
             required: true,
         },
+
+        // Service mode carried over from the quotation.
+        // STANDARD = corporate runs operations itself.
+        // MANAGED = B2B partner runs operations (routes, schedules, employees,
+        // trips, invitations) on behalf of the corporate, who retains full
+        // visibility and the ability to act too.
+        serviceMode: {
+            type: String,
+            enum: ["STANDARD", "MANAGED"],
+            default: "STANDARD",
+        },
+
+        // Activity log of operations performed on a MANAGED contract, so the
+        // corporate can see everything the B2B partner did on their behalf.
+        managedOperations: {
+            activityLog: [
+                {
+                    action: String, // e.g. ROUTE_CREATED, SCHEDULE_CREATED, EMPLOYEE_ADDED, INVITATION_SENT, TRIPS_GENERATED, DRIVER_ASSIGNED, FUEL_ASSIGNED, ROUTE_ASSIGNED_TO_EMPLOYEE
+                    description: String,
+                    entityType: String, // ROUTE | SCHEDULE | EMPLOYEE | TRIP | VEHICLE | INVITATION
+                    entityId: {
+                        type: mongoose.Schema.Types.ObjectId,
+                    },
+                    performedBy: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "User",
+                    },
+                    performedByName: String,
+                    performedByRole: {
+                        type: String,
+                        enum: ["B2B_PARTNER", "CORPORATE"],
+                    },
+                    meta: {
+                        type: mongoose.Schema.Types.Mixed,
+                    },
+                    createdAt: {
+                        type: Date,
+                        default: Date.now,
+                    },
+                },
+            ],
+        },
+        
         vehicles: [
             {
                 vehicleId: {
@@ -151,6 +194,11 @@ const contractSchema = new mongoose.Schema(
             totalAmount: {
                 type: Number,
                 required: true,
+            },
+            // B2B partner management/service charge component of the total (MANAGED contracts).
+            serviceCharge: {
+                type: Number,
+                default: 0,
             },
             advancePayment: {
                 amount: Number,

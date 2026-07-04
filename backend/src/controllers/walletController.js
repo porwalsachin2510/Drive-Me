@@ -1,4 +1,5 @@
 import Wallet from "../models/Wallet.js"
+import { getOrCreateWallet } from "../Services/walletService.js"
 import User from "../models/User.js"
 import Transaction from "../models/Transaction.js"
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
@@ -7,9 +8,26 @@ import ProcessedPayment from "../models/ProcessedPayment.js"
 import { sendRealTimeNotification, notifyAdminsWalletEvent } from "../Services/socketService.js"
 import { createNotification } from "./notificationController.js"
 import { detectCountryFromCurrency, getPaymentGateway } from "../Services/paymentGatewayService.js"
-import { getCountryCurrency, getCurrencyDecimals, getCurrencySymbol, getCountryPaymentMethods } from "../Services/countryLocalizationService.js"
+import { getCountryCurrency, getCurrencyDecimals, getCurrencySymbol, getCountryPaymentMethods, getEffectiveCountry } from "../Services/countryLocalizationService.js"
 import bankValidationService from "../Services/bankValidationService.js"
+import currencyConversionService from "../Services/currencyConversionService.js"
+import { settleCashDuesOnTopUp } from "../Services/cashCancellationService.js"
 import crypto from "crypto"
+
+/**
+ * Resolve the currency a user's wallet should use.
+ *
+ * - In local/dev testing (DEV_COUNTRY set), the effective country wins so the
+ *   whole wallet flow can be tested per country (UAE -> AED, Kuwait -> KWD).
+ * - In production (DEV_COUNTRY unset), the wallet's stored currency is
+ *   authoritative (it holds real money), then the user's country.
+ */
+const resolveWalletCurrency = (user, storedCurrency) => {
+    if (process.env.DEV_COUNTRY) {
+        return getCountryCurrency(getEffectiveCountry(user))
+    }
+    return storedCurrency || getCountryCurrency(getEffectiveCountry(user))
+}
 
 // Create payment session for wallet funds
 export const createPaymentSession = async (req, res) => {
@@ -41,10 +59,11 @@ export const createPaymentSession = async (req, res) => {
         }
 
         // ===== Determine currency from the source of truth =====
-        // Prefer the user's existing wallet currency, then their country, and
-        // only fall back to the request body. Never trust a hardcoded default.
+        // Prefer the user's existing wallet currency, then their (effective)
+        // country, and only fall back to the request body. The DEV_COUNTRY
+        // testing override (when set) takes priority so the gateway matches.
         const existingWallet = await Wallet.findOne({ userId })
-        const currency = existingWallet?.currency || getCountryCurrency(user.country) || req.body.currency || "AED"
+        const currency = resolveWalletCurrency(user, existingWallet?.currency) || req.body.currency || "AED"
 
         // Detect country and get gateway from the resolved currency
         const country = detectCountryFromCurrency(currency)
@@ -121,24 +140,18 @@ export const getWalletBalance = async (req, res) => {
             })
         }
 
-        // Find or create wallet for user
-        let wallet = await Wallet.findOne({ userId })
+        // The PRIMARY wallet is the one in the user's effective-country currency
+        // (UAE -> AED, Kuwait -> KWD, ...). A user may also hold wallets in other
+        // currencies (e.g. an admin earning commission from multiple countries);
+        // those are summed into the converted `displayBalance` further below.
+        const userCurrency = resolveWalletCurrency(user, null)
+        let wallet = await Wallet.findOne({ userId, currency: userCurrency })
         if (!wallet) {
-            // Detect currency based on user location or default to KWD
-            let userCurrency = "KWD"
-            if (user.country) {
-                const countryCurrencyMap = {
-                    "UAE": "AED",
-                    "KW": "KWD",
-                    "KUWAIT": "KWD",
-                    "SA": "SAR",
-                    "BH": "BHD",
-                    "OM": "OMR",
-                    "QA": "QAR"
-                }
-                userCurrency = countryCurrencyMap[user.country] || "KWD"
-            }
-
+            // Fall back to ANY existing wallet before creating a new one, so we
+            // never orphan a legacy single-currency wallet on first read.
+            wallet = await Wallet.findOne({ userId })
+        }
+        if (!wallet) {
             // Map role to valid wallet roles - some driver roles don't have wallets
             const validWalletRoles = ["COMMUTER", "CORPORATE", "CORPORATE_EMPLOYEE", "B2C_PARTNER", "B2C_PARTNER_DRIVER", "B2B_PARTNER", "ADMIN"]
             const resolvedRole = validWalletRoles.includes(userRole)
@@ -155,6 +168,42 @@ export const getWalletBalance = async (req, res) => {
                 transactions: []
             })
             await wallet.save()
+        }
+
+        // DEV testing only: when DEV_COUNTRY is set and the wallet's currency no
+        // longer matches the country being tested, reset it to a FRESH wallet in
+        // the new currency. A balance can't be meaningfully carried across
+        // currencies (50 AED is not 50 KWD), and a real new user in that country
+        // starts with an empty wallet -- so this accurately simulates switching
+        // between a clean Kuwait user and a clean UAE user. Safe because
+        // DEV_COUNTRY is never set in production (this branch never runs there).
+        if (process.env.DEV_COUNTRY) {
+            const effectiveCurrency = getCountryCurrency(getEffectiveCountry(user))
+            if (wallet.currency !== effectiveCurrency) {
+                wallet.currency = effectiveCurrency
+                wallet.balance = 0
+                wallet.transactions = []
+                await wallet.save()
+            }
+        } else {
+            // PRODUCTION self-heal: a wallet's currency must match the user's
+            // account country (the single source of truth). A legacy/stale wallet
+            // can carry the wrong currency (e.g. an "AED" wallet for a Kuwait
+            // user created before the country was resolved). Correct it in place
+            // ONLY when it is completely safe -- i.e. the wallet is empty (no
+            // balance, no commission debt, no pending amount, no transactions) so
+            // no real money is ever relabeled across currencies.
+            const effectiveCurrency = getCountryCurrency(getEffectiveCountry(user))
+            if (
+                wallet.currency !== effectiveCurrency &&
+                (wallet.balance || 0) === 0 &&
+                (wallet.commissionDebt || 0) === 0 &&
+                (wallet.pendingAmount || 0) === 0 &&
+                !(wallet.transactions && wallet.transactions.length)
+            ) {
+                wallet.currency = effectiveCurrency
+                await wallet.save()
+            }
         }
 
         // ===== Compute real "spent" statistics =====
@@ -203,6 +252,38 @@ export const getWalletBalance = async (req, res) => {
 
         const walletObj = wallet.toObject ? wallet.toObject() : wallet
 
+        // ===== Display-currency conversion =====
+        // The wallet balance is stored in the wallet's NATIVE currency (e.g. a
+        // Kuwait admin's commissions are held in KWD). When the caller views the
+        // dashboard in another currency (e.g. an admin switches the navbar to AED),
+        // the raw number must be CONVERTED, not just relabelled — otherwise
+        // 1200 KWD wrongly shows as "AED 1200". We honour an optional
+        // `displayCurrency` query param and return the converted value alongside
+        // the native one, consistent with the Finance dashboard's conversion.
+        const nativeCurrency = wallet.currency || "AED"
+        const requestedDisplay = String(
+            req.query?.displayCurrency || req.query?.currency || ""
+        ).trim().toUpperCase()
+        const SUPPORTED = ["AED", "KWD", "SAR", "BHD", "OMR", "QAR"]
+        const displayCurrency = SUPPORTED.includes(requestedDisplay)
+            ? requestedDisplay
+            : nativeCurrency
+
+        // displayBalance is the user's TOTAL across every per-currency wallet,
+        // each converted into the display currency and summed. This is what lets
+        // an admin who earned AED 1,600 and KWD 50 see one correct combined
+        // number in whichever currency they select — never a raw relabel.
+        const allWallets = await Wallet.find({ userId })
+        const displayBalance = allWallets.reduce((sum, w) => {
+            const bal = Number(w.balance) || 0
+            const from = w.currency || nativeCurrency
+            const converted =
+                from === displayCurrency
+                    ? bal
+                    : currencyConversionService.convertAmount(bal, from, displayCurrency)
+            return sum + (Number(converted) || 0)
+        }, 0)
+
         return res.status(200).json({
             success: true,
             data: {
@@ -212,7 +293,10 @@ export const getWalletBalance = async (req, res) => {
                     last30DaysSpent
                 },
                 balance: wallet.balance,
-                currency: wallet.currency,
+                currency: nativeCurrency,
+                // Converted view for the caller's selected display currency.
+                displayBalance,
+                displayCurrency,
                 totalSpent,
                 last30DaysSpent
             }
@@ -232,7 +316,16 @@ export const getWalletTransactions = async (req, res) => {
         const userId = req.userId
         const { page = 1, limit = 20 } = req.query
 
-        const wallet = await Wallet.findOne({ userId })
+        // Resolve the PRIMARY wallet (the user's effective-country currency), so
+        // history is shown for their active market. Fall back to any wallet.
+        const historyUser = await User.findById(userId)
+        const primaryCurrency = historyUser ? resolveWalletCurrency(historyUser, null) : null
+        let wallet = primaryCurrency
+            ? await Wallet.findOne({ userId, currency: primaryCurrency })
+            : null
+        if (!wallet) {
+            wallet = await Wallet.findOne({ userId })
+        }
         if (!wallet) {
             return res.status(404).json({
                 success: false,
@@ -243,17 +336,23 @@ export const getWalletTransactions = async (req, res) => {
         const walletCurrency = wallet.currency || "AED"
 
         // ===== Build a unified transaction history =====
-        // Sources:
-        //  1. Embedded wallet.transactions (top-ups, withdrawals, earnings, refunds, etc.)
-        //  2. Transaction collection records scoped to this user (a "better tracking" copy
-        //     of many of the same events -> must be de-duplicated against source 1)
-        //  3. Completed passenger bookings (gateway ride/pass payments that never touch the
-        //     wallet balance but are still spend the user made)
+        // Sources, in priority order:
+        //  1. Passenger bookings — the CANONICAL record of every ride/pass the commuter paid
+        //     for, by CASH, WALLET or an online gateway (Card/KNET/Benefit). Carries the real
+        //     paymentMethod, so this is the single source of truth for ride/pass spend.
+        //  2. Embedded wallet.transactions — wallet top-ups, withdrawals, admin adjustments,
+        //     earnings and refunds (anything that actually moves the wallet balance).
+        //  3. Transaction-collection ledger — a parallel copy of many of the same events.
         //
-        // CRITICAL: every emitted row carries an explicit `direction` ("CREDIT" | "DEBIT")
-        // computed here from the authoritative transaction type/category. The frontend must
-        // rely on this field for the +/- sign and red/green colour instead of guessing from
-        // a remapped `type`, which previously caused earnings/refunds to render as red debits.
+        // A single WALLET-paid booking historically produced THREE rows (the booking + an
+        // embedded wallet debit + a ledger record) all for the SAME money, and every row was
+        // labelled "wallet". We now (a) emit the booking once with its true payment method and
+        // (b) drop the wallet/ledger twins that belong to that booking, so each payment shows
+        // exactly once with a correct Cash / Wallet / Card badge.
+        //
+        // CRITICAL: every emitted row carries an explicit `direction` ("CREDIT" | "DEBIT") and
+        // a human `paymentMethod`. The frontend relies on `direction` for the +/- sign and
+        // red/green colour instead of guessing from a remapped `type`.
 
         // Embedded transaction types that represent money coming INTO the wallet.
         const EMBEDDED_CREDIT_TYPES = new Set([
@@ -266,23 +365,128 @@ export const getWalletTransactions = async (req, res) => {
             "NEGOTIATION_COMMISSION",
         ])
 
+        // Normalise a raw payment-method/source code into a short label for the UI badge.
+        const prettyMethod = (code) => {
+            switch (String(code || "").toUpperCase()) {
+                case "CASH": return "Cash"
+                case "WALLET": return "Wallet"
+                case "CARD":
+                case "CREDIT_CARD":
+                case "STRIPE":
+                case "TAP": return "Card"
+                case "KNET": return "KNET"
+                case "BENEFIT": return "Benefit"
+                case "ZAINCASH": return "Zain Cash"
+                case "APPLE_PAY": return "Apple Pay"
+                case "GOOGLE_PAY": return "Google Pay"
+                case "UPI": return "UPI"
+                case "BANK": return "Bank"
+                case "ADMIN": return "Admin"
+                case "REFUND": return "Refund"
+                default: return code ? String(code) : "Wallet"
+            }
+        }
+
         const merged = []
-        // Dedup keys built from embedded transactions so the Transaction-collection twin of the
-        // same event (identical amount + description on the same wallet) is not shown twice.
+
+        // ---- Source 1: passenger bookings (canonical ride/pass spend) ----
+        const bookingIdSet = new Set()
+        try {
+            const bookings = await B2CPassengerBooking.find({
+                passengerId: userId,
+                bookingStatus: { $nin: ["CANCELLED", "REJECTED"] },
+            })
+                .select("paymentAmount currency createdAt bookingDate pickupLocation dropoffLocation isMonthlyPass transactionId paymentMethod paymentStatus")
+                .lean()
+
+            bookings.forEach((b) => {
+                bookingIdSet.add(String(b._id))
+                const isCash = String(b.paymentMethod || "").toUpperCase() === "CASH"
+
+                // A CASH fare is paid in person to the captain at travel time — it NEVER
+                // moves through the wallet, so it must not be rendered as a wallet debit
+                // and must not be counted in wallet spend totals. We still surface it in
+                // the activity feed for history, but as a neutral, informational row
+                // (direction "NONE", affectsWallet false) carrying its real settlement
+                // status ("PAY ON BOARD" until collected). Wallet / Card / gateway fares
+                // do correspond to real money movement and stay as DEBITs.
+                merged.push({
+                    _id: `booking-${String(b._id)}`,
+                    type: "RIDE_PAYMENT",
+                    category: "BOOKING_PAYMENT",
+                    direction: isCash ? "NONE" : "DEBIT",
+                    affectsWallet: !isCash,
+                    amount: b.paymentAmount,
+                    paymentMethod: prettyMethod(b.paymentMethod),
+                    description: b.isMonthlyPass
+                        ? `Monthly pass payment (${b.pickupLocation} ↔ ${b.dropoffLocation})`
+                        : `Ride payment (${b.pickupLocation} → ${b.dropoffLocation})`,
+                    // Cash fares are collected on board, so surface their real settlement state.
+                    status: b.paymentStatus === "COMPLETED"
+                        ? (isCash ? "PAID IN CASH" : "COMPLETED")
+                        : (isCash ? "PAY ON BOARD" : (b.paymentStatus || "PENDING")),
+                    reference: b.transactionId,
+                    currency: b.currency || walletCurrency,
+                    createdAt: b.createdAt || b.bookingDate,
+                })
+            })
+        } catch (bookingErr) {
+            console.error("[v0] Error loading bookings for transactions:", bookingErr.message)
+        }
+
+        // Does a free-text description point at a booking we've already emitted above?
+        const refsKnownBooking = (text) => {
+            const m = String(text || "").match(/booking\s+([a-f0-9]{24})/i)
+            return m ? bookingIdSet.has(m[1]) : false
+        }
+
+        // Dedup of identical amount+description twins between embedded txns and the ledger.
         const seenTwins = new Set()
         const twinKey = (amount, description) =>
             `${Number(amount || 0).toFixed(2)}|${(description || "").trim()}`
 
-            // 1) Embedded wallet transactions
+            // ---- Source 2: embedded wallet transactions ----
             ; (wallet.transactions || []).forEach((t) => {
                 const obj = t.toObject ? t.toObject() : t
+                // Drop the wallet-side twin of a booking payment (the booking row already covers it).
+                if (refsKnownBooking(obj.description)) return
                 const direction = EMBEDDED_CREDIT_TYPES.has(obj.type) ? "CREDIT" : "DEBIT"
                 seenTwins.add(twinKey(obj.amount, obj.description))
+
+                // Derive a method label for older rows that pre-date the stored
+                // `paymentMethod` field by parsing the description text (e.g.
+                // "(Wallet payment ...)", "(Stripe payment)", "(TAP payment)",
+                // "(Cash payment ...)"). Newer rows carry obj.paymentMethod directly.
+                const methodFromText = (text) => {
+                    const s = String(text || "")
+                    if (/\(wallet payment/i.test(s) || /wallet payment\)/i.test(s)) return "WALLET"
+                    if (/\(stripe payment/i.test(s) || /stripe payment\)/i.test(s)) return "STRIPE"
+                    if (/\(tap payment/i.test(s) || /tap payment\)/i.test(s)) return "TAP"
+                    if (/\(cash payment/i.test(s) || /cash payment/i.test(s)) return "CASH"
+                    if (/\(knet/i.test(s)) return "KNET"
+                    return null
+                }
+
+                let method
+                if (/admin adjustment/i.test(obj.description)) method = "Admin"
+                else if (obj.type === "DEPOSIT")
+                    method = prettyMethod(obj.paymentMethod || methodFromText(obj.description) || "Card")
+                else if (obj.type === "WITHDRAWAL" || obj.type === "PAYOUT") {
+                    // A "WITHDRAWAL" that is really a commission deduction collected from a
+                    // cash booking should reflect Cash, not a bank payout.
+                    const fromText = methodFromText(obj.description)
+                    method = obj.paymentMethod ? prettyMethod(obj.paymentMethod) : (fromText ? prettyMethod(fromText) : "Bank")
+                }
+                else if (["REFUND", "COMMISSION_REFUND", "SECURITY_DEPOSIT_REFUND"].includes(obj.type)) method = "Refund"
+                else method = prettyMethod(obj.paymentMethod || methodFromText(obj.description))
+
                 merged.push({
                     _id: String(obj._id),
                     type: obj.type === "DEPOSIT" ? "WALLET_TOPUP" : obj.type,
+                    category: obj.type,
                     direction,
                     amount: obj.amount,
+                    paymentMethod: method,
                     description: obj.description,
                     status: obj.status || "COMPLETED",
                     reference: obj.reference,
@@ -291,18 +495,31 @@ export const getWalletTransactions = async (req, res) => {
                 })
             })
 
-        // 2) Transaction collection records for this user (skip twins already shown above)
+        // ---- Source 3: Transaction-collection ledger (skip booking + amount/desc twins) ----
         try {
             const ledger = await Transaction.find({ userId }).lean()
             ledger.forEach((t) => {
+                // Skip ledger rows that belong to a booking already emitted as source 1.
+                if (t.referenceModel === "B2CPassengerBooking" && t.referenceId && bookingIdSet.has(String(t.referenceId))) return
+                if (refsKnownBooking(t.description)) return
                 if (seenTwins.has(twinKey(t.amount, t.description))) return
                 seenTwins.add(twinKey(t.amount, t.description))
+
                 const isCredit = t.type === "CREDIT"
+                let method
+                if (/admin adjustment/i.test(t.description) || t.category === "ADJUSTMENT") method = "Admin"
+                else if (t.category === "WITHDRAWAL" || t.category === "PAYOUT_REQUESTED") method = "Bank"
+                else if (["REFUND", "COMMISSION_REFUND"].includes(t.category)) method = "Refund"
+                else if (t.category === "BOOKING_PAYMENT") method = "Card"
+                else method = "Wallet"
+
                 merged.push({
                     _id: String(t._id),
                     type: isCredit ? "WALLET_TOPUP" : "RIDE_PAYMENT",
+                    category: t.category,
                     direction: isCredit ? "CREDIT" : "DEBIT",
                     amount: t.amount,
+                    paymentMethod: method,
                     description: t.description,
                     status: "COMPLETED",
                     reference: t.referenceId ? String(t.referenceId) : undefined,
@@ -312,32 +529,6 @@ export const getWalletTransactions = async (req, res) => {
             })
         } catch (ledgerErr) {
             console.error("[v0] Error loading Transaction ledger:", ledgerErr.message)
-        }
-
-        // 3) Completed passenger bookings (gateway payments) - always money OUT (debit)
-        try {
-            const bookings = await B2CPassengerBooking.find({
-                passengerId: userId,
-                paymentStatus: "COMPLETED"
-            }).select("paymentAmount currency createdAt bookingDate pickupLocation dropoffLocation isMonthlyPass transactionId").lean()
-
-            bookings.forEach((b) => {
-                merged.push({
-                    _id: `booking-${String(b._id)}`,
-                    type: "RIDE_PAYMENT",
-                    direction: "DEBIT",
-                    amount: b.paymentAmount,
-                    description: b.isMonthlyPass
-                        ? `Monthly pass payment (${b.pickupLocation} ↔ ${b.dropoffLocation})`
-                        : `Ride payment (${b.pickupLocation} → ${b.dropoffLocation})`,
-                    status: "COMPLETED",
-                    reference: b.transactionId,
-                    currency: b.currency || walletCurrency,
-                    createdAt: b.createdAt || b.bookingDate,
-                })
-            })
-        } catch (bookingErr) {
-            console.error("[v0] Error loading bookings for transactions:", bookingErr.message)
         }
 
         // Sort newest first and paginate the merged list
@@ -399,7 +590,7 @@ const detectGatewayFromSessionId = (sessionId) => {
 export const addFundsToWallet = async (req, res) => {
     try {
         const userId = req.userId
-        const { amount, paymentMethod, paymentDetails, paymentSessionId, currency = "KWD", gateway: providedGateway } = req.body
+        const { amount, paymentMethod, paymentDetails, paymentSessionId, currency: bodyCurrency, gateway: providedGateway } = req.body
 
         if (!paymentSessionId) {
             return res.status(400).json({
@@ -417,8 +608,11 @@ export const addFundsToWallet = async (req, res) => {
             })
         }
 
-        // Use user's currency or fallback to passed currency or KWD
-        const userCurrency = currency || getCountryCurrency(user.country) || "KWD"
+        // The user's (effective) country is authoritative for their wallet
+        // currency (UAE -> AED, Kuwait -> KWD). The request body currency is
+        // only a last-resort hint, so a UAE user can never be charged in KWD.
+        // Honors the DEV_COUNTRY testing override.
+        const userCurrency = resolveWalletCurrency(user, null) || bodyCurrency || "AED"
 
         // Verify payment session with payment gateway first
         let paymentVerification = null
@@ -619,6 +813,17 @@ export const addFundsToWallet = async (req, res) => {
                 }
             })
 
+            // If the commuter had an unpaid cash-cancellation fee (negative wallet),
+            // this top-up may have cleared it — settle the admin and lift the block.
+            try {
+                const settlement = await settleCashDuesOnTopUp(userId)
+                if (settlement.settled) {
+                    console.log("[v0] Cash cancellation due settled on top-up:", settlement)
+                }
+            } catch (settleErr) {
+                console.error("[v0] settleCashDuesOnTopUp failed (new wallet path):", settleErr.message)
+            }
+
             return res.status(200).json({
                 success: true,
                 message: "Funds added successfully",
@@ -678,6 +883,17 @@ export const addFundsToWallet = async (req, res) => {
             transactionType: "DEPOSIT",
             paymentMethod
         })
+
+        // If the commuter had an unpaid cash-cancellation fee (negative wallet),
+        // this top-up may have cleared it — settle the admin and lift the block.
+        try {
+            const settlement = await settleCashDuesOnTopUp(userId)
+            if (settlement.settled) {
+                console.log("[v0] Cash cancellation due settled on top-up:", settlement)
+            }
+        } catch (settleErr) {
+            console.error("[v0] settleCashDuesOnTopUp failed (atomic path):", settleErr.message)
+        }
 
         return res.status(200).json({
             success: true,
@@ -1244,16 +1460,18 @@ export const getPaymentConfig = async (req, res) => {
 
         console.log("[v0] Fetching payment config for user country:", user.country)
 
-        // Get currency and payment methods based on country
-        const currency = getCountryCurrency(user.country)
+        // Get currency and payment methods based on the user's effective
+        // country (honors the DEV_COUNTRY testing override).
+        const effectiveCountry = getEffectiveCountry(user)
+        const currency = getCountryCurrency(effectiveCountry)
         const decimals = getCurrencyDecimals(currency)
         const symbol = getCurrencySymbol(currency)
-        const paymentMethods = getCountryPaymentMethods(user.country)
+        const paymentMethods = getCountryPaymentMethods(effectiveCountry)
 
         return res.status(200).json({
             success: true,
             data: {
-                country: user.country,
+                country: effectiveCountry,
                 currency,
                 currencySymbol: symbol,
                 decimals,
@@ -1289,18 +1507,13 @@ export const creditAdminNegotiationCommission = async ({
             return { success: false, message: "Invalid parameters" }
         }
 
-        // Find or create Admin wallet
-        let adminWallet = await Wallet.findOne({ userId: adminUserId })
-        if (!adminWallet) {
-            // Create wallet for admin
-            adminWallet = new Wallet({
-                userId: adminUserId,
-                role: "ADMIN",
-                balance: 0,
-                currency: currency || "AED",
-                transactions: []
-            })
-        }
+        // Find or create the Admin wallet FOR THIS COMMISSION'S CURRENCY so the
+        // negotiation commission never mixes into a wallet of another currency.
+        const commissionCurrency = currency || "AED"
+        const adminWallet = await getOrCreateWallet(adminUserId, {
+            currency: commissionCurrency,
+            role: "ADMIN",
+        })
 
         const balanceBefore = adminWallet.balance
 

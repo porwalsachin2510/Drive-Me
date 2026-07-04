@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../../config/localeConfig";
 import { useState } from "react";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import api from "../../../../utils/api";
@@ -199,7 +200,7 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
                   </span>
                   <span className="b2b-operator-dashboard-vehicles-tab-detail-value">
                     {vehicle.pricing?.dailyRate || 0}{" "}
-                    {vehicle.pricing?.currency || "AED"}
+                    {vehicle.pricing?.currency || getActiveCurrency()}
                   </span>
                 </div>
                 <div className="b2b-operator-dashboard-vehicles-tab-detail-row">
@@ -210,7 +211,7 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
                     {vehicle.pricing?.yearlyRate > 0
                       ? vehicle.pricing.yearlyRate
                       : (vehicle.pricing?.monthlyRate || 0) * 12}{" "}
-                    {vehicle.pricing?.currency || "AED"}
+                    {vehicle.pricing?.currency || getActiveCurrency()}
                   </span>
                 </div>
               </div>

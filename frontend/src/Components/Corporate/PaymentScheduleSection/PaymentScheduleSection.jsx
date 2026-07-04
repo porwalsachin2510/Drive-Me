@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getPaymentScheduleByContract } from "../../../Redux/slices/paymentScheduleSlice";
@@ -14,7 +15,7 @@ import {
 } from "react-icons/fi";
 import "./PaymentScheduleSection.css";
 
-const PaymentScheduleSection = ({ contractId, currency = "AED", contract }) => {
+const PaymentScheduleSection = ({ contractId, currency = getActiveCurrency(), contract }) => {
   const dispatch = useDispatch();
   const [showExtensionModal, setShowExtensionModal] = useState(false);
   const [extensionData, setExtensionData] = useState({

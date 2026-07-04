@@ -1,5 +1,7 @@
 "use client";
 
+import { getCurrencyDecimals } from "../../../../config/localeConfig";
+import { getActiveCurrency } from "../../../../config/localeConfig";
 import { useState } from "react";
 import "./AdminReassignModal.css";
 
@@ -14,8 +16,8 @@ const AdminReassignModal = ({
   const [selectedRoute, setSelectedRoute] = useState("");
   const [reason, setReason] = useState("");
 
-  const formatCurrency = (amount, currency = "AED") => {
-    const decimals = ["KWD", "BHD", "OMR"].includes(currency) ? 3 : 2;
+  const formatCurrency = (amount, currency = getActiveCurrency()) => {
+    const decimals = getCurrencyDecimals(currency);
     return `${currency} ${(amount || 0).toFixed(decimals)}`;
   };
 

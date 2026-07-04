@@ -1,10 +1,21 @@
 import stripe from "../Config/stripe.js"
 import tapPayments from "../Config/tapPayments.js"
 import CommissionSettings from "../models/CommissionSettings.js"
+import { DEFAULT_COMMISSION_PERCENTAGE } from "./HelperUtilities.js"
+import {
+    normalizeCountry,
+    getCountryFromCurrency,
+    getCountryPaymentGateway,
+} from "../Config/localizationConfig.js"
+
+// Single source of truth for the fallback commission rate (as a decimal), so the
+// amount actually charged always matches what the Commission Management screen and
+// the payment preview display when a partner has no custom rule configured.
+const DEFAULT_COMMISSION_DECIMAL = DEFAULT_COMMISSION_PERCENTAGE / 100
 
 // Calculate commission split - now accepts dynamic rate (0-100%)
 // commissionRate should be passed as decimal (e.g., 0.10 for 10%, 0.20 for 20%)
-export const calculateCommission = (amount, paymentType = "advance", commissionRate = 0.1) => {
+export const calculateCommission = (amount, paymentType = "advance", commissionRate = DEFAULT_COMMISSION_DECIMAL) => {
     if (paymentType === "advance") {
         // Amount here is only the 50% advance (security deposit is handled separately)
         const adminCommission = Math.round(amount * commissionRate * 100) / 100
@@ -41,25 +52,17 @@ export const getB2BPartnerCommissionRate = async (fleetOwnerId) => {
             }
             return settings.defaultCommissionRate / 100 // Convert percentage to decimal
         }
-        return 0.10 // Default 10% if no settings found
+        // No settings for this partner: fall back to the platform default (20%),
+        // matching the rate shown in Commission Management and the payment preview.
+        return DEFAULT_COMMISSION_DECIMAL
     } catch (error) {
         console.error("[v0] Error fetching B2B commission rate:", error)
-        return 0.10 // Default 10%
+        return DEFAULT_COMMISSION_DECIMAL
     }
 }
 
-// Detect country from currency or user data
-export const detectCountryFromCurrency = (currency) => {
-    const currencyToCountry = {
-        AED: "UAE",
-        KWD: "KW",
-        SAR: "SA",
-        BHD: "BH",
-        OMR: "OM",
-        QAR: "QA",
-    }
-    return currencyToCountry[currency] || "UAE"
-}
+// Detect canonical country code from a currency (delegates to central config)
+export const detectCountryFromCurrency = (currency) => getCountryFromCurrency(currency)
 
 // Coerce every metadata value to a Stripe-safe string. Stripe silently drops
 // metadata keys whose values are not strings (e.g. Mongoose ObjectIds, numbers,
@@ -73,15 +76,12 @@ const normalizeStripeMetadata = (metadata = {}) => {
     return safe
 }
 
-// Get appropriate gateway based on country
+// Get appropriate gateway based on country.
+// Accepts ANY country variant ("KW", "Kuwait", "KUWAIT", "UAE", "AE", ...) and
+// resolves it via the central config. UAE -> STRIPE, Kuwait -> TAP, future
+// countries per localizationConfig.
 export const getPaymentGateway = (country) => {
-    // UAE → Stripe
-    // Kuwait → Tap Payments
-    // Other GCC → Stripe (can be customized)
-    if (country === "KW") {
-        return "TAP"
-    }
-    return "STRIPE"
+    return getCountryPaymentGateway(normalizeCountry(country))
 }
 
 class PaymentGatewayService {

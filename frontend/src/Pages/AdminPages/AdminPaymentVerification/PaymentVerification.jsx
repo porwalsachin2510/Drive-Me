@@ -1,6 +1,8 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import api from "../../../utils/api";
 import PaymentBreakdown from "../../../Components/Corporate/PaymentBreakdown/PaymentBreakdown";
 import "./PaymentVerification.css";
@@ -17,13 +19,17 @@ const PaymentVerification = () => {
     totalVerified: 0,
     totalRejected: 0,
     totalAmount: 0,
-    currency: "AED",
+    currency: getActiveCurrency(),
   });
+
+  // Re-fetch when the admin changes the dashboard display currency so amounts
+  // come back converted into that currency.
+  const activeCurrency = useSelector((state) => state.locale?.currency);
 
   useEffect(() => {
     fetchPendingPayments();
     fetchStats();
-  }, []);
+  }, [activeCurrency]);
 
   const fetchPendingPayments = async () => {
     try {
@@ -98,12 +104,14 @@ const PaymentVerification = () => {
   };
 
   const formatCurrency = (amount, currency = null) => {
-    const curr = currency || stats.currency || "AED";
+    const curr = currency || stats.currency || getActiveCurrency();
+    const decimals = ["KWD", "BHD", "OMR"].includes(curr) ? 3 : 2;
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: curr,
-      minimumFractionDigits: 2,
-    }).format(amount);
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }).format(amount || 0);
   };
 
   if (loading) {
@@ -179,7 +187,19 @@ const PaymentVerification = () => {
                 <td>{payment.contractId?.contractNumber || "N/A"}</td>
                 <td>{payment.corporateOwnerId?.fullName || "N/A"}</td>
                 <td>{payment.fleetOwnerId?.fullName || "N/A"}</td>
-                <td>{formatCurrency(payment.amount, payment.currency)}</td>
+                <td>
+                  {formatCurrency(
+                    payment.displayAmount ?? payment.amount,
+                    payment.displayCurrency,
+                  )}
+                  {payment.displayCurrency &&
+                    payment.currency &&
+                    payment.displayCurrency !== payment.currency && (
+                      <span className="drivemego-paymentverification-native-hint">
+                        {formatCurrency(payment.amount, payment.currency)}
+                      </span>
+                    )}
+                </td>
                 <td>
                   <span
                     className={`drivemego-paymentverification-type-badge ${payment.paymentSource?.toLowerCase() || "regular"}`}
@@ -284,9 +304,20 @@ const PaymentVerification = () => {
                   </span>
                   <span className="drivemego-paymentverification-value">
                     {formatCurrency(
-                      selectedPayment.amount,
-                      selectedPayment.currency,
+                      selectedPayment.displayAmount ?? selectedPayment.amount,
+                      selectedPayment.displayCurrency,
                     )}
+                    {selectedPayment.displayCurrency &&
+                      selectedPayment.currency &&
+                      selectedPayment.displayCurrency !==
+                        selectedPayment.currency && (
+                        <span className="drivemego-paymentverification-native-hint">
+                          {formatCurrency(
+                            selectedPayment.amount,
+                            selectedPayment.currency,
+                          )}
+                        </span>
+                      )}
                   </span>
                 </div>
                 <div className="drivemego-paymentverification-info-row">

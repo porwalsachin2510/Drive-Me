@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import BookingModal from "../BookingModal/BookingModal";
 import RoleRestrictionModal from "../RoleRestrictionModal/RoleRestrictionModal";
 import { storeNavigationState } from "../../utils/loginRedirect";
+import { useLocale } from "../../hooks/useLocale";
 import api from "../../utils/api";
 import "./availablesection.css";
 
@@ -25,6 +26,8 @@ const AvailableSection = ({
   const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
     useState(false);
   const auth = useSelector((state) => state.auth);
+  // Currency fallback when a route has no currency set.
+  const { currency: localeCurrency } = useLocale();
   const filterOptions = [
     "All",
     "Budget Friendly",
@@ -173,6 +176,31 @@ const AvailableSection = ({
     return hours * 60 + minutes;
   };
 
+  // Build the distinct, time-sorted list of departure times for a route.
+  // A round-trip tripTime contributes BOTH its outbound (departureTime) and its
+  // return leg (arrivalTime / returnDepartureTime), so commuters see every time
+  // they can actually board — not just the outbound one.
+  const getRouteTripTimes = (route) => {
+    const times = new Set();
+    const source =
+      route.tripTimes && route.tripTimes.length > 0
+        ? route.tripTimes
+        : route.upcomingTrips || [];
+
+    source.forEach((trip) => {
+      if (trip.departureTime) times.add(trip.departureTime);
+      if (trip.tripType === "Round Trip") {
+        if (trip.returnDepartureTime) times.add(trip.returnDepartureTime);
+        else if (trip.arrivalTime) times.add(trip.arrivalTime);
+      }
+      if (!trip.departureTime && trip.time) times.add(trip.time);
+    });
+
+    return Array.from(times).sort(
+      (a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b),
+    );
+  };
+
   // Sort stops by time
   const sortStopsByTime = (stops) => {
     if (!stops || !Array.isArray(stops) || stops.length === 0) return [];
@@ -213,7 +241,7 @@ const AvailableSection = ({
     // If route already has monthlyPrice, use it
     if (route.monthlyPrice && route.monthlyPrice !== "N/A") {
       return typeof route.monthlyPrice === "number"
-        ? `${route.monthlyPrice.toFixed(2)} ${route.pricing?.currency || "KWD"}`
+        ? `${route.monthlyPrice.toFixed(2)} ${route.pricing?.currency || localeCurrency}`
         : route.monthlyPrice;
     }
 
@@ -229,7 +257,7 @@ const AvailableSection = ({
 
     // Monthly price = one-way price * travel days per month
     const monthlyPrice = parseFloat(oneWayPrice) * travelDaysPerMonth;
-    const currency = route.pricing?.currency || "KWD";
+    const currency = route.pricing?.currency || localeCurrency;
     return `${monthlyPrice.toFixed(2)} ${currency}`;
   };
 
@@ -565,40 +593,43 @@ const AvailableSection = ({
                     TRIP TIMES
                   </label>
                   <div className="drivemego-availablesection-trip-times-container">
-                    {route.tripTimes && route.tripTimes.length > 0 ? (
-                      route.tripTimes.slice(0, 5).map((trip, tripIdx) => (
-                        <span
-                          key={tripIdx}
-                          className="drivemego-availablesection-trip-time-badge"
-                        >
-                          {trip.departureTime || trip.time || "N/A"}
+                    {(() => {
+                      const allTimes = getRouteTripTimes(route);
+                      if (allTimes.length > 0) {
+                        return (
+                          <>
+                            {allTimes.slice(0, 5).map((time, tripIdx) => (
+                              <span
+                                key={tripIdx}
+                                className="drivemego-availablesection-trip-time-badge"
+                              >
+                                {time}
+                              </span>
+                            ))}
+                            {allTimes.length > 5 && (
+                              <span className="drivemego-availablesection-more-times">
+                                +{allTimes.length - 5} more
+                              </span>
+                            )}
+                          </>
+                        );
+                      }
+                      if (
+                        route.pickupArrivalTime &&
+                        route.pickupArrivalTime !== "N/A"
+                      ) {
+                        return (
+                          <span className="drivemego-availablesection-trip-time-badge">
+                            {route.pickupArrivalTime}
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="drivemego-availablesection-no-trip-times">
+                          {'Click "Book This Route" to see available times'}
                         </span>
-                      ))
-                    ) : route.upcomingTrips &&
-                      route.upcomingTrips.length > 0 ? (
-                      route.upcomingTrips.slice(0, 5).map((trip, tripIdx) => (
-                        <span
-                          key={tripIdx}
-                          className="drivemego-availablesection-trip-time-badge"
-                        >
-                          {trip.departureTime || trip.time || "N/A"}
-                        </span>
-                      ))
-                    ) : route.pickupArrivalTime &&
-                      route.pickupArrivalTime !== "N/A" ? (
-                      <span className="drivemego-availablesection-trip-time-badge">
-                        {route.pickupArrivalTime}
-                      </span>
-                    ) : (
-                      <span className="drivemego-availablesection-no-trip-times">
-                        Click "Book This Route" to see available times
-                      </span>
-                    )}
-                    {route.tripTimes && route.tripTimes.length > 5 && (
-                      <span className="drivemego-availablesection-more-times">
-                        +{route.tripTimes.length - 5} more
-                      </span>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
 

@@ -284,6 +284,38 @@
   background: linear-gradient(135deg, #138d7b 0%, #117a6d 100%);
 }
 
+.b2b-contracts-managed-banner {
+  margin: 0 20px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-left: 4px solid #667eea;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #3730a3;
+  line-height: 1.5;
+}
+.b2b-contracts-manage-ops-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.b2b-contracts-manage-ops-btn:hover {
+  transform: scale(1.02);
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
 @media (max-width: 768px) {
   .b2b-contracts-container {
     padding: 16px;

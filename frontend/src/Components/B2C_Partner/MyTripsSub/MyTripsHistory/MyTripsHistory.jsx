@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../../config/localeConfig";
 import { useState, useEffect, useCallback } from "react";
 import HistoryTripCard from "../HistoryTripCard/HistoryTripCard";
 import api from "../../../../utils/api";
@@ -75,7 +76,7 @@ function MyTripsHistory() {
         })
       : "N/A",
     time: booking.time || "05:30 AM",
-    fare: `${(booking.amount || 0).toLocaleString()} ${booking.currency || "AED"}`,
+    fare: `${(booking.amount || 0).toLocaleString()} ${booking.currency || getActiveCurrency()}`,
     pickup: booking.pickup || "N/A",
     dropoff: booking.dropoff || "N/A",
     passenger: booking.passengerName || "N/A",

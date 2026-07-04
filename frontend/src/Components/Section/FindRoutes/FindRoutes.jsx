@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import "./find-routes.css";
 import api from "../../../utils/api";
 import BookingModal from "../../BookingModal/BookingModal";
+import { useLocale } from "../../../hooks/useLocale";
 
 export default function FindRoutes() {
   const [routes, setRoutes] = useState([]);
@@ -11,44 +12,15 @@ export default function FindRoutes() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [savingId, setSavingId] = useState(null);
 
-  // Commuter's detected country (UAE / Kuwait). We only show routes that
-  // belong to this country, mirroring the home page behaviour.
-  const [userNationality, setUserNationality] = useState(null);
+  // Country comes from the single source of truth (Redux locale), detected
+  // once on app load. `countryName` is the human-readable value the route
+  // filter expects ("UAE" / "Kuwait").
+  const { countryName, currency: localeCurrency, formatCurrency } = useLocale();
+  const userNationality = countryName;
 
   // Booking modal state
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
-
-  // Detect the commuter's location the same way the home page does, so the
-  // Find Routes tab shows the same country-filtered routes.
-  useEffect(() => {
-    const detectUserLocation = async () => {
-      try {
-        const response = await api.get("/location/detect", {
-          withCredentials: true,
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (response.data?.success) {
-          const countryName = response.data.nationality;
-          let nationality = countryName;
-          if (countryName === "United Arab Emirates") {
-            nationality = "UAE";
-          } else if (countryName === "Kuwait") {
-            nationality = "Kuwait";
-          }
-          setUserNationality(nationality || "Kuwait");
-        } else {
-          setUserNationality("Kuwait");
-        }
-      } catch (error) {
-        console.error("Error detecting location:", error);
-        setUserNationality("Kuwait");
-      }
-    };
-
-    detectUserLocation();
-  }, []);
 
   // Fetch routes once we know the commuter's country.
   useEffect(() => {
@@ -214,8 +186,41 @@ export default function FindRoutes() {
                   </div>
                 </div>
                 <div className="fr-route-price">
-                  {route.pricing?.currency || route.currency || "KWD"}{" "}
-                  {route.price || route.pricing?.oneWayPrice || 0}
+                  {(() => {
+                    const cur =
+                      route.pricing?.currency ||
+                      route.currency ||
+                      localeCurrency;
+                    const oneWay =
+                      route.monthlyOneWayPrice ??
+                      route.price ??
+                      route.pricing?.monthlyOneWayPrice ??
+                      route.pricing?.oneWayPrice ??
+                      0;
+                    const roundTrip =
+                      route.monthlyRoundTripPrice ??
+                      route.pricing?.monthlyRoundTripPrice ??
+                      route.pricing?.roundTripPrice ??
+                      0;
+                    return (
+                      <>
+                        <div className="fr-price-row">
+                          <span className="fr-price-label">One Way</span>
+                          <span className="fr-price-value">
+                            {formatCurrency(oneWay, cur)}/month
+                          </span>
+                        </div>
+                        {roundTrip > 0 && (
+                          <div className="fr-price-row">
+                            <span className="fr-price-label">Round Trip</span>
+                            <span className="fr-price-value">
+                              {formatCurrency(roundTrip, cur)}/month
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -231,12 +236,15 @@ export default function FindRoutes() {
                 </div>
 
                 <div className="fr-route-meta">
-                  <div className="fr-meta-item">
-                    <span className="fr-meta-label">Distance:</span>
-                    <span className="fr-meta-value">
-                      {route.distance || "Not available"}
-                    </span>
-                  </div>
+                  {/* Distance is only shown when the route stores a real, genuine
+                      value. We no longer fabricate a "~15 km" placeholder, so the
+                      row is hidden entirely when no real distance exists. */}
+                  {route.distance && route.distance !== "Not available" && (
+                    <div className="fr-meta-item">
+                      <span className="fr-meta-label">Distance:</span>
+                      <span className="fr-meta-value">{route.distance}</span>
+                    </div>
+                  )}
                   <div className="fr-meta-item">
                     <span className="fr-meta-label">Duration:</span>
                     <span className="fr-meta-value">

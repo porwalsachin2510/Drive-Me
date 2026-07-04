@@ -2,26 +2,36 @@
 
 import { useState, useEffect } from "react";
 import api from "../../utils/api";
+import { useLocale } from "../../hooks/useLocale";
+import { getPaymentMethods } from "../../config/localeConfig";
 import "./PaymentModal.css";
+
+const METHOD_ICONS = {
+  card: "💳",
+  apple_pay: "🍎",
+  google_pay: "🤖",
+  knet: "🔵",
+  benefit: "🟣",
+  zaincash: "🟢",
+  stcpay: "🔴",
+  mada: "🟢",
+};
 
 // eslint-disable-next-line no-unused-vars
 function PaymentModal({
   isOpen,
   onClose,
   amount,
-  currency,
+  currency: currencyProp,
   onPaymentSuccess: _onPaymentSuccess,
 }) {
+  const locale = useLocale();
+  // Currency and methods follow the user's active country unless a parent
+  // explicitly passes a currency (kept for backward compatibility).
+  const currency = currencyProp || locale.currency;
+  const currencyDecimals = locale.getCurrencyDecimals(currency);
   const [selectedMethod, setSelectedMethod] = useState("card");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [formData, setFormData] = useState({
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-    holderName: "",
-    email: "",
-    phone: "",
-  });
 
   // Payment control state
   const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true);
@@ -48,93 +58,38 @@ function PaymentModal({
     fetchPaymentSettings();
   }, []);
 
-  const paymentMethods = [
-    {
-      id: "card",
-      name: "Credit/Debit Card",
-      icon: "💳",
-      fields: ["cardNumber", "expiryDate", "cvv", "holderName"],
-    },
-    {
-      id: "apple_pay",
-      name: "Apple Pay",
-      icon: "🍎",
-      fields: [],
-    },
-    {
-      id: "google_pay",
-      name: "Google Pay",
-      icon: "🤖",
-      fields: [],
-    },
-    {
-      id: "knet",
-      name: "KNET",
-      icon: "🔵",
-      fields: ["cardNumber", "holderName"],
-    },
-    {
-      id: "benefit",
-      name: "Benefit",
-      icon: "🟣",
-      fields: ["cardNumber", "holderName"],
-    },
-    {
-      id: "zaincash",
-      name: "Zain Cash",
-      icon: "🟢",
-      fields: ["phone"],
-    },
-  ];
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
+  // Build the method list from the active locale (excludes the wallet method).
+  const localeMethods =
+    locale.paymentMethods?.length > 0
+      ? locale.paymentMethods
+      : getPaymentMethods(locale.country);
+  const paymentMethods = localeMethods
+    .filter((m) => m.id !== "wallet")
+    .map((m) => ({
+      id: m.id,
+      name: m.name,
+      icon: METHOD_ICONS[m.id] || "💳",
     }));
-  };
-
-  const formatCardNumber = (value) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || "";
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    if (parts.length) {
-      return parts.join(" ");
-    } else {
-      return v;
-    }
-  };
-
-  const formatExpiryDate = (value) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    if (v.length >= 2) {
-      return v.slice(0, 2) + "/" + v.slice(2, 4);
-    }
-    return v;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
 
     try {
-      // Create payment session with backend
+      // Create payment session with backend. We intentionally DO NOT collect
+      // card number / CVV / expiry here — those are entered on the payment
+      // gateway's own PCI-compliant hosted page after redirect. Sending them
+      // from our app would be redundant, insecure, and bad UX.
       const response = await api.post("/wallet/create-payment-session", {
         amount: parseFloat(amount),
         paymentMethod: selectedMethod,
         currency: currency,
-        paymentDetails: formData,
       });
 
       const data = response.data;
 
       if (data.success && data.data?.paymentUrl) {
-        // Redirect to payment gateway - paymentUrl is directly in data.data
+        // Redirect to the payment gateway's secure hosted page.
         window.location.href = data.data.paymentUrl;
       } else {
         alert(
@@ -154,9 +109,11 @@ function PaymentModal({
 
   if (!isOpen) return null;
 
-  const selectedPaymentMethod = paymentMethods.find(
-    (m) => m.id === selectedMethod,
-  );
+  const selectedPaymentMethod =
+    paymentMethods.find((m) => m.id === selectedMethod) ||
+    paymentMethods[0] ||
+    null;
+  const selectedMethodName = selectedPaymentMethod?.name || "Payment";
 
   return (
     <div className="drivemego-wppm-payment-modal-overlay">
@@ -174,8 +131,7 @@ function PaymentModal({
         <div className="drivemego-wppm-payment-amount-display">
           <div className="drivemego-wppm-amount-label">Amount to Add</div>
           <div className="drivemego-wppm-amount-value">
-            {currency === "KWD" ? "KWD" : "AED"}{" "}
-            {parseFloat(amount).toFixed(currency === "KWD" ? 3 : 2)}
+            {currency} {parseFloat(amount).toFixed(currencyDecimals)}
           </div>
         </div>
 
@@ -218,92 +174,13 @@ function PaymentModal({
             )}
           </div>
 
-          {selectedPaymentMethod.fields.length > 0 && (
-            <div className="drivemego-wppm-payment-details-section">
-              <h3>Payment Details</h3>
-              <div className="drivemego-wppm-form-fields">
-                {selectedPaymentMethod.fields.includes("cardNumber") && (
-                  <div className="drivemego-wppm-form-group">
-                    <label>Card Number</label>
-                    <input
-                      type="text"
-                      name="cardNumber"
-                      value={formData.cardNumber}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          cardNumber: formatCardNumber(e.target.value),
-                        }))
-                      }
-                      placeholder="1234 5678 9012 3456"
-                      maxLength="19"
-                      required
-                    />
-                  </div>
-                )}
-
-                {selectedPaymentMethod.fields.includes("expiryDate") && (
-                  <div className="drivemego-wppm-form-group">
-                    <label>Expiry Date</label>
-                    <input
-                      type="text"
-                      name="expiryDate"
-                      value={formData.expiryDate}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          expiryDate: formatExpiryDate(e.target.value),
-                        }))
-                      }
-                      placeholder="MM/YY"
-                      maxLength="5"
-                      required
-                    />
-                  </div>
-                )}
-
-                {selectedPaymentMethod.fields.includes("cvv") && (
-                  <div className="drivemego-wppm-form-group">
-                    <label>CVV</label>
-                    <input
-                      type="text"
-                      name="cvv"
-                      value={formData.cvv}
-                      onChange={handleInputChange}
-                      placeholder="123"
-                      maxLength="4"
-                      required
-                    />
-                  </div>
-                )}
-
-                {selectedPaymentMethod.fields.includes("holderName") && (
-                  <div className="drivemego-wppm-form-group">
-                    <label>Cardholder Name</label>
-                    <input
-                      type="text"
-                      name="holderName"
-                      value={formData.holderName}
-                      onChange={handleInputChange}
-                      placeholder="John Doe"
-                      required
-                    />
-                  </div>
-                )}
-
-                {selectedPaymentMethod.fields.includes("phone") && (
-                  <div className="drivemego-wppm-form-group">
-                    <label>Phone Number</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+965 5000 0000"
-                      required
-                    />
-                  </div>
-                )}
+          {onlinePaymentsEnabled && !loadingPaymentSettings && (
+            <div className="drivemego-wppm-redirect-notice">
+              <div className="drivemego-wppm-redirect-icon">🔐</div>
+              <div className="drivemego-wppm-redirect-text">
+                You&apos;ll be redirected to a secure {selectedMethodName} page
+                to enter your payment details and complete this top-up. We never
+                ask for or store your card information.
               </div>
             </div>
           )}
@@ -324,15 +201,12 @@ function PaymentModal({
               {isProcessing ? (
                 <>
                   <span className="drivemego-wppm-spinner"></span>
-                  Processing...
+                  Redirecting...
                 </>
               ) : !onlinePaymentsEnabled ? (
                 "Online Payments Disabled"
               ) : (
-                <>
-                  Pay {currency === "KWD" ? "KWD" : "AED"}{" "}
-                  {parseFloat(amount).toFixed(currency === "KWD" ? 3 : 2)}
-                </>
+                <>Continue to Secure Payment</>
               )}
             </button>
           </div>
@@ -341,8 +215,8 @@ function PaymentModal({
         <div className="drivemego-wppm-security-info">
           <div className="drivemego-wppm-security-badge">🔒 Secure Payment</div>
           <div className="drivemego-wppm-security-text">
-            Your payment information is encrypted and secure. We use
-            industry-standard security measures.
+            Your payment is processed on the provider&apos;s PCI-compliant
+            gateway. We use industry-standard security measures.
           </div>
         </div>
       </div>

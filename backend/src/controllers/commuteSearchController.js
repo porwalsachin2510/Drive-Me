@@ -13,6 +13,143 @@ import B2CPartnerDriver from "../models/B2CPartnerDriver.js"
 import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js"
 import mongoose from "mongoose"
 import { createNotification } from "../Services/notificationService.js"
+import { computeRouteSeatAvailability } from "../Services/seatAvailabilityService.js"
+import { getCountryCurrency, getEffectiveCountry } from "../Config/localizationConfig.js"
+
+/* ======================================================
+   ROUND-TRIP DRIVER / VEHICLE RESOLUTION (shared helpers)
+   ------------------------------------------------------
+   A "Round Trip" trip-time can carry a DEDICATED return-leg (To->From, "aane")
+   driver and vehicle in `returnDriver` / `returnVehicle` that are DIFFERENT from
+   the outbound (`assignedDriver` / `assignedVehicle`, "jaane") leg. The commuter
+   search/detail endpoints previously only resolved the outbound assignment, so
+   the return leg wrongly showed the outbound driver/vehicle. These helpers make
+   every commuter endpoint collect and expose BOTH legs consistently.
+====================================================== */
+
+// Collect every driver/vehicle id referenced by a trip-time (both legs) so the
+// batch lookup fetches return-leg drivers/vehicles too.
+function collectTripTimeAssignmentIds(tt, driverIds, vehicleIds) {
+    if (!tt) return;
+    if (tt.assignedDriver) driverIds.add(tt.assignedDriver.toString());
+    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+    if (tt.returnDriver) driverIds.add(tt.returnDriver.toString());
+    if (tt.returnVehicle) vehicleIds.add(tt.returnVehicle.toString());
+}
+
+// Build the resolved driver/vehicle fields for a trip-time given the lookup maps.
+// Outbound fields stay on effectiveDriver/effectiveVehicle; the return leg gets
+// its own effectiveReturnDriver/effectiveReturnVehicle (falling back to outbound
+// only when no dedicated return assignment exists on a Round Trip).
+function buildTripTimeAssignments(tt, driverMap, vehicleMap) {
+    const outDriverId = tt.assignedDriver?.toString();
+    const outVehicleId = tt.assignedVehicle?.toString();
+    const retDriverId = tt.returnDriver?.toString();
+    const retVehicleId = tt.returnVehicle?.toString();
+
+    const effectiveDriver = outDriverId && driverMap[outDriverId] ? driverMap[outDriverId] : null;
+    const effectiveVehicle = outVehicleId && vehicleMap[outVehicleId] ? vehicleMap[outVehicleId] : null;
+    const returnDriverInfo = retDriverId && driverMap[retDriverId] ? driverMap[retDriverId] : null;
+    const returnVehicleInfo = retVehicleId && vehicleMap[retVehicleId] ? vehicleMap[retVehicleId] : null;
+
+    const isRoundTrip = tt.tripType === "Round Trip";
+
+    return {
+        effectiveDriver,
+        effectiveVehicle,
+        returnDriverInfo,
+        returnVehicleInfo,
+        // For Round Trips, the return leg falls back to the outbound assignment
+        // only when a dedicated return driver/vehicle was not configured.
+        effectiveReturnDriver: isRoundTrip ? (returnDriverInfo || effectiveDriver) : null,
+        effectiveReturnVehicle: isRoundTrip ? (returnVehicleInfo || effectiveVehicle) : null
+    };
+}
+
+/* ======================================================
+   COUNTRY / SERVICE-AREA RESOLUTION (shared, identity-based)
+   ------------------------------------------------------
+   A route's country and a commuter's country are IDENTITY facts, not something
+   to guess from free-text location names. We resolve both from the account's
+   immutable signal (dialing code -> country) via getEffectiveCountry, so a
+   Kuwait partner's routes always surface to Kuwait commuters (KWD) and UAE
+   commuters only ever see UAE routes — regardless of how the stop names are
+   spelled. The old location-keyword heuristic silently dropped any route whose
+   text didn't contain a hard-coded city name; it now survives ONLY as a
+   last-resort fallback for legacy routes with no resolvable owner.
+====================================================== */
+
+// Markets where the service is currently live. Canonical codes (see COUNTRY_CONFIG).
+const SERVICE_COUNTRY_CODES = ["UAE", "KW"]
+
+// Minimal nationality/param -> canonical code map for GUEST (unauthenticated)
+// requests, where we have no account identity to trust. Unknown inputs are
+// returned as-is so they correctly fail the "is this a served country?" check
+// instead of being silently collapsed to a default served country.
+const NATIONALITY_TO_CODE = {
+    UAE: "UAE",
+    "UNITED ARAB EMIRATES": "UAE",
+    AE: "UAE",
+    DUBAI: "UAE",
+    "ABU DHABI": "UAE",
+    KW: "KW",
+    KUWAIT: "KW",
+    "STATE OF KUWAIT": "KW",
+}
+
+// Legacy fallback: infer a canonical country code from location strings. Only
+// used when a route has no resolvable owning partner (pre-identity data).
+const guessCountryFromLocations = (fromLocation, toLocation) => {
+    const allLocations = `${fromLocation || ""} ${toLocation || ""}`.toLowerCase()
+    const kuwaitIndicators = ["kuwait", "salwa", "jahra", "salmiya", "hawally", "farwaniya", "ahmadi", "mangaf", "fahaheel", "fintas", "mahboula", "khaitan", "jleeb", "mubarak"]
+    const uaeIndicators = ["dubai", "abu dhabi", "sharjah", "ajman", "fujairah", "ras al", "umm al", "al ain", "deira", "bur dubai", "jumeirah", "marina", "jebel ali", "silicon oasis", "business bay", "creek", "mall of emirates", "burjuman"]
+    for (const indicator of kuwaitIndicators) {
+        if (allLocations.includes(indicator)) return "KW"
+    }
+    for (const indicator of uaeIndicators) {
+        if (allLocations.includes(indicator)) return "UAE"
+    }
+    return null // Unknown
+}
+
+// Canonical service country ("UAE" | "KW" | ...) for a B2C route, derived from
+// the OWNING PARTNER's identity. Falls back to the location heuristic only when
+// the partner can't be resolved (legacy routes).
+const resolveRouteServiceCountry = (route) => {
+    const partner = route?.b2cPartnerId
+    if (partner && typeof partner === "object" && (partner.countryCode || partner.country)) {
+        return getEffectiveCountry(partner)
+    }
+    return guessCountryFromLocations(route?.fromLocation, route?.toLocation)
+}
+
+// Canonical service country for the requesting commuter.
+//
+// A commuter's country is now AUTO-DETECTED from their real location and
+// persisted to their profile (see localizationController). The server therefore
+// trusts ONLY the account's stored effective country here — a client-supplied
+// `nationality` hint is deliberately ignored for any authenticated user. This
+// is what enforces the automatic model end to end: someone physically in the
+// UAE can never make the API return Kuwait routes by spoofing a query param,
+// and the list can never disagree with their real, detected location.
+//
+// Priority:
+//   1. Any authenticated account -> getEffectiveCountry(user) (a commuter's
+//      auto-detected, persisted active country; an earner's locked identity).
+//   2. Guest (no account, public search) -> the client-supplied nationality
+//      hint, which itself was IP-hydrated on the public homepage. Guests cannot
+//      book without an account, so no privileged data is exposed by this.
+const resolveCommuterServiceCountry = ({ user, nationalityParam } = {}) => {
+    if (user && (user.role || user.countryCode || user.country)) {
+        return getEffectiveCountry(user)
+    }
+
+    if (nationalityParam && typeof nationalityParam === "string") {
+        const key = nationalityParam.trim().toUpperCase()
+        return NATIONALITY_TO_CODE[key] || nationalityParam.trim()
+    }
+    return null // Unknown -> caller decides (no country filtering)
+}
 /* ======================================================
    UTILITY FUNCTIONS
 ====================================================== */
@@ -288,7 +425,7 @@ export const searchCommuteRoutes = async (req, res) => {
             }
         }
 
-        const user = await User.findById(userId).select("companyId role")
+        const user = await User.findById(userId).select("companyId role country countryCode adminPermissions")
 
         if (!user) {
             return res.status(404).json({
@@ -442,62 +579,28 @@ export const searchCommuteRoutes = async (req, res) => {
                NORMAL / B2C COMMUTER ROUTES
             ====================================================== */
 
-        // Service is currently only available in these countries.
-        const SERVICE_COUNTRIES = ["UAE", "Kuwait"];
-        const resolveUserCountry = (nat) => {
-            const countryMapping = {
-                "UAE": "UAE",
-                "United Arab Emirates": "UAE",
-                "AE": "UAE",
-                "Kuwait": "Kuwait",
-                "KW": "Kuwait",
-            };
-            return countryMapping[nat] || nat;
-        };
+        // Resolve the commuter's country from their OWN account identity (dialing
+        // code -> country), falling back to the client-sent nationality only for
+        // edge cases. This is the single source of truth for which country's
+        // routes they may see, so it can never disagree with their currency.
+        const commuterCountry = resolveCommuterServiceCountry({ user, nationalityParam: nationality });
 
-        // If the commuter is located in a country where the service is not
-        // available (e.g. India), do NOT return any routes. Previously routes
-        // were only filtered for UAE/Kuwait users, so unsupported-country users
-        // saw every route on the platform.
-        if (nationality && !SERVICE_COUNTRIES.includes(resolveUserCountry(nationality))) {
+        // If the commuter is in a country where the service is not live yet
+        // (e.g. India), do NOT return any routes.
+        if (commuterCountry && !SERVICE_COUNTRY_CODES.includes(commuterCountry)) {
             return res.status(200).json({
                 success: true,
                 userType: "commuter",
                 serviceAvailable: false,
-                message: `Drive Me Go is not available in ${nationality} yet.`,
+                message: `Drive Me Go is not available in ${nationality || commuterCountry} yet.`,
                 totalRoutes: 0,
                 routes: [],
             });
         }
 
-        // Helper function to determine route country from location names
-        const getRouteCountry = (fromLocation, toLocation) => {
-            const allLocations = `${fromLocation || ''} ${toLocation || ''}`.toLowerCase();
-
-            // Kuwait indicators
-            const kuwaitIndicators = ['kuwait', 'salwa', 'jahra', 'salmiya', 'hawally', 'farwaniya', 'ahmadi', 'mangaf', 'fahaheel', 'fintas', 'mahboula', 'khaitan', 'jleeb', 'mubarak'];
-
-            // UAE indicators
-            const uaeIndicators = ['dubai', 'abu dhabi', 'sharjah', 'ajman', 'fujairah', 'ras al', 'umm al', 'al ain', 'deira', 'bur dubai', 'jumeirah', 'marina', 'jebel ali', 'silicon oasis', 'business bay', 'creek', 'mall of emirates', 'burjuman'];
-
-            // Check for Kuwait locations
-            for (const indicator of kuwaitIndicators) {
-                if (allLocations.includes(indicator)) {
-                    return 'Kuwait';
-                }
-            }
-
-            // Check for UAE locations
-            for (const indicator of uaeIndicators) {
-                if (allLocations.includes(indicator)) {
-                    return 'UAE';
-                }
-            }
-
-            return null; // Unknown country
-        };
-
-        // Get B2C Partner Routes directly from B2CPartnerRoute collection
+        // Get B2C Partner Routes directly from B2CPartnerRoute collection.
+        // countryCode is populated so a route's country can be resolved from its
+        // owning partner's identity (not from guessing the stop names).
         const b2cRoutes = await B2CPartnerRoute.find({
             status: "Active",
             $or: [
@@ -505,32 +608,22 @@ export const searchCommuteRoutes = async (req, res) => {
                 { isActive: { $exists: false } },
                 { isActive: null }
             ]
-        }).populate('b2cPartnerId', 'fullName companyLogo profileImage country')
+        }).populate('b2cPartnerId', 'fullName companyLogo profileImage country countryCode role')
             .populate('assignedVehicle')
             .populate('assignedDriver')
             .populate('tags', 'label color textColor icon category')
 
         for (const route of b2cRoutes) {
 
-            // Filter by country based on route locations
-            if (nationality) {
-                const countryMapping = {
-                    'UAE': 'UAE',
-                    'United Arab Emirates': 'UAE',
-                    'Kuwait': 'Kuwait',
-                    'KW': 'Kuwait',
-                    'AE': 'UAE'
-                };
-                const userCountry = countryMapping[nationality] || nationality;
-                const routeCountry = getRouteCountry(route.fromLocation, route.toLocation);
-
-                // Only show routes that match the user's country
-                // If routeCountry is null (unknown location like India), skip the route for UAE/Kuwait users
-                // This ensures only verified UAE/Kuwait routes are shown to respective users
-                if (userCountry === 'UAE' || userCountry === 'Kuwait') {
-                    if (routeCountry !== userCountry) {
-                        continue; // Skip routes that don't match OR are from unknown countries
-                    }
+            // Show a route only when it belongs to the commuter's country. The
+            // route's country comes from its owning partner's identity, so a
+            // Kuwait partner's routes always reach Kuwait commuters and never
+            // leak to UAE commuters (and vice-versa) — no matter how the stop
+            // names are spelled.
+            if (commuterCountry && SERVICE_COUNTRY_CODES.includes(commuterCountry)) {
+                const routeCountry = resolveRouteServiceCountry(route);
+                if (routeCountry !== commuterCountry) {
+                    continue;
                 }
             }
 
@@ -570,8 +663,7 @@ export const searchCommuteRoutes = async (req, res) => {
             for (const sch of schedules) {
                 if (sch?.tripTimes && sch.tripTimes.length > 0) {
                     for (const tt of sch.tripTimes) {
-                        if (tt.assignedDriver) driverIds.add(tt.assignedDriver.toString());
-                        if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                        collectTripTimeAssignmentIds(tt, driverIds, vehicleIds);
                     }
                 }
             }
@@ -641,15 +733,12 @@ export const searchCommuteRoutes = async (req, res) => {
                 if (sch?.tripTimes && sch.tripTimes.length > 0) {
                     for (const tt of sch.tripTimes) {
                         const tripTimeObj = tt.toObject ? tt.toObject() : { ...tt };
-                        const tripDriverId = tt.assignedDriver?.toString();
-                        const tripVehicleId = tt.assignedVehicle?.toString();
 
                         populatedTripTimes.push({
                             ...tripTimeObj,
                             scheduleId: sch._id,
                             scheduleName: sch.scheduleName,
-                            effectiveDriver: tripDriverId && driverMap[tripDriverId] ? driverMap[tripDriverId] : null,
-                            effectiveVehicle: tripVehicleId && vehicleMap[tripVehicleId] ? vehicleMap[tripVehicleId] : null
+                            ...buildTripTimeAssignments(tt, driverMap, vehicleMap)
                         });
                     }
                 }
@@ -756,26 +845,23 @@ export const searchCommuteRoutes = async (req, res) => {
                 .filter(stop => !stop.isFromLocation && !stop.isToLocation && stop.isStop)
                 .map(stop => ({ location: stop.location, time: stop.time }))
 
-            // Calculate dynamic available seats based on active monthly passes
-            const activePassCountAuth = await B2CMonthlyPass.countDocuments({
-                routeId: route._id,
-                status: { $in: ['ACTIVE', 'active', 'Active'] },
-                endDate: { $gte: new Date() }
-            });
-            // Derive seat capacity from the ACTUAL vehicles assigned to this route's
-            // trip schedules (each trip time may use a different vehicle). Use the
-            // max capacity across trip options so the route card matches the
-            // per-trip seats shown inside the booking modal.
-            const vehicleSeatCapacitiesAuth = populatedTripTimes
-                .map(tt => tt.effectiveVehicle?.seatingCapacity)
-                .filter(cap => Number.isFinite(cap) && cap > 0);
-            if (Number.isFinite(route.assignedVehicle?.seatingCapacity) && route.assignedVehicle.seatingCapacity > 0) {
-                vehicleSeatCapacitiesAuth.push(route.assignedVehicle.seatingCapacity);
-            }
-            const totalSeatsAuth = vehicleSeatCapacitiesAuth.length > 0
-                ? Math.max(...vehicleSeatCapacitiesAuth)
-                : (route.totalSeats || 35);
-            const dynamicAvailableSeatsAuth = Math.max(0, totalSeatsAuth - activePassCountAuth);
+            // Compute live seat availability authoritatively from the shared
+            // service. It calculates seats PER trip-leg (`${time}_${direction}`)
+            // using each leg's OWN assigned vehicle capacity minus the active
+            // monthly passes occupying that exact leg — the same numbers the
+            // booking modal shows. `routeAvailableSeats` is the best (max) seats
+            // still open across all legs, and `isFull` is true only when EVERY
+            // leg on EVERY schedule of this route is fully booked.
+            const {
+                seatAvailability: seatAvailabilityAuth,
+                routeAvailableSeats: dynamicAvailableSeatsAuth,
+                routeTotalSeats: totalSeatsAuth,
+                isFull: isFullAuth,
+            } = await computeRouteSeatAvailability(route);
+
+            // If all seats on all schedules for this route are booked, do not
+            // show the route to the commuter at all.
+            if (isFullAuth) continue;
 
             routes.push({
                 routeId: route._id,
@@ -814,6 +900,7 @@ export const searchCommuteRoutes = async (req, res) => {
                 monthlyRoundTripPrice: route.pricing?.monthlyRoundTripPrice,
                 availableSeats: dynamicAvailableSeatsAuth,
                 totalSeats: totalSeatsAuth,
+                seatAvailability: seatAvailabilityAuth, // Per trip-leg seats for the booking modal
                 dayMatching: travelData.dayMatching,
 
                 driverName: route.assignedDriver?.name,
@@ -872,59 +959,25 @@ export const publicSearchRoutes = async (req, res) => {
 
         const routes = []
 
-        // Service is currently only available in these countries.
-        const SERVICE_COUNTRIES = ["UAE", "Kuwait"];
-        const resolveUserCountry = (nat) => {
-            const countryMapping = {
-                "UAE": "UAE",
-                "United Arab Emirates": "UAE",
-                "AE": "UAE",
-                "Kuwait": "Kuwait",
-                "KW": "Kuwait",
-            };
-            return countryMapping[nat] || nat;
-        };
+        // Guests have no account, so we trust the client-sent nationality for the
+        // visitor's country. Route country is still resolved from each route's
+        // owning partner identity (below), not from guessing the stop names.
+        const visitorCountry = resolveCommuterServiceCountry({ user: null, nationalityParam: nationality });
 
-        // If the visitor is located in a country where the service is not
-        // available (e.g. India), do NOT return any routes.
-        if (nationality && !SERVICE_COUNTRIES.includes(resolveUserCountry(nationality))) {
+        // If the visitor is in a country where the service is not live yet
+        // (e.g. India), do NOT return any routes.
+        if (visitorCountry && !SERVICE_COUNTRY_CODES.includes(visitorCountry)) {
             return res.status(200).json({
                 success: true,
                 serviceAvailable: false,
-                message: `Drive Me Go is not available in ${nationality} yet.`,
+                message: `Drive Me Go is not available in ${nationality || visitorCountry} yet.`,
                 totalRoutes: 0,
                 routes: [],
             });
         }
 
-        // Helper function to determine route country from location names
-        const getRouteCountry = (fromLocation, toLocation) => {
-            const allLocations = `${fromLocation || ''} ${toLocation || ''}`.toLowerCase();
-
-            // Kuwait indicators
-            const kuwaitIndicators = ['kuwait', 'salwa', 'jahra', 'salmiya', 'hawally', 'farwaniya', 'ahmadi', 'mangaf', 'fahaheel', 'fintas', 'mahboula', 'khaitan', 'jleeb', 'mubarak'];
-
-            // UAE indicators
-            const uaeIndicators = ['dubai', 'abu dhabi', 'sharjah', 'ajman', 'fujairah', 'ras al', 'umm al', 'al ain', 'deira', 'bur dubai', 'jumeirah', 'marina', 'jebel ali', 'silicon oasis', 'business bay', 'creek', 'mall of emirates', 'burjuman'];
-
-            // Check for Kuwait locations
-            for (const indicator of kuwaitIndicators) {
-                if (allLocations.includes(indicator)) {
-                    return 'Kuwait';
-                }
-            }
-
-            // Check for UAE locations
-            for (const indicator of uaeIndicators) {
-                if (allLocations.includes(indicator)) {
-                    return 'UAE';
-                }
-            }
-
-            return null; // Unknown country
-        };
-
-        // Get all active B2C Partner Routes
+        // Get all active B2C Partner Routes. countryCode is populated so each
+        // route's country can be resolved from its owning partner's identity.
         const b2cRoutes = await B2CPartnerRoute.find({
             status: "Active",
             $or: [
@@ -932,32 +985,19 @@ export const publicSearchRoutes = async (req, res) => {
                 { isActive: { $exists: false } },
                 { isActive: null }
             ]
-        }).populate('b2cPartnerId', 'fullName companyLogo profileImage country')
+        }).populate('b2cPartnerId', 'fullName companyLogo profileImage country countryCode role')
             .populate('assignedVehicle')
             .populate('assignedDriver')
             .populate('tags', 'label color textColor icon category')
 
         for (const route of b2cRoutes) {
 
-            // Filter by country based on route locations
-            if (nationality) {
-                const countryMapping = {
-                    'UAE': 'UAE',
-                    'United Arab Emirates': 'UAE',
-                    'Kuwait': 'Kuwait',
-                    'KW': 'Kuwait',
-                    'AE': 'UAE'
-                };
-                const userCountry = countryMapping[nationality] || nationality;
-                const routeCountry = getRouteCountry(route.fromLocation, route.toLocation);
-
-                // Only show routes that match the user's country
-                // If routeCountry is null (unknown location), skip the route for UAE/Kuwait users
-                // This ensures only verified UAE/Kuwait routes are shown to respective users
-                if (userCountry === 'UAE' || userCountry === 'Kuwait') {
-                    if (routeCountry !== userCountry) {
-                        continue; // Skip routes that don't match OR are from unknown countries
-                    }
+            // Show a route only when it belongs to the visitor's country, using
+            // the route's owning-partner identity as the authority.
+            if (visitorCountry && SERVICE_COUNTRY_CODES.includes(visitorCountry)) {
+                const routeCountry = resolveRouteServiceCountry(route);
+                if (routeCountry !== visitorCountry) {
+                    continue;
                 }
             }
 
@@ -1001,8 +1041,7 @@ export const publicSearchRoutes = async (req, res) => {
                 const driverIds = new Set();
                 const vehicleIds = new Set();
                 for (const tt of schedule.tripTimes) {
-                    if (tt.assignedDriver) driverIds.add(tt.assignedDriver.toString());
-                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                    collectTripTimeAssignmentIds(tt, driverIds, vehicleIds);
                 }
 
                 const driverObjectIds = Array.from(driverIds).map(id => {
@@ -1049,14 +1088,11 @@ export const publicSearchRoutes = async (req, res) => {
 
                 for (const tt of schedule.tripTimes) {
                     const tripTimeObj = tt.toObject ? tt.toObject() : { ...tt };
-                    const tripDriverId = tt.assignedDriver?.toString();
-                    const tripVehicleId = tt.assignedVehicle?.toString();
                     populatedTripTimes.push({
                         ...tripTimeObj,
                         scheduleId: schedule._id,
                         scheduleName: schedule.scheduleName,
-                        effectiveDriver: tripDriverId && driverMap[tripDriverId] ? driverMap[tripDriverId] : null,
-                        effectiveVehicle: tripVehicleId && vehicleMap[tripVehicleId] ? vehicleMap[tripVehicleId] : null
+                        ...buildTripTimeAssignments(tt, driverMap, vehicleMap)
                     });
                 }
             }
@@ -1125,27 +1161,19 @@ export const publicSearchRoutes = async (req, res) => {
                 pricing: trip.pricing,
             }))
 
-            // Calculate dynamic available seats based on active monthly passes
-            const activePassCount = await B2CMonthlyPass.countDocuments({
-                routeId: route._id,
-                status: { $in: ['ACTIVE', 'active', 'Active'] },
-                endDate: { $gte: new Date() }
-            });
-            // Derive seat capacity from the ACTUAL vehicles assigned to this route's
-            // trip schedules (each trip time may use a different vehicle with a
-            // different seating capacity). The route card shows the best (max)
-            // capacity available across all trip options so it matches what the
-            // commuter sees per-trip inside the booking modal.
-            const vehicleSeatCapacities = populatedTripTimes
-                .map(tt => tt.effectiveVehicle?.seatingCapacity)
-                .filter(cap => Number.isFinite(cap) && cap > 0);
-            if (Number.isFinite(route.assignedVehicle?.seatingCapacity) && route.assignedVehicle.seatingCapacity > 0) {
-                vehicleSeatCapacities.push(route.assignedVehicle.seatingCapacity);
-            }
-            const totalSeats = vehicleSeatCapacities.length > 0
-                ? Math.max(...vehicleSeatCapacities)
-                : (route.totalSeats || 35);
-            const dynamicAvailableSeats = Math.max(0, totalSeats - activePassCount);
+            // Compute live seat availability authoritatively from the shared
+            // service (per trip-leg, using each leg's own vehicle capacity minus
+            // active passes on that leg) — identical to what the booking modal
+            // shows. Skip the route entirely when every leg on every schedule is
+            // fully booked.
+            const {
+                seatAvailability: seatAvailabilityPublic,
+                routeAvailableSeats: dynamicAvailableSeats,
+                routeTotalSeats: totalSeats,
+                isFull: isFullPublic,
+            } = await computeRouteSeatAvailability(route);
+
+            if (isFullPublic) continue;
 
             routes.push({
                 routeId: route._id,
@@ -1182,6 +1210,7 @@ export const publicSearchRoutes = async (req, res) => {
                 monthlyRoundTripPrice: route.pricing?.monthlyRoundTripPrice,
                 availableSeats: dynamicAvailableSeats,
                 totalSeats: totalSeats,
+                seatAvailability: seatAvailabilityPublic, // Per trip-leg seats for the booking modal
                 dayMatching: travelData.dayMatching,
                 stopPoints: route.stopPoints || [],
                 scheduleStops: intermediateStopsFromPath, // Only stops between pickup and dropoff
@@ -1307,8 +1336,12 @@ export const getB2CPartnerDashboardStats = async (req, res) => {
             })
         )
 
-        // Get currency from routes or default to AED
-        const currency = activeRoutes[0]?.currency || "AED"
+        // Currency a partner sees is ALWAYS derived from their own account country
+        // (the single source of truth), NEVER from a stored route currency (which can
+        // be stale) or a platform-wide toggle. A Kuwait partner always sees KWD,
+        // even before they create any routes.
+        const partner = await User.findById(partnerId).select("country countryCode role adminPermissions")
+        const currency = getCountryCurrency(getEffectiveCountry(partner))
 
         return res.status(200).json({
             success: true,
@@ -1612,8 +1645,7 @@ export const getPublicRouteDetails = async (req, res) => {
         for (const sch of schedules) {
             if (sch?.tripTimes && sch.tripTimes.length > 0) {
                 for (const tt of sch.tripTimes) {
-                    if (tt.assignedDriver) driverIds.add(tt.assignedDriver.toString());
-                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                    collectTripTimeAssignmentIds(tt, driverIds, vehicleIds);
                 }
             }
         }
@@ -1676,8 +1708,7 @@ export const getPublicRouteDetails = async (req, res) => {
                         availableDays: sch.availableDays,
                         scheduleVehicle: sch.assignedVehicle,
                         scheduleDriver: sch.assignedDriver,
-                        effectiveDriver: tripDriverId && driverMap[tripDriverId] ? driverMap[tripDriverId] : null,
-                        effectiveVehicle: tripVehicleId && vehicleMap[tripVehicleId] ? vehicleMap[tripVehicleId] : null
+                        ...buildTripTimeAssignments(tt, driverMap, vehicleMap)
                     })
                 })
             }
@@ -1867,8 +1898,7 @@ export const getRouteDetails = async (req, res) => {
         for (const sch of schedules) {
             if (sch?.tripTimes && sch.tripTimes.length > 0) {
                 for (const tt of sch.tripTimes) {
-                    if (tt.assignedDriver) driverIds.add(tt.assignedDriver.toString());
-                    if (tt.assignedVehicle) vehicleIds.add(tt.assignedVehicle.toString());
+                    collectTripTimeAssignmentIds(tt, driverIds, vehicleIds);
                 }
             }
         }
@@ -1924,8 +1954,6 @@ export const getRouteDetails = async (req, res) => {
             if (sch.tripTimes && sch.tripTimes.length > 0) {
                 sch.tripTimes.forEach(tt => {
                     const tripTimeObj = tt.toObject ? tt.toObject() : { ...tt }
-                    const tripDriverId = tt.assignedDriver?.toString();
-                    const tripVehicleId = tt.assignedVehicle?.toString();
                     allTripTimes.push({
                         ...tripTimeObj,
                         scheduleId: sch._id,
@@ -1933,8 +1961,7 @@ export const getRouteDetails = async (req, res) => {
                         availableDays: sch.availableDays,
                         scheduleVehicle: sch.assignedVehicle,
                         scheduleDriver: sch.assignedDriver,
-                        effectiveDriver: tripDriverId && driverMap[tripDriverId] ? driverMap[tripDriverId] : null,
-                        effectiveVehicle: tripVehicleId && vehicleMap[tripVehicleId] ? vehicleMap[tripVehicleId] : null
+                        ...buildTripTimeAssignments(tt, driverMap, vehicleMap)
                     })
                 })
             }

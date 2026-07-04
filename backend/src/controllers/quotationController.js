@@ -2,6 +2,96 @@ import Quotation from "../models/Quotation.js"
 import Notification from "../models/Notification.js"
 import { createNotification as createNotificationService, sendAdminNotification, sendRealTimeNotification } from "../Services/notificationService.js"
 import User from "../models/User.js"
+import ManagedServiceBrief from "../models/ManagedServiceBrief.js"
+import { deriveServiceMode } from "../utils/operationContext.js"
+
+/**
+ * Sanitize an incoming Managed Service Brief payload so we only persist the
+ * fields the corporate is allowed to author at quotation-request time. Any
+ * partner-side fulfilment/review state is stripped — items always start PENDING.
+ */
+const sanitizeManagedBrief = (raw = {}) => {
+    const toStringArr = (v) =>
+        Array.isArray(v) ? v.map((s) => String(s).trim()).filter(Boolean) : []
+
+    const workLocations = Array.isArray(raw.workLocations)
+        ? raw.workLocations
+            .filter((l) => l && String(l.name || "").trim())
+            .map((l) => ({
+                name: String(l.name).trim(),
+                address: String(l.address || "").trim(),
+                city: String(l.city || "").trim(),
+                shifts: Array.isArray(l.shifts)
+                    ? l.shifts.map((s) => ({
+                        label: String(s.label || "").trim(),
+                        loginTime: String(s.loginTime || "").trim(),
+                        logoutTime: String(s.logoutTime || "").trim(),
+                        workingDays: toStringArr(s.workingDays),
+                    }))
+                    : [],
+            }))
+        : []
+
+    const routeRequests = Array.isArray(raw.routeRequests)
+        ? raw.routeRequests
+            .filter((r) => r && String(r.label || "").trim())
+            .map((r) => ({
+                label: String(r.label).trim(),
+                fromArea: String(r.fromArea || "").trim(),
+                toWorkLocation: String(r.toWorkLocation || "").trim(),
+                direction: ["PICKUP", "DROP", "BOTH"].includes(r.direction)
+                    ? r.direction
+                    : "BOTH",
+                stops: toStringArr(r.stops),
+                operatingDays: toStringArr(r.operatingDays),
+                pickupWindowStart: String(r.pickupWindowStart || "").trim(),
+                pickupWindowEnd: String(r.pickupWindowEnd || "").trim(),
+                headcount: Number(r.headcount) || 0,
+                preferredVehicleType: String(r.preferredVehicleType || "").trim(),
+                notes: String(r.notes || "").trim(),
+                fulfillment: { status: "PENDING" },
+            }))
+        : []
+
+    const employeeRoster = Array.isArray(raw.employeeRoster)
+        ? raw.employeeRoster
+            .filter((e) => e && String(e.name || "").trim())
+            .map((e) => ({
+                name: String(e.name).trim(),
+                email: String(e.email || "").trim(),
+                phone: String(e.phone || "").trim(),
+                employeeCode: String(e.employeeCode || "").trim(),
+                department: String(e.department || "").trim(),
+                homeAddress: String(e.homeAddress || "").trim(),
+                pickupArea: String(e.pickupArea || "").trim(),
+                workLocation: String(e.workLocation || "").trim(),
+                shiftLabel: String(e.shiftLabel || "").trim(),
+                passMonths: Math.max(0, Number(e.passMonths) || 0),
+                preferredRouteLabel: String(e.preferredRouteLabel || "").trim(),
+                assignmentHint: String(e.assignmentHint || "").trim(),
+                fulfillment: { status: "PENDING" },
+            }))
+        : []
+
+    return {
+        summary: String(raw.summary || "").trim(),
+        serviceStartDate: raw.serviceStartDate || null,
+        sla: {
+            targetCompletionDate: raw.sla?.targetCompletionDate || null,
+            fulfillmentSlaHours: Number(raw.sla?.fulfillmentSlaHours) > 0
+                ? Number(raw.sla.fulfillmentSlaHours)
+                : 72,
+        },
+        pointOfContact: {
+            name: String(raw.pointOfContact?.name || "").trim(),
+            phone: String(raw.pointOfContact?.phone || "").trim(),
+            email: String(raw.pointOfContact?.email || "").trim(),
+        },
+        workLocations,
+        routeRequests,
+        employeeRoster,
+    }
+}
 
 const createNotification = async (userId, type, title, message, relatedEntityId, relatedEntityType) => {
     try {
@@ -51,11 +141,47 @@ export const requestQuotation = async (req, res) => {
             })
         }
 
+        // Determine service mode. Prefer an explicit value from the client
+        // (selected on the Service Selection screen), otherwise derive it from
+        // the vehicles (any MANAGED_SERVICES vehicle => MANAGED).
+        const requestedMode =
+            typeof req.body.serviceMode === "string" ? req.body.serviceMode.toUpperCase() : null
+        const serviceMode =
+            requestedMode === "MANAGED" || requestedMode === "STANDARD"
+                ? requestedMode
+                : await deriveServiceMode(vehicles)
+
+        // For MANAGED-service requests the corporate MUST hand the partner an
+        // operations brief (work locations & shifts + the routes to operate)
+        // BEFORE the partner prices anything. Without it the partner has no way
+        // to know whether it can even serve those routes, so we refuse to create
+        // the quotation until a valid brief is attached to the request.
+        let cleanBrief = null
+        if (serviceMode === "MANAGED") {
+            cleanBrief = sanitizeManagedBrief(req.body.managedServiceBrief || {})
+
+            if (cleanBrief.workLocations.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Add at least one work location & shift to the service brief before requesting a managed-service quotation.",
+                })
+            }
+            if (cleanBrief.routeRequests.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Add at least one route / coverage request to the service brief so the partner knows which routes to operate before quoting.",
+                })
+            }
+        }
+
         // Create quotation with the schema structure
         const quotation = await Quotation.create({
             corporateOwnerId: req.userId, // From auth middleware
             fleetOwnerId,
             vehicles, // Array of vehicle IDs
+            serviceMode,
             rentalPeriod: {
                 startDate: rentalPeriod.startDate,
                 endDate: rentalPeriod.endDate,
@@ -73,12 +199,40 @@ export const requestQuotation = async (req, res) => {
         // 🔹 total quantity calculate karo
         const totalQty = vehicles.reduce((sum, v) => sum + v.quantity, 0);
 
+        // For MANAGED requests, persist the operations brief AGAINST this
+        // quotation and mark it SUBMITTED immediately, so the partner sees the
+        // required routes, work locations & shifts and employee roster the very
+        // first time it opens the request — before it prices or agrees.
+        let createdBrief = null
+        if (serviceMode === "MANAGED" && cleanBrief) {
+            createdBrief = await ManagedServiceBrief.create({
+                quotationId: quotation._id,
+                corporateOwnerId: req.userId,
+                b2bPartnerId: fleetOwnerId,
+                status: "SUBMITTED",
+                submittedAt: new Date(),
+                summary: cleanBrief.summary,
+                serviceStartDate: cleanBrief.serviceStartDate,
+                sla: cleanBrief.sla,
+                pointOfContact: cleanBrief.pointOfContact,
+                workLocations: cleanBrief.workLocations,
+                routeRequests: cleanBrief.routeRequests,
+                employeeRoster: cleanBrief.employeeRoster,
+            })
+        }
+
+        // Managed requests get a brief-aware notification so the partner knows
+        // to review the operational requirements before quoting.
+        const briefSummaryText = createdBrief
+            ? ` It includes an operations brief: ${createdBrief.routeRequests.length} route request(s), ${createdBrief.workLocations.length} work location(s) and ${createdBrief.employeeRoster.length} employee(s). Review it before you quote.`
+            : ""
+
         // Create notification for fleet owner (B2B_PARTNER)
         await createNotification(
             fleetOwnerId,
             "QUOTATION_REQUEST",
-            "New Quotation Request",
-            `You have received a new quotation request for ${totalQty} vehicle(s)`,
+            createdBrief ? "New Managed-Service Quotation Request" : "New Quotation Request",
+            `You have received a new quotation request for ${totalQty} vehicle(s).${briefSummaryText}`,
             quotation._id,
             "QUOTATION",
         )
@@ -88,14 +242,17 @@ export const requestQuotation = async (req, res) => {
         const realTimeNotif = await createNotificationService({
             userId: fleetOwnerId,
             type: "QUOTATION_REQUEST",
-            title: "New Quotation Request",
-            message: `${corporateName} has requested a quotation for ${totalQty} vehicle(s). Please respond within 48 hours.`,
+            title: createdBrief ? "New Managed-Service Quotation Request" : "New Quotation Request",
+            message: `${corporateName} has requested a quotation for ${totalQty} vehicle(s).${briefSummaryText} Please respond within 48 hours.`,
             metadata: {
                 quotationId: quotation._id,
                 corporateId: req.userId,
                 corporateName,
                 vehicleCount: totalQty,
                 rentalPeriod: rentalPeriod,
+                serviceMode,
+                hasBrief: Boolean(createdBrief),
+                briefId: createdBrief?._id || null,
             },
         })
         sendRealTimeNotification(fleetOwnerId.toString(), realTimeNotif)
@@ -122,7 +279,8 @@ export const requestQuotation = async (req, res) => {
             message: "Quotation request sent successfully",
             data: {
                 quotation: populatedQuotation,
-                quotationNumber: populatedQuotation.quotationNumber
+                quotationNumber: populatedQuotation.quotationNumber,
+                briefId: createdBrief?._id || null,
             },
         })
     } catch (error) {
@@ -179,7 +337,7 @@ export const getCorporateOwnerQuotations = async (req, res) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
-        
+
         // Get total count for pagination
         const totalCount = await Quotation.countDocuments(filter)
 
@@ -388,7 +546,7 @@ export const getCorporateOwnerQuotationById = async (req, res) => {
             .populate({
                 path: "vehicles.vehicleId",
                 select:
-                    "vehicleName vehicleCategory registrationNumber pricing capacity location photos documents manufacturingYear facilities",
+                    "vehicleName vehicleCategory serviceType registrationNumber pricing capacity location photos documents manufacturingYear facilities",
             })
 
 
@@ -488,7 +646,7 @@ export const corporateDecisionOnQuotation = async (req, res) => {
         // Get names for notifications
         const corporateName = await getUserName(corporateOwnerId);
         const fleetName = quotation.fleetOwnerId?.fullName || quotation.fleetOwnerId?.companyName || 'Fleet Owner';
-        
+
         // Notify B2B_PARTNER about corporate's decision
         if (decision === "accept") {
             await createNotification(
@@ -499,7 +657,7 @@ export const corporateDecisionOnQuotation = async (req, res) => {
                 quotation._id,
                 "QUOTATION"
             );
-            
+
 
             // Send REAL-TIME notification to B2B Partner
             const acceptNotif = await createNotificationService({
@@ -534,7 +692,7 @@ export const corporateDecisionOnQuotation = async (req, res) => {
                 quotation._id,
                 "QUOTATION"
             );
-            
+
 
             // Send REAL-TIME notification to B2B Partner about rejection
             const rejectNotif = await createNotificationService({
@@ -593,7 +751,7 @@ export const fetchFleetQuotations = async (req, res) => {
             })
             .populate({
                 path: "vehicles.vehicleId",
-                select: "vehicleName vehicleCategory registrationNumber pricing capacity location photos manufacturingYear",
+                select: "vehicleName vehicleCategory serviceType registrationNumber pricing capacity location photos manufacturingYear",
             })
             .sort({ createdAt: -1 })
 
@@ -740,9 +898,28 @@ export const respondToQuotation = async (req, res) => {
             const firstVehicle = quotation.vehicles?.[0]?.vehicleId
             const quotationCurrency = firstVehicle?.pricing?.currency || "AED"
 
+            // Management/service charge only applies to MANAGED quotations. The
+            // partner may charge any amount (including 0) for running operations
+            // on the corporate's behalf. It is added on top of the vehicle totals.
+            const serviceCharge =
+                quotation.serviceMode === "MANAGED"
+                    ? Math.max(0, Number.parseFloat(quotedPrice.serviceCharge) || 0)
+                    : 0
+
+            // The client may send a total that already includes the service charge.
+            // Normalise so the stored total always reflects vehicles + serviceCharge.
+            const incomingTotal = Number.parseFloat(quotedPrice.totalAmount) || 0
+            const vehiclesTotal = (quotedPrice.perVehicleBreakdown || []).reduce(
+                (sum, b) => sum + (Number.parseFloat(b.totalAmount) || 0),
+                0,
+            )
+            const baseTotal = vehiclesTotal > 0 ? vehiclesTotal : Math.max(0, incomingTotal - serviceCharge)
+            const finalTotal = baseTotal + serviceCharge
+
             quotation.quotedPrice = {
-                totalAmount: Number.parseFloat(quotedPrice.totalAmount),
+                totalAmount: finalTotal,
                 currency: quotationCurrency,
+                serviceCharge,
                 breakdown: {
                     vehicleRental: Number.parseFloat(quotedPrice.breakdown?.vehicleRental) || 0,
                     driverCharges: Number.parseFloat(quotedPrice.breakdown?.driverCharges) || 0,
@@ -796,7 +973,7 @@ export const respondToQuotation = async (req, res) => {
         // Send notification to CORPORATE user about quotation response
         const fleetName = await getUserName(fleetOwnerId);
         const corporateName = quotation.corporateOwnerId?.companyName || quotation.corporateOwnerId?.fullName || 'Corporate';
-        
+
         if (status === "approved") {
             await createNotification(
                 quotation.corporateOwnerId._id,
@@ -806,7 +983,7 @@ export const respondToQuotation = async (req, res) => {
                 quotation._id,
                 "QUOTATION"
             );
-            
+
             // Send REAL-TIME notification to Corporate
             const realTimeNotif = await createNotificationService({
                 userId: quotation.corporateOwnerId._id,
@@ -841,7 +1018,7 @@ export const respondToQuotation = async (req, res) => {
                 quotation._id,
                 "QUOTATION"
             );
-            
+
             // Send REAL-TIME notification to Corporate about rejection
             const rejectNotif = await createNotificationService({
                 userId: quotation.corporateOwnerId._id,
@@ -1011,7 +1188,7 @@ export const getFleetQuotationById = async (req, res) => {
             .populate({
                 path: "vehicles.vehicleId",
                 select:
-                    "vehicleName vehicleCategory registrationNumber pricing capacity location photos documents manufacturingYear facilities driverAvailability fuelOptions",
+                    "vehicleName vehicleCategory serviceType registrationNumber pricing capacity location photos documents manufacturingYear facilities driverAvailability fuelOptions",
             })
 
         if (!quotation) {
@@ -1036,7 +1213,3 @@ export const getFleetQuotationById = async (req, res) => {
         })
     }
 }
-
-
-
-

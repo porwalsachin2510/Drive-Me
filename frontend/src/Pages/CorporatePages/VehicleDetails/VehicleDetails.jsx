@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -66,7 +67,7 @@ const VehicleDetails = () => {
   const formatPrice = (amount) => {
     return new Intl.NumberFormat("en-KW", {
       style: "currency",
-      currency: "KWD",
+      currency: getActiveCurrency(),
     }).format(amount);
   };
 

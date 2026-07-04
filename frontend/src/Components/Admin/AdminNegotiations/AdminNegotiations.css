@@ -1010,3 +1010,34 @@
     justify-content: center;
   }
 }
+
+/* Completion gating notices */
+.drivemego-negotiation-complete-ready,
+.drivemego-negotiation-complete-waiting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.drivemego-negotiation-complete-ready {
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.drivemego-negotiation-complete-waiting {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.drivemego-negotiation-complete-ready svg,
+.drivemego-negotiation-complete-waiting svg {
+  flex-shrink: 0;
+}

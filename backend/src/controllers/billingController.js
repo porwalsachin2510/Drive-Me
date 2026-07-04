@@ -2,7 +2,9 @@ import Contract from "../models/Contract.js";
 import CorporateBooking from "../models/CorporateBooking.js";
 import CorporateEmployee from "../models/CorporateEmployee.js";
 import VehicleAssignment from "../models/VehicleAssignment.js";
+import User from "../models/User.js";
 import mongoose from "mongoose";
+import { getEffectiveCountry, getCountryCurrency } from "../Config/localizationConfig.js";
 
 // @desc    Get monthly billing report for a corporate
 // @route   GET /api/corporate/billing-report
@@ -11,6 +13,12 @@ export const getBillingReport = async (req, res) => {
     try {
         const corporateId = req.userId;
         const { month, year } = req.query;
+
+        // Currency is anchored to the corporate account's registered country
+        // (identity-locked earner), so a Kuwait corporate always sees KWD even
+        // with zero contracts — never a hard-coded "AED".
+        const corporate = await User.findById(corporateId).select("country countryCode role adminPermissions");
+        const corporateCurrency = getCountryCurrency(getEffectiveCountry(corporate));
 
         // Determine date range
         const now = new Date();
@@ -53,7 +61,7 @@ export const getBillingReport = async (req, res) => {
         const contractBreakdown = contracts.map(contract => {
             const totalAmount = contract.financials?.totalAmount || 0;
             const monthlyAmount = contract.financials?.monthlyValue || totalAmount;
-            const currency = contract.financials?.currency || "AED";
+            const currency = contract.financials?.currency || corporateCurrency;
 
             totalMonthlyValue += monthlyAmount;
             totalBilled += totalAmount;
@@ -140,7 +148,7 @@ export const getBillingReport = async (req, res) => {
                     totalPaid: totalPaid,
                     outstanding: totalBilled - totalPaid,
                     activeContracts: contracts.length,
-                    currency: contracts.length > 0 ? (contracts[0].financials?.currency || "AED") : "AED",
+                    currency: contracts[0]?.financials?.currency || corporateCurrency,
                     totalMonthlyValue,
                     totalEmployees,
                     totalTrips,
@@ -178,6 +186,9 @@ export const getInvoices = async (req, res) => {
     try {
         const corporateId = req.userId;
 
+        const corporate = await User.findById(corporateId).select("country countryCode role adminPermissions");
+        const corporateCurrency = getCountryCurrency(getEffectiveCountry(corporate));
+
         // Get all active/completed contracts for this corporate
         const contracts = await Contract.find({
             corporateOwnerId: corporateId,
@@ -195,7 +206,7 @@ export const getInvoices = async (req, res) => {
                         contractNumber: contract.contractNumber,
                         fleetOwner: contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName,
                         amount: payment.amount,
-                        currency: contract.financials?.currency || "AED",
+                        currency: contract.financials?.currency || corporateCurrency,
                         createdAt: payment.paidDate || payment.createdAt,
                         date: payment.paidDate || payment.createdAt,
                         status: payment.status || "PAID",
@@ -228,7 +239,7 @@ export const getInvoices = async (req, res) => {
                         contractNumber: contract.contractNumber,
                         fleetOwner: contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName,
                         amount: invoiceAmount,
-                        currency: contract.financials?.currency || "AED",
+                        currency: contract.financials?.currency || corporateCurrency,
                         billingPeriod: billingPeriod,
                         createdAt: contract.createdAt || new Date(),
                         date: contract.createdAt || new Date(),
@@ -293,7 +304,7 @@ export const getB2BPartnerInvoices = async (req, res) => {
                     const dueDate = installment.dueDate || contract.createdAt;
                     const dueMonth = dueDate ? new Date(dueDate) : new Date();
                     const billingPeriod = `${dueMonth.toLocaleString('default', { month: 'short' })} ${dueMonth.getFullYear()}`;
-                    
+
                     invoices.push({
                         _id: `${contract._id}-inst-${idx}`,
                         invoiceNumber: `B2B-INV-${contract.contractNumber || contract._id.toString().slice(-6)}-${idx + 1}`,
@@ -315,7 +326,7 @@ export const getB2BPartnerInvoices = async (req, res) => {
             // Current month invoice
             const now = new Date();
             const currentBillingPeriod = contractPeriodStr || `${now.toLocaleString('default', { month: 'short' })} ${now.getFullYear()}`;
-            
+
             invoices.push({
                 _id: `${contract._id}-current`,
                 invoiceNumber: `B2B-INV-${contract.contractNumber || contract._id.toString().slice(-6)}-CUR`,

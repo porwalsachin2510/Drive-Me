@@ -104,6 +104,40 @@ export const sendRealTimeNotification = (userId, notification) => {
     }
 }
 
+// Broadcast a managed-service brief change to both the corporate owner and the
+// B2B partner watching a contract's managed operations board. Each side's open
+// ManagedServiceBrief listens for `managed_brief_updated` and, if it matches
+// the contract it is showing, refetches WITHOUT a manual refresh. This is what
+// makes the two-way fulfillment/approval handshake feel live.
+export const broadcastManagedBriefUpdate = (
+    { corporateOwnerId, b2bPartnerId, contractId },
+    meta = {},
+) => {
+    if (!ioInstance) {
+        console.log('[v0] Socket.io not initialized yet - cannot broadcast managed brief update')
+        return
+    }
+
+    try {
+        const idOf = (v) => (v && v._id ? v._id.toString() : v ? v.toString() : null)
+        const payload = {
+            contractId: idOf(contractId),
+            event: meta.event || 'MANAGED_BRIEF_UPDATE',
+            actorRole: meta.actorRole || null,
+            updatedAt: new Date().toISOString(),
+        }
+
+        const corp = idOf(corporateOwnerId)
+        const partner = idOf(b2bPartnerId)
+        if (corp) ioInstance.to(`notifications-${corp}`).emit('managed_brief_updated', payload)
+        if (partner) ioInstance.to(`notifications-${partner}`).emit('managed_brief_updated', payload)
+
+        console.log('[v0] managed_brief_updated broadcast:', payload.contractId, `(event: ${payload.event})`)
+    } catch (error) {
+        console.error('[v0] Error broadcasting managed brief update:', error)
+    }
+}
+
 // Send notification to all admin users
 export const sendAdminNotificationSocket = (notification) => {
     if (!ioInstance) {
@@ -335,5 +369,56 @@ export const broadcastVehicleAvailabilityChange = (b2cPartnerId, vehicleData) =>
         console.log(`Vehicle availability broadcast to partner ${b2cPartnerId}:`, availabilityPayload.vehicleModel, '-', availabilityPayload.availabilityStatus)
     } catch (error) {
         console.error('Error broadcasting vehicle availability:', error)
+    }
+}
+
+// Broadcast a live negotiation update to EVERY party watching this negotiation
+// (Admin, the Corporate user, and the B2B Partner). This is what makes the
+// negotiation modals update in real time — each open modal listens for the
+// `negotiation_updated` event and, if it matches the negotiation it is showing,
+// refreshes its data WITHOUT the user having to close and reopen it.
+//
+// `negotiation` should be a saved AdminNegotiation doc. corporateId /
+// b2bPartnerId may be raw ObjectIds or populated user docs.
+export const broadcastNegotiationUpdate = (negotiation, meta = {}) => {
+    if (!ioInstance) {
+        console.log('[v0] Socket.io not initialized yet - cannot broadcast negotiation update')
+        return
+    }
+
+    if (!negotiation || !negotiation._id) {
+        console.log('[v0] No negotiation provided - cannot broadcast negotiation update')
+        return
+    }
+
+    try {
+        const idOf = (v) => (v && v._id ? v._id.toString() : v ? v.toString() : null)
+        const corporateId = idOf(negotiation.corporateId)
+        const b2bPartnerId = idOf(negotiation.b2bPartnerId)
+
+        const payload = {
+            negotiationId: negotiation._id.toString(),
+            negotiationNumber: negotiation.negotiationNumber,
+            status: negotiation.status,
+            // Who triggered this change and what kind of change it was, so the
+            // client can show a subtle "live update" hint if it wants to.
+            event: meta.event || 'NEGOTIATION_UPDATE',
+            actorRole: meta.actorRole || null,
+            updatedAt: new Date().toISOString(),
+        }
+
+        // Emit to the Corporate user and the B2B Partner via their personal
+        // notification rooms, and to the shared admin room.
+        if (corporateId) {
+            ioInstance.to(`notifications-${corporateId}`).emit('negotiation_updated', payload)
+        }
+        if (b2bPartnerId) {
+            ioInstance.to(`notifications-${b2bPartnerId}`).emit('negotiation_updated', payload)
+        }
+        ioInstance.to('admin-notifications').emit('negotiation_updated', payload)
+
+        console.log('[v0] negotiation_updated broadcast:', payload.negotiationNumber, '-', payload.status, `(event: ${payload.event})`)
+    } catch (error) {
+        console.error('[v0] Error broadcasting negotiation update:', error)
     }
 }

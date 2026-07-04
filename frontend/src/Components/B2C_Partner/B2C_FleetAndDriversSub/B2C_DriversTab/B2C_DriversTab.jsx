@@ -135,9 +135,9 @@ function B2C_DriversTab({ onDriversCountChange }) {
 
   if (loading) {
     return (
-      <div className="b2c-drivers-tab">
-        <div className="b2c-loading-state">
-          <div className="b2c-loading-spinner">Loading...</div>
+      <div className="drivemego-b2c-drivers-tab">
+        <div className="drivemego-b2c-loading-state">
+          <div className="drivemego-b2c-loading-spinner">Loading...</div>
           <p>Loading drivers...</p>
         </div>
       </div>
@@ -148,7 +148,7 @@ function B2C_DriversTab({ onDriversCountChange }) {
   const externalDrivers = drivers.filter((driver) => !driver.isSelf);
 
   return (
-    <div className="b2c-drivers-tab">
+    <div className="drivemego-b2c-drivers-tab">
       {/* Self-Driver Registration Section */}
       <div className="b2c-self-driver-section">
         <div className="b2c-self-driver-card">

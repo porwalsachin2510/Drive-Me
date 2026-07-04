@@ -1,11 +1,12 @@
 "use client";
 import { useNavigate } from "react-router-dom";
+import { useLocale } from "../../hooks/useLocale";
 import "./VehicleCard.css";
 
 const VehicleCard = ({ vehicle }) => {
 
-  console.log("vehicle ", vehicle );
   const navigate = useNavigate();
+  const { currency, currencyDecimals, isoCode } = useLocale();
 
   const handleViewDetails = () => {
     navigate(`/vehicle/${vehicle._id}`);
@@ -18,11 +19,15 @@ const VehicleCard = ({ vehicle }) => {
 
   
   const formatPrice = (price) => {
-    if (!price) return "AED 0";
-    return new Intl.NumberFormat("en-AE", {
+    // Currency follows the user's active locale (UAE -> AED, Kuwait -> KWD, ...).
+    // Prefer the currency stored on the vehicle pricing if present.
+    const cur = vehicle?.pricing?.currency || currency;
+    if (!price) return `${cur} 0`;
+    return new Intl.NumberFormat(`en-${isoCode || "AE"}`, {
       style: "currency",
-      currency: "AED",
+      currency: cur,
       minimumFractionDigits: 0,
+      maximumFractionDigits: currencyDecimals,
     }).format(price);
   };
 

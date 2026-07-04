@@ -28,7 +28,29 @@ const scheduleSchema = new mongoose.Schema({
                 message: 'Time must be in HH:MM AM/PM format'
             }
         },
+        // For Round Trip: the time the bus departs the destination to head back (legacy "Return Time").
         arrivalTime: {
+            type: String,
+            validate: {
+                validator: function(v) {
+                    return !v || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?(AM|PM)$/i.test(v);
+                },
+                message: 'Time must be in HH:MM AM/PM format'
+            }
+        },
+        // Time the bus REACHES the destination of the forward/outbound journey.
+        // For One Way: arrival at the trip's destination. For Round Trip: arrival at the "To" location on the outbound leg.
+        destinationArrivalTime: {
+            type: String,
+            validate: {
+                validator: function(v) {
+                    return !v || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?(AM|PM)$/i.test(v);
+                },
+                message: 'Time must be in HH:MM AM/PM format'
+            }
+        },
+        // For Round Trip only: the time the bus REACHES back the origin ("From") location after the return leg.
+        returnArrivalTime: {
             type: String,
             validate: {
                 validator: function(v) {
@@ -42,6 +64,15 @@ const scheduleSchema = new mongoose.Schema({
             enum: ["One Way", "Round Trip"],
             default: "One Way"
         },
+        // Direction of a One Way trip:
+        //   "outbound" => From -> To (uses outboundStopPoints)
+        //   "return"   => To -> From (uses returnStopPoints, falling back to outboundStopPoints)
+        // Ignored for Round Trip (which always runs both legs).
+        direction: {
+            type: String,
+            enum: ["outbound", "return"],
+            default: "outbound"
+        },
         // Per-trip driver assignment (optional - falls back to schedule/route default)
         assignedDriver: {
             type: mongoose.Schema.Types.ObjectId,
@@ -49,10 +80,35 @@ const scheduleSchema = new mongoose.Schema({
             default: null
         },
         // Per-trip vehicle assignment (optional - falls back to schedule/route default)
+        // For Round Trip this represents the OUTBOUND (From -> To / "jaane") leg assignment.
         assignedVehicle: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "B2CPartnerVehicle",
             default: null
+        },
+        // Round Trip only: dedicated driver for the RETURN (To -> From / "aane") leg.
+        // Optional - when null the return leg falls back to assignedDriver (outbound).
+        returnDriver: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "B2CPartnerDriver",
+            default: null
+        },
+        // Round Trip only: dedicated vehicle for the RETURN (To -> From / "aane") leg.
+        // Optional - when null the return leg falls back to assignedVehicle (outbound).
+        returnVehicle: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "B2CPartnerVehicle",
+            default: null
+        },
+        // Round Trip only: whether the outbound leg driver is the partner acting as self-driver.
+        outboundIsSelfDriver: {
+            type: Boolean,
+            default: false
+        },
+        // Round Trip only: whether the return leg driver is the partner acting as self-driver.
+        returnIsSelfDriver: {
+            type: Boolean,
+            default: false
         },
         outboundStopPoints: [{
             location: {

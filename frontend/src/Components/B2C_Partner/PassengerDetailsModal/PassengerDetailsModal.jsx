@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { getPassengerDetails } from "../../../services/b2cPartnerService";
 import "./passengerdetailsmodal.css";
@@ -342,7 +343,7 @@ function PassengerDetailsModal({ bookingId, isOpen, onClose }) {
                       </span>
                       <span className="drivemego-passengerdetailsmodal-detail-value highlight">
                         {bookingData?.paymentAmount?.toLocaleString() || 0}{" "}
-                        {bookingData?.currency || "AED"}
+                        {bookingData?.currency || getActiveCurrency()}
                       </span>
                     </div>
                     <div className="drivemego-passengerdetailsmodal-booking-detail">

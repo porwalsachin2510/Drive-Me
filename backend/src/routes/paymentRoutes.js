@@ -3,6 +3,7 @@ import {
     createPayment,
     verifyPayment,
     getPaymentByContract,
+    getContractCommissionPreview,
     stripeWebhook,
     tapWebhook,
     createInstallmentPayment,
@@ -21,6 +22,9 @@ router.post("/installments/:scheduleItemId/payment", verifyToken, checkCorporate
 
 // Get payment by contract
 router.get("/contracts/:contractId/payment", verifyToken, getPaymentByContract)
+
+// Commission preview for a contract (used by the payment modal before paying)
+router.get("/contracts/:contractId/commission-preview", verifyToken, getContractCommissionPreview)
 
 // Stripe webhook (use raw body parser for signature verification)
 router.post("/webhook/stripe", express.raw({ type: "application/json" }), stripeWebhook)

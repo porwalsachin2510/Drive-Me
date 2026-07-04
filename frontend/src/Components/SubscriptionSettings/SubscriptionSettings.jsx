@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../config/localeConfig";
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import "./SubscriptionSettings.css";
@@ -30,7 +31,7 @@ const SubscriptionSettings = () => {
   // How many months the commuter wants to renew for (minimum 1, no fixed max).
   const [renewalMonths, setRenewalMonths] = useState(1);
   const [walletBalance, setWalletBalance] = useState(0);
-  const [walletCurrency, setWalletCurrency] = useState("AED");
+  const [walletCurrency, setWalletCurrency] = useState(getActiveCurrency());
   const [pendingCash, setPendingCash] = useState(null);
   const [history, setHistory] = useState([]);
 
@@ -75,7 +76,7 @@ const SubscriptionSettings = () => {
             : [],
         );
         setWalletBalance(response.data.data.walletBalance || 0);
-        setWalletCurrency(response.data.data.walletCurrency || "AED");
+        setWalletCurrency(response.data.data.walletCurrency || getActiveCurrency());
       } else {
         setError(response.data.message || "Failed to fetch settings");
       }

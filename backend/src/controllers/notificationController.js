@@ -1,59 +1,12 @@
 import User from "../models/User.js"
 import Notification from "../models/Notification.js"
 import { sendRealTimeNotification } from "../Services/socketService.js"
+// Single source of truth for notification creation lives in the service layer.
+// We re-export it here so existing controllers (booking, wallet, EMI cron)
+// that import `createNotification` from this file keep working unchanged.
+import { createNotification } from "../Services/notificationService.js"
 
-// Create notification helper function
-export const createNotification = async (notificationData) => {
-    try {
-        const notification = new Notification(notificationData)
-        await notification.save()
-
-        // Populate related user data if relatedUserId exists
-        if (notificationData.relatedUserId) {
-            await notification.populate("relatedUserId", "fullName email phone")
-        }
-
-        // Populate booking data for both B2C and Corporate bookings
-        if (notificationData.bookingId) {
-            // Try to populate as B2CPassengerBooking first
-            try {
-                await notification.populate({
-                    path: "bookingId",
-                    model: "B2CPassengerBooking",
-                    select: "pickupLocation dropoffLocation travelDate numberOfSeats"
-                })
-            } catch (error) {
-                // If B2CPassengerBooking fails, try CorporateBooking
-                try {
-                    await notification.populate({
-                        path: "bookingId",
-                        model: "CorporateBooking",
-                        select: "pickupLocation dropoffLocation travelDate numberOfSeats"
-                    })
-                } catch (corpError) {
-                    console.log("Could not populate bookingId:", corpError.message)
-                }
-            }
-        }
-
-        if (notificationData.recipientId) {
-            await notification.populate("recipientId", "fullName email phone")
-        }
-
-        // Send real-time notification via Socket.io to the user
-        // This ensures all user types (ADMIN, CORPORATE, B2B_PARTNER, etc.) receive notifications in real-time
-        const targetUserId = notificationData.userId || notificationData.recipientId
-        if (targetUserId) {
-            sendRealTimeNotification(targetUserId.toString(), notification)
-            console.log(`[v0] Real-time notification sent to user: ${targetUserId}`)
-        }
-
-        return notification
-    } catch (error) {
-        console.error("Error creating notification:", error)
-        throw error
-    }
-}
+export { createNotification }
 
 // Get user notifications
 export const getUserNotifications = async (req, res) => {

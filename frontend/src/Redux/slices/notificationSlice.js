@@ -91,6 +91,20 @@ const notificationSlice = createSlice({
   reducers: {
     addRealtimeNotification: (state, action) => {
       const notification = action.payload
+      if (!notification) return
+
+      // Dedupe by _id. The backend emits the SAME notification under multiple
+      // socket event names (new-notification, new_notification, plus a
+      // type-specific event), and the navbar binds one handler to several of
+      // them, so the identical notification (same _id) would otherwise be added
+      // 2-3 times and inflate the unread count. Skip if we already have it.
+      if (
+        notification._id &&
+        state.notifications.some((n) => n._id === notification._id)
+      ) {
+        return
+      }
+
       state.notifications.unshift(notification)
       if (!notification.isRead) {
         state.unreadCount += 1

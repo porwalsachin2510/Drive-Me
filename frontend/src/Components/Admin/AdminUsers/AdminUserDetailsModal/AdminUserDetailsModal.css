@@ -189,6 +189,129 @@
   background: #059669;
 }
 
+.admin-user-details-btn-danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.admin-user-details-btn-danger:hover {
+  background: #dc2626;
+}
+
+.admin-user-details-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* KYC verification */
+.admin-kyc-badge {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.admin-kyc-badge-verified {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.admin-kyc-badge-pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.admin-kyc-badge-rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.admin-kyc-document {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-kyc-image-btn {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px;
+  background: #f9fafb;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  transition: border-color 0.2s;
+}
+
+.admin-kyc-image-btn:hover {
+  border-color: #10b981;
+}
+
+.admin-kyc-image-thumb {
+  max-width: 240px;
+  max-height: 160px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.admin-kyc-image-hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.admin-kyc-no-image {
+  font-size: 13px;
+  color: #b91c1c;
+  margin: 0;
+}
+
+.admin-kyc-reject-form {
+  padding: 16px 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-kyc-reject-textarea {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.admin-kyc-reject-textarea:focus {
+  outline: none;
+  border-color: #ef4444;
+}
+
+.admin-kyc-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 24px;
+  cursor: zoom-out;
+}
+
+.admin-kyc-lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .admin-user-details-modal {

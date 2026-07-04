@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 "use client";
 
+import { useLocale } from "../../../hooks/useLocale";
 import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +17,7 @@ import DailyTripsInBooking from "../../../Components/DailyTripsInBooking/DailyTr
 import api from "../../../utils/api";
 import WalletRechargeModal from "../../../Components/WalletRechargeModal/WalletRechargeModal";
 import PassengerDetailsModal from "../../../Components/B2C_Partner/PassengerDetailsModal/PassengerDetailsModal";
+import { getCountryConfig } from "../../../config/localeConfig";
 import "./b2c_partnerbookingspage.css";
 
 const B2C_PartnerBookingsPage = () => {
@@ -24,6 +26,8 @@ const B2C_PartnerBookingsPage = () => {
   const socket = useSocket();
   const { partnerBookings, loading } = useSelector((state) => state.booking);
   const auth = useSelector((state) => state.auth);
+  // Active currency for the logged-in partner's country (e.g. KWD for Kuwait).
+  const { currency: activeCurrency } = useLocale();
   const [filterStatus, setFilterStatus] = useState("CONFIRMED");
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -329,9 +333,7 @@ const B2C_PartnerBookingsPage = () => {
         <div className="B2C_Partner-bookings-page-wallet-info">
           <span className="B2C_Partner-bookings-page-wallet-balance">
             Wallet Balance: {walletBalance}{" "}
-            {Array.isArray(partnerBookings) && partnerBookings.length > 0
-              ? partnerBookings[0]?.currency || "AED"
-              : "AED"}
+            {partnerBookings?.[0]?.currency || activeCurrency}
           </span>
         </div>
         <div className="B2C_Partner-bookings-page-filter-controls">
@@ -618,7 +620,7 @@ const B2C_PartnerBookingsPage = () => {
                   <p>
                     <strong>Amount</strong>{" "}
                     {(booking.paymentAmount || 0).toLocaleString()}{" "}
-                    {booking.currency || "KWD"}
+                    {booking.currency || activeCurrency}
                   </p>
                   <p>
                     <strong>Payment</strong> {booking.paymentStatus || "N/A"} /{" "}
@@ -634,12 +636,12 @@ const B2C_PartnerBookingsPage = () => {
                   <p>
                     <strong>Admin Commission</strong>{" "}
                     {(booking.adminCommissionAmount || 0).toLocaleString()}{" "}
-                    {booking.currency || "KWD"}
+                    {booking.currency || activeCurrency}
                   </p>
                   <p>
                     <strong>Driver Earnings</strong>{" "}
                     {(booking.driverEarnings || 0).toLocaleString()}{" "}
-                    {booking.currency || "KWD"}
+                    {booking.currency || activeCurrency}
                   </p>
                   {/* Show commission refund info for CANCELLED bookings */}
                   {booking.bookingStatus === "CANCELLED" &&
@@ -656,7 +658,7 @@ const B2C_PartnerBookingsPage = () => {
                       >
                         <strong>Commission Refunded:</strong>{" "}
                         {(booking.commissionRefundAmount || 0).toLocaleString()}{" "}
-                        {booking.currency || "KWD"}
+                        {booking.currency || activeCurrency}
                       </p>
                     )}
                   {/* Show cancellation reason for CANCELLED bookings */}
@@ -770,11 +772,11 @@ const B2C_PartnerBookingsPage = () => {
                 <p>
                   <strong>Required Amount:</strong>{" "}
                   {selectedBooking?.adminCommissionAmount || 0}{" "}
-                  {selectedBooking?.currency || "KWD"}
+                  {selectedBooking?.currency || activeCurrency}
                 </p>
                 <p>
                   <strong>Current Balance:</strong> {walletBalance}{" "}
-                  {selectedBooking?.currency || "KWD"}
+                  {selectedBooking?.currency || activeCurrency}
                 </p>
                 <p>
                   <strong>Shortfall:</strong>{" "}
@@ -783,7 +785,7 @@ const B2C_PartnerBookingsPage = () => {
                     (selectedBooking?.adminCommissionAmount || 0) -
                       walletBalance,
                   )}{" "}
-                  {selectedBooking?.currency || "KWD"}
+                  {selectedBooking?.currency || activeCurrency}
                 </p>
               </div>
               <p>Please add funds to your wallet to accept this booking.</p>
@@ -888,7 +890,7 @@ const B2C_PartnerBookingsPage = () => {
           }
         }}
         country={auth.user?.country || "UAE"}
-        currency={auth.user?.country === "UAE" ? "AED" : "KWD"}
+        currency={getCountryConfig(auth.user?.country).currency}
       />
 
       {/* Booking Warning Modal */}
@@ -995,7 +997,7 @@ const B2C_PartnerBookingsPage = () => {
                 {warningData?.paymentAmount && (
                   <p style={{ fontSize: "14px", color: "#374151", margin: 0 }}>
                     <strong>Amount:</strong> {warningData.paymentAmount}{" "}
-                    {warningData.currency || "AED"}
+                    {warningData.currency || activeCurrency}
                   </p>
                 )}
               </div>

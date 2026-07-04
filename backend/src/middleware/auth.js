@@ -1,4 +1,6 @@
 import jwt from "jsonwebtoken"
+import User from "../models/User.js"
+import Contract from "../models/Contract.js"
 
 export const verifyToken = (req, res, next) => {
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1]
@@ -43,7 +45,7 @@ export const optionalAuth = (req, res, next) => {
 }
 
 // START: NEW MIDDLEWARE TO CHECK COMMUTER ROLE
-export const checkCommuterRole = (req, res, next) => {
+export const checkCommuterRole = async (req, res, next) => {
     // USER ROLE IS ALREADY SET BY verifyToken MIDDLEWARE IN req.userRole
     if (req.userRole !== "COMMUTER") {
         return res.status(403).json({
@@ -51,7 +53,27 @@ export const checkCommuterRole = (req, res, next) => {
             message: "Access denied. Only commuters can access this resource.",
         })
     }
-    next()
+
+    // Defense-in-depth: a commuter must be ACTIVE to perform ANY operation.
+    // Commuters are ACTIVE as soon as their phone OTP is verified (no KYC /
+    // admin-approval gate), so this primarily blocks SUSPENDED accounts even if
+    // they somehow still hold a valid token.
+    try {
+        const user = await User.findById(req.userId).select("status").lean()
+        if (!user) {
+            return res.status(401).json({ success: false, message: "Account not found." })
+        }
+        if (user.status !== "ACTIVE") {
+            return res.status(403).json({
+                success: false,
+                code: "ACCOUNT_NOT_ACTIVE",
+                message: "Your account is not active. Please contact support.",
+            })
+        }
+        next()
+    } catch (err) {
+        return res.status(500).json({ success: false, message: "Authorization check failed." })
+    }
 }
 // END: NEW MIDDLEWARE TO CHECK COMMUTER ROLE
 
@@ -135,5 +157,78 @@ export const requireRole = (roles) => {
             })
         }
         next()
+    }
+}
+
+/**
+ * Resolve the effective corporate context for an operation.
+ *
+ * - CORPORATE users: pass through unchanged (req.userId remains the corporate id).
+ * - B2B_PARTNER users: only allowed when acting on a MANAGED contract they own.
+ *   They must supply the target contract via `onBehalfContractId`
+ *   (request body, query string, or `x-onbehalf-contract` header).
+ *   On success, req.userId is rewritten to the contract's corporateOwnerId so all
+ *   downstream corporate controllers operate within the corporate's scope, while
+ *   the real actor is preserved on req.actorId / req.actingRole for activity logging.
+ *
+ * This lets the B2B partner perform every corporate operation (routes, schedules,
+ * employees, trips, invitations) on behalf of the corporate without duplicating
+ * controller logic, and records created automatically appear in the corporate's
+ * own panels as live data.
+ */
+export const resolveCorporateContext = async (req, res, next) => {
+    try {
+        if (req.userRole === "B2B_PARTNER") {
+            const contractId =
+                req.body?.onBehalfContractId ||
+                req.query?.onBehalfContractId ||
+                req.headers["x-onbehalf-contract"] ||
+                req.params?.contractId
+
+            if (!contractId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "onBehalfContractId is required for partner-managed operations.",
+                })
+            }
+
+            const contract = await Contract.findById(contractId).select(
+                "corporateOwnerId fleetOwnerId serviceMode",
+            )
+
+            if (!contract) {
+                return res.status(404).json({ success: false, message: "Contract not found." })
+            }
+
+            if (contract.fleetOwnerId.toString() !== req.userId) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You are not the partner for this contract.",
+                })
+            }
+
+            if (contract.serviceMode !== "MANAGED") {
+                return res.status(403).json({
+                    success: false,
+                    message: "Operations on behalf of corporate are only allowed for managed-service contracts.",
+                })
+            }
+
+            // Impersonate the corporate's scope for downstream controllers
+            req.actorId = req.userId
+            req.actingRole = "B2B_PARTNER"
+            req.userId = contract.corporateOwnerId.toString()
+            req.onBehalfContractId = contractId
+            req.onBehalfCorporateId = contract.corporateOwnerId.toString()
+            return next()
+        }
+
+        // CORPORATE (and any other role) pass through unchanged.
+        req.actorId = req.userId
+        req.actingRole = req.userRole
+        return next()
+    } catch (error) {
+        console.error("[auth] resolveCorporateContext error:", error.message)
+        return res.status(500).json({ success: false, message: "Authorization check failed." })
     }
 }

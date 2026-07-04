@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getPassengerBookings } from "../../../Redux/slices/bookingSlice";
 import { useSocket } from "../../../hooks/useSocket";
+import { useLocale } from "../../../hooks/useLocale";
 import DailyTripsInBooking from "../../../Components/DailyTripsInBooking/DailyTripsInBooking";
 import commuterBookingAPI from "../../../services/commuterBookingAPI";
 import api from "../../../utils/api";
@@ -16,6 +17,7 @@ const CommuterMyBookingsPage = () => {
   const navigate = useNavigate();
   const { passengerBookings, loading } = useSelector((state) => state.booking);
   const auth = useSelector((state) => state.auth);
+  const { currency: localeCurrency } = useLocale();
   const socket = useSocket();
   const [filterStatus, setFilterStatus] = useState("all");
   const [driverLocations, setDriverLocations] = useState({});
@@ -1246,7 +1248,7 @@ const CommuterMyBookingsPage = () => {
                 booking.totalAmount ||
                 booking.price ||
                 0;
-              const currency = booking.currency || "KWD";
+              const currency = booking.currency || localeCurrency;
 
               return (
                 <div key={bookingKey} className="cmbp-booking-card">

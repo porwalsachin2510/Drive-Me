@@ -5,7 +5,11 @@ import Route from "../models/Route.js"
 import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
 import { createNotification, sendAdminNotification, sendRealTimeNotification } from "../Services/notificationService.js"
+import { syncInvoicesForContract } from "../Services/invoiceService.js"
 import User from "../models/User.js"
+import ManagedServiceBrief from "../models/ManagedServiceBrief.js"
+import { logRequestActivity } from "../utils/operationContext.js"
+import { autoFulfillBriefItem } from "./managedServiceBriefController.js"
 
 // Helper to get user name
 const getUserName = async (userId) => {
@@ -119,6 +123,7 @@ export const createContractFromQuotation = async (req, res) => {
             quotationId: quotation._id,
             corporateOwnerId: quotation.corporateOwnerId,
             fleetOwnerId: quotation.fleetOwnerId,
+            serviceMode: quotation.serviceMode || "STANDARD",
             vehicles: quotation.vehicles.map((v) => ({
                 vehicleId: v.vehicleId._id,
                 quantity: v.quantity,
@@ -128,6 +133,7 @@ export const createContractFromQuotation = async (req, res) => {
             financials: {
 
                 totalAmount: quotation.quotedPrice.totalAmount,
+                serviceCharge: quotation.quotedPrice?.serviceCharge || 0,
                 currency: contractCurrency,
                 advancePayment: {
                     amount: advanceAmount,
@@ -159,6 +165,35 @@ export const createContractFromQuotation = async (req, res) => {
         })
 
         await contract.save()
+
+        // For MANAGED contracts, carry the operational brief the corporate
+        // authored at quotation stage onto this contract so the same document
+        // drives the contract-stage fulfilment/approval loop. We stamp
+        // contractId (and ensure ownership fields) on the existing
+        // quotation-stage brief; if none exists yet we lazily create one.
+        if ((quotation.serviceMode || "STANDARD") === "MANAGED") {
+            try {
+                let brief = await ManagedServiceBrief.findOne({ quotationId: quotation._id })
+                if (brief) {
+                    brief.contractId = contract._id
+                    brief.corporateOwnerId = quotation.corporateOwnerId
+                    brief.b2bPartnerId = quotation.fleetOwnerId
+                    await brief.save()
+                } else {
+                    await ManagedServiceBrief.create({
+                        quotationId: quotation._id,
+                        contractId: contract._id,
+                        corporateOwnerId: quotation.corporateOwnerId,
+                        b2bPartnerId: quotation.fleetOwnerId,
+                        status: "DRAFT",
+                    })
+                }
+            } catch (briefError) {
+                // Never fail contract creation if brief linking fails.
+                console.error("[v0] Failed to link managed-service brief to contract:", briefError.message)
+            }
+        }
+
         await contract.populate([
             {
                 path: "corporateOwnerId",
@@ -768,6 +803,7 @@ export const processContractPayment = async (req, res) => {
         if (paymentType === "advance") {
             contract.financials.advancePayment.paidAt = new Date()
             contract.financials.advancePayment.transactionId = transactionId
+            contract.financials.advancePayment.status = "PAID"
             contract.status = "ACTIVE"
             contract.activatedAt = new Date()
             contract.statusHistory.push({
@@ -777,9 +813,11 @@ export const processContractPayment = async (req, res) => {
             })
         } else if (paymentType === "final") {
             contract.financials.finalPayment = {
+                ...(contract.financials.finalPayment?.toObject?.() || contract.financials.finalPayment || {}),
                 amount,
                 paidAt: new Date(),
                 transactionId,
+                status: "PAID",
             }
             contract.status = "COMPLETED"
             contract.completedAt = new Date()
@@ -791,6 +829,16 @@ export const processContractPayment = async (req, res) => {
         }
 
         await contract.save()
+
+        // Keep persisted invoices in sync with the new payment status
+        try {
+            const populatedContract = await Contract.findById(contract._id)
+                .populate("corporateOwnerId", "fullName companyName email")
+                .populate("fleetOwnerId", "fullName companyName email")
+            await syncInvoicesForContract(populatedContract)
+        } catch (syncErr) {
+            console.error("[v0] Invoice sync after payment failed (non-fatal):", syncErr.message)
+        }
 
         // Get names for notifications
         const corporateName = await getUserName(corporateOwnerId);
@@ -1349,6 +1397,10 @@ export const getAssignedVehiclesForContract = async (req, res) => {
                 path: "fleetOwnerId",
                 select: "fullName companyName",
             })
+            .populate({
+                path: "corporateOwnerId",
+                select: "fullName companyName",
+            })
 
         if (!contract) {
             return res.status(404).json({
@@ -1394,6 +1446,12 @@ export const assignDriverOrFuelToVehicle = async (req, res) => {
     try {
         const { contractId, assignedVehicleId } = req.params
         const corporateOwnerId = req.userId
+        // Who is actually performing this action. When a B2B partner operates on
+        // behalf of the corporate (MANAGED contracts), resolveCorporateContext sets
+        // req.actingRole = "B2B_PARTNER" and req.actorId = the partner's user id,
+        // while req.userId is the impersonated corporate owner.
+        const actingRole = req.actingRole || "CORPORATE"
+        const actorId = req.actorId || req.userId
         const { driverId, fuelCardNumber } = req.body
 
         console.log("first my driverId", driverId)
@@ -1419,12 +1477,12 @@ export const assignDriverOrFuelToVehicle = async (req, res) => {
             if (assignedVehicle) {
                 if (driverId) {
                     assignedVehicle.driverId = driverId
-                    assignedVehicle.driverAssignedBy = "CORPORATE"
+                    assignedVehicle.driverAssignedBy = actingRole
                     assignedVehicle.driverModel = "CorporateDriver"
                 }
                 if (fuelCardNumber) {
                     assignedVehicle.fuelCardNumber = fuelCardNumber
-                    assignedVehicle.fuelAssignedBy = "CORPORATE"
+                    assignedVehicle.fuelAssignedBy = actingRole
                 }
                 updated = true
                 break
@@ -1473,37 +1531,72 @@ export const assignDriverOrFuelToVehicle = async (req, res) => {
         const corporateUser = await User.findById(corporateOwnerId).select('fullName companyName')
         const corporateName = corporateUser?.companyName || corporateUser?.fullName || 'Corporate'
 
-        // Send notification to B2B Partner about assignment change by Corporate
-        const b2bNotif = await createNotification({
-            userId: contract.fleetOwnerId,
-            type: "ASSIGNMENT_UPDATED",
-            title: "Vehicle Assignment Updated",
-            message: `${corporateName} has ${driverId ? 'assigned a new driver' : 'updated fuel card'} for ${vehicleName} in contract ${contract.contractNumber}. ${driverId ? `Driver: ${driverName}` : `Fuel Card: ${fuelCardNumber}`}`,
-            metadata: {
-                contractId: contract._id,
-                contractNumber: contract.contractNumber,
-                assignedVehicleId,
-                vehicleName,
-                changeType: driverId ? 'DRIVER_ASSIGNED' : 'FUEL_CARD_UPDATED',
-                driverId: driverId || null,
-                driverName: driverId ? driverName : null,
-                fuelCardNumber: fuelCardNumber || null,
-            },
-        })
-        sendRealTimeNotification(contract.fleetOwnerId.toString(), b2bNotif)
+        const partnerUser = await User.findById(contract.fleetOwnerId).select('fullName companyName')
+        const partnerName = partnerUser?.companyName || partnerUser?.fullName || 'Fleet Partner'
+
+        const changeLabel = driverId ? 'assigned a new driver' : 'updated fuel card'
+        const detailLabel = driverId ? `Driver: ${driverName}` : `Fuel Card: ${fuelCardNumber}`
+        const notifMetadata = {
+            contractId: contract._id,
+            contractNumber: contract.contractNumber,
+            assignedVehicleId,
+            vehicleName,
+            changeType: driverId ? 'DRIVER_ASSIGNED' : 'FUEL_CARD_UPDATED',
+            driverId: driverId || null,
+            driverName: driverId ? driverName : null,
+            fuelCardNumber: fuelCardNumber || null,
+            performedByRole: actingRole,
+        }
+
+        if (actingRole === "B2B_PARTNER") {
+            // Partner acted on behalf of the corporate under a managed contract.
+            // Notify the corporate owner so they retain full visibility.
+            const corpNotif = await createNotification({
+                userId: corporateOwnerId,
+                type: "ASSIGNMENT_UPDATED",
+                title: "Vehicle Assignment Updated",
+                message: `${partnerName} has ${changeLabel} for ${vehicleName} in contract ${contract.contractNumber}. ${detailLabel}`,
+                metadata: notifMetadata,
+            })
+            sendRealTimeNotification(corporateOwnerId.toString(), corpNotif)
+        } else {
+            // Corporate performed the action directly. Notify the B2B partner.
+            const b2bNotif = await createNotification({
+                userId: contract.fleetOwnerId,
+                type: "ASSIGNMENT_UPDATED",
+                title: "Vehicle Assignment Updated",
+                message: `${corporateName} has ${changeLabel} for ${vehicleName} in contract ${contract.contractNumber}. ${detailLabel}`,
+                metadata: notifMetadata,
+            })
+            sendRealTimeNotification(contract.fleetOwnerId.toString(), b2bNotif)
+        }
 
         // Notify admin about assignment change
+        const actorName = actingRole === "B2B_PARTNER" ? partnerName : corporateName
         await sendAdminNotification(
             "Vehicle Assignment Changed",
-            `${corporateName} ${driverId ? 'assigned new driver' : 'updated fuel card'} for ${vehicleName} in contract ${contract.contractNumber}`,
+            `${actorName} ${driverId ? 'assigned new driver' : 'updated fuel card'} for ${vehicleName} in contract ${contract.contractNumber}`,
             "ASSIGNMENT_UPDATED",
             {
                 contractId: contract._id,
                 contractNumber: contract.contractNumber,
                 corporateId: corporateOwnerId,
                 b2bPartnerId: contract.fleetOwnerId,
+                performedByRole: actingRole,
             }
         )
+
+        // Record on the managed contract activity log (who did what on behalf of corporate)
+        await logRequestActivity(req, {
+            contractId: contract._id,
+            action: driverId ? "DRIVER_ASSIGNED" : "FUEL_ASSIGNED",
+            entityType: "VEHICLE",
+            entityId: assignedVehicleId,
+            description: driverId
+                ? `Assigned driver ${driverName} to ${vehicleName}`
+                : `Updated fuel card for ${vehicleName}`,
+            meta: { vehicleName, driverId: driverId || null, fuelCardNumber: fuelCardNumber || null },
+        })
 
         res.status(200).json({
             success: true,
@@ -1540,6 +1633,10 @@ export const assignRouteToVehicle = async (req, res) => {
             availableDays,
             routeNotes,
             tripTimes, // New: Array of trip times with stop points
+            // Managed-service auto-link: when a B2B partner creates this route on
+            // behalf of the corporate to fulfil a specific brief route request,
+            // the frontend passes that brief item's id here.
+            briefItemId,
         } = req.body
 
         if (!availableDays || !availableDays.length) {
@@ -1745,9 +1842,42 @@ export const assignRouteToVehicle = async (req, res) => {
             },
         ])
 
+        // Record route + schedule creation on the managed contract activity log
+        await logRequestActivity(req, {
+            contractId,
+            action: "ROUTE_CREATED",
+            entityType: "ROUTE",
+            entityId: route._id,
+            description: `Created route ${fromLocation} → ${toLocation}${routeSchedule ? " with schedule" : ""}`,
+            meta: {
+                fromLocation,
+                toLocation,
+                assignedVehicleId,
+                scheduleId: routeSchedule?._id || null,
+                tripCount: (tripTimes || []).length,
+            },
+        })
+
+        // Managed-service auto-link: if the partner indicated which brief route
+        // request this route satisfies, mark that brief item FULFILLED and link
+        // it to the created route (defensive — never breaks route creation).
+        let briefAutoFulfilled = false
+        if (briefItemId && req.onBehalfContractId) {
+            briefAutoFulfilled = await autoFulfillBriefItem({
+                contractId: req.onBehalfContractId,
+                section: "routeRequests",
+                briefItemId,
+                entityId: route._id,
+                entityType: "ROUTE",
+                actorId: req.actorId || req.userId,
+                actorRole: req.actingRole || "B2B_PARTNER",
+            })
+        }
+
         res.status(201).json({
             success: true,
             message: "Route assigned successfully",
+            briefAutoFulfilled,
             data: {
                 route: updatedRoute,
                 routeSchedule: routeSchedule,
@@ -2044,6 +2174,53 @@ export const deleteVehicleRoute = async (req, res) => {
 //         })
 //     }
 // }
+
+// @desc    Corporate requests due date extension for final payment
+// @desc    Get managed-service contract operations activity log
+// @route   GET /api/contracts/:contractId/managed-activity
+// @access  Private (CORPORATE owner or B2B managing partner)
+export const getManagedContractActivity = async (req, res) => {
+    try {
+        const { contractId } = req.params
+        const userId = req.userId
+
+        const contract = await Contract.findById(contractId)
+            .select("corporateOwnerId fleetOwnerId serviceMode managedOperations financials contractNumber")
+            .populate({
+                path: "managedOperations.activityLog.performedBy",
+                select: "fullName companyName",
+            })
+
+        if (!contract) {
+            return res.status(404).json({ success: false, message: "Contract not found" })
+        }
+
+        const isCorporate = contract.corporateOwnerId.toString() === userId
+        const isPartner = contract.fleetOwnerId.toString() === userId
+        if (!isCorporate && !isPartner) {
+            return res.status(403).json({ success: false, message: "Access denied" })
+        }
+
+        const activityLog = [...(contract.managedOperations?.activityLog || [])].sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+        )
+
+        res.status(200).json({
+            success: true,
+            data: {
+                contractId: contract._id,
+                contractNumber: contract.contractNumber,
+                serviceMode: contract.serviceMode,
+                serviceCharge: contract.financials?.serviceCharge || 0,
+                currency: contract.financials?.currency,
+                activityLog,
+            },
+        })
+    } catch (error) {
+        console.error("[v0] Error fetching managed activity:", error)
+        res.status(500).json({ success: false, message: "Failed to fetch managed activity", error: error.message })
+    }
+}
 
 // @desc    Corporate requests due date extension for final payment
 // @route   POST /api/contracts/:contractId/request-due-date-extension

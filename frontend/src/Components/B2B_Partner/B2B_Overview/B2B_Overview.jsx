@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import B2B_MetricsCard from "../B2B_Common/B2B_MetricsCard/B2B_MetricsCard";
 import B2B_ContractCard from "../B2B_Common/B2B_ContractCard/B2B_ContractCard";
@@ -48,7 +49,7 @@ function B2B_Overview() {
     );
   }
 
-  const currency = overview.revenue?.currency || "AED";
+  const currency = overview.revenue?.currency || getActiveCurrency();
 
   const metrics = [
     {
@@ -110,11 +111,11 @@ function B2B_Overview() {
       <div className="drivemego-b2b_overview-charts-section">
         <div className="drivemego-b2b_overview-chart-container">
           <h3>Monthly Revenue</h3>
-          <B2B_BarChart data={chartData} />
+          <B2B_BarChart data={chartData} currency={currency} />
         </div>
         <div className="drivemego-b2b_overview-chart-container">
           <h3>Profit Trend</h3>
-          <B2B_LineChart data={chartData} />
+          <B2B_LineChart data={chartData} currency={currency} />
         </div>
       </div>
 

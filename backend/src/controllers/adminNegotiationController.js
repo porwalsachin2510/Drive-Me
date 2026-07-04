@@ -5,6 +5,38 @@ import CommissionSettings from "../models/CommissionSettings.js"
 import { calculateNegotiationCommission, resolveNegotiationCommissionRate, DEFAULT_NEGOTIATION_COMMISSION_RATE } from "../Services/HelperUtilities.js"
 import { sendNegotiationRequestEmail, sendNegotiationUpdateEmail } from "../Services/emailService.js"
 import { createNotification, sendAdminNotification, sendRealTimeNotification } from "../Services/notificationService.js"
+import { broadcastNegotiationUpdate } from "../Services/socketService.js"
+import { resolveDisplayCurrency, convertForDisplay } from "../Services/displayCurrency.js"
+
+/**
+ * Determine whether the B2B Partner has ACCEPTED the Admin's latest offer.
+ *
+ * The Admin may only "Complete & Update Quotation" once the back-and-forth is
+ * over and the B2B Partner has agreed. Rule:
+ *   - the B2B Partner's most recent response (by timestamp) must be "ACCEPTED"
+ *   - AND the Admin must not have sent a NEW price offer after that acceptance
+ *     (a fresh offer re-opens the negotiation and invalidates the agreement).
+ *
+ * Shared by the completion guard so frontend and backend agree on the rule.
+ */
+export const isB2BPartnerAccepted = (negotiation) => {
+    const responses = Array.isArray(negotiation?.b2bPartnerResponses)
+        ? negotiation.b2bPartnerResponses
+        : []
+    if (responses.length === 0) return false
+
+    const latestResponse = [...responses].sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    )[0]
+    if (!latestResponse || latestResponse.response !== "ACCEPTED") return false
+
+    const actions = Array.isArray(negotiation?.adminActions) ? negotiation.adminActions : []
+    const acceptedAt = new Date(latestResponse.timestamp).getTime()
+    const hasLaterOffer = actions.some(
+        (a) => a.action === "SENT_OFFER" && new Date(a.timestamp).getTime() > acceptedAt
+    )
+    return !hasLaterOffer
+}
 
 /**
  * Corporate requests admin to negotiate on their behalf
@@ -159,7 +191,7 @@ export const getAllNegotiations = async (req, res) => {
             query.status = status
         }
 
-        const negotiations = await AdminNegotiation.find(query)
+        const negotiationDocs = await AdminNegotiation.find(query)
             .populate("quotationId", "quotationNumber quotedPrice vehicles rentalPeriod status")
             .populate("corporateId", "fullName email companyName")
             .populate("b2bPartnerId", "fullName email companyName")
@@ -168,6 +200,27 @@ export const getAllNegotiations = async (req, res) => {
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(parseInt(limit))
+
+        // The admin chooses which currency to view the dashboard in. Each
+        // negotiation is stored in its NATIVE currency (a UAE corporate's in
+        // AED, a Kuwait corporate's in KWD, ...). Convert the money fields to
+        // the admin's display currency so totals computed on the client are
+        // apples-to-apples. We keep the native fields untouched and add parallel
+        // `display*` fields + the display currency the UI should render with.
+        const displayCurrency = resolveDisplayCurrency(req)
+        const negotiations = negotiationDocs.map((doc) => {
+            const n = doc.toObject()
+            const native = n.currency || "AED"
+            const commissionAmount = n.adminCommissionFromCorporate?.amount || 0
+            return {
+                ...n,
+                displayCurrency,
+                displayOriginalPrice: convertForDisplay(n.originalPrice || 0, native, displayCurrency),
+                displayFinalPrice: convertForDisplay(n.finalPrice || 0, native, displayCurrency),
+                displayPriceSaved: convertForDisplay(n.priceSaved || 0, native, displayCurrency),
+                displayCommissionAmount: convertForDisplay(commissionAmount, native, displayCurrency),
+            }
+        })
 
         const total = await AdminNegotiation.countDocuments(query)
 
@@ -184,6 +237,7 @@ export const getAllNegotiations = async (req, res) => {
         res.json({
             success: true,
             negotiations,
+            displayCurrency,
             stats: {
                 total: await AdminNegotiation.countDocuments(),
                 requested: await AdminNegotiation.countDocuments({ status: "REQUESTED" }),
@@ -368,6 +422,10 @@ export const adminNegotiationAction = async (req, res) => {
             .populate("b2bPartnerId", "fullName email companyName")
             .populate("adminActions.adminId", "fullName email")
 
+        // Push a live update so the B2B Partner's (and any admin's) open modal
+        // refreshes instantly instead of requiring a manual close/reopen.
+        broadcastNegotiationUpdate(updatedNegotiation, { event: action, actorRole: "ADMIN" })
+
         res.json({
             success: true,
             message: "Action recorded successfully",
@@ -495,6 +553,10 @@ export const b2bPartnerResponse = async (req, res) => {
 
         console.log("[v0] Real-time notification sent to Admin for B2B Partner response:", response);
 
+        // Push a live update so the Admin's open modal reflects the B2B Partner's
+        // response instantly (and enables "Complete" the moment they ACCEPT).
+        broadcastNegotiationUpdate(negotiation, { event: response, actorRole: "B2B_PARTNER" })
+
         res.json({
             success: true,
             message: "Response recorded successfully",
@@ -542,6 +604,18 @@ export const completeNegotiation = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Final negotiated price is required",
+            })
+        }
+
+        // GUARD: the negotiation can only be completed AFTER the B2B Partner has
+        // accepted the Admin's latest offer. This mirrors the frontend gating and
+        // protects against completing a still-open (or counter-offered) negotiation
+        // via a direct API call.
+        if (!isB2BPartnerAccepted(negotiation)) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Cannot complete yet — the B2B Partner has not accepted your latest offer. Wait for their acceptance before updating the quotation.",
             })
         }
 
@@ -720,6 +794,9 @@ export const completeNegotiation = async (req, res) => {
 
         console.log("[v0] Real-time notifications sent to Corporate and B2B Partner for negotiation completion");
 
+        // Push a live update so both parties' open modals flip to COMPLETED instantly.
+        broadcastNegotiationUpdate(negotiation, { event: "COMPLETED", actorRole: "ADMIN" })
+
         res.json({
             success: true,
             message: "Negotiation completed successfully. Quotation price has been updated.",
@@ -812,6 +889,9 @@ export const cancelNegotiation = async (req, res) => {
             console.error("Failed to send cancellation email:", emailError)
         }
 
+        // Push a live update so both parties' open modals reflect the cancellation.
+        broadcastNegotiationUpdate(negotiation, { event: "CANCELLED", actorRole: isAdmin ? "ADMIN" : "CORPORATE" })
+
         res.json({
             success: true,
             message: "Negotiation cancelled successfully",
@@ -879,6 +959,9 @@ export const failNegotiation = async (req, res) => {
         } catch (emailError) {
             console.error("Failed to send failure email:", emailError)
         }
+
+        // Push a live update so both parties' open modals reflect the failure.
+        broadcastNegotiationUpdate(negotiation, { event: "FAILED", actorRole: "ADMIN" })
 
         res.json({
             success: true,

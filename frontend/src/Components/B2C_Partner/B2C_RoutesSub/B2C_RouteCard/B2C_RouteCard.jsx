@@ -1,17 +1,21 @@
 /* eslint-disable no-unused-vars */
 "use client";
 
+import { getActiveCurrency } from "../../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import "./b2c_routecard.css";
 import api from "../../../../utils/api";
 import B2C_TripModal from "../B2C_TripModal/B2C_TripModal.jsx";
 import B2C_EditRouteModal from "../B2C_EditRouteModal/B2C_EditRouteModal.jsx";
+import B2C_ChangeAssignmentModal from "../B2C_ChangeAssignmentModal/B2C_ChangeAssignmentModal.jsx";
 
 function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
   const [showDetails, setShowDetails] = useState(false);
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showTripModal, setShowTripModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  // "driver" | "vehicle" | null — controls the Change Driver/Vehicle modal.
+  const [changeMode, setChangeMode] = useState(null);
   const [hasSchedule, setHasSchedule] = useState(false);
   const [scheduleCount, setScheduleCount] = useState(0); // Track number of schedules
   const [allSchedules, setAllSchedules] = useState([]); // Store all schedules
@@ -20,6 +24,8 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [dependencies, setDependencies] = useState(null);
   const [checkingDependencies, setCheckingDependencies] = useState(false);
+  // Bumped to re-fetch schedules/trips after a driver/vehicle change.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +58,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
     return () => {
       cancelled = true;
     };
-  }, [route._id]);
+  }, [route._id, refreshKey]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -112,7 +118,20 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
       const url = forceDelete
         ? `/b2c-schedules/routes/${route._id}?forceDelete=true`
         : `/b2c-schedules/routes/${route._id}`;
-      await api.delete(url);
+      const { data } = await api.delete(url);
+
+      // Surface refund outcome to the operator so they know what was settled.
+      const refunds = data?.refunds;
+      if (refunds && refunds.passesRefunded > 0) {
+        const currency = refunds.details?.[0]?.currency || getActiveCurrency();
+        alert(
+          `Route deleted.\n\n${refunds.passesRefunded} commuter pass(es) were refunded for their unused trips (no cancellation fee).\nTotal refunded to commuters: ${currency} ${Number(
+            refunds.totalRefundedToCommuters || 0,
+          ).toFixed(
+            2,
+          )}.\n\nThe unused-trip earnings were deducted from your wallet and the matching commission was reversed from the admin wallet.`,
+        );
+      }
       if (onRouteUpdated) onRouteUpdated();
     } catch (error) {
       console.error("Error deleting route:", error);
@@ -140,6 +159,80 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
       day: "numeric",
     });
   };
+
+  // Flatten every trip time across all loaded schedules into a single list so the
+  // card can show ALL of the route's start times (the route in the screenshot has
+  // one schedule with multiple trip times, but only the first was being displayed).
+  const allTripTimes = allSchedules.flatMap((sch) =>
+    (sch.tripTimes || []).map((tt) => ({
+      departureTime: tt.departureTime,
+      arrivalTime: tt.arrivalTime,
+      tripType: tt.tripType,
+      // effectiveDriver / effectiveVehicle are computed by the backend with a
+      // fallback to the schedule-level assignment.
+      driverName:
+        tt.effectiveDriver?.name ||
+        tt.tripDriverInfo?.name ||
+        sch.driverInfo?.name ||
+        null,
+      vehicleModel:
+        tt.effectiveVehicle?.model ||
+        tt.tripVehicleInfo?.model ||
+        sch.assignedVehicle?.model ||
+        null,
+      // Round Trip only: the dedicated RETURN (aane) leg can use a different
+      // driver/vehicle from the onward leg. Collect these too so the card lists
+      // EVERY driver/vehicle serving the route, not just the onward ones.
+      returnDriverName:
+        tt.tripType === "Round Trip"
+          ? tt.effectiveReturnDriver?.name || tt.returnDriverInfo?.name || null
+          : null,
+      returnVehicleModel:
+        tt.tripType === "Round Trip"
+          ? tt.effectiveReturnVehicle?.model ||
+            tt.returnVehicleInfo?.model ||
+            null
+          : null,
+    })),
+  );
+
+  // Build a readable label for each trip time, e.g. "7:00 AM" or
+  // "7:00 AM → 10:00 AM" for round trips.
+  const formatTripTimeLabel = (tt) =>
+    tt.tripType === "Round Trip" && tt.arrivalTime
+      ? `${tt.departureTime} → ${tt.arrivalTime}`
+      : tt.departureTime;
+
+  // Unique vehicle models and driver names actually assigned across the trips,
+  // covering BOTH the onward and return legs of every round trip.
+  const assignedVehicleNames = [
+    ...new Set(
+      allTripTimes
+        .flatMap((tt) => [tt.vehicleModel, tt.returnVehicleModel])
+        .filter(Boolean),
+    ),
+  ];
+  const assignedDriverNames = [
+    ...new Set(
+      allTripTimes
+        .flatMap((tt) => [tt.driverName, tt.returnDriverName])
+        .filter(Boolean),
+    ),
+  ];
+
+  // Vehicle display: prefer per-trip assignments, fall back to route-level fields.
+  const vehicleDisplay =
+    assignedVehicleNames.length > 0
+      ? assignedVehicleNames.join(", ")
+      : route.assignedVehicle?.model || "Not Assigned";
+
+  // Driver display: prefer per-trip assignments, fall back to route-level / self.
+  const driverDisplay =
+    assignedDriverNames.length > 0
+      ? assignedDriverNames.join(", ")
+      : route.driverInfo?.name ||
+        route.assignedDriver?.name ||
+        (route.isSelfDriver ? "Self" : "Not Assigned");
 
   return (
     <div className="b2c-route-card">
@@ -186,28 +279,29 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                   marginTop: "4px",
                 }}
               >
-                {allSchedules.map((sch, idx) => (
-                  <span
-                    key={sch._id || idx}
-                    style={{
-                      padding: "4px 8px",
-                      backgroundColor: "#eff6ff",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                      color: "#1e40af",
-                      border: "1px solid #bfdbfe",
-                    }}
-                  >
-                    {sch.tripTimes?.[0]?.departureTime || "N/A"}
-                    {sch.tripTimes?.[0]?.tripType === "Round Trip" &&
-                      sch.tripTimes?.[0]?.arrivalTime && (
+                {allSchedules.flatMap((sch, sIdx) =>
+                  (sch.tripTimes || []).map((tt, tIdx) => (
+                    <span
+                      key={`${sch._id || sIdx}-${tIdx}`}
+                      style={{
+                        padding: "4px 8px",
+                        backgroundColor: "#eff6ff",
+                        borderRadius: "4px",
+                        fontSize: "12px",
+                        color: "#1e40af",
+                        border: "1px solid #bfdbfe",
+                      }}
+                    >
+                      {tt.departureTime || "N/A"}
+                      {tt.tripType === "Round Trip" && tt.arrivalTime && (
                         <span style={{ color: "#6b7280" }}>
                           {" "}
-                          / {sch.tripTimes?.[0]?.arrivalTime}
+                          / {tt.arrivalTime}
                         </span>
                       )}
-                  </span>
-                ))}
+                    </span>
+                  )),
+                )}
               </div>
             </div>
             <div className="b2c-detail-item">
@@ -222,13 +316,39 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
         ) : (
           <div className="b2c-detail-row">
             <div className="b2c-detail-item">
-              <span className="b2c-detail-label">Start Time:</span>
-              <span className="b2c-detail-value">
-                {route.startTime ||
-                  allSchedules[0]?.tripTimes?.[0]?.departureTime ||
-                  route.schedules?.[0]?.tripTimes?.[0]?.departureTime ||
-                  "N/A"}
+              <span className="b2c-detail-label">
+                {allTripTimes.length > 1 ? "Start Times:" : "Start Time:"}
               </span>
+              {allTripTimes.length > 0 ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "6px",
+                    marginTop: "4px",
+                  }}
+                >
+                  {allTripTimes.map((tt, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        padding: "4px 8px",
+                        backgroundColor: "#eff6ff",
+                        borderRadius: "4px",
+                        fontSize: "12px",
+                        color: "#1e40af",
+                        border: "1px solid #bfdbfe",
+                      }}
+                    >
+                      {formatTripTimeLabel(tt)}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="b2c-detail-value">
+                  {route.startTime || "N/A"}
+                </span>
+              )}
             </div>
             <div className="b2c-detail-item">
               <span className="b2c-detail-label">Available Days:</span>
@@ -252,22 +372,52 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
           </div>
         </div>
         <div className="b2c-pricing-row">
-          <div className="b2c-price-item">
-            <span className="b2c-price-label">One Way:</span>
-            <span className="b2c-price-value">
-              {route.pricing?.currency || "AED"}{" "}
-              {route.pricing?.oneWayPrice || 0}
-            </span>
-          </div>
-          {route.pricing?.roundTripPrice > 0 && (
-            <div className="b2c-price-item">
-              <span className="b2c-price-label">Round Trip:</span>
-              <span className="b2c-price-value">
-                {route.pricing?.currency || "AED"}{" "}
-                {route.pricing.roundTripPrice}
-              </span>
-            </div>
-          )}
+          {/* Show the FIXED MONTHLY price the partner set. Fall back to the legacy
+              per-day price only for old routes created before monthly pricing. */}
+          {(() => {
+            const currencyCode = route.pricing?.currency || getActiveCurrency();
+            const monthlyOneWay =
+              route.pricing?.monthlyOneWayPrice ??
+              route.monthlyOneWayPrice ??
+              0;
+            const monthlyRoundTrip =
+              route.pricing?.monthlyRoundTripPrice ??
+              route.monthlyRoundTripPrice ??
+              0;
+            const legacyOneWay = route.pricing?.oneWayPrice ?? 0;
+            const legacyRoundTrip = route.pricing?.roundTripPrice ?? 0;
+
+            const oneWayValue =
+              monthlyOneWay > 0 ? monthlyOneWay : legacyOneWay;
+            const roundTripValue =
+              monthlyRoundTrip > 0 ? monthlyRoundTrip : legacyRoundTrip;
+            const usingMonthly = monthlyOneWay > 0 || monthlyRoundTrip > 0;
+
+            return (
+              <>
+                <div className="b2c-price-item">
+                  <span className="b2c-price-label">
+                    {usingMonthly ? "One Way (Monthly):" : "One Way:"}
+                  </span>
+                  <span className="b2c-price-value">
+                    {currencyCode} {Number(oneWayValue).toFixed(2)}
+                    {usingMonthly ? "/month" : ""}
+                  </span>
+                </div>
+                {roundTripValue > 0 && (
+                  <div className="b2c-price-item">
+                    <span className="b2c-price-label">
+                      {usingMonthly ? "Round Trip (Monthly):" : "Round Trip:"}
+                    </span>
+                    <span className="b2c-price-value">
+                      {currencyCode} {Number(roundTripValue).toFixed(2)}
+                      {usingMonthly ? "/month" : ""}
+                    </span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {route.stopPoints && route.stopPoints.length > 0 && (
@@ -301,20 +451,36 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
           </div>
         )}
 
+        {/* Each column shows the assignment AND the matching change button right
+            below it: Vehicles → Change Vehicle, Driver → Change Driver. The
+            buttons open a per-trip modal so a single schedule's driver/vehicle
+            can be swapped without affecting the route's other trips. */}
         <div className="b2c-route-assignments">
           <div className="b2c-assignment-item">
-            <span className="b2c-assignment-label">Vehicle:</span>
-            <span className="b2c-assignment-value">
-              {route.assignedVehicle?.model || "Not Assigned"}
+            <span className="b2c-assignment-label">
+              {assignedVehicleNames.length > 1 ? "Vehicles:" : "Vehicle:"}
             </span>
+            <span className="b2c-assignment-value">{vehicleDisplay}</span>
+            <button
+              type="button"
+              className="b2c-change-btn"
+              onClick={() => setChangeMode("vehicle")}
+            >
+              Change Vehicle
+            </button>
           </div>
           <div className="b2c-assignment-item">
-            <span className="b2c-assignment-label">Driver:</span>
-            <span className="b2c-assignment-value">
-              {route.driverInfo?.name ||
-                route.assignedDriver?.name ||
-                (route.isSelfDriver ? "Self" : "Not Assigned")}
+            <span className="b2c-assignment-label">
+              {assignedDriverNames.length > 1 ? "Drivers:" : "Driver:"}
             </span>
+            <span className="b2c-assignment-value">{driverDisplay}</span>
+            <button
+              type="button"
+              className="b2c-change-btn"
+              onClick={() => setChangeMode("driver")}
+            >
+              Change Driver
+            </button>
           </div>
         </div>
       </div>
@@ -382,6 +548,18 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
 
       {showTripModal && (
         <B2C_TripModal route={route} onClose={() => setShowTripModal(false)} />
+      )}
+
+      {changeMode && (
+        <B2C_ChangeAssignmentModal
+          route={route}
+          mode={changeMode}
+          onClose={() => setChangeMode(null)}
+          onChanged={() => {
+            setRefreshKey((k) => k + 1);
+            if (onRouteUpdated) onRouteUpdated();
+          }}
+        />
       )}
 
       {/* Delete Warning Modal */}
@@ -472,10 +650,36 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                 >
                   <p style={{ margin: 0, color: "#92400e", fontSize: "14px" }}>
                     <strong>Warning:</strong> This route has active
-                    subscriptions and bookings. Deleting it will cancel all
-                    associated passes and bookings. Affected passengers may need
-                    refunds.
+                    subscriptions and bookings. Because <strong>you</strong> are
+                    deleting the route, every affected commuter will be{" "}
+                    <strong>
+                      automatically refunded for their unused trips
+                    </strong>{" "}
+                    with <strong>no cancellation fee</strong>. The refunded
+                    amount for unused trips will be{" "}
+                    <strong>deducted from your wallet</strong> (you keep
+                    earnings only for trips already used), and the matching
+                    commission for unused trips will be reversed from the admin
+                    wallet.
                   </p>
+                  {dependencies.dependencies?.activePasses
+                    ?.totalEstimatedRefund > 0 && (
+                    <p
+                      style={{
+                        margin: "10px 0 0 0",
+                        color: "#991b1b",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Estimated total refund to commuters:{" "}
+                      {dependencies.dependencies.activePasses.currency}{" "}
+                      {Number(
+                        dependencies.dependencies.activePasses
+                          .totalEstimatedRefund,
+                      ).toFixed(2)}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -566,6 +770,16 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                           >
                             Amount
                           </th>
+                          <th
+                            style={{
+                              padding: "10px",
+                              textAlign: "right",
+                              borderBottom: "1px solid #e5e7eb",
+                              color: "#dc2626",
+                            }}
+                          >
+                            Est. Refund
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -598,6 +812,17 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                                 style={{ padding: "10px", textAlign: "right" }}
                               >
                                 {pass.currency} {pass.totalAmount}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "10px",
+                                  textAlign: "right",
+                                  color: "#dc2626",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {pass.currency}{" "}
+                                {Number(pass.estimatedRefund || 0).toFixed(2)}
                               </td>
                             </tr>
                           ),
@@ -888,7 +1113,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                       >
                         Total Value:{" "}
                         {dependencies.dependencies.pendingBookings.details[0]
-                          ?.currency || "AED"}{" "}
+                          ?.currency || getActiveCurrency()}{" "}
                         {dependencies.dependencies.pendingBookings.totalValue}
                       </div>
                     )}
@@ -984,8 +1209,8 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                   }}
                 >
                   {deleting
-                    ? "Deleting..."
-                    : "Delete Anyway (Cancel All Passes & Bookings)"}
+                    ? "Deleting & Refunding..."
+                    : "Delete & Refund Commuters (No Cancellation Fee)"}
                 </button>
               ) : (
                 <button

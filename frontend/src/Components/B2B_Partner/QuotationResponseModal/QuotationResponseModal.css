@@ -337,6 +337,34 @@
   font-weight: 700;
 }
 
+.managed-service-charge-section {
+  background: #f5f7ff;
+  border: 1px solid #d9e0ff;
+  border-radius: 8px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.managed-service-charge-note {
+  font-size: 0.9rem;
+  color: #3a3f63;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.grand-total-breakdown {
+  margin-bottom: 14px;
+}
+
+.grand-total-breakdown .breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  color: white;
+  font-size: 0.95rem;
+  padding: 3px 0;
+  opacity: 0.95;
+}
+
 .grand-total-section {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 25px;

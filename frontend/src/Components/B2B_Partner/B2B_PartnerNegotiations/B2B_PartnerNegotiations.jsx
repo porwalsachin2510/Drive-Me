@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -131,7 +132,16 @@ const B2B_PartnerNegotiations = () => {
       setTimeout(() => setMessage({ type: "", text: "" }), 5000);
     };
 
+    // Dedicated live-update event fired by the backend on EVERY negotiation
+    // mutation. Refresh quietly (no banner) so the open modal updates in real
+    // time via the modal-sync effect below.
+    const handleLiveUpdate = (data) => {
+      console.log("[v0] B2B Partner received negotiation_updated:", data);
+      fetchNegotiations();
+    };
+
     // Listen for negotiation-related events
+    socket.on("negotiation_updated", handleLiveUpdate);
     socket.on("negotiation_offer", handleNegotiationUpdate);
     socket.on("negotiation_started", handleNegotiationUpdate);
     socket.on("negotiation_message", handleNegotiationUpdate);
@@ -143,12 +153,25 @@ const B2B_PartnerNegotiations = () => {
     });
 
     return () => {
+      socket.off("negotiation_updated", handleLiveUpdate);
       socket.off("negotiation_offer", handleNegotiationUpdate);
       socket.off("negotiation_started", handleNegotiationUpdate);
       socket.off("negotiation_message", handleNegotiationUpdate);
       socket.off("negotiation_completed", handleNegotiationUpdate);
     };
   }, [socket, user?._id, fetchNegotiations]);
+
+  // Keep the OPEN modal's negotiation in sync with the freshly fetched list, so
+  // real-time socket refreshes update the timeline/prices live without the B2B
+  // Partner having to close and reopen the modal.
+  useEffect(() => {
+    if (!showModal || !selectedNegotiation?._id) return;
+    const fresh = negotiations.find((n) => n._id === selectedNegotiation._id);
+    if (fresh && fresh !== selectedNegotiation) {
+      setSelectedNegotiation((prev) => ({ ...prev, ...fresh }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [negotiations]);
 
   // Auto-open negotiation if id is in URL
   useEffect(() => {
@@ -211,7 +234,7 @@ const B2B_PartnerNegotiations = () => {
     setResponseType("ACCEPTED");
   };
 
-  const formatCurrency = (amount, currency = "AED") => {
+  const formatCurrency = (amount, currency = getActiveCurrency()) => {
     return `${currency} ${parseFloat(amount || 0).toFixed(2)}`;
   };
 
@@ -374,7 +397,7 @@ const B2B_PartnerNegotiations = () => {
           </div>
           <div className="stat-content">
             <div className="stat-value">
-              AED {stats.totalSavings.toFixed(0)}
+              {getActiveCurrency()} {stats.totalSavings.toFixed(0)}
             </div>
             <div className="stat-label">Corporate Savings</div>
           </div>
@@ -680,72 +703,82 @@ const B2B_PartnerNegotiations = () => {
                 </div>
               )}
 
-              <div className="drivemego-negotiations-response-section">
-                <div className="drivemego-negotiations-form-group">
-                  <label>Your Response</label>
-                  <div className="drivemego-negotiations-response-type-selector">
-                    <label className="drivemego-negotiations-radio">
-                      <input
-                        type="radio"
-                        value="ACCEPTED"
-                        checked={responseType === "ACCEPTED"}
-                        onChange={(e) => setResponseType(e.target.value)}
-                      />
-                      <span className="drivemego-negotiations-agree-label">
-                        Accept Price
-                      </span>
-                    </label>
-                    <label className="drivemego-negotiations-radio">
-                      <input
-                        type="radio"
-                        value="COUNTER_OFFERED"
-                        checked={responseType === "COUNTER_OFFERED"}
-                        onChange={(e) => setResponseType(e.target.value)}
-                      />
-                      <span className="drivemego-negotiations-reject-label">
-                        Reject / Counter Offer
-                      </span>
-                    </label>
-                  </div>
+              {!canRespond(selectedNegotiation) && (
+                <div className="drivemego-negotiations-closed-note">
+                  {selectedNegotiation.status === "COMPLETED"
+                    ? "This negotiation has been completed. The final price has been applied to the quotation."
+                    : `This negotiation is ${getStatusLabel(selectedNegotiation.status)} and can no longer be responded to.`}
                 </div>
+              )}
 
-                {responseType === "ACCEPTED" && (
+              {canRespond(selectedNegotiation) && (
+                <div className="drivemego-negotiations-response-section">
                   <div className="drivemego-negotiations-form-group">
-                    <label>Confirmation Message</label>
-                    <textarea
-                      value={responseMessage}
-                      onChange={(e) => setResponseMessage(e.target.value)}
-                      placeholder="We accept this price and are ready to proceed..."
-                      rows="4"
-                    />
-                  </div>
-                )}
-
-                {responseType === "COUNTER_OFFERED" && (
-                  <>
-                    <div className="drivemego-negotiations-form-group">
-                      <label>
-                        Counter Price ({selectedNegotiation.currency})
+                    <label>Your Response</label>
+                    <div className="drivemego-negotiations-response-type-selector">
+                      <label className="drivemego-negotiations-radio">
+                        <input
+                          type="radio"
+                          value="ACCEPTED"
+                          checked={responseType === "ACCEPTED"}
+                          onChange={(e) => setResponseType(e.target.value)}
+                        />
+                        <span className="drivemego-negotiations-agree-label">
+                          Accept Price
+                        </span>
                       </label>
-                      <input
-                        type="number"
-                        value={counterPrice}
-                        onChange={(e) => setCounterPrice(e.target.value)}
-                        placeholder="Enter your counter price"
-                      />
+                      <label className="drivemego-negotiations-radio">
+                        <input
+                          type="radio"
+                          value="COUNTER_OFFERED"
+                          checked={responseType === "COUNTER_OFFERED"}
+                          onChange={(e) => setResponseType(e.target.value)}
+                        />
+                        <span className="drivemego-negotiations-reject-label">
+                          Reject / Counter Offer
+                        </span>
+                      </label>
                     </div>
+                  </div>
+
+                  {responseType === "ACCEPTED" && (
                     <div className="drivemego-negotiations-form-group">
-                      <label>Message / Reason</label>
+                      <label>Confirmation Message</label>
                       <textarea
                         value={responseMessage}
                         onChange={(e) => setResponseMessage(e.target.value)}
-                        placeholder="Explain why you cannot accept this price..."
+                        placeholder="We accept this price and are ready to proceed..."
                         rows="4"
                       />
                     </div>
-                  </>
-                )}
-              </div>
+                  )}
+
+                  {responseType === "COUNTER_OFFERED" && (
+                    <>
+                      <div className="drivemego-negotiations-form-group">
+                        <label>
+                          Counter Price ({selectedNegotiation.currency})
+                        </label>
+                        <input
+                          type="number"
+                          value={counterPrice}
+                          onChange={(e) => setCounterPrice(e.target.value)}
+                          placeholder="Enter your counter price"
+                        />
+                      </div>
+                      <div className="drivemego-negotiations-form-group">
+                        <label>Message / Reason</label>
+                        <textarea
+                          value={responseMessage}
+                          onChange={(e) => setResponseMessage(e.target.value)}
+                          placeholder="Explain why you cannot accept this price..."
+                          rows="4"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="drivemego-negotiations-modal-footer">
@@ -753,21 +786,23 @@ const B2B_PartnerNegotiations = () => {
                 className="drivemego-negotiations-btn-cancel"
                 onClick={() => setShowModal(false)}
               >
-                Cancel
+                {canRespond(selectedNegotiation) ? "Cancel" : "Close"}
               </button>
-              <button
-                className="drivemego-negotiations-btn-submit"
-                onClick={handleB2BPartnerResponse}
-                disabled={responseLoading || !responseMessage}
-              >
-                {responseLoading ? "Sending..." : "Send Response"}
-              </button>
+              {canRespond(selectedNegotiation) && (
+                <button
+                  className="drivemego-negotiations-btn-submit"
+                  onClick={handleB2BPartnerResponse}
+                  disabled={responseLoading || !responseMessage}
+                >
+                  {responseLoading ? "Sending..." : "Send Response"}
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
     </div>
   );
-};;
+};
 
 export default B2B_PartnerNegotiations;

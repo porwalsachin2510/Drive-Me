@@ -1,6 +1,8 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import "./AdminFinance.css";
 import api from "../../../utils/api";
 
@@ -36,9 +38,14 @@ function AdminFinance() {
   const [rejectModal, setRejectModal] = useState({ open: false, payout: null });
   const [rejectReason, setRejectReason] = useState("");
 
+  // The admin's selected display currency (drives all amount conversions).
+  const activeCurrency = useSelector((state) => state.locale?.currency);
+
+  // Re-fetch whenever the admin switches the dashboard currency so every amount
+  // comes back converted from the backend in the newly selected currency.
   useEffect(() => {
     fetchFinanceData();
-  }, []);
+  }, [activeCurrency]);
 
   const fetchFinanceData = async () => {
     try {
@@ -191,11 +198,14 @@ function AdminFinance() {
   };
 
   const formatCurrency = (amount, currency = null) => {
-    const curr = currency || metrics.currency || "AED";
+    const curr = currency || metrics.currency || getActiveCurrency();
+    // Gulf currencies (KWD/BHD/OMR) use 3 decimal places.
+    const decimals = ["KWD", "BHD", "OMR"].includes(curr) ? 3 : 2;
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: curr,
-      minimumFractionDigits: 2,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     }).format(amount || 0);
   };
 
@@ -302,7 +312,17 @@ function AdminFinance() {
                     </span>
                   </td>
                   <td className="amount-cell">
-                    {formatCurrency(payout.totalAmount, payout.currency)}
+                    {formatCurrency(
+                      payout.displayAmount ?? payout.totalAmount,
+                      payout.displayCurrency,
+                    )}
+                    {payout.displayCurrency &&
+                      payout.currency &&
+                      payout.displayCurrency !== payout.currency && (
+                        <span className="amount-native-hint">
+                          {formatCurrency(payout.totalAmount, payout.currency)}
+                        </span>
+                      )}
                   </td>
                   <td>
                     <div className="bank-info">
@@ -704,7 +724,20 @@ function AdminFinance() {
                   {transaction.to || transaction.toName || "-"}
                 </td>
                 <td className="amount-cell">
-                  {formatCurrency(transaction.amount, transaction.currency)}
+                  {formatCurrency(
+                    transaction.displayAmount ?? transaction.amount,
+                    transaction.displayCurrency,
+                  )}
+                  {transaction.displayCurrency &&
+                    transaction.currency &&
+                    transaction.displayCurrency !== transaction.currency && (
+                      <span className="amount-native-hint">
+                        {formatCurrency(
+                          transaction.amount,
+                          transaction.currency,
+                        )}
+                      </span>
+                    )}
                 </td>
                 <td>
                   <span

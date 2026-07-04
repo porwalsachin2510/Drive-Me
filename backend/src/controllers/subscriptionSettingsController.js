@@ -8,6 +8,9 @@ import Wallet from "../models/Wallet.js";
 import Transaction from "../models/Transaction.js";
 import { sendEmail } from "../Services/emailService.js";
 import PaymentGatewayService from "../Services/paymentGatewayService.js";
+import { createNotification } from "../Services/notificationService.js";
+import { resolveDisplayCurrency, convertForDisplay } from "../Services/displayCurrency.js";
+import { getOrCreateWallet } from "../Services/walletService.js";
 
 /*
  * Subscription renewal supports three commuter-chosen methods:
@@ -68,15 +71,10 @@ const settleRenewalEarnings = async (pass, overrides = {}) => {
     // Credit admin commission
     const adminUserId = process.env.ADMIN_USER_ID;
     if (adminUserId && adminCommission > 0) {
-        let adminWallet = await Wallet.findOne({ userId: adminUserId });
-        if (!adminWallet) {
-            adminWallet = await Wallet.create({
-                userId: adminUserId,
-                role: "ADMIN",
-                balance: 0,
-                currency,
-            });
-        }
+        // Renewal commission settles into the admin wallet for the PASS'S
+        // currency, keeping UAE (AED) and Kuwait (KWD) renewals separated.
+        const adminWallet = await getOrCreateWallet(adminUserId, { currency, role: "ADMIN" });
+        if (adminWallet.isNew) await adminWallet.save();
         const adminBefore = adminWallet.balance;
         adminWallet.balance += adminCommission;
         adminWallet.totalEarnings += adminCommission;
@@ -99,15 +97,8 @@ const settleRenewalEarnings = async (pass, overrides = {}) => {
 
     // Credit partner earnings
     if (pass.partnerId && partnerEarnings > 0) {
-        let partnerWallet = await Wallet.findOne({ userId: pass.partnerId });
-        if (!partnerWallet) {
-            partnerWallet = await Wallet.create({
-                userId: pass.partnerId,
-                role: "B2C_PARTNER",
-                balance: 0,
-                currency,
-            });
-        }
+        const partnerWallet = await getOrCreateWallet(pass.partnerId, { currency, role: "B2C_PARTNER" });
+        if (partnerWallet.isNew) await partnerWallet.save();
         const partnerBefore = partnerWallet.balance;
         partnerWallet.balance += partnerEarnings;
         partnerWallet.totalEarnings += partnerEarnings;
@@ -635,8 +626,10 @@ export const getSubscriptionSettings = async (req, res) => {
         const activePasses = await loadActivePasses(userId);
         const activePass = activePasses[0] || null;
 
-        // Get wallet balance so the UI can show whether wallet renewal is affordable
-        const wallet = await Wallet.findOne({ userId });
+        // Show the wallet balance in the ACTIVE PASS'S currency so the UI's
+        // "can you afford a wallet renewal?" check compares like for like.
+        const uiWalletCurrency = activePass?.currency || "AED";
+        const wallet = await Wallet.findOne({ userId, currency: uiWalletCurrency });
 
         res.status(200).json({
             success: true,
@@ -794,7 +787,8 @@ const renewWithWallet = async (req, res, settings, basePass, isManual, renewalMo
     const amount = pricing.amount;
     const currency = basePass.currency || "AED";
 
-    const wallet = await Wallet.findOne({ userId });
+    // Wallet renewal must be paid from the wallet in the pass's currency.
+    const wallet = await Wallet.findOne({ userId, currency });
     if (!wallet || (wallet.balance || 0) < amount) {
         settings.renewalHistory.push({
             date: new Date(),
@@ -1004,6 +998,22 @@ export const activateCardRenewalPass = async (passId, sessionId = null) => {
             await settings.save();
 
             await sendRenewalSuccessEmail(settings, basePass);
+
+            // Real-time notify the commuter that their pass was renewed/extended.
+            createNotification({
+                userId: basePass.passengerId,
+                type: "PASS_ACTIVATED",
+                title: "Pass Renewed!",
+                message: `Your monthly pass has been renewed and is now valid until ${new Date(newEndDate).toLocaleDateString()}.`,
+                data: {
+                    passId: basePass._id,
+                    routeId: basePass.routeId,
+                    endDate: newEndDate,
+                    renewal: true,
+                },
+            }).catch((e) =>
+                console.error("[v0] Renewal activation notification failed:", e?.message)
+            );
         }
     }
 
@@ -1029,6 +1039,7 @@ const createCashRenewalRequest = async (req, res, settings, basePass, renewalMon
         requested: true,
         passId: basePass._id,
         amount: pricing.amount,
+        currency: basePass.currency || "AED",
         renewalMonths: pricing.months,
         requestedAt: new Date(),
     };
@@ -1120,7 +1131,7 @@ export const confirmCashRenewal = async (req, res) => {
         settings.lastRenewalDate = new Date();
         settings.nextRenewalDate = settings.autoRenewal ? newEndDate : null;
         settings.currentRenewalAttempts = 0;
-        settings.pendingCashRenewal = { requested: false, passId: null, amount: 0, renewalMonths: 1, requestedAt: null };
+        settings.pendingCashRenewal = { requested: false, passId: null, amount: 0, currency: "AED", renewalMonths: 1, requestedAt: null };
         settings.renewalHistory.push({
             date: new Date(),
             status: "SUCCESS",
@@ -1151,20 +1162,37 @@ export const getPendingCashRenewals = async (req, res) => {
     try {
         const pending = await SubscriptionSettings.find({
             "pendingCashRenewal.requested": true,
-        }).populate("userId", "fullName email phoneNumber");
+        })
+            .populate("userId", "fullName email phoneNumber")
+            .populate("pendingCashRenewal.passId", "currency");
 
-        const data = pending.map((s) => ({
-            userId: s.userId?._id,
-            userName: s.userId?.fullName,
-            userEmail: s.userId?.email,
-            userPhone: s.userId?.phoneNumber,
-            passId: s.pendingCashRenewal.passId,
-            amount: s.pendingCashRenewal.amount,
-            renewalMonths: s.pendingCashRenewal.renewalMonths || 1,
-            requestedAt: s.pendingCashRenewal.requestedAt,
-        }));
+        // The admin views cash-to-collect in ONE currency of their choosing, but
+        // requests can come from different countries (UAE -> AED, Kuwait -> KWD).
+        // Convert every native amount into the admin's display currency.
+        const displayCurrency = resolveDisplayCurrency(req);
 
-        res.status(200).json({ success: true, data });
+        const data = pending.map((s) => {
+            const nativeCurrency =
+                s.pendingCashRenewal.currency ||
+                s.pendingCashRenewal.passId?.currency ||
+                "AED";
+            const nativeAmount = s.pendingCashRenewal.amount || 0;
+            return {
+                userId: s.userId?._id,
+                userName: s.userId?.fullName,
+                userEmail: s.userId?.email,
+                userPhone: s.userId?.phoneNumber,
+                passId: s.pendingCashRenewal.passId?._id || s.pendingCashRenewal.passId,
+                amount: nativeAmount,
+                currency: nativeCurrency,
+                displayCurrency,
+                displayAmount: convertForDisplay(nativeAmount, nativeCurrency, displayCurrency),
+                renewalMonths: s.pendingCashRenewal.renewalMonths || 1,
+                requestedAt: s.pendingCashRenewal.requestedAt,
+            };
+        });
+
+        res.status(200).json({ success: true, data, displayCurrency });
     } catch (error) {
         console.error("[v0] Error fetching pending cash renewals:", error);
         res.status(500).json({
@@ -1239,7 +1267,8 @@ export const processRenewals = async (req, res) => {
 const autoRenewWallet = async (subscription, basePass) => {
     const userId = basePass.passengerId;
     const amount = basePass.totalAmount;
-    const wallet = await Wallet.findOne({ userId });
+    const renewalCurrency = basePass.currency || "AED";
+    const wallet = await Wallet.findOne({ userId, currency: renewalCurrency });
 
     if (!wallet || (wallet.balance || 0) < amount) {
         subscription.currentRenewalAttempts += 1;

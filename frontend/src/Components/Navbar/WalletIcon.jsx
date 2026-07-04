@@ -1,9 +1,11 @@
 "use client";
 
+import { getActiveCurrency } from "../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { updateWalletBalance } from "../../Redux/slices/walletSlice";
+import { useLocale } from "../../hooks/useLocale";
 import api from "../../utils/api";
 import "./WalletIcon.css";
 
@@ -12,7 +14,12 @@ function WalletIcon() {
   const navigate = useNavigate();
   const { balance, loading } = useSelector((state) => state.wallet);
   const { user } = useSelector((state) => state.auth);
+  const locale = useLocale();
   const [showDropdown, setShowDropdown] = useState(false);
+  // Balance converted into the currency the user is currently viewing the app
+  // in (e.g. an admin viewing in AED sees a KWD wallet converted to AED).
+  const [displayBalance, setDisplayBalance] = useState(null);
+  const [displayCurrency, setDisplayCurrency] = useState(null);
 
   const walletAllowedRoles = [
     "COMMUTER",
@@ -29,58 +36,85 @@ function WalletIcon() {
     // Set up interval for real-time updates
     const interval = setInterval(fetchWalletBalance, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
-  }, [isAllowed]);
+    // Re-fetch when the user switches their display currency so the converted
+    // navbar balance stays in sync with the rest of the dashboard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAllowed, locale.currency]);
 
   const fetchWalletBalance = async () => {
     try {
-      const response = await api.get('/wallet/balance');
-      const newBalance = response.data.data.balance;
-      dispatch(updateWalletBalance(newBalance));
+      // Ask the backend to convert the wallet's native balance into the
+      // currency we're displaying the app in, so 1200 KWD is shown as its real
+      // AED equivalent (not relabelled 1:1).
+      const response = await api.get("/wallet/balance", {
+        params: { displayCurrency: locale.currency },
+      });
+      const data = response.data.data;
+      // Native balance feeds Redux (other screens rely on the raw amount).
+      dispatch(updateWalletBalance(data.balance));
+      // Converted values drive the navbar pill rendering.
+      setDisplayBalance(
+        data.displayBalance !== undefined ? data.displayBalance : data.balance,
+      );
+      setDisplayCurrency(
+        data.displayCurrency || data.currency || locale.currency,
+      );
     } catch (error) {
       console.error("Error fetching wallet balance:", error);
       // Set default balance if API fails
       dispatch(updateWalletBalance(0));
+      setDisplayBalance(0);
+      setDisplayCurrency(locale.currency);
     }
   };
-  
+
   // Hide wallet for CORPORATE, ADMIN and other roles
   if (!isAllowed) {
     return null;
   }
 
   const handleWalletClick = () => {
-    navigate('/wallet');
+    navigate("/wallet");
     setShowDropdown(false);
   };
 
   const handleAddFunds = () => {
-    navigate('/wallet');
+    navigate("/wallet");
     setShowDropdown(false);
   };
 
   const handleTransactions = () => {
-    navigate('/wallet');
+    navigate("/wallet");
     setShowDropdown(false);
   };
 
   // const formatCurrency = (amount) => {
-  //   const currency = user?.currency || 'KWD';
+  //   const currency = user?.currency || getActiveCurrency();
   //   return `${currency} ${amount?.toFixed(3) || '0.000'}`;
   // };
 
   const formatCurrency = (amount) => {
-    const currency = user?.country === "KW" ? "KWD" : "AED";
-    return new Intl.NumberFormat("en-AE", {
+    // Render in the currency the balance has actually been converted into
+    // (displayCurrency from the API), falling back to the user's active locale
+    // currency. This keeps the navbar consistent with the converted amount.
+    const currency = displayCurrency || locale.currency;
+    const decimals = locale.getCurrencyDecimals(currency);
+    return new Intl.NumberFormat(`en-${locale.isoCode || "AE"}`, {
       style: "currency",
-      currency: currency === "KWD" ? "KWD" : "AED",
-      minimumFractionDigits: currency === "KWD" ? 3 : 2,
+      currency,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     }).format(amount);
   };
 
+  // Amount used for both display and the color threshold. Falls back to the
+  // native Redux balance until the converted value has loaded.
+  const shownBalance = displayBalance !== null ? displayBalance : balance;
+
   const getBalanceColor = () => {
-    if (balance > 1000) return '#10b981';
-    if (balance > 100) return '#f59e0b';
-    return '#ef4444';
+    if (shownBalance > 1000) return "#10b981";
+    if (shownBalance > 100) return "#f59e0b";
+    return "#ef4444";
   };
 
   return (
@@ -143,7 +177,7 @@ function WalletIcon() {
           {/* Smaller Amount Badge */}
           <div className="amount-badge">
             <span className="amount-text" style={{ color: getBalanceColor() }}>
-              {loading ? "..." : formatCurrency(balance)}
+              {loading ? "..." : formatCurrency(shownBalance)}
             </span>
           </div>
         </div>
@@ -201,7 +235,7 @@ function WalletIcon() {
                   className="wallet-total"
                   style={{ color: getBalanceColor() }}
                 >
-                  {loading ? "..." : formatCurrency(balance)}
+                  {loading ? "..." : formatCurrency(shownBalance)}
                 </span>
               </div>
             </div>

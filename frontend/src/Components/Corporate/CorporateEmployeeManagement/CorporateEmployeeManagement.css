@@ -518,6 +518,16 @@ padding: 12px;
   color: #d97706;
 }
 
+.drivemego-cem-return-departure-time {
+  margin: 10px 0 0 0;
+  font-size: 13px;
+  color: #d97706;
+}
+
+.drivemego-cem-return-departure-time strong {
+  color: #b45309;
+}
+
 .drivemego-cem-stop-points-list-info ul {
   margin: 0;
   padding-left: 16px;

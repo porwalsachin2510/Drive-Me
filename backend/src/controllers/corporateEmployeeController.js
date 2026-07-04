@@ -7,6 +7,9 @@ import CorporateBooking from "../models/CorporateBooking.js";
 import MonthlyPass from "../models/MonthlyPass.js";
 import Trip from "../models/Trip.js";
 import { sendEmail } from "../Services/emailService.js";
+import { logRequestActivity } from "../utils/operationContext.js";
+import { autoFulfillBriefItem } from "./managedServiceBriefController.js";
+import { getEffectiveCountry, getCountryCurrency } from "../Config/localizationConfig.js";
 import csv from "csv-parser";
 import fs from "fs";
 
@@ -93,6 +96,16 @@ const generateTripsForEmployee = async (employee, companyId, passDuration = null
             status: "ACTIVE"
         });
 
+        // Currency must follow the corporate's country (identity-locked), never
+        // a hard-coded value. Prefer the contract/route currency; fall back to
+        // the corporate account's country currency so UAE corporates get AED
+        // and Kuwait corporates get KWD.
+        let passCurrency = contract?.financials?.currency || route?.currency;
+        if (!passCurrency) {
+            const corporate = await User.findById(companyId).select("country countryCode role adminPermissions");
+            passCurrency = getCountryCurrency(getEffectiveCountry(corporate));
+        }
+
         // Calculate pass dates based on duration
         const { startDate, endDate } = calculatePassDates(passDuration);
 
@@ -139,7 +152,7 @@ const generateTripsForEmployee = async (employee, companyId, passDuration = null
             preferredPickupTime: assignedTripTime,
             preferredDropPoint: outboundDropoff,
             totalAmount: 0, // Corporate billed
-            currency: "KWD",
+            currency: passCurrency,
             paymentStatus: "PAID", // Corporate billing
             paidAt: new Date(),
             paymentMethod: "CORPORATE_BILLED",
@@ -548,6 +561,22 @@ export const bulkUploadEmployees = async (req, res) => {
                 // Send invitation email
                 await sendEmployeeInvitation(user, employeeData);
 
+                // Managed-service auto-link: when a B2B partner adds this employee
+                // on behalf of the corporate to fulfil a specific brief roster item,
+                // the frontend passes that brief item's id on the employee row.
+                let briefAutoFulfilled = false;
+                if (employeeData.briefItemId && req.onBehalfContractId) {
+                    briefAutoFulfilled = await autoFulfillBriefItem({
+                        contractId: req.onBehalfContractId,
+                        section: "employeeRoster",
+                        briefItemId: employeeData.briefItemId,
+                        entityId: corporateEmployee._id,
+                        entityType: "EMPLOYEE",
+                        actorId: req.actorId || req.userId,
+                        actorRole: req.actingRole || "B2B_PARTNER",
+                    });
+                }
+
                 results.success.push({
                     employeeId: employeeData.employeeId,
                     fullName: employeeData.fullName,
@@ -555,7 +584,8 @@ export const bulkUploadEmployees = async (req, res) => {
                     userId: user._id,
                     corporateEmployeeId: corporateEmployee._id,
                     tripsGenerated: tripGenerationResult?.generated || 0,
-                    monthlyPassId: tripGenerationResult?.monthlyPass || null
+                    monthlyPassId: tripGenerationResult?.monthlyPass || null,
+                    briefAutoFulfilled
                 });
 
             } catch (error) {
@@ -564,6 +594,15 @@ export const bulkUploadEmployees = async (req, res) => {
                     error: error.message
                 });
             }
+        }
+
+        if (results.success.length > 0) {
+            await logRequestActivity(req, {
+                action: "EMPLOYEE_ADDED",
+                entityType: "EMPLOYEE",
+                description: `Added ${results.success.length} employee(s)`,
+                meta: { count: results.success.length },
+            });
         }
 
         res.status(201).json({
@@ -1115,6 +1154,16 @@ export const sendInvitationEmails = async (req, res) => {
             }
         }
 
+        if (results.sent.length > 0) {
+            const tripsGenerated = results.sent.reduce((sum, s) => sum + (s.tripsGenerated || 0), 0);
+            await logRequestActivity(req, {
+                action: "INVITATION_SENT",
+                entityType: "INVITATION",
+                description: `Sent invitation(s) to ${results.sent.length} employee(s)${tripsGenerated ? ` and generated ${tripsGenerated} trip(s)` : ""}`,
+                meta: { invited: results.sent.length, tripsGenerated },
+            });
+        }
+
         res.status(200).json({
             success: true,
             message: `Invitations sent: ${results.sent.length} successful, ${results.failed.length} failed`,
@@ -1422,10 +1471,10 @@ const sendEmployeeInvitation = async (user, employeeData) => {
                             ${employeeData.pickupLocation ? `<p style="margin: 5px 0;"><strong>Pickup:</strong> ${employeeData.pickupLocation}</p>` : ''}
                             ${employeeData.dropoffLocation ? `<p style="margin: 5px 0;"><strong>Dropoff:</strong> ${employeeData.dropoffLocation}</p>` : ''}
                             ${employeeData.passDuration?.durationType ? `<p style="margin: 5px 0;"><strong>Pass Duration:</strong> ${employeeData.passDuration.durationType === '1_MONTH' ? '1 Month' :
-                                employeeData.passDuration.durationType === '2_MONTHS' ? '2 Months' :
-                                    employeeData.passDuration.durationType === '3_MONTHS' ? '3 Months' :
-                                        employeeData.passDuration.durationType === '6_MONTHS' ? '6 Months' :
-                                            employeeData.passDuration.durationType === '1_YEAR' ? '1 Year' : 'Custom'
+                            employeeData.passDuration.durationType === '2_MONTHS' ? '2 Months' :
+                                employeeData.passDuration.durationType === '3_MONTHS' ? '3 Months' :
+                                    employeeData.passDuration.durationType === '6_MONTHS' ? '6 Months' :
+                                        employeeData.passDuration.durationType === '1_YEAR' ? '1 Year' : 'Custom'
                             }</p>` : ''}
                         </div>
                     `;
@@ -1769,6 +1818,18 @@ export const assignRouteToEmployee = async (req, res) => {
         // Use generateTripsForEmployee to create trips and monthly pass
         const tripResult = await generateTripsForEmployee(employee, companyId, passDuration);
         console.log(`[v0] Generated trips for employee ${employeeId}:`, tripResult);
+
+        // Log on the managed contract activity timeline
+        if (contract.serviceMode === "MANAGED") {
+            await logRequestActivity(req, {
+                contractId: contract._id,
+                action: "ROUTE_ASSIGNED_TO_EMPLOYEE",
+                entityType: "EMPLOYEE",
+                entityId: employee._id,
+                description: `Assigned route ${route.fromLocation} → ${route.toLocation} to ${employee.fullName || "employee"}${tripResult.generated ? ` and generated ${tripResult.generated} trip(s)` : ""}`,
+                meta: { employeeId: employee._id, routeId: route._id, tripsGenerated: tripResult.generated },
+            });
+        }
 
         res.status(200).json({
             success: true,

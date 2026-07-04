@@ -3,13 +3,15 @@ import React, { useState, useEffect } from "react";
 import "./addfundsmodal.css";
 import api from "../../../utils/api";
 import useCurrency from "../../../hooks/useCurrency";
+import { useLocale } from "../../../hooks/useLocale";
+import { getGatewayForCurrency, getCurrencyDecimals } from "../../../config/localeConfig";
 
 const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
-  const { formatCurrency, getCurrencyDecimals, getCurrencySymbol } =
-    useCurrency();
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
+  const { currency: localeCurrency } = useLocale();
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
-  const [currency, setCurrency] = useState("AED");
+  const [currency, setCurrency] = useState(localeCurrency);
   const [decimals, setDecimals] = useState(2);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("card");
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -53,14 +55,17 @@ const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
       }
     } catch (error) {
       console.error("[v0] Error fetching payment config:", error);
-      // Fallback to defaults
-       setCurrency("AED");
-       setDecimals(2);
+      // Fallback to the user's active locale so the currency and gateway stay
+      // consistent (AED -> Stripe, KWD -> TAP) instead of a mismatched default.
+      const fallbackCurrency = localeCurrency;
+      const fallbackGateway = getGatewayForCurrency(fallbackCurrency);
+      setCurrency(fallbackCurrency);
+      setDecimals(getCurrencyDecimals(fallbackCurrency));
       setPaymentMethods([
         {
           id: "card",
           name: "Credit/Debit Card",
-          gateway: "TAP",
+          gateway: fallbackGateway,
           enabled: true,
         },
       ]);
@@ -69,8 +74,10 @@ const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
     }
   };
 
+  // 3-decimal currencies (KWD/BHD/OMR) have higher unit value, so use smaller
+  // quick-add presets; 2-decimal currencies (AED/SAR/QAR) use larger presets.
   const predefinedAmounts =
-    currency === "KWD" ? [10, 20, 50, 100, 200] : [50, 100, 200, 500, 1000];
+    decimals === 3 ? [10, 20, 50, 100, 200] : [50, 100, 200, 500, 1000];
 
   const handleSubmit = async (e) => {
     e.preventDefault();

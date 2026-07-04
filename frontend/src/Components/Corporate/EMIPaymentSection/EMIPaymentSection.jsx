@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -23,7 +24,7 @@ const EMIPaymentSection = ({ contract, onRefresh }) => {
   // Define which methods are online payment methods
   const onlinePaymentMethods = ["CARD", "BANK_TRANSFER"];
 
-  const currency = contract?.financials?.currency || "AED";
+  const currency = contract?.financials?.currency || getActiveCurrency();
   const paymentMode = contract?.financials?.paymentMode;
 
   useEffect(() => {

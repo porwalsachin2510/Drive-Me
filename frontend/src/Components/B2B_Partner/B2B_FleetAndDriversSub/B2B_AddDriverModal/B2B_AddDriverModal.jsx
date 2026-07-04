@@ -11,6 +11,10 @@ import {
   useDropdownOptions,
   DROPDOWN_CATEGORIES,
 } from "../../../../hooks/useDropdownOptions";
+import {
+  getActiveCountry,
+  getCountryLocations,
+} from "../../../../config/localeConfig";
 import "./b2b_adddrivermodal.css";
 
 function B2B_AddDriverModal({ onClose }) {
@@ -34,12 +38,13 @@ function B2B_AddDriverModal({ onClose }) {
     { value: "Private", label: "Private" },
   ];
 
-  const cities = dropdownOptions[DROPDOWN_CATEGORIES.CITIES]?.options || [
-    { value: "Dubai", label: "Dubai" },
-    { value: "Abu Dhabi", label: "Abu Dhabi" },
-    { value: "Sharjah", label: "Sharjah" },
-    { value: "Kuwait City", label: "Kuwait City" },
-  ];
+  // A driver is based in the partner's country, so the city list is scoped to
+  // that country (a Kuwait partner adds drivers in Kuwait cities, not Dubai).
+  const partnerCountry = getActiveCountry();
+  const cities = getCountryLocations(partnerCountry).map((c) => ({
+    value: c,
+    label: c,
+  }));
 
   const countries = dropdownOptions[DROPDOWN_CATEGORIES.COUNTRIES]?.options || [
     { value: "UAE", label: "United Arab Emirates" },

@@ -1,10 +1,74 @@
 import User from "../models/User.js"
 import OTP from "../models/OTP.js"
+import { checkIdentityRegistrationEligibility, registerIdentityLedger } from "../Services/cashCancellationService.js"
 import TermsAndConditions from "../models/TermsAndConditions.js"
 import CommissionSettings from "../models/CommissionSettings.js"
 import jwt from "jsonwebtoken"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
 import { generateOTP, sendVerificationOTP, sendWelcomeEmailWithTerms } from "../Services/emailService.js"
+import { sendAdminNotification } from "../Services/notificationService.js"
+import { withOwnerPermissions } from "../Services/ownerService.js"
+import {
+    resolveRegistrationCountry,
+    buildLocalePayload,
+    getCountryCurrency,
+    getCountryFromPhoneCode,
+    isIdentityLockedUser,
+    normalizeCountry,
+} from "../Config/localizationConfig.js"
+
+/**
+ * Reconcile a user's stored `country` (and `nationality`) with the immutable
+ * registration signal we always keep: their international dialing code
+ * (e.g. "+965" => KW, "+971" => UAE). This is the SAME signal registration uses
+ * to stamp the country in production, so re-asserting it here is a no-op for
+ * healthy records and a self-heal for corrupted ones.
+ *
+ * Why this exists: older builds defaulted every account to "UAE" and a previous
+ * version of the localization endpoint re-persisted a transient DEV_COUNTRY / IP
+ * / stale-browser locale onto the profile. That left some accounts (e.g. a real
+ * Kuwait partner) with country "UAE", so they saw AED everywhere. Healing on
+ * login fixes those accounts the next time they sign in — no manual migration
+ * needed — and keeps a partner's currency tied to where they actually operate.
+ *
+ * Guard rails:
+ *   - ONLY identity-locked EARNERS are reconciled (partners, drivers, corporate
+ *     & employees). Their country is a fixed business identity, so re-asserting
+ *     the dialing code is always correct.
+ *   - COMMUTERS are intentionally SKIPPED: their country is a switchable travel
+ *     context (they may deliberately be browsing UAE on a "+965" SIM), so we
+ *     must never overwrite their chosen country back to their dialing code.
+ *   - Platform admins are location-independent and are never reconciled.
+ *   - We only correct when the dialing code maps to a served country AND it
+ *     differs from what's stored. Unknown codes are left untouched (no guessing).
+ *   - This runs REGARDLESS of DEV_COUNTRY. The dialing code is the immutable
+ *     identity for an earner, so DEV_COUNTRY (a developer's display toggle for
+ *     anonymous/preview flows) must never leave a real Kuwait "+965" partner
+ *     stranded on a stale "UAE" country. New accounts are stamped from the same
+ *     dialing code, so this is a no-op for healthy records.
+ *
+ * Returns true when a correction was applied (caller persists the user).
+ */
+const reconcileUserCountryFromDialingCode = (user) => {
+    if (!user || !isIdentityLockedUser(user)) return false
+
+    const trueCountry = getCountryFromPhoneCode(user.countryCode)
+    if (!trueCountry) return false
+
+    const storedCountry = user.country ? normalizeCountry(user.country) : null
+    if (storedCountry === trueCountry) return false
+
+    const locale = buildLocalePayload(trueCountry)
+    console.log("[v0] Reconciling account country from dialing code:", {
+        userId: String(user._id),
+        countryCode: user.countryCode,
+        from: user.country,
+        to: locale.country,
+    })
+    user.country = locale.country
+    user.nationality = locale.countryName
+    return true
+}
 
 const generateToken = (userId, role) => {
     return jwt.sign({ userId, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE })
@@ -76,9 +140,34 @@ export const register = async (req, res) => {
             })
         }
 
+        // ===== Anti-abuse identity check (COMMUTER only) =====
+        // We do NOT collect any government ID (illegal in UAE/Kuwait). Instead we
+        // build a stable identity from the registration details the user already
+        // gives us — primarily their OTP-verified phone number, with their email
+        // as a secondary matcher — and refuse registration if that identity already
+        // has an unpaid cancellation due. This stops a commuter from deleting their
+        // account and re-registering to dodge a cancellation charge.
+        if (role === "COMMUTER") {
+            const eligibility = await checkIdentityRegistrationEligibility({
+                countryCode: countryCode || "+965",
+                phone: whatsappNumber,
+                email,
+            })
+            if (eligibility.blocked) {
+                return res.status(403).json({
+                    success: false,
+                    code: "IDENTITY_BLOCKED",
+                    outstandingDue: eligibility.outstanding,
+                    existingEmail: eligibility.existingEmail,
+                    message: eligibility.reason
+                        || "Your details are already registered with an outstanding cancellation due. Please log in to your existing account and clear it before registering again.",
+                })
+            }
+        }
+
         // Generate OTP
         const otp = generateOTP()
-        
+
         // Save OTP to database
         await OTP.deleteMany({ email, purpose: "registration" }) // Clean up any existing OTPs
         const otpRecord = new OTP({
@@ -128,7 +217,7 @@ export const register = async (req, res) => {
             fullName,
             email,
             whatsappNumber,
-            countryCode: countryCode || "+971", // Default to UAE if not provided
+            countryCode: countryCode || "+965", // Default to platform base (Kuwait) if not provided
             password, // Plain password - User model pre-save hook will hash it
             companyName,
             companyAddress,
@@ -146,8 +235,13 @@ export const register = async (req, res) => {
             disclosedCommissionRange: commissionRange,
         }
 
-        // Store registration data in OTP document (in production, use Redis)
+        // Store registration data in OTP document (in production, use Redis).
+        // registrationData is a Mongoose `Mixed` type and this document was
+        // already saved above, so Mongoose will NOT auto-detect this change.
+        // We must markModified() or the field is silently dropped on save,
+        // which later makes verifyOTP fail with a 400 "session expired".
         otpRecord.registrationData = registrationData
+        otpRecord.markModified("registrationData")
         await otpRecord.save()
 
         console.log("[v1] OTP sent for email verification:", { email, role })
@@ -236,8 +330,6 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body
 
-        console.log("request body", req.body);
-
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -255,8 +347,6 @@ export const login = async (req, res) => {
         }
 
         const isPasswordValid = await user.comparePassword(password);
-
-        console.log("isPasswordValid", isPasswordValid)
 
         if (!isPasswordValid) {
             return res.status(401).json({
@@ -308,10 +398,17 @@ export const login = async (req, res) => {
             }
         }
 
+        // Self-heal a corrupted/legacy account country from the immutable
+        // dialing code (e.g. a Kuwait "+965" partner stored as "UAE"). This runs
+        // before we return the user so the corrected country is reflected
+        // everywhere (header currency, wallet, earnings, settlements) on this
+        // very session. No-op for healthy records and for DEV_COUNTRY testing.
+        reconcileUserCountryFromDialingCode(user)
+
         // Update lastLogin timestamp
         user.lastLogin = new Date()
         await user.save()
-        
+
         const token = generateToken(user._id, user.role)
 
         res.cookie("token", token, {
@@ -325,7 +422,8 @@ export const login = async (req, res) => {
             success: true,
             message: "Login successful",
             token,
-            user: user.toJSON(),
+            // The real platform owner always logs in with full super-admin access.
+            user: withOwnerPermissions(user.toJSON()),
         })
     } catch (error) {
         console.error("Login error:", error)
@@ -366,14 +464,14 @@ export const verifyOTP = async (req, res) => {
         const isValid = otpRecord.verify(otp)
         if (!isValid) {
             await otpRecord.save() // Save the incremented attempt count
-            
+
             if (otpRecord.attempts >= otpRecord.maxAttempts) {
                 return res.status(400).json({
                     success: false,
                     message: "Maximum attempts reached. Please request a new verification code.",
                 })
             }
-            
+
             return res.status(400).json({
                 success: false,
                 message: `Invalid verification code. ${otpRecord.maxAttempts - otpRecord.attempts} attempts remaining.`,
@@ -398,6 +496,27 @@ export const verifyOTP = async (req, res) => {
             isEmailVerified: true,
         }
 
+        // ===== Stamp the account's country & nationality at creation time =====
+        // The registration form never sent a top-level `country`/`nationality`,
+        // so previously every new account silently fell back to the User model
+        // default ("UAE") — which is wrong for a user signing up from Kuwait
+        // (or any other served country). Resolve the real country once here,
+        // from DEV_COUNTRY (local/dev) -> the dialing code the user picked
+        // (e.g. "+965" => KW) -> default, and persist BOTH the canonical code
+        // and the human-readable nationality so currency, payment gateway,
+        // routes and wallet are all consistent from day one.
+        const registrationCountry = resolveRegistrationCountry({
+            countryCode: userData.countryCode,
+        })
+        const registrationLocale = buildLocalePayload(registrationCountry)
+        userData.country = registrationLocale.country
+        userData.nationality = registrationLocale.countryName
+        console.log("[v0] Resolved registration country:", {
+            countryCode: userData.countryCode,
+            country: userData.country,
+            nationality: userData.nationality,
+        })
+
         // Handle role-specific data processing
         if (userData.role === "COMMUTER") {
             const matchingCorporateUser = await User.findOne({
@@ -414,6 +533,43 @@ export const verifyOTP = async (req, res) => {
             } else {
                 userData.companyName = null
             }
+
+            // ===== Re-verify identity eligibility at creation time =====
+            // Re-check here too in case a cancellation due was recorded against
+            // this identity between register and verify. The identity is built
+            // from the registration phone/email — no government ID is collected.
+            const eligibility = await checkIdentityRegistrationEligibility({
+                countryCode: registrationData.countryCode || "+965",
+                phone: registrationData.whatsappNumber,
+                email: registrationData.email,
+            })
+            if (eligibility.blocked) {
+                return res.status(403).json({
+                    success: false,
+                    code: "IDENTITY_BLOCKED",
+                    outstandingDue: eligibility.outstanding,
+                    existingEmail: eligibility.existingEmail,
+                    message: eligibility.reason
+                        || "Your details are already registered with an outstanding cancellation due. Please log in to your existing account and clear it before registering again.",
+                })
+            }
+
+            // Seed the cash-cancellation mirror with this commuter's identity key
+            // so future cancellations are anchored to a stable, durable identity.
+            userData.cashCancellation = {
+                outstandingDue: 0,
+                strikeCount: 0,
+                isBlocked: false,
+                blockedReason: null,
+                identityKey: eligibility.identityKey,
+                currency: getCountryCurrency(registrationCountry),
+                lastUpdatedAt: new Date(),
+            }
+
+            // No admin approval / KYC review is required anymore — government IDs
+            // cannot be collected in UAE/Kuwait. The commuter is active as soon as
+            // their phone OTP is verified.
+            userData.status = "ACTIVE"
         }
 
         if (userData.role === "CORPORATE_EMPLOYEE") {
@@ -497,11 +653,44 @@ export const verifyOTP = async (req, res) => {
             }
         }
 
-        // Create user
+        // Every role (including COMMUTER) is auto-logged-in right after OTP
+        // verification — there is no admin approval / KYC gate anymore. Stamp
+        // lastLogin now so the freshly registered user doesn't show
+        // "Last login: Never".
         const newUser = new User(userData)
+        newUser.lastLogin = new Date()
         await newUser.save()
 
+        // Persist the durable identity record for COMMUTERs at registration time
+        // so the anti-abuse anchor (and the user's identityKey mirror) is saved in
+        // the database from day one — not only after a cancellation is incurred.
+        if (newUser.role === "COMMUTER") {
+            try {
+                await registerIdentityLedger(newUser)
+            } catch (ledgerErr) {
+                console.error("[v0] Failed to persist identity ledger at registration:", ledgerErr.message)
+            }
+        }
+
         console.log("[v1] User created and verified successfully:", newUser._id)
+
+        // Real-time alert to all admins about the new registration
+        try {
+            await sendAdminNotification(
+                "New User Registration",
+                `${newUser.fullName || newUser.email} registered as ${newUser.role}${newUser.companyName ? ` (${newUser.companyName})` : ""}.`,
+                "NEW_USER_REGISTRATION",
+                {
+                    newUserId: newUser._id,
+                    role: newUser.role,
+                    email: newUser.email,
+                    fullName: newUser.fullName,
+                    companyName: newUser.companyName || null,
+                }
+            )
+        } catch (notifyErr) {
+            console.error("[v0] Failed to send new-user admin notification:", notifyErr.message)
+        }
 
         // Send welcome email with T&C details for applicable roles
         const rolesRequiringTerms = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"]
@@ -521,7 +710,7 @@ export const verifyOTP = async (req, res) => {
             }
         }
 
-        // Generate token
+        // Generate token (all roles auto-login)
         const token = generateToken(newUser._id, newUser.role)
 
         res.cookie("token", token, {
@@ -535,14 +724,12 @@ export const verifyOTP = async (req, res) => {
             success: true,
             message: "Email verified and registration completed successfully!",
             token,
-            user: {
-                _id: newUser._id,
-                role: newUser.role,
-                fullName: newUser.fullName,
-                email: newUser.email,
-                whatsappNumber: newUser.whatsappNumber,
-                isEmailVerified: newUser.isEmailVerified,
-            },
+            // Return the full user (password stripped by toJSON) so the
+            // auto-login right after registration has profileImage and every
+            // other field. Previously only a few fields were returned, so the
+            // freshly-registered user had no profileImage in Redux/localStorage
+            // and the navbar/sidebar avatar fell back to initials.
+            user: newUser.toJSON(),
         })
     } catch (error) {
         console.error("[v1] OTP verification error:", error)
@@ -581,7 +768,7 @@ export const resendOTP = async (req, res) => {
 
         // Generate new OTP
         const newOTP = generateOTP()
-        
+
         // Update existing record
         existingOTP.otp = newOTP
         existingOTP.attempts = 0
@@ -590,8 +777,8 @@ export const resendOTP = async (req, res) => {
 
         // Send new OTP email
         const emailResult = await sendVerificationOTP(
-            email, 
-            existingOTP.registrationData.fullName, 
+            email,
+            existingOTP.registrationData.fullName,
             newOTP
         )
 

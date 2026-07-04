@@ -1,6 +1,10 @@
+import { useNavigate } from "react-router-dom";
+import { getActiveCurrency } from "../../../../config/localeConfig";
 import "./b2b_contractcard.css";
 
 function B2B_ContractCard({ contract }) {
+  const navigate = useNavigate();
+  const isManaged = contract.serviceMode === "MANAGED";
   const getStatusColor = (status) => {
     const statusLower = status?.toLowerCase();
     if (statusLower === "active" || statusLower === "approved") return "active";
@@ -120,9 +124,9 @@ function B2B_ContractCard({ contract }) {
     );
   };
 
-   const getCurrency = () => {
-     return contract.financials?.currency || "AED";
-   };
+  const getCurrency = () => {
+    return contract.financials?.currency || getActiveCurrency();
+  };
 
   return (
     <div className="drivemego-b2b_contractcard-contract-card">
@@ -183,11 +187,29 @@ function B2B_ContractCard({ contract }) {
               "Pending"}
           </span>
         </div>
-        <button className="drivemego-b2b_contractcard-manage-link">
-          Manage Contract
-        </button>
+        {isManaged ? (
+          <button
+            className="drivemego-b2b_contractcard-manage-link drivemego-b2b_contractcard-managed-btn"
+            onClick={() =>
+              navigate("/b2b-partner/managed-operations", {
+                state: { contractId: contract._id },
+              })
+            }
+          >
+            Manage Operations
+          </button>
+        ) : (
+          <button className="drivemego-b2b_contractcard-manage-link">
+            Manage Contract
+          </button>
+        )}
       </div>
-    </div>
+      {isManaged && (
+        <div className="drivemego-b2b_contractcard-managed-tag">
+          Managed Service — you run operations for this client
+        </div>
+      )}
+      </div>
   );
 }
 

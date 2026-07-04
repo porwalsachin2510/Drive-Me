@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import "./AdminReports.css";
 import api from "../../../utils/api";
@@ -21,6 +22,11 @@ function AdminReports() {
   });
   const [generatedReport, setGeneratedReport] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewReport, setViewReport] = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Revenue Reports State
   const [revenueTab, setRevenueTab] = useState("summary");
@@ -121,12 +127,69 @@ function AdminReports() {
       const response = await api.post("/admin/reports/generate", reportForm);
       if (response.data.success) {
         setGeneratedReport(response.data.report);
+        // Refresh the saved reports list so the new report appears immediately
+        const reportsResponse = await api.get("/admin/reports");
+        setReports(reportsResponse.data.reports);
       }
     } catch (error) {
       console.error("Error generating report:", error);
       setGeneratedReport({ title: "Error", error: error.message });
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleViewReport = async (reportId) => {
+    try {
+      setViewLoading(true);
+      setShowViewModal(true);
+      setViewReport(null);
+      const response = await api.get(`/admin/reports/${reportId}`);
+      if (response.data.success) {
+        setViewReport(response.data.report);
+      }
+    } catch (error) {
+      console.error("Error fetching report details:", error);
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const handleDownloadReport = async (report) => {
+    try {
+      setDownloadingId(report._id);
+      const response = await api.get(`/admin/reports/${report._id}/download`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const safeName = (report.title || "report")
+        .replace(/[^a-z0-9]+/gi, "_")
+        .toLowerCase();
+      link.href = url;
+      link.setAttribute("download", `${safeName}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading report:", error);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleDeleteReport = async (reportId) => {
+    if (!window.confirm("Delete this report? This cannot be undone.")) return;
+    try {
+      setDeletingId(reportId);
+      await api.delete(`/admin/reports/${reportId}`);
+      setReports((prev) => prev.filter((r) => r._id !== reportId));
+    } catch (error) {
+      console.error("Error deleting report:", error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -509,37 +572,76 @@ function AdminReports() {
         </button>
       </div>
 
-      <div className="reports-grid">
-        {reports.map((report) => (
-          <div key={report._id} className="report-card">
-            <div className="report-header">
-              <h4>{report.title}</h4>
-              <span className="report-date">
-                {new Date(report.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-            <div className="report-description">
-              <p>{report.description}</p>
-            </div>
-            <div className="report-stats">
-              <div className="stat">
-                <span className="stat-label">Records:</span>
-                <span className="stat-value">{report.recordCount}</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">Generated:</span>
-                <span className="stat-value">
-                  {new Date(report.generatedAt).toLocaleString()}
+      {reports.length === 0 ? (
+        <div className="reports-empty">
+          <p>No reports generated yet.</p>
+          <p className="reports-empty-hint">
+            Click &ldquo;Generate Report&rdquo; to create your first custom
+            report.
+          </p>
+        </div>
+      ) : (
+        <div className="reports-grid">
+          {reports.map((report) => (
+            <div key={report._id} className="report-card">
+              <div className="report-header">
+                <h4>{report.title}</h4>
+                <span className="report-date">
+                  {new Date(report.createdAt).toLocaleDateString()}
                 </span>
               </div>
+              <div className="report-description">
+                <span className={`report-type-badge type-${report.reportType}`}>
+                  {report.reportType}
+                </span>
+                <p>{report.description}</p>
+              </div>
+              <div className="report-stats">
+                <div className="stat">
+                  <span className="stat-label">Records:</span>
+                  <span className="stat-value">{report.recordCount}</span>
+                </div>
+                {report.totalAmount > 0 && (
+                  <div className="stat">
+                    <span className="stat-label">Total:</span>
+                    <span className="stat-value">
+                      AED {report.totalAmount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="stat">
+                  <span className="stat-label">Generated:</span>
+                  <span className="stat-value">
+                    {new Date(report.generatedAt).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <div className="report-actions">
+                <button
+                  className="download-btn"
+                  onClick={() => handleDownloadReport(report)}
+                  disabled={downloadingId === report._id}
+                >
+                  {downloadingId === report._id ? "Downloading..." : "Download"}
+                </button>
+                <button
+                  className="view-btn"
+                  onClick={() => handleViewReport(report._id)}
+                >
+                  View Details
+                </button>
+                <button
+                  className="delete-report-btn"
+                  onClick={() => handleDeleteReport(report._id)}
+                  disabled={deletingId === report._id}
+                >
+                  {deletingId === report._id ? "Deleting..." : "Delete"}
+                </button>
+              </div>
             </div>
-            <div className="report-actions">
-              <button className="download-btn">Download</button>
-              <button className="view-btn">View Details</button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -633,7 +735,7 @@ function AdminReports() {
           <div className="summary-content">
             <span className="summary-label">Total Revenue</span>
             <span className="summary-value">
-              {revenueSummary?.currency || "AED"}{" "}
+              {revenueSummary?.currency || getActiveCurrency()}{" "}
               {(revenueSummary?.totalRevenue || 0).toLocaleString()}
             </span>
           </div>
@@ -643,7 +745,7 @@ function AdminReports() {
           <div className="summary-content">
             <span className="summary-label">Admin Commission</span>
             <span className="summary-value">
-              {revenueSummary?.currency || "AED"}{" "}
+              {revenueSummary?.currency || getActiveCurrency()}{" "}
               {(revenueSummary?.totalCommission || 0).toLocaleString()}
             </span>
           </div>
@@ -653,7 +755,7 @@ function AdminReports() {
           <div className="summary-content">
             <span className="summary-label">Admin Wallet Balance</span>
             <span className="summary-value">
-              {revenueSummary?.currency || "AED"}{" "}
+              {revenueSummary?.currency || getActiveCurrency()}{" "}
               {(revenueSummary?.adminWalletBalance || 0).toLocaleString()}
             </span>
           </div>
@@ -675,14 +777,14 @@ function AdminReports() {
               <div className="breakdown-stat">
                 <span className="stat-label">Revenue</span>
                 <span className="stat-value">
-                  {revenueSummary?.currency || "AED"}{" "}
+                  {revenueSummary?.currency || getActiveCurrency()}{" "}
                   {(revenueSummary?.corporateRevenue || 0).toLocaleString()}
                 </span>
               </div>
               <div className="breakdown-stat">
                 <span className="stat-label">Commission</span>
                 <span className="stat-value">
-                  {revenueSummary?.currency || "AED"}{" "}
+                  {revenueSummary?.currency || getActiveCurrency()}{" "}
                   {(revenueSummary?.corporateCommission || 0).toLocaleString()}
                 </span>
               </div>
@@ -701,14 +803,14 @@ function AdminReports() {
               <div className="breakdown-stat">
                 <span className="stat-label">Revenue</span>
                 <span className="stat-value">
-                  {revenueSummary?.currency || "AED"}{" "}
+                  {revenueSummary?.currency || getActiveCurrency()}{" "}
                   {(revenueSummary?.b2cRevenue || 0).toLocaleString()}
                 </span>
               </div>
               <div className="breakdown-stat">
                 <span className="stat-label">Commission</span>
                 <span className="stat-value">
-                  {revenueSummary?.currency || "AED"}{" "}
+                  {revenueSummary?.currency || getActiveCurrency()}{" "}
                   {(revenueSummary?.b2cCommission || 0).toLocaleString()}
                 </span>
               </div>
@@ -1209,6 +1311,8 @@ function AdminReports() {
                   >
                     <option value="general">General Summary</option>
                     <option value="revenue">Revenue Report</option>
+                    <option value="commission">Commission Earned</option>
+                    <option value="settlements">Settlements</option>
                     <option value="users">User Report</option>
                     <option value="bookings">Bookings Report</option>
                   </select>
@@ -1250,6 +1354,9 @@ function AdminReports() {
               {generatedReport && !generatedReport.error && (
                 <div className="generated-report-result">
                   <h4>{generatedReport.title}</h4>
+                  <p className="generated-report-desc">
+                    {generatedReport.description}
+                  </p>
                   <div className="report-result-stats">
                     <div className="report-result-stat">
                       <span className="stat-label">Records</span>
@@ -1257,42 +1364,37 @@ function AdminReports() {
                         {generatedReport.recordCount}
                       </span>
                     </div>
+                    {generatedReport.totalAmount > 0 && (
+                      <div className="report-result-stat">
+                        <span className="stat-label">Total (AED)</span>
+                        <span className="stat-value">
+                          {generatedReport.totalAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                     <div className="report-result-stat">
                       <span className="stat-label">Generated</span>
                       <span className="stat-value">
                         {new Date(generatedReport.generatedAt).toLocaleString()}
                       </span>
                     </div>
-                    {generatedReport.totalRevenue !== undefined && (
-                      <div className="report-result-stat">
-                        <span className="stat-label">Total Revenue</span>
-                        <span className="stat-value">
-                          AED {generatedReport.totalRevenue.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                    {generatedReport.summary && (
-                      <>
-                        <div className="report-result-stat">
-                          <span className="stat-label">Users</span>
-                          <span className="stat-value">
-                            {generatedReport.summary.users}
-                          </span>
-                        </div>
-                        <div className="report-result-stat">
-                          <span className="stat-label">Payments</span>
-                          <span className="stat-value">
-                            {generatedReport.summary.payments}
-                          </span>
-                        </div>
-                        <div className="report-result-stat">
-                          <span className="stat-label">Bookings</span>
-                          <span className="stat-value">
-                            {generatedReport.summary.bookings}
-                          </span>
-                        </div>
-                      </>
-                    )}
+                  </div>
+                  <div className="generated-report-actions">
+                    <button
+                      className="view-btn"
+                      onClick={() => {
+                        setShowReportModal(false);
+                        handleViewReport(generatedReport._id);
+                      }}
+                    >
+                      View Details
+                    </button>
+                    <button
+                      className="download-btn"
+                      onClick={() => handleDownloadReport(generatedReport)}
+                    >
+                      Download CSV
+                    </button>
                   </div>
                 </div>
               )}
@@ -1300,6 +1402,99 @@ function AdminReports() {
                 <div className="report-error">
                   Error: {generatedReport.error}
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Report Details Modal */}
+      {showViewModal && (
+        <div className="reports-modal-overlay">
+          <div
+            className="reports-modal reports-modal-lg report-view-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="reports-modal-header">
+              <h3>{viewReport ? viewReport.title : "Report Details"}</h3>
+              <button
+                className="reports-modal-close"
+                onClick={() => {
+                  setShowViewModal(false);
+                  setViewReport(null);
+                }}
+              >
+                X
+              </button>
+            </div>
+            <div className="reports-modal-body">
+              {viewLoading && <p>Loading report...</p>}
+              {!viewLoading && viewReport && (
+                <>
+                  <p className="generated-report-desc">
+                    {viewReport.description}
+                  </p>
+
+                  {viewReport.summary &&
+                    Object.keys(viewReport.summary).length > 0 && (
+                      <div className="report-result-stats">
+                        {Object.entries(viewReport.summary).map(
+                          ([key, value]) => (
+                            <div className="report-result-stat" key={key}>
+                              <span className="stat-label">{key}</span>
+                              <span className="stat-value">
+                                {typeof value === "object" && value !== null
+                                  ? Object.entries(value)
+                                      .map(([k, v]) => `${k}: ${v}`)
+                                      .join(", ")
+                                  : String(value)}
+                              </span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    )}
+
+                  <div className="report-view-actions">
+                    <button
+                      className="download-btn"
+                      onClick={() => handleDownloadReport(viewReport)}
+                    >
+                      Download CSV
+                    </button>
+                  </div>
+
+                  {viewReport.rows && viewReport.rows.length > 0 ? (
+                    <div className="report-table-wrapper">
+                      <table className="report-table">
+                        <thead>
+                          <tr>
+                            {viewReport.columns.map((col) => (
+                              <th key={col}>{col}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {viewReport.rows.map((row, idx) => (
+                            <tr key={idx}>
+                              {viewReport.columns.map((col) => (
+                                <td key={col}>
+                                  {row[col] === undefined || row[col] === null
+                                    ? "—"
+                                    : String(row[col])}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="reports-empty-hint">
+                      No data rows for this report.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>

@@ -28,7 +28,8 @@ import {
     verifySignedContractDocument,
     downloadContractDocument
 } from "../controllers/contractController.js"
-import { verifyToken, checkFleetOwnerRole, checkCorporateOwnerRole, requireRole } from "../middleware/auth.js"
+import { verifyToken, checkFleetOwnerRole, checkCorporateOwnerRole, requireRole, resolveCorporateContext } from "../middleware/auth.js"
+import { getManagedContractActivity } from "../controllers/contractController.js"
 import { upload, handleMulterError } from "../Config/multerConfig.js"
 
 const router = express.Router()
@@ -105,27 +106,33 @@ router.post("/:contractId/corporate-reject", verifyToken, checkCorporateOwnerRol
 // @access  Private (B2B_PARTNER only)
 router.post("/:contractId/assign-vehicles", verifyToken, checkFleetOwnerRole, assignVehicles)
 
+// Operation endpoints below are accessible by the CORPORATE owner OR, for
+// MANAGED-service contracts, by the B2B partner acting on the corporate's
+// behalf. resolveCorporateContext enforces access and scopes the operation.
 
 // Get assigned vehicles for a contract
-router.get("/assigned-vehicles/:contractId", verifyToken, checkCorporateOwnerRole, getAssignedVehiclesForContract)
+router.get("/assigned-vehicles/:contractId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, getAssignedVehiclesForContract)
 
 // Assign driver or fuel to vehicle
-router.post("/assign-driver-fuel/:contractId/:assignedVehicleId", verifyToken, checkCorporateOwnerRole, assignDriverOrFuelToVehicle)
+router.post("/assign-driver-fuel/:contractId/:assignedVehicleId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, assignDriverOrFuelToVehicle)
 
 // Assign route to vehicle
-router.post("/assign-route/:contractId/:assignedVehicleId", verifyToken, checkCorporateOwnerRole, assignRouteToVehicle)
+router.post("/assign-route/:contractId/:assignedVehicleId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, assignRouteToVehicle)
 
 // Update/Change driver assigned by Corporate
-router.put("/update-corporate-driver/:contractId/:assignedVehicleId", verifyToken, checkCorporateOwnerRole, updateCorporateDriver)
+router.put("/update-corporate-driver/:contractId/:assignedVehicleId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, updateCorporateDriver)
 
 // Get contract routes
-router.get("/routes/:contractId", verifyToken, checkCorporateOwnerRole, getContractRoutes)
+router.get("/routes/:contractId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, getContractRoutes)
 
 // Get all routes for a specific vehicle in a contract
-router.get("/:contractId/vehicles/:assignedVehicleId/routes", verifyToken, checkCorporateOwnerRole, getVehicleRoutes)
+router.get("/:contractId/vehicles/:assignedVehicleId/routes", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, getVehicleRoutes)
 
 // Delete a route from a vehicle
-router.delete("/:contractId/vehicles/:assignedVehicleId/routes/:routeId", verifyToken, checkCorporateOwnerRole, deleteVehicleRoute)
+router.delete("/:contractId/vehicles/:assignedVehicleId/routes/:routeId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, deleteVehicleRoute)
+
+// Get managed contract operations activity log (visible to corporate and the managing partner)
+router.get("/:contractId/managed-activity", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), getManagedContractActivity)
 
 // @route   POST /api/contracts/:contractId/request-due-date-extension
 // @desc    Corporate requests due date extension for final payment

@@ -12,6 +12,7 @@ import {
 } from "../../Redux/slices/notificationSlice";
 import { SocketContext } from "../../context/SocketContext";
 import { getSocket } from "../../utils/socket";
+import { getNotificationRoute } from "../../utils/notificationRoute";
 import "./NotificationIcon.css";
 
 function NotificationIcon() {
@@ -166,98 +167,10 @@ function NotificationIcon() {
       );
     }
 
-    // Navigate based on notification type
-    switch (notification.type) {
-      case "TRIP_REMINDER":
-      case "TRIP_STARTED":
-      case "TRIP_COMPLETED":
-      case "LATE_TRIP_START":
-        navigate("/commuter/my-bookings");
-        break;
-      case "WALLET_UPDATED":
-      case "PAYMENT_COMPLETED":
-      case "PAYMENT_SUBMITTED":
-      case "PAYMENT_RECEIVED":
-      case "PAYMENT_VERIFIED":
-      case "PAYMENT_REJECTED":
-        navigate("/wallet");
-        break;
-      case "SUBSCRIPTION_RENEWAL":
-        navigate("/commuter/my-bookings");
-        break;
-      case "QUOTATION_REQUEST":
-      case "QUOTATION_RECEIVED":
-      case "QUOTATION_ACCEPTED":
-      case "QUOTATION_REJECTED":
-        navigate("/b2b/quotations");
-        break;
-      case "CONTRACT_ACTIVATED":
-      case "CONTRACT_UPDATE":
-      case "CONTRACT_CREATED":
-      case "CONTRACT_DOCUMENT_UPLOADED":
-      case "CONTRACT_SIGNED":
-      case "CONTRACT_FULLY_SIGNED":
-      case "CONTRACT_REJECTED":
-      case "ASSIGNMENT_UPDATED":
-      case "DRIVER_ASSIGNED":
-      case "VEHICLE_ASSIGNED":
-      case "VEHICLE_CHANGED":
-      case "SIGNED_DOCUMENT_UPLOADED":
-      case "SIGNED_DOCUMENT_VERIFIED":
-      case "SIGNED_DOCUMENT_REJECTED":
-        // Navigate to contracts based on user role
-        if (user?.role === "CORPORATE") {
-          navigate("/corporate/contracts");
-        } else if (user?.role === "B2B_PARTNER") {
-          navigate("/b2b/contracts");
-        } else {
-          navigate("/contracts");
-        }
-        break;
-      case "NEGOTIATION_REQUEST":
-      case "NEGOTIATION_UPDATE":
-      case "NEGOTIATION_OFFER":
-      case "NEGOTIATION_STARTED":
-      case "NEGOTIATION_MESSAGE":
-      case "NEGOTIATION_RESPONSE":
-      case "NEGOTIATION_ACCEPTED":
-      case "NEGOTIATION_REJECTED":
-      case "NEGOTIATION_COUNTER_OFFER":
-      case "NEGOTIATION_COMPLETED":
-        // Navigate to negotiations based on user role
-        if (user?.role === "ADMIN") {
-          navigate("/admin/negotiations");
-        } else if (user?.role === "B2B_PARTNER") {
-          navigate("/b2b/negotiations");
-        } else if (user?.role === "CORPORATE") {
-          navigate("/corporate/quotations");
-        } else {
-          navigate("/notifications");
-        }
-        break;
-      case "EMERGENCY":
-        navigate("/commuter/support");
-        break;
-      case "NEW_ROUTE_REQUEST":
-      case "ROUTE_REQUEST":
-        // B2C Partner sees route requests
-        if (user?.role === "B2C_PARTNER") {
-          navigate("/b2c-partner/route-requests");
-        } else {
-          navigate("/notifications");
-        }
-        break;
-      case "ROUTE_REQUEST_RESPONSE":
-        // Commuter sees their route requests
-        if (user?.role === "COMMUTER") {
-          navigate("/commuter/route-requests");
-        } else {
-          navigate("/notifications");
-        }
-        break;
-      default:
-        navigate("/notifications");
-    }
+    // Navigate using the shared, role-aware notification routing helper so the
+    // dropdown and the full Notifications page always agree on the destination
+    // (commuters -> the correct `/commuter-profile?tab=...` tab).
+    navigate(getNotificationRoute(notification, user));
 
     setShowDropdown(false);
   };

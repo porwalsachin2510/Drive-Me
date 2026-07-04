@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { loginSuccess, authError, clearError } from "../../Redux/slices/authSlice";
+import {
+  loginSuccess,
+  authError,
+  clearError,
+} from "../../Redux/slices/authSlice";
 import api from "../../utils/api";
 import "./OTPVerification.css";
 
@@ -27,12 +31,12 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   const handleOtpChange = (index, value) => {
     if (value.length > 1) return; // Only allow single digit
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -46,7 +50,7 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
 
   const handleKeyDown = (index, e) => {
     // Handle backspace
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
       const prevInput = document.getElementById(`otp-${index - 1}`);
       if (prevInput) prevInput.focus();
     }
@@ -54,16 +58,16 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').trim();
+    const pastedData = e.clipboardData.getData("text").trim();
     if (pastedData.length === 6 && /^\d+$/.test(pastedData)) {
-      setOtp(pastedData.split(''));
+      setOtp(pastedData.split(""));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    const otpValue = otp.join('');
+
+    const otpValue = otp.join("");
     if (otpValue.length !== 6) {
       dispatch(authError("Please enter all 6 digits"));
       return;
@@ -79,14 +83,18 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
       });
 
       if (response.data.success) {
-        dispatch(loginSuccess({
-          user: response.data.user,
-          token: response.data.token,
-        }));
+        // Every role (including COMMUTER) is auto-logged-in after OTP
+        // verification — there is no admin approval gate anymore.
+        dispatch(
+          loginSuccess({
+            user: response.data.user,
+            token: response.data.token,
+          }),
+        );
 
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
-        
+
         // Call success callback or navigate based on user role
         if (onSuccess) {
           onSuccess(response.data.user);
@@ -97,10 +105,10 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
             B2C_PARTNER: "/b2c-partner-profile",
             B2B_PARTNER: "/b2b-partner-profile",
           };
-          
+
           const userRole = response.data.user?.role;
           const redirectPath = roleRedirectMap[userRole] || "/dashboard";
-          
+
           setTimeout(() => {
             navigate(redirectPath);
           }, 1500);
@@ -110,8 +118,8 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
       dispatch(
         authError(
           err.response?.data?.message ||
-            "Verification failed. Please try again."
-        )
+            "Verification failed. Please try again.",
+        ),
       );
     } finally {
       setLoading(false);
@@ -134,17 +142,16 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
         setTimeLeft(600);
         setCanResend(false);
         setOtp(["", "", "", "", "", ""]);
-        
+
         // Focus first input
-        const firstInput = document.getElementById('otp-0');
+        const firstInput = document.getElementById("otp-0");
         if (firstInput) firstInput.focus();
       }
     } catch (err) {
       dispatch(
         authError(
-          err.response?.data?.message ||
-            "Failed to resend verification code."
-        )
+          err.response?.data?.message || "Failed to resend verification code.",
+        ),
       );
     } finally {
       setResending(false);
@@ -155,16 +162,13 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
     <div className="otp-verification-container">
       <div className="otp-verification-card">
         <div className="otp-header">
-          <button 
-            className="otp-back-btn" 
-            onClick={onBack}
-            type="button"
-          >
+          <button className="otp-back-btn" onClick={onBack} type="button">
             ← Back
           </button>
           <h2 className="otp-title">Verify Your Email</h2>
           <p className="otp-subtitle">
-            We've sent a 6-digit verification code to<br />
+            We've sent a 6-digit verification code to
+            <br />
             <strong>{email}</strong>
           </p>
         </div>
@@ -193,7 +197,8 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
           <div className="otp-timer">
             {timeLeft > 0 ? (
               <p className="timer-text">
-                Code expires in <span className="timer-value">{formatTime(timeLeft)}</span>
+                Code expires in{" "}
+                <span className="timer-value">{formatTime(timeLeft)}</span>
               </p>
             ) : (
               <p className="timer-expired">Code expired</p>
@@ -203,7 +208,7 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
           <button
             type="submit"
             className="otp-verify-btn"
-            disabled={loading || otp.join('').length !== 6}
+            disabled={loading || otp.join("").length !== 6}
           >
             {loading ? "Verifying..." : "Verify Email"}
           </button>
@@ -212,7 +217,7 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
             <p className="resend-text">Didn't receive the code?</p>
             <button
               type="button"
-              className={`otp-resend-btn ${canResend ? 'enabled' : 'disabled'}`}
+              className={`otp-resend-btn ${canResend ? "enabled" : "disabled"}`}
               onClick={handleResend}
               disabled={!canResend || resending}
             >
@@ -225,7 +230,10 @@ const OTPVerification = ({ email, onBack, onSuccess }) => {
           <div className="security-icon">🔒</div>
           <div className="security-text">
             <h4>Security Notice</h4>
-            <p>Never share this verification code with anyone. DriveMe staff will never ask for your OTP.</p>
+            <p>
+              Never share this verification code with anyone. DriveMe staff will
+              never ask for your OTP.
+            </p>
           </div>
         </div>
       </div>

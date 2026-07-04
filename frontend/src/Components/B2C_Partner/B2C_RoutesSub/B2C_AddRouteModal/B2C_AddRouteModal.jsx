@@ -1,6 +1,12 @@
 /* eslint-disable no-unused-vars */
 "use client";
 
+import {
+  getActiveCurrency,
+  getCountryConfig,
+  getActiveCountry,
+  getExampleLocations,
+} from "../../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import "./b2c_addroutemodal.css";
@@ -13,8 +19,11 @@ function B2C_AddRouteModal({ onClose }) {
   const dispatch = useDispatch();
   const { formatAmount, getCurrencyDecimals, getCurrencySymbol } =
     useCurrency();
-  const [currency, setCurrency] = useState("AED");
+  const [currency, setCurrency] = useState(getActiveCurrency());
   const [decimals, setDecimals] = useState(2);
+  // Partner's country drives country-appropriate placeholders (e.g. KW -> Kuwait City).
+  const [country, setCountry] = useState(getActiveCountry());
+  const exampleLocations = getExampleLocations(country);
 
   // Helper function to get local date string in YYYY-MM-DD format
   // This avoids timezone shift issues that occur with toISOString()
@@ -49,6 +58,8 @@ function B2C_AddRouteModal({ onClose }) {
         returnStopPoints: [], // Only for Round Trip return journey
         assignedDriver: "", // Per-trip driver assignment (optional)
         assignedVehicle: "", // Per-trip vehicle assignment (optional)
+        returnDriver: "", // Round Trip: dedicated return-leg driver (optional)
+        returnVehicle: "", // Round Trip: dedicated return-leg vehicle (optional)
       },
     ],
     vehicleId: "",
@@ -161,6 +172,8 @@ function B2C_AddRouteModal({ onClose }) {
             returnStopPoints: [],
             assignedDriver: "", // Per-trip driver (optional)
             assignedVehicle: "", // Per-trip vehicle (optional)
+            returnDriver: "", // Round Trip: dedicated return-leg driver (optional)
+            returnVehicle: "", // Round Trip: dedicated return-leg vehicle (optional)
           },
         ],
       }));
@@ -197,6 +210,8 @@ function B2C_AddRouteModal({ onClose }) {
             returnStopPoints: [],
             assignedDriver: "", // Per-trip driver (optional)
             assignedVehicle: "", // Per-trip vehicle (optional)
+            returnDriver: "", // Round Trip: dedicated return-leg driver (optional)
+            returnVehicle: "", // Round Trip: dedicated return-leg vehicle (optional)
           },
         ],
         vehicleId: "",
@@ -212,21 +227,11 @@ function B2C_AddRouteModal({ onClose }) {
     try {
       setLoadingAssets(true);
 
-      // Fetch user's country to get currency
+      // Fetch user's country to get currency (central config = single source).
       const userResponse = await api.get("/users/me");
-      const userCountry = userResponse.data?.user?.country || "KW";
+      const userCountry = userResponse.data?.user?.country;
 
-      // Map country to currency
-      const countryToCurrency = {
-        UAE: "AED",
-        KW: "KWD",
-        SA: "SAR",
-        BH: "BHD",
-        OM: "OMR",
-        QA: "QAR",
-      };
-
-      const userCurrency = countryToCurrency[userCountry] || "AED";
+      const userCurrency = getCountryConfig(userCountry).currency;
       const userDecimals = getCurrencyDecimals(userCurrency);
 
       console.log(
@@ -240,6 +245,7 @@ function B2C_AddRouteModal({ onClose }) {
 
       setCurrency(userCurrency);
       setDecimals(userDecimals);
+      if (userCountry) setCountry(userCountry);
 
       // Fetch vehicles, drivers, and tags from B2C partner fleet
       // Use context="route" to get route, promo, and general tags
@@ -370,20 +376,99 @@ function B2C_AddRouteModal({ onClose }) {
     return assigned;
   };
 
-  // Check if a driver is assigned to another trip in this modal
+  // Check if a driver is assigned to another trip in this modal.
+  // Considers BOTH the outbound driver and the Return Leg driver of every other
+  // trip, so a driver picked as a return driver above shows as assigned (blue).
   const isDriverAssignedInOtherTrip = (driverId, currentTripIndex) => {
+    if (!driverId) return false;
     return formData.tripTimes.some(
       (tripTime, idx) =>
-        idx !== currentTripIndex && tripTime.assignedDriver === driverId,
+        idx !== currentTripIndex &&
+        (tripTime.assignedDriver === driverId ||
+          tripTime.returnDriver === driverId),
     );
   };
 
-  // Check if a vehicle is assigned to another trip in this modal
+  // Check if a vehicle is assigned to another trip in this modal.
+  // Considers BOTH the outbound vehicle and the Return Leg vehicle of every other
+  // trip, so a vehicle picked as a return vehicle above shows as assigned (blue).
   const isVehicleAssignedInOtherTrip = (vehicleId, currentTripIndex) => {
+    if (!vehicleId) return false;
     return formData.tripTimes.some(
       (tripTime, idx) =>
-        idx !== currentTripIndex && tripTime.assignedVehicle === vehicleId,
+        idx !== currentTripIndex &&
+        (tripTime.assignedVehicle === vehicleId ||
+          tripTime.returnVehicle === vehicleId),
     );
+  };
+
+  // Return Leg helpers: a driver/vehicle counts as "assigned above" when it is
+  // already used by the OUTBOUND leg of the SAME trip, or by the outbound/return
+  // leg of ANY OTHER trip in this modal. This mirrors the Trip-2 dropdown behavior
+  // so the Return Leg no longer shows an already-assigned asset as available (green).
+  const isDriverAssignedForReturn = (driverId, currentTripIndex) => {
+    if (!driverId) return false;
+    return formData.tripTimes.some((tripTime, idx) => {
+      if (idx === currentTripIndex) {
+        // Same trip: the outbound driver is considered assigned above.
+        return tripTime.assignedDriver === driverId;
+      }
+      // Other trips: both outbound and dedicated return drivers count.
+      return (
+        tripTime.assignedDriver === driverId ||
+        tripTime.returnDriver === driverId
+      );
+    });
+  };
+
+  const isVehicleAssignedForReturn = (vehicleId, currentTripIndex) => {
+    if (!vehicleId) return false;
+    return formData.tripTimes.some((tripTime, idx) => {
+      if (idx === currentTripIndex) {
+        // Same trip: the outbound vehicle is considered assigned above.
+        return tripTime.assignedVehicle === vehicleId;
+      }
+      // Other trips: both outbound and dedicated return vehicles count.
+      return (
+        tripTime.assignedVehicle === vehicleId ||
+        tripTime.returnVehicle === vehicleId
+      );
+    });
+  };
+
+  // Outbound Leg helpers: a driver/vehicle counts as "assigned above" when it is
+  // already used by the RETURN leg of the SAME trip, or by the outbound/return leg
+  // of ANY OTHER trip in this modal. This keeps the Outbound Leg dropdown in sync
+  // with the Return Leg so an asset picked for the return leg no longer shows as
+  // available (green) in the outbound dropdown.
+  const isDriverAssignedForOutbound = (driverId, currentTripIndex) => {
+    if (!driverId) return false;
+    return formData.tripTimes.some((tripTime, idx) => {
+      if (idx === currentTripIndex) {
+        // Same trip: the dedicated return driver is considered assigned above.
+        return tripTime.returnDriver === driverId;
+      }
+      // Other trips: both outbound and dedicated return drivers count.
+      return (
+        tripTime.assignedDriver === driverId ||
+        tripTime.returnDriver === driverId
+      );
+    });
+  };
+
+  const isVehicleAssignedForOutbound = (vehicleId, currentTripIndex) => {
+    if (!vehicleId) return false;
+    return formData.tripTimes.some((tripTime, idx) => {
+      if (idx === currentTripIndex) {
+        // Same trip: the dedicated return vehicle is considered assigned above.
+        return tripTime.returnVehicle === vehicleId;
+      }
+      // Other trips: both outbound and dedicated return vehicles count.
+      return (
+        tripTime.assignedVehicle === vehicleId ||
+        tripTime.returnVehicle === vehicleId
+      );
+    });
   };
 
   // Trip time management functions
@@ -400,6 +485,8 @@ function B2C_AddRouteModal({ onClose }) {
           returnStopPoints: [], // Only for Round Trip return journey
           assignedDriver: "", // Per-trip driver assignment (optional)
           assignedVehicle: "", // Per-trip vehicle assignment (optional)
+          returnDriver: "", // Round Trip: dedicated return-leg driver (optional)
+          returnVehicle: "", // Round Trip: dedicated return-leg vehicle (optional)
         },
       ],
     }));
@@ -672,6 +759,41 @@ function B2C_AddRouteModal({ onClose }) {
         updatedData.monthlyOneWayPrice = monthlyOneWay;
         updatedData.monthlyRoundTripPrice = monthlyRoundTrip;
         updatedData.workingDaysPerMonth = workingDaysPerMonth;
+      }
+
+      return updatedData;
+    });
+  };
+
+  // Handle MONTHLY price changes (the price model the partner actually sets).
+  // The partner enters a fixed monthly price; this is the authoritative price the
+  // commuter is billed (monthly price x number of months). We also derive a legacy
+  // per-day value so older per-day displays elsewhere in the app and the model's
+  // required oneWayPrice field stay populated with a sensible number.
+  const handleMonthlyPriceChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => {
+      const updatedData = { ...prev, [name]: value };
+
+      const daysPerWeek = updatedData.availableDays.length || 5;
+      const weeksPerMonth = 4.33;
+      const workingDaysPerMonth = Math.max(
+        1,
+        Math.round(daysPerWeek * weeksPerMonth),
+      );
+      updatedData.workingDaysPerMonth = workingDaysPerMonth;
+
+      // Derive legacy per-day prices from the entered monthly prices.
+      if (name === "monthlyOneWayPrice") {
+        updatedData.oneWayPrice = value
+          ? (parseFloat(value) / workingDaysPerMonth).toFixed(2)
+          : "";
+      }
+      if (name === "monthlyRoundTripPrice") {
+        updatedData.roundTripPrice = value
+          ? (parseFloat(value) / workingDaysPerMonth).toFixed(2)
+          : "";
       }
 
       return updatedData;
@@ -1059,11 +1181,12 @@ function B2C_AddRouteModal({ onClose }) {
                     <div className="b2c-detail-item">
                       <span className="b2c-detail-label">Price:</span>
                       <span className="b2c-detail-value">
-                        {selectedExistingRoute.pricing?.currency || "AED"}{" "}
+                        {selectedExistingRoute.pricing?.currency ||
+                          getActiveCurrency()}{" "}
                         {selectedExistingRoute.pricing?.oneWayPrice || 0} (One
                         Way)
                         {selectedExistingRoute.pricing?.roundTripPrice > 0 &&
-                          ` / ${selectedExistingRoute.pricing?.currency || "AED"} ${selectedExistingRoute.pricing?.roundTripPrice} (Round Trip)`}
+                          ` / ${selectedExistingRoute.pricing?.currency || getActiveCurrency()} ${selectedExistingRoute.pricing?.roundTripPrice} (Round Trip)`}
                       </span>
                     </div>
                   </div>
@@ -1105,7 +1228,7 @@ function B2C_AddRouteModal({ onClose }) {
                     type="text"
                     id="fromLocation"
                     name="fromLocation"
-                    placeholder="e.g. Dubai Marina"
+                    placeholder={`e.g. ${exampleLocations.from}`}
                     value={formData.fromLocation}
                     onChange={handleChange}
                     required
@@ -1121,7 +1244,7 @@ function B2C_AddRouteModal({ onClose }) {
                     type="text"
                     id="toLocation"
                     name="toLocation"
-                    placeholder="e.g. Abu Dhabi City"
+                    placeholder={`e.g. ${exampleLocations.to}`}
                     value={formData.toLocation}
                     onChange={handleChange}
                     required
@@ -1271,37 +1394,6 @@ function B2C_AddRouteModal({ onClose }) {
 
                   <div className="b2c-form-row">
                     <div className="b2c-form-group">
-                      <label className="b2c-form-label">Departure Time *</label>
-                      <input
-                        type="time"
-                        value={tripTime.departureTime}
-                        onChange={(e) =>
-                          updateTripTime(index, "departureTime", e.target.value)
-                        }
-                        required
-                        className="b2c-form-input"
-                      />
-                    </div>
-
-                    {tripTime.tripType === "Round Trip" && (
-                      <div className="b2c-form-group">
-                        <label className="b2c-form-label">Return Time *</label>
-                        <input
-                          type="time"
-                          value={tripTime.arrivalTime}
-                          onChange={(e) =>
-                            updateTripTime(index, "arrivalTime", e.target.value)
-                          }
-                          required={tripTime.tripType === "Round Trip"}
-                          className="b2c-form-input"
-                        />
-                        <small className="b2c-form-help">
-                          Time when bus returns from destination
-                        </small>
-                      </div>
-                    )}
-
-                    <div className="b2c-form-group">
                       <label className="b2c-form-label">Trip Type</label>
                       <select
                         value={tripTime.tripType}
@@ -1317,6 +1409,126 @@ function B2C_AddRouteModal({ onClose }) {
                         ))}
                       </select>
                     </div>
+
+                    {/* Direction selector - only for One Way trips */}
+                    {tripTime.tripType === "One Way" && (
+                      <div className="b2c-form-group">
+                        <label className="b2c-form-label">Direction</label>
+                        <select
+                          value={tripTime.direction || "outbound"}
+                          onChange={(e) =>
+                            updateTripTime(index, "direction", e.target.value)
+                          }
+                          className="b2c-form-input"
+                        >
+                          <option value="outbound">
+                            {formData.fromLocation || "From"} →{" "}
+                            {formData.toLocation || "To"}
+                          </option>
+                          <option value="return">
+                            {formData.toLocation || "To"} →{" "}
+                            {formData.fromLocation || "From"}
+                          </option>
+                        </select>
+                        <small className="b2c-form-help">
+                          Choose which way this one-way trip runs
+                        </small>
+                      </div>
+                    )}
+
+                    <div className="b2c-form-group">
+                      <label className="b2c-form-label">Departure Time *</label>
+                      <input
+                        type="time"
+                        value={tripTime.departureTime}
+                        onChange={(e) =>
+                          updateTripTime(index, "departureTime", e.target.value)
+                        }
+                        required
+                        className="b2c-form-input"
+                      />
+                      <small className="b2c-form-help">
+                        Bus leaves{" "}
+                        {tripTime.tripType === "One Way" &&
+                        tripTime.direction === "return"
+                          ? formData.toLocation || "destination"
+                          : formData.fromLocation || "origin"}
+                      </small>
+                    </div>
+
+                    {/* Arrival at destination - applies to One Way and the outbound leg of Round Trip */}
+                    <div className="b2c-form-group">
+                      <label className="b2c-form-label">
+                        Arrival Time (at destination)
+                      </label>
+                      <input
+                        type="time"
+                        value={tripTime.destinationArrivalTime || ""}
+                        onChange={(e) =>
+                          updateTripTime(
+                            index,
+                            "destinationArrivalTime",
+                            e.target.value,
+                          )
+                        }
+                        className="b2c-form-input"
+                      />
+                      <small className="b2c-form-help">
+                        Bus reaches{" "}
+                        {tripTime.tripType === "One Way" &&
+                        tripTime.direction === "return"
+                          ? formData.fromLocation || "destination"
+                          : formData.toLocation || "destination"}
+                      </small>
+                    </div>
+
+                    {tripTime.tripType === "Round Trip" && (
+                      <>
+                        <div className="b2c-form-group">
+                          <label className="b2c-form-label">
+                            Return Departure Time *
+                          </label>
+                          <input
+                            type="time"
+                            value={tripTime.arrivalTime}
+                            onChange={(e) =>
+                              updateTripTime(
+                                index,
+                                "arrivalTime",
+                                e.target.value,
+                              )
+                            }
+                            required={tripTime.tripType === "Round Trip"}
+                            className="b2c-form-input"
+                          />
+                          <small className="b2c-form-help">
+                            Bus departs {formData.toLocation || "destination"}{" "}
+                            to head back
+                          </small>
+                        </div>
+
+                        <div className="b2c-form-group">
+                          <label className="b2c-form-label">
+                            Return Arrival Time
+                          </label>
+                          <input
+                            type="time"
+                            value={tripTime.returnArrivalTime || ""}
+                            onChange={(e) =>
+                              updateTripTime(
+                                index,
+                                "returnArrivalTime",
+                                e.target.value,
+                              )
+                            }
+                            className="b2c-form-input"
+                          />
+                          <small className="b2c-form-help">
+                            Bus reaches back {formData.fromLocation || "origin"}
+                          </small>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Stop Points for this specific trip */}
@@ -1325,22 +1537,44 @@ function B2C_AddRouteModal({ onClose }) {
                     <div className="b2c-journey-stop-points">
                       <div className="b2c-stop-points-header">
                         <h5 className="b2c-stop-points-title">
-                          🛑 Outbound Stops: {formData.fromLocation} →{" "}
-                          {formData.toLocation}
+                          🛑{" "}
+                          {tripTime.tripType === "One Way" &&
+                          tripTime.direction === "return"
+                            ? "Stops"
+                            : "Outbound Stops"}
+                          :{" "}
+                          {tripTime.tripType === "One Way" &&
+                          tripTime.direction === "return"
+                            ? formData.toLocation
+                            : formData.fromLocation}{" "}
+                          →{" "}
+                          {tripTime.tripType === "One Way" &&
+                          tripTime.direction === "return"
+                            ? formData.fromLocation
+                            : formData.toLocation}
                         </h5>
                         <button
                           type="button"
                           onClick={() => addStopPointToTrip(index, "outbound")}
                           className="b2c-add-stop-btn"
                         >
-                          + Add Outbound Stop
+                          + Add Stop
                         </button>
                       </div>
 
                       {tripTime.outboundStopPoints.length === 0 ? (
                         <p className="b2c-no-stops">
-                          No outbound stops. Bus will go directly from{" "}
-                          {formData.fromLocation} to {formData.toLocation}.
+                          No stops. Bus will go directly from{" "}
+                          {tripTime.tripType === "One Way" &&
+                          tripTime.direction === "return"
+                            ? formData.toLocation
+                            : formData.fromLocation}{" "}
+                          to{" "}
+                          {tripTime.tripType === "One Way" &&
+                          tripTime.direction === "return"
+                            ? formData.fromLocation
+                            : formData.toLocation}
+                          .
                         </p>
                       ) : (
                         <div className="b2c-stops-list">
@@ -1353,7 +1587,7 @@ function B2C_AddRouteModal({ onClose }) {
                                 <div className="b2c-stop-details">
                                   <input
                                     type="text"
-                                    placeholder="Stop location (e.g., Dubai Mall)"
+                                    placeholder={`Stop location (e.g., ${exampleLocations.stop})`}
                                     value={stop.location}
                                     onChange={(e) =>
                                       updateTripStopPoint(
@@ -1435,7 +1669,7 @@ function B2C_AddRouteModal({ onClose }) {
                                   <div className="b2c-stop-details">
                                     <input
                                       type="text"
-                                      placeholder="Stop location (e.g., Sharjah)"
+                                      placeholder={`Stop location (e.g., ${exampleLocations.to})`}
                                       value={stop.location}
                                       onChange={(e) =>
                                         updateTripStopPoint(
@@ -1508,7 +1742,11 @@ function B2C_AddRouteModal({ onClose }) {
                         gap: "6px",
                       }}
                     >
-                      <span>📋</span> Trip {index + 1} Assignment *
+                      <span>📋</span> Trip {index + 1} Assignment
+                      {tripTime.tripType === "Round Trip"
+                        ? " — Outbound Leg (From → To)"
+                        : ""}{" "}
+                      *
                     </h5>
                     <p
                       style={{
@@ -1517,7 +1755,9 @@ function B2C_AddRouteModal({ onClose }) {
                         marginBottom: "12px",
                       }}
                     >
-                      Assign a driver and vehicle for this specific trip time.
+                      {tripTime.tripType === "Round Trip"
+                        ? "Assign the driver and vehicle for the OUTBOUND (jaane) leg of this round trip. You can assign a different driver/vehicle for the return leg below."
+                        : "Assign a driver and vehicle for this specific trip time."}{" "}
                       Drivers/Vehicles: 🟢 available, 🔴 busy, 🟠 offline, 🔵
                       assigned to another trip above.
                     </p>
@@ -1552,9 +1792,10 @@ function B2C_AddRouteModal({ onClose }) {
                         >
                           <option value="">Select a driver</option>
                           {availableDrivers.map((driver) => {
-                            // Check if this driver is assigned to another trip in this modal
+                            // Check if this driver is assigned to another trip in this
+                            // modal OR to the Return Leg of this same trip.
                             const isAssignedInModal =
-                              isDriverAssignedInOtherTrip(driver._id, index);
+                              isDriverAssignedForOutbound(driver._id, index);
 
                             // Use the backend-calculated availability status and message
                             const availabilityStatus = isAssignedInModal
@@ -1736,9 +1977,10 @@ function B2C_AddRouteModal({ onClose }) {
                         >
                           <option value="">Select a vehicle</option>
                           {availableVehicles.map((vehicle) => {
-                            // Check if this vehicle is assigned to another trip in this modal
+                            // Check if this vehicle is assigned to another trip in this
+                            // modal OR to the Return Leg of this same trip.
                             const isAssignedInModal =
-                              isVehicleAssignedInOtherTrip(vehicle._id, index);
+                              isVehicleAssignedForOutbound(vehicle._id, index);
 
                             // Use backend-calculated availability status
                             const vehicleAvailability = isAssignedInModal
@@ -1890,6 +2132,183 @@ function B2C_AddRouteModal({ onClose }) {
                           })()}
                       </div>
                     </div>
+                    {/* Round Trip ONLY: dedicated RETURN (aane) leg driver/vehicle */}
+                    {tripTime.tripType === "Round Trip" && (
+                      <div
+                        style={{
+                          marginTop: "14px",
+                          paddingTop: "14px",
+                          borderTop: "1px dashed #cbd5e1",
+                        }}
+                      >
+                        <h5
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            color: "#475569",
+                            marginBottom: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          <span>🔄</span> Return Leg (To → From)
+                        </h5>
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            color: "#64748b",
+                            marginBottom: "12px",
+                          }}
+                        >
+                          Optionally assign a different driver and vehicle for
+                          the RETURN (aane) leg. Leave blank to reuse the
+                          outbound driver and vehicle.
+                        </p>
+                        <div
+                          className="b2c-form-row"
+                          style={{ display: "flex", gap: "12px" }}
+                        >
+                          <div className="b2c-form-group" style={{ flex: 1 }}>
+                            <label
+                              style={{
+                                fontSize: "12px",
+                                fontWeight: "500",
+                                color: "#475569",
+                                marginBottom: "4px",
+                                display: "block",
+                              }}
+                            >
+                              Return Driver (optional)
+                            </label>
+                            <select
+                              value={tripTime.returnDriver || ""}
+                              onChange={(e) =>
+                                updateTripTime(
+                                  index,
+                                  "returnDriver",
+                                  e.target.value,
+                                )
+                              }
+                              className="b2c-form-input"
+                              style={{ fontSize: "13px", padding: "8px 10px" }}
+                            >
+                              <option value="">Same as outbound driver</option>
+                              {availableDrivers.map((driver) => {
+                                // A driver already used above (this trip's outbound
+                                // leg or any other trip) is shown as assigned (blue).
+                                const isAssignedInModal =
+                                  isDriverAssignedForReturn(driver._id, index);
+
+                                const availabilityStatus = isAssignedInModal
+                                  ? "assigned"
+                                  : driver.availability?.status ||
+                                    driver.availabilityStatus ||
+                                    "available";
+                                const availabilityIcon = isAssignedInModal
+                                  ? "🔵"
+                                  : availabilityStatus === "available"
+                                    ? "🟢"
+                                    : availabilityStatus === "busy"
+                                      ? "🔴"
+                                      : "🟠";
+                                const isDisabled =
+                                  isAssignedInModal ||
+                                  (availabilityStatus !== "available" &&
+                                    availabilityStatus !== "scheduled");
+                                const statusText = isAssignedInModal
+                                  ? " - Assigned to Trip Above"
+                                  : "";
+                                return (
+                                  <option
+                                    key={driver._id}
+                                    value={driver._id}
+                                    disabled={isDisabled}
+                                    style={{
+                                      color: isDisabled ? "#94a3b8" : "inherit",
+                                    }}
+                                  >
+                                    {availabilityIcon} {driver.name} (
+                                    {driver.phoneNumber}){statusText}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                          <div className="b2c-form-group" style={{ flex: 1 }}>
+                            <label
+                              style={{
+                                fontSize: "12px",
+                                fontWeight: "500",
+                                color: "#475569",
+                                marginBottom: "4px",
+                                display: "block",
+                              }}
+                            >
+                              Return Vehicle (optional)
+                            </label>
+                            <select
+                              value={tripTime.returnVehicle || ""}
+                              onChange={(e) =>
+                                updateTripTime(
+                                  index,
+                                  "returnVehicle",
+                                  e.target.value,
+                                )
+                              }
+                              className="b2c-form-input"
+                              style={{ fontSize: "13px", padding: "8px 10px" }}
+                            >
+                              <option value="">Same as outbound vehicle</option>
+                              {availableVehicles.map((vehicle) => {
+                                // A vehicle already used above (this trip's outbound
+                                // leg or any other trip) is shown as assigned (blue).
+                                const isAssignedInModal =
+                                  isVehicleAssignedForReturn(
+                                    vehicle._id,
+                                    index,
+                                  );
+
+                                const vehicleAvailability = isAssignedInModal
+                                  ? "assigned"
+                                  : vehicle.availabilityStatus || "available";
+                                const vehicleIcon = isAssignedInModal
+                                  ? "🔵"
+                                  : vehicleAvailability === "available"
+                                    ? "🟢"
+                                    : vehicleAvailability === "busy"
+                                      ? "🔴"
+                                      : "🟠";
+                                const isVehicleDisabled =
+                                  isAssignedInModal ||
+                                  (vehicleAvailability !== "available" &&
+                                    vehicleAvailability !== "scheduled");
+                                const vehicleStatusText = isAssignedInModal
+                                  ? " - ASSIGNED TO TRIP ABOVE"
+                                  : "";
+                                return (
+                                  <option
+                                    key={vehicle._id}
+                                    value={vehicle._id}
+                                    disabled={isVehicleDisabled}
+                                    style={{
+                                      color: isVehicleDisabled
+                                        ? "#94a3b8"
+                                        : "inherit",
+                                    }}
+                                  >
+                                    {vehicleIcon} {vehicle.model} (
+                                    {vehicle.licensePlate}) -{" "}
+                                    {vehicle.seatingCapacity} seats
+                                    {vehicleStatusText}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -2061,47 +2480,49 @@ function B2C_AddRouteModal({ onClose }) {
 
                   <div className="b2c-form-row">
                     <div className="b2c-form-group">
-                      <label htmlFor="oneWayPrice" className="b2c-form-label">
-                        One Way Price ({getCurrencySymbol(currency)}) *
+                      <label
+                        htmlFor="monthlyOneWayPrice"
+                        className="b2c-form-label"
+                      >
+                        One Way Monthly Price ({getCurrencySymbol(currency)}) *
                       </label>
                       <input
                         type="number"
-                        id="oneWayPrice"
-                        name="oneWayPrice"
-                        placeholder="50.00"
-                        value={formData.oneWayPrice}
-                        onChange={handlePriceChange}
+                        id="monthlyOneWayPrice"
+                        name="monthlyOneWayPrice"
+                        placeholder="2000.00"
+                        value={formData.monthlyOneWayPrice}
+                        onChange={handleMonthlyPriceChange}
                         required
                         min="0"
                         step={decimals === 3 ? "0.001" : "0.01"}
                         className="b2c-form-input"
                       />
                       <small className="b2c-form-help">
-                        Daily price per trip (charged per travel day)
+                        Fixed price per month for a one-way monthly pass
                       </small>
                     </div>
 
                     <div className="b2c-form-group">
                       <label
-                        htmlFor="roundTripPrice"
+                        htmlFor="monthlyRoundTripPrice"
                         className="b2c-form-label"
                       >
-                        Round Trip Price ({getCurrencySymbol(currency)}) *
+                        Round Trip Monthly Price ({getCurrencySymbol(currency)})
                       </label>
                       <input
                         type="number"
-                        id="roundTripPrice"
-                        name="roundTripPrice"
-                        placeholder="80.00"
-                        value={formData.roundTripPrice}
-                        onChange={handlePriceChange}
-                        required
+                        id="monthlyRoundTripPrice"
+                        name="monthlyRoundTripPrice"
+                        placeholder="4000.00"
+                        value={formData.monthlyRoundTripPrice}
+                        onChange={handleMonthlyPriceChange}
                         min="0"
                         step={decimals === 3 ? "0.001" : "0.01"}
                         className="b2c-form-input"
                       />
                       <small className="b2c-form-help">
-                        Daily price per round trip (charged per travel day)
+                        Fixed price per month for a round-trip monthly pass
                       </small>
                     </div>
                   </div>
@@ -2160,12 +2581,32 @@ function B2C_AddRouteModal({ onClose }) {
                           <div className="b2c-trip-header">
                             <span className="b2c-trip-time">
                               {trip.departureTime}
+                              {trip.destinationArrivalTime &&
+                                ` → ${trip.destinationArrivalTime}`}
                               {trip.tripType === "Round Trip" &&
                                 trip.arrivalTime &&
-                                ` - Return ${trip.arrivalTime}`}
+                                ` | Return ${trip.arrivalTime}${
+                                  trip.returnArrivalTime
+                                    ? ` → ${trip.returnArrivalTime}`
+                                    : ""
+                                }`}
                             </span>
                             <span className="b2c-trip-type">
                               {trip.tripType}
+                              {trip.tripType === "One Way" &&
+                                trip.direction === "return" &&
+                                " (Reverse)"}
+                            </span>
+                          </div>
+
+                          {/* Direction summary */}
+                          <div className="b2c-trip-stops-preview">
+                            <span className="b2c-stops-label">🧭 Route:</span>
+                            <span className="b2c-stop-preview">
+                              {trip.tripType === "One Way" &&
+                              trip.direction === "return"
+                                ? `${formData.toLocation} → ${formData.fromLocation}`
+                                : `${formData.fromLocation} → ${formData.toLocation}`}
                             </span>
                           </div>
 
@@ -2173,7 +2614,11 @@ function B2C_AddRouteModal({ onClose }) {
                           {trip.outboundStopPoints.length > 0 && (
                             <div className="b2c-trip-stops-preview">
                               <span className="b2c-stops-label">
-                                🛑 Outbound:
+                                🛑{" "}
+                                {trip.tripType === "One Way" &&
+                                trip.direction === "return"
+                                  ? "Stops:"
+                                  : "Outbound:"}
                               </span>
                               {trip.outboundStopPoints.map(
                                 (stop, stopIndex) => (

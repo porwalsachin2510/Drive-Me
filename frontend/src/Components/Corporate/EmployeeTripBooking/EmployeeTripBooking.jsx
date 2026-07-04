@@ -200,35 +200,53 @@ function EmployeeTripBooking() {
     }
   };
 
+  // Trip History = finished trips (completed or cancelled). The backend
+  // getMyBookings endpoint defaults to only SCHEDULED/IN_PROGRESS, so we MUST
+  // request the history statuses explicitly via ?status=COMPLETED,CANCELLED.
+  const isHistoryStatus = (status) =>
+    ["COMPLETED", "CANCELLED"].includes((status || "").toUpperCase());
+
   const fetchMyBookings = async () => {
     try {
       setLoading(true);
-      // Use the trips/my-bookings endpoint which returns trips where this employee is a passenger
-      // Then filter to only show COMPLETED trips for Trip History
-      const response = await api.get("/trips/my-bookings");
+      // Ask the server for finished trips only (already status-filtered + sorted newest-first)
+      const response = await api.get(
+        "/trips/my-bookings?status=COMPLETED,CANCELLED",
+      );
       const bookingsData =
         response.data?.data?.bookings || response.data?.data || [];
 
-      // Filter to only show COMPLETED trips in Trip History
-      const completedTrips = (
+      const historyTrips = (
         Array.isArray(bookingsData) ? bookingsData : []
-      ).filter(
-        (trip) => trip.status === "COMPLETED" || trip.status === "Completed",
-      );
+      ).filter((trip) => isHistoryStatus(trip.status));
 
-      setMyBookings(completedTrips);
+      // Fallback to the dashboard travel history if the bookings endpoint is empty
+      if (historyTrips.length === 0) {
+        try {
+          const dashResponse = await api.get(
+            "/corporate-employee-users/dashboard",
+          );
+          const historyFromDash = (
+            dashResponse.data?.data?.travelHistory || []
+          ).filter((trip) => isHistoryStatus(trip.status));
+          setMyBookings(historyFromDash);
+          return;
+        } catch {
+          // ignore and fall through to setting the (empty) history list
+        }
+      }
+
+      setMyBookings(historyTrips);
     } catch (error) {
       console.error("Error fetching bookings:", error);
-      // Fallback to dashboard - filter for completed trips
+      // Fallback to dashboard travel history for completed/cancelled trips
       try {
         const response = await api.get("/corporate-employee-users/dashboard");
         const dashboardData = response.data?.data;
-        const historyTrips = dashboardData?.travelHistory || [];
-        // Filter for completed trips only
-        const completedTrips = historyTrips.filter(
-          (trip) => trip.status === "COMPLETED" || trip.status === "Completed",
+        const historyTrips = (dashboardData?.travelHistory || []).filter(
+          (trip) => isHistoryStatus(trip.status),
         );
-        setMyBookings(completedTrips);
+        setMyBookings(historyTrips);
       } catch {
         setMyBookings([]);
       }

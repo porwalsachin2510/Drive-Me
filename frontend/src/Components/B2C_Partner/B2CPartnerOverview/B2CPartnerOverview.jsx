@@ -1,10 +1,13 @@
 "use client";
 
+import { useLocale } from "../../../hooks/useLocale";
 import { useState, useEffect } from "react";
 import api from "../../../utils/api";
 import "./b2cpartneroverview.css";
 
 function B2CPartnerOverview() {
+  // Active currency for the logged-in partner's country (e.g. KWD for Kuwait).
+  const { currency: activeCurrency } = useLocale();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,21 +57,51 @@ function B2CPartnerOverview() {
 
   const getRenewalStatusStyle = (status) => {
     switch (status) {
-      case "expired": return { background: "#fce4ec", color: "#c62828", border: "1px solid #ef9a9a" };
-      case "expiring_soon": return { background: "#fff3e0", color: "#e65100", border: "1px solid #ffcc80" };
-      case "renewal_upcoming": return { background: "#e3f2fd", color: "#1565c0", border: "1px solid #90caf9" };
-      case "active": return { background: "#e8f5e9", color: "#2e7d32", border: "1px solid #a5d6a7" };
-      default: return { background: "#f5f5f5", color: "#616161", border: "1px solid #e0e0e0" };
+      case "expired":
+        return {
+          background: "#fce4ec",
+          color: "#c62828",
+          border: "1px solid #ef9a9a",
+        };
+      case "expiring_soon":
+        return {
+          background: "#fff3e0",
+          color: "#e65100",
+          border: "1px solid #ffcc80",
+        };
+      case "renewal_upcoming":
+        return {
+          background: "#e3f2fd",
+          color: "#1565c0",
+          border: "1px solid #90caf9",
+        };
+      case "active":
+        return {
+          background: "#e8f5e9",
+          color: "#2e7d32",
+          border: "1px solid #a5d6a7",
+        };
+      default:
+        return {
+          background: "#f5f5f5",
+          color: "#616161",
+          border: "1px solid #e0e0e0",
+        };
     }
   };
 
   const getRenewalStatusLabel = (status) => {
     switch (status) {
-      case "expired": return "Expired";
-      case "expiring_soon": return "Expiring Soon";
-      case "renewal_upcoming": return "Renewal Due";
-      case "active": return "Active";
-      default: return status;
+      case "expired":
+        return "Expired";
+      case "expiring_soon":
+        return "Expiring Soon";
+      case "renewal_upcoming":
+        return "Renewal Due";
+      case "active":
+        return "Active";
+      default:
+        return status;
     }
   };
 
@@ -166,7 +199,7 @@ function B2CPartnerOverview() {
           </div>
           <div className="stat-info">
             <span className="stat-value">
-              {stats?.currency || "AED"}{" "}
+              {stats?.currency || activeCurrency}{" "}
               {(stats?.monthlyRevenue || 0).toLocaleString()}
             </span>
             <span className="stat-label">Monthly Revenue</span>
@@ -300,7 +333,7 @@ function B2CPartnerOverview() {
         <div className="summary-card">
           <h4>Total Revenue</h4>
           <p className="summary-value">
-            {stats?.currency || "AED"}{" "}
+            {stats?.currency || activeCurrency}{" "}
             {(stats?.totalRevenue || 0).toLocaleString()}
           </p>
         </div>

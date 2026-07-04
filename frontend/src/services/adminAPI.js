@@ -509,6 +509,55 @@ export const updateCommissionSettings = async (userId, settings) => {
   }
 };
 
+// Get the platform-wide cancellation policy settings
+export const getCancellationSettings = async () => {
+  try {
+    const response = await api.get("/admin/cancellation-settings");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching cancellation settings:", error);
+    throw error;
+  }
+};
+
+// Update the platform-wide cancellation policy settings
+export const updateCancellationSettings = async (settings) => {
+  try {
+    const response = await api.put("/admin/cancellation-settings", settings);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating cancellation settings:", error);
+    throw error;
+  }
+};
+
+// Get the list of outstanding cash cancellation dues (identity-anchored receivables)
+export const getCashCancellationDues = async (params = {}) => {
+  try {
+    const response = await api.get("/admin/cancellation-settings/cash-dues", {
+      params,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching cash cancellation dues:", error);
+    throw error;
+  }
+};
+
+// Waive or settle an outstanding cash cancellation due
+export const resolveCashCancellationDue = async (ledgerId, payload) => {
+  try {
+    const response = await api.post(
+      `/admin/cancellation-settings/cash-dues/${ledgerId}/resolve`,
+      payload,
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error resolving cash cancellation due:", error);
+    throw error;
+  }
+};
+
 // Delete commission settings for a user
 export const deleteCommissionSettings = async (userId) => {
   try {

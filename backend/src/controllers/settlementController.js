@@ -5,6 +5,8 @@ import Settlement from "../models/Settlement.js";
 import WithdrawalRequest from "../models/WithdrawalRequest.js";
 import { createNotification } from "../Services/notificationService.js";
 import { sendEmail } from "../Services/emailService.js";
+import { resolveDisplayCurrency, convertForDisplay } from "../Services/displayCurrency.js";
+import { getCountryCurrency, getEffectiveCountry } from "../Config/localizationConfig.js";
 
 /**
  * Transaction "types" (wallet sub-document `type`) that represent money the
@@ -43,7 +45,7 @@ export const calculateSettlementsForPeriod = async (
 
     const partners = await User.find({
         role: { $in: ["B2C_PARTNER", "B2B_PARTNER"] },
-    }).select("_id fullName companyName email role status");
+    }).select("_id fullName companyName email role status country countryCode adminPermissions");
 
     const results = [];
 
@@ -91,7 +93,9 @@ export const calculateSettlementsForPeriod = async (
             year: targetYear,
             periodStart,
             periodEnd,
-            currency: wallet.currency || "AED",
+            // Stamp the partner's account-country currency (single source of
+            // truth), not the stored wallet currency which could be stale.
+            currency: getCountryCurrency(getEffectiveCountry(partner)),
             grossEarnings,
             commissionCollected,
             bookingCount,
@@ -284,6 +288,7 @@ export const getAllSettlements = async (req, res) => {
     try {
         const { status, month, year, page = 1, limit = 20 } = req.query;
         const skip = (Number(page) - 1) * Number(limit);
+        const displayCurrency = resolveDisplayCurrency(req);
 
         const query = {};
         if (status && status !== "all") query.status = status;
@@ -298,12 +303,14 @@ export const getAllSettlements = async (req, res) => {
             Settlement.countDocuments(query),
         ]);
 
-        // Global summary across the SAME filter (not just current page)
+        // Global summary across the SAME filter (not just current page). Group by
+        // each settlement's native currency so we can convert every bucket into
+        // the admin's selected display currency before summing.
         const summaryAgg = await Settlement.aggregate([
             { $match: query },
             {
                 $group: {
-                    _id: null,
+                    _id: { $ifNull: ["$currency", "AED"] },
                     totalNetPayable: { $sum: "$netPayable" },
                     totalCommissionCollected: { $sum: "$commissionCollected" },
                     totalCommissionDebt: { $sum: "$commissionDebt" },
@@ -313,23 +320,45 @@ export const getAllSettlements = async (req, res) => {
             },
         ]);
 
-        const summary = summaryAgg[0] || {
-            totalNetPayable: 0,
-            totalCommissionCollected: 0,
-            totalCommissionDebt: 0,
-            totalGrossEarnings: 0,
-            partners: [],
-        };
+        const partnerSet = new Set();
+        let totalNetPayable = 0;
+        let totalCommissionCollected = 0;
+        let totalCommissionDebt = 0;
+        let totalGrossEarnings = 0;
+        for (const bucket of summaryAgg) {
+            const native = bucket._id || "AED";
+            totalNetPayable += convertForDisplay(bucket.totalNetPayable, native, displayCurrency);
+            totalCommissionCollected += convertForDisplay(bucket.totalCommissionCollected, native, displayCurrency);
+            totalCommissionDebt += convertForDisplay(bucket.totalCommissionDebt, native, displayCurrency);
+            totalGrossEarnings += convertForDisplay(bucket.totalGrossEarnings, native, displayCurrency);
+            (bucket.partners || []).forEach((p) => partnerSet.add(String(p)));
+        }
+
+        // Attach converted display fields to each settlement row.
+        const settlementsWithDisplay = settlements.map((s) => {
+            const obj = s.toObject ? s.toObject() : s;
+            const native = obj.currency || "AED";
+            return {
+                ...obj,
+                displayCurrency,
+                displayGrossEarnings: convertForDisplay(obj.grossEarnings, native, displayCurrency),
+                displayNetPayable: convertForDisplay(obj.netPayable, native, displayCurrency),
+                displayCommissionCollected: convertForDisplay(obj.commissionCollected, native, displayCurrency),
+                displayCommissionDebt: convertForDisplay(obj.commissionDebt, native, displayCurrency),
+            };
+        });
 
         return res.status(200).json({
             success: true,
-            settlements,
+            settlements: settlementsWithDisplay,
+            displayCurrency,
             summary: {
-                totalNetPayable: summary.totalNetPayable,
-                totalCommissionCollected: summary.totalCommissionCollected,
-                totalCommissionDebt: summary.totalCommissionDebt,
-                totalGrossEarnings: summary.totalGrossEarnings,
-                activePartners: summary.partners.length,
+                totalNetPayable: Math.round(totalNetPayable * 1e6) / 1e6,
+                totalCommissionCollected: Math.round(totalCommissionCollected * 1e6) / 1e6,
+                totalCommissionDebt: Math.round(totalCommissionDebt * 1e6) / 1e6,
+                totalGrossEarnings: Math.round(totalGrossEarnings * 1e6) / 1e6,
+                activePartners: partnerSet.size,
+                currency: displayCurrency,
             },
             pagination: {
                 total,
@@ -363,6 +392,24 @@ export const getPartnerSettlement = async (req, res) => {
             return res.status(404).json({ success: false, message: "Wallet not found" });
         }
 
+        // Currency a partner sees is ALWAYS derived from their own account country
+        // (single source of truth), never from the stored wallet currency (which
+        // can be stale, e.g. an "AED" wallet for a Kuwait partner) or an "AED"
+        // fallback. Self-heal the wallet's currency in place when it is safe to do
+        // so (no real money would be mislabeled): empty wallet with no debt.
+        const settlementPartner = await User.findById(partnerId).select("country countryCode role adminPermissions");
+        const accountCurrency = getCountryCurrency(getEffectiveCountry(settlementPartner));
+        if (
+            wallet.currency !== accountCurrency &&
+            (wallet.balance || 0) === 0 &&
+            (wallet.commissionDebt || 0) === 0 &&
+            (wallet.pendingAmount || 0) === 0 &&
+            !(wallet.transactions && wallet.transactions.length)
+        ) {
+            wallet.currency = accountCurrency;
+            await wallet.save();
+        }
+
         const periodStart = new Date(targetYear, targetMonth - 1, 1, 0, 0, 0);
         const periodEnd = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999);
 
@@ -390,7 +437,7 @@ export const getPartnerSettlement = async (req, res) => {
                 partnerId,
                 month: targetMonth,
                 year: targetYear,
-                currency: wallet.currency || "AED",
+                currency: accountCurrency,
                 grossEarnings,
                 commissionCollected,
                 netPayable: wallet.balance > 0 ? wallet.balance : 0,

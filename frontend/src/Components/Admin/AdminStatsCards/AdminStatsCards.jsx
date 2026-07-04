@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import "./AdminStatsCards.css";
 
 function AdminStatsCards({ stats }) {
@@ -38,8 +39,8 @@ function AdminStatsCards({ stats }) {
       title: "Total Revenue",
       value:
         stats?.totalRevenue !== undefined
-          ? `${stats.currency || "AED"} ${Number(stats.totalRevenue).toLocaleString()}`
-          : `${stats.currency || "AED"} 0`,
+          ? `${stats.currency || getActiveCurrency()} ${Number(stats.totalRevenue).toLocaleString()}`
+          : `${stats.currency || getActiveCurrency()} 0`,
       change: "+18% this month",
       positive: true,
       icon: "💰",
@@ -49,9 +50,9 @@ function AdminStatsCards({ stats }) {
       title: "Admin Wallet Balance",
       value:
         stats?.adminBalance !== undefined
-          ? `${stats.currency || "AED"} ${Number(stats.adminBalance).toLocaleString()}`
-          : `${stats.currency || "AED"} 0`,
-      change: `Total Earnings: ${stats.currency || "AED"} ${Number(stats?.totalEarnings || 0).toLocaleString()}`,
+          ? `${stats.currency || getActiveCurrency()} ${Number(stats.adminBalance).toLocaleString()}`
+          : `${stats.currency || getActiveCurrency()} 0`,
+      change: `Total Earnings: ${stats.currency || getActiveCurrency()} ${Number(stats?.totalEarnings || 0).toLocaleString()}`,
       positive: true,
       icon: "💳",
       color: "#059669",

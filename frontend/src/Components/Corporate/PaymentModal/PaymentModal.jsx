@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from "react";
 import api from "../../../utils/api";
+import { useLocale } from "../../../hooks/useLocale";
+import { formatMoney } from "../../../config/localeConfig";
 import "./PaymentModal.css";
 
 const PaymentModal = ({ contract, onClose, onSubmit }) => {
+  const { currency: localeCurrency } = useLocale();
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [paymentData, setPaymentData] = useState({
     cardNumber: "",
@@ -63,12 +66,10 @@ const PaymentModal = ({ contract, onClose, onSubmit }) => {
   };
 
   const formatCurrency = (amount) => {
-    // Use contract currency or default to KWD
-    const contractCurrency = contract?.financials?.currency || "KWD";
-    return new Intl.NumberFormat("en-KW", {
-      style: "currency",
-      currency: contractCurrency,
-    }).format(amount);
+    // Currency comes from the contract; fall back to the user's active locale.
+    const currency =
+      contract?.financials?.currency || contract?.currency || localeCurrency;
+    return formatMoney(amount, currency);
   };
 
   return (

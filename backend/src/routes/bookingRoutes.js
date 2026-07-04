@@ -23,6 +23,7 @@ import {
     completeCorporateBooking,
     getDailyTripsForBooking,
     cancelBooking,
+    getCancellationPreview,
 } from "../controllers/bookingController.js"
 
 const router = express.Router()
@@ -50,6 +51,9 @@ router.put("/:bookingId/complete", verifyToken, completeB2CTrip)
 
 // Cancel booking
 router.put("/:bookingId/cancel", verifyToken, cancelBooking)
+
+// Preview cancellation fee/refund before confirming
+router.get("/:bookingId/cancellation-preview", verifyToken, getCancellationPreview)
 
 // Daily trips for a booking
 router.get("/:bookingId/daily-trips", verifyToken, getDailyTripsForBooking)

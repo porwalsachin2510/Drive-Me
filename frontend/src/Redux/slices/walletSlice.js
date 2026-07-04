@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 import api from "../../utils/api"
+import { getActiveCurrency, getActiveCountry } from "../../config/localeConfig"
 
 const initialState = {
     wallet: null,
@@ -53,7 +54,7 @@ export const addFundsToWallet = createAsyncThunk(
 // Withdraw funds from wallet
 export const withdrawFromWallet = createAsyncThunk(
     "wallet/withdrawFromWallet",
-    async ({ amount, iban, bankCode, accountHolderName, currency = "KWD", country = "KW" }, { rejectWithValue }) => {
+    async ({ amount, iban, bankCode, accountHolderName, currency = getActiveCurrency(), country = getActiveCountry() }, { rejectWithValue }) => {
         try {
             const response = await api.post("/wallet/withdraw", {
                 amount: parseFloat(amount),

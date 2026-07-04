@@ -2,6 +2,12 @@ import express from "express"
 const router = express.Router()
 import { upload, handleMulterError } from "../Config/multerConfig.js"
 import {
+    getCancellationSettings,
+    updateCancellationSettings,
+    getCashCancellationDues,
+    resolveCashCancellationDue,
+} from "../controllers/cancellationSettingsController.js"
+import {
     getPendingPayments,
     getPaymentDetails,
     verifyPayment,
@@ -31,6 +37,9 @@ import {
     getUserActivity,
     getSystemLogs,
     getCustomReports,
+    getReportById,
+    downloadReport,
+    deleteReport,
     getCommTemplates,
     getCommMessages,
     getCommConfig,
@@ -184,6 +193,12 @@ router.put("/finance/payouts/:payoutId/complete", verifyToken, checkAdminRole, c
 router.put("/finance/payouts/:payoutId/process-automatic", verifyToken, checkAdminRole, processAutomaticPayout)
 
 // Reports Management
+// Cancellation policy settings (admin-configurable, applied to commuter cancellations)
+router.get("/cancellation-settings", verifyToken, checkAdminRole, getCancellationSettings)
+router.put("/cancellation-settings", verifyToken, checkAdminRole, updateCancellationSettings)
+router.get("/cancellation-settings/cash-dues", verifyToken, checkAdminRole, getCashCancellationDues)
+router.post("/cancellation-settings/cash-dues/:ledgerId/resolve", verifyToken, checkAdminRole, resolveCashCancellationDue)
+
 router.get("/reports/fraud-alerts", verifyToken, checkAdminRole, getFraudAlerts)
 router.put("/reports/fraud-alerts/:alertId/resolve", verifyToken, checkAdminRole, resolveFraudAlert)
 router.put("/reports/fraud-alerts/:alertId/investigate", verifyToken, checkAdminRole, investigateFraudAlert)
@@ -191,6 +206,9 @@ router.get("/reports/user-activity", verifyToken, checkAdminRole, getUserActivit
 router.get("/reports/system-logs", verifyToken, checkAdminRole, getSystemLogs)
 router.get("/reports", verifyToken, checkAdminRole, getCustomReports)
 router.post("/reports/generate", verifyToken, checkAdminRole, generateCustomReport)
+router.get("/reports/:reportId/download", verifyToken, checkAdminRole, downloadReport)
+router.get("/reports/:reportId", verifyToken, checkAdminRole, getReportById)
+router.delete("/reports/:reportId", verifyToken, checkAdminRole, deleteReport)
 
 // Revenue Reports - User-wise and Vendor-wise
 router.get("/reports/revenue/summary", verifyToken, checkAdminRole, getRevenueSummary)

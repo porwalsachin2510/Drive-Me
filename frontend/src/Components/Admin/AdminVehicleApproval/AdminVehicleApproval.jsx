@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../../utils/api";
 import "./adminvehicleapproval.css";
@@ -393,7 +394,7 @@ function AdminVehicleApproval() {
               {/* Pricing Information */}
               <div className="drivemego-adminvehicleapproval-info-section">
                 <h4>
-                  Pricing Details ({viewingVehicle.pricing?.currency || "AED"})
+                  Pricing Details ({viewingVehicle.pricing?.currency || getActiveCurrency()})
                 </h4>
                 <div className="drivemego-adminvehicleapproval-info-grid">
                   <div className="drivemego-adminvehicleapproval-info-item">

@@ -30,13 +30,15 @@ const Login = () => {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem("activeTab") || "commuters";
   });
-const [showSuspendedModal, setShowSuspendedModal] = useState(false);
-const [suspensionDetails, setSuspensionDetails] = useState(null);
+  const [showSuspendedModal, setShowSuspendedModal] = useState(false);
+  const [suspensionDetails, setSuspensionDetails] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [pendingNotice, setPendingNotice] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = location.state?.returnTo;
   const returnState = location.state?.returnState;
-  const loginMessage = location.state?.message;
+  const loginMessage = location.state?.message || pendingNotice;
 
   const dispatch = useDispatch();
 

@@ -9,6 +9,8 @@ import B2CPartnerDriver from "../models/B2CPartnerDriver.js"
 import Wallet from "../models/Wallet.js"
 import Notification from "../models/Notification.js"
 import Transaction from "../models/Transaction.js"
+import CancellationSettings from "../models/CancellationSettings.js"
+import { recordCashCancellationDue, deductCashCancellationFromWallet, checkBookingEligibility } from "../Services/cashCancellationService.js"
 import stripe from "../Config/stripe.js"
 import tapPayments from "../Config/tapPayments.js"
 import { calculateCommission, calculateDriverCommission, calculateDynamicCommission } from "../Services/HelperUtilities.js"
@@ -16,6 +18,68 @@ import { sendRealTimeNotification, sendBookingUpdate } from "../Services/socketS
 import { createNotification } from "./notificationController.js"
 import { sendAdminNotification } from "../Services/notificationService.js"
 import { setBookingDeadlines } from "../cron/bookingTimeoutCron.js"
+import { getOrCreateWallet } from "../Services/walletService.js"
+
+/**
+ * Resolve the fare base used for cancellation-fee / cash-due math.
+ *
+ * Normally this is simply the stored `paymentAmount`. But some bookings were
+ * created with a wrong/zero fare (a historical pricing-field bug stored
+ * paymentAmount = 0). A zero base makes the cash-cancellation due compute to 0,
+ * which silently let cash cancellations through with no charge. To make the
+ * policy robust regardless of stored data, when the stored fare is missing/zero
+ * we reconstruct it from the route's configured pricing.
+ *
+ * @returns {Promise<number>} a non-negative fare base
+ */
+async function resolveBookingFareBase(booking, bookingType) {
+    const stored = Number(booking.paymentAmount) || Number(booking.totalAmount) || 0
+    if (stored > 0) return stored
+    // Only B2C bookings carry a B2CPartnerRoute we can reconstruct pricing from.
+    if (bookingType !== "B2C" || !booking.routeId) return stored
+
+    try {
+        const route = await B2CPartnerRoute.findById(booking.routeId).select("pricing")
+        const p = route && route.pricing ? route.pricing : null
+        if (!p) return stored
+
+        const seats = Number(booking.numberOfSeats) > 0 ? Number(booking.numberOfSeats) : 1
+        const months = Number(booking.passDuration) > 0 ? Number(booking.passDuration) : 1
+        const isRound = booking.bookingType === "ROUND_TRIP"
+
+        const perSeatMonthly = isRound
+            ? (Number(p.monthlyRoundTripPrice) || (Number(p.monthlyOneWayPrice) ? Number(p.monthlyOneWayPrice) * 1.5 : 0))
+            : Number(p.monthlyOneWayPrice) || 0
+        const perSeatSingle = isRound
+            ? (Number(p.roundTripPrice) || (Number(p.oneWayPrice) ? Number(p.oneWayPrice) * 1.5 : 0))
+            : Number(p.oneWayPrice) || 0
+
+        let fare = 0
+        if (booking.isMonthlyPass && perSeatMonthly > 0) {
+            fare = perSeatMonthly * months * seats
+        } else if (perSeatMonthly > 0) {
+            fare = perSeatMonthly * seats
+        } else if (perSeatSingle > 0) {
+            fare = perSeatSingle * seats
+        }
+
+        const resolved = Math.round((fare || 0) * 1000) / 1000
+        if (resolved > 0) {
+            console.log("[resolveBookingFareBase] Reconstructed fare from route pricing:", {
+                bookingId: String(booking._id),
+                storedPaymentAmount: stored,
+                resolvedFareBase: resolved,
+                isMonthlyPass: !!booking.isMonthlyPass,
+                seats,
+                months,
+            })
+        }
+        return resolved
+    } catch (e) {
+        console.error("[resolveBookingFareBase] Failed to reconstruct fare:", e.message)
+        return stored
+    }
+}
 
 // Check if route is available for booking
 export const checkRouteAvailability = async (req, res) => {
@@ -168,11 +232,63 @@ export const createB2CBooking = async (req, res) => {
             })
         }
 
+        // ===== CASH CANCELLATION ACCOUNTABILITY GUARD =====
+        // A commuter who has an unpaid cash-cancellation due (or a negative wallet
+        // balance, which IS the unpaid due) is blocked from creating ANY new booking
+        // until the due is cleared. This is the same guard used by the trip/monthly-pass
+        // booking endpoints — adding it here closes the Home page + Find Routes booking
+        // path (POST /api/bookings/b2c) that previously let a commuter keep booking
+        // without ever paying their cancellation charge.
+        const eligibility = await checkBookingEligibility(passengerId)
+        if (!eligibility.allowed) {
+            return res.status(403).json({
+                success: false,
+                code: eligibility.code,
+                outstandingDue: eligibility.outstandingDue,
+                currency: eligibility.currency,
+                message: eligibility.message,
+            })
+        }
+
         const passenger = await User.findById(passengerId)
         if (!passenger) {
             return res.status(404).json({
                 success: false,
                 message: "Passenger not found",
+            })
+        }
+
+        // ===== CASH CANCELLATION ACCOUNTABILITY GUARD =====
+        // Block new bookings if the commuter has an unpaid cash-cancellation due,
+        // This is the enforcement that protects partners/admin from the
+        // "book cash -> cancel -> repeat" abuse: an unpaid cancellation due blocks
+        // ALL new bookings until it is cleared. There is no strike-based cash
+        // disabling — commuters may cancel any number of times, they are simply
+        // charged each time and must clear the due to book again.
+        const cc = passenger.cashCancellation || {}
+        if (cc.isBlocked || (cc.outstandingDue || 0) > 0) {
+            return res.status(403).json({
+                success: false,
+                code: "OUTSTANDING_CANCELLATION_DUE",
+                outstandingDue: cc.outstandingDue || 0,
+                currency: cc.currency || "KWD",
+                message: cc.blockedReason
+                    || `You have an unpaid cancellation fee of ${cc.currency || "KWD"} ${(cc.outstandingDue || 0).toFixed(2)}. Please clear it before making a new booking.`,
+            })
+        }
+
+        // Safety net: the cash-cancellation fee is deducted directly from the
+        // commuter's wallet, which is allowed to go negative. A negative balance
+        // IS an unpaid due, so block new bookings until the commuter tops up to >= 0.
+        const passengerWallet = await Wallet.findOne({ userId: passengerId })
+        if (passengerWallet && passengerWallet.balance < 0) {
+            const owed = Math.abs(passengerWallet.balance)
+            return res.status(403).json({
+                success: false,
+                code: "OUTSTANDING_CANCELLATION_DUE",
+                outstandingDue: Math.round(owed * 100) / 100,
+                currency: passengerWallet.currency || cc.currency || "KWD",
+                message: `Your wallet balance is negative (${passengerWallet.currency || "KWD"} ${owed.toFixed(2)} due, mostly from a cancellation fee). Please add money to bring your balance back to zero before making a new booking.`,
             })
         }
 
@@ -548,6 +664,20 @@ export const createCorporateBooking = async (req, res) => {
             })
         }
 
+        // ===== CASH CANCELLATION ACCOUNTABILITY GUARD =====
+        // Block a passenger with an unpaid cash-cancellation due / negative wallet
+        // from creating a new booking until they clear it.
+        const eligibility = await checkBookingEligibility(passengerId)
+        if (!eligibility.allowed) {
+            return res.status(403).json({
+                success: false,
+                code: eligibility.code,
+                outstandingDue: eligibility.outstandingDue,
+                currency: eligibility.currency,
+                message: eligibility.message,
+            })
+        }
+
         const passenger = await User.findById(passengerId)
         if (!passenger) {
             return res.status(404).json({
@@ -764,23 +894,21 @@ export const acceptB2CBooking = async (req, res) => {
         const adminCommission = booking.adminCommissionAmount || 0
         const driverEarnings = booking.driverEarnings || (booking.paymentAmount - adminCommission)
 
-        // Get Admin user to credit commission
+        // Get Admin user to credit commission. The admin wallet is resolved for
+        // the BOOKING'S currency (not "the admin's single wallet") so a UAE
+        // booking's AED commission lands in the admin's AED wallet and a Kuwait
+        // booking's KWD commission lands in the KWD wallet — never mixed.
+        const bookingCurrency = booking.currency || 'AED'
         const adminUser = await User.findOne({ role: 'ADMIN' })
         let adminWallet = null
         if (adminUser) {
-            adminWallet = await Wallet.findOne({ userId: adminUser._id })
-
-            // Create admin wallet if it doesn't exist
-            if (!adminWallet) {
-                adminWallet = new Wallet({
-                    userId: adminUser._id,
-                    role: 'ADMIN',
-                    balance: 0,
-                    currency: booking.currency || 'AED',
-                    transactions: []
-                })
+            adminWallet = await getOrCreateWallet(adminUser._id, {
+                currency: bookingCurrency,
+                role: 'ADMIN',
+            })
+            if (adminWallet.isNew) {
                 await adminWallet.save()
-                console.log("[acceptB2CBooking] Created new admin wallet for admin:", adminUser._id)
+                console.log("[acceptB2CBooking] Created new admin wallet for admin:", adminUser._id, bookingCurrency)
             }
         } else {
             console.error("[acceptB2CBooking] No ADMIN user found in the system!")
@@ -789,7 +917,7 @@ export const acceptB2CBooking = async (req, res) => {
         if (booking.paymentMethod === "CASH") {
             // CASH Payment: B2C Partner will collect cash from Commuter
             // Admin commission needs to be deducted from B2C Partner's wallet and added to Admin's wallet
-            const partnerWallet = await Wallet.findOne({ userId: partnerId })
+            const partnerWallet = await Wallet.findOne({ userId: partnerId, currency: bookingCurrency })
 
             console.log("[acceptB2CBooking] CASH payment - Wallet check:", {
                 paymentMethod: booking.paymentMethod,
@@ -817,6 +945,7 @@ export const acceptB2CBooking = async (req, res) => {
                 type: 'WITHDRAWAL',
                 amount: adminCommission,
                 description: `Admin commission for booking ${booking._id} (Cash payment)`,
+                paymentMethod: 'CASH',
                 status: 'COMPLETED'
             })
             await partnerWallet.save()
@@ -830,6 +959,7 @@ export const acceptB2CBooking = async (req, res) => {
                     type: 'DEPOSIT',
                     amount: adminCommission,
                     description: `Commission from B2C booking ${booking._id} (Cash payment from partner ${booking.b2cPartnerId?.fullName || partnerId})`,
+                    paymentMethod: 'CASH',
                     status: 'COMPLETED'
                 })
                 await adminWallet.save()
@@ -862,18 +992,16 @@ export const acceptB2CBooking = async (req, res) => {
         } else if ((booking.paymentMethod === "STRIPE" || booking.paymentMethod === "WALLET") && booking.paymentStatus === "COMPLETED") {
             // STRIPE / WALLET Payment: Payment already received/held by the platform.
             // Now credit the B2C Partner's wallet with their earnings (total - admin commission)
-            let partnerWallet = await Wallet.findOne({ userId: partnerId })
-
-            // Create wallet if it doesn't exist
-            if (!partnerWallet) {
-                partnerWallet = new Wallet({
-                    userId: partnerId,
-                    role: 'B2C_PARTNER',
-                    balance: 0,
-                    currency: booking.currency || 'AED',
-                    transactions: []
-                })
-            }
+            //
+            // NOTE: this branch handles BOTH gateway (Stripe) and in-app WALLET
+            // payments, so we must NOT hardcode "Stripe" in the descriptions or the
+            // payment-method badge. Derive the real method from the booking so a
+            // wallet-paid ride shows "Wallet" (not "Card"/"Stripe").
+            const payLabel = booking.paymentMethod === "WALLET" ? "Wallet" : "Stripe"
+            let partnerWallet = await getOrCreateWallet(partnerId, {
+                currency: bookingCurrency,
+                role: 'B2C_PARTNER',
+            })
 
             // Add driver earnings to B2C Partner's wallet
             if (driverEarnings > 0) {
@@ -882,32 +1010,36 @@ export const acceptB2CBooking = async (req, res) => {
                 partnerWallet.transactions.push({
                     type: 'DEPOSIT',
                     amount: driverEarnings,
-                    description: `Earnings from B2C booking ${booking._id} (Stripe payment - after ${adminCommission} ${booking.currency || 'AED'} admin commission)`,
+                    description: `Earnings from B2C booking ${booking._id} (${payLabel} payment - after ${adminCommission} ${booking.currency || 'AED'} admin commission)`,
+                    paymentMethod: booking.paymentMethod,
                     status: 'COMPLETED'
                 })
                 await partnerWallet.save()
 
-                console.log("[acceptB2CBooking] STRIPE booking - Earnings credited to partner wallet:", {
+                console.log("[acceptB2CBooking] STRIPE/WALLET booking - Earnings credited to partner wallet:", {
+                    paymentMethod: booking.paymentMethod,
                     driverEarnings,
                     adminCommission,
                     partnerNewBalance: partnerWallet.balance
                 })
             }
 
-            // Credit commission to Admin's wallet (Stripe payment received, now record commission)
+            // Credit commission to Admin's wallet (payment received, now record commission)
             if (adminWallet && adminCommission > 0) {
-                // Add commission to admin balance (this is the admin's share from Stripe payment)
+                // Add commission to admin balance (this is the admin's share from the payment)
                 adminWallet.balance += adminCommission
                 adminWallet.totalEarnings = (adminWallet.totalEarnings || 0) + adminCommission
                 adminWallet.transactions.push({
                     type: 'DEPOSIT',
                     amount: adminCommission,
-                    description: `Commission from B2C booking ${booking._id} (Stripe payment)`,
+                    description: `Commission from B2C booking ${booking._id} (${payLabel} payment)`,
+                    paymentMethod: booking.paymentMethod,
                     status: 'COMPLETED'
                 })
                 await adminWallet.save()
 
-                console.log("[acceptB2CBooking] STRIPE booking - Admin commission credited to wallet:", {
+                console.log("[acceptB2CBooking] STRIPE/WALLET booking - Admin commission credited to wallet:", {
+                    paymentMethod: booking.paymentMethod,
                     adminCommission,
                     adminWalletNewBalance: adminWallet.balance,
                     adminWalletTotalEarnings: adminWallet.totalEarnings
@@ -924,24 +1056,16 @@ export const acceptB2CBooking = async (req, res) => {
                     balanceBefore: adminWallet.balance - adminCommission,
                     balanceAfter: adminWallet.balance,
                     paymentId: booking._id,
-                    description: `B2C booking commission (${booking.appliedCommissionRate || 10}%) from ${booking.passengerId?.fullName || 'passenger'} - Stripe payment`,
+                    description: `B2C booking commission (${booking.appliedCommissionRate || 10}%) from ${booking.passengerId?.fullName || 'passenger'} - ${payLabel} payment`,
                 })
             }
         } else if (booking.paymentMethod === "TAP" && booking.paymentStatus === "COMPLETED") {
             // TAP Payment: Same logic as Stripe - payment already received by Admin via Tap
             // Now credit the B2C Partner's wallet with their earnings (total - admin commission)
-            let partnerWallet = await Wallet.findOne({ userId: partnerId })
-
-            // Create wallet if it doesn't exist
-            if (!partnerWallet) {
-                partnerWallet = new Wallet({
-                    userId: partnerId,
-                    role: 'B2C_PARTNER',
-                    balance: 0,
-                    currency: booking.currency || 'AED',
-                    transactions: []
-                })
-            }
+            let partnerWallet = await getOrCreateWallet(partnerId, {
+                currency: bookingCurrency,
+                role: 'B2C_PARTNER',
+            })
 
             // Add driver earnings to B2C Partner's wallet
             if (driverEarnings > 0) {
@@ -951,6 +1075,7 @@ export const acceptB2CBooking = async (req, res) => {
                     type: 'DEPOSIT',
                     amount: driverEarnings,
                     description: `Earnings from B2C booking ${booking._id} (TAP payment - after ${adminCommission} ${booking.currency || 'AED'} admin commission)`,
+                    paymentMethod: 'TAP',
                     status: 'COMPLETED'
                 })
                 await partnerWallet.save()
@@ -971,6 +1096,7 @@ export const acceptB2CBooking = async (req, res) => {
                     type: 'DEPOSIT',
                     amount: adminCommission,
                     description: `Commission from B2C booking ${booking._id} (TAP payment)`,
+                    paymentMethod: 'TAP',
                     status: 'COMPLETED'
                 })
                 await adminWallet.save()
@@ -1237,7 +1363,12 @@ export const rejectB2CBooking = async (req, res) => {
         const isOnlinePayment = booking.paymentMethod === "STRIPE" || booking.paymentMethod === "TAP" || booking.paymentMethod === "WALLET"
 
         if (isOnlinePayment && booking.paymentStatus === "COMPLETED" && booking.transactionId) {
-            const passengerWallet = await Wallet.findOne({ userId: booking.passengerId._id || booking.passengerId })
+            // Refund goes back to the passenger's wallet IN THE BOOKING'S CURRENCY
+            // (the currency they actually paid in), never a mismatched wallet.
+            const passengerWallet = await getOrCreateWallet(booking.passengerId._id || booking.passengerId, {
+                currency: booking.currency || "AED",
+                role: "COMMUTER",
+            })
 
             if (passengerWallet) {
                 const refundAmount = booking.paymentAmount
@@ -1299,12 +1430,14 @@ export const rejectB2CBooking = async (req, res) => {
             const adminCommission = booking.adminCommissionAmount || 0
             const driverEarnings = booking.driverEarnings || 0
 
-            // Get Admin wallet
+            // Reversal must touch the SAME per-currency wallets the original
+            // credit/debit used, so scope every lookup by the booking's currency.
+            const reversalCurrency = booking.currency || 'AED'
             const adminUser = await User.findOne({ role: 'ADMIN' })
-            const adminWallet = adminUser ? await Wallet.findOne({ userId: adminUser._id }) : null
+            const adminWallet = adminUser ? await Wallet.findOne({ userId: adminUser._id, currency: reversalCurrency }) : null
 
             // Get Partner wallet
-            const partnerWallet = await Wallet.findOne({ userId: partnerId })
+            const partnerWallet = await Wallet.findOne({ userId: partnerId, currency: reversalCurrency })
 
             if (booking.paymentMethod === "CASH") {
                 // CASH: Partner had commission deducted, admin had commission credited
@@ -2005,6 +2138,18 @@ export const getPassengerBookings = async (req, res) => {
         } else {
             const query = { passengerId }
             if (status) query.bookingStatus = status
+
+            // Exclude bookings whose ONLINE payment was never completed. Gateway
+            // bookings (STRIPE/TAP/CARD) stay "PENDING" until the payment webhook
+            // marks them "COMPLETED"; a failed/abandoned checkout (e.g. missing Tap
+            // keys -> 401) must NOT show up in My Rides as a confirmed ride. CASH
+            // (pay-on-board) and WALLET (debited at creation) are unaffected.
+            query.$nor = [
+                {
+                    paymentMethod: { $in: ["STRIPE", "TAP", "CARD"] },
+                    paymentStatus: { $in: ["PENDING", "FAILED"] },
+                },
+            ]
 
             const b2cBookings = await B2CPassengerBooking.find(query)
                 .populate("b2cPartnerId", "fullName companyLogo whatsappNumber profileImage")
@@ -3698,9 +3843,12 @@ export const cancelBooking = async (req, res) => {
         const hoursSinceBooking = (now - bookingCreatedAt) / (1000 * 60 * 60)
 
         const travelDate = new Date(booking.travelDate)
-        const hoursUntilTravel = (travelDate - now) / (1000 * 60 * 60)
+        let hoursUntilTravel = (travelDate - now) / (1000 * 60 * 60)
 
-        const paymentAmount = booking.paymentAmount || booking.totalAmount || 0
+        // Resolve the fare base defensively: fall back to the route's configured
+        // pricing if the booking was stored with a missing/zero paymentAmount, so
+        // the cancellation fee / cash due is never silently zero.
+        const paymentAmount = await resolveBookingFareBase(booking, bookingType)
         const isPaid = booking.paymentStatus === "COMPLETED" || booking.paymentStatus === "PAID"
 
         // ===== REFUNDABLE BASE: FULL PASS AMOUNT =====
@@ -3714,34 +3862,53 @@ export const cancelBooking = async (req, res) => {
         // CRITICAL: For CASH bookings, check if cash was actually collected yet.
         // Cash is only collected during the first trip. If cancellation happens BEFORE
         // the first trip date has arrived, no cash was exchanged, so refund = 0.
-        let isCashCollected = true // assume collected for online payments
-        if (booking.paymentMethod === "CASH" && booking.isMonthlyPass && Array.isArray(booking.monthlyTrips) && booking.monthlyTrips.length > 0) {
-            try {
-                const firstTrip = await B2CPartnerTrip.findById(booking.monthlyTrips[0]).select("tripDate status")
-                if (firstTrip) {
-                    const firstTripDate = new Date(firstTrip.tripDate)
-                    firstTripDate.setHours(0, 0, 0, 0)
-                    const isFirstTripPast = firstTripDate < todayStart
-                    const isFirstTripInProgress = ["Completed", "In Progress"].includes(firstTrip.status)
-                    isCashCollected = isFirstTripPast || isFirstTripInProgress
-                    console.log("[cancelBooking] Cash collection check:", {
-                        firstTripDate,
-                        today: todayStart,
-                        isFirstTripPast,
-                        isFirstTripInProgress,
-                        isCashCollected
-                    })
+        // ===== HAS ANY CASH ACTUALLY BEEN COLLECTED? =====
+        // For CASH bookings the operator collects the fare ONLY when a driver STARTS a
+        // trip (trip status becomes "In Progress"/"Completed", or tripStarted=true).
+        // Cancellation is already blocked once any trip has started (guard above), so by
+        // the time we get here a cash booking has almost never had cash collected.
+        //
+        // IMPORTANT: collection is decided by trip *status*, NOT by the trip *date*. A
+        // scheduled trip whose date is in the past was simply never run, so no cash was
+        // exchanged. The previous date-based heuristic wrongly treated a past-but-never-
+        // started trip as "collected", which let cash cancellations slip through with no
+        // fee. We now treat a cash booking as uncollected unless a trip truly started or
+        // the booking is explicitly marked paid.
+        let isCashCollected = true // online payments are always "collected"
+        if (booking.paymentMethod === "CASH") {
+            // Start from the explicit payment flag (covers any pre-paid/settled cash flow).
+            isCashCollected = booking.paymentStatus === "COMPLETED" || booking.paymentStatus === "PAID"
+
+            if (!isCashCollected && booking.isMonthlyPass && Array.isArray(booking.monthlyTrips) && booking.monthlyTrips.length > 0) {
+                // Monthly pass: cash is collected on the first trip the driver actually runs.
+                try {
+                    const startedTrip = await B2CPartnerTrip.findOne({
+                        _id: { $in: booking.monthlyTrips },
+                        $or: [
+                            { status: "In Progress" },
+                            { status: "Completed" },
+                            { tripStarted: true },
+                        ],
+                    }).select("_id")
+                    isCashCollected = !!startedTrip
+                } catch (cashCheckErr) {
+                    console.error("[cancelBooking] Failed to check if cash collected:", cashCheckErr)
+                    isCashCollected = false // Assume not collected on error (safer for commuter)
                 }
-            } catch (cashCheckErr) {
-                console.error("[cancelBooking] Failed to check if cash collected:", cashCheckErr)
-                isCashCollected = false // Assume not collected on error (safer for commuter)
             }
+
+            console.log("[cancelBooking] Cash collection check:", {
+                isMonthlyPass: booking.isMonthlyPass,
+                paymentStatus: booking.paymentStatus,
+                isCashCollected,
+            })
         }
 
         if (bookingType === "B2C" && booking.isMonthlyPass && Array.isArray(booking.monthlyTrips) && booking.monthlyTrips.length > 0) {
             try {
                 const passTrips = await B2CPartnerTrip.find({ _id: { $in: booking.monthlyTrips } }).select("tripDate status")
 
+                let earliestUpcomingTrip = null
                 for (const t of passTrips) {
                     const tDate = new Date(t.tripDate)
                     const isPast = tDate < todayStart
@@ -3750,7 +3917,23 @@ export const cancelBooking = async (req, res) => {
                         usedTripsCount++
                     } else {
                         remainingTripsCount++
+                        if (!earliestUpcomingTrip || tDate < earliestUpcomingTrip) {
+                            earliestUpcomingTrip = tDate
+                        }
                     }
+                }
+
+                // For monthly passes the booking-level `travelDate` is unreliable: bookings
+                // are created with `travelDate = new Date()` (the creation moment), which makes
+                // `hoursUntilTravel` collapse to ~0 and forces the most aggressive last-minute
+                // tier on every cancellation. Re-anchor the timing to the EARLIEST upcoming
+                // (not-yet-started) trip so the admin's time-based tiers are applied accurately.
+                if (earliestUpcomingTrip) {
+                    hoursUntilTravel = (earliestUpcomingTrip - now) / (1000 * 60 * 60)
+                    console.log("[cancelBooking] Re-anchored hoursUntilTravel to earliest upcoming trip:", {
+                        earliestUpcomingTrip,
+                        hoursUntilTravel,
+                    })
                 }
             } catch (countErr) {
                 console.error("[cancelBooking] Trip count (informational) failed:", countErr)
@@ -3773,26 +3956,80 @@ export const cancelBooking = async (req, res) => {
             remainingTripsCount
         })
 
-        // Cancellation fee applied on the FULL refundable amount.
-        // IMPORTANT: the tiers must be evaluated in order of customer-favorability so the
-        // free window always wins. Order of precedence (matches the email/PDF policy):
-        //   1. Within 12 hours of booking            -> FREE (no fee)        [checked first]
-        //   2. Within 24 hours of travel             -> 30% fee
-        //   3. After the operator accepted           -> 20% fee
-        //   4. Otherwise (more than 12h since booking) -> 10% fee
-        // Previously (2) was checked before the free window, so a pass whose first travel day
-        // was within 24h wrongly charged 30% even when cancelled minutes after booking.
+        // ===== DYNAMIC, ADMIN-CONFIGURED CANCELLATION FEE =====
+        // The cancellation fee is no longer hardcoded. The admin defines a free
+        // cancellation window (hours after booking) plus a set of time-based tiers
+        // (charge % based on how many hours remain until travel) in the
+        // CancellationSettings singleton. We evaluate those rules here so any change
+        // the admin makes in their panel is immediately reflected in real refunds.
+        let cancellationTierLabel = "No charge"
         if (isPaid && refundableBase > 0) {
-            if (hoursSinceBooking <= 12) {
+            try {
+                const cancellationSettings = await CancellationSettings.getSettings()
+                const feeResult = CancellationSettings.computeFee(cancellationSettings, {
+                    refundableBase,
+                    hoursSinceBooking,
+                    hoursUntilTravel,
+                })
+                cancellationFee = feeResult.cancellationFee
+                cancellationTierLabel = feeResult.appliedTierLabel
+                refundAmount = Math.max(0, refundableBase - cancellationFee)
+
+                console.log("[cancelBooking] Applied dynamic cancellation policy:", {
+                    freeWindowHoursAfterBooking: cancellationSettings.freeWindowHoursAfterBooking,
+                    isActive: cancellationSettings.isActive,
+                    hoursSinceBooking,
+                    hoursUntilTravel,
+                    chargePercentage: feeResult.chargePercentage,
+                    appliedTierLabel: feeResult.appliedTierLabel,
+                    cancellationFee,
+                    refundAmount,
+                })
+            } catch (settingsErr) {
+                // Fail safe: if settings can't be read, do not charge a fee (full refund).
+                console.error("[cancelBooking] Failed to load cancellation settings, defaulting to no fee:", settingsErr.message)
                 cancellationFee = 0
-            } else if (hoursUntilTravel <= 24) {
-                cancellationFee = refundableBase * 0.30
-            } else if (wasAccepted) {
-                cancellationFee = refundableBase * 0.20
-            } else {
-                cancellationFee = refundableBase * 0.10
+                refundAmount = refundableBase
             }
-            refundAmount = Math.max(0, refundableBase - cancellationFee)
+        }
+
+        // ===== CASH CANCELLATION DUE (commuter paid nothing yet) =====
+        // For a CASH booking cancelled BEFORE the first trip, no money was ever
+        // collected, so there is nothing to deduct a fee from. Instead of letting
+        // the cancellation be free (the old bug), we compute the policy fee on the
+        // FULL fare and record it as an OUTSTANDING DUE anchored to the commuter's
+        // registration identity. The free window + tiers still apply, so an early
+        // cancel can be free.
+        let cashCancellationDue = 0
+        let cashCancellationTierLabel = "No charge"
+        let cashAccountability = null
+        const isUncollectedCashBooking = booking.paymentMethod === "CASH" && !isCashCollected
+        // Admin policy applies to EVERY cancellation outside the free window, regardless of
+        // whether the partner had already accepted/confirmed the booking. The free window and
+        // time-based tiers still protect genuinely early cancellations (an early cancel can be free).
+        if (isUncollectedCashBooking) {
+            try {
+                const cashSettings = await CancellationSettings.getSettings()
+                const dueResult = CancellationSettings.computeCashDue(cashSettings, {
+                    fareBase: paymentAmount,
+                    hoursSinceBooking,
+                    hoursUntilTravel,
+                })
+                cashCancellationDue = dueResult.dueAmount
+                cashCancellationTierLabel = dueResult.appliedTierLabel
+
+                console.log("[cancelBooking] Cash cancellation due computed:", {
+                    fareBase: paymentAmount,
+                    hoursSinceBooking,
+                    hoursUntilTravel,
+                    chargePercentage: dueResult.chargePercentage,
+                    appliedTierLabel: dueResult.appliedTierLabel,
+                    cashCancellationDue,
+                })
+            } catch (cashDueErr) {
+                console.error("[cancelBooking] Failed to compute cash cancellation due:", cashDueErr.message)
+                cashCancellationDue = 0
+            }
         }
 
         // Persist usage snapshot for transparency
@@ -3986,17 +4223,12 @@ export const cancelBooking = async (req, res) => {
             try {
                 const adminUser = await User.findOne({ role: 'ADMIN' })
                 if (adminUser) {
-                    let adminWallet = await Wallet.findOne({ userId: adminUser._id })
-
-                    if (!adminWallet) {
-                        adminWallet = new Wallet({
-                            userId: adminUser._id,
-                            role: 'ADMIN',
-                            balance: 0,
-                            currency: booking.currency || 'AED',
-                            transactions: []
-                        })
-                    }
+                    // Cancellation fee settles into the admin wallet for the
+                    // booking's currency (AED for UAE, KWD for Kuwait, ...).
+                    let adminWallet = await getOrCreateWallet(adminUser._id, {
+                        currency: booking.currency || 'AED',
+                        role: 'ADMIN',
+                    })
 
                     if (!isCashBooking) {
                         // ----- ONLINE: credit fee to admin (platform held the money) -----
@@ -4140,8 +4372,8 @@ export const cancelBooking = async (req, res) => {
                 paymentMethod: booking.paymentMethod
             })
 
-            // Get Partner wallet
-            const partnerWallet = await Wallet.findOne({ userId: partnerId })
+            // Get Partner wallet (scoped to the booking's currency)
+            const partnerWallet = await Wallet.findOne({ userId: partnerId, currency: booking.currency || 'AED' })
 
             // NOTE: use `isPaid` (captured BEFORE the refund block mutates paymentStatus to
             // "REFUNDED"). Using booking.paymentStatus here would always be false after refund,
@@ -4205,7 +4437,7 @@ export const cancelBooking = async (req, res) => {
                 if (commissionToReverse > 0) {
                     const adminUser = await User.findOne({ role: 'ADMIN' })
                     if (adminUser) {
-                        const adminWallet = await Wallet.findOne({ userId: adminUser._id })
+                        const adminWallet = await Wallet.findOne({ userId: adminUser._id, currency: booking.currency || 'AED' })
                         if (adminWallet) {
                             const adminBalanceBefore = adminWallet.balance
                             adminWallet.balance = Math.max(0, adminWallet.balance - commissionToReverse)
@@ -4304,7 +4536,7 @@ export const cancelBooking = async (req, res) => {
                     // 2. Deduct commission from Admin's wallet
                     const adminUser = await User.findOne({ role: 'ADMIN' })
                     if (adminUser) {
-                        const adminWallet = await Wallet.findOne({ userId: adminUser._id })
+                        const adminWallet = await Wallet.findOne({ userId: adminUser._id, currency: booking.currency || 'AED' })
                         if (adminWallet) {
                             const adminBalanceBefore = adminWallet.balance
                             adminWallet.balance -= adminCommission
@@ -4405,10 +4637,107 @@ export const cancelBooking = async (req, res) => {
             }
         }
 
+        // ===== RECORD THE CASH CANCELLATION DUE (identity-anchored) =====
+        // The commuter owes this fee but paid nothing into the platform, so we do
+        // NOT credit any wallet now. We record an outstanding due against their
+        // registration identity (durable across account deletion) which blocks new
+        // bookings until cleared. There is no strike limit — every cancellation is
+        // simply charged. The partner already had their commission refunded above,
+        // so the partner is made whole.
+        if (cashCancellationDue > 0) {
+            try {
+                const cashSettings = await CancellationSettings.getSettings()
+                const commuter = await User.findById(userId)
+                cashAccountability = await recordCashCancellationDue({
+                    user: commuter,
+                    dueAmount: cashCancellationDue,
+                    currency: booking.currency || "KWD",
+                    bookingId: booking._id,
+                    bookingNumber: booking.bookingNumber || String(booking._id),
+                    settings: cashSettings,
+                })
+
+                // ===== DEDUCT THE FEE FROM THE COMMUTER'S WALLET =====
+                // The commuter paid nothing into the platform for this cash booking,
+                // so we charge the policy fee by debiting their wallet. The balance is
+                // allowed to go NEGATIVE — that negative balance is the unpaid due and
+                // blocks new bookings until the commuter tops up. The admin is paid this
+                // fee later (in settleCashDuesOnTopUp) once the wallet returns to >= 0.
+                let walletDeduction = null
+                try {
+                    walletDeduction = await deductCashCancellationFromWallet({
+                        user: commuter,
+                        amount: cashCancellationDue,
+                        currency: booking.currency || "KWD",
+                        booking,
+                    })
+                    console.log("[cancelBooking] Cancellation fee deducted from commuter wallet:", walletDeduction)
+                } catch (walletErr) {
+                    console.error("[cancelBooking] Failed to deduct cancellation fee from commuter wallet:", walletErr.message)
+                }
+
+                booking.cashCancellationDueAmount = cashCancellationDue
+                booking.cashCancellationDueStatus = "OUTSTANDING"
+                booking.cashCancellationAdminSettled = false
+                booking.cancellationFee = cashCancellationDue
+                booking.cancellationTierLabel = cashCancellationTierLabel
+
+                // CRITICAL: the booking was already persisted (booking.save() above) BEFORE the
+                // cash due was computed/recorded. Without re-saving here, the booking document
+                // keeps cashCancellationDueAmount = 0 / cancellationFee = 0 forever, so the
+                // commuter & partner booking screens show "no charge" even though a fee was
+                // charged and recorded in the ledger. Persist the cash-due fields now.
+                await booking.save()
+
+                // Surface the charged amount in the cancel response too. For an uncollected
+                // cash booking the refund-path `cancellationFee` is 0 (nothing was paid to
+                // deduct from), so without this the API response would report a 0 fee even
+                // though the commuter now owes `cashCancellationDue`.
+                cancellationFee = cashCancellationDue
+                cancellationTierLabel = cashCancellationTierLabel
+
+                console.log("[cancelBooking] Cash cancellation due recorded against identity:", cashAccountability)
+
+                // Inform the commuter and (separately) the admin for visibility.
+                try {
+                    await createNotification({
+                        userId,
+                        type: "CANCELLATION_DUE",
+                        title: "Cancellation Fee Charged",
+                        message: `You cancelled cash booking #${booking.bookingNumber || bookingId} after the free window. A cancellation fee of ${booking.currency || 'KWD'} ${cashCancellationDue.toFixed(2)} has been deducted from your wallet. If your wallet is now negative, add money to clear it — you won't be able to make a new booking until your balance is back to zero.`,
+                        bookingId,
+                        category: "BOOKING",
+                    })
+                } catch (n1) {
+                    console.error("[cancelBooking] commuter due notification failed:", n1.message)
+                }
+                try {
+                    await sendAdminNotification(
+                        "Cash Cancellation Due Recorded",
+                        `${commuter?.fullName || commuter?.email || "A commuter"} cancelled cash booking #${booking.bookingNumber || bookingId}. Outstanding due: ${booking.currency || 'KWD'} ${cashAccountability?.totalOutstanding ?? cashCancellationDue}. Strikes: ${cashAccountability?.strikeCount ?? 1}.`,
+                        "CASH_CANCELLATION_DUE",
+                        {
+                            bookingId: booking._id,
+                            commuterId: userId,
+                            dueAmount: cashCancellationDue,
+                            totalOutstanding: cashAccountability?.totalOutstanding ?? cashCancellationDue,
+                            strikeCount: cashAccountability?.strikeCount ?? 1,
+                        }
+                    )
+                } catch (n2) {
+                    console.error("[cancelBooking] admin due notification failed:", n2.message)
+                }
+            } catch (dueErr) {
+                console.error("[cancelBooking] Failed to record cash cancellation due:", dueErr)
+            }
+        }
+
         // Build the commuter-facing message based on how the refund is settled
         let responseMessage = "Booking cancelled successfully"
-        if (booking.paymentMethod === "CASH" && !isCashCollected && refundAmount === 0) {
-            responseMessage = `Booking cancelled. Since you cancelled before your first trip, no payment was collected. No refund is due.`
+        if (booking.paymentMethod === "CASH" && !isCashCollected && cashCancellationDue > 0) {
+            responseMessage = `Booking cancelled. A cancellation fee of ${booking.currency || 'KWD'} ${cashCancellationDue.toFixed(2)} has been deducted from your wallet. If your balance is now negative, please add money to clear it before you can book again.`
+        } else if (booking.paymentMethod === "CASH" && !isCashCollected && refundAmount === 0) {
+            responseMessage = `Booking cancelled. Since you cancelled within the free window before your first trip, no payment was collected and no fee is due.`
         } else if (booking.refundMethod === "WALLET" && refundAmount > 0) {
             responseMessage = `Booking cancelled. ${booking.currency || 'AED'} ${refundAmount.toFixed(2)} has been refunded to your wallet${cancellationFee > 0 ? ` (after a ${booking.currency || 'AED'} ${cancellationFee.toFixed(2)} cancellation fee)` : ''}.`
         } else if (booking.refundMethod === "CASH_FROM_PARTNER" && refundAmount > 0) {
@@ -4427,9 +4756,15 @@ export const cancelBooking = async (req, res) => {
                 usedTripsCount,
                 remainingTripsCount,
                 cancellationFee,
+                cancellationTierLabel,
                 commissionRefunded: booking.commissionRefunded || false,
                 commissionRefundAmount: booking.commissionRefundAmount || 0,
-                cancellationFeeApplied: cancellationFee > 0
+                cancellationFeeApplied: cancellationFee > 0,
+                // Cash cancellation accountability
+                cashCancellationDue,
+                cashCancellationTierLabel,
+                outstandingDue: cashAccountability?.totalOutstanding || 0,
+                bookingBlocked: cashAccountability?.isBlocked || false,
             },
         })
     } catch (error) {
@@ -4437,6 +4772,133 @@ export const cancelBooking = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to cancel booking",
+            error: error.message,
+        })
+    }
+}
+
+// Preview the cancellation fee/refund for a booking WITHOUT cancelling it.
+// Lets the commuter see the exact charge (based on the admin's dynamic policy)
+// before confirming the cancellation.
+// GET /api/bookings/:bookingId/cancellation-preview
+export const getCancellationPreview = async (req, res) => {
+    try {
+        const { bookingId } = req.params
+        const userId = req.userId
+
+        let booking = await B2CPassengerBooking.findOne({ _id: bookingId, passengerId: userId })
+        let bookingType = "B2C"
+        if (!booking) {
+            booking = await CorporateBooking.findOne({
+                _id: bookingId,
+                $or: [{ passengerId: userId }, { corporateOwnerId: userId }],
+            })
+            bookingType = "CORPORATE"
+        }
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: "Booking not found" })
+        }
+
+        const currency = booking.currency || "AED"
+        // Resolve the fare base defensively (see resolveBookingFareBase) so the
+        // preview matches the real charge even when paymentAmount was stored as 0.
+        const paymentAmount = await resolveBookingFareBase(booking, bookingType)
+        const isPaid = booking.paymentStatus === "COMPLETED" || booking.paymentStatus === "PAID"
+
+        const now = new Date()
+        const hoursSinceBooking = (now - new Date(booking.createdAt)) / (1000 * 60 * 60)
+        let hoursUntilTravel = (new Date(booking.travelDate) - now) / (1000 * 60 * 60)
+
+        // Mirror cancelBooking: for monthly passes the booking-level travelDate is unreliable
+        // (stored as the creation moment), so anchor the timing to the earliest upcoming trip
+        // to keep the preview's tier consistent with the real charge applied on cancellation.
+        if (bookingType === "B2C" && booking.isMonthlyPass && Array.isArray(booking.monthlyTrips) && booking.monthlyTrips.length > 0) {
+            try {
+                const todayStart = new Date()
+                todayStart.setHours(0, 0, 0, 0)
+                const passTrips = await B2CPartnerTrip.find({ _id: { $in: booking.monthlyTrips } }).select("tripDate status")
+                let earliestUpcomingTrip = null
+                for (const t of passTrips) {
+                    const tDate = new Date(t.tripDate)
+                    const isPast = tDate < todayStart
+                    const isDone = ["Completed", "In Progress"].includes(t.status)
+                    if (!isPast && !isDone && (!earliestUpcomingTrip || tDate < earliestUpcomingTrip)) {
+                        earliestUpcomingTrip = tDate
+                    }
+                }
+                if (earliestUpcomingTrip) {
+                    hoursUntilTravel = (earliestUpcomingTrip - now) / (1000 * 60 * 60)
+                }
+            } catch (previewTripErr) {
+                console.error("[getCancellationPreview] Failed to anchor to earliest trip:", previewTripErr.message)
+            }
+        }
+
+        // Mirror the refundableBase rule used in cancelBooking: for CASH bookings,
+        // money is only refundable once cash has actually been collected. For a
+        // lightweight preview we treat a paid (online) booking's full amount as
+        // refundable, and a not-yet-collected cash booking as 0.
+        const isCashUncollected = booking.paymentMethod === "CASH" && !isPaid
+        const refundableBase = isCashUncollected ? 0 : (isPaid ? paymentAmount : 0)
+
+        const settings = await CancellationSettings.getSettings()
+        const feeResult = CancellationSettings.computeFee(settings, {
+            refundableBase,
+            hoursSinceBooking,
+            hoursUntilTravel,
+        })
+
+        const refundAmount = Math.max(0, refundableBase - feeResult.cancellationFee)
+
+        // For an uncollected CASH booking, the commuter pays nothing now but
+        // OWES a cancellation due (computed on the full fare). Surface it so the
+        // commuter sees exactly what they will owe before confirming.
+        //
+        // This mirrors the actual charge condition in cancelBooking: the policy applies to
+        // EVERY cancellation outside the free window, regardless of accept/confirm state.
+        // The free window and time-based tiers still make genuinely early cancels free.
+        let cashCancellationDue = 0
+        let cashDueTierLabel = "No charge"
+        if (isCashUncollected) {
+            const dueResult = CancellationSettings.computeCashDue(settings, {
+                fareBase: paymentAmount,
+                hoursSinceBooking,
+                hoursUntilTravel,
+            })
+            cashCancellationDue = dueResult.dueAmount
+            cashDueTierLabel = dueResult.appliedTierLabel
+        }
+
+        res.status(200).json({
+            success: true,
+            preview: {
+                currency,
+                paymentAmount,
+                refundableBase,
+                isPaid,
+                paymentMethod: booking.paymentMethod || null,
+                chargePercentage: feeResult.chargePercentage,
+                cancellationFee: feeResult.cancellationFee,
+                refundAmount,
+                appliedTierLabel: feeResult.appliedTierLabel,
+                isFree: isCashUncollected ? cashCancellationDue <= 0 : feeResult.isFree,
+                policyActive: settings.isActive,
+                freeWindowHoursAfterBooking: settings.freeWindowHoursAfterBooking,
+                hoursSinceBooking: Math.round(hoursSinceBooking * 10) / 10,
+                hoursUntilTravel: Math.round(hoursUntilTravel * 10) / 10,
+                // Cash-specific: what the commuter will OWE (not a refund deduction)
+                isCashUncollected,
+                cashCancellationDue,
+                cashDueTierLabel,
+                cashPenaltyActive: settings.cashPenaltyActive !== false,
+            },
+        })
+    } catch (error) {
+        console.error("[getCancellationPreview] Error:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to compute cancellation preview",
             error: error.message,
         })
     }

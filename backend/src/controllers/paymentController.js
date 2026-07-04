@@ -1,5 +1,6 @@
 import Payment from "../models/Payment.js"
 import Wallet from "../models/Wallet.js"
+import { getOrCreateWallet } from "../Services/walletService.js"
 import Transaction from "../models/Transaction.js"
 import Contract from "../models/Contract.js"
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
@@ -10,7 +11,7 @@ import AdminNegotiation from "../models/AdminNegotiation.js"
 import EMIPayment from "../models/EMIPayment.js"
 import ProcessedPayment from "../models/ProcessedPayment.js"
 import { creditAdminNegotiationCommission } from "./walletController.js"
-import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js"
+import { createNotification, sendRealTimeNotification, sendAdminNotification, sendPassActivatedNotification } from "../Services/notificationService.js"
 import paymentGatewayService, {
     calculateCommission,
     detectCountryFromCurrency,
@@ -51,7 +52,7 @@ export const createPayment = async (req, res) => {
     try {
         console.log("[v0] Create payment request received")
         const { contractId } = req.params
-        const { paymentMethod, paymentType = "advance", currency = "AED" } = req.body
+        const { paymentMethod, paymentType = "advance", currency: bodyCurrency } = req.body
         const corporateOwnerId = req.userId
 
         // Normalize the incoming payment method
@@ -61,7 +62,7 @@ export const createPayment = async (req, res) => {
         console.log("[v0] Payment Method (original):", paymentMethod)
         console.log("[v0] Payment Method (normalized):", normalizedMethod)
         console.log("[v0] Payment Type:", paymentType)
-        console.log("[v0] Currency:", currency)
+        console.log("[v0] Currency (from body, if any):", bodyCurrency)
 
         const contract = await Contract.findById(contractId)
             .populate("corporateOwnerId")
@@ -74,6 +75,15 @@ export const createPayment = async (req, res) => {
                 message: "Contract not found",
             })
         }
+
+        // The contract's stored currency is authoritative — it determines the
+        // payment gateway (KWD -> TAP, AED -> Stripe). We never trust a default
+        // from the request body, so a Kuwait contract can never hit Stripe.
+        const currency =
+            contract.financials?.currency ||
+            contract.currency ||
+            bodyCurrency ||
+            "AED"
 
         // Verify contract is ready for payment
         if (contract.status !== "PENDING_PAYMENT" && contract.status !== "ACTIVE") {
@@ -494,8 +504,11 @@ export const verifyPayment = async (req, res) => {
                             booking.transactionId = session.payment_intent
                             await booking.save()
 
-                            // Notify partner about confirmed booking
-                            await Notification.create({
+                            // Notify partner about confirmed booking IN REAL TIME.
+                            // (Previously this used Notification.create() directly,
+                            // which saved to the DB but never emitted a socket event,
+                            // so the partner only saw it after a page refresh.)
+                            await createNotification({
                                 recipientId: booking.b2cPartnerId,
                                 userId: booking.b2cPartnerId,
                                 type: "NEW_BOOKING",
@@ -505,8 +518,23 @@ export const verifyPayment = async (req, res) => {
                                     bookingId: booking._id,
                                     paymentAmount: booking.paymentAmount,
                                 },
-                                status: "UNREAD",
                             })
+
+                            // Activate the linked monthly pass and notify the commuter
+                            // in real time that their card payment succeeded.
+                            if (booking.monthlyPassId) {
+                                try {
+                                    const pass = await B2CMonthlyPass.findById(booking.monthlyPassId)
+                                    if (pass && pass.paymentStatus !== "PAID") {
+                                        pass.paymentStatus = "PAID"
+                                        pass.status = "ACTIVE"
+                                        await pass.save()
+                                    }
+                                    await sendPassActivatedNotification(booking.monthlyPassId)
+                                } catch (passErr) {
+                                    console.error("[v0] Pass activation after card payment failed:", passErr?.message)
+                                }
+                            }
                         }
 
                         return res.status(200).json({
@@ -601,6 +629,18 @@ export const verifyPayment = async (req, res) => {
 
             console.log("[v0] Contract status updated:", contract._id)
 
+            // Sync invoices after payment verification
+            try {
+                const { syncInvoicesForContract } = await import("../Services/invoiceService.js")
+                const populatedContract = await Contract.findById(contract._id)
+                    .populate("corporateOwnerId", "fullName companyName email")
+                    .populate("fleetOwnerId", "fullName companyName email")
+                await syncInvoicesForContract(populatedContract)
+                console.log("[v0] Invoices synced after payment verification for contract:", contract._id)
+            } catch (syncErr) {
+                console.error("[v0] Invoice sync after payment verification (non-fatal):", syncErr.message)
+            }
+
             return res.status(200).json({
                 success: true,
                 message: "Payment verified successfully",
@@ -622,6 +662,71 @@ export const verifyPayment = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Failed to verify payment",
+            error: error.message,
+        })
+    }
+}
+
+// Get the commission preview for a contract BEFORE payment.
+// Returns the exact rate + admin/fleet-owner split the backend will actually apply,
+// so the payment modal never shows a hardcoded/guessed percentage.
+export const getContractCommissionPreview = async (req, res) => {
+    try {
+        const { contractId } = req.params
+
+        const contract = await Contract.findById(contractId)
+            .populate("fleetOwnerId", "_id")
+            .populate("quotationId")
+
+        if (!contract) {
+            return res.status(404).json({
+                success: false,
+                message: "Contract not found",
+            })
+        }
+
+        const currency =
+            contract.financials?.currency || contract.currency || "AED"
+
+        // Advance is 50% of the total contract amount (security deposit excluded).
+        const advanceAmount = contract.financials?.advancePayment?.amount || 0
+        const securityDeposit = contract.financials?.securityDeposit?.amount || 0
+
+        // Same resolution the real payment uses: custom CONTRACT rate -> partner
+        // default -> platform default (20%).
+        const commissionRate = await getB2BPartnerCommissionRate(contract.fleetOwnerId._id)
+        const { adminCommission, fleetOwnerAmount, appliedRate } = calculateCommission(
+            advanceAmount,
+            "advance",
+            commissionRate
+        )
+
+        // Pending negotiation service fee (charged on top of the advance, if any).
+        let negotiationCommission = 0
+        let negotiationCommissionStatus = null
+        if (contract.negotiationCommission) {
+            negotiationCommission = contract.negotiationCommission.adminCommission || 0
+            negotiationCommissionStatus = contract.negotiationCommission.commissionStatus || null
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                currency,
+                advanceAmount,
+                securityDeposit,
+                appliedCommissionRate: appliedRate,
+                adminCommission,
+                fleetOwnerAmount,
+                negotiationCommission,
+                negotiationCommissionStatus,
+            },
+        })
+    } catch (error) {
+        console.error("[v0] Error building commission preview:", error)
+        return res.status(500).json({
+            success: false,
+            message: "Failed to load commission preview",
             error: error.message,
         })
     }
@@ -1057,30 +1162,24 @@ const processPaymentToWallets = async (payment) => {
 
     console.log("[v0] Wallet credit lock acquired for payment:", payment._id)
 
-    // Get or create admin wallet
+    // Resolve wallets in the PAYMENT'S currency so a UAE (AED) payment credits
+    // the AED wallets and a Kuwait (KWD) payment credits the KWD wallets. The
+    // old code found "the user's single wallet" regardless of currency, which is
+    // how foreign amounts ended up mislabeled under the wrong currency.
+    const walletCurrency = payment.currency || "AED"
     const adminUserId = process.env.ADMIN_USER_ID
-    let adminWallet = await Wallet.findOne({ userId: adminUserId })
-
-    if (!adminWallet) {
-        adminWallet = await Wallet.create({
-            userId: adminUserId,
-            role: "ADMIN",
-            balance: 0,
-            currency: payment.currency || "KWD",
-        })
-    }
+    let adminWallet = await getOrCreateWallet(adminUserId, {
+        currency: walletCurrency,
+        role: "ADMIN",
+    })
+    if (adminWallet.isNew) await adminWallet.save()
 
     // Get or create fleet owner wallet with B2B_PARTNER role
-    let fleetWallet = await Wallet.findOne({ userId: payment.fleetOwnerId })
-
-    if (!fleetWallet) {
-        fleetWallet = await Wallet.create({
-            userId: payment.fleetOwnerId,
-            role: "B2B_PARTNER",
-            balance: 0,
-            currency: payment.currency || "KWD",
-        })
-    }
+    let fleetWallet = await getOrCreateWallet(payment.fleetOwnerId, {
+        currency: walletCurrency,
+        role: "B2B_PARTNER",
+    })
+    if (fleetWallet.isNew) await fleetWallet.save()
 
     // Log currency info for debugging
     console.log("[v0] Fleet Wallet currency:", fleetWallet.currency)
@@ -1369,7 +1468,8 @@ export const createInstallmentPayment = async (req, res) => {
         }
 
         const contract = paymentSchedule.contractId
-        const currency = contract.currency || "AED"
+        // Currency from the contract is authoritative for gateway selection.
+        const currency = contract.financials?.currency || contract.currency || "AED"
 
         const { adminCommission, fleetOwnerAmount } = calculateCommission(scheduleItem.amount)
 

@@ -12,6 +12,12 @@ import {
   useDropdownOptions,
   DROPDOWN_CATEGORIES,
 } from "../../../hooks/useDropdownOptions";
+import {
+  normalizeCountry,
+  getActiveCountry,
+  getCountryLocations,
+  getCurrencyForLocation,
+} from "../../../config/localeConfig";
 import "./corporate.css";
 
 const Corporate = () => {
@@ -24,32 +30,15 @@ const Corporate = () => {
   const [activeTab, setActiveTab] = useState("corporate");
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Get currency based on user's country or selected location
-  const getCurrencyForLocation = (locationName) => {
-    // Kuwait locations
-    const kuwaitLocations = [
-      "Kuwait City",
-      "Hawalli",
-      "Salmiya",
-      "Jahra",
-      "Ahmadi",
-      "Farwaniya",
-    ];
-    // Check if location is in Kuwait
-    if (
-      kuwaitLocations.some((loc) =>
-        locationName?.toLowerCase().includes(loc.toLowerCase()),
-      )
-    ) {
-      return "KWD";
-    }
-    // Check user's country
-    if (user?.country === "KW" || user?.country === "Kuwait") {
-      return "KWD";
-    }
-    // Default to AED for UAE and other locations
-    return "AED";
-  };
+  // The corporate account's country (identity-locked). Locations and currency
+  // are scoped to this so a Kuwait corporate only sees Kuwait cities + KWD and
+  // a UAE corporate only sees UAE cities + AED. Data-driven via localeConfig.
+  const formCountry = normalizeCountry(user?.country) || getActiveCountry();
+
+  // Currency for the budget dropdown: driven by the chosen location's country,
+  // falling back to the corporate's own country currency.
+  const resolveBudgetCurrency = (locationName) =>
+    getCurrencyForLocation(locationName, formCountry);
 
   // Format budget label with dynamic currency
   const formatBudgetLabel = (option, currency) => {
@@ -249,7 +238,7 @@ const Corporate = () => {
       placeholder: "e.g. 1",
     },
   ];
-  
+
   // Budget ranges without currency - currency is added dynamically based on location
   const budgetRanges = {
     daily: dropdownOptions[DROPDOWN_CATEGORIES.BUDGET_RANGES_DAILY]
@@ -297,34 +286,25 @@ const Corporate = () => {
     "Child Safety Seats",
   ];
 
-  const locations = dropdownOptions[
-    DROPDOWN_CATEGORIES.LOCATIONS
-  ]?.options?.map((opt) => opt.value) || [
-    "Dubai",
-    "Abu Dhabi",
-    "Sharjah",
-    "Ajman",
-    "Kuwait City",
-    "Doha",
-    "Riyadh",
-    "Jeddah",
-  ];
+  // Locations are scoped to the corporate's country (multi-country). We do NOT
+  // use the global LOCATIONS dropdown here because it mixes every country.
+  const locations = getCountryLocations(formCountry);
 
   const handleInputChange = (field, value) => {
-   setFilters((prev) => {
-     // If rental duration changes, reset the budget since ranges are different
-     if (field === "rentalDuration" && prev.rentalDuration !== value) {
-       return {
-         ...prev,
-         [field]: value,
-         budget: "", // Reset budget when duration type changes
-       };
-     }
-     return {
-       ...prev,
-       [field]: value,
-     };
-   });
+    setFilters((prev) => {
+      // If rental duration changes, reset the budget since ranges are different
+      if (field === "rentalDuration" && prev.rentalDuration !== value) {
+        return {
+          ...prev,
+          [field]: value,
+          budget: "", // Reset budget when duration type changes
+        };
+      }
+      return {
+        ...prev,
+        [field]: value,
+      };
+    });
   };
 
   const handleFeatureToggle = (feature) => {
@@ -569,7 +549,7 @@ const Corporate = () => {
                   <option key={range.value} value={range.value}>
                     {formatBudgetLabel(
                       range,
-                      getCurrencyForLocation(filters.location),
+                      resolveBudgetCurrency(filters.location),
                     )}
                   </option>
                 ))}
@@ -662,6 +642,6 @@ const Corporate = () => {
       <Footer />
     </>
   );
-};;
+};
 
 export default Corporate;

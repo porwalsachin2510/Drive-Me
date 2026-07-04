@@ -10,10 +10,15 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import "./CorporateAssignedVehiclesPage.css";
 import AddDriverModal from "../../../Components/Corporate/AddDriverModal/AddDriverModal";
 
-const CorporateAssignedVehiclesPage = () => {
+const CorporateAssignedVehiclesPage = ({
+  embedded = false,
+  embeddedContractId = null,
+} = {}) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { contractId } = location.state || {};
+  // When embedded (e.g. a B2B partner managing on behalf of a corporate), the
+  // contract id is passed via props instead of router state.
+  const contractId = embeddedContractId || location.state?.contractId;
 
   const [contract, setContract] = useState(null);
   const [assignedVehicles, setAssignedVehicles] = useState([]);
@@ -37,6 +42,11 @@ const CorporateAssignedVehiclesPage = () => {
     fuelCardNumber: "",
   });
 
+  // Managed-service brief context (only used when embedded, i.e. a B2B partner
+  // running operations on behalf of the corporate). Lets the partner link the
+  // route they are creating to a specific brief route request so it auto-fulfils.
+  const [briefRouteItems, setBriefRouteItems] = useState([]);
+
   const [routeForm, setRouteForm] = useState({
     fromLocation: "",
     toLocation: "",
@@ -47,6 +57,7 @@ const CorporateAssignedVehiclesPage = () => {
     estimatedDuration: "",
     availableDays: [],
     routeNotes: "",
+    briefItemId: "",
     // Trip Times - like B2C Partner route creation
     tripTimes: [
       {
@@ -245,9 +256,14 @@ const CorporateAssignedVehiclesPage = () => {
       );
 
       if (response.data.success) {
-        alert("Route assigned successfully");
+        alert(
+          response.data.briefAutoFulfilled
+            ? "Route assigned and linked to the brief. It's now awaiting the corporate's approval."
+            : "Route assigned successfully",
+        );
         closeModal();
         await fetchAssignedVehicles();
+        if (embedded) await fetchBriefRouteItems();
       }
     } catch (err) {
       alert(err.response?.data?.message || "Failed to assign route");
@@ -340,6 +356,7 @@ const CorporateAssignedVehiclesPage = () => {
       estimatedDuration: "",
       availableDays: ["MON", "TUE", "WED", "THU", "FRI"],
       routeNotes: "",
+      briefItemId: "",
       tripTimes: [
         {
           tripNumber: 1,
@@ -354,12 +371,31 @@ const CorporateAssignedVehiclesPage = () => {
       ],
     });
     setNewStopPoint({ location: "", time: "" });
+    // Refresh the brief's outstanding route requests so the partner can link
+    // this new route to one of them (only relevant in embedded/on-behalf mode).
+    if (embedded) fetchBriefRouteItems();
   };
 
   const closeModal = () => {
     setModalType(null);
     setSelectedVehicle(null);
   };
+
+  // Load the managed-service brief's route requests so the partner can pick which
+  // one this route fulfils. Fetched lazily (embedded mode only). Failures are
+  // silent — linking to a brief is optional and never blocks route creation.
+  const fetchBriefRouteItems = useCallback(async () => {
+    if (!embedded || !contractId) return;
+    try {
+      const res = await api.get(`/managed-service-brief/${contractId}`);
+      if (res.data?.success) {
+        setBriefRouteItems(res.data.data.brief?.routeRequests || []);
+      }
+    } catch (err) {
+      // Non-managed contracts / no brief: just skip the selector.
+      setBriefRouteItems([]);
+    }
+  }, [embedded, contractId]);
 
   // Changed: Returns array of routes (supports multiple routes per vehicle)
   const getAssignedVehicleRoutes = (vehicle) => {
@@ -628,14 +664,16 @@ const CorporateAssignedVehiclesPage = () => {
 
   return (
     <>
-      <Navbar activeTab="contracts" setActiveTab={() => {}} />
+      {!embedded && <Navbar activeTab="contracts" setActiveTab={() => {}} />}
       <div className="corporate-assigned-vehicles-container">
-        <button
-          className="corporate-assigned-vehicles-back-btn"
-          onClick={() => navigate("/corporate-profile?tab=contracts")}
-        >
-          ← Back to Contracts
-        </button>
+        {!embedded && (
+          <button
+            className="corporate-assigned-vehicles-back-btn"
+            onClick={() => navigate("/corporate-profile?tab=contracts")}
+          >
+            ← Back to Contracts
+          </button>
+        )}
 
         <div className="corporate-assigned-vehicles-header">
           <div>
@@ -1709,6 +1747,41 @@ const CorporateAssignedVehiclesPage = () => {
                       />
                     </div>
                   </div>
+
+                  {embedded && briefRouteItems.length > 0 && (
+                    <div className="form-group">
+                      <label>Fulfills brief route request (optional)</label>
+                      <select
+                        value={routeForm.briefItemId}
+                        onChange={(e) =>
+                          setRouteForm({
+                            ...routeForm,
+                            briefItemId: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">— Not linked to a brief item —</option>
+                        {briefRouteItems.map((r) => {
+                          const done =
+                            r.fulfillment?.status === "FULFILLED" &&
+                            r.fulfillment?.approvalStatus === "APPROVED";
+                          return (
+                            <option key={r._id} value={r._id} disabled={done}>
+                              {(r.label || "Route request") +
+                                (r.fromArea || r.toWorkLocation
+                                  ? ` (${r.fromArea || "?"} → ${r.toWorkLocation || "?"})`
+                                  : "") +
+                                (done ? " — already approved" : "")}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <small className="form-hint">
+                        Linking auto-marks that brief item fulfilled and sends
+                        it to the corporate for approval.
+                      </small>
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label>Route Notes</label>

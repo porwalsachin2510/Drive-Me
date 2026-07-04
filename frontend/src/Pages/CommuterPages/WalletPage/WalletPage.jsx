@@ -12,6 +12,7 @@ import {
 import PaymentModal from "../../../Components/Payment/PaymentModal";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
+import { useLocale } from "../../../hooks/useLocale";
 import "./walletpage.css";
 
 function WalletPage() {
@@ -20,6 +21,11 @@ function WalletPage() {
     (state) => state.wallet,
   );
   const { user } = useSelector((state) => state.auth);
+  // Locale drives currency for display and withdrawal (UAE -> AED, Kuwait -> KWD).
+  const locale = useLocale();
+  // Prefer the wallet's own currency (the actual stored balance currency),
+  // then the user's active locale currency.
+  const activeCurrency = wallet?.currency || locale.currency;
 
   const [activeTab, setActiveTab] = useState("overview");
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
@@ -35,9 +41,13 @@ function WalletPage() {
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+  // Transactions tab filters
+  const [typeFilter, setTypeFilter] = useState("all"); // all | credit | debit
+  const [timeFilter, setTimeFilter] = useState("all"); // all | today | week | month
+
   useEffect(() => {
     dispatch(getWalletBalance());
-    dispatch(getWalletTransactions({ page: 1, limit: 20 }));
+    dispatch(getWalletTransactions({ page: 1, limit: 100 }));
   }, [dispatch]);
 
   const handleAddFunds = () => {
@@ -54,21 +64,18 @@ function WalletPage() {
     setShowPaymentModal(false);
     setAddFundsAmount("");
     dispatch(getWalletBalance());
-    dispatch(getWalletTransactions({ page: 1, limit: 20 }));
+    dispatch(getWalletTransactions({ page: 1, limit: 100 }));
   };
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
     try {
-      // Get the appropriate currency based on user's country
-      const currency = user?.country === "KW" ? "KWD" : "AED";
-
       await dispatch(
         withdrawFromWallet({
           ...withdrawForm,
           amount: parseFloat(withdrawForm.amount),
-          currency,
-          country: user?.country || "UAE",
+          currency: activeCurrency,
+          country: user?.country || locale.country,
         }),
       ).unwrap();
 
@@ -84,7 +91,7 @@ function WalletPage() {
         country: user?.country || "UAE",
       });
       dispatch(getWalletBalance());
-      dispatch(getWalletTransactions({ page: 1, limit: 20 }));
+      dispatch(getWalletTransactions({ page: 1, limit: 100 }));
     } catch (error) {
       console.error("Withdraw error:", error);
       alert(error || "Withdrawal failed. Please try again.");
@@ -92,11 +99,12 @@ function WalletPage() {
   };
 
   const formatCurrency = (amount) => {
-    const currency = user?.country === "KW" ? "KWD" : "AED";
-    return new Intl.NumberFormat("en-AE", {
+    const decimals = locale.getCurrencyDecimals(activeCurrency);
+    return new Intl.NumberFormat(`en-${locale.isoCode || "AE"}`, {
       style: "currency",
-      currency: currency === "KWD" ? "KWD" : "AED",
-      minimumFractionDigits: currency === "KWD" ? 3 : 2,
+      currency: activeCurrency,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     }).format(amount);
   };
 
@@ -111,7 +119,7 @@ function WalletPage() {
       { id: "zaincash", name: "Zain Cash", icon: "🟢" },
     ];
 
-    if (user?.country === "KW") {
+    if (locale.country === "KW") {
       return methods.filter((m) =>
         ["card", "knet", "benefit", "zaincash"].includes(m.id),
       );
@@ -142,18 +150,32 @@ function WalletPage() {
     "SECURITY_DEPOSIT_REFUND",
     "TRANSFER_IN",
   ];
+  // A "neutral" transaction is one that does NOT move the wallet balance — most
+  // importantly a CASH (pay-on-board) fare, which is paid in person to the captain
+  // at travel time. The backend flags these with direction "NONE" / affectsWallet
+  // false. They appear in the activity feed for history but must NOT be coloured as
+  // a debit nor counted in wallet spend totals.
+  const isNeutralTransaction = (transaction) => {
+    if (!transaction) return false;
+    if (transaction.affectsWallet === false) return true;
+    return transaction.direction === "NONE";
+  };
   const isCreditTransaction = (transaction) => {
     if (!transaction) return false;
+    if (isNeutralTransaction(transaction)) return false;
     if (transaction.direction) return transaction.direction === "CREDIT";
     if (!transaction.type) return false;
     return CREDIT_TYPES.includes(transaction.type);
   };
-  const signedAmount = (transaction) =>
-    isCreditTransaction(transaction)
+  const signedAmount = (transaction) => {
+    if (isNeutralTransaction(transaction)) return 0;
+    return isCreditTransaction(transaction)
       ? Math.abs(transaction.amount)
       : -Math.abs(transaction.amount);
+  };
 
-  // "This Month" = net movement (credits minus debits) for the current calendar month.
+  // "This Month" = net movement (credits minus debits) for the current calendar
+  // month. Neutral cash pay-on-board fares contribute 0 (see signedAmount).
   const thisMonthNet = () => {
     const now = new Date();
     return transactions
@@ -167,10 +189,73 @@ function WalletPage() {
       .reduce((sum, t) => sum + signedAmount(t), 0);
   };
 
+  // Short, human label for how the money moved (Cash / Wallet / Card / Bank / Admin...).
+  // The backend now sends `paymentMethod` on every row; fall back gracefully for old rows.
+  const getMethodLabel = (transaction) => {
+    if (transaction?.paymentMethod) return transaction.paymentMethod;
+    if (isCreditTransaction(transaction)) return "Wallet";
+    return "Wallet";
+  };
+
+  // Apply the "All Types" and "All Time" filters to the full transaction list.
+  const getFilteredTransactions = () => {
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    return transactions.filter((t) => {
+      // Type filter — neutral (cash pay-on-board) rows are neither credit nor debit.
+      if (typeFilter === "credit" && !isCreditTransaction(t)) return false;
+      if (
+        typeFilter === "debit" &&
+        (isCreditTransaction(t) || isNeutralTransaction(t))
+      )
+        return false;
+
+      // Time filter
+      if (timeFilter !== "all") {
+        const d = new Date(t.createdAt);
+        if (timeFilter === "today" && d < startOfToday) return false;
+        if (timeFilter === "week" && d < startOfWeek) return false;
+        if (timeFilter === "month" && d < startOfMonth) return false;
+      }
+      return true;
+    });
+  };
+
+  const filteredTransactions = getFilteredTransactions();
+
   return (
     <>
       <Navbar />
       <div className="drivemego-wp-wallet-page">
+        {/* Negative balance warning banner */}
+        {balance < 0 && (
+          <div className="drivemego-wp-negative-balance-warning">
+            <div className="drivemego-wp-warning-content">
+              <h3>Outstanding Balance Due</h3>
+              <p>
+                Your wallet has an outstanding balance of{" "}
+                <strong>{formatCurrency(Math.abs(balance))}</strong>. This is
+                typically from a cancellation fee. You will not be able to make
+                new bookings until you add money to clear this balance.
+              </p>
+              <button
+                className="drivemego-wp-warning-action-btn"
+                onClick={() => setShowAddFundsModal(true)}
+              >
+                Add Funds Now
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="drivemego-wp-wallet-header">
           <h1>My Wallet</h1>
           <div className="drivemego-wp-wallet-balance-card">
@@ -258,20 +343,47 @@ function WalletPage() {
                   {transactions.slice(0, 5).map((transaction, index) => (
                     <div key={index} className="transaction-item">
                       <div className="drivemego-wp-transaction-icon">
-                        {isCreditTransaction(transaction) ? "➕" : "➖"}
+                        {isNeutralTransaction(transaction)
+                          ? "💵"
+                          : isCreditTransaction(transaction)
+                            ? "➕"
+                            : "➖"}
                       </div>
                       <div className="drivemego-wp-transaction-details">
                         <p className="drivemego-wp-transaction-description">
                           {transaction.description}
                         </p>
-                        <span className="drivemego-wp-transaction-date">
-                          {new Date(transaction.createdAt).toLocaleDateString()}
-                        </span>
+                        <div className="drivemego-wp-transaction-meta">
+                          <span className="drivemego-wp-method-badge">
+                            {getMethodLabel(transaction)}
+                          </span>
+                          {isNeutralTransaction(transaction) &&
+                            transaction.status && (
+                              <span className="drivemego-wp-status-badge">
+                                {transaction.status}
+                              </span>
+                            )}
+                          <span className="drivemego-wp-transaction-date">
+                            {new Date(
+                              transaction.createdAt,
+                            ).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
                       <div
-                        className={`drivemego-wp-transaction-amount ${isCreditTransaction(transaction) ? "drivemego-wp-credit" : "drivemego-wp-debit"}`}
+                        className={`drivemego-wp-transaction-amount ${
+                          isNeutralTransaction(transaction)
+                            ? "drivemego-wp-neutral"
+                            : isCreditTransaction(transaction)
+                              ? "drivemego-wp-credit"
+                              : "drivemego-wp-debit"
+                        }`}
                       >
-                        {isCreditTransaction(transaction) ? "+" : "-"}
+                        {isNeutralTransaction(transaction)
+                          ? ""
+                          : isCreditTransaction(transaction)
+                            ? "+"
+                            : "-"}
                         {formatCurrency(Math.abs(transaction.amount))}
                       </div>
                     </div>
@@ -286,12 +398,20 @@ function WalletPage() {
               <div className="drivemego-wp-transactions-header">
                 <h3>All Transactions</h3>
                 <div className="drivemego-wp-transaction-filters">
-                  <select className="drivemego-wp-filter-select">
+                  <select
+                    className="drivemego-wp-filter-select"
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                  >
                     <option value="all">All Types</option>
                     <option value="credit">Credits</option>
                     <option value="debit">Debits</option>
                   </select>
-                  <select className="drivemego-wp-filter-select">
+                  <select
+                    className="drivemego-wp-filter-select"
+                    value={timeFilter}
+                    onChange={(e) => setTimeFilter(e.target.value)}
+                  >
                     <option value="all">All Time</option>
                     <option value="today">Today</option>
                     <option value="week">This Week</option>
@@ -301,29 +421,67 @@ function WalletPage() {
               </div>
 
               <div className="drivemego-wp-transaction-list">
-                {transactions.map((transaction, index) => (
-                  <div key={index} className="drivemego-wp-transaction-item">
-                    <div className="drivemego-wp-transaction-icon">
-                      {isCreditTransaction(transaction) ? "➕" : "➖"}
-                    </div>
-                    <div className="drivemego-wp-transaction-details">
-                      <p className="drivemego-wp-transaction-description">
-                        {transaction.description}
-                      </p>
-                      <span className="drivemego-wp-transaction-date">
-                        {new Date(transaction.createdAt).toLocaleDateString()}{" "}
-                        at{" "}
-                        {new Date(transaction.createdAt).toLocaleTimeString()}
-                      </span>
-                    </div>
+                {filteredTransactions.length === 0 ? (
+                  <p className="drivemego-wp-no-transactions">
+                    No transactions match the selected filters.
+                  </p>
+                ) : (
+                  filteredTransactions.map((transaction, index) => (
                     <div
-                      className={`drivemego-wp-transaction-amount ${isCreditTransaction(transaction) ? "drivemego-wp-credit" : "drivemego-wp-debit"}`}
+                      key={transaction._id || index}
+                      className="drivemego-wp-transaction-item"
                     >
-                      {isCreditTransaction(transaction) ? "+" : "-"}
-                      {formatCurrency(Math.abs(transaction.amount))}
+                      <div className="drivemego-wp-transaction-icon">
+                        {isNeutralTransaction(transaction)
+                          ? "💵"
+                          : isCreditTransaction(transaction)
+                            ? "➕"
+                            : "➖"}
+                      </div>
+                      <div className="drivemego-wp-transaction-details">
+                        <p className="drivemego-wp-transaction-description">
+                          {transaction.description}
+                        </p>
+                        <div className="drivemego-wp-transaction-meta">
+                          <span className="drivemego-wp-method-badge">
+                            {getMethodLabel(transaction)}
+                          </span>
+                          {transaction.status &&
+                            transaction.status !== "COMPLETED" && (
+                              <span className="drivemego-wp-status-badge">
+                                {transaction.status}
+                              </span>
+                            )}
+                          <span className="drivemego-wp-transaction-date">
+                            {new Date(
+                              transaction.createdAt,
+                            ).toLocaleDateString()}{" "}
+                            at{" "}
+                            {new Date(
+                              transaction.createdAt,
+                            ).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className={`drivemego-wp-transaction-amount ${
+                          isNeutralTransaction(transaction)
+                            ? "drivemego-wp-neutral"
+                            : isCreditTransaction(transaction)
+                              ? "drivemego-wp-credit"
+                              : "drivemego-wp-debit"
+                        }`}
+                      >
+                        {isNeutralTransaction(transaction)
+                          ? ""
+                          : isCreditTransaction(transaction)
+                            ? "+"
+                            : "-"}
+                        {formatCurrency(Math.abs(transaction.amount))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -373,17 +531,15 @@ function WalletPage() {
 
               <div className="drivemego-wp-modal-form">
                 <div className="drivemego-wp-form-group">
-                  <label>
-                    Amount ({user?.country === "KW" ? "KWD" : "AED"})
-                  </label>
+                  <label>Amount ({activeCurrency})</label>
                   <input
                     type="number"
                     value={addFundsAmount}
                     onChange={(e) => setAddFundsAmount(e.target.value)}
-                    placeholder={`Enter amount in ${user?.country === "KW" ? "KWD" : "AED"}`}
+                    placeholder={`Enter amount in ${activeCurrency}`}
                     required
-                    min={user?.country === "KW" ? "0.250" : "1"}
-                    step={user?.country === "KW" ? "0.001" : "0.01"}
+                    min={locale.currencyDecimals === 3 ? "0.250" : "1"}
+                    step={locale.currencyDecimals === 3 ? "0.001" : "0.01"}
                   />
                 </div>
 
@@ -416,7 +572,7 @@ function WalletPage() {
             setAddFundsAmount("");
           }}
           amount={addFundsAmount}
-          currency={user?.country === "KW" ? "KWD" : "AED"}
+          currency={activeCurrency}
           onPaymentSuccess={handlePaymentSuccess}
         />
 
@@ -491,7 +647,7 @@ function WalletPage() {
                     required
                   >
                     <option value="">Select Bank</option>
-                    {user?.country === "KW" ? (
+                    {locale.country === "KW" ? (
                       <>
                         <option value="NBK">National Bank of Kuwait</option>
                         <option value="KFH">Kuwait Finance House</option>
@@ -521,7 +677,7 @@ function WalletPage() {
                       })
                     }
                     placeholder={
-                      user?.country === "KW"
+                      locale.country === "KW"
                         ? "KW00AAAA0000000000000000"
                         : "AE00 0000 0000 0000 0000 000"
                     }

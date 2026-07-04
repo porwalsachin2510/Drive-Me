@@ -10,10 +10,12 @@ const PaymentMethodSelector = ({
   onSelectMethod,
   onClose,
   contract,
+  paymentType = "advance",
 }) => {
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true);
   const [loadingPaymentSettings, setLoadingPaymentSettings] = useState(true);
+  const [commissionPreview, setCommissionPreview] = useState(null);
 
   // Fetch payment settings to check if online payments are enabled
   useEffect(() => {
@@ -35,6 +37,29 @@ const PaymentMethodSelector = ({
 
     fetchPaymentSettings();
   }, []);
+
+  // Fetch the real commission preview so the breakdown shows the exact rate the
+  // backend will charge (never a hardcoded/guessed percentage).
+  useEffect(() => {
+    const contractId = contract?._id;
+    if (!contractId) return;
+
+    const fetchCommissionPreview = async () => {
+      try {
+        const response = await api.get(
+          `/payments/contracts/${contractId}/commission-preview`,
+        );
+        if (response.data.success) {
+          setCommissionPreview(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching commission preview:", error);
+        // Leave null — PaymentBreakdown will fall back to the platform default.
+      }
+    };
+
+    fetchCommissionPreview();
+  }, [contract?._id]);
 
   // Define which methods are considered "online" payments
   const onlinePaymentMethods = ["CARD", "WALLET", "BANK_TRANSFER"];
@@ -100,7 +125,11 @@ const PaymentMethodSelector = ({
             Choose how you'd like to pay for this contract
           </p>
 
-          <PaymentBreakdown contract={contract} />
+          <PaymentBreakdown
+            contract={contract}
+            paymentType={paymentType}
+            commissionPreview={commissionPreview}
+          />
 
           {loadingPaymentSettings ? (
             <div className="payment-methods-loading">

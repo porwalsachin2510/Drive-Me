@@ -1,116 +1,48 @@
 /**
  * Country Localization Service
- * Provides utilities for country-specific configurations including currency, payment gateways, and formatting
+ *
+ * Thin compatibility layer over the single source of truth in
+ * `../Config/localizationConfig.js`. All lookups normalize the incoming country
+ * (so "KW", "Kuwait", "KUWAIT", "AE", "UAE" all resolve correctly) and delegate
+ * to the central config. Existing function signatures are preserved.
  */
+import {
+    normalizeCountry,
+    getCountryConfig,
+    getCountryCurrency as configGetCurrency,
+    getCurrencyDecimals as configGetDecimals,
+    getCurrencySymbol as configGetSymbol,
+    getCountryPaymentMethods as configGetMethods,
+    getCountryPaymentGateway as configGetGateway,
+    getCountryFromCurrency,
+    getEffectiveCountry as configGetEffectiveCountry,
+} from "../Config/localizationConfig.js";
 
-// Country to Currency Mapping
-const countryToCurrency = {
-    "UAE": "AED",
-    "KW": "KWD",
-    "SA": "SAR",
-    "BH": "BHD",
-    "OM": "OMR",
-    "QA": "QAR"
-};
+// Effective country for a user (honors the DEV_COUNTRY testing override).
+export const getEffectiveCountry = (user) => configGetEffectiveCountry(user);
 
-// Currency to Decimal Places Mapping
-const currencyDecimals = {
-    "AED": 2,
-    "KWD": 3,
-    "SAR": 2,
-    "BHD": 3,
-    "OMR": 3,
-    "QAR": 2
-};
+// Currency for a country. Normalizes any variant ("Kuwait" -> KW -> KWD).
+export const getCountryCurrency = (userCountry) => configGetCurrency(userCountry);
 
-// Currency Symbols
-const currencySymbols = {
-    "AED": "د.إ",
-    "KWD": "د.ك",
-    "SAR": "﷼",
-    "BHD": ".د.ب",
-    "OMR": "ر.ع.",
-    "QAR": "ر.ق"
-};
+// Decimal places for a currency (KWD/BHD/OMR -> 3, others -> 2).
+export const getCurrencyDecimals = (currency) => configGetDecimals(currency);
 
-// Country to Payment Gateway Mapping
-const countryToPaymentGateway = {
-    "UAE": {
-        primary: "STRIPE",
-        fallback: "TAP",
-        supportedMethods: ["card", "apple_pay", "google_pay", "knet"]
-    },
-    "KW": {
-        primary: "TAP",
-        fallback: null,
-        supportedMethods: ["card", "knet", "benefit", "zain_cash", "stc_pay"]
-    }
-};
+// Display symbol for a currency.
+export const getCurrencySymbol = (currency) => configGetSymbol(currency);
 
-// Export function to get currency for a country
-export const getCountryCurrency = (userCountry) => {
-    const currency = countryToCurrency[userCountry];
-    if (!currency) {
-        console.warn(`[countryLocalizationService] Unknown country: ${userCountry}, defaulting to AED`);
-        return "AED";
-    }
-    return currency;
-};
-
-// Export function to get currency decimals
-export const getCurrencyDecimals = (currency) => {
-    const decimals = currencyDecimals[currency];
-    if (decimals === undefined) {
-        console.warn(`[countryLocalizationService] Unknown currency: ${currency}, defaulting to 2 decimals`);
-        return 2;
-    }
-    return decimals;
-};
-
-// Export function to get currency symbol
-export const getCurrencySymbol = (currency) => {
-    const symbol = currencySymbols[currency];
-    if (!symbol) {
-        console.warn(`[countryLocalizationService] Unknown currency: ${currency}, defaulting to currency code`);
-        return currency;
-    }
-    return symbol;
-};
-
-// Export function to get payment gateway config for a country
+// Payment gateway config for a country (object shape kept for compatibility).
+// Resolves the primary gateway from the central config.
 export const getCountryPaymentGateway = (userCountry) => {
-    const gateway = countryToPaymentGateway[userCountry];
-    if (!gateway) {
-        console.warn(`[countryLocalizationService] No payment gateway configured for country: ${userCountry}`);
-        return {
-            primary: "TAP",
-            fallback: null,
-            supportedMethods: ["card"]
-        };
-    }
-    return gateway;
-};
-
-// Export function to get payment methods for a country
-export const getCountryPaymentMethods = (userCountry) => {
-    const methods = {
-        "UAE": [
-            { id: "card", name: "Credit/Debit Card", gateway: "STRIPE", enabled: true },
-            { id: "apple_pay", name: "Apple Pay", gateway: "STRIPE", enabled: true },
-            { id: "google_pay", name: "Google Pay", gateway: "STRIPE", enabled: true },
-            { id: "knet", name: "KNET", gateway: "TAP", enabled: true }
-        ],
-        "KW": [
-            { id: "card", name: "Credit/Debit Card", gateway: "TAP", enabled: true },
-            { id: "knet", name: "KNET", gateway: "TAP", enabled: true },
-            { id: "benefit", name: "Benefit", gateway: "TAP", enabled: true },
-            { id: "zain_cash", name: "Zain Cash", gateway: "TAP", enabled: true },
-            { id: "stc_pay", name: "STC Pay", gateway: "TAP", enabled: true }
-        ]
+    const config = getCountryConfig(userCountry);
+    return {
+        primary: config.paymentGateway,
+        fallback: config.fallbackGateway || null,
+        supportedMethods: config.paymentMethods.filter((m) => m.enabled).map((m) => m.id),
     };
-
-    return methods[userCountry] || methods["UAE"];
 };
+
+// Enabled payment methods for a country (normalized).
+export const getCountryPaymentMethods = (userCountry) => configGetMethods(userCountry);
 
 // Export function to format currency for display
 export const formatCurrencyForDisplay = (amount, currency) => {
@@ -133,17 +65,11 @@ export const validateCountryPrice = (price, userCountry) => {
     };
 };
 
-// Export function to get country code from currency
-export const getCurrencyCountry = (currency) => {
-    for (const [country, curr] of Object.entries(countryToCurrency)) {
-        if (curr === currency) {
-            return country;
-        }
-    }
-    return null;
-};
+// Canonical country code from a currency (e.g. "KWD" -> "KW").
+export const getCurrencyCountry = (currency) => getCountryFromCurrency(currency);
 
 export default {
+    getEffectiveCountry,
     getCountryCurrency,
     getCurrencyDecimals,
     getCurrencySymbol,

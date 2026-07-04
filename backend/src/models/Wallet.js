@@ -6,7 +6,11 @@ const walletSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
-            unique: true,
+            // NOTE: intentionally NOT unique. A user holds ONE wallet PER currency
+            // (see the compound { userId, currency } unique index below). This is
+            // what lets an admin accumulate an AED wallet for UAE commission and a
+            // separate KWD wallet for Kuwait commission, instead of dumping mixed
+            // currencies into a single mislabeled balance.
         },
 
         role: {
@@ -128,6 +132,9 @@ const walletSchema = new mongoose.Schema(
     { timestamps: true },
 )
 
+// One wallet per user per currency. This is the core guarantee that keeps
+// money from different countries from ever mixing inside a single balance.
+walletSchema.index({ userId: 1, currency: 1 }, { unique: true })
 walletSchema.index({ userId: 1 })
 // Sparse index for payment session IDs to prevent duplicate transactions
 // This allows quick lookup and prevents double-charging race conditions

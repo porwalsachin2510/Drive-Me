@@ -11,6 +11,7 @@ import {
 import LoadingSpinner from "../../LoadingSpinner/LoadingSpinner";
 import QuotationDetailsModal from "../QuotationDetailsModal/QuotationDetailsModal";
 import QuotationResponseModal from "../QuotationResponseModal/QuotationResponseModal";
+import { getActiveCurrency } from "../../../config/localeConfig";
 import "./B2B_Quotation.css";
 
 const B2B_Quotation = () => {
@@ -727,7 +728,7 @@ const B2B_Quotation = () => {
                             {quotation.currency ||
                               quotation.vehicles?.[0]?.vehicleId?.pricing
                                 ?.currency ||
-                              "AED"}{" "}
+                              getActiveCurrency()}{" "}
                             {quotation.quotedPrice.totalAmount.toFixed(2)}
                           </span>
                         ) : (

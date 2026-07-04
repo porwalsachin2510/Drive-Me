@@ -1,3 +1,4 @@
+import { getActiveCurrency } from "../../../config/localeConfig";
 import "./PriceComparison.css";
 
 const PriceComparison = ({ pricing }) => {
@@ -63,7 +64,7 @@ const PriceComparison = ({ pricing }) => {
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "KWD",
+      currency: getActiveCurrency(),
       minimumFractionDigits: 0,
     }).format(price);
   };

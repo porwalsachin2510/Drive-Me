@@ -1,6 +1,8 @@
 "use client";
 
+import { getActiveCurrency } from "../../../config/localeConfig";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import api from "../../../utils/api";
 import "./AdminCashRenewals.css";
 
@@ -9,6 +11,10 @@ function AdminCashRenewals() {
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState(null);
   const [error, setError] = useState("");
+  // Currency the admin chose to view amounts in. The backend converts each
+  // request's native cash amount into this currency (displayAmount).
+  const activeCurrency = useSelector((state) => state.locale?.currency);
+  const [displayCurrency, setDisplayCurrency] = useState(getActiveCurrency());
 
   const fetchPendingCashRenewals = async () => {
     try {
@@ -16,6 +22,7 @@ function AdminCashRenewals() {
       setError("");
       const res = await api.get("/subscription-settings/admin/pending-cash");
       setRequests(res.data?.data || []);
+      setDisplayCurrency(res.data?.displayCurrency || getActiveCurrency());
     } catch (err) {
       console.error("Error fetching pending cash renewals:", err);
       setError("Failed to load pending cash renewals.");
@@ -26,11 +33,11 @@ function AdminCashRenewals() {
 
   useEffect(() => {
     fetchPendingCashRenewals();
-  }, []);
+  }, [activeCurrency]);
 
   const handleConfirm = async (req) => {
     const ok = window.confirm(
-      `Confirm that you received ${formatCurrency(req.amount)} cash from ${
+      `Confirm that you received ${formatCurrency(req.amount, req.currency)} cash from ${
         req.userName || "this commuter"
       }? This will activate their monthly pass.`,
     );
@@ -54,13 +61,23 @@ function AdminCashRenewals() {
     }
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount, currency = displayCurrency) => {
     const value = Number(amount) || 0;
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "AED",
-      minimumFractionDigits: 2,
-    }).format(value);
+    const decimals = ["KWD", "BHD", "OMR"].includes(
+      (currency || "").toUpperCase(),
+    )
+      ? 3
+      : 2;
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency,
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }).format(value);
+    } catch {
+      return `${currency} ${value.toFixed(decimals)}`;
+    }
   };
 
   const formatDate = (date) => {
@@ -95,7 +112,11 @@ function AdminCashRenewals() {
         <div className="acr-summary-card">
           <span className="acr-summary-value">
             {formatCurrency(
-              requests.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
+              requests.reduce(
+                (sum, r) =>
+                  sum + (Number(r.displayAmount ?? r.amount) || 0),
+                0,
+              ),
             )}
           </span>
           <span className="acr-summary-label">Total To Collect</span>
@@ -134,7 +155,15 @@ function AdminCashRenewals() {
                     {req.renewalMonths || 1} month
                     {(req.renewalMonths || 1) > 1 ? "s" : ""}
                   </td>
-                  <td className="acr-amount">{formatCurrency(req.amount)}</td>
+                  <td className="acr-amount">
+                    {formatCurrency(req.displayAmount ?? req.amount)}
+                    {req.currency &&
+                      req.currency !== displayCurrency && (
+                        <span className="acr-amount-native">
+                          Collect {formatCurrency(req.amount, req.currency)}
+                        </span>
+                      )}
+                  </td>
                   <td>{formatDate(req.requestedAt)}</td>
                   <td>
                     <button

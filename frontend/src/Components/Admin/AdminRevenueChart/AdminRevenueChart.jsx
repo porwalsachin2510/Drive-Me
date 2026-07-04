@@ -12,18 +12,22 @@ import {
   Legend,
 } from "recharts";
 import "./AdminRevenueChart.css";
-
+import { useSelector } from "react-redux";
+import useLocale from "../../../hooks/useLocale";
 import api from "../../../utils/api";
 
 function AdminRevenueChart() {
   const [animationKey, setAnimationKey] = useState(0);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { currency } = useLocale();
+  const country = useSelector((state) => state.locale?.country);
 
   useEffect(() => {
     setAnimationKey((prev) => prev + 1);
     fetchRevenueData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country]);
 
   // Build a full year of zero-filled months so the chart always has an X axis
   const emptyYear = () => {
@@ -47,8 +51,10 @@ function AdminRevenueChart() {
   const fetchRevenueData = async () => {
     try {
       setLoading(true);
-      // Fetch real revenue data from backend
-      const response = await api.get("/admin/revenue/monthly");
+      // Fetch real revenue data from backend, scoped to the selected country
+      const response = await api.get("/admin/revenue/monthly", {
+        params: country ? { country } : {},
+      });
 
       if (
         response.data.success &&
@@ -75,7 +81,7 @@ function AdminRevenueChart() {
           <p className="ad-dash-tooltip-month">{payload[0].payload.month}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }}>
-              {entry.name}: AED {entry.value.toLocaleString()}
+              {entry.name}: {currency} {entry.value.toLocaleString()}
             </p>
           ))}
         </div>
@@ -142,7 +148,7 @@ function AdminRevenueChart() {
               value >= 1000 ? `${(value / 1000).toFixed(1)}k` : `${value}`
             }
             label={{
-              value: "Revenue (AED)",
+              value: `Revenue (${currency})`,
               angle: -90,
               position: "insideLeft",
               style: { textAnchor: "middle", fill: "#6b7280", fontSize: 12 },

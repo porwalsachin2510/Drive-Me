@@ -8,25 +8,28 @@ import {
     getTripDetails,
     getCorporateEmployeeBookings
 } from "../controllers/corporateOperationsController.js";
-import { verifyToken } from "../middleware/auth.js";
+import { verifyToken, resolveCorporateContext } from "../middleware/auth.js";
 
 const router = express.Router();
 
+// All corporate operations support a B2B partner acting on behalf of the
+// corporate for MANAGED-service contracts (via onBehalfContractId).
+
 // Daily trips management
-router.get("/daily-trips", verifyToken, getDailyTrips);
-router.get("/employee/:employeeId/trips", verifyToken, getEmployeeAssignedTrips);
+router.get("/daily-trips", verifyToken, resolveCorporateContext, getDailyTrips);
+router.get("/employee/:employeeId/trips", verifyToken, resolveCorporateContext, getEmployeeAssignedTrips);
 
 // Route-Vehicle assignment
-router.post("/assign-route-to-vehicle", verifyToken, assignRouteToVehicle);
-router.get("/assigned-routes-status", verifyToken, getAssignedRoutesStatus);
+router.post("/assign-route-to-vehicle", verifyToken, resolveCorporateContext, assignRouteToVehicle);
+router.get("/assigned-routes-status", verifyToken, resolveCorporateContext, getAssignedRoutesStatus);
 
 // Employee trip assignment
-router.post("/trips/:tripId/assign-employees", verifyToken, assignEmployeesToTrip);
+router.post("/trips/:tripId/assign-employees", verifyToken, resolveCorporateContext, assignEmployeesToTrip);
 
 // Trip details
-router.get("/trips/:tripId/details", verifyToken, getTripDetails);
+router.get("/trips/:tripId/details", verifyToken, resolveCorporateContext, getTripDetails);
 
 // Corporate employee bookings
-router.get("/bookings", verifyToken, getCorporateEmployeeBookings);
+router.get("/bookings", verifyToken, resolveCorporateContext, getCorporateEmployeeBookings);
 
 export default router;

@@ -1,7 +1,9 @@
 "use client";
+import { useLocale } from "../../../hooks/useLocale";
 import "./ride-card.css";
 
 export default function RideCard({ ride }) {
+  const { currency } = useLocale();
   const getStatusBadge = (status) => {
     const statusConfig = {
       ongoing: { label: "Ongoing", color: "#4B9EFF" },
@@ -38,7 +40,7 @@ export default function RideCard({ ride }) {
         <div className="detail-item">
           <label>PRICE</label>
           <p>
-            {ride.price} {ride.currency || "KWD"}
+            {ride.price} {ride.currency || currency}
           </p>
         </div>
       </div>

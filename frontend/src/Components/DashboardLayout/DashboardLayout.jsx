@@ -7,6 +7,7 @@ import { logout, setUser } from "../../Redux/slices/authSlice";
 import api from "../../utils/api";
 import WalletIcon from "../Navbar/WalletIcon";
 import NotificationIcon from "../Navbar/NotificationIcon";
+import AdminCurrencySelector from "../Admin/AdminCurrencySelector/AdminCurrencySelector";
 import Logo from "../../assets/Logo.png";
 import "./DashboardLayout.css";
 
@@ -124,6 +125,12 @@ const menuConfigs = {
       id: "commission-settings",
       label: "Commission",
       icon: "commission",
+      moduleKey: "commission",
+    },
+    {
+      id: "cancellation-settings",
+      label: "Cancellation Policy",
+      icon: "cancellation",
       moduleKey: "commission",
     },
     {
@@ -783,6 +790,20 @@ const getIcon = (iconType) => {
         <path d="M16 3.13a4 4 0 010 7.75" />
       </svg>
     ),
+    cancellation: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <line x1="15" y1="9" x2="9" y2="15" />
+        <line x1="9" y1="9" x2="15" y2="15" />
+      </svg>
+    ),
     terms: (
       <svg
         width="20"
@@ -908,6 +929,11 @@ export default function DashboardLayout({
   }, [auth.user?.lastLogin]);
 
   const getRoleDisplayName = (role) => {
+    // Distinguish a Super Admin from a regular (scoped) Admin so the logged-in
+    // user can tell which kind of admin account they are on.
+    if (role === "ADMIN" && user?.adminPermissions?.isSuperAdmin) {
+      return "Super Admin";
+    }
     const roleMap = {
       ADMIN: "Admin",
       COMMUTER: "Commuter",
@@ -1184,6 +1210,9 @@ export default function DashboardLayout({
         </div>
 
         <div className="dm-header-right">
+          {/* Admin Currency Selector (only for ADMIN role) */}
+          {user?.role === "ADMIN" && <AdminCurrencySelector />}
+
           {/* Layout Toggle */}
           <div className="dm-layout-toggle">
             <button

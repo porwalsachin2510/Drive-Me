@@ -1,0 +1,93 @@
+.b2b-managed-ops-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 60px;
+}
+
+.b2b-managed-ops-loading,
+.b2b-managed-ops-error {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+}
+
+.b2b-managed-ops-error button,
+.b2b-managed-ops-back {
+  background: #f1f3f9;
+  border: 1px solid #d9def0;
+  color: #2a2f4a;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.b2b-managed-ops-back {
+  margin-bottom: 16px;
+}
+
+.b2b-managed-ops-header {
+  background: #f7f9ff;
+  border: 1px solid #e1e7ff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.b2b-managed-ops-header h1 {
+  font-size: 1.4rem;
+  margin: 8px 0 6px;
+  color: #1d2440;
+}
+
+.b2b-managed-ops-sub {
+  color: #4a5070;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.b2b-managed-ops-badge {
+  display: inline-block;
+  background: #2c47e0;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.b2b-managed-ops-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e7e9f2;
+  padding-bottom: 10px;
+}
+
+.b2b-managed-ops-tabs button {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #5a607a;
+  cursor: pointer;
+}
+
+.b2b-managed-ops-tabs button.active {
+  background: #2c47e0;
+  color: #fff;
+}
+
+.b2b-managed-ops-content {
+  min-height: 300px;
+}

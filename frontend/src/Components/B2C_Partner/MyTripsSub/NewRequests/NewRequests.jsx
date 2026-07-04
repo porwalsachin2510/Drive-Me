@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveCurrency } from "../../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -144,7 +145,7 @@ function NewRequests() {
               <div className="trip-fare">
                 <span className="fare-amount">
                   {booking.paymentAmount?.toLocaleString() || 0}{" "}
-                  {booking.currency || "AED"}
+                  {booking.currency || getActiveCurrency()}
                 </span>
                 <span className="booking-type-badge">
                   {booking.isMonthlyPass

@@ -111,6 +111,22 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
+
+        // Denormalized return-leg driver display info (captured at booking time so the
+        // commuter "Track Driver" / My Rides views can show the aane-leg driver directly).
+        returnDriverName: {
+            type: String,
+            default: null,
+        },
+        returnDriverImage: {
+            type: String,
+            default: null,
+        },
+        returnDriverPhoneNumber: {
+            type: String,
+            default: null,
+        },
+        
         // Return Trip Status (separate from bookingStatus for ROUND_TRIP tracking)
         returnTripStatus: {
             type: String,
@@ -263,6 +279,31 @@ const b2cPassengerBookingSchema = new mongoose.Schema(
         cancellationFee: {
             type: Number,
             default: 0
+        },
+        cancellationTierLabel: {
+            type: String,
+            default: null
+        },
+        // ===== CASH cancellation due (commuter paid nothing, now OWES a fee) =====
+        // Recorded when a CASH booking is cancelled past the free window. The
+        // durable record lives in CancellationLedger; these mirror it on the booking.
+        cashCancellationDueAmount: {
+            type: Number,
+            default: 0
+        },
+        cashCancellationDueStatus: {
+            type: String,
+            enum: ["NONE", "OUTSTANDING", "SETTLED", "WAIVED", null],
+            default: "NONE"
+        },
+        // The cash cancellation fee is deducted from the commuter's wallet immediately
+        // (their balance may go negative). The admin is only paid this fee once the
+        // commuter tops up and their wallet returns to >= 0. This flag tracks whether
+        // the admin has already been credited for THIS booking's due, so a later
+        // top-up never double-pays the admin.
+        cashCancellationAdminSettled: {
+            type: Boolean,
+            default: false
         },
         // Commission Refund Fields (for CASH bookings cancelled by commuter)
         commissionRefunded: {

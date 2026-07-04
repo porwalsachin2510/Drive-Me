@@ -5,6 +5,7 @@ import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import User from "../models/User.js";
 import { generateTripsForSchedule } from "../Services/tripGenerationService.js";
+import { checkBookingEligibility } from "../Services/cashCancellationService.js";
 
 // Create Passenger Booking (ONE-WAY or ROUND-TRIP)
 export const createPassengerBooking = async (req, res) => {
@@ -27,6 +28,20 @@ export const createPassengerBooking = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Missing required fields"
+            });
+        }
+
+        // ===== CASH CANCELLATION ACCOUNTABILITY GUARD =====
+        // A commuter with an unpaid cash cancellation due (or a negative wallet,
+        // which IS the unpaid due) cannot create a new booking until they clear it.
+        const eligibility = await checkBookingEligibility(req.userId);
+        if (!eligibility.allowed) {
+            return res.status(403).json({
+                success: false,
+                code: eligibility.code,
+                outstandingDue: eligibility.outstandingDue,
+                currency: eligibility.currency,
+                message: eligibility.message,
             });
         }
 
@@ -80,16 +95,38 @@ export const createPassengerBooking = async (req, res) => {
             });
         }
 
-        // Calculate pricing - ONLY MONTHLY PASSES
-        let totalAmount = 0;
-        const isMonthly = req.body.isMonthly || true; // Default to monthly
+        // ===== Calculate pricing (AUTHORITATIVE, server-side) =====
+        // IMPORTANT: the route pricing schema stores `monthlyOneWayPrice` /
+        // `monthlyRoundTripPrice` (and legacy `oneWayPrice` / `roundTripPrice`).
+        // There is NO `route.pricing.monthlyPrice` field — reading it produced
+        // `undefined * seats = NaN/0`, so bookings were saved with paymentAmount 0.
+        // A zero fare then made the cash-cancellation fee compute to 0, which is why
+        // commuters were never charged on cancellation. We now resolve the correct
+        // per-seat price with sensible fallbacks and refuse bookings with no fare.
+        const seats = parseInt(numberOfSeats) > 0 ? parseInt(numberOfSeats) : 1;
+        const pricing = route.pricing || {};
 
-        if (isMonthly) {
-            if (bookingType === "ONE_WAY") {
-                totalAmount = route.pricing.monthlyPrice * numberOfSeats;
-            } else if (bookingType === "ROUND_TRIP") {
-                totalAmount = (route.pricing.monthlyRoundTripPrice || route.pricing.monthlyPrice * 1.5) * numberOfSeats;
-            }
+        let perSeatPrice = 0;
+        if (bookingType === "ROUND_TRIP") {
+            perSeatPrice =
+                Number(pricing.monthlyRoundTripPrice) ||
+                Number(pricing.roundTripPrice) ||
+                (Number(pricing.monthlyOneWayPrice) ? Number(pricing.monthlyOneWayPrice) * 1.5 : 0) ||
+                (Number(pricing.oneWayPrice) ? Number(pricing.oneWayPrice) * 1.5 : 0);
+        } else {
+            perSeatPrice =
+                Number(pricing.monthlyOneWayPrice) ||
+                Number(pricing.oneWayPrice) ||
+                0;
+        }
+
+        const totalAmount = Number((perSeatPrice * seats).toFixed(3));
+
+        if (!totalAmount || totalAmount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "This route does not have a valid fare configured yet. Please contact the operator before booking.",
+            });
         }
 
         // Create booking record
@@ -103,7 +140,7 @@ export const createPassengerBooking = async (req, res) => {
             dropoffLocation,
             bookingDate: new Date(),
             travelDate: new Date(travelDate),
-            numberOfSeats: parseInt(numberOfSeats),
+            numberOfSeats: seats,
             paymentAmount: totalAmount,
             paymentMethod,
             paymentStatus: "PENDING",
@@ -226,8 +263,18 @@ export const createPassengerBooking = async (req, res) => {
 // Get passenger bookings
 export const getPassengerBookings = async (req, res) => {
     try {
+        // Exclude bookings whose ONLINE payment was never completed. Gateway
+        // bookings (STRIPE/TAP/CARD) are "PENDING" until the payment webhook marks
+        // them "COMPLETED"; a failed/abandoned checkout (e.g. missing Tap keys -> 401)
+        // must NOT show up in My Rides as a confirmed ride. CASH and WALLET are kept.
         const bookings = await B2CPassengerBooking.find({
-            passengerId: req.userId
+            passengerId: req.userId,
+            $nor: [
+                {
+                    paymentMethod: { $in: ["STRIPE", "TAP", "CARD"] },
+                    paymentStatus: { $in: ["PENDING", "FAILED"] },
+                },
+            ],
         })
             .populate('routeId')
             .populate('b2cPartnerId', 'fullName email name phone whatsappNumber profileImage')
