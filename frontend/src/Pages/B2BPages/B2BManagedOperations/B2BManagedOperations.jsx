@@ -13,7 +13,8 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import ManagedActivityLog from "../../../Components/Corporate/ManagedActivityLog/ManagedActivityLog";
 import ManagedServiceBrief from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBrief";
 import CorporateAssignedVehiclesPage from "../../CorporatePages/CorporateAssignedVehiclesPage/CorporateAssignedVehiclesPage";
-import CorporateEmployeeManagementPage from "../../CorporatePages/CorporateEmployeeManagementPage/CorporateEmployeeManagementPage";
+// import CorporateEmployeeManagementPage from "../../CorporatePages/CorporateEmployeeManagementPage/CorporateEmployeeManagementPage";
+import CorporateEmployeeManagement from "../../../Components/Corporate/CorporateEmployeeManagement/CorporateEmployeeManagement";
 import "./B2BManagedOperations.css";
 
 /**
@@ -150,7 +151,7 @@ const B2BManagedOperations = () => {
             />
           )}
           {activeTab === "employees" && (
-            <CorporateEmployeeManagementPage embedded />
+            <CorporateEmployeeManagement embedded />
           )}
           {activeTab === "activity" && (
             <ManagedActivityLog contractId={contractId} />

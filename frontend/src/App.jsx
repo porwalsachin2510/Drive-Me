@@ -454,7 +454,7 @@ function App() {
               <ProtectedRoleBasedRoute allowedRoles={["B2C_PARTNER_DRIVER"]}>
                 <Navbar />
                 <B2CPartnerDriverDashboard />
-                <Footer />
+                {/* <Footer /> */}
               </ProtectedRoleBasedRoute>
             }
           />
