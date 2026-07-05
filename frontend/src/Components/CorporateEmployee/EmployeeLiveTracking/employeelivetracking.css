@@ -1,0 +1,259 @@
+.dmg-track-wrap {
+  padding: 20px;
+  color: #0f172a;
+}
+
+.dmg-track-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.dmg-track-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.dmg-track-route {
+  margin: 4px 0 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.dmg-track-status {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #e2e8f0;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.dmg-track-status.dmg-status-in_progress,
+.dmg-track-status.dmg-status-inprogress {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.dmg-track-status.dmg-status-scheduled {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.dmg-track-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .dmg-track-grid {
+    grid-template-columns: 1.7fr 1fr;
+  }
+}
+
+.dmg-track-map-card {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.dmg-track-map {
+  position: relative;
+  height: 420px;
+  width: 100%;
+  background: #eef2f7;
+}
+
+.dmg-track-map-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  background: rgba(241, 245, 249, 0.72);
+  color: #475569;
+  font-size: 0.95rem;
+  pointer-events: none;
+  z-index: 500;
+}
+
+.dmg-track-live-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  border-top: 1px solid #e2e8f0;
+}
+
+.dmg-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.dmg-live-dot.on {
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+}
+
+.dmg-track-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dmg-eta-card {
+  background: #2563eb;
+  color: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dmg-eta-label {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.dmg-eta-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.dmg-eta-sub {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.dmg-info-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.dmg-info-card h4 {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.dmg-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dmg-info-row:last-of-type {
+  border-bottom: none;
+}
+
+.dmg-info-row span {
+  color: #64748b;
+}
+
+.dmg-info-row strong {
+  color: #0f172a;
+  text-align: right;
+}
+
+.dmg-call-btn {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  padding: 10px;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.dmg-track-loading,
+.dmg-track-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  text-align: center;
+  color: #475569;
+}
+
+.dmg-track-empty h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.dmg-track-error {
+  color: #dc2626;
+}
+
+.dmg-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: dmg-spin 0.8s linear infinite;
+}
+
+@keyframes dmg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Leaflet custom markers */
+.dmg-marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #2563eb;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.3);
+}
+
+.dmg-marker-pin span {
+  transform: rotate(45deg);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.dmg-marker-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #16a34a;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.25);
+}

@@ -1,0 +1,197 @@
+.dmg-sosops {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dmg-sosops-loading,
+.dmg-sosops-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted-foreground, #64748b);
+}
+
+.dmg-sosops-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dmg-sosops-stat {
+  flex: 1 1 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--card, #fff);
+}
+
+.dmg-sosops-stat-num {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.dmg-sosops-stat-label {
+  font-size: 0.8rem;
+  color: var(--muted-foreground, #64748b);
+}
+
+.dmg-sosops-stat-active .dmg-sosops-stat-num {
+  color: #dc2626;
+}
+.dmg-sosops-stat-ack .dmg-sosops-stat-num {
+  color: #d97706;
+}
+.dmg-sosops-stat-res .dmg-sosops-stat-num {
+  color: #16a34a;
+}
+
+.dmg-sosops-error {
+  color: #dc2626;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.dmg-sosops-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dmg-sosops-card {
+  border: 1px solid var(--border, #e2e8f0);
+  border-left-width: 4px;
+  border-radius: 12px;
+  padding: 1rem;
+  background: var(--card, #fff);
+}
+
+.dmg-sosops-active {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+.dmg-sosops-acknowledged {
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+.dmg-sosops-resolved {
+  border-left-color: #16a34a;
+}
+.dmg-sosops-cancelled {
+  border-left-color: #94a3b8;
+  opacity: 0.75;
+}
+
+.dmg-sosops-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.dmg-sosops-type {
+  font-weight: 700;
+  margin-right: 0.5rem;
+}
+
+.dmg-sosops-num {
+  font-size: 0.8rem;
+  color: var(--muted-foreground, #64748b);
+}
+
+.dmg-sosops-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.dmg-sosops-badge-active {
+  background: #dc2626;
+  color: #fff;
+}
+.dmg-sosops-badge-acknowledged {
+  background: #d97706;
+  color: #fff;
+}
+.dmg-sosops-badge-resolved {
+  background: #16a34a;
+  color: #fff;
+}
+.dmg-sosops-badge-cancelled {
+  background: #94a3b8;
+  color: #fff;
+}
+
+.dmg-sosops-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dmg-sosops-who {
+  margin: 0;
+}
+
+.dmg-sosops-msg {
+  margin: 0;
+  color: var(--foreground, #0f172a);
+}
+
+.dmg-sosops-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted-foreground, #64748b);
+}
+
+.dmg-sosops-maplink {
+  font-size: 0.85rem;
+  color: #2563eb;
+  text-decoration: none;
+  width: fit-content;
+}
+.dmg-sosops-maplink:hover {
+  text-decoration: underline;
+}
+
+.dmg-sosops-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.dmg-sosops-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.dmg-sosops-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.dmg-sosops-btn-ack {
+  background: #d97706;
+  color: #fff;
+}
+.dmg-sosops-btn-res {
+  background: #16a34a;
+  color: #fff;
+}
+
+.dmg-sosops-resolution {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted-foreground, #64748b);
+  font-style: italic;
+}

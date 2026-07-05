@@ -1,0 +1,180 @@
+.lp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4000;
+  padding: 16px;
+}
+
+.lp-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 18px 20px 20px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+}
+
+.lp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.lp-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #111827;
+}
+.lp-close {
+  border: none;
+  background: transparent;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: #6b7280;
+  cursor: pointer;
+}
+.lp-close:hover {
+  color: #111827;
+}
+
+.lp-search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.lp-search {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.lp-search:focus {
+  outline: none;
+  border-color: #2c47e0;
+  box-shadow: 0 0 0 2px rgba(44, 71, 224, 0.15);
+}
+
+.lp-results {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.lp-results li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  font-size: 0.84rem;
+  color: #374151;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+}
+.lp-results li:last-child button {
+  border-bottom: none;
+}
+.lp-results li button:hover {
+  background: #eef2ff;
+}
+
+.lp-map {
+  height: 340px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+.lp-map .leaflet-container {
+  height: 100%;
+  width: 100%;
+}
+
+.lp-tip {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+.lp-hint {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+.lp-error {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.lp-selected {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+.lp-selected-addr {
+  font-size: 0.86rem;
+  color: #111827;
+  font-weight: 600;
+}
+.lp-selected-coords {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.lp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+.lp-btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lp-btn.primary {
+  background: #2c47e0;
+  color: #fff;
+}
+.lp-btn.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.lp-btn.secondary {
+  background: #fff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+.lp-btn.ghost {
+  background: #eef2ff;
+  color: #2c47e0;
+  white-space: nowrap;
+}
+.lp-btn.ghost:hover {
+  background: #e0e7ff;
+}
+
+/* Office marker tint so it's distinguishable from the pickup pin */
+.lp-office-marker {
+  filter: hue-rotate(120deg);
+}

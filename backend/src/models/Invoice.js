@@ -54,10 +54,27 @@ const invoiceSchema = new mongoose.Schema(
         // What this invoice is billing for
         type: {
             type: String,
-            enum: ["ADVANCE", "FINAL", "INSTALLMENT", "SECURITY_DEPOSIT", "MONTHLY"],
+            enum: ["ADVANCE", "FINAL", "INSTALLMENT", "SECURITY_DEPOSIT", "MONTHLY", "OPERATIONAL"],
             required: true,
         },
         installmentNumber: Number,
+
+        // Operation-based billing metadata (type === "OPERATIONAL"). Captures the
+        // billing model used and the real operational usage the invoice was
+        // computed from, so both parties can audit how the amount was derived.
+        billingModel: {
+            type: String,
+            enum: ["PER_TRIP", "PER_SEAT", "PER_KM", "FIXED_MONTHLY", null],
+            default: null,
+        },
+        usage: {
+            trips: { type: Number, default: 0 },
+            seats: { type: Number, default: 0 },
+            distanceKm: { type: Number, default: 0 },
+            operationalAmount: { type: Number, default: 0 },
+            managementFee: { type: Number, default: 0 },
+            slaPenalty: { type: Number, default: 0 },
+        },
 
         billingPeriod: {
             start: Date,

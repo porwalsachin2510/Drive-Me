@@ -4,6 +4,7 @@ import {
     getBrief,
     updateBrief,
     submitBrief,
+    respondToBrief,
     updateItemFulfillment,
     reviewItem,
     postMessage,
@@ -33,6 +34,9 @@ router.get("/:contractId", verifyToken, getBrief)
 // Corporate edits / submits the brief
 router.put("/:contractId", verifyToken, updateBrief)
 router.post("/:contractId/submit", verifyToken, submitBrief)
+
+// Partner accepts the brief or requests clarification (execution handshake)
+router.post("/:contractId/respond", verifyToken, respondToBrief)
 
 // Partner updates fulfillment of a route/roster item
 router.patch(

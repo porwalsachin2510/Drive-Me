@@ -27,6 +27,10 @@ import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
 import ManagedActivityLog from "../../../Components/Corporate/ManagedActivityLog/ManagedActivityLog";
 import ManagedServiceBrief from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBrief";
+import RosterChangeRequests from "../../../Components/Corporate/RosterChangeRequests/RosterChangeRequests";
+import SOSAlertsPanel from "../../../Components/Corporate/SOSAlertsPanel/SOSAlertsPanel";
+import ManagedSLADashboard from "../../../Components/Corporate/ManagedSLADashboard/ManagedSLADashboard";
+import ManagedBilling from "../../../Components/Corporate/ManagedBilling/ManagedBilling";
 import { syncNegotiationCommission } from "../../../services/corporateOperationsAPI";
 import "./CorporateContractDetails.css";
 
@@ -597,10 +601,49 @@ const CorporateContractDetails = () => {
             </div>
           )}
 
+          {/* Managed Services: continuous roster/route change requests (employees join,
+              leave & move; routes get tweaked) raised by corporate and executed by the
+              partner, then applied to the live brief on completion */}
+          {contract.serviceMode === "MANAGED" && (
+            <div className="drivemego-corporate-contract-section">
+              <RosterChangeRequests
+                contractId={contract._id}
+                mode="corporate"
+              />
+            </div>
+          )}
+
+          {/* Managed Services: live safety / SOS alerts raised by employees during
+              trips, visible to the corporate owner in real time */}
+          {contract.serviceMode === "MANAGED" && (
+            <div className="drivemego-corporate-contract-section">
+              <h2 className="drivemego-corporate-contract-section-title">
+                Safety &amp; SOS Alerts
+              </h2>
+              <SOSAlertsPanel contractId={contract._id} />
+            </div>
+          )}
+
           {/* Managed Services: operations performed by the B2B partner on behalf of corporate */}
           {contract.serviceMode === "MANAGED" && (
             <div className="drivemego-corporate-contract-section">
               <ManagedActivityLog contractId={contract._id} />
+            </div>
+          )}
+
+          {/* Managed Services: SLA & Performance tracking (on-time %, availability %,
+              complaint resolution, breaches & penalties) computed from real operations */}
+          {contract.serviceMode === "MANAGED" && (
+            <div className="drivemego-corporate-contract-section">
+              <ManagedSLADashboard contractId={contract._id} mode="corporate" />
+            </div>
+          )}
+
+          {/* Managed Services: operation-based billing (per-trip/seat/km + management fee)
+              with monthly invoices generated from real trip data */}
+          {contract.serviceMode === "MANAGED" && (
+            <div className="drivemego-corporate-contract-section">
+              <ManagedBilling contractId={contract._id} mode="corporate" />
             </div>
           )}
 

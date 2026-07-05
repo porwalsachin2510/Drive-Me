@@ -30,7 +30,7 @@ const router = express.Router();
 // Employee management - static routes
 router.post("/bulk-upload", verifyToken, resolveCorporateContext, bulkUploadEmployees);
 router.post("/upload-csv", verifyToken, resolveCorporateContext, uploadEmployeesFromCSV);
-router.get("/", verifyToken, getEmployees);
+router.get("/", verifyToken, resolveCorporateContext, getEmployees);
 
 // Corporate routes for assignment
 router.get("/routes", verifyToken, resolveCorporateContext, getCorporateRoutes);

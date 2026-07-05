@@ -2011,7 +2011,7 @@ const CorporateAssignedVehiclesPage = ({
           </div>
         )}
       </div>
-      <Footer />
+      {!embedded && <Footer />}
     </>
   );
 };

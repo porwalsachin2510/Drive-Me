@@ -138,6 +138,95 @@ export const broadcastManagedBriefUpdate = (
     }
 }
 
+// Broadcast a MANAGED trip's live driver location to everyone who should see it:
+// each passenger employee (their personal notification room), the shared trip
+// room (`trip-<tripId>`), and optionally the corporate owner + B2B partner ops
+// boards. The employee "Track my ride" screen listens for `managed_trip_location`.
+export const broadcastManagedTripLocation = (payload = {}, recipients = {}) => {
+    if (!ioInstance) {
+        console.log('[v0] Socket.io not initialized yet - cannot broadcast managed trip location')
+        return
+    }
+
+    try {
+        const idOf = (v) => (v && v._id ? v._id.toString() : v ? v.toString() : null)
+        const tripId = idOf(payload.tripId)
+        const body = {
+            tripId,
+            location: payload.location || null,
+            status: payload.status || null,
+            etaMinutes: payload.etaMinutes ?? null,
+            distanceMeters: payload.distanceMeters ?? null,
+            speed: payload.speed ?? null,
+            timestamp: new Date().toISOString(),
+        }
+
+        // Shared trip room (employees join `trip-<tripId>` / `booking-<tripId>`)
+        if (tripId) {
+            ioInstance.to(`trip-${tripId}`).emit('managed_trip_location', body)
+            ioInstance.to(`booking-${tripId}`).emit('managed_trip_location', body)
+            ioInstance.to(`booking-${tripId}`).emit('driver-location-update', {
+                ...body,
+                bookingId: tripId,
+            })
+        }
+
+        // Per-employee notification rooms
+        const employeeUserIds = (recipients.employeeUserIds || []).map(idOf).filter(Boolean)
+        employeeUserIds.forEach((uid) => {
+            ioInstance.to(`notifications-${uid}`).emit('managed_trip_location', body)
+        })
+
+        // Ops visibility (corporate owner + B2B partner)
+        const ops = [recipients.corporateOwnerId, recipients.b2bPartnerId].map(idOf).filter(Boolean)
+        ops.forEach((uid) => {
+            ioInstance.to(`notifications-${uid}`).emit('managed_trip_location', body)
+        })
+    } catch (error) {
+        console.error('[v0] Error broadcasting managed trip location:', error)
+    }
+}
+
+// Broadcast an SOS / safety alert raised by an employee (or driver) on a managed
+// trip. Goes to the corporate owner, the B2B partner, and all admins so whoever
+// is on the ops board sees it instantly. Everyone listens for `sos_alert`.
+export const broadcastSOSAlert = (alert = {}, recipients = {}) => {
+    if (!ioInstance) {
+        console.log('[v0] Socket.io not initialized yet - cannot broadcast SOS alert')
+        return
+    }
+
+    try {
+        const idOf = (v) => (v && v._id ? v._id.toString() : v ? v.toString() : null)
+        const body = {
+            alertId: idOf(alert._id) || alert.alertId || null,
+            alertNumber: alert.alertNumber || null,
+            status: alert.status || 'ACTIVE',
+            emergencyType: alert.emergencyType || 'SOS',
+            tripId: idOf(alert.tripId),
+            contractId: idOf(alert.contractId),
+            raisedByName: alert.raisedByName || null,
+            raisedByRole: alert.raisedByRole || null,
+            location: alert.location || null,
+            message: alert.message || null,
+            event: recipients.event || 'SOS_RAISED',
+            updatedAt: new Date().toISOString(),
+        }
+
+        const targets = [recipients.corporateOwnerId, recipients.b2bPartnerId, recipients.raisedByUserId]
+            .map(idOf)
+            .filter(Boolean)
+        targets.forEach((uid) => {
+            ioInstance.to(`notifications-${uid}`).emit('sos_alert', body)
+        })
+
+        // All admins
+        ioInstance.to('admin-notifications').emit('sos_alert', body)
+    } catch (error) {
+        console.error('[v0] Error broadcasting SOS alert:', error)
+    }
+}
+
 // Send notification to all admin users
 export const sendAdminNotificationSocket = (notification) => {
     if (!ioInstance) {

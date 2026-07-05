@@ -9,7 +9,9 @@ import {
     completeTrip,
     updateDriverLocation,
     getCorporateTrips,
-    assignDriverToTrip
+    assignDriverToTrip,
+    getMyActiveTrip,
+    getTripLive
 } from "../controllers/tripController.js";
 import {
     createMonthlyPass,
@@ -27,7 +29,9 @@ const router = express.Router();
 router.post("/create-from-route", verifyToken, createTripsFromRoute);
 router.get("/available", verifyToken, getAvailableTrips);
 router.get("/my-bookings", verifyToken, getMyBookings);
+router.get("/my-active-trip", verifyToken, getMyActiveTrip);
 router.get("/corporate", verifyToken, getCorporateTrips);
+router.get("/:tripId/live", verifyToken, getTripLive);
 router.post("/:tripId/assign-driver", verifyToken, assignDriverToTrip);
 router.post("/:tripId/book", verifyToken, bookTripSeat);
 router.delete("/:tripId/cancel", verifyToken, cancelTripBooking);

@@ -60,11 +60,32 @@ const fulfillmentSchema = {
     reviewNote: { type: String, default: "" },
 }
 
+// A geocoded / map-pinned point. Used for work locations (office point) and
+// roster employees (home pickup point) so the partner can do route optimization
+// and driver navigation. Coordinates come from Nominatim geocoding or from the
+// corporate dragging the marker on the map (free OpenStreetMap + Leaflet stack).
+const geoPointSchema = {
+    lat: { type: Number, default: null },
+    lng: { type: Number, default: null },
+    // The human-readable address the coordinates resolved to (or that was typed).
+    formattedAddress: { type: String, default: "" },
+    // How the coordinates were set: GEOCODED (from address search), PINNED
+    // (marker dragged on map), or NONE (not set yet).
+    source: {
+        type: String,
+        enum: ["NONE", "GEOCODED", "PINNED"],
+        default: "NONE",
+    },
+    updatedAt: { type: Date, default: null },
+}
+
 const workLocationSchema = new mongoose.Schema(
     {
         name: { type: String, required: true }, // e.g. "HQ - Tower B"
         address: { type: String, default: "" },
         city: { type: String, default: "" },
+        // Map-pinned office coordinates (drop-off / destination point).
+        location: geoPointSchema,
         // Free-form shift definitions for this location
         shifts: [
             {
@@ -109,6 +130,10 @@ const rosterEmployeeSchema = new mongoose.Schema(
         department: { type: String, default: "" },
         homeAddress: { type: String, default: "" },
         pickupArea: { type: String, default: "" },
+        // Map-pinned home pickup point for this employee (origin for route
+        // optimization & driver navigation). UAE/Kuwait addresses are often
+        // building/zone based, so an exact map pin matters more than free text.
+        pickupPoint: geoPointSchema,
         workLocation: { type: String, default: "" }, // matches a work location name
         shiftLabel: { type: String, default: "" },
         // Requested monthly pass duration in months
@@ -171,10 +196,31 @@ const managedServiceBriefSchema = new mongoose.Schema(
             type: String,
             // DRAFT      -> corporate is still editing, partner shouldn't act yet
             // SUBMITTED  -> handed to partner, awaiting partner acknowledgement
+            // ACCEPTED   -> partner reviewed & accepted the brief; execution may begin
             // IN_PROGRESS-> partner is actively fulfilling items
             // COMPLETED  -> all items fulfilled / corporate marked done
-            enum: ["DRAFT", "SUBMITTED", "IN_PROGRESS", "COMPLETED"],
+            enum: ["DRAFT", "SUBMITTED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"],
             default: "DRAFT",
+        },
+        // --- Partner acknowledgement handshake (real-world approval loop) ---
+        // After the corporate SUBMITs a brief, the partner must explicitly ACCEPT
+        // it (agreeing to operate against it) or request CLARIFICATION (sending it
+        // back to the corporate with questions) before execution starts. This
+        // prevents the partner silently starting work on an ambiguous brief.
+        partnerResponse: {
+            status: {
+                type: String,
+                enum: ["NONE", "ACCEPTED", "CLARIFICATION_REQUESTED"],
+                default: "NONE",
+            },
+            respondedBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+                default: null,
+            },
+            respondedByName: { type: String, default: null },
+            respondedAt: { type: Date, default: null },
+            note: { type: String, default: "" },
         },
         // High level summary / objectives the corporate wants
         summary: { type: String, default: "" },

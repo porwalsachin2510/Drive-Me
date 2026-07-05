@@ -205,6 +205,68 @@
   padding: 5px 12px;
   font-size: 0.78rem;
 }
+.msb-btn.ghost {
+  background: transparent;
+  color: #2c47e0;
+  border-color: transparent;
+}
+.msb-btn.ghost:hover {
+  background: #eef2ff;
+}
+
+/* Roster header actions (import / template / add) */
+.msb-roster-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Partner acknowledgement / clarification handshake banner */
+.msb-accept-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 12px 0 4px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+.msb-accept-banner.warn {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+.msb-accept-banner.ok {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+  font-weight: 600;
+}
+.msb-accept-text strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+.msb-accept-text p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #4b5563;
+  max-width: 60ch;
+}
+.msb-accept-warn {
+  margin-top: 6px !important;
+  color: #b45309 !important;
+  font-weight: 600;
+}
+.msb-accept-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
 .msb-actions {
   display: flex;
@@ -426,4 +488,30 @@
   color: #3a3f63;
   font-size: 0.88rem;
   line-height: 1.5;
+}
+
+/* --- Map pin controls (pickup points / office location) --- */
+.msb-map-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+.msb-pin-status {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+.msb-pin-status.ok {
+  color: #15803d;
+  font-weight: 600;
+}
+.msb-map-link {
+  margin-left: 8px;
+  font-size: 0.78rem;
+  color: #2c47e0;
+  text-decoration: underline;
+}
+.msb-map-link:hover {
+  color: #1d2fb0;
 }

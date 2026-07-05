@@ -8,6 +8,37 @@ import MonthlyPass from "../models/MonthlyPass.js";
 import CorporateEmployee from "../models/CorporateEmployee.js";
 import { io } from "../index.js";
 import { createNotification, sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js";
+import { broadcastManagedTripLocation } from "../Services/socketService.js";
+
+// Haversine distance in meters between two {lat,lng} points.
+const distanceMeters = (a, b) => {
+    if (!a || !b || a.lat == null || a.lng == null || b.lat == null || b.lng == null) return null;
+    const R = 6371e3;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+};
+
+// Resolve the User account ids for a managed trip's passengers so real-time
+// events reach the rooms employees actually join (they join by userId, while
+// trip.passengers[].employeeId is the CorporateEmployee document id).
+const resolvePassengerUserIds = async (trip) => {
+    const userIds = new Set();
+    const employeeDocIds = [];
+    for (const p of trip.passengers || []) {
+        if (p.passengerId) userIds.add(p.passengerId.toString());
+        if (p.employeeId) employeeDocIds.push(p.employeeId);
+    }
+    if (employeeDocIds.length) {
+        const employees = await CorporateEmployee.find({ _id: { $in: employeeDocIds } }).select("userId");
+        employees.forEach((e) => e.userId && userIds.add(e.userId.toString()));
+    }
+    return Array.from(userIds);
+};
 
 // @desc    Create recurring trips from route
 // @route   POST /api/trips/create-from-route
@@ -1012,6 +1043,13 @@ export const completeTrip = async (req, res) => {
         // Update trip status
         trip.status = "COMPLETED";
 
+        // Stop live location sharing so the employee tracking screen ends
+        trip.tracking = {
+            ...(trip.tracking || {}),
+            isSharingLocation: false,
+            lastPingAt: new Date(),
+        };
+
         // Add trip event
         trip.events.push({
             eventType: "TRIP_COMPLETED",
@@ -1072,7 +1110,13 @@ export const updateDriverLocation = async (req, res) => {
     try {
         const driverId = req.userId;
         const { tripId } = req.params;
-        const { lat, lng } = req.body;
+        // employeeLat/employeeLng (optional) let us compute a per-viewer ETA to
+        // the employee currently watching the ride.
+        const { lat, lng, speed, employeeLat, employeeLng } = req.body;
+
+        if (lat == null || lng == null) {
+            return res.status(400).json({ success: false, message: "lat and lng are required" });
+        }
 
         const trip = await Trip.findById(tripId);
         if (!trip) {
@@ -1082,34 +1126,71 @@ export const updateDriverLocation = async (req, res) => {
             });
         }
 
-        if (trip.driverId.toString() !== driverId) {
+        if (!trip.driverId || trip.driverId.toString() !== driverId) {
             return res.status(403).json({
                 success: false,
                 message: "Unauthorized access"
             });
         }
 
-        // Update driver location
-        trip.driverLocation = {
-            lat,
-            lng,
-            lastUpdated: new Date()
+        const now = new Date();
+        const location = { lat, lng, lastUpdated: now };
+
+        // Persist both fields (getDriverLocation falls back to currentLocation)
+        trip.currentLocation = location;
+        trip.driverLocation = location;
+
+        // Append to capped rolling history (keep the most recent 50 pings)
+        trip.locationHistory = [
+            ...(trip.locationHistory || []),
+            { lat, lng, speed: speed ?? null, timestamp: now },
+        ].slice(-50);
+
+        // Best-effort ETA toward the watching employee's coordinates
+        let etaMinutes = null;
+        let distMeters = null;
+        if (employeeLat != null && employeeLng != null) {
+            distMeters = distanceMeters({ lat, lng }, { lat: employeeLat, lng: employeeLng });
+            if (distMeters != null) {
+                const avgSpeedKmh = speed && speed > 3 ? speed : 30; // fallback urban avg
+                etaMinutes = Math.max(1, Math.round((distMeters / 1000 / avgSpeedKmh) * 60));
+            }
+        }
+
+        trip.tracking = {
+            ...(trip.tracking || {}),
+            isSharingLocation: true,
+            startedAt: trip.tracking?.startedAt || now,
+            lastPingAt: now,
+            etaMinutes: etaMinutes ?? trip.tracking?.etaMinutes,
+            distanceMeters: distMeters ?? trip.tracking?.distanceMeters,
         };
 
         await trip.save();
 
-        // Broadcast location to all passengers
-        trip.passengers.forEach(passenger => {
-            io.to(`notifications-${passenger.employeeId}`).emit('driver-location-update', {
+        // Broadcast to the rooms employees actually join (by userId + trip room),
+        // plus corporate/partner ops boards.
+        const employeeUserIds = await resolvePassengerUserIds(trip);
+        broadcastManagedTripLocation(
+            {
                 tripId: trip._id,
                 location: { lat, lng },
-                timestamp: new Date()
-            });
-        });
+                status: trip.status,
+                etaMinutes,
+                distanceMeters: distMeters,
+                speed: speed ?? null,
+            },
+            {
+                employeeUserIds,
+                corporateOwnerId: trip.corporateId,
+                b2bPartnerId: trip.b2bPartnerId,
+            },
+        );
 
         res.json({
             success: true,
-            message: "Location updated successfully"
+            message: "Location updated successfully",
+            data: { location, etaMinutes, distanceMeters: distMeters },
         });
 
     } catch (error) {
@@ -1317,5 +1398,166 @@ export const assignDriverToTrip = async (req, res) => {
             success: false,
             message: "Failed to assign driver to trip"
         });
+    }
+};
+
+// Resolve a friendly driver name/phone for a managed trip. driverId may point at
+// a User, Driver or CorporateDriver document depending on how it was assigned.
+const resolveTripDriver = async (trip) => {
+    if (!trip.driverId) return { name: "To be assigned", phone: null };
+    const id = trip.driverId._id || trip.driverId;
+    try {
+        const user = await User.findById(id).select("fullName phone whatsappNumber");
+        if (user) return { name: user.fullName, phone: user.phone || user.whatsappNumber || null };
+    } catch (e) { /* ignore */ }
+    try {
+        const drv = await Driver.findById(id).select("name phone");
+        if (drv) return { name: drv.name, phone: drv.phone || null };
+    } catch (e) { /* ignore */ }
+    try {
+        const linked = await User.findOne({ driverId: id }).select("fullName phone whatsappNumber");
+        if (linked) return { name: linked.fullName, phone: linked.phone || linked.whatsappNumber || null };
+    } catch (e) { /* ignore */ }
+    return { name: "Driver", phone: null };
+};
+
+// Build a normalized live-tracking payload for a trip + the requesting employee.
+const buildLivePayload = async (trip, employee, employeeCoords) => {
+    const driver = await resolveTripDriver(trip);
+    const myPassenger = employee
+        ? (trip.passengers || []).find(
+            (p) =>
+                p.employeeId?.toString() === employee._id.toString() ||
+                p.passengerId?.toString() === employee.userId?.toString(),
+        )
+        : null;
+
+    const driverLoc = trip.currentLocation || trip.driverLocation || null;
+    let etaMinutes = trip.tracking?.etaMinutes ?? null;
+    let distMeters = trip.tracking?.distanceMeters ?? null;
+
+    // Recompute a fresh ETA if the employee shared their coordinates
+    if (driverLoc && driverLoc.lat != null && employeeCoords?.lat != null) {
+        distMeters = distanceMeters(
+            { lat: driverLoc.lat, lng: driverLoc.lng },
+            { lat: employeeCoords.lat, lng: employeeCoords.lng },
+        );
+        if (distMeters != null) {
+            etaMinutes = Math.max(1, Math.round((distMeters / 1000 / 30) * 60));
+        }
+    }
+
+    return {
+        tripId: trip._id,
+        status: trip.status,
+        fromLocation: trip.fromLocation,
+        toLocation: trip.toLocation,
+        startTime: trip.startTime,
+        tripDate: trip.tripDate,
+        direction: trip.direction,
+        pickupStop: myPassenger?.pickupStop || null,
+        dropoffStop: myPassenger?.dropoffStop || null,
+        seatNumber: myPassenger?.seatNumber || null,
+        vehicle: trip.vehicleId
+            ? {
+                name: trip.vehicleId.vehicleName || trip.vehicleId.model || null,
+                plate: trip.vehicleId.registrationNumber || trip.vehicleId.licensePlate || null,
+            }
+            : null,
+        driver,
+        driverLocation: driverLoc,
+        locationHistory: (trip.locationHistory || []).slice(-15),
+        isSharingLocation: !!trip.tracking?.isSharingLocation,
+        lastPingAt: trip.tracking?.lastPingAt || null,
+        etaMinutes,
+        distanceMeters: distMeters,
+    };
+};
+
+// @desc    Employee: get my current trackable trip (today, scheduled/in-progress)
+// @route   GET /api/trips/my-active-trip
+// @access  Private (Corporate employee)
+export const getMyActiveTrip = async (req, res) => {
+    try {
+        const employee = await CorporateEmployee.findOne({ userId: req.userId });
+        if (!employee) {
+            return res.status(404).json({ success: false, message: "Employee profile not found" });
+        }
+
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(todayStart);
+        todayEnd.setDate(todayEnd.getDate() + 1);
+
+        const trip = await Trip.findOne({
+            corporateId: employee.companyId,
+            tripDate: { $gte: todayStart, $lt: todayEnd },
+            status: { $in: ["SCHEDULED", "IN_PROGRESS", "Scheduled", "InProgress"] },
+            $or: [
+                { "passengers.passengerId": req.userId },
+                { "passengers.employeeId": employee._id },
+            ],
+        })
+            .populate("vehicleId", "vehicleName registrationNumber model licensePlate")
+            .sort({ status: -1, startTime: 1 });
+
+        if (!trip) {
+            return res.json({ success: true, data: { trip: null } });
+        }
+
+        const payload = await buildLivePayload(trip, employee, {
+            lat: req.query.lat != null ? Number(req.query.lat) : null,
+            lng: req.query.lng != null ? Number(req.query.lng) : null,
+        });
+
+        res.json({ success: true, data: { trip: payload } });
+    } catch (error) {
+        console.error("Error getting active trip:", error);
+        res.status(500).json({ success: false, message: "Failed to get active trip" });
+    }
+};
+
+// @desc    Get live tracking data for a specific trip
+// @route   GET /api/trips/:tripId/live
+// @access  Private (passenger employee / corporate owner / partner / admin)
+export const getTripLive = async (req, res) => {
+    try {
+        const { tripId } = req.params;
+        const trip = await Trip.findById(tripId).populate(
+            "vehicleId",
+            "vehicleName registrationNumber model licensePlate",
+        );
+        if (!trip) {
+            return res.status(404).json({ success: false, message: "Trip not found" });
+        }
+
+        // Authorization: corporate owner, partner, admin, or a passenger employee
+        const uid = req.userId.toString();
+        let employee = await CorporateEmployee.findOne({ userId: req.userId });
+        const isPassenger =
+            employee &&
+            (trip.passengers || []).some(
+                (p) =>
+                    p.employeeId?.toString() === employee._id.toString() ||
+                    p.passengerId?.toString() === uid,
+            );
+        const isOwner =
+            trip.corporateId?.toString() === uid ||
+            trip.b2bPartnerId?.toString() === uid ||
+            req.userRole === "ADMIN";
+
+        if (!isPassenger && !isOwner) {
+            return res.status(403).json({ success: false, message: "Not authorized to track this trip" });
+        }
+
+        const payload = await buildLivePayload(trip, employee, {
+            lat: req.query.lat != null ? Number(req.query.lat) : null,
+            lng: req.query.lng != null ? Number(req.query.lng) : null,
+        });
+
+        res.json({ success: true, data: { trip: payload } });
+    } catch (error) {
+        console.error("Error getting trip live data:", error);
+        res.status(500).json({ success: false, message: "Failed to get live tracking data" });
     }
 };

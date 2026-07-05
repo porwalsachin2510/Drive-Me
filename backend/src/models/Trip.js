@@ -160,6 +160,31 @@ const tripSchema = new mongoose.Schema(
             lng: Number,
             lastUpdated: Date,
         },
+        // Rolling history of driver GPS pings for the current trip (managed live
+        // tracking). Capped in the controller to the most recent points so the
+        // document never grows unbounded.
+        locationHistory: [{
+            lat: Number,
+            lng: Number,
+            speed: Number,
+            timestamp: {
+                type: Date,
+                default: Date.now,
+            },
+        }],
+        // Live tracking meta used by the employee "Track my ride" screen.
+        tracking: {
+            isSharingLocation: {
+                type: Boolean,
+                default: false,
+            },
+            startedAt: Date,
+            lastPingAt: Date,
+            // Server-estimated minutes until the bus reaches the tracking
+            // employee's pickup point (best-effort, Haversine based).
+            etaMinutes: Number,
+            distanceMeters: Number,
+        },
 
         // Trip events
         events: [{
@@ -206,7 +231,7 @@ const tripSchema = new mongoose.Schema(
         actualStartTime: {
             type: Date,
         },
-        
+
         // Notifications
         notifications: {
             tripReminder: {

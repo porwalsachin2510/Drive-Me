@@ -49,6 +49,23 @@ export default function CorporateDriverDashboard() {
             socket.socket.emit("driver-location-update", location);
           }
 
+          // Persist to the managed-trip so it saves location history + ETA and
+          // broadcasts to the passenger employees' "Track My Ride" screens.
+          if (activeTrip?._id) {
+            api
+              .post(`/trips/${activeTrip._id}/location`, {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                speed:
+                  position.coords.speed != null && position.coords.speed >= 0
+                    ? position.coords.speed * 3.6 // m/s -> km/h
+                    : null,
+              })
+              .catch(() => {
+                /* trip may be a CorporateBooking (not a Trip) - ignore */
+              });
+          }
+
           setLiveLocation(location);
         },
         (error) => {

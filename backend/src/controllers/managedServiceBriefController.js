@@ -154,7 +154,9 @@ export const autoFulfillBriefItem = async ({
             `Auto-linked to the ${entityType?.toLowerCase() || "entity"} created on ${new Date().toLocaleString()}.`
 
         // Advance the overall brief status.
-        if (brief.status === "SUBMITTED") brief.status = "IN_PROGRESS"
+        if (brief.status === "SUBMITTED" || brief.status === "ACCEPTED") {
+            brief.status = "IN_PROGRESS"
+        }
 
         const allItems = [...brief.routeRequests, ...brief.employeeRoster]
         const allApproved =
@@ -437,6 +439,15 @@ export const submitBrief = async (req, res) => {
 
         brief.status = "SUBMITTED"
         brief.submittedAt = new Date()
+        // Re-submitting (e.g. after a clarification request) resets the partner
+        // acknowledgement so they must accept the updated brief again.
+        brief.partnerResponse = {
+            status: "NONE",
+            respondedBy: null,
+            respondedByName: null,
+            respondedAt: null,
+            note: "",
+        }
         await brief.save()
 
         const actor = await User.findById(req.userId).select("fullName companyName").lean()
@@ -485,6 +496,153 @@ export const submitBrief = async (req, res) => {
 }
 
 /**
+ * POST /api/managed-service-brief/:contractId/respond
+ * Partner acknowledges a SUBMITTED brief: ACCEPT (agree to operate, execution
+ * may begin) or REQUEST_CLARIFICATION (send it back to the corporate with a
+ * question — a message is recorded and the corporate is notified). This is the
+ * real-world two-way handshake that gates execution on the partner's agreement.
+ */
+export const respondToBrief = async (req, res) => {
+    try {
+        const access = await resolveBriefAccess(req, res)
+        if (!access) return
+
+        if (access.role !== "B2B_PARTNER") {
+            return res.status(403).json({
+                success: false,
+                message: "Only the partner can accept or request clarification on a brief.",
+            })
+        }
+
+        const { decision, note } = req.body
+        if (!["ACCEPT", "REQUEST_CLARIFICATION"].includes(decision)) {
+            return res.status(400).json({
+                success: false,
+                message: "Decision must be ACCEPT or REQUEST_CLARIFICATION.",
+            })
+        }
+
+        const brief = await getOrCreateBrief(access.contract)
+
+        // The partner can only respond to a brief that has actually been handed
+        // to them (SUBMITTED). Drafts aren't visible for action; briefs already
+        // in progress/completed have moved past the acknowledgement stage.
+        if (brief.status !== "SUBMITTED") {
+            return res.status(400).json({
+                success: false,
+                message:
+                    brief.status === "DRAFT"
+                        ? "This brief has not been submitted yet."
+                        : "This brief has already been accepted or is in progress.",
+            })
+        }
+
+        if (decision === "REQUEST_CLARIFICATION" && (!note || !note.trim())) {
+            return res.status(400).json({
+                success: false,
+                message: "Please describe what needs clarification.",
+            })
+        }
+
+        const actor = await User.findById(req.userId).select("fullName companyName").lean()
+        const actorName = actor?.companyName || actor?.fullName || "Partner"
+
+        if (decision === "ACCEPT") {
+            brief.status = "ACCEPTED"
+            brief.partnerResponse = {
+                status: "ACCEPTED",
+                respondedBy: req.userId,
+                respondedByName: actorName,
+                respondedAt: new Date(),
+                note: note?.trim() || "",
+            }
+            if (note && note.trim()) {
+                brief.messages.push({
+                    senderId: req.userId,
+                    senderName: actorName,
+                    senderRole: "B2B_PARTNER",
+                    message: note.trim(),
+                    createdAt: new Date(),
+                })
+            }
+        } else {
+            // Clarification requested: the brief stays SUBMITTED (execution is
+            // still blocked) but we record the request + message so the corporate
+            // can answer / update the brief and re-submit.
+            brief.partnerResponse = {
+                status: "CLARIFICATION_REQUESTED",
+                respondedBy: req.userId,
+                respondedByName: actorName,
+                respondedAt: new Date(),
+                note: note.trim(),
+            }
+            brief.messages.push({
+                senderId: req.userId,
+                senderName: actorName,
+                senderRole: "B2B_PARTNER",
+                message: note.trim(),
+                createdAt: new Date(),
+            })
+        }
+
+        await brief.save()
+
+        await logManagedActivity(access.contract._id, {
+            action: decision === "ACCEPT" ? "SERVICE_BRIEF_ACCEPTED" : "SERVICE_BRIEF_CLARIFICATION_REQUESTED",
+            description:
+                decision === "ACCEPT"
+                    ? "Partner accepted the managed-service brief and will begin execution."
+                    : `Partner requested clarification on the brief: ${note.trim()}`,
+            entityType: "SERVICE_BRIEF",
+            entityId: brief._id,
+            performedBy: req.userId,
+            performedByRole: "B2B_PARTNER",
+            performedByName: actorName,
+            meta: { decision, note: note?.trim() || "" },
+        })
+
+        await createNotification({
+            userId: brief.corporateOwnerId,
+            type: decision === "ACCEPT" ? "MANAGED_BRIEF_ACCEPTED" : "MANAGED_BRIEF_CLARIFICATION",
+            title: decision === "ACCEPT" ? "Partner accepted your brief" : "Partner needs clarification",
+            message:
+                decision === "ACCEPT"
+                    ? `${actorName} accepted your operations brief for contract ${access.contract.contractNumber} and will begin setting everything up.`
+                    : `${actorName} has a question about your brief for contract ${access.contract.contractNumber}: ${note.trim()}`,
+            data: {
+                contractId: access.contract._id.toString(),
+                briefId: brief._id.toString(),
+                decision,
+            },
+        })
+
+        broadcastManagedBriefUpdate(
+            {
+                corporateOwnerId: brief.corporateOwnerId,
+                b2bPartnerId: brief.b2bPartnerId,
+                contractId: access.contract._id,
+            },
+            {
+                event: decision === "ACCEPT" ? "BRIEF_ACCEPTED" : "BRIEF_CLARIFICATION_REQUESTED",
+                actorRole: "B2B_PARTNER",
+            },
+        )
+
+        res.json({
+            success: true,
+            message:
+                decision === "ACCEPT"
+                    ? "Brief accepted. You can now start fulfilling items."
+                    : "Clarification request sent to the corporate client.",
+            data: { brief, metrics: computeBriefMetrics(brief) },
+        })
+    } catch (error) {
+        console.error("[managedServiceBrief] respondToBrief error:", error)
+        res.status(500).json({ success: false, message: "Failed to submit response." })
+    }
+}
+
+/**
  * PATCH /api/managed-service-brief/:contractId/items/:section/:itemId/fulfillment
  * Partner marks a route-request or roster item as IN_PROGRESS / FULFILLED.
  * section is "routeRequests" | "employeeRoster".
@@ -512,6 +670,18 @@ export const updateItemFulfillment = async (req, res) => {
         }
 
         const brief = await getOrCreateBrief(access.contract)
+
+        // Real-world handshake: the partner must ACCEPT the brief before they can
+        // start executing against it. A brief that is still SUBMITTED (awaiting
+        // the partner's acknowledgement) cannot have its items fulfilled yet.
+        if (brief.status === "SUBMITTED" && brief.partnerResponse?.status !== "ACCEPTED") {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Accept the brief before updating fulfillment. Review the requirements and click Accept (or Request clarification) first.",
+            })
+        }
+
         const item = brief[section].id(itemId)
         if (!item) {
             return res.status(404).json({ success: false, message: "Brief item not found." })
@@ -542,8 +712,10 @@ export const updateItemFulfillment = async (req, res) => {
             item.fulfillment.reviewedAt = null
         }
 
-        // Auto-advance the overall brief status.
-        if (brief.status === "SUBMITTED") brief.status = "IN_PROGRESS"
+        // Auto-advance the overall brief status once the partner starts working.
+        if (brief.status === "SUBMITTED" || brief.status === "ACCEPTED") {
+            brief.status = "IN_PROGRESS"
+        }
 
         // A brief is only COMPLETED when every item is FULFILLED *and* the
         // corporate has APPROVED it. Otherwise it stays IN_PROGRESS.

@@ -12,6 +12,10 @@ import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
 import ManagedActivityLog from "../../../Components/Corporate/ManagedActivityLog/ManagedActivityLog";
 import ManagedServiceBrief from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBrief";
+import RosterChangeRequests from "../../../Components/Corporate/RosterChangeRequests/RosterChangeRequests";
+import SOSAlertsPanel from "../../../Components/Corporate/SOSAlertsPanel/SOSAlertsPanel";
+import ManagedSLADashboard from "../../../Components/Corporate/ManagedSLADashboard/ManagedSLADashboard";
+import ManagedBilling from "../../../Components/Corporate/ManagedBilling/ManagedBilling";
 import CorporateAssignedVehiclesPage from "../../CorporatePages/CorporateAssignedVehiclesPage/CorporateAssignedVehiclesPage";
 // import CorporateEmployeeManagementPage from "../../CorporatePages/CorporateEmployeeManagementPage/CorporateEmployeeManagementPage";
 import CorporateEmployeeManagement from "../../../Components/Corporate/CorporateEmployeeManagement/CorporateEmployeeManagement";
@@ -133,6 +137,30 @@ const B2BManagedOperations = () => {
             Employees &amp; Invitations
           </button>
           <button
+            className={activeTab === "roster" ? "active" : ""}
+            onClick={() => setActiveTab("roster")}
+          >
+            Roster Changes
+          </button>
+          <button
+            className={activeTab === "sos" ? "active" : ""}
+            onClick={() => setActiveTab("sos")}
+          >
+            Safety / SOS
+          </button>
+          <button
+            className={activeTab === "sla" ? "active" : ""}
+            onClick={() => setActiveTab("sla")}
+          >
+            SLA &amp; Performance
+          </button>
+          <button
+            className={activeTab === "billing" ? "active" : ""}
+            onClick={() => setActiveTab("billing")}
+          >
+            Billing
+          </button>
+          <button
             className={activeTab === "activity" ? "active" : ""}
             onClick={() => setActiveTab("activity")}
           >
@@ -152,6 +180,16 @@ const B2BManagedOperations = () => {
           )}
           {activeTab === "employees" && (
             <CorporateEmployeeManagement embedded />
+          )}
+          {activeTab === "roster" && (
+            <RosterChangeRequests contractId={contractId} mode="partner" />
+          )}
+          {activeTab === "sos" && <SOSAlertsPanel contractId={contractId} />}
+          {activeTab === "sla" && (
+            <ManagedSLADashboard contractId={contractId} mode="partner" />
+          )}
+          {activeTab === "billing" && (
+            <ManagedBilling contractId={contractId} mode="partner" />
           )}
           {activeTab === "activity" && (
             <ManagedActivityLog contractId={contractId} />

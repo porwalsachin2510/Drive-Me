@@ -63,7 +63,7 @@ const contractSchema = new mongoose.Schema(
                 },
             ],
         },
-        
+
         vehicles: [
             {
                 vehicleId: {
@@ -275,6 +275,68 @@ const contractSchema = new mongoose.Schema(
                 installmentsPaid: Number,
                 installmentsOverdue: Number,
             },
+        },
+
+        // ------------------------------------------------------------------
+        // MANAGED-service SLA (Service Level Agreement) configuration.
+        // Corporate defines the performance targets the B2B partner commits to.
+        // Live performance (on-time %, vehicle availability %, complaint
+        // resolution time) is computed from real operational data (Trips,
+        // assigned vehicles, Complaints) and compared against these targets to
+        // detect breaches and calculate penalties applied to monthly billing.
+        // ------------------------------------------------------------------
+        sla: {
+            enabled: { type: Boolean, default: false },
+            // Targets (percentages / hours)
+            onTimeTargetPct: { type: Number, default: 95 },
+            vehicleAvailabilityTargetPct: { type: Number, default: 98 },
+            complaintResolutionHours: { type: Number, default: 24 },
+            // Minutes after scheduled start after which a trip counts as "late".
+            lateThresholdMinutes: { type: Number, default: 10 },
+            // Penalty rules applied against the monthly operational bill on breach.
+            penalty: {
+                // % of the monthly operational bill charged per percentage point
+                // that on-time / availability falls below its target.
+                onTimePerPointPct: { type: Number, default: 1 },
+                availabilityPerPointPct: { type: Number, default: 1 },
+                // Flat amount (contract currency) per complaint resolved late / unresolved.
+                perLateComplaint: { type: Number, default: 0 },
+                // Cap on total penalty as % of the monthly operational bill.
+                maxPenaltyPct: { type: Number, default: 25 },
+            },
+            updatedAt: Date,
+        },
+
+        // ------------------------------------------------------------------
+        // MANAGED-service operation-based billing configuration.
+        // Instead of a single fixed serviceCharge, managed billing is driven by
+        // actual operations for the month (per-trip / per-seat / per-km) plus a
+        // management fee. A monthly Invoice is generated from real trip data.
+        // ------------------------------------------------------------------
+        operationBilling: {
+            enabled: { type: Boolean, default: false },
+            model: {
+                type: String,
+                enum: ["PER_TRIP", "PER_SEAT", "PER_KM", "FIXED_MONTHLY"],
+                default: "PER_TRIP",
+            },
+            ratePerTrip: { type: Number, default: 0 },
+            // Per occupied seat, per trip.
+            ratePerSeat: { type: Number, default: 0 },
+            ratePerKm: { type: Number, default: 0 },
+            fixedMonthlyAmount: { type: Number, default: 0 },
+            // Management fee added on top of the operational cost.
+            managementFeeType: {
+                type: String,
+                enum: ["FLAT", "PERCENT"],
+                default: "PERCENT",
+            },
+            managementFeeValue: { type: Number, default: 0 },
+            // Tax applied to the invoice subtotal.
+            taxRatePct: { type: Number, default: 0 },
+            // Day of month invoices are due (used to set invoice dueDate).
+            billingDay: { type: Number, default: 7 },
+            updatedAt: Date,
         },
 
         vehicleAccess: {

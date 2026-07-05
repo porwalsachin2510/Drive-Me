@@ -5,6 +5,7 @@ import { logout } from "../../../Redux/slices/authSlice";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import api from "../../../utils/api";
+import EmployeeLiveTracking from "../../../Components/CorporateEmployee/EmployeeLiveTracking/EmployeeLiveTracking";
 import "./corporateemployeedashboard.css";
 import io from "socket.io-client";
 import {
@@ -25,7 +26,7 @@ import {
   selectTravelHistory,
   selectTodayTrips,
   selectVehicleInfo,
-  selectBookings
+  selectBookings,
 } from "../../../Redux/slices/corporateEmployeeSlice";
 
 export default function CorporateEmployeeDashboard() {
@@ -49,7 +50,8 @@ export default function CorporateEmployeeDashboard() {
   const bookings = useSelector(selectBookings);
 
   // Use todayTrips from redux, fallback to upcomingTrips
-  const todayTrips = todayTripsRedux?.length > 0 ? todayTripsRedux : upcomingTripsRedux;
+  const todayTrips =
+    todayTripsRedux?.length > 0 ? todayTripsRedux : upcomingTripsRedux;
 
   const [activeTab, setActiveTab] = useState("corporate");
   const [upcomingTrips, setUpcomingTrips] = useState([]);
@@ -58,16 +60,18 @@ export default function CorporateEmployeeDashboard() {
   const [socket, setSocket] = useState(null);
   const [error, setError] = useState(null);
 
-  
-
   const handleLogout = async () => {
     try {
       const storedToken = localStorage.getItem("token");
       if (storedToken) {
-        await api.post("/auth/logout", {}, {
-          headers: { Authorization: `Bearer ${storedToken}` },
-          withCredentials: true,
-        });
+        await api.post(
+          "/auth/logout",
+          {},
+          {
+            headers: { Authorization: `Bearer ${storedToken}` },
+            withCredentials: true,
+          },
+        );
       }
     } catch (err) {
       console.error("Logout error:", err);
@@ -92,7 +96,7 @@ export default function CorporateEmployeeDashboard() {
         dispatch(fetchEmployeeTrips({ employeeId: userId, date: dateStr })),
         dispatch(fetchAssignedRoute(userId)),
         dispatch(fetchNoShowHistory()),
-        dispatch(fetchNotifications(userId))
+        dispatch(fetchNotifications(userId)),
       ]);
 
       setLoading(false);
@@ -123,7 +127,12 @@ export default function CorporateEmployeeDashboard() {
 
       newSocket.on("trip-update", (tripData) => {
         console.log("Trip update received:", tripData);
-        dispatch(updateTripStatus({ tripId: tripData.tripId, status: tripData.status }));
+        dispatch(
+          updateTripStatus({
+            tripId: tripData.tripId,
+            status: tripData.status,
+          }),
+        );
       });
 
       newSocket.on("notification", (notificationData) => {
@@ -143,23 +152,25 @@ export default function CorporateEmployeeDashboard() {
     } catch (error) {
       console.error("Error setting up socket connection:", error);
     }
+  };
+
+  useEffect(() => {
+    if (token && userId) {
+      fetchEmployeeDashboardData();
+      subscribeToRealTimeUpdates();
+    }
+    return () => {
+      if (socket) socket.disconnect();
     };
-    
-    useEffect(() => {
-      if (token && userId) {
-        fetchEmployeeDashboardData();
-        subscribeToRealTimeUpdates();
-      }
-      return () => {
-        if (socket) socket.disconnect();
-      };
-    }, [token, userId]);
+  }, [token, userId]);
 
   const handleBookTrip = async (tripId) => {
     try {
       // For corporate trips, employees are pre-assigned by the corporate admin
       // This is a confirmation/check-in action
-      alert("Trip is already assigned to you. Please check in 15 minutes before departure.");
+      alert(
+        "Trip is already assigned to you. Please check in 15 minutes before departure.",
+      );
       fetchEmployeeDashboardData();
     } catch (error) {
       console.error("Error handling trip:", error);
@@ -167,7 +178,9 @@ export default function CorporateEmployeeDashboard() {
   };
 
   const handleCancelBooking = async (tripId) => {
-    if (window.confirm("Are you sure you want to cancel this trip assignment?")) {
+    if (
+      window.confirm("Are you sure you want to cancel this trip assignment?")
+    ) {
       try {
         // Cancel booking through trip endpoint
         const response = await api.delete(`/trips/${tripId}/cancel`);
@@ -193,11 +206,14 @@ export default function CorporateEmployeeDashboard() {
       <div className="corporate-employee-dashboard-with-tabs-container">
         <div className="corporate-employee-dashboard-with-tabs-header">
           <div className="corporate-employee-dashboard-with-tabs-header-left">
-            <h1>Welcome, {user?.fullName || 'Employee'}</h1>
+            <h1>Welcome, {user?.fullName || "Employee"}</h1>
             <p>Corporate Employee Transportation Dashboard</p>
           </div>
           <div className="corporate-employee-dashboard-with-tabs-header-right">
-            <button className="corporate-employee-dashboard-with-tabs-logout-btn" onClick={handleLogout}>
+            <button
+              className="corporate-employee-dashboard-with-tabs-logout-btn"
+              onClick={handleLogout}
+            >
               Logout
             </button>
           </div>
@@ -223,6 +239,12 @@ export default function CorporateEmployeeDashboard() {
                 onClick={() => setActiveSection("trip-info")}
               >
                 Trip Info
+              </button>
+              <button
+                className={`corporate-employee-dashboard-with-tabs-tab-btn ${activeSection === "track" ? "active" : ""}`}
+                onClick={() => setActiveSection("track")}
+              >
+                Track My Ride
               </button>
               <button
                 className={`corporate-employee-dashboard-with-tabs-tab-btn ${activeSection === "bookings" ? "active" : ""}`}
@@ -260,15 +282,21 @@ export default function CorporateEmployeeDashboard() {
                         </div>
                         <div className="corporate-employee-dashboard-with-tabs-route-item">
                           <label>To:</label>
-                          <span>{assignedBus.route?.toLocation || "Loading..."}</span>
+                          <span>
+                            {assignedBus.route?.toLocation || "Loading..."}
+                          </span>
                         </div>
                         <div className="corporate-employee-dashboard-with-tabs-route-item">
                           <label>Pickup Stop:</label>
-                          <span>{assignedBus.pickupStop || "Not assigned"}</span>
+                          <span>
+                            {assignedBus.pickupStop || "Not assigned"}
+                          </span>
                         </div>
                         <div className="corporate-employee-dashboard-with-tabs-route-item">
                           <label>Dropoff Stop:</label>
-                          <span>{assignedBus.dropoffStop || "Not assigned"}</span>
+                          <span>
+                            {assignedBus.dropoffStop || "Not assigned"}
+                          </span>
                         </div>
                         <div className="corporate-employee-dashboard-with-tabs-route-item">
                           <label>Shift Type:</label>
@@ -300,16 +328,22 @@ export default function CorporateEmployeeDashboard() {
                           <p>
                             <strong>Vehicle:</strong>{" "}
                             {assignedBus.vehicle
-                              ? assignedBus.vehicle.vehicleName || `${assignedBus.vehicle.make || ""} ${assignedBus.vehicle.model || ""}`.trim() || "N/A"
+                              ? assignedBus.vehicle.vehicleName ||
+                                `${assignedBus.vehicle.make || ""} ${assignedBus.vehicle.model || ""}`.trim() ||
+                                "N/A"
                               : "Not assigned"}
                           </p>
                           <p>
                             <strong>Type:</strong>{" "}
-                            {assignedBus.vehicle?.vehicleCategory || assignedBus.vehicle?.vehicleType || "N/A"}
+                            {assignedBus.vehicle?.vehicleCategory ||
+                              assignedBus.vehicle?.vehicleType ||
+                              "N/A"}
                           </p>
                           <p>
                             <strong>Registration:</strong>{" "}
-                            {assignedBus.vehicle?.registrationNumber || assignedBus.vehicle?.licensePlate || "N/A"}
+                            {assignedBus.vehicle?.registrationNumber ||
+                              assignedBus.vehicle?.licensePlate ||
+                              "N/A"}
                           </p>
                           <p>
                             <strong>Capacity:</strong>{" "}
@@ -318,19 +352,29 @@ export default function CorporateEmployeeDashboard() {
                         </div>
                       </div>
 
-                      {assignedBus.route?.stopPoints && assignedBus.route.stopPoints.length > 0 && (
-                        <div className="corporate-employee-dashboard-with-tabs-stop-points-info">
-                          <h3>Stop Points</h3>
-                          <div className="corporate-employee-dashboard-with-tabs-stop-points-list">
-                            {assignedBus.route.stopPoints.map((stop, index) => (
-                              <div key={index} className="corporate-employee-dashboard-with-tabs-stop-point-item">
-                                <span className="corporate-employee-dashboard-with-tabs-stop-location">{stop.location}</span>
-                                <span className="corporate-employee-dashboard-with-tabs-stop-time">{stop.time || "Time not set"}</span>
-                              </div>
-                            ))}
+                      {assignedBus.route?.stopPoints &&
+                        assignedBus.route.stopPoints.length > 0 && (
+                          <div className="corporate-employee-dashboard-with-tabs-stop-points-info">
+                            <h3>Stop Points</h3>
+                            <div className="corporate-employee-dashboard-with-tabs-stop-points-list">
+                              {assignedBus.route.stopPoints.map(
+                                (stop, index) => (
+                                  <div
+                                    key={index}
+                                    className="corporate-employee-dashboard-with-tabs-stop-point-item"
+                                  >
+                                    <span className="corporate-employee-dashboard-with-tabs-stop-location">
+                                      {stop.location}
+                                    </span>
+                                    <span className="corporate-employee-dashboard-with-tabs-stop-time">
+                                      {stop.time || "Time not set"}
+                                    </span>
+                                  </div>
+                                ),
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   ) : (
                     <div className="corporate-employee-dashboard-with-tabs-no-bus-assigned">
@@ -346,21 +390,32 @@ export default function CorporateEmployeeDashboard() {
                   {todayTrips.length > 0 ? (
                     <div className="corporate-employee-dashboard-with-tabs-trips-list">
                       {todayTrips.map((trip) => (
-                        <div key={trip._id} className="corporate-employee-dashboard-with-tabs-trip-item">
+                        <div
+                          key={trip._id}
+                          className="corporate-employee-dashboard-with-tabs-trip-item"
+                        >
                           <div className="corporate-employee-dashboard-with-tabs-trip-timing">
-                            <span className="corporate-employee-dashboard-with-tabs-trip-time">{trip.startTime}</span>
+                            <span className="corporate-employee-dashboard-with-tabs-trip-time">
+                              {trip.startTime}
+                            </span>
                             <span className="corporate-employee-dashboard-with-tabs-trip-route">
                               {trip.fromLocation} → {trip.toLocation}
                             </span>
                             {trip.currentLocation && (
                               <span className="corporate-employee-dashboard-with-tabs-trip-location">
-                                Driver Location: {trip.currentLocation.lat?.toFixed(2)}, {trip.currentLocation.lng?.toFixed(2)}
+                                Driver Location:{" "}
+                                {trip.currentLocation.lat?.toFixed(2)},{" "}
+                                {trip.currentLocation.lng?.toFixed(2)}
                               </span>
                             )}
                           </div>
                           <div className="corporate-employee-dashboard-with-tabs-trip-details">
-                            <span>Status: <strong>{trip.status}</strong></span>
-                            <span>Pickup: {trip.pickupPoint || trip.fromLocation}</span>
+                            <span>
+                              Status: <strong>{trip.status}</strong>
+                            </span>
+                            <span>
+                              Pickup: {trip.pickupPoint || trip.fromLocation}
+                            </span>
                             {trip.driverInfo && (
                               <span>Driver: {trip.driverInfo.name}</span>
                             )}
@@ -384,27 +439,47 @@ export default function CorporateEmployeeDashboard() {
             )}
 
             {/* My Bookings */}
+            {activeSection === "track" && (
+              <div className="corporate-employee-dashboard-with-tabs-section-content">
+                <EmployeeLiveTracking />
+              </div>
+            )}
+
             {activeSection === "bookings" && (
               <div className="corporate-employee-dashboard-with-tabs-section-content">
                 <div className="corporate-employee-dashboard-with-tabs-bookings-card">
                   <h2>My Upcoming Bookings</h2>
-                  {(bookings?.length > 0 || upcomingTripsRedux?.length > 0) ? (
+                  {bookings?.length > 0 || upcomingTripsRedux?.length > 0 ? (
                     <div className="corporate-employee-dashboard-with-tabs-bookings-list">
-                      {(bookings?.length > 0 ? bookings : upcomingTripsRedux).map((booking) => (
-                        <div key={booking._id} className="corporate-employee-dashboard-with-tabs-booking-item">
+                      {(bookings?.length > 0
+                        ? bookings
+                        : upcomingTripsRedux
+                      ).map((booking) => (
+                        <div
+                          key={booking._id}
+                          className="corporate-employee-dashboard-with-tabs-booking-item"
+                        >
                           <div className="corporate-employee-dashboard-with-tabs-booking-date">
-                            {new Date(booking.tripDate || booking.date).toLocaleDateString()}
+                            {new Date(
+                              booking.tripDate || booking.date,
+                            ).toLocaleDateString()}
                           </div>
                           <div className="corporate-employee-dashboard-with-tabs-booking-info">
                             <span className="corporate-employee-dashboard-with-tabs-booking-time">
-                              {booking.startTime || 'TBD'}
+                              {booking.startTime || "TBD"}
                             </span>
                             <span className="corporate-employee-dashboard-with-tabs-booking-route">
-                              {booking.fromLocation || 'Unknown'} → {booking.toLocation || 'Unknown'}
+                              {booking.fromLocation || "Unknown"} →{" "}
+                              {booking.toLocation || "Unknown"}
                             </span>
                           </div>
                           <div className="corporate-employee-dashboard-with-tabs-booking-seat">
-                            <span>Vehicle: {booking.vehicleName || vehicleInfo?.vehicleName || 'Assigned'}</span>
+                            <span>
+                              Vehicle:{" "}
+                              {booking.vehicleName ||
+                                vehicleInfo?.vehicleName ||
+                                "Assigned"}
+                            </span>
                           </div>
                           <div className="corporate-employee-dashboard-with-tabs-booking-status">
                             <span
@@ -439,25 +514,37 @@ export default function CorporateEmployeeDashboard() {
                   {travelHistory && travelHistory.length > 0 ? (
                     <div className="corporate-employee-dashboard-with-tabs-history-list">
                       {travelHistory.map((trip) => (
-                        <div key={trip._id} className="corporate-employee-dashboard-with-tabs-history-item">
+                        <div
+                          key={trip._id}
+                          className="corporate-employee-dashboard-with-tabs-history-item"
+                        >
                           <div className="corporate-employee-dashboard-with-tabs-history-date">
-                            {new Date(trip.travelDate || trip.tripDate || trip.date).toLocaleDateString()}
+                            {new Date(
+                              trip.travelDate || trip.tripDate || trip.date,
+                            ).toLocaleDateString()}
                           </div>
                           <div className="corporate-employee-dashboard-with-tabs-history-info">
-                            <span>{trip.route || `${trip.fromLocation || 'Unknown'} → ${trip.toLocation || 'Unknown'}`}</span>
+                            <span>
+                              {trip.route ||
+                                `${trip.fromLocation || "Unknown"} → ${trip.toLocation || "Unknown"}`}
+                            </span>
                           </div>
                           <div className="corporate-employee-dashboard-with-tabs-history-reason">
-                            <span>
-                              Status: {trip.status || 'Completed'}
-                            </span>
-                            {trip.attendance && <span> | Attendance: {trip.attendance}</span>}
-                            {trip.startTime && <span> | Time: {trip.startTime}</span>}
-                            {trip.vehicleName && trip.vehicleName !== 'Not assigned' && (
-                              <span> | Vehicle: {trip.vehicleName}</span>
+                            <span>Status: {trip.status || "Completed"}</span>
+                            {trip.attendance && (
+                              <span> | Attendance: {trip.attendance}</span>
                             )}
-                            {trip.driverName && trip.driverName !== 'Not assigned' && (
-                              <span> | Driver: {trip.driverName}</span>
+                            {trip.startTime && (
+                              <span> | Time: {trip.startTime}</span>
                             )}
+                            {trip.vehicleName &&
+                              trip.vehicleName !== "Not assigned" && (
+                                <span> | Vehicle: {trip.vehicleName}</span>
+                              )}
+                            {trip.driverName &&
+                              trip.driverName !== "Not assigned" && (
+                                <span> | Driver: {trip.driverName}</span>
+                              )}
                           </div>
                         </div>
                       ))}
@@ -479,7 +566,10 @@ export default function CorporateEmployeeDashboard() {
                   {notifications.length > 0 ? (
                     <div className="corporate-employee-dashboard-with-tabs-notifications-list">
                       {notifications.map((notif) => (
-                        <div key={notif._id} className="corporate-employee-dashboard-with-tabs-notification-item">
+                        <div
+                          key={notif._id}
+                          className="corporate-employee-dashboard-with-tabs-notification-item"
+                        >
                           <div className="corporate-employee-dashboard-with-tabs-notification-type">
                             <span
                               className={`corporate-employee-dashboard-with-tabs-type-badge ${notif.type?.toLowerCase()}`}

@@ -46,6 +46,8 @@ import travelHistoryRoutes from "./routes/travelHistoryRoutes.js"
 import settlementRoutes from "./routes/settlementRoutes.js"
 import corporateOperationsRoutes from "./routes/corporateOperationsRoutes.js"
 import managedServiceBriefRoutes from "./routes/managedServiceBriefRoutes.js"
+import managedServiceRoutes from "./routes/managedServiceRoutes.js"
+import geocodeRoutes from "./routes/geocodeRoutes.js"
 import driverLocationRoutes from "./routes/driverLocationRoutes.js"
 import corporateRoutes from "./routes/corporateRoutes.js"
 import pageRoutes from "./routes/pageRoutes.js"
@@ -54,6 +56,8 @@ import commissionRoutes from "./routes/commissionRoutes.js"
 import negotiationRoutes from "./routes/negotiationRoutes.js"
 import termsRoutes from "./routes/termsRoutes.js"
 import emiPaymentRoutes from "./routes/emiPaymentRoutes.js"
+import rosterChangeRequestRoutes from "./routes/rosterChangeRequestRoutes.js"
+import sosRoutes from "./routes/sosRoutes.js"
 import { seedDropdownOptions } from "./controllers/dropdownController.js"
 // import { dailyTripGeneration, frequentTripGeneration, hourlyTripGeneration, runImmediateGeneration, corporateTripGeneration } from "./cron/tripGenerationCron.js"
 import { processDailyRenewals, sendDailyRenewalReminders } from "./cron/subscriptionCron.js"
@@ -836,6 +840,8 @@ app.use("/api/travel-history", travelHistoryRoutes)
 app.use("/api/settlement", settlementRoutes)
 app.use("/api/corporate-operations", corporateOperationsRoutes)
 app.use("/api/managed-service-brief", managedServiceBriefRoutes)
+app.use("/api/managed-service", managedServiceRoutes)
+app.use("/api/geocode", geocodeRoutes)
 app.use("/api/corporate", corporateRoutes)
 app.use("/api/driver", driverLocationRoutes)
 app.use("/api/pages", pageRoutes)
@@ -844,6 +850,8 @@ app.use("/api/commission", commissionRoutes)
 app.use("/api/emi-payments", emiPaymentRoutes)
 app.use("/api", negotiationRoutes)
 app.use("/api/terms", termsRoutes)
+app.use("/api/roster-change-requests", rosterChangeRequestRoutes)
+app.use("/api/sos", sosRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

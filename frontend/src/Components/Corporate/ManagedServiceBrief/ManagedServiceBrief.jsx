@@ -1,9 +1,17 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import api from "../../../utils/api";
 import { SocketContext } from "../../../context/SocketContext";
 import LoadingSpinner from "../../LoadingSpinner/LoadingSpinner";
+import LocationPicker from "../../Common/LocationPicker/LocationPicker";
 import "./ManagedServiceBrief.css";
 
 /**
@@ -30,11 +38,71 @@ const emptyBrief = {
   serviceStartDate: "",
   sla: { targetCompletionDate: "", fulfillmentSlaHours: 72 },
   pointOfContact: { name: "", phone: "", email: "" },
+  partnerResponse: {
+    status: "NONE",
+    note: "",
+    respondedByName: "",
+    respondedAt: null,
+  },
   workLocations: [],
   routeRequests: [],
   employeeRoster: [],
   messages: [],
 };
+
+// Normalize an imported spreadsheet header to a comparable token.
+const normKey = (k) =>
+  String(k || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+// Read a value from a row object by trying several possible header tokens.
+const pickCell = (row, keys) => {
+  for (const k of Object.keys(row)) {
+    if (keys.includes(normKey(k))) return row[k];
+  }
+  return "";
+};
+
+// Map a raw spreadsheet row to a brief roster employee.
+const rowToRosterEmployee = (row) => ({
+  name: String(
+    pickCell(row, ["name", "fullname", "employeename"]) || "",
+  ).trim(),
+  email: String(pickCell(row, ["email", "emailaddress"]) || "").trim(),
+  phone: String(
+    pickCell(row, [
+      "phone",
+      "mobile",
+      "phonenumber",
+      "contact",
+      "contactnumber",
+    ]) || "",
+  ).trim(),
+  employeeCode: String(
+    pickCell(row, ["employeecode", "code", "empcode", "employeeid", "empid"]) ||
+      "",
+  ).trim(),
+  department: String(pickCell(row, ["department", "dept"]) || "").trim(),
+  homeAddress: String(pickCell(row, ["homeaddress", "address"]) || "").trim(),
+  pickupArea: String(
+    pickCell(row, ["pickuparea", "pickup", "area", "pickuplocation"]) || "",
+  ).trim(),
+  workLocation: String(
+    pickCell(row, ["worklocation", "office", "location"]) || "",
+  ).trim(),
+  shiftLabel: String(pickCell(row, ["shift", "shiftlabel"]) || "").trim(),
+  passMonths:
+    Number(pickCell(row, ["passmonths", "months", "pass", "passduration"])) ||
+    1,
+  preferredRouteLabel: String(
+    pickCell(row, ["preferredroute", "route", "preferredroutelabel"]) || "",
+  ).trim(),
+  assignmentHint: String(
+    pickCell(row, ["assignmenthint", "assignment", "note", "notes"]) || "",
+  ).trim(),
+  fulfillment: { status: "PENDING" },
+});
 
 const toArr = (str) =>
   (str || "")
@@ -88,6 +156,9 @@ const ManagedServiceBrief = ({
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState("");
   const [newMessage, setNewMessage] = useState("");
+  const rosterFileRef = useRef(null);
+  // Map picker state: { kind: "work" | "pickup", index }. null = closed.
+  const [picker, setPicker] = useState(null);
 
   const load = useCallback(async () => {
     if (!resourceId) return;
@@ -109,6 +180,7 @@ const ManagedServiceBrief = ({
             fulfillmentSlaHours: b.sla?.fulfillmentSlaHours ?? 72,
           },
           pointOfContact: b.pointOfContact || emptyBrief.pointOfContact,
+          partnerResponse: b.partnerResponse || emptyBrief.partnerResponse,
           workLocations: b.workLocations || [],
           routeRequests: b.routeRequests || [],
           employeeRoster: b.employeeRoster || [],
@@ -189,6 +261,65 @@ const ManagedServiceBrief = ({
       [key]: prev[key].filter((_, i) => i !== index),
     }));
 
+  /* ------------------------- map / pickup pinning ------------------------ */
+  // Resolve the office point to draw a route to for a given employee: prefer the
+  // work location matching emp.workLocation, else the first pinned location.
+  const resolveOfficePoint = useCallback(
+    (emp) => {
+      const locs = brief.workLocations || [];
+      const byName = locs.find(
+        (l) =>
+          l.name &&
+          emp?.workLocation &&
+          l.name.trim().toLowerCase() === emp.workLocation.trim().toLowerCase(),
+      );
+      const pick = byName || locs.find((l) => l.location?.lat != null);
+      const loc = pick?.location;
+      return loc && loc.lat != null && loc.lng != null
+        ? { lat: loc.lat, lng: loc.lng }
+        : null;
+    },
+    [brief.workLocations],
+  );
+
+  const handlePickerSave = (coords) => {
+    if (!picker) return;
+    const value = { ...coords, updatedAt: new Date().toISOString() };
+    if (picker.kind === "work") {
+      updateList("workLocations", picker.index, { location: value });
+    } else if (picker.kind === "pickup") {
+      updateList("employeeRoster", picker.index, {
+        pickupPoint: value,
+        // Keep the free-text home address in sync if it was empty.
+        homeAddress:
+          brief.employeeRoster[picker.index]?.homeAddress ||
+          coords.formattedAddress ||
+          "",
+      });
+    }
+    setPicker(null);
+    setNotice('Location pinned. Click "Save draft" to persist your changes.');
+  };
+
+  // Props for the active picker modal.
+  const pickerProps = useMemo(() => {
+    if (!picker) return null;
+    if (picker.kind === "work") {
+      const loc = brief.workLocations[picker.index];
+      return {
+        title: `Pin office: ${loc?.name || "Work location"}`,
+        initial: loc?.location?.lat != null ? loc.location : null,
+        officePoint: null,
+      };
+    }
+    const emp = brief.employeeRoster[picker.index];
+    return {
+      title: `Pin pickup: ${emp?.name || "Employee"}`,
+      initial: emp?.pickupPoint?.lat != null ? emp.pickupPoint : null,
+      officePoint: resolveOfficePoint(emp),
+    };
+  }, [picker, brief.workLocations, brief.employeeRoster, resolveOfficePoint]);
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -239,6 +370,122 @@ const ManagedServiceBrief = ({
       setError(err.response?.data?.message || "Error submitting brief.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  /* --------------------- Partner accept / clarification -------------------- */
+  const handleRespond = async (decision) => {
+    let note = "";
+    if (decision === "REQUEST_CLARIFICATION") {
+      note =
+        window.prompt(
+          "What needs clarification? This message is sent to the corporate client.",
+          "",
+        ) || "";
+      if (!note.trim()) return;
+    } else if (
+      !window.confirm(
+        "Accept this brief? You are agreeing to operate against it, and item fulfillment will be unlocked.",
+      )
+    ) {
+      return;
+    }
+    try {
+      setSaving(true);
+      setError(null);
+      const res = await api.post(`${basePath}/respond`, { decision, note });
+      if (res.data.success) {
+        setNotice(res.data.message);
+        await load();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Error submitting response.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ---------------------- Roster Excel / CSV bulk import ------------------- */
+  const handleRosterImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setError(null);
+      const xlsxModule = await import("xlsx");
+      const XLSX = xlsxModule.default || xlsxModule;
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      const mapped = rows
+        .map((r) => rowToRosterEmployee(r))
+        .filter((r) => r.name);
+      if (mapped.length === 0) {
+        setError(
+          "No valid rows found. Make sure the file has a 'Name' column and at least one employee row.",
+        );
+        return;
+      }
+      setBrief((prev) => ({
+        ...prev,
+        employeeRoster: [...prev.employeeRoster, ...mapped],
+      }));
+      setNotice(
+        `${mapped.length} employee(s) imported from ${file.name}. Review them below, then click "Save draft" to persist.`,
+      );
+    } catch (err) {
+      console.log("[v0] Roster import error:", err?.message);
+      setError(
+        "Could not read the file. Please upload a valid .xlsx, .xls or .csv file.",
+      );
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  const handleRosterTemplate = async () => {
+    try {
+      const xlsxModule = await import("xlsx");
+      const XLSX = xlsxModule.default || xlsxModule;
+      const headers = [
+        [
+          "Name",
+          "Email",
+          "Phone",
+          "Employee Code",
+          "Department",
+          "Home Address",
+          "Pickup Area",
+          "Work Location",
+          "Shift",
+          "Pass Months",
+          "Preferred Route",
+          "Assignment Hint",
+        ],
+      ];
+      const example = [
+        [
+          "John Doe",
+          "john@acme.com",
+          "+971500000000",
+          "EMP001",
+          "Engineering",
+          "Marina Tower 3, Dubai Marina",
+          "Dubai Marina",
+          "HQ - Tower B",
+          "General",
+          3,
+          "Marina -> HQ Morning",
+          "Window seat preferred",
+        ],
+      ];
+      const ws = XLSX.utils.aoa_to_sheet([...headers, ...example]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Roster");
+      XLSX.writeFile(wb, "employee_roster_template.xlsx");
+    } catch (err) {
+      console.log("[v0] Roster template error:", err?.message);
+      setError("Could not generate the template file.");
     }
   };
 
@@ -328,12 +575,22 @@ const ManagedServiceBrief = ({
 
     return (
       <div className="msb-fulfill-controls">
-        {/* Partner-side: set fulfillment status */}
+        {/* Partner-side: set fulfillment status (locked until brief accepted) */}
         {!isCorporate && (
           <>
             <span className="msb-spec-label">Mark as</span>
             <select
               value={status}
+              disabled={
+                brief.status === "SUBMITTED" &&
+                brief.partnerResponse?.status !== "ACCEPTED"
+              }
+              title={
+                brief.status === "SUBMITTED" &&
+                brief.partnerResponse?.status !== "ACCEPTED"
+                  ? "Accept the brief first to unlock fulfillment."
+                  : undefined
+              }
               onChange={(e) =>
                 handleFulfillment(section, item._id, e.target.value)
               }
@@ -418,6 +675,79 @@ const ManagedServiceBrief = ({
 
       {error && <p className="msb-error">{error}</p>}
       {notice && <div className="msb-note-banner">{notice}</div>}
+
+      {/* Partner acknowledgement handshake (contract stage only) */}
+      {!isQuotationStage && !isCorporate && brief.status === "SUBMITTED" && (
+        <div className="msb-accept-banner">
+          <div className="msb-accept-text">
+            <strong>Review &amp; accept this brief</strong>
+            <p>
+              The client submitted this operations brief. Accept it to begin
+              building routes, employees and passes — or request clarification
+              if anything is unclear. Item fulfillment stays locked until you
+              accept.
+            </p>
+            {brief.partnerResponse?.status === "CLARIFICATION_REQUESTED" && (
+              <p className="msb-accept-warn">
+                You requested clarification. Waiting for the client to update
+                and re-submit the brief.
+              </p>
+            )}
+          </div>
+          <div className="msb-accept-actions">
+            <button
+              className="msb-btn primary"
+              disabled={saving}
+              onClick={() => handleRespond("ACCEPT")}
+            >
+              Accept &amp; start
+            </button>
+            <button
+              className="msb-btn secondary"
+              disabled={saving}
+              onClick={() => handleRespond("REQUEST_CLARIFICATION")}
+            >
+              Request clarification
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Corporate view: partner asked for clarification */}
+      {!isQuotationStage &&
+        isCorporate &&
+        brief.status === "SUBMITTED" &&
+        brief.partnerResponse?.status === "CLARIFICATION_REQUESTED" && (
+          <div className="msb-accept-banner warn">
+            <div className="msb-accept-text">
+              <strong>Partner requested clarification</strong>
+              <p>
+                {brief.partnerResponse.note ||
+                  "See the Clarifications thread below."}{" "}
+                Update the brief if needed, then re-submit so the partner can
+                accept and begin.
+              </p>
+            </div>
+          </div>
+        )}
+
+      {/* Both views: brief accepted */}
+      {!isQuotationStage &&
+        brief.partnerResponse?.status === "ACCEPTED" &&
+        (brief.status === "ACCEPTED" || brief.status === "IN_PROGRESS") && (
+          <div className="msb-accept-banner ok">
+            <span>
+              Brief accepted by{" "}
+              {brief.partnerResponse.respondedByName || "the partner"}
+              {brief.partnerResponse.respondedAt
+                ? ` on ${new Date(
+                    brief.partnerResponse.respondedAt,
+                  ).toLocaleDateString()}`
+                : ""}
+              . Execution is underway.
+            </span>
+          </div>
+        )}
 
       {/* Progress (fulfilment only exists once the contract is live) */}
       {!isQuotationStage && (
@@ -690,6 +1020,23 @@ const ManagedServiceBrief = ({
                     }
                   />
                 </div>
+                <div className="msb-map-row">
+                  <button
+                    type="button"
+                    className="msb-btn secondary small"
+                    onClick={() => setPicker({ kind: "work", index: i })}
+                  >
+                    {loc.location?.lat != null
+                      ? "Edit office pin"
+                      : "Pin office on map"}
+                  </button>
+                  {loc.location?.lat != null && (
+                    <span className="msb-pin-status ok">
+                      Pinned · {loc.location.lat.toFixed(4)},{" "}
+                      {loc.location.lng.toFixed(4)}
+                    </span>
+                  )}
+                </div>
                 <div className="msb-section-head">
                   <span className="msb-spec-label">Shifts</span>
                   <button
@@ -777,6 +1124,23 @@ const ManagedServiceBrief = ({
                     {[loc.address, loc.city].filter(Boolean).join(", ") || "—"}
                   </span>
                 </div>
+                {loc.location?.lat != null && (
+                  <div className="msb-spec-row">
+                    <span className="msb-spec-label">Map pin</span>
+                    <span className="msb-spec-value">
+                      {loc.location.lat.toFixed(5)},{" "}
+                      {loc.location.lng.toFixed(5)}{" "}
+                      <a
+                        className="msb-map-link"
+                        href={`https://www.openstreetmap.org/?mlat=${loc.location.lat}&mlon=${loc.location.lng}#map=17/${loc.location.lat}/${loc.location.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View on map
+                      </a>
+                    </span>
+                  </div>
+                )}
                 {(loc.shifts || []).map((sh, si) => (
                   <div className="msb-spec-row" key={si}>
                     <span className="msb-spec-label">
@@ -1039,33 +1403,58 @@ const ManagedServiceBrief = ({
         <div className="msb-section-head">
           <h3>Employee Roster &amp; Passes</h3>
           {canEdit && (
-            <button
-              className="msb-btn secondary small"
-              onClick={() =>
-                addListItem("employeeRoster", {
-                  name: "",
-                  email: "",
-                  phone: "",
-                  employeeCode: "",
-                  department: "",
-                  homeAddress: "",
-                  pickupArea: "",
-                  workLocation: "",
-                  shiftLabel: "",
-                  passMonths: 1,
-                  preferredRouteLabel: "",
-                  assignmentHint: "",
-                  fulfillment: { status: "PENDING" },
-                })
-              }
-            >
-              + Add employee
-            </button>
+            <div className="msb-roster-actions">
+              <button
+                type="button"
+                className="msb-btn ghost small"
+                onClick={handleRosterTemplate}
+              >
+                Download template
+              </button>
+              <button
+                type="button"
+                className="msb-btn secondary small"
+                onClick={() => rosterFileRef.current?.click()}
+              >
+                Import Excel/CSV
+              </button>
+              <input
+                ref={rosterFileRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleRosterImport}
+                style={{ display: "none" }}
+              />
+              <button
+                className="msb-btn secondary small"
+                onClick={() =>
+                  addListItem("employeeRoster", {
+                    name: "",
+                    email: "",
+                    phone: "",
+                    employeeCode: "",
+                    department: "",
+                    homeAddress: "",
+                    pickupArea: "",
+                    workLocation: "",
+                    shiftLabel: "",
+                    passMonths: 1,
+                    preferredRouteLabel: "",
+                    assignmentHint: "",
+                    fulfillment: { status: "PENDING" },
+                  })
+                }
+              >
+                + Add employee
+              </button>
+            </div>
           )}
         </div>
         <p className="msb-section-hint">
           Who to onboard, their pickup address, which route they should ride,
-          and how many months of pass to issue each of them.
+          and how many months of pass to issue each of them. For large teams,
+          download the template, fill it in, and use Import Excel/CSV — then
+          save the draft.
         </p>
         {brief.employeeRoster.length === 0 && (
           <p className="msb-empty">No employees added yet.</p>
@@ -1210,6 +1599,27 @@ const ManagedServiceBrief = ({
                     }
                   />
                 </div>
+                <div className="msb-map-row">
+                  <button
+                    type="button"
+                    className="msb-btn secondary small"
+                    onClick={() => setPicker({ kind: "pickup", index: i })}
+                  >
+                    {emp.pickupPoint?.lat != null
+                      ? "Edit pickup pin"
+                      : "Pin pickup point on map"}
+                  </button>
+                  {emp.pickupPoint?.lat != null ? (
+                    <span className="msb-pin-status ok">
+                      Pinned · {emp.pickupPoint.lat.toFixed(4)},{" "}
+                      {emp.pickupPoint.lng.toFixed(4)}
+                    </span>
+                  ) : (
+                    <span className="msb-pin-status">
+                      No exact pickup point set
+                    </span>
+                  )}
+                </div>
                 <div className="msb-field">
                   <label>Assignment hint (trip / seat note)</label>
                   <input
@@ -1246,6 +1656,31 @@ const ManagedServiceBrief = ({
                     {emp.shiftLabel ? ` · ${emp.shiftLabel}` : ""}
                   </span>
                 </div>
+                {emp.pickupPoint?.lat != null && (
+                  <div className="msb-spec-row">
+                    <span className="msb-spec-label">Pickup pin</span>
+                    <span className="msb-spec-value">
+                      {emp.pickupPoint.lat.toFixed(5)},{" "}
+                      {emp.pickupPoint.lng.toFixed(5)}{" "}
+                      <a
+                        className="msb-map-link"
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${emp.pickupPoint.lat},${emp.pickupPoint.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Navigate
+                      </a>
+                      <a
+                        className="msb-map-link"
+                        href={`https://www.openstreetmap.org/?mlat=${emp.pickupPoint.lat}&mlon=${emp.pickupPoint.lng}#map=17/${emp.pickupPoint.lat}/${emp.pickupPoint.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View on map
+                      </a>
+                    </span>
+                  </div>
+                )}
                 <div className="msb-spec-row">
                   <span className="msb-spec-label">Pass / Route</span>
                   <span className="msb-spec-value">
@@ -1336,6 +1771,17 @@ const ManagedServiceBrief = ({
           </button>
         </div>
       </div>
+
+      {picker && pickerProps && (
+        <LocationPicker
+          open
+          title={pickerProps.title}
+          initial={pickerProps.initial}
+          officePoint={pickerProps.officePoint}
+          onClose={() => setPicker(null)}
+          onSave={handlePickerSave}
+        />
+      )}
     </div>
   );
 };
