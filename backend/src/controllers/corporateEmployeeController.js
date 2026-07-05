@@ -443,7 +443,7 @@ const generateEmployeeId = async (companyId) => {
 // Bulk upload employees
 export const bulkUploadEmployees = async (req, res) => {
     try {
-        const { employees } = req.body;
+        const { employees, skipInvitation } = req.body;
         const managerId = req.userId;
         const companyId = await resolveCompanyId(req.userId);
 
@@ -558,8 +558,13 @@ export const bulkUploadEmployees = async (req, res) => {
                     }
                 }
 
-                // Send invitation email
-                await sendEmployeeInvitation(user, employeeData);
+                // Send invitation email — unless the caller asked to skip it.
+                // The managed-service brief flow creates employees first and lets
+                // the B2B partner send invitations manually afterwards, so it
+                // passes skipInvitation:true here.
+                if (!skipInvitation) {
+                    await sendEmployeeInvitation(user, employeeData);
+                }
 
                 // Managed-service auto-link: when a B2B partner adds this employee
                 // on behalf of the corporate to fulfil a specific brief roster item,

@@ -1898,6 +1898,253 @@ export const assignRouteToVehicle = async (req, res) => {
     }
 }
 
+// @desc    Bulk-create every PENDING route request from the managed-service
+//          brief against a single assigned vehicle, and auto-fulfil each brief
+//          route item. This is how a B2B partner turns an Excel-driven brief
+//          (which may list hundreds/thousands of routes) into real operational
+//          routes in one action, instead of adding them one by one.
+// @route   POST /api/contracts/bulk-assign-routes/:contractId/:assignedVehicleId
+// @access  Private (CORPORATE self-serve, or B2B_PARTNER on-behalf via context)
+export const bulkCreateRoutesFromBrief = async (req, res) => {
+    try {
+        const { contractId, assignedVehicleId } = req.params
+        const corporateOwnerId = req.userId
+        // Optional: restrict to a specific subset of brief route item ids.
+        const { briefItemIds } = req.body || {}
+
+        const contract = await Contract.findOne({
+            _id: contractId,
+            corporateOwnerId,
+        }).populate({
+            path: "vehicles.vehicleId",
+            select: "capacity vehicleName registrationNumber",
+        })
+
+        if (!contract) {
+            return res.status(404).json({ success: false, message: "Contract not found" })
+        }
+
+        // Locate the target assigned vehicle inside the contract.
+        let assignedVehicleData = null
+        let vehicleDetails = null
+        let vehicleGroupRef = null
+        for (const vehicleGroup of contract.vehicles) {
+            const found = vehicleGroup.assignedVehicles.find(
+                (v) => v._id.toString() === assignedVehicleId,
+            )
+            if (found) {
+                assignedVehicleData = found
+                vehicleDetails = vehicleGroup.vehicleId
+                vehicleGroupRef = vehicleGroup
+                break
+            }
+        }
+
+        if (!assignedVehicleData) {
+            return res.status(404).json({
+                success: false,
+                message: "Assigned vehicle not found in contract",
+            })
+        }
+
+        // Load the brief so we know which routes to build.
+        const brief = await ManagedServiceBrief.findOne({ contractId })
+        if (!brief) {
+            return res.status(404).json({
+                success: false,
+                message: "No managed-service brief exists for this contract.",
+            })
+        }
+
+        const seatingCapacity = vehicleDetails?.capacity?.seatingCapacity || 0
+
+        // Which brief route items to process: not-yet-fulfilled (or a requested
+        // subset). Already fulfilled items are skipped so re-running is safe.
+        const wanted = Array.isArray(briefItemIds) && briefItemIds.length > 0
+            ? new Set(briefItemIds.map(String))
+            : null
+        const pendingRoutes = (brief.routeRequests || []).filter((r) => {
+            if (wanted && !wanted.has(String(r._id))) return false
+            return r.fulfillment?.status !== "FULFILLED"
+        })
+
+        if (pendingRoutes.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No pending route requests to create.",
+                data: { created: 0, results: [] },
+            })
+        }
+
+        const defaultStartDate = brief.serviceStartDate
+            ? new Date(brief.serviceStartDate)
+            : new Date()
+
+        const results = []
+        let createdCount = 0
+
+        for (const rr of pendingRoutes) {
+            try {
+                const fromLocation = (rr.fromArea || rr.label || "Pickup").trim()
+                const toLocation = (rr.toWorkLocation || "Work location").trim()
+                const availableDays = (rr.operatingDays && rr.operatingDays.length)
+                    ? rr.operatingDays
+                    : ["MON", "TUE", "WED", "THU", "FRI"]
+
+                // Map brief stops -> route stop points (objects with location/time).
+                const stopPoints = (rr.stops || [])
+                    .filter(Boolean)
+                    .map((s) => ({ location: String(s).trim(), time: "" }))
+
+                // A single one-way trip covering the brief's pickup window.
+                const tripTimes = [
+                    {
+                        tripType: "One Way",
+                        departureTime: rr.pickupWindowStart || "",
+                        arrivalTime: rr.pickupWindowEnd || "",
+                        outboundStopPoints: stopPoints,
+                        returnStopPoints: [],
+                    },
+                ]
+
+                const formattedTripTimesForRoute = tripTimes.map((trip, index) => ({
+                    tripNumber: index + 1,
+                    tripType: trip.tripType,
+                    departureTime: trip.departureTime || "",
+                    pickupStartTime: null,
+                    pickupEndTime: null,
+                    returnStartTime: null,
+                    returnEndTime: null,
+                    outboundStopPoints: trip.outboundStopPoints,
+                    returnStopPoints: [],
+                }))
+
+                const route = new Route({
+                    contractId,
+                    assignedVehicleId,
+                    vehicleId: vehicleDetails?._id || null,
+                    fromLocation,
+                    toLocation,
+                    routeStartDate: defaultStartDate,
+                    startTime: rr.pickupWindowStart || "",
+                    endTime: rr.pickupWindowEnd || "",
+                    stopPoints,
+                    totalDistance: 0,
+                    estimatedDuration: "",
+                    availableDays,
+                    routeNotes: rr.notes || "",
+                    tripTimes: formattedTripTimesForRoute,
+                    assignedBy: corporateOwnerId,
+                    totalSeats: seatingCapacity,
+                    availableSeats: seatingCapacity,
+                    routeType: "CORPORATE",
+                    corporateId: corporateOwnerId,
+                })
+
+                await route.save()
+
+                const routeSchedule = new CorporateRouteSchedule({
+                    corporateId: corporateOwnerId,
+                    routeId: route._id,
+                    contractId: contractId,
+                    scheduleName: `${fromLocation} to ${toLocation} Schedule`,
+                    tripTimes: formattedTripTimesForRoute.map((t) => ({
+                        tripNumber: t.tripNumber,
+                        departureTime: t.departureTime,
+                        arrivalTime: rr.pickupWindowEnd || null,
+                        pickupStartTime: null,
+                        pickupEndTime: null,
+                        returnStartTime: null,
+                        returnEndTime: null,
+                        tripType: t.tripType,
+                        outboundStopPoints: t.outboundStopPoints,
+                        returnStopPoints: [],
+                    })),
+                    availableDays,
+                    assignedVehicleId: assignedVehicleId,
+                    assignedVehicle: vehicleDetails?._id || null,
+                    assignedDriver: assignedVehicleData.driverId || null,
+                    startDate: defaultStartDate,
+                    endDate: null,
+                    totalSeats: seatingCapacity,
+                    isActive: true,
+                    status: "Active",
+                })
+                await routeSchedule.save()
+
+                // Link the route onto the assigned vehicle.
+                if (
+                    !assignedVehicleData.routeDetails ||
+                    !Array.isArray(assignedVehicleData.routeDetails)
+                ) {
+                    assignedVehicleData.routeDetails = []
+                }
+                assignedVehicleData.routeDetails.push(route._id)
+
+                // Auto-fulfil the corresponding brief route item.
+                let briefAutoFulfilled = false
+                if (req.onBehalfContractId) {
+                    briefAutoFulfilled = await autoFulfillBriefItem({
+                        contractId: req.onBehalfContractId,
+                        section: "routeRequests",
+                        briefItemId: rr._id,
+                        entityId: route._id,
+                        entityType: "ROUTE",
+                        actorId: req.actorId || req.userId,
+                        actorRole: req.actingRole || "B2B_PARTNER",
+                    })
+                }
+
+                createdCount += 1
+                results.push({
+                    briefItemId: String(rr._id),
+                    label: rr.label,
+                    routeId: route._id,
+                    scheduleId: routeSchedule._id,
+                    briefAutoFulfilled,
+                })
+            } catch (rowError) {
+                console.error("[v0] Bulk route row failed:", rowError.message)
+                results.push({
+                    briefItemId: String(rr._id),
+                    label: rr.label,
+                    error: rowError.message,
+                })
+            }
+        }
+
+        contract.markModified("vehicles")
+        await contract.save()
+
+        if (createdCount > 0) {
+            await logRequestActivity(req, {
+                contractId,
+                action: "ROUTE_CREATED",
+                entityType: "ROUTE",
+                description: `Bulk-created ${createdCount} route(s) from the service brief on one vehicle`,
+                meta: { count: createdCount, assignedVehicleId },
+            })
+        }
+
+        res.status(201).json({
+            success: true,
+            message: `Created ${createdCount} route(s) from the brief.`,
+            data: {
+                created: createdCount,
+                failed: results.filter((r) => r.error).length,
+                results,
+            },
+        })
+    } catch (error) {
+        console.error("[v0] Error in bulk route creation:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to bulk-create routes from brief",
+            error: error.message,
+        })
+    }
+}
+
 // @desc    Get routes for a contract
 // @route   GET /api/corporate/routes/:contractId
 // @access  Private (CORPORATE only)

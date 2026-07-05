@@ -78,3 +78,53 @@
     padding-right: 16px;
   }
 }
+
+/* Excel bulk-import toolbar (top of the brief modal body) */
+.msb-import-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: #eef4ff;
+  border: 1px solid #cddcff;
+  border-radius: 10px;
+}
+
+.msb-import-bar-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 240px;
+  flex: 1;
+}
+
+.msb-import-bar-text strong {
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.msb-import-bar-text span {
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.msb-import-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.msb-import-notice {
+  margin: -6px 0 16px;
+  padding: 10px 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  color: #065f46;
+  font-size: 13px;
+}

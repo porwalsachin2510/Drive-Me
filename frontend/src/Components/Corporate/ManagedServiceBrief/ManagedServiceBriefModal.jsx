@@ -1,6 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import {
+  downloadBriefTemplate,
+  parseBriefWorkbook,
+  summarizeParsedBrief,
+} from "./briefExcel";
 import "./ManagedServiceBrief.css";
 import "./ManagedServiceBriefModal.css";
 
@@ -98,6 +103,79 @@ const ManagedServiceBriefModal = ({
   const [routeRequests, setRouteRequests] = useState([emptyRoute()]);
   const [employeeRoster, setEmployeeRoster] = useState([]);
   const [error, setError] = useState("");
+  const [importNotice, setImportNotice] = useState("");
+  const [importing, setImporting] = useState(false);
+  const importFileRef = useRef(null);
+
+  /* --------------------------- Excel template / import --------------------- */
+  const handleDownloadTemplate = async () => {
+    try {
+      setError("");
+      await downloadBriefTemplate();
+    } catch (err) {
+      console.log("[v0] Brief template download error:", err?.message);
+      setError("Could not generate the Excel template. Please try again.");
+    }
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setError("");
+      setImportNotice("");
+      setImporting(true);
+      const parsed = await parseBriefWorkbook(file);
+      const counts = summarizeParsedBrief(parsed);
+
+      if (
+        counts.locations === 0 &&
+        counts.routes === 0 &&
+        counts.employees === 0
+      ) {
+        setError(
+          "No rows found in the workbook. Download the template, fill in the sheets, and try again.",
+        );
+        return;
+      }
+
+      // Overwrite scalar fields only when the sheet actually provided a value,
+      // so importing never wipes something the user already typed.
+      if (parsed.summary) setSummary(parsed.summary);
+      if (parsed.serviceStartDate) setServiceStartDate(parsed.serviceStartDate);
+      setPointOfContact((prev) => ({
+        name: parsed.pointOfContact.name || prev.name,
+        phone: parsed.pointOfContact.phone || prev.phone,
+        email: parsed.pointOfContact.email || prev.email,
+      }));
+      setSla((prev) => ({
+        targetCompletionDate:
+          parsed.sla.targetCompletionDate || prev.targetCompletionDate,
+        fulfillmentSlaHours:
+          parsed.sla.fulfillmentSlaHours || prev.fulfillmentSlaHours,
+      }));
+
+      // Lists are replaced wholesale when the workbook has rows for them.
+      if (parsed.workLocations.length > 0)
+        setWorkLocations(parsed.workLocations);
+      if (parsed.routeRequests.length > 0)
+        setRouteRequests(parsed.routeRequests);
+      if (parsed.employeeRoster.length > 0)
+        setEmployeeRoster(parsed.employeeRoster);
+
+      setImportNotice(
+        `Imported from ${file.name}: ${counts.locations} location(s), ${counts.shifts} shift(s), ${counts.routes} route(s), ${counts.employees} employee(s). Review below, then send the request.`,
+      );
+    } catch (err) {
+      console.log("[v0] Brief import error:", err?.message);
+      setError(
+        "Could not read the file. Please upload a valid .xlsx or .csv built from the template.",
+      );
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  };
 
   /* ------------------------------ list helpers ----------------------------- */
   const updateItem = (setter, index, patch) =>
@@ -203,6 +281,44 @@ const ManagedServiceBriefModal = ({
 
         <div className="msb-modal-body">
           {error && <p className="msb-error">{error}</p>}
+
+          {/* Excel bulk-import toolbar. Corporates with many routes / employees
+              fill the template offline and import it instead of typing rows. */}
+          <div className="msb-import-bar">
+            <div className="msb-import-bar-text">
+              <strong>Have a lot of routes, locations or employees?</strong>
+              <span>
+                Download the Excel template, fill every sheet, and import it to
+                populate this whole form at once.
+              </span>
+            </div>
+            <div className="msb-import-bar-actions">
+              <button
+                type="button"
+                className="msb-btn secondary small"
+                onClick={handleDownloadTemplate}
+                disabled={submitting || importing}
+              >
+                Download Excel template
+              </button>
+              <button
+                type="button"
+                className="msb-btn primary small"
+                onClick={() => importFileRef.current?.click()}
+                disabled={submitting || importing}
+              >
+                {importing ? "Importing…" : "Import from Excel"}
+              </button>
+              <input
+                ref={importFileRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                style={{ display: "none" }}
+                onChange={handleImportFile}
+              />
+            </div>
+          </div>
+          {importNotice && <p className="msb-import-notice">{importNotice}</p>}
 
           {/* Overview */}
           <div className="msb-section">

@@ -159,6 +159,12 @@ const ManagedServiceBrief = ({
   const rosterFileRef = useRef(null);
   // Map picker state: { kind: "work" | "pickup", index }. null = closed.
   const [picker, setPicker] = useState(null);
+  // Partner bulk-create state (contract stage only).
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false);
+  const [assignedVehicles, setAssignedVehicles] = useState([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
 
   const load = useCallback(async () => {
     if (!resourceId) return;
@@ -563,6 +569,141 @@ const ManagedServiceBrief = ({
     }
   };
 
+  /* ------------------- Partner bulk-create from the brief ------------------ */
+  // Map a brief roster "passMonths" number to the durationType the employee
+  // bulk-upload / trip generator understands.
+  const monthsToDurationType = (months) => {
+    switch (Number(months)) {
+      case 2:
+        return "2_MONTHS";
+      case 3:
+        return "3_MONTHS";
+      case 6:
+        return "6_MONTHS";
+      case 12:
+        return "1_YEAR";
+      default:
+        return "1_MONTH";
+    }
+  };
+
+  // Open the vehicle picker: the partner must choose which assigned vehicle the
+  // bulk-created routes attach to (an operational route always needs a vehicle).
+  const openVehiclePicker = async () => {
+    setError(null);
+    setVehiclePickerOpen(true);
+    try {
+      setVehiclesLoading(true);
+      const res = await api.get(`/contracts/assigned-vehicles/${contractId}`);
+      if (res.data.success) {
+        const contract = res.data.data.contract;
+        const list = [];
+        (contract?.vehicles || []).forEach((group) => {
+          (group.assignedVehicles || []).forEach((av) => {
+            list.push({
+              id: av._id,
+              label:
+                group.vehicleId?.vehicleName ||
+                group.vehicleId?.registrationNumber ||
+                "Vehicle",
+              registration: group.vehicleId?.registrationNumber || "",
+              driverName: av.driverId?.name || null,
+            });
+          });
+        });
+        setAssignedVehicles(list);
+        if (list.length === 1) setSelectedVehicleId(list[0].id);
+      } else {
+        setError(res.data.message || "Failed to load vehicles.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Error loading vehicles.");
+    } finally {
+      setVehiclesLoading(false);
+    }
+  };
+
+  const handleBulkCreateRoutes = async () => {
+    if (!selectedVehicleId) {
+      setError("Select a vehicle to attach the routes to.");
+      return;
+    }
+    try {
+      setBulkBusy(true);
+      setError(null);
+      const res = await api.post(
+        `/contracts/bulk-assign-routes/${contractId}/${selectedVehicleId}`,
+      );
+      if (res.data.success) {
+        const { created = 0, failed = 0 } = res.data.data || {};
+        setNotice(
+          `Created ${created} route(s) from the brief${failed ? `, ${failed} failed` : ""}. They are linked and marked fulfilled for the client to review.`,
+        );
+        setVehiclePickerOpen(false);
+        setSelectedVehicleId("");
+        await load();
+      } else {
+        setError(res.data.message || "Failed to create routes.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Error creating routes.");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkCreateEmployees = async () => {
+    const pending = (brief.employeeRoster || []).filter(
+      (e) => e.fulfillment?.status !== "FULFILLED" && e.name && e.email,
+    );
+    if (pending.length === 0) {
+      setError(
+        "No pending roster employees with both a name and email to create.",
+      );
+      return;
+    }
+    if (
+      !window.confirm(
+        `Create ${pending.length} employee(s) from the brief now? Invitations are NOT sent automatically — you can send them from the Employees & Invitations tab afterwards.`,
+      )
+    )
+      return;
+    try {
+      setBulkBusy(true);
+      setError(null);
+      const employees = pending.map((e) => ({
+        fullName: e.name,
+        email: e.email,
+        contactNumber: e.phone,
+        employeeId: e.employeeCode || undefined,
+        department: e.department || "",
+        workLocation: e.workLocation || "",
+        pickupLocation: e.pickupArea || "",
+        homeAddress: e.homeAddress || "",
+        workShift: e.shiftLabel || "",
+        passDuration: { durationType: monthsToDurationType(e.passMonths) },
+        briefItemId: e._id,
+      }));
+      const res = await api.post("/corporate-employees/bulk-upload", {
+        employees,
+        skipInvitation: true,
+      });
+      if (res.data.success) {
+        const s = res.data.data?.summary || {};
+        setNotice(
+          `Employees processed: ${s.successful || 0} created, ${s.duplicates || 0} already existed, ${s.errors || 0} failed. Send invitations from the Employees & Invitations tab when ready.`,
+        );
+        await load();
+      } else {
+        setError(res.data.message || "Failed to create employees.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Error creating employees.");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   /* -------- Shared fulfillment + approval footer for each brief item ------- */
   const renderFulfillmentFooter = (section, item) => {
     // No fulfilment / approval loop exists at quotation stage — the partner is
@@ -652,6 +793,23 @@ const ManagedServiceBrief = ({
   }
 
   const canEdit = isCorporate && brief.status !== "COMPLETED";
+
+  // The partner may operate (bulk-create routes/employees) once the brief is at
+  // contract stage and not still waiting for the partner to accept it.
+  const partnerCanOperate =
+    !isCorporate &&
+    !isQuotationStage &&
+    !(
+      brief.status === "SUBMITTED" &&
+      brief.partnerResponse?.status !== "ACCEPTED"
+    );
+
+  const pendingRouteCount = (brief.routeRequests || []).filter(
+    (r) => r.fulfillment?.status !== "FULFILLED",
+  ).length;
+  const pendingEmployeeCount = (brief.employeeRoster || []).filter(
+    (e) => e.fulfillment?.status !== "FULFILLED" && e.name && e.email,
+  ).length;
 
   return (
     <div className="msb-wrap">
@@ -1164,6 +1322,18 @@ const ManagedServiceBrief = ({
       <div className="msb-section">
         <div className="msb-section-head">
           <h3>Route / Coverage Requests</h3>
+          {partnerCanOperate && pendingRouteCount > 0 && (
+            <button
+              className="msb-btn primary small"
+              onClick={openVehiclePicker}
+              disabled={bulkBusy}
+              title="Create all pending brief routes on one vehicle in one action"
+            >
+              {bulkBusy
+                ? "Working…"
+                : `Create all ${pendingRouteCount} route(s)`}
+            </button>
+          )}
           {canEdit && (
             <button
               className="msb-btn secondary small"
@@ -1402,6 +1572,18 @@ const ManagedServiceBrief = ({
       <div className="msb-section">
         <div className="msb-section-head">
           <h3>Employee Roster &amp; Passes</h3>
+          {partnerCanOperate && pendingEmployeeCount > 0 && (
+            <button
+              className="msb-btn primary small"
+              onClick={handleBulkCreateEmployees}
+              disabled={bulkBusy}
+              title="Create all pending roster employees (invitations sent later)"
+            >
+              {bulkBusy
+                ? "Working…"
+                : `Create all ${pendingEmployeeCount} employee(s)`}
+            </button>
+          )}
           {canEdit && (
             <div className="msb-roster-actions">
               <button
@@ -1781,6 +1963,71 @@ const ManagedServiceBrief = ({
           onClose={() => setPicker(null)}
           onSave={handlePickerSave}
         />
+      )}
+
+      {/* Partner vehicle picker for bulk route creation */}
+      {vehiclePickerOpen && (
+        <div
+          className="msb-vpicker-overlay"
+          onClick={() => !bulkBusy && setVehiclePickerOpen(false)}
+        >
+          <div className="msb-vpicker" onClick={(e) => e.stopPropagation()}>
+            <h3>Create all routes on a vehicle</h3>
+            <p className="msb-vpicker-hint">
+              Every pending brief route will be created against the vehicle you
+              pick and marked fulfilled for the client. You can reassign
+              individual routes later from Vehicles &amp; Routes.
+            </p>
+            {vehiclesLoading ? (
+              <p className="msb-empty">Loading assigned vehicles…</p>
+            ) : assignedVehicles.length === 0 ? (
+              <p className="msb-empty">
+                No vehicles are assigned to this contract yet. Assign a vehicle
+                first, then create routes from the brief.
+              </p>
+            ) : (
+              <div className="msb-vpicker-list">
+                {assignedVehicles.map((v) => (
+                  <label
+                    key={v.id}
+                    className={`msb-vpicker-item ${selectedVehicleId === v.id ? "selected" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="bulk-vehicle"
+                      value={v.id}
+                      checked={selectedVehicleId === v.id}
+                      onChange={() => setSelectedVehicleId(v.id)}
+                    />
+                    <span>
+                      <strong>{v.label}</strong>
+                      {v.registration ? ` · ${v.registration}` : ""}
+                      {v.driverName ? ` · Driver: ${v.driverName}` : ""}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="msb-vpicker-actions">
+              <button
+                className="msb-btn secondary"
+                onClick={() => setVehiclePickerOpen(false)}
+                disabled={bulkBusy}
+              >
+                Cancel
+              </button>
+              <button
+                className="msb-btn primary"
+                onClick={handleBulkCreateRoutes}
+                disabled={bulkBusy || !selectedVehicleId}
+              >
+                {bulkBusy
+                  ? "Creating…"
+                  : `Create ${pendingRouteCount} route(s)`}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

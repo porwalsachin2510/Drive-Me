@@ -15,6 +15,7 @@ import {
     assignVehicles,
     getAssignedVehiclesForContract,
     assignRouteToVehicle,
+    bulkCreateRoutesFromBrief,
     assignDriverOrFuelToVehicle,
     getContractRoutes,
     getVehicleRoutes,
@@ -118,6 +119,9 @@ router.post("/assign-driver-fuel/:contractId/:assignedVehicleId", verifyToken, r
 
 // Assign route to vehicle
 router.post("/assign-route/:contractId/:assignedVehicleId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, assignRouteToVehicle)
+
+// Bulk-create all pending brief route requests on one vehicle (managed service)
+router.post("/bulk-assign-routes/:contractId/:assignedVehicleId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, bulkCreateRoutesFromBrief)
 
 // Update/Change driver assigned by Corporate
 router.put("/update-corporate-driver/:contractId/:assignedVehicleId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, updateCorporateDriver)
