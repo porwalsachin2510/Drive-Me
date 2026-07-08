@@ -64,7 +64,7 @@ export const computeRouteSeatAvailability = async (routeOrId) => {
         : await B2CPartnerRoute.findById(routeOrId);
 
     if (!route) {
-        return { seatAvailability: {}, routeAvailableSeats: 0, routeTotalSeats: 0, isFull: true };
+        return { seatAvailability: {}, routeAvailableSeats: 0, routeTotalSeats: 0, isFull: true, legs: [] };
     }
 
     const schedules = await B2CPartnerSchedule.find({ routeId: route._id });
@@ -171,5 +171,112 @@ export const computeRouteSeatAvailability = async (routeOrId) => {
         routeAvailableSeats,
         routeTotalSeats,
         isFull: routeAvailableSeats <= 0,
+        // Expose the canonical leg list so callers (e.g. subscription renewal)
+        // can resolve the exact leg(s) a specific pass occupies.
+        legs,
+    };
+};
+
+// A paid online pass (STRIPE/TAP/CARD) only occupies a seat once its payment
+// status flips to PAID; wallet/cash passes hold their seat immediately.
+const passIsPaidAndHoldingSeat = (pass) => {
+    const onlineUnpaid =
+        ["STRIPE", "TAP", "CARD"].includes(pass.paymentMethod) &&
+        pass.paymentStatus !== "PAID";
+    if (onlineUnpaid) return false;
+    const activeStatus = ACTIVE_PASS_STATUSES.includes(pass.status);
+    const notExpired = new Date(pass.endDate) >= new Date();
+    return activeStatus && notExpired;
+};
+
+/**
+ * Compute seat availability for the specific trip-leg(s) a monthly pass occupies.
+ *
+ * This is the authoritative check used by the subscription renewal flow to tell a
+ * commuter — BEFORE they pay — whether they will actually get a seat when they
+ * renew. Key nuance: a pass that is still ACTIVE (not yet expired) already holds
+ * its seat, so its renewal simply extends that seat in place and can never be
+ * blocked by a full vehicle. Only a pass that has LAPSED (expired / cancelled)
+ * must re-acquire a seat, and therefore can be blocked when the leg is full.
+ *
+ * @param {string|object} passOrId - a B2CMonthlyPass document or its id
+ * @returns {Promise<null|{
+ *   passId: string, routeLabel: string, holdsSeat: boolean, canRenew: boolean,
+ *   legs: Array<{direction:string,time:string,availableSeats:number,totalSeats:number,bookedSeats:number,isFull:boolean}>,
+ *   availableSeats: number, totalSeats: number, isFull: boolean
+ * }>}
+ */
+export const computePassSeatAvailability = async (passOrId) => {
+    const pass = passOrId && passOrId._id
+        ? passOrId
+        : await B2CMonthlyPass.findById(passOrId);
+    if (!pass) return null;
+
+    const route = await B2CPartnerRoute.findById(pass.routeId);
+    if (!route) return null;
+
+    const { seatAvailability, legs } = await computeRouteSeatAvailability(route);
+
+    const holdsSeat = passIsPaidAndHoldingSeat(pass);
+
+    // Resolve the leg(s) this pass travels on. Same matching rules as the booking
+    // modal: match by time, disambiguating shared times by preferred direction.
+    const findLeg = (time, preferredDirection) => {
+        if (!time) return null;
+        const candidates = legs.filter((l) => l.time === time);
+        if (candidates.length === 0) return null;
+        if (candidates.length === 1) return candidates[0];
+        return candidates.find((l) => l.direction === preferredDirection) || candidates[0];
+    };
+
+    const neededLegs = [];
+    const outboundLeg = findLeg(pass.outboundTripTime, "outbound");
+    if (outboundLeg) neededLegs.push(outboundLeg);
+    if (pass.passType === "ROUND_TRIP" && pass.returnTripTime) {
+        const returnLeg = findLeg(pass.returnTripTime, "return");
+        if (returnLeg) neededLegs.push(returnLeg);
+    }
+
+    // Build a per-leg availability report. When a leg cannot be resolved from the
+    // schedule we fall back to route-level capacity so we never falsely block.
+    const legReports = neededLegs.map((leg) => {
+        const info = seatAvailability[leg.key] || {
+            availableSeats: leg.cap,
+            totalSeats: leg.cap,
+            bookedSeats: 0,
+        };
+        return {
+            direction: leg.direction,
+            time: leg.time,
+            availableSeats: info.availableSeats,
+            totalSeats: info.totalSeats,
+            bookedSeats: info.bookedSeats,
+            isFull: info.availableSeats <= 0,
+        };
+    });
+
+    // The most constrained leg determines whether the commuter can travel.
+    const minAvailable = legReports.length
+        ? Math.min(...legReports.map((l) => l.availableSeats))
+        : 0;
+    const maxTotal = legReports.length
+        ? Math.max(...legReports.map((l) => l.totalSeats))
+        : (route.totalSeats || 0);
+
+    const anyLegFull = legReports.some((l) => l.isFull);
+
+    // A commuter can renew when they already hold their seat (active pass) OR when
+    // every leg they need still has at least one free seat.
+    const canRenew = holdsSeat || (legReports.length > 0 ? !anyLegFull : true);
+
+    return {
+        passId: String(pass._id),
+        routeLabel: `${route.fromLocation} -> ${route.toLocation}`,
+        holdsSeat,
+        canRenew,
+        legs: legReports,
+        availableSeats: minAvailable,
+        totalSeats: maxTotal,
+        isFull: anyLegFull,
     };
 };

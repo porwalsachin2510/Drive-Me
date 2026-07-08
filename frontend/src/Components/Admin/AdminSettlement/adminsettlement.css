@@ -1,11 +1,11 @@
-.admin-settlement {
+.drivemego-st-admin-settlement {
     background: #f8f9fa;
     border-radius: 8px;
     padding: 20px;
     min-height: 600px;
 }
 
-.settlement-header {
+.drivemego-st-settlement-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -16,14 +16,14 @@
     gap: 15px;
 }
 
-.settlement-header h2 {
+.drivemego-st-settlement-header h2 {
     font-size: 28px;
     font-weight: 600;
     color: #1f2937;
     margin: 0;
 }
 
-.settlement-subtitle {
+.drivemego-st-settlement-subtitle {
     font-size: 13px;
     color: #6b7280;
     margin: 6px 0 0 0;
@@ -32,27 +32,27 @@
 }
 
 /* Filters */
-.settlement-filters {
+.drivemego-st-settlement-filters {
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
     margin-bottom: 24px;
 }
 
-.filter-group {
+.drivemego-st-filter-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.filter-group label {
+.drivemego-st-filter-group label {
     font-size: 11px;
     font-weight: 600;
     color: #6b7280;
     text-transform: uppercase;
 }
 
-.filter-group select {
+.drivemego-st-filter-group select {
     padding: 8px 12px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
@@ -62,19 +62,19 @@
     cursor: pointer;
 }
 
-.filter-group select:focus {
+.drivemego-st-filter-group select:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.header-actions {
+.drivemego-st-header-actions {
     display: flex;
     gap: 10px;
 }
 
-.btn-calculate,
-.btn-auto-debit {
+.drivemego-st-btn-calculate,
+.drivemego-st-btn-auto-debit {
     padding: 10px 16px;
     border: none;
     border-radius: 6px;
@@ -84,31 +84,31 @@
     transition: all 0.2s ease;
 }
 
-.btn-calculate {
+.drivemego-st-btn-calculate {
     background: #3b82f6;
     color: white;
 }
 
-.btn-calculate:hover {
+.drivemego-st-btn-calculate:hover {
     background: #2563eb;
 }
 
-.btn-auto-debit {
+.drivemego-st-btn-auto-debit {
     background: #8b5cf6;
     color: white;
 }
 
-.btn-auto-debit:hover {
+.drivemego-st-btn-auto-debit:hover {
     background: #7c3aed;
 }
 
-.btn-calculate:disabled,
-.btn-auto-debit:disabled {
+.drivemego-st-btn-calculate:disabled,
+.drivemego-st-btn-auto-debit:disabled {
     background: #d1d5db;
     cursor: not-allowed;
 }
 
-.error-message {
+.drivemego-st-error-message {
     background: #fee2e2;
     color: #991b1b;
     padding: 12px 16px;
@@ -117,7 +117,7 @@
     border-left: 4px solid #dc2626;
 }
 
-.settlement-loading {
+.drivemego-st-settlement-loading {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -127,14 +127,14 @@
 }
 
 /* Stats */
-.settlement-stats {
+.drivemego-st-settlement-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
     margin-bottom: 30px;
 }
 
-.stat-card {
+.drivemego-st-stat-card {
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
@@ -145,19 +145,26 @@
     text-align: center;
 }
 
-.stat-card.pending {
+.drivemego-st-stat-card.drivemego-st-pending {
     border-left: 4px solid #f59e0b;
 }
 
-.stat-card.commission {
+.drivemego-st-stat-card.drivemego-st-commission {
     border-left: 4px solid #ef4444;
 }
 
-.stat-card.partners {
+.drivemego-st-stat-card.drivemego-st-partners {
     border-left: 4px solid #10b981;
 }
 
-.stat-label {
+/* Corporate negotiation-commission breakdown row */
+.drivemego-st-settlement-stats-corporate {
+    margin-top: -10px;
+    padding-top: 18px;
+    border-top: 1px dashed #e5e7eb;
+}
+
+.drivemego-st-stat-label {
     font-size: 12px;
     color: #6b7280;
     font-weight: 500;
@@ -165,14 +172,14 @@
     margin-bottom: 8px;
 }
 
-.stat-value {
+.drivemego-st-stat-value {
     font-size: 24px;
     font-weight: 700;
     color: #1f2937;
 }
 
 /* No settlements */
-.no-settlements {
+.drivemego-st-no-settlements {
     text-align: center;
     padding: 60px 20px;
     background: white;
@@ -180,41 +187,41 @@
     border: 2px dashed #d1d5db;
 }
 
-.no-settlements p {
+.drivemego-st-no-settlements p {
     font-size: 16px;
     color: #6b7280;
     margin: 0;
 }
 
-.no-settlements-hint {
+.drivemego-st-no-settlements-hint {
     font-size: 13px !important;
     color: #9ca3af !important;
     margin-top: 8px !important;
 }
 
 /* Partner cell */
-.partner-name {
+.drivemego-st-partner-name {
     font-weight: 600;
     color: #1f2937;
 }
 
-.partner-email {
+.drivemego-st-partner-email {
     font-size: 11px;
     color: #9ca3af;
     margin-top: 2px;
 }
 
 /* Amount variants */
-.amount.neutral {
+.drivemego-st-amount.drivemego-st-neutral {
     color: #4b5563;
 }
 
-.amount.debt {
+.drivemego-st-amount.drivemego-st-debt {
     color: #dc2626;
 }
 
 /* Status badges */
-.status-badge {
+.drivemego-st-status-badge {
     display: inline-block;
     padding: 4px 8px;
     border-radius: 4px;
@@ -223,34 +230,34 @@
     text-transform: capitalize;
 }
 
-.status-calculated {
+.drivemego-st-status-calculated {
     background: #e0e7ff;
     color: #3730a3;
 }
 
-.status-pending_payout {
+.drivemego-st-status-pending_payout {
     background: #fef3c7;
     color: #92400e;
 }
 
-.status-settled {
+.drivemego-st-status-settled {
     background: #d1fae5;
     color: #065f46;
 }
 
-.status-debt_outstanding {
+.drivemego-st-status-debt_outstanding {
     background: #fee2e2;
     color: #991b1b;
 }
 
-.settled-text {
+.drivemego-st-settled-text {
     font-size: 12px;
     font-weight: 600;
     color: #059669;
 }
 
 /* Settlements Table */
-.settlements-table {
+.drivemego-st-settlements-table {
     background: white;
     border-radius: 8px;
     border: 1px solid #e5e7eb;
@@ -258,17 +265,17 @@
     margin-bottom: 30px;
 }
 
-table {
+.drivemego-st-settlements-table table {
     width: 100%;
     border-collapse: collapse;
 }
 
-thead tr {
+.drivemego-st-settlements-table thead tr {
     background: #f9fafb;
     border-bottom: 2px solid #e5e7eb;
 }
 
-th {
+.drivemego-st-settlements-table th {
     padding: 12px 16px;
     text-align: left;
     font-size: 12px;
@@ -277,22 +284,22 @@ th {
     text-transform: uppercase;
 }
 
-tbody tr {
+.drivemego-st-settlements-table tbody tr {
     border-bottom: 1px solid #e5e7eb;
     transition: background 0.2s ease;
 }
 
-tbody tr:hover {
+.drivemego-st-settlements-table tbody tr:hover {
     background: #f9fafb;
 }
 
-td {
+.drivemego-st-settlements-table td {
     padding: 12px 16px;
     font-size: 13px;
     color: #1f2937;
 }
 
-.badge {
+.drivemego-st-badge {
     display: inline-block;
     background: #dbeafe;
     color: #1e40af;
@@ -302,21 +309,21 @@ td {
     font-weight: 600;
 }
 
-.amount {
+.drivemego-st-amount {
     font-weight: 600;
     color: #059669;
 }
 
-.amount.pending {
+.drivemego-st-amount.drivemego-st-pending {
     color: #d97706;
 }
 
-.date {
+.drivemego-st-date {
     color: #9ca3af;
     font-size: 12px;
 }
 
-.btn-payout {
+.drivemego-st-btn-payout {
     padding: 6px 12px;
     background: #10b981;
     color: white;
@@ -328,17 +335,17 @@ td {
     transition: all 0.2s ease;
 }
 
-.btn-payout:hover:not(:disabled) {
+.drivemego-st-btn-payout:hover:not(:disabled) {
     background: #059669;
 }
 
-.btn-payout:disabled {
+.drivemego-st-btn-payout:disabled {
     background: #d1d5db;
     cursor: not-allowed;
 }
 
 /* Payout Modal */
-.payout-modal-overlay {
+.drivemego-st-payout-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -351,7 +358,7 @@ td {
     z-index: 1000;
 }
 
-.payout-modal {
+.drivemego-st-payout-modal {
     background: white;
     border-radius: 8px;
     padding: 30px;
@@ -360,22 +367,22 @@ td {
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-.payout-modal h3 {
+.drivemego-st-payout-modal h3 {
     font-size: 20px;
     font-weight: 600;
     color: #1f2937;
     margin: 0 0 20px 0;
 }
 
-.modal-content {
+.drivemego-st-modal-content {
     margin-bottom: 20px;
 }
 
-.form-group {
+.drivemego-st-form-group {
     margin-bottom: 16px;
 }
 
-.form-group label {
+.drivemego-st-form-group label {
     display: block;
     font-size: 13px;
     font-weight: 600;
@@ -383,8 +390,8 @@ td {
     margin-bottom: 8px;
 }
 
-.form-group input,
-.form-group select {
+.drivemego-st-form-group input,
+.drivemego-st-form-group select {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid #d1d5db;
@@ -393,27 +400,27 @@ td {
     font-family: inherit;
 }
 
-.form-group input:focus,
-.form-group select:focus {
+.drivemego-st-form-group input:focus,
+.drivemego-st-form-group select:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.info-text {
+.drivemego-st-info-text {
     font-size: 12px;
     color: #6b7280;
     margin: 0;
 }
 
-.modal-actions {
+.drivemego-st-modal-actions {
     display: flex;
     gap: 12px;
     justify-content: flex-end;
 }
 
-.btn-cancel,
-.btn-process-payout {
+.drivemego-st-btn-cancel,
+.drivemego-st-btn-process-payout {
     padding: 10px 20px;
     border: none;
     border-radius: 6px;
@@ -423,31 +430,31 @@ td {
     transition: all 0.2s ease;
 }
 
-.btn-cancel {
+.drivemego-st-btn-cancel {
     background: #e5e7eb;
     color: #1f2937;
 }
 
-.btn-cancel:hover {
+.drivemego-st-btn-cancel:hover {
     background: #d1d5db;
 }
 
-.btn-process-payout {
+.drivemego-st-btn-process-payout {
     background: #10b981;
     color: white;
 }
 
-.btn-process-payout:hover:not(:disabled) {
+.drivemego-st-btn-process-payout:hover:not(:disabled) {
     background: #059669;
 }
 
-.btn-process-payout:disabled {
+.drivemego-st-btn-process-payout:disabled {
     background: #d1d5db;
     cursor: not-allowed;
 }
 
 /* Pagination */
-.pagination {
+.drivemego-st-pagination {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -458,7 +465,7 @@ td {
     border: 1px solid #e5e7eb;
 }
 
-.pagination button {
+.drivemego-st-pagination button {
     padding: 8px 16px;
     border: 1px solid #d1d5db;
     background: white;
@@ -469,17 +476,17 @@ td {
     transition: all 0.2s ease;
 }
 
-.pagination button:hover:not(:disabled) {
+.drivemego-st-pagination button:hover:not(:disabled) {
     background: #f3f4f6;
     border-color: #3b82f6;
 }
 
-.pagination button:disabled {
+.drivemego-st-pagination button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.pagination span {
+.drivemego-st-pagination span {
     font-size: 14px;
     color: #6b7280;
     font-weight: 500;
@@ -487,41 +494,41 @@ td {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .settlement-header {
+    .drivemego-st-settlement-header {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .header-actions {
+    .drivemego-st-header-actions {
         flex-direction: column;
         width: 100%;
     }
 
-    .header-actions button {
+    .drivemego-st-header-actions button {
         width: 100%;
     }
 
-    .settlement-stats {
+    .drivemego-st-settlement-stats {
         grid-template-columns: 1fr 1fr;
     }
 
-    .settlements-table {
+    .drivemego-st-settlements-table {
         overflow-x: auto;
     }
 
-    th,
-    td {
+    .drivemego-st-settlements-table th,
+    .drivemego-st-settlements-table td {
         padding: 8px 12px;
         font-size: 12px;
     }
 }
 
 @media (max-width: 480px) {
-    .settlement-stats {
+    .drivemego-st-settlement-stats {
         grid-template-columns: 1fr;
     }
 
-    .payout-modal {
+    .drivemego-st-payout-modal {
         width: 95%;
         padding: 20px;
     }

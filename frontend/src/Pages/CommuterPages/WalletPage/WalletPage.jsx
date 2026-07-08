@@ -1,8 +1,9 @@
 /* eslint-disable no-unused-vars */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import {
   getWalletBalance,
   getWalletTransactions,
@@ -49,6 +50,20 @@ function WalletPage() {
     dispatch(getWalletBalance());
     dispatch(getWalletTransactions({ page: 1, limit: 100 }));
   }, [dispatch]);
+
+  // Live auto-refresh: keep balance + transactions current without manual reload.
+  const refreshWallet = useCallback(
+    ({ silent } = {}) => {
+      dispatch(getWalletBalance({ silent }));
+      dispatch(getWalletTransactions({ page: 1, limit: 100, silent }));
+    },
+    [dispatch],
+  );
+
+  useAutoRefresh(refreshWallet, {
+    interval: 20000,
+    socketEvents: ["wallet-activity", "new-notification"],
+  });
 
   const handleAddFunds = () => {
     if (!addFundsAmount || parseFloat(addFundsAmount) <= 0) {

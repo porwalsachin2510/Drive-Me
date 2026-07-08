@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import api from "../../../utils/api";
 import "./CorporateEmployeeManagement.css";
 
@@ -115,9 +116,9 @@ function CorporateEmployeeManagement() {
     }
   };
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = async ({ silent } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const params = {
         page: currentPage,
         limit: 10,
@@ -136,11 +137,24 @@ function CorporateEmployeeManagement() {
       );
     } catch (error) {
       console.error("Error fetching employees:", error);
-      setEmployees([]);
+      if (!silent) setEmployees([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  // Live auto-refresh: keep the employee list current in the background.
+  const refreshEmployees = useCallback(
+    ({ silent } = {}) => fetchEmployees({ silent }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentPage, searchTerm, filterStatus],
+  );
+
+  useAutoRefresh(refreshEmployees, {
+    interval: 30000,
+    socketEvents: ["new-notification"],
+    deps: [currentPage, searchTerm, filterStatus],
+  });
 
   const fetchAvailableRoutes = async () => {
     try {

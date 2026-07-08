@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getPassengerBookings } from "../../../Redux/slices/bookingSlice";
 import { useSocket } from "../../../hooks/useSocket";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import { useLocale } from "../../../hooks/useLocale";
 import DailyTripsInBooking from "../../../Components/DailyTripsInBooking/DailyTripsInBooking";
 import commuterBookingAPI from "../../../services/commuterBookingAPI";
@@ -515,21 +516,33 @@ const CommuterMyBookingsPage = () => {
     }
   }, [dispatch, auth.user, filterStatus]);
 
-  // Poll bookings every 30 seconds to reduce server load
-  useEffect(() => {
-    if (auth.user) {
-      const pollingInterval = setInterval(() => {
-        dispatch(
-          getPassengerBookings({
-            status: filterStatus !== "all" ? filterStatus : undefined,
-            silent: true,
-          }),
-        );
-      }, 30000);
+  // Live auto-refresh: silent background polling + instant refetch on relevant
+  // socket events + refetch when the tab regains focus. Replaces manual polling.
+  const refreshBookings = useCallback(
+    ({ silent } = {}) => {
+      if (!auth.user) return;
+      dispatch(
+        getPassengerBookings({
+          status: filterStatus !== "all" ? filterStatus : undefined,
+          silent,
+        }),
+      );
+    },
+    [dispatch, auth.user, filterStatus],
+  );
 
-      return () => clearInterval(pollingInterval);
-    }
-  }, [dispatch, auth.user, filterStatus]);
+  useAutoRefresh(refreshBookings, {
+    interval: 20000,
+    enabled: !!auth.user,
+    socketEvents: [
+      "booking-accepted",
+      "booking-rejected",
+      "trip-started",
+      "trip-completed",
+      "new-notification",
+    ],
+    deps: [filterStatus],
+  });
 
   // Socket.io connection and enhanced location tracking
   useEffect(() => {

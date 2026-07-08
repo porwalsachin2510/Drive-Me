@@ -12,6 +12,7 @@ import PassengerDetailsModal from "../PassengerDetailsModal/PassengerDetailsModa
 import WalletRechargeModal from "../../WalletRechargeModal/WalletRechargeModal";
 import api from "../../../utils/api";
 import { useSocket } from "../../../hooks/useSocket";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./BookingTable.css";
 
 /**
@@ -59,6 +60,28 @@ function BookingTable() {
       fetchWalletBalance();
     }
   }, [dispatch, user]);
+
+  // Live auto-refresh: silent background polling + instant refetch on booking
+  // socket events keeps the table current without a manual page refresh.
+  useAutoRefresh(
+    ({ silent } = {}) => {
+      if (user?.role === "B2C_PARTNER") {
+        dispatch(getPartnerBookings({ status: "ALL", silent }));
+        fetchWalletBalance();
+      }
+    },
+    {
+      interval: 20000,
+      enabled: user?.role === "B2C_PARTNER",
+      socketEvents: [
+        "passenger-booked",
+        "passenger-cancelled",
+        "booking-accepted",
+        "booking-rejected",
+        "new-notification",
+      ],
+    },
+  );
 
   // Socket listener for real-time updates (e.g., booking cancelled by commuter)
   useEffect(() => {

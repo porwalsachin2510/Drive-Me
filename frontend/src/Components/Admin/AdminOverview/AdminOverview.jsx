@@ -1,6 +1,7 @@
 import { getActiveCurrency } from "../../../config/localeConfig";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./AdminOverview.css";
 import AdminStatsCards from "../AdminStatsCards/AdminStatsCards";
 import AdminRevenueChart from "../AdminRevenueChart/AdminRevenueChart";
@@ -46,10 +47,29 @@ function AdminOverview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [country]);
 
-  const fetchDashboardData = async () => {
+  // Live auto-refresh: keep platform KPIs + recent activity current in the
+  // background without the admin needing to reload the page.
+  const refreshDashboard = useCallback(
+    ({ silent } = {}) => {
+      fetchDashboardData({ silent });
+      fetchRecentActivity();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [country],
+  );
+
+  useAutoRefresh(refreshDashboard, {
+    interval: 30000,
+    socketEvents: ["new-notification"],
+    deps: [country],
+  });
+
+  const fetchDashboardData = async ({ silent } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
 
       // Fetch dashboard stats scoped to the selected country so revenue, wallet
       // balance and currency all reflect the chosen market.
@@ -86,25 +106,29 @@ function AdminOverview() {
       setRecentActivity(activityResponse.data.recentActivity || []);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-      setError("Failed to load dashboard data");
+      // On a silent background refresh, keep the last good data instead of
+      // flashing an error / zeros to the admin.
+      if (!silent) {
+        setError("Failed to load dashboard data");
 
-      // Set fallback data only on error
-      setStats({
-        totalUsers: 0,
-        totalCorporates: 0,
-        totalB2CPartners: 0,
-        totalB2BPartners: 0,
-        totalBookings: 0,
-        totalRevenue: 0,
-        activeTrips: 0,
-        pendingPayments: 0,
-        supportTickets: 0,
-        activeContracts: 0,
-        totalDrivers: 0,
-        suspendedUsers: 0,
-      });
+        // Set fallback data only on error
+        setStats({
+          totalUsers: 0,
+          totalCorporates: 0,
+          totalB2CPartners: 0,
+          totalB2BPartners: 0,
+          totalBookings: 0,
+          totalRevenue: 0,
+          activeTrips: 0,
+          pendingPayments: 0,
+          supportTickets: 0,
+          activeContracts: 0,
+          totalDrivers: 0,
+          suspendedUsers: 0,
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 

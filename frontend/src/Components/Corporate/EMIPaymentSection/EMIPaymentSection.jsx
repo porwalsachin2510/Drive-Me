@@ -6,6 +6,7 @@ import {
   payEMIInstallment,
 } from "../../../Redux/slices/emiPaymentSlice";
 import api from "../../../utils/api";
+import CashPaymentDetails from "../../CashPaymentDetails/CashPaymentDetails";
 import "./EMIPaymentSection.css";
 
 const EMIPaymentSection = ({ contract, onRefresh }) => {
@@ -389,6 +390,23 @@ const EMIPaymentSection = ({ contract, onRefresh }) => {
                             Online payment methods are currently unavailable.
                             Please use cash payment.
                           </span>
+                        </div>
+                      )}
+
+                      {/* Cash selected: show admin bank/office details so the
+                          payer knows where to pay before admin verification. */}
+                      {selectedPaymentMethod === "CASH" && (
+                        <div className="emi-cash-details">
+                          <CashPaymentDetails
+                            title="Where to Pay (Cash Installment)"
+                            amount={
+                              selectedInstallment
+                                ? (selectedInstallment.totalDue ??
+                                  selectedInstallment.amount)
+                                : undefined
+                            }
+                            currency={currency}
+                          />
                         </div>
                       )}
                     </>

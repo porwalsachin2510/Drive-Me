@@ -20,11 +20,33 @@ const MONTHS = [
 ];
 
 const STATUS_LABELS = {
-  CALCULATED: "Calculated",
-  PENDING_PAYOUT: "Pending Payout",
-  SETTLED: "Settled",
+  CALCULATED: "Reconciled",
+  PENDING_PAYOUT: "Reconciled",
+  SETTLED: "Reconciled",
   DEBT_OUTSTANDING: "Debt Outstanding",
 };
+
+// Friendly role names + the revenue source each account type is settled from.
+const ROLE_LABELS = {
+  B2C_PARTNER: "B2C Partner",
+  B2B_PARTNER: "B2B Partner",
+  CORPORATE: "Corporate",
+};
+
+// B2C earns per passenger ride; B2B earns per contract/EMI payment; a Corporate
+// is billed per completed negotiation. The count column means different things
+// per role, so label it accordingly.
+const activityLabel = (role, count) => {
+  const n = count || 0;
+  if (role === "B2B_PARTNER") return `${n} ${n === 1 ? "payment" : "payments"}`;
+  if (role === "CORPORATE")
+    return `${n} ${n === 1 ? "negotiation" : "negotiations"}`;
+  return `${n} ${n === 1 ? "ride" : "rides"}`;
+};
+
+// Is this row a corporate negotiation-commission receivable (vs a partner payout)?
+const isCorporateReceivable = (s) =>
+  s?.statementType === "CORPORATE_RECEIVABLE" || s?.role === "CORPORATE";
 
 function AdminSettlement() {
   const now = new Date();
@@ -35,6 +57,11 @@ function AdminSettlement() {
     totalCommissionDebt: 0,
     totalGrossEarnings: 0,
     activePartners: 0,
+    activeCorporates: 0,
+    partnerCommissionCollected: 0,
+    partnerCommissionDebt: 0,
+    corporateCommissionCollected: 0,
+    corporateReceivableOutstanding: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,16 +74,11 @@ function AdminSettlement() {
   const activeCurrency = useSelector((state) => state.locale?.currency);
   const [displayCurrency, setDisplayCurrency] = useState(getActiveCurrency());
 
-  const [selectedPayout, setSelectedPayout] = useState(null);
-  const [payoutAmount, setPayoutAmount] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [iban, setIban] = useState("");
-  const [accountHolderName, setAccountHolderName] = useState("");
-  const [payoutNotes, setPayoutNotes] = useState("");
-
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   const [filterStatus, setFilterStatus] = useState("all");
+  // "all" | "PARTNER_PAYOUT" | "CORPORATE_RECEIVABLE"
+  const [filterType, setFilterType] = useState("all");
 
   const [pagination, setPagination] = useState({
     page: 1,
@@ -73,6 +95,7 @@ function AdminSettlement() {
         limit: String(pagination.limit),
       });
       if (filterStatus !== "all") params.append("status", filterStatus);
+      if (filterType !== "all") params.append("statementType", filterType);
       if (filterMonth) params.append("month", String(filterMonth));
       if (filterYear) params.append("year", String(filterYear));
 
@@ -103,6 +126,7 @@ function AdminSettlement() {
     pagination.page,
     pagination.limit,
     filterStatus,
+    filterType,
     filterMonth,
     filterYear,
     activeCurrency,
@@ -134,7 +158,7 @@ function AdminSettlement() {
   const collectDebt = async () => {
     if (
       !window.confirm(
-        "Notify all partners with outstanding commission balances to settle?",
+        "Recover outstanding commission from partners who have available wallet funds, and notify the rest to top up. Continue?",
       )
     ) {
       return;
@@ -154,45 +178,6 @@ function AdminSettlement() {
     }
   };
 
-  const openPayout = (settlement) => {
-    setSelectedPayout(settlement);
-    setPayoutAmount(String(settlement.netPayable || 0));
-    setAccountHolderName(settlement.partnerName || "");
-    setBankName("");
-    setIban("");
-    setPayoutNotes("");
-  };
-
-  const submitPayout = async () => {
-    if (!payoutAmount || Number(payoutAmount) <= 0) {
-      alert("Please enter a valid payout amount");
-      return;
-    }
-    try {
-      setActionLoading(true);
-      const response = await api.post(
-        `/settlement/payout/${selectedPayout._id}`,
-        {
-          amount: Number(payoutAmount),
-          bankName,
-          iban,
-          accountHolderName,
-          notes: payoutNotes,
-        },
-      );
-      if (response.data.success) {
-        alert("Payout processed successfully!");
-        setSelectedPayout(null);
-        fetchSettlements();
-      }
-    } catch (err) {
-      console.error("Error processing payout:", err);
-      alert(err.response?.data?.message || "Failed to process payout");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   // KWD/BHD/OMR are 3-decimal currencies; everything else uses 2.
   const decimalsFor = (c) =>
     ["KWD", "BHD", "OMR"].includes((c || "").toUpperCase()) ? 3 : 2;
@@ -202,38 +187,35 @@ function AdminSettlement() {
   const money = (n) =>
     `${Number(n || 0).toFixed(decimalsFor(displayCurrency))} ${displayCurrency}`;
 
-  // Format an amount in its own native currency (used for payout actions, which
-  // are processed against the partner's wallet in its native currency).
-  const fmtNative = (n, c) => {
-    const cur = c || displayCurrency;
-    return `${Number(n || 0).toFixed(decimalsFor(cur))} ${cur}`;
-  };
-
   const yearOptions = [];
   for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--)
     yearOptions.push(y);
 
   return (
-    <div className="admin-settlement">
-      <div className="settlement-header">
+    <div className="drivemego-st-admin-settlement">
+      <div className="drivemego-st-settlement-header">
         <div>
           <h2>Settlement Management</h2>
-          <p className="settlement-subtitle">
-            Monthly reconciliation statements for partners. Commission is
-            collected in real time at booking; this is the payout &amp; debt
-            ledger.
+          <p className="drivemego-st-settlement-subtitle">
+            Monthly reconciliation statements &mdash; B2C partners from
+            passenger rides, B2B partners from contract &amp; EMI payments, and
+            Corporate clients for the negotiation commission they owe the
+            platform. Partner commission is collected in real time (payouts are
+            handled in the Finance tab); corporate negotiation commission is
+            collected when the client pays the negotiated contract. This is a
+            read-only earnings statement plus a debt / receivable ledger.
           </p>
         </div>
-        <div className="header-actions">
+        <div className="drivemego-st-header-actions">
           <button
-            className="btn-calculate"
+            className="drivemego-st-btn-calculate"
             onClick={calculateMonthlySettlement}
             disabled={actionLoading}
           >
             {actionLoading ? "Working..." : "Calculate Monthly Settlement"}
           </button>
           <button
-            className="btn-auto-debit"
+            className="drivemego-st-btn-auto-debit"
             onClick={collectDebt}
             disabled={actionLoading}
           >
@@ -243,8 +225,8 @@ function AdminSettlement() {
       </div>
 
       {/* Filters */}
-      <div className="settlement-filters">
-        <div className="filter-group">
+      <div className="drivemego-st-settlement-filters">
+        <div className="drivemego-st-filter-group">
           <label>Month</label>
           <select
             value={filterMonth}
@@ -260,7 +242,7 @@ function AdminSettlement() {
             ))}
           </select>
         </div>
-        <div className="filter-group">
+        <div className="drivemego-st-filter-group">
           <label>Year</label>
           <select
             value={filterYear}
@@ -276,7 +258,7 @@ function AdminSettlement() {
             ))}
           </select>
         </div>
-        <div className="filter-group">
+        <div className="drivemego-st-filter-group">
           <label>Status</label>
           <select
             value={filterStatus}
@@ -286,110 +268,164 @@ function AdminSettlement() {
             }}
           >
             <option value="all">All</option>
-            <option value="CALCULATED">Calculated</option>
-            <option value="PENDING_PAYOUT">Pending Payout</option>
-            <option value="SETTLED">Settled</option>
+            <option value="CALCULATED">Reconciled</option>
             <option value="DEBT_OUTSTANDING">Debt Outstanding</option>
+          </select>
+        </div>
+        <div className="drivemego-st-filter-group">
+          <label>Account Type</label>
+          <select
+            value={filterType}
+            onChange={(e) => {
+              setFilterType(e.target.value);
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
+          >
+            <option value="all">All Accounts</option>
+            <option value="PARTNER_PAYOUT">Partners (B2C / B2B)</option>
+            <option value="CORPORATE_RECEIVABLE">Corporate Receivables</option>
           </select>
         </div>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && <div className="drivemego-st-error-message">{error}</div>}
 
       {/* Summary Stats */}
-      <div className="settlement-stats">
-        <div className="stat-card">
-          <div className="stat-label">Gross Earnings</div>
-          <div className="stat-value">{money(summary.totalGrossEarnings)}</div>
+      <div className="drivemego-st-settlement-stats">
+        <div className="drivemego-st-stat-card">
+          <div className="drivemego-st-stat-label">Gross Earnings</div>
+          <div className="drivemego-st-stat-value">
+            {money(summary.totalGrossEarnings)}
+          </div>
         </div>
-        <div className="stat-card pending">
-          <div className="stat-label">Pending Payout</div>
-          <div className="stat-value">{money(summary.totalNetPayable)}</div>
+        <div className="drivemego-st-stat-card">
+          <div className="drivemego-st-stat-label">
+            Commission (Platform Revenue)
+          </div>
+          <div className="drivemego-st-stat-value">
+            {money(summary.totalCommissionCollected)}
+          </div>
         </div>
-        <div className="stat-card commission">
-          <div className="stat-label">Commission Debt</div>
-          <div className="stat-value">{money(summary.totalCommissionDebt)}</div>
+        <div className="drivemego-st-stat-card drivemego-st-pending">
+          <div className="drivemego-st-stat-label">Net Earnings</div>
+          <div className="drivemego-st-stat-value">
+            {money(summary.totalNetPayable)}
+          </div>
         </div>
-        <div className="stat-card partners">
-          <div className="stat-label">Partners In Period</div>
-          <div className="stat-value">{summary.activePartners}</div>
+        <div className="drivemego-st-stat-card drivemego-st-commission">
+          <div className="drivemego-st-stat-label">Commission Debt</div>
+          <div className="drivemego-st-stat-value">
+            {money(summary.totalCommissionDebt)}
+          </div>
+        </div>
+        <div className="drivemego-st-stat-card drivemego-st-partners">
+          <div className="drivemego-st-stat-label">Accounts In Period</div>
+          <div className="drivemego-st-stat-value">
+            {(summary.activePartners || 0) + (summary.activeCorporates || 0)}
+          </div>
+        </div>
+      </div>
+
+      {/* Corporate negotiation-commission breakdown */}
+      <div className="drivemego-st-settlement-stats drivemego-st-settlement-stats-corporate">
+        <div className="drivemego-st-stat-card">
+          <div className="drivemego-st-stat-label">
+            Corporate Commission Collected
+          </div>
+          <div className="drivemego-st-stat-value">
+            {money(summary.corporateCommissionCollected)}
+          </div>
+        </div>
+        <div className="drivemego-st-stat-card drivemego-st-commission">
+          <div className="drivemego-st-stat-label">
+            Corporate Receivable Outstanding
+          </div>
+          <div className="drivemego-st-stat-value">
+            {money(summary.corporateReceivableOutstanding)}
+          </div>
+        </div>
+        <div className="drivemego-st-stat-card drivemego-st-partners">
+          <div className="drivemego-st-stat-label">Corporates In Period</div>
+          <div className="drivemego-st-stat-value">
+            {summary.activeCorporates || 0}
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="settlement-loading">Loading settlements...</div>
+        <div className="drivemego-st-settlement-loading">
+          Loading settlements...
+        </div>
       ) : settlements.length === 0 ? (
-        <div className="no-settlements">
+        <div className="drivemego-st-no-settlements">
           <p>No settlements to display.</p>
-          <p className="no-settlements-hint">
+          <p className="drivemego-st-no-settlements-hint">
             Click &quot;Calculate Monthly Settlement&quot; to generate
             statements for the selected period.
           </p>
         </div>
       ) : (
-        <div className="settlements-table">
+        <div className="drivemego-st-settlements-table">
           <table>
             <thead>
               <tr>
-                <th>Partner</th>
+                <th>Account</th>
                 <th>Role</th>
                 <th>Period</th>
-                <th>Gross Earnings</th>
+                <th>Gross / Savings</th>
                 <th>Commission</th>
                 <th>Net Payable</th>
-                <th>Debt</th>
+                <th>Activity</th>
+                <th>Debt / Receivable</th>
                 <th>Status</th>
-                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {settlements.map((s) => (
                 <tr key={s._id}>
                   <td>
-                    <div className="partner-name">{s.partnerName}</div>
-                    <div className="partner-email">{s.partnerEmail}</div>
+                    <div className="drivemego-st-partner-name">
+                      {s.partnerName}
+                    </div>
+                    <div className="drivemego-st-partner-email">
+                      {s.partnerEmail}
+                    </div>
                   </td>
                   <td>
-                    <span className="badge">{s.role}</span>
+                    <span className="drivemego-st-badge">
+                      {ROLE_LABELS[s.role] || s.role}
+                    </span>
                   </td>
-                  <td className="date">
+                  <td className="drivemego-st-date">
                     {MONTHS[s.month - 1]?.slice(0, 3)} {s.year}
                   </td>
-                  <td className="amount">
+                  <td className="drivemego-st-amount">
                     {money(s.displayGrossEarnings ?? s.grossEarnings)}
                   </td>
-                  <td className="amount neutral">
-                    {money(s.displayCommissionCollected ?? s.commissionCollected)}
+                  <td className="drivemego-st-amount drivemego-st-neutral">
+                    {money(
+                      s.displayCommissionCollected ?? s.commissionCollected,
+                    )}
                   </td>
-                  <td className="amount pending">
-                    {money(s.displayNetPayable ?? s.netPayable)}
+                  <td className="drivemego-st-amount drivemego-st-pending">
+                    {isCorporateReceivable(s)
+                      ? "—"
+                      : money(s.displayNetPayable ?? s.netPayable)}
+                  </td>
+                  <td className="drivemego-st-amount drivemego-st-neutral">
+                    {activityLabel(s.role, s.bookingCount)}
                   </td>
                   <td
-                    className={`amount ${s.commissionDebt > 0 ? "debt" : "neutral"}`}
+                    className={`drivemego-st-amount ${s.commissionDebt > 0 ? "drivemego-st-debt" : "drivemego-st-neutral"}`}
                   >
                     {money(s.displayCommissionDebt ?? s.commissionDebt)}
                   </td>
                   <td>
                     <span
-                      className={`status-badge status-${s.status?.toLowerCase()}`}
+                      className={`drivemego-st-status-badge drivemego-st-status-${s.status?.toLowerCase()}`}
                     >
                       {STATUS_LABELS[s.status] || s.status}
                     </span>
-                  </td>
-                  <td>
-                    {s.status === "SETTLED" ? (
-                      <span className="settled-text">
-                        Paid {fmtNative(s.payoutAmount, s.currency)}
-                      </span>
-                    ) : (
-                      <button
-                        className="btn-payout"
-                        onClick={() => openPayout(s)}
-                        disabled={!s.netPayable || s.netPayable <= 0}
-                      >
-                        Payout
-                      </button>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -398,101 +434,9 @@ function AdminSettlement() {
         </div>
       )}
 
-      {/* Payout Modal */}
-      {selectedPayout && (
-        <div
-          className="payout-modal-overlay"
-          onClick={() => setSelectedPayout(null)}
-        >
-          <div className="payout-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Process Payout</h3>
-            <div className="modal-content">
-              <div className="form-group">
-                <label>Partner: {selectedPayout.partnerName}</label>
-                <p className="info-text">
-                  Available for payout:{" "}
-                  {fmtNative(
-                    selectedPayout.netPayable,
-                    selectedPayout.currency || getActiveCurrency(),
-                  )}
-                </p>
-              </div>
-
-              <div className="form-group">
-                <label>Payout Amount</label>
-                <input
-                  type="number"
-                  value={payoutAmount}
-                  onChange={(e) => setPayoutAmount(e.target.value)}
-                  max={selectedPayout.netPayable}
-                  step="0.01"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Account Holder Name</label>
-                <input
-                  type="text"
-                  value={accountHolderName}
-                  onChange={(e) => setAccountHolderName(e.target.value)}
-                  placeholder="Account holder name"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Bank Name</label>
-                <input
-                  type="text"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  placeholder="Bank name"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>IBAN / Account Number</label>
-                <input
-                  type="text"
-                  value={iban}
-                  onChange={(e) => setIban(e.target.value)}
-                  placeholder="IBAN or account number"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Notes (optional)</label>
-                <input
-                  type="text"
-                  value={payoutNotes}
-                  onChange={(e) => setPayoutNotes(e.target.value)}
-                  placeholder="Reference or notes"
-                />
-              </div>
-            </div>
-
-            <div className="modal-actions">
-              <button
-                className="btn-cancel"
-                onClick={() => setSelectedPayout(null)}
-                disabled={actionLoading}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn-process-payout"
-                onClick={submitPayout}
-                disabled={actionLoading || !payoutAmount}
-              >
-                {actionLoading ? "Processing..." : "Process Payout"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Pagination */}
       {pagination.pages > 1 && (
-        <div className="pagination">
+        <div className="drivemego-st-pagination">
           <button
             disabled={pagination.page === 1}
             onClick={() =>

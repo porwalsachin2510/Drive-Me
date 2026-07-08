@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import { logout } from "../../../Redux/slices/authSlice";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
@@ -163,6 +164,29 @@ export default function CorporateEmployeeDashboard() {
       if (socket) socket.disconnect();
     };
   }, [token, userId]);
+
+  // Live auto-refresh: silently refresh trips/route/notifications in the
+  // background (no full-page spinner) and instantly on relevant socket events.
+  const silentRefreshDashboard = useCallback(() => {
+    if (!token || !userId) return;
+    const dateStr = new Date().toISOString().split("T")[0];
+    dispatch(fetchEmployeeTrips({ employeeId: userId, date: dateStr }));
+    dispatch(fetchAssignedRoute(userId));
+    dispatch(fetchNoShowHistory());
+    dispatch(fetchNotifications(userId));
+  }, [dispatch, token, userId]);
+
+  useAutoRefresh(silentRefreshDashboard, {
+    interval: 15000,
+    enabled: !!(token && userId),
+    socketEvents: [
+      "trip-assigned",
+      "newTripAssigned",
+      "trip-started",
+      "trip-completed",
+      "new-notification",
+    ],
+  });
 
   const handleBookTrip = async (tripId) => {
     try {

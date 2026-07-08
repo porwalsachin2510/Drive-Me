@@ -1,6 +1,7 @@
 import { getActiveCurrency } from "../../config/localeConfig";
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
+import CashPaymentDetails from "../CashPaymentDetails/CashPaymentDetails";
 import "./SubscriptionSettings.css";
 
 // Map backend renewal method <-> UI select value
@@ -34,6 +35,10 @@ const SubscriptionSettings = () => {
   const [walletCurrency, setWalletCurrency] = useState(getActiveCurrency());
   const [pendingCash, setPendingCash] = useState(null);
   const [history, setHistory] = useState([]);
+  // Live seat availability for the selected pass's route/leg(s). Tells the
+  // commuter whether the vehicle is full BEFORE they pay to renew.
+  const [seatInfo, setSeatInfo] = useState(null);
+  const [seatLoading, setSeatLoading] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [renewing, setRenewing] = useState(false);
@@ -45,6 +50,38 @@ const SubscriptionSettings = () => {
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  // Refresh seat availability whenever the pass being managed changes.
+  useEffect(() => {
+    if (!selectedPassId) {
+      setSeatInfo(null);
+      return;
+    }
+    fetchSeatAvailability(selectedPassId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPassId]);
+
+  const fetchSeatAvailability = async (passId) => {
+    setSeatLoading(true);
+    try {
+      const response = await api.get(
+        "/subscription-settings/seat-availability",
+        {
+          params: passId ? { passId } : {},
+        },
+      );
+      if (response.data.success) {
+        setSeatInfo(response.data.data.seatAvailability || null);
+      } else {
+        setSeatInfo(null);
+      }
+    } catch (err) {
+      console.error("Error fetching seat availability:", err);
+      setSeatInfo(null);
+    } finally {
+      setSeatLoading(false);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -76,7 +113,9 @@ const SubscriptionSettings = () => {
             : [],
         );
         setWalletBalance(response.data.data.walletBalance || 0);
-        setWalletCurrency(response.data.data.walletCurrency || getActiveCurrency());
+        setWalletCurrency(
+          response.data.data.walletCurrency || getActiveCurrency(),
+        );
       } else {
         setError(response.data.message || "Failed to fetch settings");
       }
@@ -125,6 +164,15 @@ const SubscriptionSettings = () => {
   };
 
   const handleRenewNow = async () => {
+    // Client-side seat guard: don't even attempt a renewal when the vehicle is
+    // full for a lapsed pass. The backend enforces this too (409 SEATS_FULL).
+    if (seatInfo && !seatInfo.canRenew) {
+      setSuccess("");
+      setError(
+        `The vehicle on ${seatInfo.routeLabel} is currently full (0 of ${seatInfo.totalSeats} seats free). Your pass has lapsed, so renewing now won't secure a seat. Please try again once a seat frees up.`,
+      );
+      return;
+    }
     setRenewing(true);
     setError("");
     setSuccess("");
@@ -151,12 +199,17 @@ const SubscriptionSettings = () => {
             response.data.message || "Monthly pass renewed successfully!",
           );
           fetchSettings();
+          fetchSeatAvailability(selectedPassId);
         }
       } else {
         setError(response.data.message || "Failed to renew");
       }
     } catch (err) {
       console.error("Error renewing:", err);
+      // A 409 SEATS_FULL response carries the latest seat report — surface it so
+      // the on-screen availability badge updates immediately.
+      const seatData = err.response?.data?.data?.seatAvailability;
+      if (seatData) setSeatInfo(seatData);
       setError(
         err.response?.data?.message || "Network error. Please try again.",
       );
@@ -299,9 +352,71 @@ const SubscriptionSettings = () => {
                 {Number(computedRenewalAmount || 0).toFixed(2)}
               </span>
             </div>
+            <div className="ss-status-card">
+              <span className="ss-status-label">Seat Availability</span>
+              {seatLoading ? (
+                <span className="ss-status-value">Checking...</span>
+              ) : seatInfo ? (
+                <span
+                  className={`ss-status-value ${
+                    seatInfo.isFull ? "ss-seat-full" : "ss-seat-available"
+                  }`}
+                >
+                  {seatInfo.isFull
+                    ? "Vehicle Full"
+                    : `${seatInfo.availableSeats} of ${seatInfo.totalSeats} free`}
+                </span>
+              ) : (
+                <span className="ss-status-value">Not tracked</span>
+              )}
+            </div>
           </div>
         ) : // placeholder branch handled below
         null}
+
+        {/* Prominent seat availability notice so commuters know whether their
+            renewal will actually secure a seat before they pay. */}
+        {selectedPass && seatInfo && (
+          <div
+            className={`ss-seat-banner ${
+              seatInfo.holdsSeat
+                ? "ss-seat-banner-ok"
+                : seatInfo.isFull
+                  ? "ss-seat-banner-full"
+                  : seatInfo.availableSeats <= 3
+                    ? "ss-seat-banner-low"
+                    : "ss-seat-banner-ok"
+            }`}
+            role="status"
+          >
+            {seatInfo.holdsSeat ? (
+              <>
+                <strong>Your seat is reserved.</strong> You currently hold a
+                seat on {seatInfo.routeLabel}. Renewing will carry it over — you
+                won&apos;t lose your spot.
+              </>
+            ) : seatInfo.isFull ? (
+              <>
+                <strong>Vehicle full.</strong> All {seatInfo.totalSeats} seats
+                on {seatInfo.routeLabel} are taken and your pass has lapsed.
+                Renewing now will not secure you a seat, so renewal is
+                unavailable until a seat frees up.
+              </>
+            ) : seatInfo.availableSeats <= 3 ? (
+              <>
+                <strong>Almost full.</strong> Only {seatInfo.availableSeats}{" "}
+                seat
+                {seatInfo.availableSeats > 1 ? "s" : ""} left on{" "}
+                {seatInfo.routeLabel}. Renew soon to secure your spot.
+              </>
+            ) : (
+              <>
+                <strong>{seatInfo.availableSeats} seats available</strong> on{" "}
+                {seatInfo.routeLabel}. Renew to secure your seat.
+              </>
+            )}
+          </div>
+        )}
 
         {selectedPass && !pendingCash && (
           <div className="ss-setting-item ss-renewal-duration">
@@ -366,12 +481,22 @@ const SubscriptionSettings = () => {
         )}
 
         {pendingCash && (
-          <div className="ss-pending-banner">
-            Cash renewal of {walletCurrency}{" "}
-            {Number(pendingCash.amount || 0).toFixed(2)} is awaiting admin
-            confirmation (requested {formatDate(pendingCash.requestedAt)}). Your
-            renewed pass activates once the admin confirms your cash payment.
-          </div>
+          <>
+            <div className="ss-pending-banner">
+              Cash renewal of {walletCurrency}{" "}
+              {Number(pendingCash.amount || 0).toFixed(2)} is awaiting admin
+              confirmation (requested {formatDate(pendingCash.requestedAt)}).
+              Your renewed pass activates once the admin confirms your cash
+              payment.
+            </div>
+            <div className="ss-cash-details-wrap">
+              <CashPaymentDetails
+                title="Complete Your Cash Payment"
+                amount={pendingCash.amount}
+                currency={walletCurrency}
+              />
+            </div>
+          </>
         )}
       </div>
 
@@ -447,16 +572,41 @@ const SubscriptionSettings = () => {
               amount. Please top up your wallet to use wallet renewal.
             </p>
           )}
+
+          {/* When paying by cash, show the admin's bank account & office
+              address so the commuter knows exactly where to pay before the
+              admin confirms the renewal. */}
+          {settings.paymentMethod === "CASH" && (
+            <div className="ss-cash-details-wrap">
+              <CashPaymentDetails
+                title="Where to Pay (Cash Renewal)"
+                amount={computedRenewalAmount}
+                currency={selectedPass?.currency || walletCurrency}
+              />
+            </div>
+          )}
         </div>
 
         {selectedPass && !pendingCash && (
-          <button
-            className="ss-renew-btn"
-            onClick={handleRenewNow}
-            disabled={renewing}
-          >
-            {renewing ? "Processing..." : renewActionLabel()}
-          </button>
+          <>
+            <button
+              className="ss-renew-btn"
+              onClick={handleRenewNow}
+              disabled={renewing || (seatInfo && !seatInfo.canRenew)}
+            >
+              {renewing
+                ? "Processing..."
+                : seatInfo && !seatInfo.canRenew
+                  ? "Vehicle Full — Renewal Unavailable"
+                  : renewActionLabel()}
+            </button>
+            {seatInfo && !seatInfo.canRenew && (
+              <p className="ss-warning-text">
+                Renewal is disabled because the vehicle is full and your pass
+                has lapsed. You will not be charged.
+              </p>
+            )}
+          </>
         )}
       </div>
 

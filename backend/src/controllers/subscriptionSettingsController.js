@@ -11,6 +11,7 @@ import PaymentGatewayService from "../Services/paymentGatewayService.js";
 import { createNotification } from "../Services/notificationService.js";
 import { resolveDisplayCurrency, convertForDisplay } from "../Services/displayCurrency.js";
 import { getOrCreateWallet } from "../Services/walletService.js";
+import { computePassSeatAvailability } from "../Services/seatAvailabilityService.js";
 
 /*
  * Subscription renewal supports three commuter-chosen methods:
@@ -730,6 +731,61 @@ const resolveBasePassForRenewal = async (userId, passId) => {
     }).sort({ endDate: -1 });
 };
 
+// Build a human-readable seat message for the given seat-availability report.
+const buildSeatMessage = (seat) => {
+    if (!seat) return "Seat availability could not be determined for this pass.";
+    if (seat.holdsSeat) {
+        return `Your seat on "${seat.routeLabel}" is reserved and will carry over when you renew.`;
+    }
+    if (seat.isFull) {
+        return `The vehicle on "${seat.routeLabel}" is currently full (0 of ${seat.totalSeats} seats free). Your pass has lapsed, so renewing now will NOT secure you a seat. Please wait for a seat to free up or contact support.`;
+    }
+    return `${seat.availableSeats} of ${seat.totalSeats} seat(s) are available on "${seat.routeLabel}". Renew now to secure your seat.`;
+};
+
+// Commuter-facing endpoint: live seat availability for a pass they may renew.
+// Lets the UI show whether the vehicle is full BEFORE the commuter pays.
+export const getPassSeatAvailability = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const passId = req.query.passId || req.body?.passId;
+
+        const basePass = await resolveBasePassForRenewal(userId, passId);
+        if (!basePass) {
+            return res.status(404).json({
+                success: false,
+                message: "No active or recently expired monthly pass found.",
+            });
+        }
+
+        const seat = await computePassSeatAvailability(basePass);
+        if (!seat) {
+            return res.status(200).json({
+                success: true,
+                data: {
+                    seatAvailability: null,
+                    message: "Seat availability is not tracked for this route.",
+                },
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                seatAvailability: seat,
+                message: buildSeatMessage(seat),
+            },
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching pass seat availability:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching seat availability",
+            error: error.message,
+        });
+    }
+};
+
 export const renewSubscription = async (req, res) => {
     try {
         const userId = req.userId;
@@ -757,6 +813,20 @@ export const renewSubscription = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: "No active or recently expired monthly pass found to renew.",
+            });
+        }
+
+        // SEAT GUARD: never take a payment for a renewal the commuter can't actually
+        // use. If their pass has lapsed AND the vehicle/leg is now full, block the
+        // renewal up front (before any wallet debit, card session, or cash request)
+        // and tell them the vehicle is full instead of silently charging them.
+        const seat = await computePassSeatAvailability(basePass);
+        if (seat && !seat.canRenew) {
+            return res.status(409).json({
+                success: false,
+                code: "SEATS_FULL",
+                message: buildSeatMessage(seat),
+                data: { seatAvailability: seat },
             });
         }
 
@@ -1077,6 +1147,17 @@ export const requestCashRenewal = async (req, res) => {
             });
         }
 
+        // SEAT GUARD: block a cash renewal request when a lapsed pass's vehicle is full.
+        const seat = await computePassSeatAvailability(basePass);
+        if (seat && !seat.canRenew) {
+            return res.status(409).json({
+                success: false,
+                code: "SEATS_FULL",
+                message: buildSeatMessage(seat),
+                data: { seatAvailability: seat },
+            });
+        }
+
         const requestedMonths = Math.floor(Number(req.body.renewalMonths));
         const renewalMonths = Number.isFinite(requestedMonths) && requestedMonths >= 1
             ? Math.min(requestedMonths, 12)
@@ -1237,6 +1318,26 @@ export const processRenewals = async (req, res) => {
 
                 if (!basePass) {
                     result.skipped += 1;
+                    continue;
+                }
+
+                // SEAT GUARD: don't auto-charge a renewal the commuter can't use.
+                // (Active passes keep their seat, so canRenew stays true for them.)
+                const seat = await computePassSeatAvailability(basePass);
+                if (seat && !seat.canRenew) {
+                    result.skipped += 1;
+                    subscription.renewalHistory.push({
+                        date: new Date(),
+                        status: "FAILED",
+                        amount: basePass.totalAmount,
+                        paymentMethod: subscription.renewalPaymentMethod,
+                        failureReason: "Vehicle full - no seat available for renewal",
+                    });
+                    await subscription.save();
+                    await sendRenewalFailedEmail(
+                        subscription,
+                        "The vehicle on your route is currently full, so your pass could not be auto-renewed."
+                    ).catch(() => { });
                     continue;
                 }
 

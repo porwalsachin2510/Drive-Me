@@ -95,18 +95,30 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
   const [selectedReturnDropoffPoint, setSelectedReturnDropoffPoint] =
     useState("");
   const [passDuration, setPassDuration] = useState(1); // months
-  const [passStartDate, setPassStartDate] = useState(() => {
+  // Earliest date a commuter can begin their pass. For advance bookings on a
+  // route that starts in the future, the pass cannot begin before the route's
+  // own start date — the rides only run from that day onward. Otherwise the
+  // earliest date is today.
+  const getEarliestStartDate = () => {
     const today = new Date();
-    // Use local date formatting to avoid timezone shift issues
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // Format: YYYY-MM-DD in local timezone
-  }); // Custom start date
+    today.setHours(0, 0, 0, 0);
+    if (route?.startDate) {
+      const routeStart = new Date(route.startDate);
+      routeStart.setHours(0, 0, 0, 0);
+      if (!isNaN(routeStart.getTime()) && routeStart > today) {
+        return routeStart;
+      }
+    }
+    return today;
+  };
+
+  const [passStartDate, setPassStartDate] = useState(() =>
+    formatLocalDate(getEarliestStartDate()),
+  ); // Custom start date
   const [passEndDate, setPassEndDate] = useState(() => {
     // Default to a 1-month pass. End date = start + 1 month - 1 day so the
     // inclusive day-count matches the actual calendar month length.
-    const end = computeEndDateForMonths(new Date(), 1);
+    const end = computeEndDateForMonths(getEarliestStartDate(), 1);
     return formatLocalDate(end);
   }); // Custom end date
   const [step, setStep] = useState(1);
@@ -554,14 +566,10 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     setPassEndDate(formatLocalDate(newEnd));
   };
 
-  // Get min date (today)
+  // Get min date. For advance bookings on a future-start route this is the
+  // route start date; otherwise today.
   const getMinDate = () => {
-    const today = new Date();
-    // Use local date formatting to avoid timezone shift issues
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+    return formatLocalDate(getEarliestStartDate());
   };
 
   // Get available trips from schedule data

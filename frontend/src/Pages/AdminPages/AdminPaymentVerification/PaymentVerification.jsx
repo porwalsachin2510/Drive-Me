@@ -1,9 +1,10 @@
 "use client";
 
 import { getActiveCurrency } from "../../../config/localeConfig";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import api from "../../../utils/api";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import PaymentBreakdown from "../../../Components/Corporate/PaymentBreakdown/PaymentBreakdown";
 import "./PaymentVerification.css";
 
@@ -31,17 +32,34 @@ const PaymentVerification = () => {
     fetchStats();
   }, [activeCurrency]);
 
-  const fetchPendingPayments = async () => {
+  const fetchPendingPayments = async ({ silent } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await api.get("/admin/payments/pending");
       setPendingPayments(response.data.payments);
     } catch (error) {
       console.error("Error fetching pending payments:", error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  // Live auto-refresh: new cash/EMI payments land in this queue continuously,
+  // so keep it current in the background instead of requiring a manual reload.
+  const refreshPayments = useCallback(
+    ({ silent } = {}) => {
+      fetchPendingPayments({ silent });
+      fetchStats();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [activeCurrency],
+  );
+
+  useAutoRefresh(refreshPayments, {
+    interval: 15000,
+    socketEvents: ["new-notification"],
+    deps: [activeCurrency],
+  });
 
   const fetchStats = async () => {
     try {
@@ -52,21 +70,21 @@ const PaymentVerification = () => {
     }
   };
 
-    const handleViewDetails = async (payment) => {
-      // For EMI payments, use the payment object directly since it already has all details
-      if (payment.paymentSource === "EMI") {
-        setSelectedPayment(payment);
+  const handleViewDetails = async (payment) => {
+    // For EMI payments, use the payment object directly since it already has all details
+    if (payment.paymentSource === "EMI") {
+      setSelectedPayment(payment);
+      setShowModal(true);
+    } else {
+      try {
+        const response = await api.get(`/admin/payments/${payment._id}`);
+        setSelectedPayment(response.data.payment);
         setShowModal(true);
-      } else {
-        try {
-          const response = await api.get(`/admin/payments/${payment._id}`);
-          setSelectedPayment(response.data.payment);
-          setShowModal(true);
-        } catch (error) {
-          console.error("Error fetching payment details:", error);
-        }
+      } catch (error) {
+        console.error("Error fetching payment details:", error);
       }
-    };
+    }
+  };
 
   const handleVerification = async (action) => {
     if (action === "REJECT" && !rejectionReason.trim()) {

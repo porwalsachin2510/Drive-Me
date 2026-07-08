@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { SocketContext } from "../../../context/SocketContext";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import api from "../../../utils/api";
 import {
   Search,
@@ -82,10 +83,12 @@ const B2B_PartnerNegotiations = () => {
     setStats(statsData);
   };
 
-  const fetchNegotiations = useCallback(async () => {
+  const fetchNegotiations = useCallback(async ({ silent } = {}) => {
     try {
-      setLoading(true);
-      setMessage({ type: "", text: "" });
+      if (!silent) {
+        setLoading(true);
+        setMessage({ type: "", text: "" });
+      }
 
       // Get B2B Partner's negotiations using the correct endpoint
       const response = await api.get("/partner-negotiations");
@@ -96,25 +99,31 @@ const B2B_PartnerNegotiations = () => {
         setNegotiations(negList);
         setFilteredNegotiations(negList);
         calculateStats(negList);
-      } else {
+      } else if (!silent) {
         setNegotiations([]);
         setFilteredNegotiations([]);
         calculateStats([]);
       }
     } catch (error) {
       console.error("Error fetching negotiations:", error);
-      setMessage({ type: "error", text: "Failed to load negotiations" });
-      setNegotiations([]);
-      setFilteredNegotiations([]);
-      calculateStats([]);
+      if (!silent) {
+        setMessage({ type: "error", text: "Failed to load negotiations" });
+        setNegotiations([]);
+        setFilteredNegotiations([]);
+        calculateStats([]);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchNegotiations();
   }, [fetchNegotiations]);
+
+  // Live auto-refresh: polling fallback in case a negotiation socket event is
+  // missed (socket handlers above still provide the instant path).
+  useAutoRefresh(fetchNegotiations, { interval: 20000 });
 
   // Listen for real-time negotiation updates
   useEffect(() => {

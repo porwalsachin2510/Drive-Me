@@ -12,7 +12,7 @@ const initialState = {
 }
 
 // Get wallet balance
-export const getWalletBalance = createAsyncThunk("wallet/getWalletBalance", async (_, { rejectWithValue }) => {
+export const getWalletBalance = createAsyncThunk("wallet/getWalletBalance", async (arg = {}, { rejectWithValue }) => {
     try {
         const response = await api.get("/wallet/balance")
         return response.data
@@ -24,7 +24,7 @@ export const getWalletBalance = createAsyncThunk("wallet/getWalletBalance", asyn
 // Get wallet transactions
 export const getWalletTransactions = createAsyncThunk(
     "wallet/getWalletTransactions",
-    async ({ page = 1, limit = 20 }, { rejectWithValue }) => {
+    async ({ page = 1, limit = 20, silent = false } = {}, { rejectWithValue }) => {
         try {
             const response = await api.get(`/wallet/transactions?page=${page}&limit=${limit}`)
             return response.data
@@ -156,8 +156,10 @@ const walletSlice = createSlice({
     extraReducers: (builder) => {
         builder
             // Get wallet balance
-            .addCase(getWalletBalance.pending, (state) => {
-                state.loading = true
+            .addCase(getWalletBalance.pending, (state, action) => {
+                if (!action.meta.arg?.silent) {
+                    state.loading = true
+                }
                 state.error = null
             })
             .addCase(getWalletBalance.fulfilled, (state, action) => {
@@ -171,8 +173,10 @@ const walletSlice = createSlice({
             })
 
             // Get wallet transactions
-            .addCase(getWalletTransactions.pending, (state) => {
-                state.loading = true
+            .addCase(getWalletTransactions.pending, (state, action) => {
+                if (!action.meta.arg?.silent) {
+                    state.loading = true
+                }
                 state.error = null
             })
             .addCase(getWalletTransactions.fulfilled, (state, action) => {

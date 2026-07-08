@@ -1,13 +1,14 @@
 /* eslint-disable no-unused-vars */
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   fetchFleetQuotations,
   respondToQuotation,
 } from "../../../Redux/slices/quotationSlice";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import LoadingSpinner from "../../LoadingSpinner/LoadingSpinner";
 import QuotationDetailsModal from "../QuotationDetailsModal/QuotationDetailsModal";
 import QuotationResponseModal from "../QuotationResponseModal/QuotationResponseModal";
@@ -37,6 +38,19 @@ const B2B_Quotation = () => {
   useEffect(() => {
     dispatch(fetchFleetQuotations());
   }, [dispatch]);
+
+  // Live auto-refresh: keep incoming quotation requests current in the background.
+  const refreshQuotations = useCallback(
+    ({ silent } = {}) => {
+      dispatch(fetchFleetQuotations({ silent }));
+    },
+    [dispatch],
+  );
+
+  useAutoRefresh(refreshQuotations, {
+    interval: 20000,
+    socketEvents: ["new-notification"],
+  });
 
   const mapStatus = (status) => {
     const statusMap = {

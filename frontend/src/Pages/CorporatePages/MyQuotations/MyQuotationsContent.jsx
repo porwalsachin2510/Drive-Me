@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../../../utils/api";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import QuotationCard from "../../../Components/QuotationCard/QuotationCard";
 import "./MyQuotations.css";
 
@@ -59,12 +60,18 @@ const MyQuotationsContent = () => {
     fetchQuotations(false);
   }, [fetchQuotations]);
 
-  useEffect(() => {
-    const pollingInterval = setInterval(() => {
-      fetchQuotations(true);
-    }, 5000);
-    return () => clearInterval(pollingInterval);
-  }, [fetchQuotations]);
+  // Live auto-refresh: silent background polling that pauses when the tab is
+  // hidden, refetches on focus, and reacts instantly to quotation events.
+  const refreshQuotations = useCallback(
+    ({ silent } = {}) => fetchQuotations(!!silent),
+    [fetchQuotations],
+  );
+
+  useAutoRefresh(refreshQuotations, {
+    interval: 15000,
+    socketEvents: ["new-notification"],
+    deps: [filters],
+  });
 
   const handleFilterChange = (filterValue) => {
     setFilter(filterValue);

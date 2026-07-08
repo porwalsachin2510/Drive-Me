@@ -59,6 +59,55 @@ router.get("/public/payment-settings", async (req, res) => {
     }
 });
 
+// Get admin cash collection details (public) - shown to any user who selects a
+// Cash payment method so they know exactly where to transfer / drop off the
+// cash before the admin verifies and approves the payment. These are the
+// business's own collection details (meant to be shared with paying customers),
+// sourced from the Admin Configuration in the backend environment.
+router.get("/public/cash-payment-details", async (req, res) => {
+    try {
+        const hasBank = Boolean(
+            process.env.ADMIN_ACCOUNT_NUMBER || process.env.ADMIN_IBAN,
+        );
+        const hasOffice = Boolean(process.env.ADMIN_OFFICE_ADDRESS);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                bankTransfer: hasBank
+                    ? {
+                        bankName: process.env.ADMIN_BANK_NAME || "",
+                        accountName: process.env.ADMIN_ACCOUNT_NAME || "",
+                        accountNumber: process.env.ADMIN_ACCOUNT_NUMBER || "",
+                        iban: process.env.ADMIN_IBAN || "",
+                        swiftCode: process.env.ADMIN_SWIFT_CODE || "",
+                    }
+                    : null,
+                office: hasOffice
+                    ? {
+                        name: process.env.ADMIN_OFFICE_NAME || "",
+                        address: process.env.ADMIN_OFFICE_ADDRESS || "",
+                        hours: process.env.ADMIN_OFFICE_HOURS || "",
+                    }
+                    : null,
+                contact: {
+                    phone: process.env.ADMIN_CONTACT_PHONE || "",
+                    email: process.env.ADMIN_CONTACT_EMAIL || "",
+                },
+                instructions:
+                    process.env.ADMIN_PAYMENT_INSTRUCTIONS ||
+                    "Complete your cash payment using the details above. Your payment will be activated once the admin verifies it.",
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching cash payment details",
+            error: error.message,
+        });
+    }
+});
+
 // Get a published page by slug (public)
 router.get("/public/:slug", async (req, res) => {
     try {

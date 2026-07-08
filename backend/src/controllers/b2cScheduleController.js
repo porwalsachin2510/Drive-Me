@@ -5,6 +5,7 @@ import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CMonthlyPass from "../models/B2CMonthlyPass.js";
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js";
+import RouteRequest from "../models/RouteRequest.js";
 import User from "../models/User.js";
 import Wallet from "../models/Wallet.js";
 import Transaction from "../models/Transaction.js";
@@ -218,6 +219,95 @@ const convertToAMPMFormat = (timeString) => {
 };
 
 // Create B2C Partner Route
+// When a B2C partner publishes a route for a corridor, close out the matching
+// passenger demand (RouteRequest): upgrade the partner's interest to
+// ROUTE_PUBLISHED, record the published route under fulfilledByRoutes, mark the
+// demand FULFILLED, and notify the waiting commuters that the route is now live.
+const fulfillMatchingRouteRequests = async (route, partnerId) => {
+    const escapeRegex = (str = "") => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const from = (route.fromLocation || "").trim();
+    const to = (route.toLocation || "").trim();
+    if (!from || !to) return;
+
+    // Match the same corridor (case-insensitive, exact string) in either direction
+    // for demand that is still open (not already rejected/completed/fulfilled).
+    const matchingRequests = await RouteRequest.find({
+        status: { $nin: ["REJECTED", "COMPLETED", "FULFILLED"] },
+        $or: [
+            {
+                pickupLocation: { $regex: `^${escapeRegex(from)}$`, $options: "i" },
+                dropoffLocation: { $regex: `^${escapeRegex(to)}$`, $options: "i" },
+            },
+            {
+                pickupLocation: { $regex: `^${escapeRegex(to)}$`, $options: "i" },
+                dropoffLocation: { $regex: `^${escapeRegex(from)}$`, $options: "i" },
+            },
+        ],
+    });
+
+    if (!matchingRequests.length) {
+        console.log("[v0] No open demand matched route corridor:", from, "->", to);
+        return;
+    }
+
+    for (const request of matchingRequests) {
+        // Upgrade this partner's interest entry to ROUTE_PUBLISHED (or add one).
+        const existing = (request.interestedPartners || []).find(
+            (p) => String(p.partnerId) === String(partnerId)
+        );
+        if (existing) {
+            existing.status = "ROUTE_PUBLISHED";
+            existing.publishedRouteId = route._id;
+            existing.respondedAt = new Date();
+        } else {
+            request.interestedPartners.push({
+                partnerId,
+                status: "ROUTE_PUBLISHED",
+                publishedRouteId: route._id,
+                respondedAt: new Date(),
+            });
+        }
+
+        // Record the published route on the demand (avoid duplicates).
+        const alreadyRecorded = (request.fulfilledByRoutes || []).some(
+            (f) => String(f.routeId) === String(route._id)
+        );
+        if (!alreadyRecorded) {
+            request.fulfilledByRoutes.push({
+                routeId: route._id,
+                partnerId,
+                publishedAt: new Date(),
+            });
+        }
+
+        // Demand is now served; commuters can book it directly.
+        request.status = "FULFILLED";
+        request.convertedRouteId = request.convertedRouteId || route._id;
+        await request.save();
+
+        // Notify the commuter that a bookable route now exists.
+        try {
+            await createNotification({
+                userId: request.passengerId,
+                type: "ROUTE_REQUEST_RESPONSE",
+                title: "Your Requested Route is Now Available!",
+                message: `A route from ${request.pickupLocation} to ${request.dropoffLocation} is now available to book.`,
+                data: {
+                    requestId: request._id,
+                    routeId: route._id,
+                    pickupLocation: request.pickupLocation,
+                    dropoffLocation: request.dropoffLocation,
+                    status: "FULFILLED",
+                },
+            });
+        } catch (notifyError) {
+            console.error("[v0] Error notifying commuter of fulfilled demand:", notifyError.message);
+        }
+    }
+
+    console.log(`[v0] Marked ${matchingRequests.length} route request(s) as FULFILLED by route ${route._id}`);
+};
+
 export const createB2CPartnerRoute = async (req, res) => {
     try {
         console.log("[v0] Creating B2C Partner Route with data:", JSON.stringify(req.body, null, 2));
@@ -294,6 +384,15 @@ export const createB2CPartnerRoute = async (req, res) => {
 
         const route = await B2CPartnerRoute.create(routeData);
         console.log("[v0] B2C Partner Route created successfully:", route._id);
+
+        // Once a partner publishes a route for a corridor, mark any matching open
+        // demand as FULFILLED so partners can no longer express/withdraw interest,
+        // and record which partner/route now serves those riders.
+        try {
+            await fulfillMatchingRouteRequests(route, req.userId);
+        } catch (linkError) {
+            console.error("[v0] Error linking route to demand:", linkError.message);
+        }
 
         res.status(201).json({
             success: true,

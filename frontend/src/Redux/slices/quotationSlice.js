@@ -137,7 +137,7 @@ export const negotiateQuotation = createAsyncThunk(
 
 export const fetchFleetQuotations = createAsyncThunk(
     "quotation/fetchFleetQuotations",
-    async (_, { rejectWithValue }) => {
+    async (arg = {}, { rejectWithValue }) => {
         try {
             const response = await api.get("/quotations/fleet/my-quotations")
             return response.data.data
@@ -254,7 +254,7 @@ const quotationSlice = createSlice({
                 state.loading = false
                 state.error = action.payload
             })
-            
+
             // Get Quotation By ID
             // .addCase(getQuotationById.pending, (state) => {
             //     state.loading = true
@@ -299,7 +299,7 @@ const quotationSlice = createSlice({
             //     }
             //     state.currentQuotation = action.payload.quotation
             // })
-        
+
             // Negotiate Quotation
             .addCase(negotiateQuotation.pending, (state) => {
                 state.loading = true
@@ -321,8 +321,10 @@ const quotationSlice = createSlice({
                 state.error = action.payload
             })
             // Fetch Fleet Quotations
-            .addCase(fetchFleetQuotations.pending, (state) => {
-                state.loading = true
+            .addCase(fetchFleetQuotations.pending, (state, action) => {
+                if (!action.meta.arg?.silent) {
+                    state.loading = true
+                }
                 state.error = null
             })
             .addCase(fetchFleetQuotations.fulfilled, (state, action) => {
@@ -351,8 +353,8 @@ const quotationSlice = createSlice({
                 state.loading = false
                 state.error = action.payload
             })
-        
-            
+
+
     },
 })
 

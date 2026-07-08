@@ -1,13 +1,14 @@
 "use client";
 
 import { getActiveCurrency } from "../../../../config/localeConfig";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getPartnerBookings,
   acceptBooking,
   rejectBooking,
 } from "../../../../Redux/slices/bookingSlice";
+import { useAutoRefresh } from "../../../../hooks/useAutoRefresh";
 import PassengerDetailsModal from "../../PassengerDetailsModal/PassengerDetailsModal";
 import "./newrequests.css";
 
@@ -26,6 +27,29 @@ function NewRequests() {
       dispatch(getPartnerBookings({ status: "CONFIRMED" }));
     }
   }, [dispatch, auth.user]);
+
+  // Live auto-refresh: incoming requests are time-sensitive, so poll frequently
+  // and refetch instantly when a booking-related socket event arrives.
+  const refreshRequests = useCallback(
+    ({ silent } = {}) => {
+      if (auth.user?.role === "B2C_PARTNER") {
+        dispatch(getPartnerBookings({ status: "CONFIRMED", silent }));
+      }
+    },
+    [dispatch, auth.user],
+  );
+
+  useAutoRefresh(refreshRequests, {
+    interval: 12000,
+    enabled: auth.user?.role === "B2C_PARTNER",
+    socketEvents: [
+      "passenger-booked",
+      "passenger-cancelled",
+      "booking-accepted",
+      "booking-rejected",
+      "new-notification",
+    ],
+  });
 
   const handleAccept = (booking) => {
     dispatch(acceptBooking(booking._id)).then(() => {

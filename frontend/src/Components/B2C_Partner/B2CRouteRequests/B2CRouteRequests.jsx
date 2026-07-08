@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSocket } from "../../../hooks/useSocket";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import api from "../../../utils/api";
 import "./b2crouterequests.css";
 
@@ -23,9 +24,9 @@ function B2CRouteRequests() {
   const socket = useSocket();
 
   const fetchRouteRequests = useCallback(
-    async (page = 1) => {
+    async (page = 1, { silent } = {}) => {
       try {
-        setLoading(true);
+        if (!silent) setLoading(true);
         const params = new URLSearchParams();
         params.append("page", page);
         if (statusFilter) params.append("status", statusFilter);
@@ -47,7 +48,7 @@ function B2CRouteRequests() {
         console.error("Error fetching route requests:", err);
         setError("Failed to load route requests");
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     },
     [statusFilter],
@@ -56,6 +57,19 @@ function B2CRouteRequests() {
   useEffect(() => {
     fetchRouteRequests();
   }, [fetchRouteRequests]);
+
+  // Live auto-refresh: poll in the background so newly-opened demand and
+  // interest counts stay current even if a socket event is missed.
+  const refreshRouteRequests = useCallback(
+    ({ silent } = {}) => fetchRouteRequests(pagination.currentPage, { silent }),
+    [fetchRouteRequests, pagination.currentPage],
+  );
+
+  useAutoRefresh(refreshRouteRequests, {
+    interval: 25000,
+    socketEvents: ["new-notification"],
+    deps: [statusFilter, pagination.currentPage],
+  });
 
   // Listen for real-time notifications about new route requests
   useEffect(() => {
@@ -281,12 +295,18 @@ function B2CRouteRequests() {
                   </div>
                 )}
 
-                {["FULFILLED", "COMPLETED", "REJECTED"].includes(
-                  request.status,
-                ) ? (
+                {request.myInterestStatus === "ROUTE_PUBLISHED" ? (
+                  <div className="provider-response">
+                    You&apos;ve already published a route for this demand. It is
+                    now available for commuters to book, so no further action is
+                    needed here.
+                  </div>
+                ) : ["FULFILLED", "COMPLETED", "REJECTED"].includes(
+                    request.status,
+                  ) ? (
                   <div className="provider-response">
                     {request.status === "FULFILLED"
-                      ? "A route has been published for this demand."
+                      ? "A route has already been published for this demand, so it is no longer open for interest."
                       : request.status === "REJECTED"
                         ? "This demand has been closed by the admin."
                         : "This demand is completed."}

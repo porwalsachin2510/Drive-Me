@@ -109,7 +109,7 @@ export const getPartnerDriverBookings = createAsyncThunk(
 
 export const getPartnerBookings = createAsyncThunk(
     "booking/getPartnerBookings",
-    async ({ status } = {}, { rejectWithValue }) => {
+    async ({ status, silent = false } = {}, { rejectWithValue }) => {
         try {
             let url = "/b2c-bookings/partner/bookings"
             if (status) url += `?status=${status}`
@@ -318,8 +318,10 @@ const bookingSlice = createSlice({
                 state.error = action.payload
             })
             // Get Partner Bookings
-            .addCase(getPartnerBookings.pending, (state) => {
-                state.loading = true
+            .addCase(getPartnerBookings.pending, (state, action) => {
+                if (!action.meta.arg?.silent) {
+                    state.loading = true
+                }
                 state.error = null
             })
             .addCase(getPartnerBookings.fulfilled, (state, action) => {

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import api from "../../../utils/api";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./CorporateTripManagement.css";
 
 function CorporateTripManagement() {
@@ -12,7 +13,7 @@ function CorporateTripManagement() {
     routeId: "",
     startDate: "",
     endDate: "",
-    daysOfWeek: ["MON", "TUE", "WED", "THU", "FRI"]
+    daysOfWeek: ["MON", "TUE", "WED", "THU", "FRI"],
   });
 
   useEffect(() => {
@@ -20,28 +21,46 @@ function CorporateTripManagement() {
     fetchRoutes();
   }, []);
 
-  const fetchTrips = async () => {
+  const fetchTrips = async ({ silent } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       // Backend: GET /api/corporate-operations/daily-trips
       const response = await api.get("/corporate-operations/daily-trips");
       setTrips(response.data.data?.trips || response.data.trips || []);
     } catch (error) {
       console.error("Error fetching trips:", error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   const fetchRoutes = async () => {
     try {
       // Backend: GET /api/corporate-operations/assigned-routes-status
-      const response = await api.get("/corporate-operations/assigned-routes-status");
+      const response = await api.get(
+        "/corporate-operations/assigned-routes-status",
+      );
       setRoutes(response.data.data?.routes || response.data.routes || []);
     } catch (error) {
       console.error("Error fetching routes:", error);
     }
   };
+
+  // Live auto-refresh: daily trips + route statuses change throughout the day.
+  const refreshOperations = useCallback(({ silent } = {}) => {
+    fetchTrips({ silent });
+    fetchRoutes();
+  }, []);
+
+  useAutoRefresh(refreshOperations, {
+    interval: 15000,
+    socketEvents: [
+      "trip-started",
+      "trip-completed",
+      "trip-assigned",
+      "new-notification",
+    ],
+  });
 
   const handleCreateTrips = async (e) => {
     e.preventDefault();
@@ -60,21 +79,26 @@ function CorporateTripManagement() {
   };
 
   const handleDayToggle = (day) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       daysOfWeek: prev.daysOfWeek.includes(day)
-        ? prev.daysOfWeek.filter(d => d !== day)
-        : [...prev.daysOfWeek, day]
+        ? prev.daysOfWeek.filter((d) => d !== day)
+        : [...prev.daysOfWeek, day],
     }));
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "SCHEDULED": return "#10b981";
-      case "IN_PROGRESS": return "#3b82f6";
-      case "COMPLETED": return "#6b7280";
-      case "CANCELLED": return "#ef4444";
-      default: return "#6b7280";
+      case "SCHEDULED":
+        return "#10b981";
+      case "IN_PROGRESS":
+        return "#3b82f6";
+      case "COMPLETED":
+        return "#6b7280";
+      case "CANCELLED":
+        return "#ef4444";
+      default:
+        return "#6b7280";
     }
   };
 
@@ -84,7 +108,7 @@ function CorporateTripManagement() {
       month: "short",
       day: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -92,7 +116,7 @@ function CorporateTripManagement() {
     <div className="corporate-trip-management">
       <div className="trip-header">
         <h2>Trip Management</h2>
-        <button 
+        <button
           className="create-trip-btn"
           onClick={() => setShowCreateModal(true)}
         >
@@ -113,23 +137,34 @@ function CorporateTripManagement() {
               {trips.map((trip) => (
                 <div key={trip._id} className="trip-card">
                   <div className="trip-header-info">
-                    <h3>{trip.fromLocation} → {trip.toLocation}</h3>
-                    <span 
+                    <h3>
+                      {trip.fromLocation} → {trip.toLocation}
+                    </h3>
+                    <span
                       className="trip-status"
                       style={{ backgroundColor: getStatusColor(trip.status) }}
                     >
                       {trip.status}
                     </span>
                   </div>
-                  
+
                   <div className="trip-details">
                     <div className="trip-info">
-                      <p><strong>Date:</strong> {formatDate(trip.tripDate)}</p>
-                      <p><strong>Time:</strong> {trip.startTime} - {trip.endTime}</p>
-                      <p><strong>Vehicle:</strong> {trip.vehicleId?.make} {trip.vehicleId?.model}</p>
-                      <p><strong>Driver:</strong> {trip.driverId?.fullName}</p>
+                      <p>
+                        <strong>Date:</strong> {formatDate(trip.tripDate)}
+                      </p>
+                      <p>
+                        <strong>Time:</strong> {trip.startTime} - {trip.endTime}
+                      </p>
+                      <p>
+                        <strong>Vehicle:</strong> {trip.vehicleId?.make}{" "}
+                        {trip.vehicleId?.model}
+                      </p>
+                      <p>
+                        <strong>Driver:</strong> {trip.driverId?.fullName}
+                      </p>
                     </div>
-                    
+
                     <div className="trip-seats">
                       <div className="seats-info">
                         <span className="seats-count">
@@ -138,10 +173,10 @@ function CorporateTripManagement() {
                         <span className="seats-label">Seats Booked</span>
                       </div>
                       <div className="seats-progress">
-                        <div 
+                        <div
                           className="seats-progress-bar"
-                          style={{ 
-                            width: `${(trip.bookedSeats / trip.totalSeats) * 100}%` 
+                          style={{
+                            width: `${(trip.bookedSeats / trip.totalSeats) * 100}%`,
                           }}
                         />
                       </div>
@@ -154,7 +189,9 @@ function CorporateTripManagement() {
                       {trip.passengers.slice(0, 3).map((passenger, index) => (
                         <div key={index} className="passenger-item">
                           <span>{passenger.employeeId?.fullName}</span>
-                          <span className="seat-info">Seat {passenger.seatNumber}</span>
+                          <span className="seat-info">
+                            Seat {passenger.seatNumber}
+                          </span>
                         </div>
                       ))}
                       {trip.passengers.length > 3 && (
@@ -176,7 +213,7 @@ function CorporateTripManagement() {
           <div className="modal">
             <div className="modal-header">
               <h3>Create Trips from Route</h3>
-              <button 
+              <button
                 className="close-btn"
                 onClick={() => setShowCreateModal(false)}
               >
@@ -189,7 +226,12 @@ function CorporateTripManagement() {
                 <label>Select Route</label>
                 <select
                   value={formData.routeId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, routeId: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      routeId: e.target.value,
+                    }))
+                  }
                   required
                 >
                   <option value="">Choose a route</option>
@@ -207,7 +249,12 @@ function CorporateTripManagement() {
                   <input
                     type="date"
                     value={formData.startDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        startDate: e.target.value,
+                      }))
+                    }
                     required
                   />
                 </div>
@@ -217,7 +264,12 @@ function CorporateTripManagement() {
                   <input
                     type="date"
                     value={formData.endDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        endDate: e.target.value,
+                      }))
+                    }
                     required
                   />
                 </div>
@@ -226,32 +278,30 @@ function CorporateTripManagement() {
               <div className="form-group">
                 <label>Days of Week</label>
                 <div className="days-selector">
-                  {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
-                    <button
-                      key={day}
-                      type="button"
-                      className={`day-btn ${formData.daysOfWeek.includes(day) ? "active" : ""}`}
-                      onClick={() => handleDayToggle(day)}
-                    >
-                      {day}
-                    </button>
-                  ))}
+                  {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
+                    (day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        className={`day-btn ${formData.daysOfWeek.includes(day) ? "active" : ""}`}
+                        onClick={() => handleDayToggle(day)}
+                      >
+                        {day}
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
 
               <div className="modal-actions">
-                <button 
+                <button
                   type="button"
                   className="cancel-btn"
                   onClick={() => setShowCreateModal(false)}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit"
-                  className="submit-btn"
-                  disabled={loading}
-                >
+                <button type="submit" className="submit-btn" disabled={loading}>
                   {loading ? "Creating..." : "Create Trips"}
                 </button>
               </div>

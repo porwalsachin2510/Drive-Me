@@ -38,8 +38,18 @@ const settlementSchema = new mongoose.Schema(
         partnerEmail: { type: String },
         role: {
             type: String,
-            enum: ["B2C_PARTNER", "B2B_PARTNER"],
+            enum: ["B2C_PARTNER", "B2B_PARTNER", "CORPORATE"],
             required: true,
+        },
+        // PARTNER_PAYOUT  -> partner earns, is paid out via Finance (B2C/B2B).
+        // CORPORATE_RECEIVABLE -> corporate pays the platform a negotiation
+        //                          commission; net payable is always 0 and any
+        //                          unpaid amount is a receivable (debt) owed to
+        //                          the platform.
+        statementType: {
+            type: String,
+            enum: ["PARTNER_PAYOUT", "CORPORATE_RECEIVABLE"],
+            default: "PARTNER_PAYOUT",
         },
         // Settlement period
         month: { type: Number, required: true, min: 1, max: 12 },

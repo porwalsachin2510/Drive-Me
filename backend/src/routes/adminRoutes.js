@@ -129,7 +129,11 @@ import {
     getCorporateRevenueReport,
     getB2CPartnerRevenueReport,
     getB2BPartnerRevenueReport,
-    getRevenueSummary
+    getRevenueSummary,
+    // Admin Account / Profile APIs
+    getAdminProfile,
+    updateAdminProfile,
+    changeAdminPassword
 } from "../controllers/adminController.js";
 import { verifyToken, checkAdminRole } from "../middleware/auth.js"
 
@@ -300,5 +304,11 @@ router.put("/admins/:adminId/permissions", verifyToken, checkAdminRole, updateAd
 router.put("/admins/:adminId/suspend", verifyToken, checkAdminRole, suspendAdmin)
 router.put("/admins/:adminId/activate", verifyToken, checkAdminRole, activateAdmin)
 router.delete("/admins/:adminId", verifyToken, checkAdminRole, deleteAdmin)
+
+// Admin Account / Profile Routes (logged-in admin managing their own account)
+router.get("/profile", verifyToken, checkAdminRole, getAdminProfile)
+router.put("/profile", verifyToken, checkAdminRole, updateAdminProfile)
+router.put("/profile/image", verifyToken, checkAdminRole, upload.single('profileImage'), updateAdminProfile)
+router.put("/profile/password", verifyToken, checkAdminRole, changeAdminPassword)
 
 export default router

@@ -8,6 +8,7 @@ import {
   updateRosterChangeStatus,
   addRosterChangeComment,
 } from "../../../services/rosterChangeAPI";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./rosterchangerequests.css";
 
 /**
@@ -128,31 +129,45 @@ export default function RosterChangeRequests({
     setTimeout(() => setToast(null), 3200);
   };
 
-  const load = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await listRosterChangeRequests(contractId, {
-        status: statusFilter || undefined,
-      });
-      if (res.data.success) {
-        setRequests(res.data.data.requests || []);
-        setSummary(res.data.data.summary || null);
-        setViewerRole(res.data.data.viewerRole || null);
+  const load = useCallback(
+    async ({ silent } = {}) => {
+      try {
+        if (!silent) setLoading(true);
+        const res = await listRosterChangeRequests(contractId, {
+          status: statusFilter || undefined,
+        });
+        if (res.data.success) {
+          setRequests(res.data.data.requests || []);
+          setSummary(res.data.data.summary || null);
+          setViewerRole(res.data.data.viewerRole || null);
+        }
+      } catch (err) {
+        console.error("[v0] Failed to load roster change requests:", err);
+        if (!silent) {
+          showToast(
+            err.response?.data?.message || "Failed to load change requests",
+            "error",
+          );
+        }
+      } finally {
+        if (!silent) setLoading(false);
       }
-    } catch (err) {
-      console.error("[v0] Failed to load roster change requests:", err);
-      showToast(
-        err.response?.data?.message || "Failed to load change requests",
-        "error",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [contractId, statusFilter]);
+    },
+    [contractId, statusFilter],
+  );
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Live auto-refresh: change requests move through approval states on the other
+  // side (corporate <-> partner), so keep the list current in the background.
+  useAutoRefresh(load, {
+    interval: 20000,
+    enabled: !!contractId,
+    socketEvents: ["new-notification"],
+    deps: [contractId, statusFilter],
+  });
 
   const openCreate = async () => {
     setForm({

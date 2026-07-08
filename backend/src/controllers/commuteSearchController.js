@@ -1268,19 +1268,25 @@ export const getB2CPartnerDashboardStats = async (req, res) => {
         startOfMonth.setDate(1)
         startOfMonth.setHours(0, 0, 0, 0)
 
+        // Revenue = gross value of non-cancelled bookings. The real status field
+        // is `bookingStatus` (not `status`) and the amount lives on `paymentAmount`
+        // (there is no `totalAmount`/`amount` field), so the previous query always
+        // summed 0. Count every paid/active booking, excluding cancelled/rejected.
+        const REVENUE_BOOKING_STATUSES = ["CONFIRMED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"]
+
         const monthlyBookings = await B2CPassengerBooking.find({
             routeId: { $in: routeIds },
-            status: { $in: ["CONFIRMED", "COMPLETED"] },
+            bookingStatus: { $in: REVENUE_BOOKING_STATUSES },
             createdAt: { $gte: startOfMonth },
         })
-        const monthlyRevenue = monthlyBookings.reduce((sum, b) => sum + (b.totalAmount || b.amount || 0), 0)
+        const monthlyRevenue = monthlyBookings.reduce((sum, b) => sum + (b.paymentAmount || 0), 0)
 
         // Get total revenue (all time)
         const allBookings = await B2CPassengerBooking.find({
             routeId: { $in: routeIds },
-            status: { $in: ["CONFIRMED", "COMPLETED"] },
+            bookingStatus: { $in: REVENUE_BOOKING_STATUSES },
         })
-        const totalRevenue = allBookings.reduce((sum, b) => sum + (b.totalAmount || b.amount || 0), 0)
+        const totalRevenue = allBookings.reduce((sum, b) => sum + (b.paymentAmount || 0), 0)
 
         // Get pending route requests (either assigned to this partner or unassigned)
         const pendingRouteRequests = await RouteRequest.countDocuments({
@@ -1449,10 +1455,13 @@ export const respondToRouteRequest = async (req, res) => {
             })
         }
 
-        if (["REJECTED", "COMPLETED"].includes(routeRequest.status)) {
+        if (["REJECTED", "COMPLETED", "FULFILLED"].includes(routeRequest.status)) {
             return res.status(400).json({
                 success: false,
-                message: "This route request is no longer accepting partner interest",
+                message:
+                    routeRequest.status === "FULFILLED"
+                        ? "A route has already been published for this demand. It is no longer open for interest."
+                        : "This route request is no longer accepting partner interest",
             })
         }
 
@@ -1464,7 +1473,7 @@ export const respondToRouteRequest = async (req, res) => {
         const clusterRequests = await RouteRequest.find({
             pickupLocation: { $regex: `^${escapeRegex(routeRequest.pickupLocation)}$`, $options: "i" },
             dropoffLocation: { $regex: `^${escapeRegex(routeRequest.dropoffLocation)}$`, $options: "i" },
-            status: { $nin: ["REJECTED", "COMPLETED"] },
+            status: { $nin: ["REJECTED", "COMPLETED", "FULFILLED"] },
         })
 
         for (const request of clusterRequests) {

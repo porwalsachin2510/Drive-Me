@@ -1,9 +1,10 @@
 "use client";
 
 import { getActiveCurrency } from "../../../config/localeConfig";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import api from "../../../utils/api";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./AdminCashRenewals.css";
 
 function AdminCashRenewals() {
@@ -16,24 +17,39 @@ function AdminCashRenewals() {
   const activeCurrency = useSelector((state) => state.locale?.currency);
   const [displayCurrency, setDisplayCurrency] = useState(getActiveCurrency());
 
-  const fetchPendingCashRenewals = async () => {
+  const fetchPendingCashRenewals = async ({ silent } = {}) => {
     try {
-      setLoading(true);
-      setError("");
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
       const res = await api.get("/subscription-settings/admin/pending-cash");
       setRequests(res.data?.data || []);
       setDisplayCurrency(res.data?.displayCurrency || getActiveCurrency());
     } catch (err) {
       console.error("Error fetching pending cash renewals:", err);
-      setError("Failed to load pending cash renewals.");
+      if (!silent) setError("Failed to load pending cash renewals.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchPendingCashRenewals();
   }, [activeCurrency]);
+
+  // Live auto-refresh: commuters submit cash renewal requests continuously.
+  const refreshCashRenewals = useCallback(
+    ({ silent } = {}) => fetchPendingCashRenewals({ silent }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeCurrency],
+  );
+
+  useAutoRefresh(refreshCashRenewals, {
+    interval: 20000,
+    socketEvents: ["new-notification"],
+    deps: [activeCurrency],
+  });
 
   const handleConfirm = async (req) => {
     const ok = window.confirm(
@@ -113,8 +129,7 @@ function AdminCashRenewals() {
           <span className="acr-summary-value">
             {formatCurrency(
               requests.reduce(
-                (sum, r) =>
-                  sum + (Number(r.displayAmount ?? r.amount) || 0),
+                (sum, r) => sum + (Number(r.displayAmount ?? r.amount) || 0),
                 0,
               ),
             )}
@@ -157,12 +172,11 @@ function AdminCashRenewals() {
                   </td>
                   <td className="acr-amount">
                     {formatCurrency(req.displayAmount ?? req.amount)}
-                    {req.currency &&
-                      req.currency !== displayCurrency && (
-                        <span className="acr-amount-native">
-                          Collect {formatCurrency(req.amount, req.currency)}
-                        </span>
-                      )}
+                    {req.currency && req.currency !== displayCurrency && (
+                      <span className="acr-amount-native">
+                        Collect {formatCurrency(req.amount, req.currency)}
+                      </span>
+                    )}
                   </td>
                   <td>{formatDate(req.requestedAt)}</td>
                   <td>

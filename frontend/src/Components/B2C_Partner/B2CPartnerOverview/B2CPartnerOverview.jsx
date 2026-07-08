@@ -1,8 +1,9 @@
 "use client";
 
 import { useLocale } from "../../../hooks/useLocale";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import api from "../../../utils/api";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./b2cpartneroverview.css";
 
 function B2CPartnerOverview() {
@@ -15,13 +16,9 @@ function B2CPartnerOverview() {
   const [renewalLoading, setRenewalLoading] = useState(false);
   const [showRenewals, setShowRenewals] = useState(false);
 
-  useEffect(() => {
-    fetchDashboardStats();
-  }, []);
-
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = useCallback(async ({ silent } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await api.get("/b2c-partner/dashboard-stats");
       if (response.data.success) {
         setStats(response.data.stats);
@@ -30,9 +27,24 @@ function B2CPartnerOverview() {
       console.error("Error fetching dashboard stats:", err);
       setError("Failed to load dashboard stats");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, [fetchDashboardStats]);
+
+  // Live auto-refresh: keep dashboard KPIs current in the background.
+  useAutoRefresh(fetchDashboardStats, {
+    interval: 30000,
+    socketEvents: [
+      "passenger-booked",
+      "passenger-cancelled",
+      "trip-completed",
+      "new-notification",
+    ],
+  });
 
   const fetchSubscriptionRenewals = async () => {
     try {

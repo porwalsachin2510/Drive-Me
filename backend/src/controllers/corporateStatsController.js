@@ -1,7 +1,6 @@
 import Contract from "../models/Contract.js"
 import CorporateEmployee from "../models/CorporateEmployee.js"
 import Requirement from "../models/Requirement.js"
-import VehicleAssignment from "../models/VehicleAssignment.js"
 import CorporateBooking from "../models/CorporateBooking.js"
 import Route from "../models/Route.js"
 import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
@@ -24,15 +23,13 @@ export const getCorporateStats = async (req, res) => {
             companyId: corporateId
         })
 
-        // Count active vehicle assignments via contracts
-        const corporateContracts = await Contract.find(
-            { corporateOwnerId: corporateId, status: { $in: ["ACTIVE", "active", "Active"] } },
-            { _id: 1 }
-        )
-        const contractIds = corporateContracts.map(c => c._id)
-        const activeRoutes = await VehicleAssignment.countDocuments({
-            contractId: { $in: contractIds },
-            status: { $in: ["ACTIVE", "active", "Active", "ASSIGNED", "assigned"] }
+        // Count the corporate's ACTIVE routes. Routes live in the Route collection
+        // (keyed by corporateId), NOT VehicleAssignment — the old query counted vehicle
+        // assignments and returned 0 even when the corporate had live routes. Count the
+        // real active Route documents so the "Active Routes" card reflects reality.
+        const activeRoutes = await Route.countDocuments({
+            corporateId,
+            status: { $in: ["ACTIVE", "active", "Active"] }
         })
 
         // Count monthly bookings (CorporateBooking model uses corporateOwnerId)

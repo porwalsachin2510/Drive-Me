@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import "./AdminPassengersReassignments.css";
 import AdminReassignModal from "../AdminReassignModal/AdminReassignModal";
 import api from "../../../../utils/api";
+import { useAutoRefresh } from "../../../../hooks/useAutoRefresh";
 
 function AdminPassengersReassignments() {
   const [reassignments, setReassignments] = useState([]);
@@ -19,20 +20,23 @@ function AdminPassengersReassignments() {
   // eslint-disable-next-line no-unused-vars
   const [availableDrivers, setAvailableDrivers] = useState([]);
 
-  const fetchReassignments = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await api.get("/admin/b2c/passenger-reassignments", {
-        params: { status: statusFilter !== "all" ? statusFilter : undefined },
-      });
-      setReassignments(response.data.reassignments || []);
-    } catch (error) {
-      console.error("Error fetching reassignments:", error);
-      setReassignments([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter]);
+  const fetchReassignments = useCallback(
+    async ({ silent } = {}) => {
+      try {
+        if (!silent) setLoading(true);
+        const response = await api.get("/admin/b2c/passenger-reassignments", {
+          params: { status: statusFilter !== "all" ? statusFilter : undefined },
+        });
+        setReassignments(response.data.reassignments || []);
+      } catch (error) {
+        console.error("Error fetching reassignments:", error);
+        if (!silent) setReassignments([]);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [statusFilter],
+  );
 
   const fetchRoutesAndDrivers = useCallback(async (providerId) => {
     try {
@@ -57,6 +61,14 @@ function AdminPassengersReassignments() {
   useEffect(() => {
     fetchReassignments();
   }, [fetchReassignments]);
+
+  // Live auto-refresh: reassignment requests are generated as routes change,
+  // so keep this operational queue current in the background.
+  useAutoRefresh(fetchReassignments, {
+    interval: 20000,
+    socketEvents: ["new-notification"],
+    deps: [statusFilter],
+  });
 
   const handleProcessReassignment = async (
     reassignmentId,

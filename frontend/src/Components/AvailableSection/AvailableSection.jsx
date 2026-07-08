@@ -262,23 +262,38 @@ const AvailableSection = ({
   };
 
   const isRouteAvailableForBooking = (route) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Advance booking is allowed at ANY time as long as seats are available.
+    // A future start date does NOT block booking — the commuter reserves in
+    // advance and the rides begin on the route's start date. The route's
+    // operating days only decide which days trips run, not whether a commuter
+    // can subscribe today.
 
-    const startDate = new Date(route.startDate);
-    startDate.setHours(0, 0, 0, 0);
-
-    const daysOfWeek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    const todayDay = daysOfWeek[today.getDay()];
-
-    // Check if route has started
-    if (today < startDate) {
+    // Genuinely full route -> not bookable.
+    const seats = route.availableSeats;
+    if (seats !== undefined && seats !== null && Number(seats) <= 0) {
       return false;
     }
 
-    // Check if today is an available day
-    if (route.availableDays && !route.availableDays.includes(todayDay)) {
+    // Route explicitly closed / deactivated -> not bookable.
+    if (route.isActive === false) return false;
+    const status = (route.status || "").toString().toLowerCase();
+    if (
+      ["inactive", "cancelled", "canceled", "completed", "expired"].includes(
+        status,
+      )
+    ) {
       return false;
+    }
+
+    // If the route has already ended, it can no longer be booked.
+    if (route.endDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const endDate = new Date(route.endDate);
+      endDate.setHours(0, 0, 0, 0);
+      if (!isNaN(endDate.getTime()) && endDate < today) {
+        return false;
+      }
     }
 
     return true;
@@ -551,8 +566,8 @@ const AvailableSection = ({
                     onClick={() => handleBookRoute(route)}
                     title={
                       !isAvailable
-                        ? "Route not available. Check start date and available days."
-                        : "Click to book this route"
+                        ? "This route is fully booked or no longer available."
+                        : "Click to book this route in advance"
                     }
                   >
                     <span className="drivemego-availablesection-book-icon">

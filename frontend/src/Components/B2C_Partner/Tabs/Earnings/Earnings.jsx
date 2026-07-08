@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import "./earnings.css";
 import api from "../../../../utils/api";
+import { useAutoRefresh } from "../../../../hooks/useAutoRefresh";
 
 function Earnings() {
   const [earningsData, setEarningsData] = useState(null);
@@ -10,24 +11,34 @@ function Earnings() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("monthly");
 
-  const fetchEarningsData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await api.get("/b2c-partner/earnings", {
-        params: { period },
-      });
-      setEarningsData(response.data.earnings);
-      setTransactions(response.data.transactions || []);
-    } catch (error) {
-      console.error("Error fetching earnings data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [period]);
+  const fetchEarningsData = useCallback(
+    async ({ silent } = {}) => {
+      try {
+        if (!silent) setLoading(true);
+        const response = await api.get("/b2c-partner/earnings", {
+          params: { period },
+        });
+        setEarningsData(response.data.earnings);
+        setTransactions(response.data.transactions || []);
+      } catch (error) {
+        console.error("Error fetching earnings data:", error);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [period],
+  );
 
   useEffect(() => {
     fetchEarningsData();
   }, [fetchEarningsData]);
+
+  // Live auto-refresh: earnings update as trips complete / payments settle.
+  useAutoRefresh(fetchEarningsData, {
+    interval: 30000,
+    socketEvents: ["trip-completed", "wallet-activity", "new-notification"],
+    deps: [period],
+  });
 
   if (loading) {
     return (

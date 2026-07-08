@@ -191,6 +191,9 @@ const menuConfigs = {
       icon: "expansion",
       moduleKey: "expansionManagement",
     },
+    // No moduleKey: the Account tab is available to every admin so they can
+    // manage their own profile, preferences, and password.
+    { id: "account", label: "Account", icon: "account" },
   ],
 };
 

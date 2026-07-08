@@ -1,6 +1,7 @@
 import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../../utils/api";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./adminvehicleapproval.css";
 
 function AdminVehicleApproval() {
@@ -38,32 +39,42 @@ function AdminVehicleApproval() {
     return imageExtensions.some((ext) => lowercaseUrl.includes(ext));
   };
 
-  const fetchPendingVehicles = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await api.get(
-        `/admin/vehicles/pending?page=${pagination.page}&limit=${pagination.limit}`,
-      );
+  const fetchPendingVehicles = useCallback(
+    async ({ silent } = {}) => {
+      try {
+        if (!silent) setLoading(true);
+        const response = await api.get(
+          `/admin/vehicles/pending?page=${pagination.page}&limit=${pagination.limit}`,
+        );
 
-      if (response.data.success) {
-        setVehicles(response.data.vehicles);
-        setPagination((prev) => ({
-          ...prev,
-          total: response.data.pagination.total,
-        }));
-        setError(null);
+        if (response.data.success) {
+          setVehicles(response.data.vehicles);
+          setPagination((prev) => ({
+            ...prev,
+            total: response.data.pagination.total,
+          }));
+          setError(null);
+        }
+      } catch (err) {
+        console.error("Error fetching vehicles:", err);
+        if (!silent) setError("Failed to load pending vehicles");
+      } finally {
+        if (!silent) setLoading(false);
       }
-    } catch (err) {
-      console.error("Error fetching vehicles:", err);
-      setError("Failed to load pending vehicles");
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.page, pagination.limit]);
+    },
+    [pagination.page, pagination.limit],
+  );
 
   useEffect(() => {
     fetchPendingVehicles();
   }, [fetchPendingVehicles]);
+
+  // Live auto-refresh: keep the pending vehicle approval queue current.
+  useAutoRefresh(fetchPendingVehicles, {
+    interval: 25000,
+    socketEvents: ["new-notification"],
+    deps: [pagination.page, pagination.limit],
+  });
 
   const approveVehicle = async (vehicleId) => {
     try {
@@ -394,7 +405,8 @@ function AdminVehicleApproval() {
               {/* Pricing Information */}
               <div className="drivemego-adminvehicleapproval-info-section">
                 <h4>
-                  Pricing Details ({viewingVehicle.pricing?.currency || getActiveCurrency()})
+                  Pricing Details (
+                  {viewingVehicle.pricing?.currency || getActiveCurrency()})
                 </h4>
                 <div className="drivemego-adminvehicleapproval-info-grid">
                   <div className="drivemego-adminvehicleapproval-info-item">

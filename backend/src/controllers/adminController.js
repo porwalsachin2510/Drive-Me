@@ -15,9 +15,11 @@ import Quotation from "../models/Quotation.js";
 import Campaign from "../models/Campaign.js";
 import Tag from "../models/Tag.js";
 import B2CPartnerTrip from "../models/B2CPartnerTrip.js";
+import Trip from "../models/Trip.js";
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import B2CMonthlyPass from "../models/B2CMonthlyPass.js";
+import Subscription from "../models/Subscription.js";
 import { processRouteDeletionRefundForPass, round2 } from "./b2cScheduleController.js";
 import AdminNegotiation from "../models/AdminNegotiation.js";
 import CorporateBooking from "../models/CorporateBooking.js";
@@ -7224,21 +7226,27 @@ export const getCommuterStats = async (req, res) => {
     try {
         const userId = req.userId;
 
-        // Count total completed bookings
+        // Count total completed rides. B2CPassengerBooking's real status field is
+        // `bookingStatus` (uppercase enum) — there is NO top-level `status` field,
+        // so the old query always returned 0. Match the actual enum value.
         const totalRides = await B2CPassengerBooking.countDocuments({
             passengerId: userId,
-            status: { $in: ['completed', 'Completed', 'COMPLETED'] }
+            bookingStatus: "COMPLETED"
         });
 
         // Estimate CO2 saved (average 2.3kg CO2 saved per shared ride vs personal car)
         const co2PerRide = 2.3;
         const savedCO2 = (totalRides * co2PerRide).toFixed(1);
 
-        // Count active subscriptions
-        const activeSubscriptions = await B2CPassengerBooking.countDocuments({
-            passengerId: userId,
-            status: { $in: ['active', 'Active', 'ACTIVE', 'confirmed', 'Confirmed'] }
-        });
+        // Active subscriptions = the commuter's REAL active recurring products, not
+        // bookings. That means active recurring Subscriptions PLUS active B2C monthly
+        // passes (the two ways a commuter holds an ongoing subscription). The old code
+        // counted bookings on a non-existent `status` field and always returned 0.
+        const [activeRecurringSubs, activeMonthlyPasses] = await Promise.all([
+            Subscription.countDocuments({ userId, status: "ACTIVE" }),
+            B2CMonthlyPass.countDocuments({ passengerId: userId, status: "ACTIVE" })
+        ]);
+        const activeSubscriptions = activeRecurringSubs + activeMonthlyPasses;
 
         // Get user level
         const user = await User.findById(userId).select('level');
@@ -7532,6 +7540,271 @@ export const changeCommuterPassword = async (req, res) => {
             console.error("[v0] Failed to log password change error:", logError);
         }
 
+        res.status(500).json({
+            success: false,
+            message: "Error changing password",
+            error: error.message
+        });
+    }
+};
+
+// ==================== ADMIN PROFILE / ACCOUNT ====================
+
+// Get the logged-in admin's own profile + notification preferences
+export const getAdminProfile = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const user = await User.findById(userId).select('-password');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found"
+            });
+        }
+
+        const profile = {
+            _id: user._id,
+            fullName: user.fullName || '',
+            email: user.email || '',
+            phone: user.whatsappNumber || '',
+            role: user.role,
+            country: user.country || '',
+            status: user.status,
+            lastLogin: user.lastLogin || null,
+            createdAt: user.createdAt,
+            profileImage: user.profileImage || null
+        };
+
+        // Map admin notification preferences onto the persisted User.notifications field
+        const preferences = {
+            systemAlerts: user.notifications?.bookingAlerts ?? true,
+            paymentAlerts: user.notifications?.paymentAlerts ?? true,
+            promotionalOffers: user.notifications?.smsNotifications ?? false,
+        };
+
+        res.status(200).json({
+            success: true,
+            profile,
+            preferences
+        });
+    } catch (error) {
+        console.error("[v0] Error fetching admin profile:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching admin profile"
+        });
+    }
+};
+
+// Update the logged-in admin's own profile (and optionally profile image)
+export const updateAdminProfile = async (req, res) => {
+    try {
+        const { profile, preferences } = req.body;
+        const userId = req.userId;
+
+        // Handle profile image upload via Cloudinary
+        let profileImageUrl = null;
+        if (req.file) {
+            try {
+                const uploadResult = await uploadToCloudinary(req.file, 'driveme/profiles', 'profile');
+                profileImageUrl = uploadResult.secure_url;
+                console.log("[v0] Admin profile image uploaded:", profileImageUrl);
+
+                // Image-only upload (profile/image endpoint)
+                if (!profile && !preferences) {
+                    const updatedUser = await User.findByIdAndUpdate(
+                        userId,
+                        { $set: { profileImage: profileImageUrl } },
+                        { new: true }
+                    ).select('-password');
+
+                    return res.status(200).json({
+                        success: true,
+                        message: "Profile image updated successfully",
+                        profileImage: profileImageUrl,
+                        profile: {
+                            _id: updatedUser._id,
+                            fullName: updatedUser.fullName,
+                            email: updatedUser.email,
+                            phone: updatedUser.whatsappNumber,
+                            profileImage: updatedUser.profileImage
+                        }
+                    });
+                }
+            } catch (uploadError) {
+                console.error("[v0] Error uploading admin profile image:", uploadError);
+                return res.status(400).json({
+                    success: false,
+                    message: "Error uploading profile image",
+                    error: uploadError.message
+                });
+            }
+        }
+
+        if (!profile) {
+            return res.status(400).json({
+                success: false,
+                message: "Profile data is required"
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found"
+            });
+        }
+
+        // Validate email format if provided
+        if (profile.email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(profile.email)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid email format"
+                });
+            }
+
+            // Ensure the email isn't already taken by another user
+            const existingEmail = await User.findOne({
+                email: profile.email,
+                _id: { $ne: userId }
+            });
+            if (existingEmail) {
+                return res.status(400).json({
+                    success: false,
+                    message: "This email is already in use by another account"
+                });
+            }
+        }
+
+        // Validate phone number format if provided
+        if (profile.phone) {
+            const phoneRegex = /^[+]?[\d\s\-\(\)]{7,15}$/;
+            if (!phoneRegex.test(profile.phone)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid phone number format"
+                });
+            }
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            {
+                $set: {
+                    ...(profile.fullName && { fullName: profile.fullName }),
+                    ...(profile.email && { email: profile.email }),
+                    ...(profile.phone && { whatsappNumber: profile.phone }),
+                    ...(profile.country && { country: profile.country }),
+                    ...(profileImageUrl && { profileImage: profileImageUrl }),
+                    // Persist admin notification preferences onto the User.notifications field
+                    ...(preferences?.systemAlerts !== undefined && {
+                        'notifications.bookingAlerts': preferences.systemAlerts
+                    }),
+                    ...(preferences?.paymentAlerts !== undefined && {
+                        'notifications.paymentAlerts': preferences.paymentAlerts
+                    }),
+                    ...(preferences?.promotionalOffers !== undefined && {
+                        'notifications.smsNotifications': preferences.promotionalOffers
+                    }),
+                }
+            },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        console.log(`[v0] Admin profile updated successfully for user ${userId}`);
+
+        res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            profile: {
+                _id: updatedUser._id,
+                fullName: updatedUser.fullName,
+                email: updatedUser.email,
+                phone: updatedUser.whatsappNumber,
+                country: updatedUser.country || '',
+                profileImage: updatedUser.profileImage || null,
+                role: updatedUser.role,
+                updatedAt: updatedUser.updatedAt
+            },
+            preferences: {
+                systemAlerts: updatedUser.notifications?.bookingAlerts ?? true,
+                paymentAlerts: updatedUser.notifications?.paymentAlerts ?? true,
+                promotionalOffers: updatedUser.notifications?.smsNotifications ?? false,
+            }
+        });
+    } catch (error) {
+        console.error("[v0] Error updating admin profile:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error updating admin profile",
+            error: error.message
+        });
+    }
+};
+
+// Change the logged-in admin's own password
+export const changeAdminPassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.userId;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Current password and new password are required"
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be at least 8 characters long"
+            });
+        }
+
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+        if (!passwordRegex.test(newPassword)) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+            });
+        }
+
+        const user = await User.findById(userId).select('+password');
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found"
+            });
+        }
+
+        const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+        if (!isCurrentPasswordValid) {
+            return res.status(400).json({
+                success: false,
+                message: "Current password is incorrect"
+            });
+        }
+
+        // Assign the plain password and let the User model's pre-save hook hash it,
+        // ensuring the hashing stays consistent with the rest of the app.
+        user.password = newPassword;
+        user.passwordChangedAt = new Date();
+        await user.save();
+
+        console.log(`[v0] Admin password changed successfully for user ${userId}`);
+
+        res.status(200).json({
+            success: true,
+            message: "Password changed successfully",
+            changedAt: new Date()
+        });
+    } catch (error) {
+        console.error("[v0] Error changing admin password:", error);
         res.status(500).json({
             success: false,
             message: "Error changing password",
@@ -8996,6 +9269,38 @@ export const getDashboardStats = async (req, res) => {
         // instead of 0 just because a separate empty AED wallet exists.
         const displayCurrency = resolveDisplayCurrency(req);
 
+        // Today's operating window (used for the "live" active-trips count).
+        const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+        const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
+
+        // Terminal statuses across BOTH trip collections. The two collections use
+        // different casing ("COMPLETED"/"CANCELLED" in Trip vs "Completed"/"Cancelled"
+        // in B2CPartnerTrip), so "active" = anything today that is NOT finished or
+        // cancelled. Matching on terminal statuses avoids missing live trips just
+        // because the schedule status casing differs.
+        const TERMINAL_TRIP_STATUSES = [
+            "COMPLETED", "Completed", "CANCELLED", "Cancelled",
+        ];
+
+        // The "Pending Payments" card counts everything genuinely awaiting payment
+        // verification across the platform: regular payments awaiting verification,
+        // cash/bank-transfer EMI installments awaiting verification, AND cash-based
+        // B2C monthly pass purchases/renewals whose payment has not yet been settled
+        // (paymentMethod CASH + paymentStatus PENDING).
+        const pendingRegularPaymentFilter = {
+            verificationStatus: "PENDING",
+            $or: [
+                { status: "PENDING" },
+                { status: "COMPLETED", paymentProvider: { $exists: true } },
+            ],
+        };
+
+        // Cash monthly passes/renewals awaiting settlement/verification.
+        const pendingCashRenewalFilter = {
+            paymentMethod: { $in: ["CASH", "BANK_TRANSFER"] },
+            paymentStatus: "PENDING",
+        };
+
         // Fetch all stats in parallel for performance
         const [
             // User counts
@@ -9010,16 +9315,21 @@ export const getDashboardStats = async (req, res) => {
             totalContracts,
             activeContracts,
 
-            // Booking counts - B2C passenger bookings
+            // Booking counts — ALL booking types (B2C passenger + Corporate)
             totalB2CBookings,
+            totalCorporateBookings,
             activeB2CBookings,
+            activeCorporateBookings,
 
             // Payment counts
-            pendingPayments,
+            pendingRegularPayments,
+            pendingEmiAgg,
+            pendingCashRenewals,
             totalPaymentRevenue,
 
-            // Trip counts
-            activeTrips,
+            // Trip counts (today, non-terminal) across BOTH collections
+            activeGenericTrips,
+            activeB2CPartnerTrips,
 
             // Wallet — all of the admin's currency wallets
             adminWallets
@@ -9036,26 +9346,47 @@ export const getDashboardStats = async (req, res) => {
             Contract.countDocuments(),
             Contract.countDocuments({ status: "ACTIVE" }),
 
-            // B2C Passenger Bookings
+            // Bookings — the real status field is `bookingStatus` (not `status`).
+            // Total counts every booking; active = confirmed/accepted/in-progress.
             B2CPassengerBooking.countDocuments(),
+            CorporateBooking.countDocuments(),
             B2CPassengerBooking.countDocuments({
-                status: { $in: ["CONFIRMED", "ACTIVE", "BOARDED"] }
+                bookingStatus: { $in: ["CONFIRMED", "ACCEPTED", "IN_PROGRESS"] }
+            }),
+            CorporateBooking.countDocuments({
+                bookingStatus: { $in: ["CONFIRMED", "IN_PROGRESS"] }
             }),
 
             // Payment counts
-            Payment.countDocuments({ verificationStatus: "PENDING" }),
+            Payment.countDocuments(pendingRegularPaymentFilter),
+            EMIPayment.aggregate([
+                { $unwind: "$installments" },
+                {
+                    $match: {
+                        "installments.paymentMethod": { $in: ["CASH", "BANK_TRANSFER"] },
+                        "installments.verificationStatus": "PENDING",
+                        "installments.transactionId": { $exists: true, $ne: null },
+                    },
+                },
+                { $count: "count" },
+            ]),
+            // Cash/bank-transfer monthly pass purchases & renewals not yet settled.
+            B2CMonthlyPass.countDocuments(pendingCashRenewalFilter),
             Payment.aggregate([
                 { $match: { status: "COMPLETED" } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]),
 
-            // Active trips (trips currently in progress)
+            // Active trips = today's trips that are NOT completed/cancelled, across
+            // the generic Trip collection (corporate / B2B / commuter marketplace)
+            // AND the B2C partner trip collection.
+            Trip.countDocuments({
+                tripDate: { $gte: todayStart, $lte: todayEnd },
+                status: { $nin: TERMINAL_TRIP_STATUSES },
+            }),
             B2CPartnerTrip.countDocuments({
-                status: { $in: ["SCHEDULED", "IN_PROGRESS", "STARTED"] },
-                tripDate: {
-                    $gte: new Date(new Date().setHours(0, 0, 0, 0)),
-                    $lte: new Date(new Date().setHours(23, 59, 59, 999))
-                }
+                tripDate: { $gte: todayStart, $lte: todayEnd },
+                status: { $nin: TERMINAL_TRIP_STATUSES },
             }),
 
             // All admin wallets for this user (one per currency/market). We sum
@@ -9065,6 +9396,13 @@ export const getDashboardStats = async (req, res) => {
                 role: "ADMIN"
             })
         ]);
+
+        // Combine the per-collection results into the real platform totals.
+        const totalBookings = (totalB2CBookings || 0) + (totalCorporateBookings || 0);
+        const activeBookings = (activeB2CBookings || 0) + (activeCorporateBookings || 0);
+        const activeTrips = (activeGenericTrips || 0) + (activeB2CPartnerTrips || 0);
+        const pendingEmiInstallments = pendingEmiAgg?.[0]?.count || 0;
+        const pendingPayments = (pendingRegularPayments || 0) + pendingEmiInstallments + (pendingCashRenewals || 0);
 
         // The dashboard renders everything in the resolved display currency.
         const currency = displayCurrency;
@@ -9104,11 +9442,11 @@ export const getDashboardStats = async (req, res) => {
                 totalContracts,
                 activeContracts,
 
-                // Booking stats
-                totalBookings: totalB2CBookings,
-                activeBookings: activeB2CBookings,
+                // Booking stats (B2C passenger + Corporate combined)
+                totalBookings,
+                activeBookings,
 
-                // Payment stats
+                // Payment stats (regular pending + EMI installments pending)
                 pendingPayments,
                 totalRevenue: totalRevenue,
                 adminBalance: adminBalance,

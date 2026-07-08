@@ -9,13 +9,15 @@ import {
     confirmCashRenewal,
     getPendingCashRenewals,
     processRenewals,
-    sendRenewalReminders
+    sendRenewalReminders,
+    getPassSeatAvailability
 } from "../controllers/subscriptionSettingsController.js";
 
 const router = express.Router();
 
 // Commuter routes
 router.get("/settings", verifyToken, getSubscriptionSettings);
+router.get("/seat-availability", verifyToken, getPassSeatAvailability);
 router.put("/settings", verifyToken, updateSubscriptionSettings);
 router.post("/cancel", verifyToken, cancelSubscription);
 router.post("/renew", verifyToken, renewSubscription);

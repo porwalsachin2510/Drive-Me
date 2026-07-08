@@ -1,33 +1,40 @@
 "use client";
 
 import { getActiveCurrency } from "../../../config/localeConfig";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import B2B_MetricsCard from "../B2B_Common/B2B_MetricsCard/B2B_MetricsCard";
 import B2B_ContractCard from "../B2B_Common/B2B_ContractCard/B2B_ContractCard";
 import B2B_BarChart from "../B2B_Common/B2B_BarChart/B2B_BarChart";
 import B2B_LineChart from "../B2B_Common/B2B_LineChart/B2B_LineChart";
 import "./b2b_overview.css";
 import api from "../../../utils/api";
+import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 
 function B2B_Overview() {
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchOverviewData();
-  }, []);
-
-  const fetchOverviewData = async () => {
+  const fetchOverviewData = useCallback(async ({ silent } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await api.get("/b2b-partner/overview");
       setOverview(response.data.data.overview);
     } catch (error) {
       console.error("Error fetching overview data:", error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchOverviewData();
+  }, [fetchOverviewData]);
+
+  // Live auto-refresh: keep overview KPIs current in the background.
+  useAutoRefresh(fetchOverviewData, {
+    interval: 30000,
+    socketEvents: ["new-notification"],
+  });
 
   if (loading) {
     return (
