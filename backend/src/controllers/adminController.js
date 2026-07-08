@@ -11440,6 +11440,9 @@ export const getCorporateRevenueReport = async (req, res) => {
     try {
         const { startDate, endDate, page = 1, limit = 20, search } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
+        // Currency the admin is viewing the dashboard in (e.g. KWD). Every stored
+        // amount is in its own native currency and must be converted to this.
+        const displayCurrency = resolveDisplayCurrency(req);
 
         // Build date filter
         const dateFilter = {};
@@ -11474,7 +11477,8 @@ export const getCorporateRevenueReport = async (req, res) => {
                     _id: "$corporateOwnerId",
                     totalPayments: { $sum: "$amount" },
                     paymentCount: { $sum: 1 },
-                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommission", 0] } },
+                    // adminCommission is an object { amount, ... }; sum its `.amount`.
+                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommission.amount", 0] } },
                     avgPayment: { $avg: "$amount" },
                     lastPaymentDate: { $max: "$createdAt" },
                     currency: { $first: "$currency" }
@@ -11502,14 +11506,49 @@ export const getCorporateRevenueReport = async (req, res) => {
             }
         ]);
 
+        // The admin's commission FROM a corporate is the negotiation commission
+        // (a % of the savings the admin negotiated on their behalf), NOT the
+        // B2B fleet-owner commission on the Payment. Pull it from AdminNegotiation.
+        const negotiations = await AdminNegotiation.find({
+            corporateId: { $in: corporateIds },
+            status: "COMPLETED",
+            ...(Object.keys(dateFilter).length > 0 && { completedAt: dateFilter }),
+        }).select("corporateId currency priceSaved adminCommissionFromCorporate");
+
+        // corporateId -> { commissionPaid, commissionPending, savings } (all in displayCurrency)
+        const negotiationMap = new Map();
+        for (const n of negotiations) {
+            const key = n.corporateId.toString();
+            const cur = n.currency || "AED";
+            const commission = n.adminCommissionFromCorporate || {};
+            const amount = Number(commission.amount) || 0;
+            const statusC = commission.status || "PENDING";
+            const bucket = negotiationMap.get(key) || {
+                commissionPaid: 0,
+                commissionPending: 0,
+                savings: 0,
+                count: 0,
+            };
+            bucket.savings += convertForDisplay(Number(n.priceSaved) || 0, cur, displayCurrency);
+            bucket.count += 1;
+            if (statusC === "PAID") {
+                bucket.commissionPaid += convertForDisplay(amount, cur, displayCurrency);
+            } else if (statusC === "PENDING") {
+                bucket.commissionPending += convertForDisplay(amount, cur, displayCurrency);
+            }
+            negotiationMap.set(key, bucket);
+        }
+
         // Create lookup maps
         const paymentMap = new Map(paymentAggregation.map(p => [p._id.toString(), p]));
         const contractMap = new Map(contractAggregation.map(c => [c._id.toString(), c]));
 
-        // Combine data
+        // Combine data — every money field converted into the display currency.
         const revenueData = corporateUsers.map(user => {
             const payments = paymentMap.get(user._id.toString()) || {};
             const contracts = contractMap.get(user._id.toString()) || {};
+            const negotiation = negotiationMap.get(user._id.toString()) || {};
+            const nativeCurrency = payments.currency || "AED";
             return {
                 userId: user._id,
                 fullName: user.fullName,
@@ -11519,15 +11558,19 @@ export const getCorporateRevenueReport = async (req, res) => {
                 profileImage: user.profileImage,
                 status: user.status,
                 joinedDate: user.createdAt,
-                totalRevenue: payments.totalPayments || 0,
+                totalRevenue: convertForDisplay(payments.totalPayments || 0, nativeCurrency, displayCurrency),
                 paymentCount: payments.paymentCount || 0,
-                adminCommission: payments.totalAdminCommission || 0,
-                avgPaymentAmount: payments.avgPayment || 0,
+                // Admin's real earning from this corporate = negotiation commission collected.
+                adminCommission: negotiation.commissionPaid || 0,
+                // Negotiation commission still owed by this corporate.
+                pendingCommission: negotiation.commissionPending || 0,
+                negotiationCount: negotiation.count || 0,
+                avgPaymentAmount: convertForDisplay(payments.avgPayment || 0, nativeCurrency, displayCurrency),
                 lastPaymentDate: payments.lastPaymentDate,
-                currency: payments.currency || "AED",
+                currency: displayCurrency,
                 totalContracts: contracts.totalContracts || 0,
                 activeContracts: contracts.activeContracts || 0,
-                totalContractValue: contracts.totalContractValue || 0,
+                totalContractValue: convertForDisplay(contracts.totalContractValue || 0, nativeCurrency, displayCurrency),
             };
         });
 
@@ -11537,13 +11580,15 @@ export const getCorporateRevenueReport = async (req, res) => {
         // Paginate
         const paginatedData = revenueData.slice(skip, skip + parseInt(limit));
 
-        // Calculate totals
+        // Calculate totals (already in display currency)
         const totals = {
             totalCorporates: corporateUsers.length,
             totalRevenue: revenueData.reduce((sum, r) => sum + r.totalRevenue, 0),
             totalAdminCommission: revenueData.reduce((sum, r) => sum + r.adminCommission, 0),
+            totalPendingCommission: revenueData.reduce((sum, r) => sum + r.pendingCommission, 0),
             totalContracts: revenueData.reduce((sum, r) => sum + r.totalContracts, 0),
             activeContracts: revenueData.reduce((sum, r) => sum + r.activeContracts, 0),
+            currency: displayCurrency,
         };
 
         res.status(200).json({
@@ -11572,6 +11617,7 @@ export const getB2CPartnerRevenueReport = async (req, res) => {
     try {
         const { startDate, endDate, page = 1, limit = 20, search } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
+        const displayCurrency = resolveDisplayCurrency(req);
 
         // Build date filter
         const dateFilter = {};
@@ -11592,12 +11638,19 @@ export const getB2CPartnerRevenueReport = async (req, res) => {
 
         const partnerIds = b2cPartners.map(u => u._id);
 
-        // Aggregate bookings by B2C partner
+        // Aggregate bookings by B2C partner.
+        // IMPORTANT: revenue is recognised the moment a booking becomes a
+        // real (revenue-generating) trip — i.e. when it is ACCEPTED — because
+        // the platform commission is taken in real time at acceptance,
+        // regardless of the payment method or gateway payment status. Filtering
+        // on paymentStatus === "COMPLETED" wrongly excluded cash rides and
+        // accepted-but-not-yet-settled online rides, making revenue read zero.
+        // This mirrors the Settlement module (the source of truth).
         const bookingAggregation = await B2CPassengerBooking.aggregate([
             {
                 $match: {
                     b2cPartnerId: { $in: partnerIds },
-                    paymentStatus: "COMPLETED",
+                    bookingStatus: { $in: ["ACCEPTED", "IN_PROGRESS", "COMPLETED"] },
                     ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
                 }
             },
@@ -11634,13 +11687,23 @@ export const getB2CPartnerRevenueReport = async (req, res) => {
         const bookingMap = new Map(bookingAggregation.map(b => [b._id.toString(), b]));
         const walletMap = new Map(walletData.map(w => [w.userId.toString(), w]));
 
-        // Combine data
+        // Combine data — booking amounts converted from the booking currency and
+        // wallet amounts from the wallet currency into the admin's display currency.
         const revenueData = b2cPartners.map(partner => {
             const bookings = bookingMap.get(partner._id.toString()) || {};
             const wallet = walletMap.get(partner._id.toString()) || {};
+            const bookingCurrency = bookings.currency || wallet.currency || "AED";
+            const walletCurrency = wallet.currency || bookingCurrency;
 
-            // Net partner earnings = Total Revenue - Admin Commission
-            const netPartnerEarnings = (bookings.totalBookingRevenue || 0) - (bookings.totalAdminCommission || 0);
+            const totalBookingRevenue = convertForDisplay(bookings.totalBookingRevenue || 0, bookingCurrency, displayCurrency);
+            const adminCommission = convertForDisplay(bookings.totalAdminCommission || 0, bookingCurrency, displayCurrency);
+
+            // Net partner earnings = the driver/partner take-home stored on each
+            // booking (driverEarnings). This matches the Settlement module and is
+            // correct for cash rides too (where the partner keeps the full fare
+            // and the commission is recovered separately), unlike a naive
+            // "revenue - commission" subtraction.
+            const netPartnerEarnings = convertForDisplay(bookings.totalDriverEarnings || 0, bookingCurrency, displayCurrency);
 
             return {
                 partnerId: partner._id,
@@ -11651,19 +11714,19 @@ export const getB2CPartnerRevenueReport = async (req, res) => {
                 profileImage: partner.profileImage,
                 status: partner.status,
                 joinedDate: partner.createdAt,
-                totalBookingRevenue: bookings.totalBookingRevenue || 0,
+                totalBookingRevenue,
                 bookingCount: bookings.bookingCount || 0,
-                adminCommission: bookings.totalAdminCommission || 0,
-                netPartnerEarnings: netPartnerEarnings,
-                avgBookingAmount: bookings.avgBookingAmount || 0,
+                adminCommission,
+                netPartnerEarnings,
+                avgBookingAmount: convertForDisplay(bookings.avgBookingAmount || 0, bookingCurrency, displayCurrency),
                 completedTrips: bookings.completedTrips || 0,
                 activeBookings: bookings.activeBookings || 0,
                 cancelledBookings: bookings.cancelledBookings || 0,
                 lastBookingDate: bookings.lastBookingDate,
-                currency: bookings.currency || wallet.currency || "AED",
-                walletBalance: wallet.balance || 0,
-                totalWalletEarnings: wallet.totalEarnings || 0,
-                totalWithdrawals: wallet.totalWithdrawals || 0,
+                currency: displayCurrency,
+                walletBalance: convertForDisplay(wallet.balance || 0, walletCurrency, displayCurrency),
+                totalWalletEarnings: convertForDisplay(wallet.totalEarnings || 0, walletCurrency, displayCurrency),
+                totalWithdrawals: convertForDisplay(wallet.totalWithdrawals || 0, walletCurrency, displayCurrency),
             };
         });
 
@@ -11673,7 +11736,7 @@ export const getB2CPartnerRevenueReport = async (req, res) => {
         // Paginate
         const paginatedData = revenueData.slice(skip, skip + parseInt(limit));
 
-        // Calculate totals
+        // Calculate totals (already in display currency)
         const totals = {
             totalPartners: b2cPartners.length,
             totalRevenue: revenueData.reduce((sum, r) => sum + r.totalBookingRevenue, 0),
@@ -11682,6 +11745,7 @@ export const getB2CPartnerRevenueReport = async (req, res) => {
             totalBookings: revenueData.reduce((sum, r) => sum + r.bookingCount, 0),
             totalCompletedTrips: revenueData.reduce((sum, r) => sum + r.completedTrips, 0),
             totalActiveBookings: revenueData.reduce((sum, r) => sum + r.activeBookings, 0),
+            currency: displayCurrency,
         };
 
         res.status(200).json({
@@ -11710,6 +11774,7 @@ export const getB2BPartnerRevenueReport = async (req, res) => {
     try {
         const { startDate, endDate, page = 1, limit = 20, search } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
+        const displayCurrency = resolveDisplayCurrency(req);
 
         // Build date filter
         const dateFilter = {};
@@ -11745,7 +11810,12 @@ export const getB2BPartnerRevenueReport = async (req, res) => {
                     totalRevenue: { $sum: "$fleetOwnerAmount" },
                     paymentCount: { $sum: 1 },
                     totalGrossAmount: { $sum: "$amount" },
-                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommission", 0] } },
+                    // adminCommission is stored as an object { amount, percentage,
+                    // appliedOn }, so we must sum its `.amount` sub-field. Summing
+                    // the object itself yields 0 and made platform commission read
+                    // zero (and forced a wrong gross-minus-net fallback that
+                    // misclassified held security deposits as commission).
+                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommission.amount", 0] } },
                     avgPayment: { $avg: "$fleetOwnerAmount" },
                     lastPaymentDate: { $max: "$createdAt" },
                     currency: { $first: "$currency" }
@@ -11784,11 +11854,22 @@ export const getB2BPartnerRevenueReport = async (req, res) => {
         const contractMap = new Map(contractAggregation.map(c => [c._id.toString(), c]));
         const walletMap = new Map(walletData.map(w => [w.userId.toString(), w]));
 
-        // Combine data
+        // Combine data — payment amounts converted from the payment currency and
+        // wallet amounts from the wallet currency into the admin's display currency.
         const revenueData = b2bPartners.map(partner => {
             const payments = paymentMap.get(partner._id.toString()) || {};
             const contracts = contractMap.get(partner._id.toString()) || {};
             const wallet = walletMap.get(partner._id.toString()) || {};
+            const paymentCurrency = payments.currency || wallet.currency || "AED";
+            const walletCurrency = wallet.currency || paymentCurrency;
+
+            // Platform commission on a B2B payment = gross amount - fleet owner payout.
+            // Prefer the stored adminCommission, fall back to the derived difference.
+            const rawCommission =
+                (payments.totalAdminCommission || 0) > 0
+                    ? payments.totalAdminCommission
+                    : Math.max(0, (payments.totalGrossAmount || 0) - (payments.totalRevenue || 0));
+
             return {
                 partnerId: partner._id,
                 fullName: partner.fullName,
@@ -11798,19 +11879,19 @@ export const getB2BPartnerRevenueReport = async (req, res) => {
                 profileImage: partner.profileImage,
                 status: partner.status,
                 joinedDate: partner.createdAt,
-                totalRevenue: payments.totalRevenue || 0,
-                totalGrossAmount: payments.totalGrossAmount || 0,
-                adminCommission: payments.totalAdminCommission || 0,
+                totalRevenue: convertForDisplay(payments.totalRevenue || 0, paymentCurrency, displayCurrency),
+                totalGrossAmount: convertForDisplay(payments.totalGrossAmount || 0, paymentCurrency, displayCurrency),
+                adminCommission: convertForDisplay(rawCommission, paymentCurrency, displayCurrency),
                 paymentCount: payments.paymentCount || 0,
-                avgPaymentAmount: payments.avgPayment || 0,
+                avgPaymentAmount: convertForDisplay(payments.avgPayment || 0, paymentCurrency, displayCurrency),
                 lastPaymentDate: payments.lastPaymentDate,
-                currency: payments.currency || wallet.currency || "AED",
+                currency: displayCurrency,
                 totalContracts: contracts.totalContracts || 0,
                 activeContracts: contracts.activeContracts || 0,
-                totalContractValue: contracts.totalContractValue || 0,
-                walletBalance: wallet.balance || 0,
-                totalWalletEarnings: wallet.totalEarnings || 0,
-                totalWithdrawals: wallet.totalWithdrawals || 0,
+                totalContractValue: convertForDisplay(contracts.totalContractValue || 0, paymentCurrency, displayCurrency),
+                walletBalance: convertForDisplay(wallet.balance || 0, walletCurrency, displayCurrency),
+                totalWalletEarnings: convertForDisplay(wallet.totalEarnings || 0, walletCurrency, displayCurrency),
+                totalWithdrawals: convertForDisplay(wallet.totalWithdrawals || 0, walletCurrency, displayCurrency),
             };
         });
 
@@ -11820,7 +11901,7 @@ export const getB2BPartnerRevenueReport = async (req, res) => {
         // Paginate
         const paginatedData = revenueData.slice(skip, skip + parseInt(limit));
 
-        // Calculate totals
+        // Calculate totals (already in display currency)
         const totals = {
             totalPartners: b2bPartners.length,
             totalRevenue: revenueData.reduce((sum, r) => sum + r.totalRevenue, 0),
@@ -11828,6 +11909,7 @@ export const getB2BPartnerRevenueReport = async (req, res) => {
             totalAdminCommission: revenueData.reduce((sum, r) => sum + r.adminCommission, 0),
             totalContracts: revenueData.reduce((sum, r) => sum + r.totalContracts, 0),
             activeContracts: revenueData.reduce((sum, r) => sum + r.activeContracts, 0),
+            currency: displayCurrency,
         };
 
         res.status(200).json({
@@ -11855,13 +11937,16 @@ export const getB2BPartnerRevenueReport = async (req, res) => {
 export const getRevenueSummary = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
+        const displayCurrency = resolveDisplayCurrency(req);
+        const round = (n) => Math.round((Number(n) || 0) * 1e6) / 1e6;
 
         // Build date filter
         const dateFilter = {};
         if (startDate) dateFilter.$gte = new Date(startDate);
         if (endDate) dateFilter.$lte = new Date(endDate);
 
-        // Get payment statistics
+        // Get payment statistics — grouped BY CURRENCY so each native-currency
+        // bucket can be converted into the display currency before summing.
         const paymentStats = await Payment.aggregate([
             {
                 $match: {
@@ -11871,32 +11956,70 @@ export const getRevenueSummary = async (req, res) => {
             },
             {
                 $group: {
-                    _id: null,
+                    _id: { $ifNull: ["$currency", "AED"] },
                     totalPaymentRevenue: { $sum: "$amount" },
-                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommission", 0] } },
-                    paymentCount: { $sum: 1 },
-                    currency: { $first: "$currency" }
+                    // adminCommission is an object { amount, ... } — sum its
+                    // `.amount` sub-field, not the object (which sums to 0).
+                    totalAdminCommission: { $sum: { $ifNull: ["$adminCommission.amount", 0] } },
+                    paymentCount: { $sum: 1 }
                 }
             }
         ]);
 
-        // Get B2C booking statistics  
+        // Get B2C booking statistics grouped by currency. Revenue is recognised
+        // at acceptance (commission is taken in real time), so we count every
+        // revenue-generating booking (ACCEPTED / IN_PROGRESS / COMPLETED) — NOT
+        // only those whose gateway paymentStatus reached "COMPLETED". This
+        // matches the Settlement module and includes cash rides.
         const bookingStats = await B2CPassengerBooking.aggregate([
             {
                 $match: {
-                    paymentStatus: "COMPLETED",
+                    bookingStatus: { $in: ["ACCEPTED", "IN_PROGRESS", "COMPLETED"] },
                     ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
                 }
             },
             {
                 $group: {
-                    _id: null,
+                    _id: { $ifNull: ["$currency", "AED"] },
                     totalBookingRevenue: { $sum: "$paymentAmount" },
                     totalBookingCommission: { $sum: { $ifNull: ["$adminCommissionAmount", 0] } },
                     bookingCount: { $sum: 1 }
                 }
             }
         ]);
+
+        // Negotiation commission the platform earned from corporates (PAID only),
+        // converted from each negotiation's native currency.
+        const negotiations = await AdminNegotiation.find({
+            status: "COMPLETED",
+            ...(Object.keys(dateFilter).length > 0 && { completedAt: dateFilter }),
+        }).select("currency adminCommissionFromCorporate");
+
+        let negotiationCommission = 0;
+        for (const n of negotiations) {
+            const c = n.adminCommissionFromCorporate || {};
+            if (c.status === "PAID") {
+                negotiationCommission += convertForDisplay(Number(c.amount) || 0, n.currency || "AED", displayCurrency);
+            }
+        }
+
+        // Convert + sum contract-payment buckets into the display currency.
+        let corporateRevenue = 0, corporateCommission = 0, corporatePayments = 0;
+        for (const b of paymentStats) {
+            const cur = b._id || "AED";
+            corporateRevenue += convertForDisplay(b.totalPaymentRevenue || 0, cur, displayCurrency);
+            corporateCommission += convertForDisplay(b.totalAdminCommission || 0, cur, displayCurrency);
+            corporatePayments += b.paymentCount || 0;
+        }
+
+        // Convert + sum B2C booking buckets into the display currency.
+        let b2cRevenue = 0, b2cCommission = 0, b2cBookings = 0;
+        for (const b of bookingStats) {
+            const cur = b._id || "AED";
+            b2cRevenue += convertForDisplay(b.totalBookingRevenue || 0, cur, displayCurrency);
+            b2cCommission += convertForDisplay(b.totalBookingCommission || 0, cur, displayCurrency);
+            b2cBookings += b.bookingCount || 0;
+        }
 
         // Get user counts by role
         const userCounts = await User.aggregate([
@@ -11917,36 +12040,51 @@ export const getRevenueSummary = async (req, res) => {
         const adminWallet = await Wallet.findOne({ role: "ADMIN" });
 
         const userCountMap = new Map(userCounts.map(u => [u._id, u.count]));
-        const payment = paymentStats[0] || {};
-        const booking = bookingStats[0] || {};
+
+        // Admin wallet balance, converted from its own native currency.
+        const adminWalletBalance = convertForDisplay(
+            adminWallet?.balance || 0,
+            adminWallet?.currency || "AED",
+            displayCurrency
+        );
+        const adminTotalEarnings = convertForDisplay(
+            adminWallet?.totalEarnings || 0,
+            adminWallet?.currency || "AED",
+            displayCurrency
+        );
+
+        // Total platform commission = B2B/contract-side + B2C-side + corporate
+        // negotiation commission (all real platform revenue).
+        const totalCommission = corporateCommission + b2cCommission + negotiationCommission;
 
         res.status(200).json({
             success: true,
             summary: {
-                // Revenue breakdown
-                corporateRevenue: payment.totalPaymentRevenue || 0,
-                b2cRevenue: booking.totalBookingRevenue || 0,
-                totalRevenue: (payment.totalPaymentRevenue || 0) + (booking.totalBookingRevenue || 0),
+                // Revenue breakdown (all in display currency)
+                corporateRevenue: round(corporateRevenue),
+                b2cRevenue: round(b2cRevenue),
+                totalRevenue: round(corporateRevenue + b2cRevenue),
 
-                // Commission breakdown
-                corporateCommission: payment.totalAdminCommission || 0,
-                b2cCommission: booking.totalBookingCommission || 0,
-                totalCommission: (payment.totalAdminCommission || 0) + (booking.totalBookingCommission || 0),
+                // Commission breakdown (all in display currency)
+                corporateCommission: round(corporateCommission),
+                b2cCommission: round(b2cCommission),
+                negotiationCommission: round(negotiationCommission),
+                totalCommission: round(totalCommission),
 
                 // Transaction counts
-                corporatePayments: payment.paymentCount || 0,
-                b2cBookings: booking.bookingCount || 0,
+                corporatePayments,
+                b2cBookings,
 
                 // User counts
                 totalCorporates: userCountMap.get("CORPORATE") || 0,
                 totalB2CPartners: userCountMap.get("B2C_PARTNER") || 0,
                 totalB2BPartners: userCountMap.get("B2B_PARTNER") || 0,
 
-                // Admin wallet
-                adminWalletBalance: adminWallet?.balance || 0,
-                adminTotalEarnings: adminWallet?.totalEarnings || 0,
+                // Admin wallet (in display currency)
+                adminWalletBalance: round(adminWalletBalance),
+                adminTotalEarnings: round(adminTotalEarnings),
 
-                currency: payment.currency || adminWallet?.currency || "AED"
+                currency: displayCurrency
             }
         });
     } catch (error) {

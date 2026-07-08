@@ -161,7 +161,9 @@ function AdminReports() {
       const response = await api.get(`/admin/reports/${report._id}/download`, {
         responseType: "blob",
       });
-      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob([response.data], {
+        type: "text/csv;charset=utf-8;",
+      });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       const safeName = (report.title || "report")
@@ -857,15 +859,25 @@ function AdminReports() {
         <div className="total-item">
           <span className="total-label">Total Revenue</span>
           <span className="total-value">
-            AED {(corporateRevenue.totals.totalRevenue || 0).toLocaleString()}
+            {corporateRevenue.totals.currency || getActiveCurrency()}{" "}
+            {(corporateRevenue.totals.totalRevenue || 0).toLocaleString()}
           </span>
         </div>
         <div className="total-item">
           <span className="total-label">Admin Commission</span>
           <span className="total-value">
-            AED{" "}
+            {corporateRevenue.totals.currency || getActiveCurrency()}{" "}
             {(
               corporateRevenue.totals.totalAdminCommission || 0
+            ).toLocaleString()}
+          </span>
+        </div>
+        <div className="total-item">
+          <span className="total-label">Pending Commission</span>
+          <span className="total-value">
+            {corporateRevenue.totals.currency || getActiveCurrency()}{" "}
+            {(
+              corporateRevenue.totals.totalPendingCommission || 0
             ).toLocaleString()}
           </span>
         </div>
@@ -885,6 +897,7 @@ function AdminReports() {
             <th>Email</th>
             <th>Total Revenue</th>
             <th>Admin Commission</th>
+            <th>Pending Commission</th>
             <th>Payments</th>
             <th>Active Contracts</th>
             <th>Joined</th>
@@ -913,6 +926,9 @@ function AdminReports() {
               <td className="amount-cell">
                 {corp.currency} {corp.adminCommission.toLocaleString()}
               </td>
+              <td className="amount-cell">
+                {corp.currency} {(corp.pendingCommission || 0).toLocaleString()}
+              </td>
               <td>{corp.paymentCount}</td>
               <td>
                 {corp.activeContracts} / {corp.totalContracts}
@@ -939,13 +955,15 @@ function AdminReports() {
         <div className="total-item">
           <span className="total-label">Total Booking Revenue</span>
           <span className="total-value">
-            AED {(b2cRevenue.totals.totalRevenue || 0).toLocaleString()}
+            {b2cRevenue.totals.currency || getActiveCurrency()}{" "}
+            {(b2cRevenue.totals.totalRevenue || 0).toLocaleString()}
           </span>
         </div>
         <div className="total-item">
           <span className="total-label">Admin Commission</span>
           <span className="total-value">
-            AED {(b2cRevenue.totals.totalAdminCommission || 0).toLocaleString()}
+            {b2cRevenue.totals.currency || getActiveCurrency()}{" "}
+            {(b2cRevenue.totals.totalAdminCommission || 0).toLocaleString()}
           </span>
         </div>
         <div className="total-item">
@@ -1027,13 +1045,15 @@ function AdminReports() {
         <div className="total-item">
           <span className="total-label">Total Revenue</span>
           <span className="total-value">
-            AED {(b2bRevenue.totals.totalRevenue || 0).toLocaleString()}
+            {b2bRevenue.totals.currency || getActiveCurrency()}{" "}
+            {(b2bRevenue.totals.totalRevenue || 0).toLocaleString()}
           </span>
         </div>
         <div className="total-item">
           <span className="total-label">Admin Commission</span>
           <span className="total-value">
-            AED {(b2bRevenue.totals.totalAdminCommission || 0).toLocaleString()}
+            {b2bRevenue.totals.currency || getActiveCurrency()}{" "}
+            {(b2bRevenue.totals.totalAdminCommission || 0).toLocaleString()}
           </span>
         </div>
         <div className="total-item">
