@@ -69,6 +69,7 @@ import {
     rejectSuggestedRoute,
     getB2BStats,
     getB2BProviders,
+    getB2BProviderDetails,
     getB2CProvidersFromB2B,
     suspendB2BProvider,
     activateB2BProvider,
@@ -258,6 +259,7 @@ router.put("/ride-pooling/suggested-routes/:routeId/reject", verifyToken, checkA
 // B2B Listings Management
 router.get("/b2b/stats", verifyToken, checkAdminRole, getB2BStats)
 router.get("/b2b/providers", verifyToken, checkAdminRole, getB2BProviders)
+router.get("/b2b/providers/:providerId/details", verifyToken, checkAdminRole, getB2BProviderDetails)
 router.get("/b2b/b2c-providers", verifyToken, checkAdminRole, getB2CProvidersFromB2B)
 router.put("/b2b/providers/:providerId/suspend", verifyToken, checkAdminRole, suspendB2BProvider)
 router.put("/b2b/providers/:providerId/activate", verifyToken, checkAdminRole, activateB2BProvider)

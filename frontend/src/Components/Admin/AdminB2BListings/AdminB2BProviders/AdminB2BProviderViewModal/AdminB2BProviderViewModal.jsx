@@ -1,13 +1,25 @@
-"use client"
+"use client";
 
-import "./AdminB2BProviderViewModal.css"
+import { useState } from "react";
+import "./AdminB2BProviderViewModal.css";
 
-function AdminB2BProviderViewModal({ provider, onClose, onApprove, onReject, onRequestInfo }) {
-  if (!provider) return null
+function AdminB2BProviderViewModal({
+  provider,
+  onClose,
+  onApprove,
+  onReject,
+  onRequestInfo,
+}) {
+  const [imageViewer, setImageViewer] = useState(null);
+
+  if (!provider) return null;
 
   return (
     <div className="admin-b2b-view-modal-overlay" onClick={onClose}>
-      <div className="admin-b2b-view-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="admin-b2b-view-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="admin-b2b-view-modal-header">
           <div>
             <h2 className="admin-b2b-view-modal-title">
@@ -18,7 +30,8 @@ function AdminB2BProviderViewModal({ provider, onClose, onApprove, onReject, onR
               {provider.name} - Full Details
             </h2>
             <p className="admin-b2b-view-modal-subtitle">
-              Review complete application details including routes, vehicles, and drivers.
+              Review complete application details including routes, vehicles,
+              and drivers.
             </p>
           </div>
           <button className="admin-b2b-view-modal-close" onClick={onClose}>
@@ -60,7 +73,7 @@ function AdminB2BProviderViewModal({ provider, onClose, onApprove, onReject, onR
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
-                {provider.rating}
+                {provider.rating > 0 ? provider.rating : "New"}
               </span>
             </div>
           </div>
@@ -87,28 +100,66 @@ function AdminB2BProviderViewModal({ provider, onClose, onApprove, onReject, onR
                   </tr>
                 </thead>
                 <tbody>
-                  {provider.vehicles && provider.vehicles.length > 0 ? (
+                  {provider.detailsLoading ? (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        style={{
+                          textAlign: "center",
+                          padding: "20px",
+                          color: "#9ca3af",
+                        }}
+                      >
+                        Loading fleet details...
+                      </td>
+                    </tr>
+                  ) : provider.vehicles && provider.vehicles.length > 0 ? (
                     provider.vehicles.map((vehicle, index) => (
-                      <tr key={index}>
+                      <tr key={vehicle.id || index}>
                         <td>{vehicle.type}</td>
                         <td>
                           <div className="admin-b2b-view-model-info">
                             <div>{vehicle.model}</div>
-                            <div className="admin-b2b-view-model-year">Year: {vehicle.year}</div>
+                            <div className="admin-b2b-view-model-year">
+                              Year: {vehicle.year}
+                            </div>
                           </div>
                         </td>
                         <td>{vehicle.capacity}</td>
                         <td>
-                          <span className="admin-b2b-view-count">{vehicle.count} Units</span>
+                          <span className="admin-b2b-view-count">
+                            {vehicle.count} Unit{vehicle.count > 1 ? "s" : ""}
+                          </span>
                         </td>
                         <td>
-                          <button className="admin-b2b-view-images-btn">View Images</button>
+                          {vehicle.images && vehicle.images.length > 0 ? (
+                            <button
+                              className="admin-b2b-view-images-btn"
+                              onClick={() =>
+                                setImageViewer({
+                                  title: `${vehicle.type} - ${vehicle.model}`,
+                                  images: vehicle.images,
+                                })
+                              }
+                            >
+                              View Images ({vehicle.images.length})
+                            </button>
+                          ) : (
+                            <span style={{ color: "#9ca3af" }}>No images</span>
+                          )}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: "center", padding: "20px", color: "#9ca3af" }}>
+                      <td
+                        colSpan="5"
+                        style={{
+                          textAlign: "center",
+                          padding: "20px",
+                          color: "#9ca3af",
+                        }}
+                      >
                         No vehicle information available
                       </td>
                     </tr>
@@ -120,19 +171,62 @@ function AdminB2BProviderViewModal({ provider, onClose, onApprove, onReject, onR
         </div>
 
         <div className="admin-b2b-view-modal-footer">
-          <button className="admin-b2b-view-btn admin-b2b-view-btn-approve" onClick={() => onApprove(provider.id)}>
+          <button
+            className="admin-b2b-view-btn admin-b2b-view-btn-approve"
+            onClick={() => onApprove(provider.id)}
+          >
             Approve Provider
           </button>
-          <button className="admin-b2b-view-btn admin-b2b-view-btn-reject" onClick={() => onReject(provider.id)}>
+          <button
+            className="admin-b2b-view-btn admin-b2b-view-btn-reject"
+            onClick={() => onReject(provider.id)}
+          >
             Reject Provider
           </button>
-          <button className="admin-b2b-view-btn admin-b2b-view-btn-info" onClick={() => onRequestInfo(provider.id)}>
+          <button
+            className="admin-b2b-view-btn admin-b2b-view-btn-info"
+            onClick={() => onRequestInfo(provider.id)}
+          >
             Request Info
           </button>
         </div>
+
+        {imageViewer && (
+          <div
+            className="admin-b2b-view-image-viewer-overlay"
+            onClick={() => setImageViewer(null)}
+          >
+            <div
+              className="admin-b2b-view-image-viewer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="admin-b2b-view-image-viewer-header">
+                <h4>{imageViewer.title}</h4>
+                <button
+                  className="admin-b2b-view-image-viewer-close"
+                  onClick={() => setImageViewer(null)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+              <div className="admin-b2b-view-image-viewer-grid">
+                {imageViewer.images.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src || "/placeholder.svg"}
+                    alt={`${imageViewer.title} ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }
 
-export default AdminB2BProviderViewModal
+export default AdminB2BProviderViewModal;

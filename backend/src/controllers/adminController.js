@@ -4039,6 +4039,92 @@ export const getB2BProviders = async (req, res) => {
     }
 };
 
+// Get full details for a single B2B provider (including their real fleet)
+export const getB2BProviderDetails = async (req, res) => {
+    try {
+        const { providerId } = req.params;
+
+        const provider = await User.findOne({ _id: providerId, role: "B2B_PARTNER" })
+            .select("fullName companyName email whatsappNumber status createdAt");
+
+        if (!provider) {
+            return res.status(404).json({ success: false, message: "B2B provider not found" });
+        }
+
+        const vehicles = await Vehicle.find({ fleetOwnerId: providerId }).sort({ createdAt: -1 });
+
+        // Human-readable labels for the enum categories
+        const categoryLabels = {
+            SEDAN: "Sedan",
+            SUV: "SUV",
+            MINIVAN: "Minivan",
+            COASTER_BUS: "Coaster Bus",
+            LUXURY_COACH: "Luxury Coach",
+            SHUTTLE_BUS: "Shuttle Bus",
+            PICKUP_1TON: "Pickup (1 Ton)",
+            PICKUP_3TON: "Pickup (3 Ton)",
+            TRUCK_7TON: "Truck (7 Ton)",
+            REEFER_TRUCK: "Reefer Truck",
+            FLATBED_TRAILER: "Flatbed Trailer",
+            EXECUTIVE_VAN: "Executive Van",
+            ANY_TYPE: "Any Type",
+        };
+
+        const formattedVehicles = vehicles.map((v) => {
+            const isGoods = v.serviceType === "GOODS_CARRIER";
+            const seating = v.capacity?.seatingCapacity || 0;
+            const cargo = v.capacity?.cargoCapacity || 0;
+            const capacityLabel = isGoods
+                ? (cargo ? `${cargo} Ton${cargo > 1 ? "s" : ""}` : "N/A")
+                : (seating ? `${seating} Seats` : "N/A");
+
+            return {
+                id: v._id,
+                type: categoryLabels[v.vehicleCategory] || v.vehicleCategory,
+                model: v.vehicleName,
+                year: v.manufacturingYear,
+                capacity: capacityLabel,
+                registrationNumber: v.registrationNumber,
+                location: v.location,
+                serviceType: v.serviceType,
+                approvalStatus: v.approvalStatus,
+                status: v.status,
+                count: 1,
+                images: (v.photos || []).map((p) => p.url).filter(Boolean),
+            };
+        });
+
+        // Average rating across the provider's rated vehicles
+        const ratedVehicles = vehicles.filter((v) => v.totalReviews > 0);
+        const avgRating = ratedVehicles.length > 0
+            ? (ratedVehicles.reduce((sum, v) => sum + (v.rating || 0), 0) / ratedVehicles.length)
+            : 0;
+
+        res.status(200).json({
+            success: true,
+            provider: {
+                _id: provider._id,
+                companyName: provider.companyName || provider.fullName,
+                contactPerson: provider.fullName,
+                email: provider.email,
+                phone: provider.whatsappNumber,
+                status: provider.status ? provider.status.toLowerCase() : "pending",
+                createdAt: provider.createdAt,
+                rating: Number(avgRating.toFixed(1)),
+                fleetSize: vehicles.length,
+                vehicles: formattedVehicles,
+            },
+        });
+    } catch (error) {
+        console.error("Error fetching B2B provider details:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching B2B provider details",
+            error: error.message,
+        });
+    }
+};
+
 // Get B2C providers for admin (from B2B listings)
 export const getB2CProvidersFromB2B = async (req, res) => {
     try {

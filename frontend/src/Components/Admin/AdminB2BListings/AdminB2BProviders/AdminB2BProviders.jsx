@@ -1,86 +1,127 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import "./AdminB2BProviders.css"
-import AdminB2BProviderViewModal from "./AdminB2BProviderViewModal/AdminB2BProviderViewModal"
-import AdminChatModal from "./AdminChatModal/AdminChatModal"
-import api from "../../../../utils/api"
+import { useState, useEffect, useCallback } from "react";
+import "./AdminB2BProviders.css";
+import AdminB2BProviderViewModal from "./AdminB2BProviderViewModal/AdminB2BProviderViewModal";
+import AdminChatModal from "./AdminChatModal/AdminChatModal";
+import api from "../../../../utils/api";
 
 const AdminB2BProviders = () => {
-  const [showViewModal, setShowViewModal] = useState(false)
-  const [showChatModal, setShowChatModal] = useState(false)
-  const [selectedProvider, setSelectedProvider] = useState(null)
-  const [providers, setProviders] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [providers, setProviders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchProviders = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await api.get("/admin/b2b/providers")
+      setLoading(true);
+      setError(null);
+      const response = await api.get("/admin/b2b/providers");
       if (response.data.success) {
         const formatted = response.data.providers.map((p) => ({
           id: p._id,
           name: p.companyName || p.contactPerson,
-          initial: (p.companyName || p.contactPerson || "?").charAt(0).toUpperCase(),
+          initial: (p.companyName || p.contactPerson || "?")
+            .charAt(0)
+            .toUpperCase(),
           fleetSize: `${p.fleetSize || 0} Vehicles`,
           contact: p.email,
           phone: p.phone,
-          joinDate: p.createdAt ? new Date(p.createdAt).toISOString().split("T")[0] : "N/A",
-          status: p.status === "active" ? "Active" : p.status === "suspended" ? "Suspended" : "Pending",
+          joinDate: p.createdAt
+            ? new Date(p.createdAt).toISOString().split("T")[0]
+            : "N/A",
+          status:
+            p.status === "active"
+              ? "Active"
+              : p.status === "suspended"
+                ? "Suspended"
+                : "Pending",
           totalContracts: p.totalContracts || 0,
           activeVehicles: p.activeVehicles || 0,
+          rating: 0,
           vehicles: [],
-        }))
-        setProviders(formatted)
+        }));
+        setProviders(formatted);
       }
     } catch (err) {
-      console.error("Error fetching B2B providers:", err)
-      setError("Failed to load B2B providers")
+      console.error("Error fetching B2B providers:", err);
+      setError("Failed to load B2B providers");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchProviders()
-  }, [fetchProviders])
+    fetchProviders();
+  }, [fetchProviders]);
 
-  const handleView = (provider) => {
-    setSelectedProvider(provider)
-    setShowViewModal(true)
-  }
+  const handleView = async (provider) => {
+    // Open immediately with what we have, then enrich with real fleet details
+    setSelectedProvider({ ...provider, vehicles: [], detailsLoading: true });
+    setShowViewModal(true);
+    try {
+      const response = await api.get(
+        `/admin/b2b/providers/${provider.id}/details`,
+      );
+      if (response.data.success) {
+        const d = response.data.provider;
+        setSelectedProvider((prev) => ({
+          ...prev,
+          rating: d.rating || 0,
+          fleetSize: `${d.fleetSize || 0} Vehicles`,
+          vehicles: d.vehicles || [],
+          detailsLoading: false,
+        }));
+      } else {
+        setSelectedProvider((prev) => ({ ...prev, detailsLoading: false }));
+      }
+    } catch (err) {
+      console.error("Error fetching B2B provider details:", err);
+      setSelectedProvider((prev) => ({ ...prev, detailsLoading: false }));
+    }
+  };
 
   const handleChat = (provider) => {
-    setSelectedProvider(provider)
-    setShowChatModal(true)
-  }
+    setSelectedProvider(provider);
+    setShowChatModal(true);
+  };
 
   const handleApprove = async (providerId) => {
     try {
-      await api.put(`/admin/b2b/providers/${providerId}/activate`)
-      setProviders((prev) => prev.map((p) => (p.id === providerId ? { ...p, status: "Active" } : p)))
-      setShowViewModal(false)
+      await api.put(`/admin/b2b/providers/${providerId}/activate`);
+      setProviders((prev) =>
+        prev.map((p) => (p.id === providerId ? { ...p, status: "Active" } : p)),
+      );
+      setShowViewModal(false);
     } catch (err) {
-      console.error("Error approving provider:", err)
+      console.error("Error approving provider:", err);
     }
-  }
+  };
 
   const handleReject = async (providerId) => {
     try {
-      await api.put(`/admin/b2b/providers/${providerId}/suspend`)
-      setProviders((prev) => prev.map((p) => (p.id === providerId ? { ...p, status: "Suspended" } : p)))
-      setShowViewModal(false)
+      await api.put(`/admin/b2b/providers/${providerId}/suspend`);
+      setProviders((prev) =>
+        prev.map((p) =>
+          p.id === providerId ? { ...p, status: "Suspended" } : p,
+        ),
+      );
+      setShowViewModal(false);
     } catch (err) {
-      console.error("Error rejecting provider:", err)
+      console.error("Error rejecting provider:", err);
     }
-  }
+  };
 
   const handleRequestMoreDetails = (providerId) => {
-    setProviders((prev) => prev.map((p) => (p.id === providerId ? { ...p, status: "More Details Requested" } : p)))
-    setShowViewModal(false)
-  }
+    setProviders((prev) =>
+      prev.map((p) =>
+        p.id === providerId ? { ...p, status: "More Details Requested" } : p,
+      ),
+    );
+    setShowViewModal(false);
+  };
 
   if (loading) {
     return (
@@ -89,7 +130,7 @@ const AdminB2BProviders = () => {
           Loading B2B providers...
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -97,12 +138,22 @@ const AdminB2BProviders = () => {
       <div className="ad-dash-b2b-providers">
         <div style={{ padding: "40px", textAlign: "center", color: "#e74c3c" }}>
           {error}
-          <button onClick={fetchProviders} style={{ marginLeft: "12px", padding: "6px 16px", border: "1px solid #ccc", borderRadius: "4px", cursor: "pointer", background: "#fff" }}>
+          <button
+            onClick={fetchProviders}
+            style={{
+              marginLeft: "12px",
+              padding: "6px 16px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              cursor: "pointer",
+              background: "#fff",
+            }}
+          >
             Retry
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -129,13 +180,21 @@ const AdminB2BProviders = () => {
                 <tr key={provider.id}>
                   <td>
                     <div className="ad-dash-b2b-providers-provider-info">
-                      <div className="ad-dash-b2b-providers-avatar">{provider.initial}</div>
-                      <span className="ad-dash-b2b-providers-name">{provider.name}</span>
+                      <div className="ad-dash-b2b-providers-avatar">
+                        {provider.initial}
+                      </div>
+                      <span className="ad-dash-b2b-providers-name">
+                        {provider.name}
+                      </span>
                     </div>
                   </td>
                   <td>
                     <div className="ad-dash-b2b-providers-fleet">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
                         <path d="M9 17H7A5 5 0 0 1 7 7h2" />
                         <path d="M15 7h2a5 5 0 1 1 0 10h-2" />
                         <line x1="8" y1="12" x2="16" y2="12" />
@@ -146,7 +205,9 @@ const AdminB2BProviders = () => {
                   <td>
                     <div className="ad-dash-b2b-providers-contact">
                       <div>{provider.contact}</div>
-                      <div className="ad-dash-b2b-providers-phone">{provider.phone}</div>
+                      <div className="ad-dash-b2b-providers-phone">
+                        {provider.phone}
+                      </div>
                     </div>
                   </td>
                   <td>{provider.joinDate}</td>
@@ -164,7 +225,11 @@ const AdminB2BProviders = () => {
                         onClick={() => handleView(provider)}
                         title="View"
                       >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                        >
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                           <circle cx="12" cy="12" r="3" />
                         </svg>
@@ -176,7 +241,11 @@ const AdminB2BProviders = () => {
                             onClick={() => handleApprove(provider.id)}
                             title="Approve"
                           >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
                               <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
                           </button>
@@ -185,7 +254,11 @@ const AdminB2BProviders = () => {
                             onClick={() => handleReject(provider.id)}
                             title="Reject"
                           >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
                               <line x1="18" y1="6" x2="6" y2="18"></line>
                               <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
@@ -195,7 +268,11 @@ const AdminB2BProviders = () => {
                             onClick={() => handleChat(provider)}
                             title="Request More Details"
                           >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
                               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                             </svg>
                           </button>
@@ -221,10 +298,13 @@ const AdminB2BProviders = () => {
       )}
 
       {showChatModal && selectedProvider && (
-        <AdminChatModal provider={selectedProvider} onClose={() => setShowChatModal(false)} />
+        <AdminChatModal
+          provider={selectedProvider}
+          onClose={() => setShowChatModal(false)}
+        />
       )}
     </div>
-  )
-}
+  );
+};
 
-export default AdminB2BProviders
+export default AdminB2BProviders;

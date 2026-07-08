@@ -105,51 +105,64 @@ const resolveCountryFromIp = async (req) => {
     const forwarded = req.headers["x-forwarded-for"];
     let userIp = forwarded ? forwarded.split(",")[0].trim() : req.socket?.remoteAddress;
     if (userIp === "::1") userIp = "127.0.0.1";
+    // Normalize IPv6-mapped IPv4 addresses (e.g. "::ffff:103.48.196.1").
+    if (userIp && userIp.startsWith("::ffff:")) userIp = userIp.slice(7);
 
-    // Development / local network fallback
+    // Development / local / private-network fallback (no public IP to geolocate).
     if (
         !userIp ||
         userIp === "127.0.0.1" ||
         userIp.startsWith("192.168") ||
-        userIp.startsWith("10.")
+        userIp.startsWith("10.") ||
+        userIp.startsWith("172.")
     ) {
         return { country: DEFAULT_COUNTRY, ip: userIp, provider: "development" };
     }
 
-    // Provider #1 - ipinfo.io
-    try {
-        const ipinfoRes = await axios.get(
-            `https://ipinfo.io/${userIp}?token=${process.env.IPINFO_TOKEN}`,
-            { timeout: 5000 }
-        );
-        const iso = ipinfoRes.data?.country;
-        if (iso) {
-            return {
-                country: ISO_TO_CANONICAL[iso] || normalizeCountry(iso),
-                ip: userIp,
-                provider: "ipinfo",
-            };
+    // Ordered list of IP geolocation providers. Every one works WITHOUT any API
+    // key so detection is reliable out of the box — the previous code appended
+    // `token=undefined` to ipinfo (→ 403 "Unknown token") and then hit ipapi.co
+    // (→ 429 rate-limited on cloud IPs), so it always fell through to the UAE
+    // default and showed every visitor (India included) UAE routes. ipinfo's
+    // free tier and ipwho.is both return the correct country with no token.
+    // IPINFO_TOKEN, when present, is used only to raise ipinfo's rate limit.
+    const providers = [
+        {
+            name: "ipinfo",
+            url: process.env.IPINFO_TOKEN
+                ? `https://ipinfo.io/${userIp}/json?token=${process.env.IPINFO_TOKEN}`
+                : `https://ipinfo.io/${userIp}/json`,
+            pick: (d) => d?.country,
+        },
+        {
+            name: "ipwho",
+            url: `https://ipwho.is/${userIp}`,
+            pick: (d) => (d && d.success === false ? null : d?.country_code),
+        },
+        {
+            name: "ipapi",
+            url: `https://ipapi.co/${userIp}/json/`,
+            pick: (d) => (d?.error ? null : d?.country_code || d?.country),
+        },
+    ];
+
+    for (const provider of providers) {
+        try {
+            const res = await axios.get(provider.url, { timeout: 5000 });
+            const iso = provider.pick(res.data);
+            if (iso) {
+                const up = String(iso).trim().toUpperCase();
+                // Keep the RAW ISO for countries we don't serve (e.g. "IN",
+                // "US") instead of normalizing them to the UAE default — that is
+                // what lets the caller show the correct "coming soon" locale.
+                return { country: ISO_TO_CANONICAL[up] || up, ip: userIp, provider: provider.name };
+            }
+        } catch (err) {
+            console.warn(`[localization] ${provider.name} failed:`, err.response?.status || err.message);
         }
-    } catch (err) {
-        console.warn("[localization] ipinfo failed:", err.response?.status || err.message);
     }
 
-    // Provider #2 - ipapi.co
-    try {
-        const ipapiRes = await axios.get(`https://ipapi.co/${userIp}/json/`, { timeout: 5000 });
-        const iso = ipapiRes.data?.country_code || ipapiRes.data?.country;
-        if (iso) {
-            return {
-                country: ISO_TO_CANONICAL[iso] || normalizeCountry(iso),
-                ip: userIp,
-                provider: "ipapi",
-            };
-        }
-    } catch (err) {
-        console.warn("[localization] ipapi failed:", err.response?.status || err.message);
-    }
-
-    // Final fallback
+    // Final fallback — genuinely could not determine the country.
     return { country: DEFAULT_COUNTRY, ip: userIp, provider: "fallback" };
 };
 
@@ -316,16 +329,32 @@ export const getLocalizationConfig = async (req, res) => {
                 // gateway, routes) can be exercised. Unset in production.
                 canonical = normalizeCountry(process.env.DEV_COUNTRY);
                 source = "dev-override";
-            } else if (requested) {
-                // A country the visitor explicitly chose on a previous visit.
+            } else if (requested && isServedCountry(requested)) {
+                // A served country the visitor explicitly chose on a previous
+                // visit (currency selector). Unserved explicit values fall
+                // through to IP detection below rather than being trusted.
                 canonical = normalizeCountry(requested);
                 source = "query";
             } else {
-                // First-time visitor: detect from IP.
+                // First-time visitor: detect from their REAL location via IP.
                 const geo = await resolveCountryFromIp(req);
                 detectedRaw = geo.country;
-                canonical = normalizeCountry(geo.country);
-                source = geo.provider;
+                if (isServedCountry(geo.country)) {
+                    canonical = normalizeCountry(geo.country);
+                    source = geo.provider;
+                } else {
+                    // Visitor is physically outside our served markets (e.g.
+                    // India). Show the localized "coming soon" experience for
+                    // their ACTUAL country instead of silently defaulting them
+                    // to UAE routes/prices.
+                    const unsupported = buildUnsupportedLocalePayload(geo.country);
+                    return res.status(200).json({
+                        success: true,
+                        ...unsupported,
+                        source: `${geo.provider}-unsupported`,
+                        detectedRaw,
+                    });
+                }
             }
         }
 
