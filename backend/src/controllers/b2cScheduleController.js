@@ -335,6 +335,14 @@ export const createB2CPartnerRoute = async (req, res) => {
             });
         }
 
+        // Block allocation of a Maintenance / Inactive vehicle at route creation.
+        if (assignedVehicle) {
+            const routeVehicleGuard = await assertVehiclesAllocatable(assignedVehicle, req.userId);
+            if (!routeVehicleGuard.ok) {
+                return res.status(400).json({ success: false, message: routeVehicleGuard.message });
+            }
+        }
+
         // Fetch B2C Partner user to get their country
         const user = await User.findById(req.userId);
         if (!user) {
@@ -484,6 +492,19 @@ export const createB2CPartnerSchedule = async (req, res) => {
             tripTimes: formattedTripTimes,
             availableDays: availableDays || ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
         };
+
+        // Block allocation of vehicles that are Under Maintenance / Inactive.
+        // Gather the schedule-default vehicle, the route's default vehicle and
+        // every per-trip (outbound + return) vehicle reference.
+        const vehicleIdsToValidate = [
+            assignedVehicle,
+            route.assignedVehicle,
+            ...formattedTripTimes.flatMap((t) => [t.assignedVehicle, t.returnVehicle]),
+        ];
+        const vehicleAllocGuard = await assertVehiclesAllocatable(vehicleIdsToValidate, req.userId);
+        if (!vehicleAllocGuard.ok) {
+            return res.status(400).json({ success: false, message: vehicleAllocGuard.message });
+        }
 
         // Check for driver scheduling conflicts
         const effectiveDriverId = assignedDriver || route.assignedDriver;
@@ -1569,9 +1590,21 @@ export const processRouteDeletionRefundForPass = async (pass, route, adminUserCa
         const paymentMethod = (booking?.paymentMethod) || pass.paymentMethod || "WALLET";
 
         // Was money actually collected by the platform/partner?
-        const bookingPaid = booking
+        //
+        // IMPORTANT (CASH): for cash monthly passes the commuter pays the partner
+        // OFFLINE, so the originating booking's `paymentStatus` stays "PENDING"
+        // even though money genuinely changed hands (the commuter paid cash and,
+        // at acceptance, the partner pre-paid the admin commission from their
+        // wallet). The pass document, however, is marked "PAID" once activated.
+        // Previously this gate only inspected the booking's paymentStatus, so cash
+        // passes were treated as "unpaid" and the whole settlement (commission
+        // reversal from admin -> partner, cash-refund-due to commuter) was skipped.
+        // We now also honour the PASS payment status so cash passes settle correctly.
+        const bookingPaidOnline = booking
             ? ["COMPLETED", "PAID"].includes(booking.paymentStatus)
-            : ["PAID"].includes(pass.paymentStatus);
+            : false;
+        const passMarkedPaid = ["PAID", "COMPLETED"].includes(pass.paymentStatus);
+        const bookingPaid = bookingPaidOnline || passMarkedPaid;
 
         // The full amount the commuter paid, and the split that was credited out.
         const paymentAmount = round2(booking?.paymentAmount || pass.totalAmount || 0);
@@ -1662,69 +1695,94 @@ export const processRouteDeletionRefundForPass = async (pass, route, adminUserCa
             adminUserCache.user = adminUser;
         }
 
-        // ===== 1. REFUND THE COMMUTER (unused-trip amount, NO cancellation fee) =====
-        if (!isCash) {
-            // ONLINE / WALLET: platform held the money -> credit commuter wallet
-            // in the pass's currency (never a mismatched-currency wallet).
-            const commuterWallet = await Wallet.findOne({ userId: passengerId, currency });
-            if (commuterWallet) {
-                const balanceBefore = commuterWallet.balance;
-                commuterWallet.balance = round2(commuterWallet.balance + refundToCommuter);
-                const description = `Refund for ${remainingTripsCount} unused trip(s) - route "${route.fromLocation} to ${route.toLocation}" deleted by operator (no cancellation fee)`;
-                commuterWallet.transactions.push({
-                    type: "REFUND",
-                    amount: refundToCommuter,
-                    description,
-                    reference: String(booking?._id || pass._id),
-                    status: "COMPLETED",
-                    createdAt: new Date(),
-                });
-                await commuterWallet.save();
+        // ===== 1. REFUND THE COMMUTER TO THEIR IN-APP WALLET (no cancellation fee) =====
+        // The commuter is ALWAYS refunded into their wallet — for BOTH online and
+        // CASH passes — so they can withdraw the money from the app and never have
+        // to chase the partner for cash offline.
+        //
+        // Funding of this wallet credit (kept fully money-conserved) happens in the
+        // sections below:
+        //   - ONLINE: platform held the money, so the partner earnings portion is
+        //     debited from the partner wallet and the commission portion from admin.
+        //   - CASH:   the partner physically holds the commuter's cash, so the
+        //     earnings portion is debited from the partner wallet (the partner keeps
+        //     the equivalent physical cash to cover it) and the commission portion —
+        //     which the partner pre-paid to admin at acceptance — is debited from the
+        //     admin wallet. Net effect: commuter is made whole digitally.
+        //
+        // Ensure the commuter has a wallet in the pass currency (create if missing so
+        // a cash commuter who never used the wallet can still receive & withdraw it).
+        let commuterWallet = await Wallet.findOne({ userId: passengerId, currency });
+        if (!commuterWallet) {
+            const passengerUser = await User.findById(passengerId).select("role");
+            commuterWallet = await Wallet.create({
+                userId: passengerId,
+                role: passengerUser?.role || "COMMUTER",
+                currency,
+                balance: 0,
+            });
+        }
+        {
+            const balanceBefore = commuterWallet.balance;
+            commuterWallet.balance = round2(commuterWallet.balance + refundToCommuter);
+            const description = `Refund for ${remainingTripsCount} unused trip(s) - route "${route.fromLocation} to ${route.toLocation}" deleted by operator (no cancellation fee)`;
+            commuterWallet.transactions.push({
+                type: "REFUND",
+                amount: refundToCommuter,
+                description,
+                reference: String(booking?._id || pass._id),
+                status: "COMPLETED",
+                createdAt: new Date(),
+            });
+            await commuterWallet.save();
 
-                await Transaction.create({
-                    walletId: commuterWallet._id,
-                    userId: passengerId,
-                    type: "CREDIT",
-                    amount: refundToCommuter,
-                    currency,
-                    category: "REFUND",
-                    description,
-                    referenceId: booking?._id,
-                    referenceModel: booking ? "B2CPassengerBooking" : undefined,
-                    balanceBefore,
-                    balanceAfter: commuterWallet.balance,
-                    metadata: {
-                        passId: pass._id,
-                        bookingId: booking?._id,
-                        reason: "route_deleted_by_partner",
-                        usedTripsCount,
-                        remainingTripsCount,
-                        cancellationFee: 0,
-                    },
-                });
-                summary.refundMethod = "WALLET";
-            }
-        } else {
-            // CASH: platform never held the money. Partner must return the unused-trip
-            // cash to the commuter offline. Record the amount due (no fee).
-            summary.refundMethod = "CASH_FROM_PARTNER";
-            if (booking) {
-                booking.refundMethod = "CASH_FROM_PARTNER";
-                booking.cashRefundDueFromPartner = refundToCommuter;
-                booking.cashRefundSettled = false;
-            }
+            await Transaction.create({
+                walletId: commuterWallet._id,
+                userId: passengerId,
+                type: "CREDIT",
+                amount: refundToCommuter,
+                currency,
+                category: "REFUND",
+                description,
+                referenceId: booking?._id,
+                referenceModel: booking ? "B2CPassengerBooking" : undefined,
+                balanceBefore,
+                balanceAfter: commuterWallet.balance,
+                metadata: {
+                    passId: pass._id,
+                    bookingId: booking?._id,
+                    reason: isCash ? "route_deleted_by_partner_cash" : "route_deleted_by_partner",
+                    paymentMethod,
+                    usedTripsCount,
+                    remainingTripsCount,
+                    cancellationFee: 0,
+                },
+            });
+            summary.refundMethod = "WALLET";
         }
 
         // ===== 2. CLAW BACK PARTNER EARNINGS FOR UNUSED TRIPS =====
-        // ONLINE/WALLET: partner was credited earnings at acceptance -> DEBIT the unused part.
-        // CASH: the partner physically holds the commuter's cash and returns it directly,
-        //       so there is no wallet earning to reverse (handled offline above).
+        // The partner keeps earnings ONLY for trips actually used, so the unused-trip
+        // earnings portion is DEBITED from the partner wallet in BOTH cases:
+        //   - ONLINE/WALLET: partner was credited earnings at acceptance -> reverse it.
+        //   - CASH: the partner physically holds the commuter's cash. We debit the
+        //     wallet by the earnings portion (the partner keeps the equivalent cash),
+        //     which funds the commuter's in-app wallet refund done in section 1.
+        // The wallet balance is intentionally allowed to go negative (see Wallet model)
+        // — a partner holding cash must top up to settle what they owe.
         const partnerWallet = await Wallet.findOne({ userId: partnerId, currency });
-        if (!isCash && partnerWallet && earningsToReverse > 0) {
+        if (partnerWallet && earningsToReverse > 0) {
             const partnerBalanceBefore = partnerWallet.balance;
             partnerWallet.balance = round2(partnerWallet.balance - earningsToReverse);
-            partnerWallet.totalEarnings = Math.max(0, round2((partnerWallet.totalEarnings || 0) - earningsToReverse));
-            const description = `Earnings reversed for ${remainingTripsCount} unused trip(s) - you deleted route "${route.fromLocation} to ${route.toLocation}"`;
+            // Only reduce lifetime earnings for online passes, where the earnings were
+            // actually credited to the wallet's totalEarnings at acceptance. For cash,
+            // earnings were never added to the wallet (held as physical cash).
+            if (!isCash) {
+                partnerWallet.totalEarnings = Math.max(0, round2((partnerWallet.totalEarnings || 0) - earningsToReverse));
+            }
+            const description = isCash
+                ? `Cash refund funded for ${remainingTripsCount} unused trip(s) - you deleted route "${route.fromLocation} to ${route.toLocation}". You keep the passenger's cash for these trips; the amount was refunded to their wallet on your behalf.`
+                : `Earnings reversed for ${remainingTripsCount} unused trip(s) - you deleted route "${route.fromLocation} to ${route.toLocation}"`;
             partnerWallet.transactions.push({
                 type: "EARNINGS_REVERSAL",
                 amount: earningsToReverse,
@@ -1749,7 +1807,8 @@ export const processRouteDeletionRefundForPass = async (pass, route, adminUserCa
                 metadata: {
                     passId: pass._id,
                     bookingId: booking?._id,
-                    reason: "route_deleted_by_partner",
+                    reason: isCash ? "route_deleted_by_partner_cash" : "route_deleted_by_partner",
+                    paymentMethod,
                     usedTripsCount,
                     remainingTripsCount,
                     fullPartnerEarnings,
@@ -1759,119 +1818,68 @@ export const processRouteDeletionRefundForPass = async (pass, route, adminUserCa
         }
 
         // ===== 3. CLAW BACK ADMIN COMMISSION FOR UNUSED TRIPS =====
+        // The admin keeps commission ONLY for trips actually used, so the unused-trip
+        // commission portion is DEBITED from the admin wallet in BOTH cases:
+        //   - ONLINE/WALLET: admin was credited commission at acceptance.
+        //   - CASH: the partner pre-paid this commission to admin at acceptance.
+        // In both cases this commission portion helps fund the commuter's in-app
+        // wallet refund done in section 1.
         if (adminUser && commissionToReverse > 0) {
             const adminWallet = await Wallet.findOne({ userId: adminUser._id, currency });
             if (adminWallet) {
-                if (!isCash) {
-                    // ONLINE/WALLET: admin was credited commission -> DEBIT the unused part.
-                    const adminBalanceBefore = adminWallet.balance;
-                    adminWallet.balance = round2(adminWallet.balance - commissionToReverse);
-                    adminWallet.totalEarnings = Math.max(0, round2((adminWallet.totalEarnings || 0) - commissionToReverse));
-                    const description = `Commission reversed for ${remainingTripsCount} unused trip(s) - route "${route.fromLocation} to ${route.toLocation}" deleted by operator`;
-                    adminWallet.transactions.push({
-                        type: "COMMISSION_REVERSAL",
-                        amount: commissionToReverse,
-                        description,
-                        status: "COMPLETED",
-                        createdAt: new Date(),
-                    });
-                    await adminWallet.save();
+                const adminBalanceBefore = adminWallet.balance;
+                adminWallet.balance = round2(adminWallet.balance - commissionToReverse);
+                adminWallet.totalEarnings = Math.max(0, round2((adminWallet.totalEarnings || 0) - commissionToReverse));
+                const description = `Commission reversed for ${remainingTripsCount} unused trip(s) - route "${route.fromLocation} to ${route.toLocation}" deleted by operator`;
+                adminWallet.transactions.push({
+                    type: "COMMISSION_REVERSAL",
+                    amount: commissionToReverse,
+                    description,
+                    status: "COMPLETED",
+                    createdAt: new Date(),
+                });
+                await adminWallet.save();
 
-                    await Transaction.create({
-                        walletId: adminWallet._id,
-                        userId: adminUser._id,
-                        type: "DEBIT",
-                        amount: commissionToReverse,
-                        currency,
-                        category: "COMMISSION_REVERSAL",
-                        description,
-                        referenceId: booking?._id,
-                        referenceModel: booking ? "B2CPassengerBooking" : undefined,
-                        balanceBefore: adminBalanceBefore,
-                        balanceAfter: adminWallet.balance,
-                        metadata: {
-                            passId: pass._id,
-                            bookingId: booking?._id,
-                            reason: "route_deleted_by_partner",
-                            usedTripsCount,
-                            remainingTripsCount,
-                            fullAdminCommission,
-                        },
-                    });
-                    summary.commissionReversed = commissionToReverse;
-                } else if (partnerWallet) {
-                    // CASH: at acceptance the admin commission was DEDUCTED from the partner
-                    // wallet and credited to admin. Since the partner now returns the unused
-                    // cash to the commuter, the partner over-paid commission on the unused
-                    // trips -> admin refunds that commission portion back to the partner.
-                    const partnerBalanceBefore = partnerWallet.balance;
-                    partnerWallet.balance = round2(partnerWallet.balance + commissionToReverse);
-                    partnerWallet.transactions.push({
-                        type: "COMMISSION_REFUND",
-                        amount: commissionToReverse,
-                        description: `Commission refunded for ${remainingTripsCount} unused trip(s) - cash route deleted`,
-                        status: "COMPLETED",
-                        createdAt: new Date(),
-                    });
-                    await partnerWallet.save();
-
-                    await Transaction.create({
-                        walletId: partnerWallet._id,
-                        userId: partnerId,
-                        type: "CREDIT",
-                        amount: commissionToReverse,
-                        currency,
-                        category: "COMMISSION_REFUND",
-                        description: `Commission refunded for ${remainingTripsCount} unused trip(s) - cash route deleted by operator`,
-                        referenceId: booking?._id,
-                        referenceModel: booking ? "B2CPassengerBooking" : undefined,
-                        balanceBefore: partnerBalanceBefore,
-                        balanceAfter: partnerWallet.balance,
-                        metadata: { passId: pass._id, bookingId: booking?._id, reason: "route_deleted_by_partner_cash" },
-                    });
-
-                    const adminBalanceBefore = adminWallet.balance;
-                    adminWallet.balance = round2(adminWallet.balance - commissionToReverse);
-                    adminWallet.totalEarnings = Math.max(0, round2((adminWallet.totalEarnings || 0) - commissionToReverse));
-                    adminWallet.transactions.push({
-                        type: "COMMISSION_REVERSAL",
-                        amount: commissionToReverse,
-                        description: `Commission reversed for ${remainingTripsCount} unused trip(s) - cash route deleted by operator`,
-                        status: "COMPLETED",
-                        createdAt: new Date(),
-                    });
-                    await adminWallet.save();
-
-                    await Transaction.create({
-                        walletId: adminWallet._id,
-                        userId: adminUser._id,
-                        type: "DEBIT",
-                        amount: commissionToReverse,
-                        currency,
-                        category: "COMMISSION_REVERSAL",
-                        description: `Commission reversed for ${remainingTripsCount} unused trip(s) - cash route deleted by operator`,
-                        referenceId: booking?._id,
-                        referenceModel: booking ? "B2CPassengerBooking" : undefined,
-                        balanceBefore: adminBalanceBefore,
-                        balanceAfter: adminWallet.balance,
-                        metadata: { passId: pass._id, bookingId: booking?._id, reason: "route_deleted_by_partner_cash" },
-                    });
-                    summary.commissionReversed = commissionToReverse;
-                }
+                await Transaction.create({
+                    walletId: adminWallet._id,
+                    userId: adminUser._id,
+                    type: "DEBIT",
+                    amount: commissionToReverse,
+                    currency,
+                    category: "COMMISSION_REVERSAL",
+                    description,
+                    referenceId: booking?._id,
+                    referenceModel: booking ? "B2CPassengerBooking" : undefined,
+                    balanceBefore: adminBalanceBefore,
+                    balanceAfter: adminWallet.balance,
+                    metadata: {
+                        passId: pass._id,
+                        bookingId: booking?._id,
+                        reason: isCash ? "route_deleted_by_partner_cash" : "route_deleted_by_partner",
+                        paymentMethod,
+                        usedTripsCount,
+                        remainingTripsCount,
+                        fullAdminCommission,
+                    },
+                });
+                summary.commissionReversed = commissionToReverse;
             }
         }
 
         // ===== 4. PERSIST REFUND STATE ON THE BOOKING =====
+        // The commuter is now refunded into their in-app wallet for BOTH online and
+        // cash passes, so the refund is COMPLETED (not a pending cash IOU) in all cases.
         if (booking) {
             booking.usedTripsCount = usedTripsCount;
             booking.remainingTripsCount = remainingTripsCount;
             booking.refundAmount = refundToCommuter;
             booking.cancellationFee = 0;
-            booking.refundStatus = isCash ? "PENDING" : "COMPLETED";
-            if (!isCash) {
-                booking.paymentStatus = "REFUNDED";
-                booking.refundMethod = "WALLET";
-            }
+            booking.refundStatus = "COMPLETED";
+            booking.paymentStatus = "REFUNDED";
+            booking.refundMethod = "WALLET";
+            // No offline cash owed to the commuter anymore.
+            booking.cashRefundDueFromPartner = 0;
+            booking.cashRefundSettled = true;
             booking.bookingStatus = "CANCELLED";
             booking.cancellationReason = "Route deleted by operator";
             booking.cancelledAt = new Date();
@@ -1880,9 +1888,7 @@ export const processRouteDeletionRefundForPass = async (pass, route, adminUserCa
 
         // ===== 5. NOTIFY THE COMMUTER =====
         try {
-            const msg = isCash
-                ? `The route "${route.fromLocation} to ${route.toLocation}" was cancelled by the operator. You will receive ${currency} ${refundToCommuter.toFixed(2)} in cash for your ${remainingTripsCount} unused trip(s). No cancellation fee was charged.`
-                : `The route "${route.fromLocation} to ${route.toLocation}" was cancelled by the operator. ${currency} ${refundToCommuter.toFixed(2)} for your ${remainingTripsCount} unused trip(s) has been refunded to your wallet. No cancellation fee was charged.`;
+            const msg = `The route "${route.fromLocation} to ${route.toLocation}" was cancelled by the operator. ${currency} ${refundToCommuter.toFixed(2)} for your ${remainingTripsCount} unused trip(s) has been refunded to your in-app wallet — you can withdraw it anytime. No cancellation fee was charged.`;
 
             await createNotification({
                 userId: passengerId,
@@ -2042,24 +2048,30 @@ export const deleteB2CPartnerRoute = async (req, res) => {
             }
         }
 
-        // Notify the operator (partner) of the total earnings reversed for unused trips.
+        // Notify the operator (partner) of the wallet impact of the deletion.
+        // The unused-trip earnings portion is DEBITED from the partner wallet in BOTH
+        // cases (commuter is refunded to their in-app wallet):
+        //  - ONLINE (WALLET/STRIPE): the earnings held in the wallet are clawed back.
+        //  - CASH: the partner keeps the passenger's physical cash for the unused
+        //    trips, and the wallet is debited by that same amount because the refund
+        //    was paid to the commuter's wallet on the partner's behalf.
         const totalEarningsReversed = round2(
             refundSummaries.reduce((s, r) => s + (r.earningsReversed || 0), 0)
         );
         if (totalEarningsReversed > 0) {
             try {
                 const partnerCurrency = refundSummaries[0]?.currency || route.pricing?.currency || "AED";
-                const partnerMsg = `You deleted the route "${route.fromLocation} to ${route.toLocation}". ${partnerCurrency} ${totalEarningsReversed.toFixed(2)} in earnings for commuters' unused trips was reversed from your wallet and refunded to them. You keep earnings only for trips that were actually used.`;
+                const partnerMsg = `You deleted the route "${route.fromLocation} to ${route.toLocation}". ${partnerCurrency} ${totalEarningsReversed.toFixed(2)} for commuters' unused trips was debited from your wallet and refunded to their in-app wallets (you keep earnings only for trips actually used). For cash passes you keep the passenger's cash for those unused trips, so this simply settles what you owed them digitally.`;
                 await createNotification({
                     userId: route.b2cPartnerId,
                     type: "WALLET_UPDATED",
-                    title: "Earnings Reversed - Route Deleted",
+                    title: "Wallet Updated - Route Deleted",
                     message: partnerMsg,
                     category: "WALLET",
                 });
                 sendRealTimeNotification(route.b2cPartnerId, {
                     type: "WALLET_UPDATED",
-                    title: "Earnings Reversed - Route Deleted",
+                    title: "Wallet Updated - Route Deleted",
                     message: partnerMsg,
                     data: { totalEarningsReversed },
                 });
@@ -2131,6 +2143,10 @@ export const deleteB2CPartnerRoute = async (req, res) => {
             refunds: {
                 passesRefunded: refundSummaries.length,
                 totalRefundedToCommuters: round2(totalRefundedToCommuters),
+                totalEarningsReversed,
+                totalAdminCommissionReversed: round2(
+                    refundSummaries.reduce((s, r) => s + (r.commissionReversed || 0), 0)
+                ),
                 details: refundSummaries
             }
         });
@@ -2833,6 +2849,184 @@ const refreshVehicleAvailability = async (vehicleId) => {
     });
 };
 
+// ---------------------------------------------------------------------------
+// Allocation guard: only "Active" vehicles may be assigned to routes, schedules
+// or trips. Vehicles that are "Maintenance" or "Inactive" must be rejected.
+//
+// Accepts one or many vehicle ids (schedule default + per-trip outbound/return
+// assignments), de-dupes them, and returns { ok:false, message } naming the
+// first offending vehicle so the partner gets a clear reason.
+// ---------------------------------------------------------------------------
+const assertVehiclesAllocatable = async (vehicleIds, partnerId) => {
+    const ids = [...new Set((Array.isArray(vehicleIds) ? vehicleIds : [vehicleIds])
+        .filter(Boolean)
+        .map((v) => v.toString()))];
+    if (ids.length === 0) return { ok: true };
+
+    const vehicles = await B2CPartnerVehicle.find({
+        _id: { $in: ids },
+        b2cPartnerId: partnerId,
+    }).select("model licensePlate status");
+
+    for (const v of vehicles) {
+        if (v.status !== "Active") {
+            const label = v.model
+                ? `${v.model}${v.licensePlate ? ` (${v.licensePlate})` : ""}`
+                : "The selected vehicle";
+            const stateWord = v.status === "Maintenance" ? "under maintenance" : "inactive";
+            return {
+                ok: false,
+                message: `${label} is ${stateWord} and cannot be assigned to trips. Please select an active vehicle.`,
+            };
+        }
+    }
+    return { ok: true };
+};
+
+// ---------------------------------------------------------------------------
+// Remove a vehicle from EVERY assignment across a partner's routes, schedules,
+// future daily trips and active bookings. Used when a vehicle becomes
+// unavailable — i.e. its status is changed to "Maintenance" or "Inactive". An
+// unavailable vehicle must not remain allocated anywhere.
+//
+// Steps (all real DB writes):
+//   1. Clear it from schedule.assignedVehicle + tripTimes.assignedVehicle /
+//      tripTimes.returnVehicle across all of the partner's schedules.
+//   2. Clear it from route.assignedVehicle on all of the partner's routes.
+//   3. Clear vehicleId + vehicleInfo snapshot from future / re-assignable
+//      daily trips.
+//   4. Clear the outbound/return vehicle refs from active commuter bookings.
+//   5. Notify every affected commuter (real-time + email) that their trip
+//      vehicle was removed and a new one will be assigned — their booking
+//      remains confirmed.
+//
+// Returns a summary of the counts touched.
+// ---------------------------------------------------------------------------
+export const deallocateVehicleFromAllAssignments = async (vehicleId, partnerId, { reason = "Inactive" } = {}) => {
+    const summary = {
+        schedulesUpdated: 0,
+        routesUpdated: 0,
+        tripsUpdated: 0,
+        bookingsUpdated: 0,
+        commutersNotified: 0,
+    };
+    if (!vehicleId || !partnerId) return summary;
+
+    const vId = vehicleId.toString();
+    const matches = (id) => id && id.toString() === vId;
+
+    // 1) Schedules + their trip-time (outbound & return) assignments.
+    const schedules = await B2CPartnerSchedule.find({ b2cPartnerId: partnerId });
+    for (const schedule of schedules) {
+        let changed = false;
+        if (matches(schedule.assignedVehicle)) {
+            schedule.assignedVehicle = null;
+            changed = true;
+        }
+        (schedule.tripTimes || []).forEach((tt) => {
+            if (matches(tt.assignedVehicle)) { tt.assignedVehicle = null; changed = true; }
+            if (matches(tt.returnVehicle)) { tt.returnVehicle = null; changed = true; }
+        });
+        if (changed) {
+            schedule.markModified("tripTimes");
+            await schedule.save();
+            summary.schedulesUpdated += 1;
+        }
+    }
+
+    // 2) Route records.
+    const routeUpdate = await B2CPartnerRoute.updateMany(
+        { b2cPartnerId: partnerId, assignedVehicle: vehicleId },
+        { $set: { assignedVehicle: null } },
+    );
+    summary.routesUpdated = routeUpdate.modifiedCount || 0;
+
+    // 3) Future / not-yet-started daily trips (clear ref + snapshot).
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tripUpdate = await B2CPartnerTrip.updateMany(
+        {
+            b2cPartnerId: partnerId,
+            vehicleId,
+            status: { $in: REASSIGNABLE_TRIP_STATUSES },
+            tripDate: { $gte: today },
+        },
+        {
+            $set: {
+                vehicleId: null,
+                "vehicleInfo.model": "",
+                "vehicleInfo.licensePlate": "",
+                "vehicleInfo.seatingCapacity": null,
+            },
+        },
+    );
+    summary.tripsUpdated = tripUpdate.modifiedCount || 0;
+
+    // 4) Active commuter bookings — capture affected commuters, then clear refs.
+    const affectedBookings = await B2CPassengerBooking.find({
+        bookingStatus: { $in: ACTIVE_BOOKING_STATUSES },
+        $or: [{ outboundVehicleId: vehicleId }, { returnVehicleId: vehicleId }],
+    }).select("userId").lean();
+
+    await B2CPassengerBooking.updateMany(
+        { bookingStatus: { $in: ACTIVE_BOOKING_STATUSES }, outboundVehicleId: vehicleId },
+        { $set: { outboundVehicleId: null } },
+    );
+    await B2CPassengerBooking.updateMany(
+        { bookingStatus: { $in: ACTIVE_BOOKING_STATUSES }, returnVehicleId: vehicleId },
+        { $set: { returnVehicleId: null } },
+    );
+    summary.bookingsUpdated = affectedBookings.length;
+
+    // 5) Notify affected commuters (real-time + best-effort email).
+    const commuterIds = [...new Set(affectedBookings.map((b) => b.userId?.toString()).filter(Boolean))];
+    const title = "Vehicle Update for Your Trip";
+    const message =
+        "The vehicle assigned to one of your upcoming trips is no longer available and will be reassigned shortly. Your booking is still confirmed.";
+    for (const uid of commuterIds) {
+        try {
+            const notification = await createNotification({
+                userId: uid,
+                type: "ASSIGNMENT_UPDATED",
+                title,
+                message,
+                metadata: { changeType: "VEHICLE_REMOVED", vehicleId: vId, reason },
+            });
+            sendRealTimeNotification(uid, notification);
+
+            const commuter = await User.findById(uid).select("fullName name email");
+            if (commuter?.email) {
+                const html = buildAssignmentEmailHtml({
+                    heading: title,
+                    greetingName: commuter.fullName || commuter.name,
+                    bodyLines: [
+                        "The vehicle assigned to one of your upcoming DriveMe trips has become unavailable and has been removed.",
+                        "Don't worry — your booking is still confirmed and a new vehicle will be assigned before your trip.",
+                        "You can view the latest details anytime in the DriveMe app under your bookings.",
+                    ],
+                });
+                await sendEmail(commuter.email, title, html);
+            }
+        } catch (notifyErr) {
+            console.error("[v0] Vehicle removal commuter notification failed:", notifyErr.message);
+        }
+    }
+    summary.commutersNotified = commuterIds.length;
+
+    // Reset the vehicle's own scheduling-availability bookkeeping.
+    await B2CPartnerVehicle.findByIdAndUpdate(vehicleId, {
+        $set: {
+            availabilityStatus: "available",
+            availableUntil: null,
+            nextScheduledTripTime: null,
+            lastAvailabilityUpdate: new Date(),
+        },
+    });
+
+    console.log(`[v0] Deallocated vehicle ${vId} (reason: ${reason}):`, summary);
+    return summary;
+};
+
 export const changeRouteDriver = async (req, res) => {
     try {
         const partnerId = req.userId;
@@ -3007,9 +3201,18 @@ export const changeRouteVehicle = async (req, res) => {
         }
 
         const newVehicle = await B2CPartnerVehicle.findOne({ _id: newVehicleId, b2cPartnerId: partnerId })
-            .select("model licensePlate seatingCapacity vehicleType");
+            .select("model licensePlate seatingCapacity vehicleType status");
         if (!newVehicle) {
             return res.status(404).json({ success: false, message: "New vehicle not found or doesn't belong to you" });
+        }
+
+        // Only Active vehicles can be assigned — reject Maintenance / Inactive.
+        if (newVehicle.status !== "Active") {
+            const stateWord = newVehicle.status === "Maintenance" ? "under maintenance" : "inactive";
+            return res.status(400).json({
+                success: false,
+                message: `${newVehicle.model || "The selected vehicle"}${newVehicle.licensePlate ? ` (${newVehicle.licensePlate})` : ""} is ${stateWord} and cannot be assigned to trips. Please select an active vehicle.`,
+            });
         }
 
         const newVehicleIdStr = newVehicleId.toString();
@@ -3395,6 +3598,19 @@ export const changeTripDriver = async (req, res) => {
         if (isReturnLeg) {
             tripTime.returnDriver = newDriverId;
         } else {
+            // Round Trip: before overwriting the OUTBOUND driver, "freeze" the
+            // RETURN leg to whatever driver it is currently serving with. The
+            // return leg's driver defaults to null and is displayed by falling
+            // back to the outbound (assignedDriver) value — so without this
+            // freeze, changing the onward driver would make the return leg
+            // appear to inherit the new driver too. Freezing keeps each leg
+            // fully independent.
+            if (isRoundTrip && !tripTime.returnDriver) {
+                const currentReturnDriver = tripTime.assignedDriver || schedule.assignedDriver || null;
+                if (currentReturnDriver) {
+                    tripTime.returnDriver = currentReturnDriver;
+                }
+            }
             tripTime.assignedDriver = newDriverId;
         }
         schedule.markModified("tripTimes");
@@ -3529,9 +3745,18 @@ export const changeTripVehicle = async (req, res) => {
         }
 
         const newVehicle = await B2CPartnerVehicle.findOne({ _id: newVehicleId, b2cPartnerId: partnerId })
-            .select("model licensePlate seatingCapacity vehicleType");
+            .select("model licensePlate seatingCapacity vehicleType status");
         if (!newVehicle) {
             return res.status(404).json({ success: false, message: "New vehicle not found or doesn't belong to you" });
+        }
+
+        // Only Active vehicles can be assigned — reject Maintenance / Inactive.
+        if (newVehicle.status !== "Active") {
+            const stateWord = newVehicle.status === "Maintenance" ? "under maintenance" : "inactive";
+            return res.status(400).json({
+                success: false,
+                message: `${newVehicle.model || "The selected vehicle"}${newVehicle.licensePlate ? ` (${newVehicle.licensePlate})` : ""} is ${stateWord} and cannot be assigned to trips. Please select an active vehicle.`,
+            });
         }
 
         const schedule = await B2CPartnerSchedule.findOne({ _id: scheduleId, routeId, b2cPartnerId: partnerId });
@@ -3557,6 +3782,16 @@ export const changeTripVehicle = async (req, res) => {
         if (isReturnLeg) {
             tripTime.returnVehicle = newVehicleId;
         } else {
+            // Round Trip: freeze the RETURN leg's current vehicle before
+            // overwriting the OUTBOUND one, so the return leg does not appear to
+            // inherit the new outbound vehicle via its null → outbound fallback.
+            // This keeps each leg's vehicle assignment independent.
+            if (isRoundTrip && !tripTime.returnVehicle) {
+                const currentReturnVehicle = tripTime.assignedVehicle || schedule.assignedVehicle || null;
+                if (currentReturnVehicle) {
+                    tripTime.returnVehicle = currentReturnVehicle;
+                }
+            }
             tripTime.assignedVehicle = newVehicleId;
         }
         schedule.markModified("tripTimes");
@@ -3613,7 +3848,7 @@ export const changeTripVehicle = async (req, res) => {
             await refreshVehicleAvailability(oldVehicleId);
         }
 
-        // 5) Notify commuters on the affected leg — real-time + email.
+        // 5) Notify commuters on the affected leg �� real-time + email.
         const legBookingMatch = isReturnLeg
             ? { returnTripTime: tripTime.arrivalTime }
             : { outboundTripTime: tripTime.departureTime };

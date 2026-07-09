@@ -8,6 +8,18 @@ const routeRequestSchema = new mongoose.Schema({
         required: true
     },
 
+    // Service country this demand belongs to. Stamped at creation from the
+    // requesting commuter's effective country (dialing-code / stored selection),
+    // NOT guessed from free-text location names. This is what keeps a UAE
+    // partner's demand board from ever showing Kuwait commuter requests and
+    // vice-versa. Kept in sync with the same canonical codes as User.country.
+    country: {
+        type: String,
+        enum: ["UAE", "KW", "SA", "BH", "OM", "QA"],
+        default: null,
+        index: true
+    },
+
     // Route Details
     pickupLocation: {
         type: String,

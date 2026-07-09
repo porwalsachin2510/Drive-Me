@@ -61,9 +61,12 @@ const CommuterBookingDetailsPage = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      PENDING: { color: "#d69e2e", bg: "#fefcbf", label: "Pending" },
-      CONFIRMED: { color: "#38a169", bg: "#c6f6d5", label: "Confirmed" },
-      ACCEPTED: { color: "#38a169", bg: "#c6f6d5", label: "Accepted" },
+      // Awaiting the B2C partner's approval — the commuter must not see "Confirmed" yet.
+      PENDING: { color: "#d69e2e", bg: "#fefcbf", label: "Pending Approval" },
+      // Legacy awaiting-approval state; still shown as pending until accepted.
+      CONFIRMED: { color: "#d69e2e", bg: "#fefcbf", label: "Pending Approval" },
+      // Partner accepted the booking — this is the real "Confirmed" state.
+      ACCEPTED: { color: "#38a169", bg: "#c6f6d5", label: "Confirmed" },
       COMPLETED: { color: "#3182ce", bg: "#bee3f8", label: "Completed" },
       REJECTED: { color: "#e53e3e", bg: "#fed7d7", label: "Rejected" },
       CANCELLED: { color: "#718096", bg: "#e2e8f0", label: "Cancelled" },
@@ -403,7 +406,7 @@ const CommuterBookingDetailsPage = () => {
     } catch (err) {
       console.error("Error fetching driver location from API:", err);
     }
-  };;
+  };
 
   // Poll driver location via API when tracking is active (as fallback to socket)
   useEffect(() => {
@@ -985,7 +988,7 @@ const CommuterBookingDetailsPage = () => {
                 </div>
               </div>
             )}
-          
+
           {/* Payment Information Card */}
           <div className="cbdp-card">
             <h2 className="cbdp-card-title">
@@ -1574,6 +1577,6 @@ const CommuterBookingDetailsPage = () => {
       <Footer />
     </div>
   );
-};;
+};
 
 export default CommuterBookingDetailsPage;

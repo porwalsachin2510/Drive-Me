@@ -222,7 +222,12 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
         api.get("/b2c-partner/drivers"),
       ]);
 
-      setAvailableVehicles(vehiclesResponse.data.fleet?.vehicles || []);
+      // Only Active vehicles can be allocated — hide Maintenance / Inactive.
+      setAvailableVehicles(
+        (vehiclesResponse.data.fleet?.vehicles || []).filter(
+          (v) => v.status === "Active",
+        ),
+      );
       setAvailableDrivers(driversResponse.data.drivers || []);
     } catch (error) {
       console.error("Error fetching assets:", error);

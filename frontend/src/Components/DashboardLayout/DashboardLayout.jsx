@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { logout, setUser } from "../../Redux/slices/authSlice";
@@ -866,6 +866,58 @@ export default function DashboardLayout({
   const [isUpdatingLayout, setIsUpdatingLayout] = useState(false);
   const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
 
+  // ---------------------------------------------------------------------------
+  // Active-tab persistence
+  //
+  // Every dashboard keeps its active tab in React state that is initialised to
+  // a default (e.g. "overview"). Any full-page reload — such as the ones some
+  // "create" flows trigger after saving a record — resets that state back to
+  // the default tab, bouncing the user away from the page they were working on
+  // (e.g. from "Fleet & Drivers" back to "Overview").
+  //
+  // To keep the user on the same tab after a reload, we persist the active tab
+  // in sessionStorage (scoped per user) and restore it once on mount. A "?tab="
+  // query param always wins, so deep-links that intentionally open a specific
+  // tab keep working.
+  // ---------------------------------------------------------------------------
+  const tabStorageKey = `dm_active_tab_${user?._id || user?.id || user?.email || user?.role || "guest"}`;
+  const didRestoreTab = useRef(false);
+
+  // Restore the persisted tab once, on mount, when the user is known.
+  useEffect(() => {
+    if (didRestoreTab.current || !user?.role) return;
+    didRestoreTab.current = true;
+
+    const params = new URLSearchParams(location.search);
+    // A deep-link tab request takes precedence over the persisted tab.
+    if (params.get("tab")) return;
+
+    try {
+      const stored = sessionStorage.getItem(tabStorageKey);
+      if (
+        stored &&
+        stored !== activeTab &&
+        typeof setActiveTab === "function"
+      ) {
+        setActiveTab(stored);
+      }
+    } catch {
+      // sessionStorage can be unavailable (private mode); fail silently.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role]);
+
+  // Persist the active tab whenever it changes (after the initial restore).
+  useEffect(() => {
+    if (!didRestoreTab.current || !user?.role || !activeTab) return;
+    try {
+      sessionStorage.setItem(tabStorageKey, activeTab);
+    } catch {
+      // Ignore storage write failures.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user?.role]);
+
   // Get menu items based on user role and filter by admin permissions if applicable
   const getFilteredMenuItems = () => {
     const baseMenuItems = menuConfigs[user?.role] || [];
@@ -979,6 +1031,14 @@ export default function DashboardLayout({
 
   const handleLogout = async () => {
     try {
+      // Drop the persisted active tab so the next user who signs in from this
+      // browser tab starts on their own default tab instead of inheriting one.
+      try {
+        sessionStorage.removeItem(tabStorageKey);
+      } catch {
+        // Ignore storage failures.
+      }
+
       const token = localStorage.getItem("token");
 
       if (!token) {

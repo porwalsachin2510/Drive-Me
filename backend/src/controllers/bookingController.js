@@ -882,8 +882,10 @@ export const acceptB2CBooking = async (req, res) => {
             })
         }
 
-        // Check if booking is in CONFIRMED status
-        if (booking.bookingStatus !== "CONFIRMED") {
+        // A booking can only be accepted while it is awaiting the partner's review.
+        // New bookings are created as PENDING; "CONFIRMED" is accepted for backward
+        // compatibility with any legacy bookings created under the old convention.
+        if (!["PENDING", "CONFIRMED"].includes(booking.bookingStatus)) {
             return res.status(400).json({
                 success: false,
                 message: "Booking cannot be accepted. Current status: " + booking.bookingStatus,
@@ -1133,8 +1135,8 @@ export const acceptB2CBooking = async (req, res) => {
         const partnerDisplayName = booking.b2cPartnerId.companyName || booking.b2cPartnerId.fullName || booking.b2cPartnerId.name || 'the partner';
         const bookingAcceptedNotification = await createNotification({
             userId: booking.passengerId._id,
-            title: "Booking Accepted",
-            message: `Your B2C booking from ${booking.pickupLocation || 'pickup'} to ${booking.dropoffLocation || 'destination'} has been accepted by ${partnerDisplayName}.`,
+            title: "Booking Confirmed",
+            message: `Your booking from ${booking.pickupLocation || 'pickup'} to ${booking.dropoffLocation || 'destination'} has been accepted by ${partnerDisplayName} and is now confirmed.`,
             type: "BOOKING_ACCEPTED",
             bookingId: booking._id,
         })
@@ -1144,7 +1146,7 @@ export const acceptB2CBooking = async (req, res) => {
             type: "BOOKING_ACCEPTED",
             data: {
                 bookingId: booking._id,
-                message: `Your booking has been accepted by ${partnerDisplayName}.`,
+                message: `Your booking has been accepted by ${partnerDisplayName} and is now confirmed.`,
                 partnerInfo: {
                     name: partnerDisplayName,
                     phone: booking.b2cPartnerId.phone,

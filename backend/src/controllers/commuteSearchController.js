@@ -14,7 +14,7 @@ import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js"
 import mongoose from "mongoose"
 import { createNotification } from "../Services/notificationService.js"
 import { computeRouteSeatAvailability } from "../Services/seatAvailabilityService.js"
-import { getCountryCurrency, getEffectiveCountry } from "../Config/localizationConfig.js"
+import { getCountryCurrency, getEffectiveCountry, getLocationCountry, normalizeCountry } from "../Config/localizationConfig.js"
 
 /* ======================================================
    ROUND-TRIP DRIVER / VEHICLE RESOLUTION (shared helpers)
@@ -1383,42 +1383,144 @@ export const getB2CPartnerRouteRequests = async (req, res) => {
         const partnerId = req.userId
         const { status, page = 1, limit = 20 } = req.query
 
+        // Resolve the partner's identity country. Their demand board must ONLY
+        // show corridors that belong to their own service country — a UAE
+        // partner must never see Kuwait commuter demand and vice-versa.
+        const partner = await User.findById(partnerId).select("role country countryCode")
+        const partnerCountry = partner ? normalizeCountry(getEffectiveCountry(partner)) : null
+
+        const partnerObjId = new mongoose.Types.ObjectId(String(partnerId))
+
         // In the Open Marketplace model partners see demand that is open to everyone:
         // PENDING / UNDER_REVIEW / OPEN requests, plus any where they already showed interest.
-        const query = {
+        const baseMatch = {
             $or: [
                 { status: { $in: ["PENDING", "UNDER_REVIEW", "OPEN"] } },
-                { "interestedPartners.partnerId": partnerId },
+                { "interestedPartners.partnerId": partnerObjId },
             ],
         }
-        if (status) query.status = status.toUpperCase()
+        if (status) baseMatch.status = status.toUpperCase()
 
-        const routeRequests = await RouteRequest.find(query)
-            .populate('passengerId', 'fullName email phone profileImage')
-            .sort({ marketplaceOpenedAt: -1, demandCount: -1, createdAt: -1 })
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .lean()
+        // Country scoping. `country` is stamped on new demand; legacy requests
+        // may have it null, so also accept requests whose location resolves to
+        // the partner's country (handled after fetch for the null case).
+        if (partnerCountry) {
+            baseMatch.$and = [
+                {
+                    $or: [
+                        { country: partnerCountry },
+                        { country: { $exists: false } },
+                        { country: null },
+                    ],
+                },
+            ]
+        }
 
-        // Annotate each request with this partner's own interest state so the UI can react.
-        const annotated = routeRequests.map((r) => {
-            const mine = (r.interestedPartners || []).find(
-                (p) => String(p.partnerId) === String(partnerId)
-            )
-            return {
-                ...r,
-                myInterestStatus: mine ? mine.status : null,
-                interestedCount: (r.interestedPartners || []).length,
-                isOpenToMarketplace: r.status === "OPEN" || !!r.marketplaceOpenedAt,
-            }
-        })
+        // Group raw requests into ONE card per corridor (case-insensitive), so
+        // two commuters wanting the same route show as a single demand card
+        // with a combined passenger count — never duplicate cards.
+        const clusters = await RouteRequest.aggregate([
+            { $match: baseMatch },
+            { $sort: { createdAt: 1 } },
+            {
+                $group: {
+                    _id: {
+                        pickup: { $toLower: "$pickupLocation" },
+                        dropoff: { $toLower: "$dropoffLocation" },
+                    },
+                    primaryRequestId: { $first: "$_id" },
+                    country: { $first: "$country" },
+                    pickupLocation: { $first: "$pickupLocation" },
+                    dropoffLocation: { $first: "$dropoffLocation" },
+                    passengerIds: { $addToSet: "$passengerId" },
+                    firstPassengerId: { $first: "$passengerId" },
+                    preferredTimes: { $addToSet: "$preferredTime" },
+                    requestTypes: { $addToSet: "$requestType" },
+                    travelDays: { $first: "$travelDays" },
+                    expectedStartDate: { $min: "$expectedStartDate" },
+                    statuses: { $addToSet: "$status" },
+                    interestedPartners: { $push: "$interestedPartners" },
+                    marketplaceOpenedAt: { $max: "$marketplaceOpenedAt" },
+                    createdAt: { $min: "$createdAt" },
+                },
+            },
+            { $sort: { marketplaceOpenedAt: -1, createdAt: -1 } },
+        ])
 
-        const total = await RouteRequest.countDocuments(query)
+        // For legacy requests with no stored country, fall back to a location
+        // heuristic so they still land in the right partner's board.
+        const scoped = partnerCountry
+            ? clusters.filter((c) => {
+                if (c.country) return normalizeCountry(c.country) === partnerCountry
+                const guessed =
+                    getLocationCountry(c.pickupLocation) ||
+                    getLocationCountry(c.dropoffLocation)
+                // Unknown-country legacy demand is shown to everyone (safe default).
+                return !guessed || guessed === partnerCountry
+            })
+            : clusters
+
+        const total = scoped.length
+        const start = (parseInt(page) - 1) * parseInt(limit)
+        const paged = scoped.slice(start, start + parseInt(limit))
+
+        // Resolve the representative passenger + this partner's interest state.
+        const routeRequests = await Promise.all(
+            paged.map(async (c) => {
+                // Flatten + dedupe interested partners across the corridor.
+                const partnerMap = new Map()
+                for (const arr of c.interestedPartners || []) {
+                    for (const ip of arr || []) {
+                        if (!ip?.partnerId) continue
+                        const key = String(ip.partnerId)
+                        const prev = partnerMap.get(key)
+                        if (!prev || new Date(ip.respondedAt) > new Date(prev.respondedAt)) {
+                            partnerMap.set(key, ip)
+                        }
+                    }
+                }
+                const activePartners = Array.from(partnerMap.values()).filter(
+                    (p) => p.status !== "WITHDRAWN"
+                )
+                const mine = partnerMap.get(String(partnerId))
+
+                const passenger = c.firstPassengerId
+                    ? await User.findById(c.firstPassengerId).select("fullName email profileImage")
+                    : null
+
+                // Representative status for the corridor.
+                let corridorStatus = "PENDING"
+                if (c.statuses.includes("FULFILLED")) corridorStatus = "FULFILLED"
+                else if (c.statuses.includes("APPROVED")) corridorStatus = "APPROVED"
+                else if (c.statuses.includes("OPEN") || c.marketplaceOpenedAt) corridorStatus = "OPEN"
+                else if (c.statuses.includes("UNDER_REVIEW")) corridorStatus = "UNDER_REVIEW"
+
+                return {
+                    _id: c.primaryRequestId,
+                    country: c.country || null,
+                    pickupLocation: c.pickupLocation,
+                    dropoffLocation: c.dropoffLocation,
+                    passengerId: passenger
+                        ? { _id: passenger._id, fullName: passenger.fullName, email: passenger.email }
+                        : null,
+                    preferredTime: (c.preferredTimes || [])[0] || "",
+                    requestType: (c.requestTypes || [])[0] || "",
+                    travelDays: c.travelDays || [],
+                    expectedStartDate: c.expectedStartDate,
+                    demandCount: (c.passengerIds || []).length,
+                    status: corridorStatus,
+                    createdAt: c.createdAt,
+                    myInterestStatus: mine && mine.status !== "WITHDRAWN" ? mine.status : null,
+                    interestedCount: activePartners.length,
+                    isOpenToMarketplace: corridorStatus === "OPEN" || !!c.marketplaceOpenedAt,
+                }
+            })
+        )
 
         return res.status(200).json({
             success: true,
             data: {
-                routeRequests: annotated,
+                routeRequests,
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages: Math.ceil(total / limit),
@@ -1474,6 +1576,9 @@ export const respondToRouteRequest = async (req, res) => {
             pickupLocation: { $regex: `^${escapeRegex(routeRequest.pickupLocation)}$`, $options: "i" },
             dropoffLocation: { $regex: `^${escapeRegex(routeRequest.dropoffLocation)}$`, $options: "i" },
             status: { $nin: ["REJECTED", "COMPLETED", "FULFILLED"] },
+            // Keep interest within the same service country so a same-named
+            // corridor in another country is never affected.
+            ...(routeRequest.country ? { country: routeRequest.country } : {}),
         })
 
         for (const request of clusterRequests) {

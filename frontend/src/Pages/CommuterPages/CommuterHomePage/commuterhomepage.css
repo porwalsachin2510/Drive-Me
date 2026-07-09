@@ -10,6 +10,21 @@ body {
   color: var(--text-primary, #202124);
 }
 
+.commuterhomepage-already-requested {
+  width: 100%;
+  max-width: 1200px;
+  margin: 24px auto;
+}
+
+/* Only paint the card chrome when the section actually has content, so an
+   empty demand board doesn't leave a hollow bordered box on the page. */
+.commuterhomepage-already-requested:has(.arr) {
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
 .commuterhomepage-homepage {
   min-height: 100vh;
   display: flex;

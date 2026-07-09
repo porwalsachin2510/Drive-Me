@@ -215,10 +215,13 @@ function BookingTable() {
   const filteredBookings = useMemo(() => {
     let bookings = Array.isArray(partnerBookings) ? [...partnerBookings] : [];
 
-    // Filter by status
+    // Filter by status. "PENDING" (awaiting approval) also matches legacy
+    // bookings that were created under the old "CONFIRMED" convention.
     if (filterStatus !== "ALL") {
-      bookings = bookings.filter(
-        (booking) => booking.bookingStatus === filterStatus,
+      bookings = bookings.filter((booking) =>
+        filterStatus === "PENDING"
+          ? ["PENDING", "CONFIRMED"].includes(booking.bookingStatus)
+          : booking.bookingStatus === filterStatus,
       );
     }
 
@@ -289,8 +292,9 @@ function BookingTable() {
     const bookingsArr = Array.isArray(partnerBookings) ? partnerBookings : [];
     return {
       totalBookings: bookingsArr.length,
-      confirmedBookings: bookingsArr.filter(
-        (b) => b.bookingStatus === "CONFIRMED",
+      // Bookings still awaiting the partner's decision (new PENDING + legacy CONFIRMED).
+      confirmedBookings: bookingsArr.filter((b) =>
+        ["PENDING", "CONFIRMED"].includes(b.bookingStatus),
       ).length,
       acceptedBookings: bookingsArr.filter((b) =>
         ["ACCEPTED", "IN_PROGRESS"].includes(b.bookingStatus),
@@ -471,7 +475,7 @@ function BookingTable() {
           <span className="b2c-booking-stat-value stat-orange">
             {bookingStats.confirmedBookings}
           </span>
-          <span className="b2c-booking-stat-label">Confirmed</span>
+          <span className="b2c-booking-stat-label">Pending Approval</span>
         </div>
         <div className="b2c-booking-stat-card">
           <span className="b2c-booking-stat-value stat-green">
@@ -530,8 +534,8 @@ function BookingTable() {
             className="b2c-booking-status-filter"
           >
             <option value="ALL">All Status</option>
-            <option value="CONFIRMED">Confirmed</option>
-            <option value="ACCEPTED">Accepted</option>
+            <option value="PENDING">Pending Approval</option>
+            <option value="ACCEPTED">Confirmed</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="REJECTED">Rejected</option>
             <option value="CANCELLED">Cancelled</option>
@@ -724,7 +728,15 @@ function BookingTable() {
                       <span
                         className={`b2c-status-pill status-${booking.bookingStatus?.toLowerCase()}`}
                       >
-                        {booking.bookingStatus}
+                        {/* PENDING and legacy CONFIRMED both mean "awaiting the
+                            partner's approval"; ACCEPTED means the ride is confirmed. */}
+                        {["PENDING", "CONFIRMED"].includes(
+                          booking.bookingStatus,
+                        )
+                          ? "PENDING APPROVAL"
+                          : booking.bookingStatus === "ACCEPTED"
+                            ? "CONFIRMED"
+                            : booking.bookingStatus}
                       </span>
                       {/* Show commission refund badge for CANCELLED bookings */}
                       {booking.bookingStatus === "CANCELLED" &&
@@ -761,7 +773,9 @@ function BookingTable() {
                             <path d="M22 12c-2.667 4.667-6 7-10 7s-7.333-2.333-10-7c2.667-4.667 6-7 10-7s7.333 2.333 10 7" />
                           </svg>
                         </button>
-                        {booking.bookingStatus === "CONFIRMED" &&
+                        {["PENDING", "CONFIRMED"].includes(
+                          booking.bookingStatus,
+                        ) &&
                           !booking.acceptedAt && (
                             <>
                               <button

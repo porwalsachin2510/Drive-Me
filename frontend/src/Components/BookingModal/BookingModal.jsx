@@ -1030,7 +1030,8 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
           <h2>
             {step === 1 && "Book Your Ride"}
             {step === 2 && "Select Payment Method"}
-            {step === 3 && "Booking Confirmed"}
+            {step === 3 &&
+              (isCorporate ? "Booking Confirmed" : "Request Submitted")}
           </h2>
           <button className="close-btn" onClick={handleClose}>
             <FaTimes />
@@ -2752,15 +2753,17 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
               <div className="success-icon">
                 <FaCheck />
               </div>
-              <h3>Booking Confirmed!</h3>
+              <h3>
+                {isCorporate ? "Booking Confirmed!" : "Request Submitted!"}
+              </h3>
               <p className="success-message">
                 {isCorporate
                   ? "Your corporate booking has been confirmed. Your company has been notified."
                   : paymentMethod === "CASH"
-                    ? "Your booking is pending. Please pay the driver when you board."
+                    ? "Your request has been sent to the operator and is awaiting approval. Please pay the driver when you board once it is confirmed."
                     : paymentMethod === "WALLET"
-                      ? "Your booking is confirmed and the amount has been deducted from your wallet."
-                      : "Your booking has been confirmed and payment received."}
+                      ? "Your request has been submitted and the amount deducted from your wallet. It is now awaiting the operator's approval, and you'll be notified once it is confirmed (or refunded if declined)."
+                      : "Your payment was received and your request is awaiting the operator's approval. You'll be notified once it is confirmed."}
               </p>
 
               <div className="booking-confirmation-details">

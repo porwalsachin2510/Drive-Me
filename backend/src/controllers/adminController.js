@@ -20,7 +20,7 @@ import B2CPartnerDriver from "../models/B2CPartnerDriver.js";
 import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js";
 import B2CMonthlyPass from "../models/B2CMonthlyPass.js";
 import Subscription from "../models/Subscription.js";
-import { processRouteDeletionRefundForPass, round2 } from "./b2cScheduleController.js";
+import { processRouteDeletionRefundForPass, round2, deallocateVehicleFromAllAssignments } from "./b2cScheduleController.js";
 import AdminNegotiation from "../models/AdminNegotiation.js";
 import CorporateBooking from "../models/CorporateBooking.js";
 import EMIPayment from "../models/EMIPayment.js";
@@ -6409,10 +6409,32 @@ export const updateB2CPartnerVehicle = async (req, res) => {
         console.log(`Successfully updated B2C vehicle: ${updatedVehicle.vehicleName}`);
         console.log(`Vehicle images: ${updatedVehicle.images.length} total`);
 
+        // If the vehicle just became unavailable (Active -> Maintenance/Inactive),
+        // remove it from every route/schedule/trip/booking it was allocated to and
+        // notify affected commuters. An unavailable vehicle must not stay assigned.
+        let deallocationSummary = null;
+        const becameUnavailable =
+            ["Maintenance", "Inactive"].includes(updatedVehicle.status) &&
+            existingVehicle.status === "Active";
+        if (becameUnavailable) {
+            try {
+                deallocationSummary = await deallocateVehicleFromAllAssignments(
+                    vehicleId,
+                    req.userId,
+                    { reason: updatedVehicle.status },
+                );
+            } catch (deallocErr) {
+                console.error("[v0] Vehicle deallocation failed:", deallocErr.message);
+            }
+        }
+
         res.status(200).json({
             success: true,
-            message: "B2C vehicle updated successfully",
-            vehicle: updatedVehicle
+            message: becameUnavailable
+                ? `Vehicle updated. It has been removed from all assigned trips because it is now ${updatedVehicle.status === "Maintenance" ? "under maintenance" : "inactive"}.`
+                : "B2C vehicle updated successfully",
+            vehicle: updatedVehicle,
+            deallocationSummary,
         });
     } catch (error) {
         console.error("[v0] Error updating B2C vehicle:", error);
@@ -6614,6 +6636,25 @@ export const updateB2CPartnerVehicleStatus = async (req, res) => {
 
         console.log(`[v0] Updated vehicle ${vehicleId} status:`, updateData);
 
+        // If the lifecycle status just moved to Maintenance/Inactive, drop this
+        // vehicle from every assignment and notify affected commuters.
+        let deallocationSummary = null;
+        const becameUnavailable =
+            !!status &&
+            ["Maintenance", "Inactive"].includes(status) &&
+            vehicle.status === "Active";
+        if (becameUnavailable) {
+            try {
+                deallocationSummary = await deallocateVehicleFromAllAssignments(
+                    vehicleId,
+                    partnerId,
+                    { reason: status },
+                );
+            } catch (deallocErr) {
+                console.error("[v0] Vehicle deallocation failed:", deallocErr.message);
+            }
+        }
+
         // Broadcast real-time vehicle availability change via socket
         if (availabilityStatus) {
             broadcastVehicleAvailabilityChange(partnerId, {
@@ -6627,10 +6668,13 @@ export const updateB2CPartnerVehicleStatus = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: `Vehicle status updated successfully`,
+            message: becameUnavailable
+                ? `Vehicle status updated. It has been removed from all assigned trips because it is now ${status === "Maintenance" ? "under maintenance" : "inactive"}.`
+                : `Vehicle status updated successfully`,
             vehicle: updatedVehicle,
             status: updatedVehicle.status,
-            availabilityStatus: updatedVehicle.availabilityStatus
+            availabilityStatus: updatedVehicle.availabilityStatus,
+            deallocationSummary,
         });
     } catch (error) {
         console.error("[v0] Error updating vehicle status:", error);

@@ -124,13 +124,31 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
       const refunds = data?.refunds;
       if (refunds && refunds.passesRefunded > 0) {
         const currency = refunds.details?.[0]?.currency || getActiveCurrency();
-        alert(
-          `Route deleted.\n\n${refunds.passesRefunded} commuter pass(es) were refunded for their unused trips (no cancellation fee).\nTotal refunded to commuters: ${currency} ${Number(
+        const lines = [
+          "Route deleted.",
+          "",
+          `${refunds.passesRefunded} commuter pass(es) were refunded for their unused trips (no cancellation fee).`,
+          `Total refunded to commuters' in-app wallets: ${currency} ${Number(
             refunds.totalRefundedToCommuters || 0,
-          ).toFixed(
-            2,
-          )}.\n\nThe unused-trip earnings were deducted from your wallet and the matching commission was reversed from the admin wallet.`,
-        );
+          ).toFixed(2)}.`,
+        ];
+        if (Number(refunds.totalEarningsReversed || 0) > 0) {
+          lines.push(
+            `Unused-trip earnings deducted from your wallet: ${currency} ${Number(
+              refunds.totalEarningsReversed,
+            ).toFixed(
+              2,
+            )}. (For cash passes you keep the passenger's cash for those trips.)`,
+          );
+        }
+        if (Number(refunds.totalAdminCommissionReversed || 0) > 0) {
+          lines.push(
+            `Commission reversed from the admin wallet: ${currency} ${Number(
+              refunds.totalAdminCommissionReversed,
+            ).toFixed(2)}.`,
+          );
+        }
+        alert(lines.join("\n"));
       }
       if (onRouteUpdated) onRouteUpdated();
     } catch (error) {
@@ -653,14 +671,18 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                     subscriptions and bookings. Because <strong>you</strong> are
                     deleting the route, every affected commuter will be{" "}
                     <strong>
-                      automatically refunded for their unused trips
+                      automatically refunded for their unused trips into their
+                      in-app wallet
                     </strong>{" "}
-                    with <strong>no cancellation fee</strong>. The refunded
-                    amount for unused trips will be{" "}
-                    <strong>deducted from your wallet</strong> (you keep
-                    earnings only for trips already used), and the matching
-                    commission for unused trips will be reversed from the admin
-                    wallet.
+                    (so they can withdraw it from the app) with{" "}
+                    <strong>no cancellation fee</strong>. You keep earnings only
+                    for trips already used. The unused-trip amount is{" "}
+                    <strong>deducted from your wallet</strong> and the matching
+                    commission is reversed from the admin wallet. For{" "}
+                    <strong>cash passes</strong>, you keep the passenger&apos;s
+                    physical cash for those unused trips, and your wallet is
+                    debited by the same amount because the refund is paid to the
+                    commuter&apos;s wallet on your behalf.
                   </p>
                   {dependencies.dependencies?.activePasses
                     ?.totalEstimatedRefund > 0 && (

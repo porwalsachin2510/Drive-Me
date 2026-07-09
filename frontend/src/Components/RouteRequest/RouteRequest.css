@@ -52,6 +52,42 @@
   color: #111827;
 }
 
+.route-request-existing {
+  padding: 20px 24px 0;
+}
+
+/* When there is no existing demand to join, drop the section and the divider
+   so the modal shows only the "request a new route" form. */
+.route-request-existing:not(:has(.arr)) {
+  display: none;
+}
+
+.route-request-existing:not(:has(.arr)) + .route-request-divider {
+  display: none;
+}
+
+/* Labelled divider separating "show interest" from "request new route". */
+.route-request-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  margin: 20px 0 4px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.route-request-divider::before,
+.route-request-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
 .route-request-form {
   padding: 24px;
 }

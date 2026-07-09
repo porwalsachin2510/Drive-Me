@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import CommuteSearchForm from "../../../Components/CommutersSearchForm/Commute-search-form";
 import FeaturedRoutes from "../../../Components/FeaturedRoutes/FeaturedRoutes";
+import AlreadyRequestedRoutes from "../../../Components/AlreadyRequestedRoutes/AlreadyRequestedRoutes";
 import AvailableSection from "../../../Components/AvailableSection/AvailableSection";
 import RouteRequest from "../../../Components/RouteRequest/RouteRequest";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -305,6 +306,13 @@ export default function CommuterHomePage() {
                   <CampaignBanner placement="top" />
 
                   <FeaturedRoutes routes={featuredRoutes} loading={loading} />
+
+                  {/* Surface corridors other commuters have already requested so
+                      commuters can join the existing demand ("Show Interest")
+                      instead of filing duplicate requests. */}
+                  {/* <div className="commuterhomepage-already-requested">
+                    <AlreadyRequestedRoutes layout="grid" />
+                  </div> */}
 
                   <div
                     ref={availableSectionRef}

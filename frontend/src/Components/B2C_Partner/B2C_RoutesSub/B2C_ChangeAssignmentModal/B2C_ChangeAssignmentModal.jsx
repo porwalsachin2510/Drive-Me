@@ -63,7 +63,11 @@ function B2C_ChangeAssignmentModal({ route, mode, onClose, onChanged }) {
 
       const opts = isDriver
         ? optionsRes.data.drivers || []
-        : optionsRes.data.fleet?.vehicles || [];
+        : // Only Active vehicles may be re-assigned — Maintenance / Inactive
+          // vehicles are excluded from the "Replace With" list.
+          (optionsRes.data.fleet?.vehicles || []).filter(
+            (v) => v.status === "Active",
+          );
       setOptions(opts);
 
       // Build the re-assignable rows. Each row targets ONE leg of ONE trip-time

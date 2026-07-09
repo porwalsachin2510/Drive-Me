@@ -863,7 +863,12 @@ export const createB2CMonthlyPass = async (req, res) => {
             paymentMethod: normalizedPaymentMethod,
             paymentStatus: "PENDING", // All bookings start pending. STRIPE/TAP become COMPLETED on webhook. WALLET becomes COMPLETED right after the wallet is debited below. CASH requires explicit confirmation.
             transactionId: monthlyPass._id.toString(),
-            bookingStatus: "CONFIRMED",
+            // A new booking is a REQUEST that the B2C partner must review. It stays
+            // PENDING (shown to the commuter as "Pending Approval") until the partner
+            // accepts it (-> ACCEPTED / shown as "Confirmed") or rejects it (-> REJECTED).
+            // It must NOT start life as CONFIRMED/ACCEPTED, otherwise the commuter would
+            // see a confirmed ride before the partner has agreed to it.
+            bookingStatus: "PENDING",
             adminCommissionAmount: adminCommission,
             driverEarnings: partnerEarnings,
             // Legacy driver fields - use outbound driver as primary

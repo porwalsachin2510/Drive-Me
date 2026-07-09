@@ -27,8 +27,16 @@ function B2C_FleetAndDrivers() {
       fetchDriversCount();
     };
 
+    // Refresh the vehicle list in place after a vehicle is added, so the modal
+    // no longer needs to trigger a full page reload (which would reset the
+    // dashboard back to the Overview tab).
+    window.onVehicleAdded = () => {
+      fetchFleetData();
+    };
+
     return () => {
       delete window.onRouteCreated;
+      delete window.onVehicleAdded;
     };
   }, []);
 

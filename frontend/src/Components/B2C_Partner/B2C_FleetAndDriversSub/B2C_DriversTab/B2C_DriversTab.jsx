@@ -87,6 +87,17 @@ function B2C_DriversTab({ onDriversCountChange }) {
   useEffect(() => {
     fetchDrivers();
     fetchSelfDriverStatus();
+
+    // Refresh the drivers list in place after a driver is added, so the Add
+    // Driver modal no longer needs a full page reload (which would reset the
+    // dashboard back to the Overview tab).
+    window.onDriverAdded = () => {
+      fetchDrivers();
+    };
+
+    return () => {
+      delete window.onDriverAdded;
+    };
   }, [fetchDrivers, fetchSelfDriverStatus]);
 
   // Keep the parent tab badge in sync with the total drivers count.

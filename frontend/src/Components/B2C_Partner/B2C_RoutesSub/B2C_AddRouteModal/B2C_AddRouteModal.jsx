@@ -101,7 +101,12 @@ function B2C_AddRouteModal({ onClose }) {
           setAvailableDrivers(driversResponse.data.drivers);
         }
         if (vehiclesResponse.data.fleet?.vehicles) {
-          setAvailableVehicles(vehiclesResponse.data.fleet.vehicles);
+          // Only Active vehicles can be allocated — hide Maintenance / Inactive.
+          setAvailableVehicles(
+            vehiclesResponse.data.fleet.vehicles.filter(
+              (v) => v.status === "Active",
+            ),
+          );
         }
       } catch (error) {
         // Silent fail - don't disrupt user experience
@@ -256,7 +261,12 @@ function B2C_AddRouteModal({ onClose }) {
           api.get("/admin/tags/by-category", { params: { context: "route" } }),
         ]);
 
-      setAvailableVehicles(vehiclesResponse.data.fleet?.vehicles || []);
+      // Only Active vehicles can be allocated — hide Maintenance / Inactive.
+      setAvailableVehicles(
+        (vehiclesResponse.data.fleet?.vehicles || []).filter(
+          (v) => v.status === "Active",
+        ),
+      );
       setAvailableDrivers(driversResponse.data.drivers || []);
       setAvailableTags(tagsResponse.data.tags || []);
       setGroupedTags(tagsResponse.data.groupedTags || {});

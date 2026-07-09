@@ -757,8 +757,9 @@ const CommuterMyBookingsPage = () => {
     if (socket.socket && passengerBookings.length > 0) {
       passengerBookings.forEach((booking) => {
         if (
-          (booking.bookingStatus === "CONFIRMED" ||
-            booking.bookingStatus === "IN_PROGRESS") &&
+          ["ACCEPTED", "ACTIVE", "IN_PROGRESS", "CONFIRMED"].includes(
+            booking.bookingStatus,
+          ) &&
           booking._id
         ) {
           socket.joinBookingRoom(booking._id);
@@ -859,9 +860,13 @@ const CommuterMyBookingsPage = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      PENDING: { color: "#d69e2e", label: "Pending" },
-      CONFIRMED: { color: "#38a169", label: "Confirmed" },
-      ACCEPTED: { color: "#38a169", label: "Accepted" },
+      // A new booking is awaiting the B2C partner's approval.
+      PENDING: { color: "#d69e2e", label: "Pending Approval" },
+      // Legacy "CONFIRMED" also represents the awaiting-approval state, so it must
+      // read as pending — NOT confirmed — until the partner actually accepts it.
+      CONFIRMED: { color: "#d69e2e", label: "Pending Approval" },
+      // The partner has accepted the booking: this is the real "Confirmed" state.
+      ACCEPTED: { color: "#38a169", label: "Confirmed" },
       COMPLETED: { color: "#3182ce", label: "Completed" },
       REJECTED: { color: "#e53e3e", label: "Rejected" },
       CANCELLED: { color: "#718096", label: "Cancelled" },
@@ -1176,11 +1181,11 @@ const CommuterMyBookingsPage = () => {
             className={`cmbp-filter-btn ${filterStatus === "PENDING" ? "cmbp-active" : ""}`}
             onClick={() => setFilterStatus("PENDING")}
           >
-            Pending
+            Pending Approval
           </button>
           <button
-            className={`cmbp-filter-btn ${filterStatus === "CONFIRMED" ? "cmbp-active" : ""}`}
-            onClick={() => setFilterStatus("CONFIRMED")}
+            className={`cmbp-filter-btn ${filterStatus === "ACCEPTED" ? "cmbp-active" : ""}`}
+            onClick={() => setFilterStatus("ACCEPTED")}
           >
             Confirmed
           </button>

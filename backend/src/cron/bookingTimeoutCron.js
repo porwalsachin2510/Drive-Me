@@ -20,10 +20,11 @@ export const processBookingWarnings = async () => {
         const now = new Date();
         const warningThreshold = new Date(now.getTime() - (WARNING_HOURS * 60 * 60 * 1000));
 
-        // Find all CONFIRMED bookings (not yet accepted) that were created more than 20 hours ago
-        // and haven't received a warning yet
+        // Find all bookings still AWAITING the partner's acceptance (PENDING; also
+        // legacy CONFIRMED) that were created more than 20 hours ago and haven't
+        // received a warning yet.
         const bookingsNeedingWarning = await B2CPassengerBooking.find({
-            bookingStatus: 'CONFIRMED',
+            bookingStatus: { $in: ['PENDING', 'CONFIRMED'] },
             createdAt: { $lte: warningThreshold },
             warningSentAt: null,
             warningNotificationSent: { $ne: true }
@@ -137,9 +138,10 @@ export const processBookingAutoCancellations = async () => {
         const now = new Date();
         const cancellationThreshold = new Date(now.getTime() - (CANCELLATION_HOURS * 60 * 60 * 1000));
 
-        // Find all CONFIRMED bookings (not yet accepted) that were created more than 24 hours ago
+        // Find all bookings still AWAITING the partner's acceptance (PENDING; also
+        // legacy CONFIRMED) that were created more than 24 hours ago.
         const bookingsToCancel = await B2CPassengerBooking.find({
-            bookingStatus: 'CONFIRMED',
+            bookingStatus: { $in: ['PENDING', 'CONFIRMED'] },
             createdAt: { $lte: cancellationThreshold },
             autoCancelledAt: null
         })

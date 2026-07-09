@@ -24,7 +24,7 @@ function NewRequests() {
 
   useEffect(() => {
     if (auth.user?.role === "B2C_PARTNER") {
-      dispatch(getPartnerBookings({ status: "CONFIRMED" }));
+      dispatch(getPartnerBookings({ status: "ALL" }));
     }
   }, [dispatch, auth.user]);
 
@@ -33,7 +33,7 @@ function NewRequests() {
   const refreshRequests = useCallback(
     ({ silent } = {}) => {
       if (auth.user?.role === "B2C_PARTNER") {
-        dispatch(getPartnerBookings({ status: "CONFIRMED", silent }));
+        dispatch(getPartnerBookings({ status: "ALL", silent }));
       }
     },
     [dispatch, auth.user],
@@ -53,7 +53,7 @@ function NewRequests() {
 
   const handleAccept = (booking) => {
     dispatch(acceptBooking(booking._id)).then(() => {
-      dispatch(getPartnerBookings({ status: "CONFIRMED" }));
+      dispatch(getPartnerBookings({ status: "ALL" }));
     });
   };
 
@@ -70,7 +70,7 @@ function NewRequests() {
           rejectionReason,
         }),
       ).then(() => {
-        dispatch(getPartnerBookings({ status: "CONFIRMED" }));
+        dispatch(getPartnerBookings({ status: "ALL" }));
         setShowRejectModal(false);
         setSelectedBooking(null);
         setRejectionReason("");
@@ -98,9 +98,12 @@ function NewRequests() {
     });
   };
 
-  // Filter only CONFIRMED bookings
+  // Only bookings still AWAITING the partner's decision are "New Requests".
+  // New bookings are PENDING; legacy bookings may still be CONFIRMED.
   const confirmedBookings = Array.isArray(partnerBookings)
-    ? partnerBookings.filter((b) => b.bookingStatus === "CONFIRMED")
+    ? partnerBookings.filter((b) =>
+        ["PENDING", "CONFIRMED"].includes(b.bookingStatus),
+      )
     : [];
 
   if (loading) {

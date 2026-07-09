@@ -144,7 +144,9 @@ export const createPassengerBooking = async (req, res) => {
             paymentAmount: totalAmount,
             paymentMethod,
             paymentStatus: "PENDING",
-            bookingStatus: "CONFIRMED",
+            // New bookings are pending the B2C partner's approval. They only become
+            // ACCEPTED (shown to the commuter as "Confirmed") once the partner accepts.
+            bookingStatus: "PENDING",
             bookingType: bookingType, // "ONE_WAY" or "ROUND_TRIP"
             isMonthly: true,
             // Schedule and timing information
