@@ -631,41 +631,103 @@ const QuotationDetails = () => {
 
           {/* Negotiation Savings Information - Show if negotiation was applied */}
           {quotation?.adminNegotiation?.priceReduced &&
-            quotation?.adminNegotiation?.status === "COMPLETED" && (
-              <div className="negotiation-savings-card">
-                <div className="negotiation-savings-header">
-                  <span className="negotiation-savings-icon">✓</span>
-                  <h3>Negotiation Applied - Great Savings!</h3>
+            quotation?.adminNegotiation?.status === "COMPLETED" &&
+            (() => {
+              // Transparent, step-by-step negotiation summary so the Corporate
+              // can see exactly what happened:
+              //   Original quotation (service charge included)
+              //   → price after negotiation
+              //   → savings
+              //   → admin negotiation service fee (a % of the savings)
+              //   → total the Corporate ultimately pays
+              const curr =
+                quotation.quotedPrice?.currency || getActiveCurrency();
+              const originalPrice =
+                quotation.adminNegotiation.originalPrice || 0;
+              const afterNegotiation = quotation.quotedPrice?.totalAmount || 0;
+              const savings =
+                quotation.adminNegotiation.savingsAmount ??
+                Math.max(0, originalPrice - afterNegotiation);
+              const serviceCharge = quotation.quotedPrice?.serviceCharge || 0;
+              const feeRate =
+                quotation.adminNegotiation.adminCommissionRate ?? 25;
+              // Prefer the stored fee; fall back to (rate% of savings) so the
+              // card is always internally consistent even for older records.
+              const negotiationFee =
+                quotation.adminNegotiation.adminCommission ??
+                Math.round(((savings * feeRate) / 100) * 100) / 100;
+              const totalPayable = afterNegotiation + negotiationFee;
+              const isManaged = quotation.serviceMode === "MANAGED";
+
+              return (
+                <div className="negotiation-savings-card">
+                  <div className="negotiation-savings-header">
+                    <span className="negotiation-savings-icon">✓</span>
+                    <h3>
+                      Negotiation Applied - Here&apos;s the Full Breakdown
+                    </h3>
+                  </div>
+                  <div className="negotiation-savings-details">
+                    <div className="savings-detail-row">
+                      <span className="savings-label">
+                        Original Quotation
+                        {isManaged ? " (incl. service charge)" : ""}:
+                      </span>
+                      <span className="savings-value original-price">
+                        {curr} {originalPrice.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="savings-detail-row">
+                      <span className="savings-label">
+                        Price After Negotiation:
+                      </span>
+                      <span className="savings-value new-price">
+                        {curr} {afterNegotiation.toFixed(2)}
+                      </span>
+                    </div>
+                    {isManaged && serviceCharge > 0 && (
+                      <div className="savings-detail-note">
+                        Includes {curr} {serviceCharge.toFixed(2)} partner
+                        management / service charge.
+                      </div>
+                    )}
+                    <div className="savings-detail-row highlight">
+                      <span className="savings-label">Your Savings:</span>
+                      <span className="savings-value savings-amount">
+                        {curr} {savings.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {negotiationFee > 0 && (
+                      <>
+                        <div className="savings-detail-row fee-row">
+                          <span className="savings-label">
+                            Negotiation Service Fee ({feeRate}% of savings):
+                          </span>
+                          <span className="savings-value fee-value">
+                            + {curr} {negotiationFee.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="savings-detail-note">
+                          A {feeRate}% fee on the {curr} {savings.toFixed(2)} we
+                          saved you is charged for the negotiation service. It
+                          is collected separately with your advance payment.
+                        </div>
+                        <div className="savings-detail-row total-payable-row">
+                          <span className="savings-label">
+                            Total Payable ({curr} {afterNegotiation.toFixed(2)}{" "}
+                            + {curr} {negotiationFee.toFixed(2)} fee):
+                          </span>
+                          <span className="savings-value total-payable-value">
+                            {curr} {totalPayable.toFixed(2)}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="negotiation-savings-details">
-                  <div className="savings-detail-row">
-                    <span className="savings-label">Original Price:</span>
-                    <span className="savings-value original-price">
-                      {quotation.quotedPrice?.currency || getActiveCurrency()}{" "}
-                      {quotation.adminNegotiation.originalPrice?.toFixed(2) ||
-                        "0.00"}
-                    </span>
-                  </div>
-                  <div className="savings-detail-row">
-                    <span className="savings-label">
-                      Price After Negotiation:
-                    </span>
-                    <span className="savings-value new-price">
-                      {quotation.quotedPrice?.currency || getActiveCurrency()}{" "}
-                      {quotation.quotedPrice?.totalAmount?.toFixed(2) || "0.00"}
-                    </span>
-                  </div>
-                  <div className="savings-detail-row highlight">
-                    <span className="savings-label">Your Savings:</span>
-                    <span className="savings-value savings-amount">
-                      {quotation.quotedPrice?.currency || getActiveCurrency()}{" "}
-                      {quotation.adminNegotiation.savingsAmount?.toFixed(2) ||
-                        "0.00"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
           {quotation?.status?.toUpperCase() === "REQUESTED" && (
             <div className="single-quotation-waiting-message">
@@ -717,6 +779,30 @@ const QuotationDetails = () => {
                               "0.00"}
                           </strong>
                         </div>
+                      )}
+                      {quotation.serviceMode === "MANAGED" && (
+                        <>
+                          {/* Vehicles subtotal = total minus the partner's
+                              management/service charge, so the addition to the
+                              Total Amount below is transparent. */}
+                          <div className="single-quotation-breakdown-row">
+                            <span>Vehicles Subtotal:</span>
+                            <strong>
+                              {quotedPrice.currency || getActiveCurrency()}{" "}
+                              {(
+                                (quotedPrice.totalAmount || 0) -
+                                (quotedPrice.serviceCharge || 0)
+                              ).toFixed(2)}
+                            </strong>
+                          </div>
+                          <div className="single-quotation-breakdown-row">
+                            <span>Partner Management / Service Charge:</span>
+                            <strong>
+                              {quotedPrice.currency || getActiveCurrency()}{" "}
+                              {(quotedPrice.serviceCharge || 0).toFixed(2)}
+                            </strong>
+                          </div>
+                        </>
                       )}
                       <div className="single-quotation-breakdown-row single-quotation-breakdown-total">
                         <span>Total Amount:</span>
@@ -967,6 +1053,35 @@ const QuotationDetails = () => {
                       ) || "0.00"}
                     </span>
                   </div>
+                  {quotation.serviceMode === "MANAGED" && (
+                    <>
+                      <div className="single-quotation-price-row">
+                        <span className="single-quotation-price-label">
+                          Vehicles Subtotal:
+                        </span>
+                        <span className="single-quotation-price-value">
+                          {quotation.quotedPrice.currency ||
+                            getActiveCurrency()}{" "}
+                          {(
+                            (quotation.quotedPrice.totalAmount || 0) -
+                            (quotation.quotedPrice.serviceCharge || 0)
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="single-quotation-price-row">
+                        <span className="single-quotation-price-label">
+                          Partner Management / Service Charge:
+                        </span>
+                        <span className="single-quotation-price-value">
+                          {quotation.quotedPrice.currency ||
+                            getActiveCurrency()}{" "}
+                          {(quotation.quotedPrice.serviceCharge || 0).toFixed(
+                            2,
+                          )}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <div className="single-quotation-price-row single-quotation-total-row">
                     <span className="single-quotation-price-label">
                       Total Amount:

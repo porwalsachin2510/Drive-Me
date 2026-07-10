@@ -1154,6 +1154,45 @@
   font-weight: 700;
 }
 
+/* Explanatory helper text between negotiation rows */
+.savings-detail-note {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #33691e;
+  opacity: 0.85;
+  padding: 2px 0 6px;
+}
+
+/* Negotiation service fee row (added on top of the negotiated price) */
+.savings-detail-row.fee-row {
+  border-top: 1px dashed rgba(27, 94, 32, 0.35);
+  padding-top: 12px;
+}
+
+.savings-value.fee-value {
+  color: #b26a00;
+  font-weight: 700;
+}
+
+/* Final total the corporate actually pays */
+.savings-detail-row.total-payable-row {
+  background: #1b5e20;
+  padding: 14px 12px;
+  border-radius: 8px;
+  margin-top: 8px;
+  border-bottom: none;
+}
+
+.savings-detail-row.total-payable-row .savings-label {
+  color: #ffffff;
+}
+
+.savings-value.total-payable-value {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
 @media (max-width: 768px) {
   .negotiation-savings-card {
     padding: 16px;

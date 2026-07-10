@@ -716,6 +716,19 @@
   font-weight: 700;
 }
 
+.drivemego-financial-item.drivemego-commission-total {
+  background: #1b5e20;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.drivemego-financial-item.drivemego-commission-total .drivemego-label,
+.drivemego-financial-item.drivemego-commission-total .drivemego-value {
+  color: #ffffff;
+  font-weight: 700;
+}
+
 .drivemego-commission-status {
   font-size: 12px;
   font-weight: 600;

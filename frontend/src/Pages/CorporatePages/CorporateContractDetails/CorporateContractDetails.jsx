@@ -1098,6 +1098,20 @@ const CorporateContractDetails = () => {
                             </span>
                           </span>
                         </div>
+                        <div className="drivemego-financial-item drivemego-commission-total">
+                          <span className="drivemego-label">
+                            Total Payable (Price + Negotiation Fee):
+                          </span>
+                          <span className="drivemego-value">
+                            {contract.financials?.currency ||
+                              getActiveCurrency()}{" "}
+                            {(
+                              (contract.financials?.totalAmount || 0) +
+                              (contract.negotiationCommission.adminCommission ||
+                                0)
+                            ).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                       <p className="drivemego-commission-note">
                         Note: The negotiation commission is automatically

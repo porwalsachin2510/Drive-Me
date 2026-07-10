@@ -687,34 +687,78 @@ export const completeNegotiation = async (req, res) => {
         // UPDATE QUOTATION PRICE - This is the key step!
         const quotation = await Quotation.findById(negotiation.quotationId)
         if (quotation) {
-            // Calculate reduction ratio
-            const reductionRatio = finalPrice / negotiation.originalPrice
+            // The negotiated `finalPrice` is the new GRAND total: it already
+            // includes the partner's management/service charge. Every sub-figure
+            // must be reduced proportionally AND reconciled so the three views the
+            // corporate sees always agree:
+            //   - sum(perVehicleBreakdown.totalAmount) + serviceCharge === totalAmount
+            //   - aggregate breakdown (vehicleRental + driverCharges + fuelCharges) === vehicles subtotal
+            //   - each perVehicle.totalAmount === baseRental + driverCharges + fuelCharges
+            // Previously the service charge was left UN-scaled, so "Vehicles
+            // Subtotal" (total - serviceCharge) no longer matched the per-vehicle
+            // totals (e.g. 200 vs 220). We now scale it too and absorb any
+            // rounding drift so the numbers reconcile exactly.
+            const reductionRatio =
+                negotiation.originalPrice > 0 ? finalPrice / negotiation.originalPrice : 1
+            const isManaged = quotation.serviceMode === "MANAGED"
 
-            // Update quotation with new negotiated price and proportionally reduced breakdown
             quotation.quotedPrice.totalAmount = finalPrice
 
-            // Proportionally reduce breakdown items
-            if (quotation.quotedPrice.breakdown) {
-                quotation.quotedPrice.breakdown.vehicleRental = Math.round(
-                    (quotation.quotedPrice.breakdown.vehicleRental || 0) * reductionRatio
-                )
-                quotation.quotedPrice.breakdown.driverCharges = Math.round(
-                    (quotation.quotedPrice.breakdown.driverCharges || 0) * reductionRatio
-                )
-                quotation.quotedPrice.breakdown.fuelCharges = Math.round(
-                    (quotation.quotedPrice.breakdown.fuelCharges || 0) * reductionRatio
-                )
+            // 1) Scale the partner's management/service charge proportionally
+            //    (only MANAGED quotations carry one; others are always 0).
+            const originalServiceCharge = isManaged
+                ? Math.max(0, quotation.quotedPrice.serviceCharge || 0)
+                : 0
+            let newServiceCharge = isManaged ? Math.round(originalServiceCharge * reductionRatio) : 0
+            if (newServiceCharge > finalPrice) newServiceCharge = finalPrice
+
+            // 2) The vehicles portion is whatever remains after the service charge.
+            const targetVehiclesTotal = Math.max(0, finalPrice - newServiceCharge)
+
+            const perVehicle = quotation.quotedPrice.perVehicleBreakdown
+            if (Array.isArray(perVehicle) && perVehicle.length > 0) {
+                // 3) Scale each per-vehicle line and rebuild its subtotal from parts.
+                perVehicle.forEach((vb) => {
+                    vb.baseRental = Math.round((vb.baseRental || 0) * reductionRatio)
+                    vb.driverCharges = Math.round((vb.driverCharges || 0) * reductionRatio)
+                    vb.fuelCharges = Math.round((vb.fuelCharges || 0) * reductionRatio)
+                    vb.totalAmount = (vb.baseRental || 0) + (vb.driverCharges || 0) + (vb.fuelCharges || 0)
+                })
+
+                // Reconcile rounding drift into the last vehicle so the vehicle
+                // subtotals add up to EXACTLY targetVehiclesTotal.
+                const scaledVehiclesTotal = perVehicle.reduce((sum, vb) => sum + (vb.totalAmount || 0), 0)
+                const drift = targetVehiclesTotal - scaledVehiclesTotal
+                if (drift !== 0) {
+                    const last = perVehicle[perVehicle.length - 1]
+                    last.baseRental = Math.max(0, (last.baseRental || 0) + drift)
+                    last.totalAmount = (last.baseRental || 0) + (last.driverCharges || 0) + (last.fuelCharges || 0)
+                }
+
+                // 4) Aggregate breakdown mirrors the reconciled per-vehicle sums.
+                quotation.quotedPrice.breakdown = {
+                    vehicleRental: perVehicle.reduce((s, vb) => s + (vb.baseRental || 0), 0),
+                    driverCharges: perVehicle.reduce((s, vb) => s + (vb.driverCharges || 0), 0),
+                    fuelCharges: perVehicle.reduce((s, vb) => s + (vb.fuelCharges || 0), 0),
+                }
+            } else if (quotation.quotedPrice.breakdown) {
+                // No per-vehicle detail: scale the aggregate breakdown and
+                // reconcile it to the target vehicles total.
+                const b = quotation.quotedPrice.breakdown
+                b.vehicleRental = Math.round((b.vehicleRental || 0) * reductionRatio)
+                b.driverCharges = Math.round((b.driverCharges || 0) * reductionRatio)
+                b.fuelCharges = Math.round((b.fuelCharges || 0) * reductionRatio)
+                const scaled = (b.vehicleRental || 0) + (b.driverCharges || 0) + (b.fuelCharges || 0)
+                const drift = targetVehiclesTotal - scaled
+                if (drift !== 0) b.vehicleRental = Math.max(0, (b.vehicleRental || 0) + drift)
             }
 
-            // Update per-vehicle breakdown if exists
-            if (quotation.quotedPrice.perVehicleBreakdown && quotation.quotedPrice.perVehicleBreakdown.length > 0) {
-                quotation.quotedPrice.perVehicleBreakdown.forEach((vehicleBreakdown) => {
-                    vehicleBreakdown.baseRental = Math.round((vehicleBreakdown.baseRental || 0) * reductionRatio)
-                    vehicleBreakdown.driverCharges = Math.round((vehicleBreakdown.driverCharges || 0) * reductionRatio)
-                    vehicleBreakdown.fuelCharges = Math.round((vehicleBreakdown.fuelCharges || 0) * reductionRatio)
-                    vehicleBreakdown.totalAmount = Math.round((vehicleBreakdown.totalAmount || 0) * reductionRatio)
-                })
-            }
+            // 5) Persist the reconciled service charge (0 for non-managed).
+            quotation.quotedPrice.serviceCharge = newServiceCharge
+
+            // Nested subdocument/array mutations must be flagged so Mongoose
+            // persists the reconciled breakdown reliably.
+            quotation.markModified("quotedPrice")
 
             // Update negotiation status in quotation
             // IMPORTANT: Set the negotiationId so contract can reference it later

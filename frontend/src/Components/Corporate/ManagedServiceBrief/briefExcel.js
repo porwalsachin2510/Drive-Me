@@ -47,13 +47,20 @@ const toArr = (str) =>
 const toDateInput = (val) => {
     if (val == null || val === "") return "";
     if (val instanceof Date && !isNaN(val)) {
-        return val.toISOString().slice(0, 10);
+        // Use LOCAL getters, not toISOString(): a cellDates Date is anchored at
+        // local midnight, and UTC conversion would roll it back a day in +NN
+        // timezones (the off-by-one seen in the form).
+        const y = val.getFullYear();
+        const mo = String(val.getMonth() + 1).padStart(2, "0");
+        const d = String(val.getDate()).padStart(2, "0");
+        return `${y}-${mo}-${d}`;
     }
     if (typeof val === "number" && isFinite(val)) {
-        // Excel serial date -> JS date (Excel epoch 1899-12-30).
+        // Excel serial date -> yyyy-mm-dd. Building the date from UTC ms keeps it
+        // timezone-independent (integer serials land exactly on UTC midnight).
         const ms = Math.round((val - 25569) * 86400 * 1000);
-        const d = new Date(ms);
-        if (!isNaN(d)) return d.toISOString().slice(0, 10);
+        const dt = new Date(ms);
+        if (!isNaN(dt)) return dt.toISOString().slice(0, 10);
         return "";
     }
     const s = String(val).trim();
@@ -70,7 +77,60 @@ const toDateInput = (val) => {
         return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
     const d = new Date(s);
-    return isNaN(d) ? "" : d.toISOString().slice(0, 10);
+    if (isNaN(d)) return "";
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${mo}-${day}`;
+};
+
+// Convert any spreadsheet cell holding a time (Excel time serial fraction, a JS
+// Date from cellDates, or a plain "HH:MM"/"h:mm AM" string) into the "HH:MM"
+// 24h string an <input type="time"> requires. Returns "" when unparseable.
+// This is the core fix: previously times were run through String().trim(), so a
+// serial/Date logout time produced garbage and the field rendered empty.
+const toTimeInput = (val) => {
+    if (val == null || val === "") return "";
+
+    const fromMinutes = (totalMinutes) => {
+        let t = ((Math.round(totalMinutes) % 1440) + 1440) % 1440; // wrap into a day
+        const hh = String(Math.floor(t / 60)).padStart(2, "0");
+        const mm = String(t % 60).padStart(2, "0");
+        return `${hh}:${mm}`;
+    };
+
+    // JS Date (only if cellDates is ever re-enabled) — use LOCAL getters.
+    if (val instanceof Date && !isNaN(val)) {
+        return fromMinutes(val.getHours() * 60 + val.getMinutes());
+    }
+
+    // Excel time serial: fraction of a 24h day (0.5 === 12:00). Whole part is
+    // the date portion for datetime cells and is ignored here.
+    if (typeof val === "number" && isFinite(val)) {
+        const frac = val - Math.floor(val);
+        return fromMinutes(frac * 24 * 60);
+    }
+
+    let s = String(val).trim();
+    if (!s) return "";
+
+    // "9:00 AM" / "05:30 pm" (with optional seconds).
+    let m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])$/);
+    if (m) {
+        let h = parseInt(m[1], 10) % 12;
+        const min = parseInt(m[2], 10);
+        if (/[Pp][Mm]/.test(m[3])) h += 12;
+        return fromMinutes(h * 60 + min);
+    }
+    // "17:00" / "9:5" / "08:00:00" (24h, optional seconds).
+    m = s.match(/^(\d{1,2}):(\d{1,2})(?::\d{1,2})?$/);
+    if (m) {
+        return fromMinutes(parseInt(m[1], 10) * 60 + parseInt(m[2], 10));
+    }
+    // Fallback: a stringified Date such as "Sat Dec 31 1899 17:00:00 GMT+...".
+    const d = new Date(s);
+    if (!isNaN(d)) return fromMinutes(d.getHours() * 60 + d.getMinutes());
+    return "";
 };
 
 /* ------------------------------------------------------------------ */
@@ -270,7 +330,14 @@ export const parseBriefWorkbook = async (file) => {
     const xlsxModule = await import("xlsx");
     const XLSX = xlsxModule.default || xlsxModule;
     const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: "array", cellDates: true });
+    // NOTE: we deliberately do NOT pass `cellDates: true`. When Excel stores a
+    // typed time (e.g. 17:00) it becomes a serial fraction (0.708...) and a
+    // typed date becomes a serial integer. With cellDates these turn into JS
+    // Date objects whose string form ("Sat Dec 31 1899...") is useless for
+    // <input type="time"> (fields render empty) and whose UTC conversion shifts
+    // dates by a day in +04 timezones. Reading raw serials lets toDateInput /
+    // toTimeInput convert them deterministically, timezone-free.
+    const workbook = XLSX.read(data, { type: "array" });
 
     const result = {
         summary: "",
@@ -329,8 +396,8 @@ export const parseBriefWorkbook = async (file) => {
             pickCell(row, ["locationname", "location", "worklocation"]) || "",
         ).trim();
         const label = String(pickCell(row, ["shiftlabel", "label", "shift"]) || "").trim();
-        const loginTime = String(pickCell(row, ["logintime", "login", "starttime", "start"]) || "").trim();
-        const logoutTime = String(pickCell(row, ["logouttime", "logout", "endtime", "end"]) || "").trim();
+        const loginTime = toTimeInput(pickCell(row, ["logintime", "login", "starttime", "start"]));
+        const logoutTime = toTimeInput(pickCell(row, ["logouttime", "logout", "endtime", "end"]));
         const workingDays = toArr(pickCell(row, ["workingdays", "days", "operatingdays"]));
         if (!label && !loginTime && !logoutTime && workingDays.length === 0) continue;
 
@@ -361,8 +428,8 @@ export const parseBriefWorkbook = async (file) => {
                 pickCell(row, ["toworklocation", "to", "destination", "worklocation"]) || "",
             ).trim(),
             direction,
-            pickupWindowStart: String(pickCell(row, ["pickupwindowstart", "windowstart", "starttime", "pickupstart"]) || "").trim(),
-            pickupWindowEnd: String(pickCell(row, ["pickupwindowend", "windowend", "endtime", "pickupend"]) || "").trim(),
+            pickupWindowStart: toTimeInput(pickCell(row, ["pickupwindowstart", "windowstart", "starttime", "pickupstart"])),
+            pickupWindowEnd: toTimeInput(pickCell(row, ["pickupwindowend", "windowend", "endtime", "pickupend"])),
             headcount: Number(pickCell(row, ["expectedheadcount", "headcount", "count", "employees"])) || 0,
             preferredVehicleType: String(pickCell(row, ["preferredvehicletype", "vehicletype", "vehicle"]) || "").trim(),
             stops: toArr(pickCell(row, ["stops", "stoppoints", "stop"])),
