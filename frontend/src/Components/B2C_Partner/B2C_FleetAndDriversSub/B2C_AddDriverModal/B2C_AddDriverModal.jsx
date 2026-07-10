@@ -3,6 +3,7 @@
 import { useState } from "react";
 import "./b2c_adddrivermodal.css";
 import api from "../../../../utils/api";
+import { showSuccess, showError } from "../../../../utils/toast";
 
 function B2C_AddDriverModal({ onClose }) {
   const [formData, setFormData] = useState({
@@ -71,6 +72,17 @@ function B2C_AddDriverModal({ onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Client-side validation with clear toast messages so the user knows
+    // exactly what to fix before the request is even sent.
+    if (
+      formData.email &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
+    ) {
+      showError("Please enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -103,8 +115,7 @@ function B2C_AddDriverModal({ onClose }) {
       });
 
       if (response.data.success) {
-        console.log("Driver created successfully:", response.data.driver);
-        alert("Driver added successfully!");
+        showSuccess("Driver added successfully!");
         onClose();
         // Optionally trigger a refresh of parent component
         if (window.onDriverAdded) {
@@ -116,10 +127,8 @@ function B2C_AddDriverModal({ onClose }) {
         throw new Error(response.data.message || "Failed to add driver");
       }
     } catch (error) {
-      console.error("Error adding driver:", error);
-      alert(
-        `Failed to add driver: ${error.response?.data?.message || error.message}`,
-      );
+      console.error("[v0] Error adding driver:", error);
+      showError(error, "Failed to add driver. Please try again.");
     } finally {
       setLoading(false);
     }

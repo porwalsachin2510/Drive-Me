@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import "../B2C_AddDriverModal/b2c_adddrivermodal.css";
 import api from "../../../../utils/api";
+import { showSuccess, showError } from "../../../../utils/toast";
 
 function B2C_EditDriverModal({ driver, onClose, onSuccess }) {
   const isSelfDriver = driver?.isSelf;
@@ -133,7 +134,7 @@ function B2C_EditDriverModal({ driver, onClose, onSuccess }) {
         const response = await api.put("/users/profile", updateData);
 
         if (response.data.success) {
-          alert("Profile updated successfully!");
+          showSuccess("Profile updated successfully!");
           onSuccess?.();
         } else {
           throw new Error(response.data.message || "Failed to update profile");
@@ -172,17 +173,15 @@ function B2C_EditDriverModal({ driver, onClose, onSuccess }) {
         );
 
         if (response.data.success) {
-          alert("Driver updated successfully!");
+          showSuccess("Driver updated successfully!");
           onSuccess?.();
         } else {
           throw new Error(response.data.message || "Failed to update driver");
         }
       }
     } catch (error) {
-      console.error("Error updating driver:", error);
-      alert(
-        `Failed to update driver: ${error.response?.data?.message || error.message}`,
-      );
+      console.error("[v0] Error updating driver:", error);
+      showError(error, "Failed to update driver. Please try again.");
     } finally {
       setLoading(false);
     }

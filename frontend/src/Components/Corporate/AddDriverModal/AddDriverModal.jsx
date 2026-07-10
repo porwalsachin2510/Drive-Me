@@ -7,6 +7,7 @@ import {
   clearDriverError,
   clearDriverSuccess,
 } from "../../../Redux/slices/driverSlice";
+import { showSuccess, showError } from "../../../utils/toast";
 import "./adddrivermodal.css";
 
 function AddDriverModal({ onClose, onSuccess }) {
@@ -192,9 +193,10 @@ function AddDriverModal({ onClose, onSuccess }) {
       const result = await dispatch(
         createCorporateDriver(formDataToSend),
       ).unwrap();
-      setSuccessMessage(
-        "Corporate Driver registered successfully! Login credentials sent to driver's email.",
-      );
+      const successText =
+        "Corporate Driver registered successfully! Login credentials sent to driver's email.";
+      setSuccessMessage(successText);
+      showSuccess(successText);
 
       setFormData({
         name: "",
@@ -233,7 +235,9 @@ function AddDriverModal({ onClose, onSuccess }) {
         }
       }, 1500);
     } catch (err) {
-      console.error("Error creating driver:", err);
+      console.error("[v0] Error creating driver:", err);
+      // err is the rejected value (a string message) from the thunk.
+      showError(err, "Failed to register driver. Please try again.");
     }
   };
 

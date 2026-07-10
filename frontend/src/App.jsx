@@ -4,6 +4,7 @@ import { Provider, useDispatch, useSelector } from "react-redux";
 import store from "./Redux/store";
 import { initLocale } from "./Redux/slices/localeSlice";
 import { SocketProvider } from "./context/SocketContext";
+import { Toaster } from "react-hot-toast";
 import HomePage from "./Pages/HomePage/index";
 import CommuterProfilePage from "./Pages/CommuterPages/CommuterProfilePage/CommuterProfilePage";
 import Login from "./Pages/Login/Login";
@@ -79,6 +80,7 @@ function App() {
   return (
     <Provider store={store}>
       <LocaleInitializer />
+      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
       <SocketProvider>
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -315,7 +317,7 @@ function App() {
               </ProtectedRoleBasedRoute>
             }
           />
-          
+
           <Route
             path="/b2b-partner/managed-operations"
             element={

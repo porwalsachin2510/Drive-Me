@@ -15,6 +15,7 @@ import {
   getActiveCountry,
   getCountryLocations,
 } from "../../../../config/localeConfig";
+import { showSuccess, showError } from "../../../../utils/toast";
 import "./b2b_adddrivermodal.css";
 
 function B2B_AddDriverModal({ onClose }) {
@@ -229,9 +230,10 @@ function B2B_AddDriverModal({ onClose }) {
     try {
       // eslint-disable-next-line no-unused-vars
       const result = await dispatch(createDriver(formDataToSend)).unwrap();
-      setSuccessMessage(
-        "B2B Partner Driver registered successfully! Login credentials sent to driver's email.",
-      );
+      const successText =
+        "B2B Partner Driver registered successfully! Login credentials sent to driver's email.";
+      setSuccessMessage(successText);
+      showSuccess(successText);
 
       setFormData({
         name: "",
@@ -266,7 +268,9 @@ function B2B_AddDriverModal({ onClose }) {
         onClose();
       }, 1500);
     } catch (err) {
-      console.error("Error creating driver:", err);
+      console.error("[v0] Error creating driver:", err);
+      // err is the rejected value (a string message) from the thunk.
+      showError(err, "Failed to register driver. Please try again.");
     }
   };
 

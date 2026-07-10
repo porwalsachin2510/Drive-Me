@@ -19,6 +19,7 @@ import { createNotification } from "./notificationController.js"
 import { sendAdminNotification } from "../Services/notificationService.js"
 import { setBookingDeadlines } from "../cron/bookingTimeoutCron.js"
 import { getOrCreateWallet } from "../Services/walletService.js"
+import { getCashAcceptanceBuffer } from "../Config/localizationConfig.js"
 
 /**
  * Resolve the fare base used for cancellation-fee / cash-due math.
@@ -928,16 +929,23 @@ export const acceptB2CBooking = async (req, res) => {
                 walletBalance: partnerWallet?.balance || 0
             })
 
-            // Calculate required balance (commission + buffer)
-            const requiredBalance = adminCommission + 50 // 50 AED buffer
+            // Calculate required balance (admin commission + a small, currency
+            // appropriate safety buffer). The buffer is resolved from the
+            // BOOKING'S currency via central config — never a flat "+ 50" that
+            // wrongly forced a Kuwait partner to hold 50 KWD extra.
+            const acceptanceBuffer = getCashAcceptanceBuffer(bookingCurrency)
+            const requiredBalance = adminCommission + acceptanceBuffer
 
             if (!partnerWallet || partnerWallet.balance < requiredBalance) {
                 return res.status(400).json({
                     success: false,
-                    message: `Insufficient wallet balance. You need at least ${requiredBalance} AED to accept this cash booking. Current balance: ${partnerWallet?.balance || 0} AED.`,
+                    message: `Insufficient wallet balance. You need at least ${requiredBalance} ${bookingCurrency} to accept this cash booking. Current balance: ${partnerWallet?.balance || 0} ${bookingCurrency}.`,
                     requiresWalletFunding: true,
                     currentBalance: partnerWallet?.balance || 0,
                     requiredBalance: requiredBalance,
+                    acceptanceBuffer: acceptanceBuffer,
+                    adminCommission: adminCommission,
+                    currency: bookingCurrency,
                 })
             }
 

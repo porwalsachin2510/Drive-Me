@@ -24,6 +24,11 @@ export const COUNTRY_CONFIG = {
         currency: "AED",
         currencySymbol: "AED",
         currencyDecimals: 2,
+        // Extra wallet balance (on top of the admin commission) a partner must
+        // hold to accept a CASH booking. This is a small per-country safety
+        // margin expressed in the country's OWN currency — never a flat number
+        // reused across currencies (50 AED is sensible; 50 KWD is not).
+        cashAcceptanceBuffer: 50,
         paymentGateway: "STRIPE",
         fallbackGateway: "TAP",
         paymentMethods: [
@@ -43,6 +48,9 @@ export const COUNTRY_CONFIG = {
         currency: "KWD",
         currencySymbol: "KWD",
         currencyDecimals: 3,
+        // ~50 AED equivalent, rounded to a clean KWD figure. KWD is a high-value
+        // currency, so the buffer is small in absolute terms.
+        cashAcceptanceBuffer: 5,
         paymentGateway: "TAP",
         fallbackGateway: null,
         paymentMethods: [
@@ -64,6 +72,7 @@ export const COUNTRY_CONFIG = {
         currency: "SAR",
         currencySymbol: "SAR",
         currencyDecimals: 2,
+        cashAcceptanceBuffer: 50,
         paymentGateway: "STRIPE",
         fallbackGateway: "TAP",
         paymentMethods: [
@@ -81,6 +90,7 @@ export const COUNTRY_CONFIG = {
         currency: "BHD",
         currencySymbol: "BHD",
         currencyDecimals: 3,
+        cashAcceptanceBuffer: 5,
         paymentGateway: "TAP",
         fallbackGateway: null,
         paymentMethods: [
@@ -99,6 +109,7 @@ export const COUNTRY_CONFIG = {
         currency: "OMR",
         currencySymbol: "OMR",
         currencyDecimals: 3,
+        cashAcceptanceBuffer: 5,
         paymentGateway: "TAP",
         fallbackGateway: null,
         paymentMethods: [
@@ -116,6 +127,7 @@ export const COUNTRY_CONFIG = {
         currency: "QAR",
         currencySymbol: "QAR",
         currencyDecimals: 2,
+        cashAcceptanceBuffer: 50,
         paymentGateway: "STRIPE",
         fallbackGateway: "TAP",
         paymentMethods: [
@@ -328,6 +340,22 @@ export const getEffectiveCountry = (user) => {
 export const getCountryCurrency = (input) => getCountryConfig(input).currency;
 
 /**
+ * Extra wallet balance (on top of the admin commission) a partner must hold to
+ * accept a CASH booking, resolved from a currency code. This replaces the old
+ * hard-coded "+ 50" that was wrongly applied to every currency (making a Kuwait
+ * partner need 50 KWD extra instead of a sensible ~5 KWD). Falls back to 0 when
+ * a currency has no configured buffer, so no phantom requirement is ever added.
+ */
+export const getCashAcceptanceBuffer = (currency) => {
+    const match = Object.values(COUNTRY_CONFIG).find(
+        (c) => c.currency === (currency || "").toUpperCase()
+    );
+    return match && typeof match.cashAcceptanceBuffer === "number"
+        ? match.cashAcceptanceBuffer
+        : 0;
+};
+
+/**
  * Selectable service locations per country (mirrors the frontend
  * config/localeConfig.js). This is the single source of truth for validating
  * that a submitted location actually belongs to the acting user's country, so
@@ -418,6 +446,7 @@ export default {
     isIdentityLockedUser,
     getEffectiveCountry,
     getCountryCurrency,
+    getCashAcceptanceBuffer,
     getCurrencySymbol,
     getCurrencyDecimals,
     getCountryPaymentGateway,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale } from "../../../hooks/useLocale";
+import { getCashAcceptanceBuffer } from "../../../config/localeConfig";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -327,7 +328,11 @@ function BookingTable() {
     // Check wallet balance for cash bookings before accepting
     if (booking.paymentMethod === "CASH") {
       const adminCommission = booking.adminCommissionAmount || 0;
-      const requiredBalance = adminCommission + 50; // 50 AED buffer as per backend
+      // Buffer is per-currency (mirrors backend) — never a flat "+ 50" applied
+      // to every currency, which forced Kuwait partners to hold 50 KWD extra.
+      const bookingCurrency = booking.currency || activeCurrency;
+      const requiredBalance =
+        adminCommission + getCashAcceptanceBuffer(bookingCurrency);
 
       if (walletBalance < requiredBalance) {
         // Insufficient balance - show warning modal
@@ -981,7 +986,10 @@ function BookingTable() {
                 <div className="b2c-wallet-info-row">
                   <span>Required Amount:</span>
                   <span className="b2c-wallet-required">
-                    {(pendingAcceptBooking?.adminCommissionAmount || 0) + 50}{" "}
+                    {(pendingAcceptBooking?.adminCommissionAmount || 0) +
+                      getCashAcceptanceBuffer(
+                        pendingAcceptBooking?.currency || activeCurrency,
+                      )}{" "}
                     {pendingAcceptBooking?.currency || activeCurrency}
                   </span>
                 </div>
@@ -991,7 +999,9 @@ function BookingTable() {
                     {Math.max(
                       0,
                       (pendingAcceptBooking?.adminCommissionAmount || 0) +
-                        50 -
+                        getCashAcceptanceBuffer(
+                          pendingAcceptBooking?.currency || activeCurrency,
+                        ) -
                         walletBalance,
                     )}{" "}
                     {pendingAcceptBooking?.currency || activeCurrency}

@@ -8,6 +8,7 @@ import { uploadToCloudinary } from "../Config/Cloudinary.js"
 import { sendDriverCredentials } from "../Services/emailService.js"
 import { initializeTripTracking, updateTripLocation, completeTrip } from "../Services/locationTrackingService.js"
 import { broadcastDriverAvailabilityChange, broadcastSelfDriverAvailabilityChange } from "../Services/socketService.js"
+import { sendErrorResponse } from "../utils/errorResponse.js"
 import crypto from "crypto"
 
 export const generateRandomPassword = () => {
@@ -35,10 +36,24 @@ export const createDriver = async (req, res) => {
             })
         }
 
+        // Pre-check for a duplicate email before creating any records, so the user
+        // gets a clear message and no orphaned Driver record is left behind if the
+        // linked User account fails to create.
+        const normalizedEmail = (req.body.email || "").trim().toLowerCase()
+        if (normalizedEmail) {
+            const existingUser = await User.findOne({ email: normalizedEmail })
+            if (existingUser) {
+                return res.status(409).json({
+                    success: false,
+                    message: "An account with this email address already exists. Please use a different email.",
+                })
+            }
+        }
+
         const driverData = {
             fleetOwnerId: req.userId,
             name: req.body.name,
-            email: req.body.email,
+            email: normalizedEmail,
             phone: req.body.phone,
             licenseNumber: req.body.licenseNumber,
             licenseExpiry: req.body.licenseExpiry,
@@ -105,7 +120,7 @@ export const createDriver = async (req, res) => {
         const userData = {
             role: "B2B_PARTNER_DRIVER",
             fullName: req.body.name,
-            email: req.body.email,
+            email: normalizedEmail,
             whatsappNumber: req.body.phone,
             password: generatedPassword,
             employedBy: req.userId,
@@ -131,7 +146,15 @@ export const createDriver = async (req, res) => {
             },
         }
 
-        const userDriver = await User.create(userData)
+        let userDriver
+        try {
+            userDriver = await User.create(userData)
+        } catch (userCreateError) {
+            // Roll back the driver record so no orphaned Driver is left behind
+            // if the linked User account fails to create.
+            await Driver.deleteOne({ _id: driver._id })
+            throw userCreateError
+        }
 
         // Send email with login credentials to driver
         try {
@@ -164,11 +187,7 @@ export const createDriver = async (req, res) => {
         })
     } catch (error) {
         console.error("[v0] Error creating driver:", error.message)
-        res.status(500).json({
-            success: false,
-            message: "Error creating driver",
-            error: error.message,
-        })
+        return sendErrorResponse(res, error, "Error creating driver")
     }
 }
 
@@ -329,10 +348,24 @@ export const createCorporateDriver = async (req, res) => {
             })
         }
 
+        // Pre-check for a duplicate email before creating any records, so the user
+        // gets a clear message and no orphaned CorporateDriver record is left
+        // behind if the linked User account fails to create.
+        const normalizedEmail = (req.body.email || "").trim().toLowerCase()
+        if (normalizedEmail) {
+            const existingUser = await User.findOne({ email: normalizedEmail })
+            if (existingUser) {
+                return res.status(409).json({
+                    success: false,
+                    message: "An account with this email address already exists. Please use a different email.",
+                })
+            }
+        }
+
         const driverData = {
             corporateOwnerId: req.userId,
             name: req.body.name,
-            email: req.body.email,
+            email: normalizedEmail,
             phone: req.body.phone,
             licenseNumber: req.body.licenseNumber,
             licenseExpiry: req.body.licenseExpiry,
@@ -399,7 +432,7 @@ export const createCorporateDriver = async (req, res) => {
         const userData = {
             role: "CORPORATE_DRIVER",
             fullName: req.body.name,
-            email: req.body.email,
+            email: normalizedEmail,
             whatsappNumber: req.body.phone,
             password: generatedPassword,
             employedBy: req.userId,
@@ -425,7 +458,15 @@ export const createCorporateDriver = async (req, res) => {
             },
         }
 
-        const userDriver = await User.create(userData)
+        let userDriver
+        try {
+            userDriver = await User.create(userData)
+        } catch (userCreateError) {
+            // Roll back the driver record so no orphaned CorporateDriver is left
+            // behind if the linked User account fails to create.
+            await CorporateDriver.deleteOne({ _id: corporateDriver._id })
+            throw userCreateError
+        }
 
         // Send email with login credentials to driver
         try {
@@ -459,11 +500,7 @@ export const createCorporateDriver = async (req, res) => {
         })
     } catch (error) {
         console.error("[v0] Error creating driver:", error.message)
-        res.status(500).json({
-            success: false,
-            message: "Error creating driver",
-            error: error.message,
-        })
+        return sendErrorResponse(res, error, "Error creating driver")
     }
 }
 
@@ -560,11 +597,24 @@ export const createB2CPartnerDriver = async (req, res) => {
             })
         }
 
+        // Pre-check for a duplicate email BEFORE creating any records. This gives
+        // the user a clear message instead of a raw Mongo E11000 error, and it
+        // prevents orphaned B2CPartnerDriver rows from being left behind when the
+        // linked User account fails to create.
+        const normalizedEmail = req.body.email.trim().toLowerCase()
+        const existingUser = await User.findOne({ email: normalizedEmail })
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message: "An account with this email address already exists. Please use a different email.",
+            })
+        }
+
         // B2C Partner Driver data for B2CPartnerDriver table
         const b2cDriverData = {
             b2cPartnerId: req.userId,
             name: req.body.fullName,
-            email: req.body.email,
+            email: normalizedEmail,
             phoneNumber: req.body.phone,
             licenseNumber: req.body.licenseNumber,
             licenseExpiry: req.body.licenseExpiry,
@@ -644,7 +694,7 @@ export const createB2CPartnerDriver = async (req, res) => {
         const userData = {
             role: "B2C_PARTNER_DRIVER",
             fullName: req.body.fullName,
-            email: req.body.email,
+            email: normalizedEmail,
             whatsappNumber: req.body.phone,
             password: generatedPassword,
             b2cPartnerId: req.userId,
@@ -672,7 +722,16 @@ export const createB2CPartnerDriver = async (req, res) => {
             },
         }
 
-        const userDriver = await User.create(userData)
+        let userDriver
+        try {
+            userDriver = await User.create(userData)
+        } catch (userCreateError) {
+            // The linked User failed to create (e.g. a race on the unique email).
+            // Roll back the driver record we just created so we never leave an
+            // orphaned B2CPartnerDriver behind.
+            await B2CPartnerDriver.deleteOne({ _id: b2cDriver._id })
+            throw userCreateError
+        }
 
         // Send email with login credentials to driver
         try {
@@ -705,11 +764,9 @@ export const createB2CPartnerDriver = async (req, res) => {
         })
     } catch (error) {
         console.error("[v0] Error creating B2C partner driver:", error.message)
-        res.status(500).json({
-            success: false,
-            message: "Error creating B2C partner driver",
-            error: error.message,
-        })
+        // Translate low-level DB errors (e.g. duplicate email) into a clear,
+        // user-friendly message the frontend can show directly in a toast.
+        return sendErrorResponse(res, error, "Error creating B2C partner driver")
     }
 }
 
@@ -1127,13 +1184,37 @@ export const getB2CPartnerDrivers = async (req, res) => {
             };
         };
 
-        // Create drivers array with availability status - using stored availabilityStatus from database
+        // Collect DB corrections for drivers whose stored availabilityStatus is
+        // stale. A driver's status was historically auto-set to 'busy' when a
+        // schedule was created, even though the driver isn't actually on/near a
+        // booked trip. That stale value leaked to the UI and made every card show
+        // "Busy". We recompute the real status and heal the persisted value.
+        const staleStatusFixes = [];
+
+        // Normalize a computed availability status to the persisted enum
+        // ('available' | 'busy' | 'offline'). 'scheduled' is a display-only state
+        // and maps back to 'available' since the driver can still take assignments.
+        const normalizeAvailabilityStatus = (computedStatus) => {
+            if (computedStatus === 'busy') return 'busy';
+            if (computedStatus === 'offline') return 'offline';
+            return 'available';
+        };
+
+        // Create drivers array with availability status - derived from REAL trips
         let drivers = assignedDrivers.map(driver => {
             const driverObj = driver.toObject();
-            // Use stored availabilityStatus from database and combine with trip info
-            driverObj.availability = getAvailabilityStatus(driver._id, driver.availabilityStatus);
-            // Also add availabilityStatus at root level for real-time socket updates compatibility
-            driverObj.availabilityStatus = driver.availabilityStatus || 'available';
+            // Compute the real availability from actual trips (respecting a manual
+            // 'offline' override), NOT the stale stored 'busy'.
+            const availabilityResult = getAvailabilityStatus(driver._id, driver.availabilityStatus);
+            driverObj.availability = availabilityResult;
+            // Root-level status must mirror the COMPUTED availability, not the stale
+            // stored value that previously forced unassigned drivers to show "Busy".
+            const normalizedStatus = normalizeAvailabilityStatus(availabilityResult.status);
+            driverObj.availabilityStatus = normalizedStatus;
+            // Queue a persisted correction when the DB value no longer matches reality.
+            if ((driver.availabilityStatus || 'available') !== normalizedStatus) {
+                staleStatusFixes.push({ id: driver._id, status: normalizedStatus });
+            }
             // Add isSelfDriver flag for socket matching
             driverObj.isSelfDriver = false;
 
@@ -1166,11 +1247,46 @@ export const getB2CPartnerDrivers = async (req, res) => {
             return driverObj;
         });
 
+        // Persist the corrected availability for any driver whose stored value was
+        // stale (e.g. auto-set 'busy'). This is a real DB write so the bad data is
+        // healed permanently and doesn't reappear on subsequent loads.
+        if (staleStatusFixes.length > 0) {
+            await Promise.all(
+                staleStatusFixes.map(fix =>
+                    B2CPartnerDriver.updateOne(
+                        { _id: fix.id },
+                        {
+                            $set: {
+                                availabilityStatus: fix.status,
+                                lastAvailabilityUpdate: new Date(),
+                            },
+                        }
+                    )
+                )
+            );
+            console.log(`[v0] Healed ${staleStatusFixes.length} stale driver availability status(es)`);
+        }
+
         // Add B2C Partner as a driver option if they can drive
         if (b2cPartner && b2cPartner.isRegisteredAsDriver === true) {
             // Check partner's availability as a driver - use stored selfDriverAvailability from database
             const storedSelfAvailability = b2cPartner.selfDriverAvailability?.status || 'available';
             const partnerAvailability = getAvailabilityStatus(b2cPartner._id, storedSelfAvailability);
+            // Same fix as external drivers: the root status must reflect the real,
+            // computed availability, not a stale stored 'busy'.
+            const normalizedSelfStatus = normalizeAvailabilityStatus(partnerAvailability.status);
+            // Heal the persisted self-driver status if it drifted out of sync.
+            if (storedSelfAvailability !== normalizedSelfStatus) {
+                await User.updateOne(
+                    { _id: b2cPartner._id },
+                    {
+                        $set: {
+                            'selfDriverAvailability.status': normalizedSelfStatus,
+                            'selfDriverAvailability.lastUpdate': new Date(),
+                        },
+                    }
+                );
+            }
 
             // Get self-driver schedule assignments
             const selfAssignedScheduleDetails = driverScheduleMap.get(b2cPartner._id.toString()) || [];
@@ -1201,10 +1317,10 @@ export const getB2CPartnerDrivers = async (req, res) => {
                 // Add profile image for display - use correct field name
                 driverImage: b2cPartner.profileImage ? { url: b2cPartner.profileImage } : null,
                 profileImage: b2cPartner.profileImage,
-                // Add availability status - from database stored value
+                // Add availability status - derived from real trips, not stale DB value
                 availability: partnerAvailability,
                 // Also add availabilityStatus at root level for real-time socket updates compatibility
-                availabilityStatus: storedSelfAvailability,
+                availabilityStatus: normalizedSelfStatus,
                 // Add schedule assignment details for self
                 assignedScheduleDetails: selfAssignedScheduleDetails,
                 availabilityInfo: selfAssignedScheduleDetails.length > 0 ? {

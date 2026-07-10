@@ -15,6 +15,10 @@ export const COUNTRY_CONFIG = {
         currency: "AED",
         currencySymbol: "AED",
         currencyDecimals: 2,
+        // Extra wallet balance (beyond the admin commission) needed to accept a
+        // CASH booking. Mirrors backend localizationConfig.js — per currency, so
+        // a flat "50" is never reused across currencies.
+        cashAcceptanceBuffer: 50,
         paymentGateway: "STRIPE",
         serviceAvailable: true,
         exampleLocations: { from: "Dubai Marina", to: "Abu Dhabi City", stop: "Mall of the Emirates" },
@@ -28,6 +32,7 @@ export const COUNTRY_CONFIG = {
         currency: "KWD",
         currencySymbol: "KWD",
         currencyDecimals: 3,
+        cashAcceptanceBuffer: 5,
         paymentGateway: "TAP",
         serviceAvailable: true,
         exampleLocations: { from: "Kuwait City", to: "Salmiya", stop: "The Avenues Mall" },
@@ -35,25 +40,25 @@ export const COUNTRY_CONFIG = {
     SA: {
         code: "SA", name: "Saudi Arabia", displayName: "Saudi Arabia", isoCode: "SA",
         phoneCode: "+966", currency: "SAR", currencySymbol: "SAR", currencyDecimals: 2,
-        paymentGateway: "STRIPE", serviceAvailable: false,
+        cashAcceptanceBuffer: 50, paymentGateway: "STRIPE", serviceAvailable: false,
         exampleLocations: { from: "Riyadh", to: "Jeddah", stop: "Kingdom Centre" },
     },
     BH: {
         code: "BH", name: "Bahrain", displayName: "Bahrain", isoCode: "BH",
         phoneCode: "+973", currency: "BHD", currencySymbol: "BHD", currencyDecimals: 3,
-        paymentGateway: "TAP", serviceAvailable: false,
+        cashAcceptanceBuffer: 5, paymentGateway: "TAP", serviceAvailable: false,
         exampleLocations: { from: "Manama", to: "Muharraq", stop: "City Centre Bahrain" },
     },
     OM: {
         code: "OM", name: "Oman", displayName: "Oman", isoCode: "OM",
         phoneCode: "+968", currency: "OMR", currencySymbol: "OMR", currencyDecimals: 3,
-        paymentGateway: "TAP", serviceAvailable: false,
+        cashAcceptanceBuffer: 5, paymentGateway: "TAP", serviceAvailable: false,
         exampleLocations: { from: "Muscat", to: "Seeb", stop: "Muscat Grand Mall" },
     },
     QA: {
         code: "QA", name: "Qatar", displayName: "Qatar", isoCode: "QA",
         phoneCode: "+974", currency: "QAR", currencySymbol: "QAR", currencyDecimals: 2,
-        paymentGateway: "STRIPE", serviceAvailable: false,
+        cashAcceptanceBuffer: 50, paymentGateway: "STRIPE", serviceAvailable: false,
         exampleLocations: { from: "Doha", to: "Al Wakrah", stop: "Villaggio Mall" },
     },
 };
@@ -200,6 +205,22 @@ export const getCurrencySymbol = (currency) => {
         (c) => c.currency === (currency || "").toUpperCase()
     );
     return match ? match.currencySymbol : currency;
+};
+
+/**
+ * Extra wallet balance (on top of the admin commission) a partner must hold to
+ * accept a CASH booking, resolved from a currency code. Mirrors the backend
+ * getCashAcceptanceBuffer so the client-side pre-check and the modal show the
+ * same figure the server enforces — instead of a hard-coded "+ 50" that made a
+ * Kuwait partner think they needed 50 KWD extra. Falls back to 0.
+ */
+export const getCashAcceptanceBuffer = (currency) => {
+    const match = Object.values(COUNTRY_CONFIG).find(
+        (c) => c.currency === (currency || "").toUpperCase()
+    );
+    return match && typeof match.cashAcceptanceBuffer === "number"
+        ? match.cashAcceptanceBuffer
+        : 0;
 };
 
 /**

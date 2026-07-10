@@ -17,7 +17,10 @@ import DailyTripsInBooking from "../../../Components/DailyTripsInBooking/DailyTr
 import api from "../../../utils/api";
 import WalletRechargeModal from "../../../Components/WalletRechargeModal/WalletRechargeModal";
 import PassengerDetailsModal from "../../../Components/B2C_Partner/PassengerDetailsModal/PassengerDetailsModal";
-import { getCountryConfig } from "../../../config/localeConfig";
+import {
+  getCountryConfig,
+  getCashAcceptanceBuffer,
+} from "../../../config/localeConfig";
 import "./b2c_partnerbookingspage.css";
 
 const B2C_PartnerBookingsPage = () => {
@@ -113,7 +116,12 @@ const B2C_PartnerBookingsPage = () => {
     // Check wallet balance for cash bookings
     if (booking.paymentMethod === "CASH") {
       const adminCommission = booking.adminCommissionAmount || 0;
-      if (walletBalance < adminCommission) {
+      // Required = admin commission + a small per-currency safety buffer
+      // (mirrors backend). Never a flat "+ 50" reused across currencies.
+      const bookingCurrency = booking.currency || activeCurrency;
+      const requiredBalance =
+        adminCommission + getCashAcceptanceBuffer(bookingCurrency);
+      if (walletBalance < requiredBalance) {
         setSelectedBooking(booking);
         setShowWalletWarning(true);
         return;
@@ -771,7 +779,10 @@ const B2C_PartnerBookingsPage = () => {
               <div className="B2C_Partner-bookings-page-balance-info">
                 <p>
                   <strong>Required Amount:</strong>{" "}
-                  {selectedBooking?.adminCommissionAmount || 0}{" "}
+                  {(selectedBooking?.adminCommissionAmount || 0) +
+                    getCashAcceptanceBuffer(
+                      selectedBooking?.currency || activeCurrency,
+                    )}{" "}
                   {selectedBooking?.currency || activeCurrency}
                 </p>
                 <p>
@@ -782,7 +793,10 @@ const B2C_PartnerBookingsPage = () => {
                   <strong>Shortfall:</strong>{" "}
                   {Math.max(
                     0,
-                    (selectedBooking?.adminCommissionAmount || 0) -
+                    (selectedBooking?.adminCommissionAmount || 0) +
+                      getCashAcceptanceBuffer(
+                        selectedBooking?.currency || activeCurrency,
+                      ) -
                       walletBalance,
                   )}{" "}
                   {selectedBooking?.currency || activeCurrency}
