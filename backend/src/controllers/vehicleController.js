@@ -274,7 +274,8 @@ export const searchVehicles = async (req, res) => {
             rentalDuration, // "daily", "weekly", "monthly"
             serviceType, // "passenger" or "cargo"
             startDate, // "2026-01-28"
-            vehicleType, // "sedan", "suv", etc.
+            vehicleType, // legacy single: "sedan", "suv", etc.
+            vehicleTypes, // multi-select: array or comma-separated "SEDAN,SUV"
             page = 1,
             limit = 12,
         } = req.query;
@@ -329,24 +330,32 @@ export const searchVehicles = async (req, res) => {
         }
 
         // Vehicle Category/Type Filter
-        if (vehicleType && vehicleType !== "ANY_TYPE") {
-            const upperVehicleType = vehicleType.toUpperCase();
-            // Define valid categories for each service type to ensure correct matching
-            const goodsCarrierCategories = ["PICKUP_1TON", "PICKUP_3TON", "TRUCK_7TON", "REEFER_TRUCK", "FLATBED_TRAILER"];
-            const passengerCategories = ["SEDAN", "SUV", "MINIVAN", "COASTER_BUS", "LUXURY_COACH", "SHUTTLE_BUS"];
+        // Supports BOTH the legacy single `vehicleType` and the new multi-select
+        // `vehicleTypes` (array or comma-separated). When multiple types are
+        // provided we match ANY of them with $in so a corporate can request,
+        // e.g., Sedan + SUV + Minivan in one search.
+        let requestedTypes = [];
+        if (Array.isArray(vehicleTypes)) {
+            requestedTypes = vehicleTypes;
+        } else if (typeof vehicleTypes === "string" && vehicleTypes.trim()) {
+            requestedTypes = vehicleTypes.split(",");
+        } else if (vehicleType) {
+            requestedTypes = [vehicleType];
+        }
 
-            // If searching for goods carrier service type with a goods category
-            if (vehicleQuery.serviceType === "GOODS_CARRIER" && goodsCarrierCategories.includes(upperVehicleType)) {
-                vehicleQuery.vehicleCategory = upperVehicleType;
-            }
-            // If searching for passenger service type with a passenger category
-            else if (vehicleQuery.serviceType === "PASSENGER" && passengerCategories.includes(upperVehicleType)) {
-                vehicleQuery.vehicleCategory = upperVehicleType;
-            }
-            // For other cases, just use the vehicleType as-is
-            else {
-                vehicleQuery.vehicleCategory = upperVehicleType;
-            }
+        // Normalize, upper-case, drop blanks/ANY_TYPE, de-duplicate.
+        requestedTypes = [
+            ...new Set(
+                requestedTypes
+                    .map((t) => String(t).trim().toUpperCase())
+                    .filter((t) => t && t !== "ANY_TYPE"),
+            ),
+        ];
+
+        if (requestedTypes.length === 1) {
+            vehicleQuery.vehicleCategory = requestedTypes[0];
+        } else if (requestedTypes.length > 1) {
+            vehicleQuery.vehicleCategory = { $in: requestedTypes };
         }
 
         // Minimum Seats/Cargo Capacity Filter (greater than or equal)
@@ -623,11 +632,27 @@ export const getVehicleById = async (req, res) => {
 export const getFleetOwnerVehicles = async (req, res) => {
     try {
         const { fleetOwnerId } = req.params
-        const { status, serviceType } = req.query
+        const { status, serviceType, approvalStatus } = req.query
 
         const query = { fleetOwnerId, isActive: true }
         if (status) query.status = status
-        if (serviceType) query.serviceType = serviceType
+        if (approvalStatus) query.approvalStatus = approvalStatus
+
+        // Map the frontend service-type slug ("passenger"/"goods"/"managed") to
+        // the backend enum so the corporate owner page can list ALL of a
+        // partner's vehicles in the chosen category, not just searched types.
+        if (serviceType) {
+            const serviceTypeMap = {
+                passenger: "PASSENGER",
+                goods: "GOODS_CARRIER",
+                cargo: "GOODS_CARRIER",
+                goods_carrier: "GOODS_CARRIER",
+                managed: "MANAGED_SERVICES",
+                managed_services: "MANAGED_SERVICES",
+            }
+            const normalized = String(serviceType).toLowerCase()
+            query.serviceType = serviceTypeMap[normalized] || String(serviceType).toUpperCase()
+        }
 
         const vehicles = await Vehicle.find(query).sort({ createdAt: -1 })
         const fleetOwner = await User.findById(fleetOwnerId).select("-password")
@@ -816,11 +841,21 @@ export const updateVehicleStatus = async (req, res) => {
     try {
         const { status } = req.body
 
-        const vehicle = await Vehicle.findOneAndUpdate(
-            { _id: req.params.id, fleetOwnerId: req.userId },
-            { status },
-            { new: true },
-        )
+        // Only these operational states can be set by the fleet owner.
+        // BOOKED is system-managed (set when a vehicle is on a trip) and must
+        // never be settable from the partner UI.
+        const PARTNER_SETTABLE_STATUSES = ["AVAILABLE", "MAINTENANCE", "OFF_ROAD", "INACTIVE"]
+        if (!status || !PARTNER_SETTABLE_STATUSES.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid status. Allowed values: ${PARTNER_SETTABLE_STATUSES.join(", ")}`,
+            })
+        }
+
+        const vehicle = await Vehicle.findOne({
+            _id: req.params.id,
+            fleetOwnerId: req.userId,
+        })
 
         if (!vehicle) {
             return res.status(404).json({
@@ -828,6 +863,29 @@ export const updateVehicleStatus = async (req, res) => {
                 message: "Vehicle not found or unauthorized",
             })
         }
+
+        // A vehicle must be approved by an admin before the partner can manage
+        // its operational status. Pending/Rejected vehicles cannot be changed.
+        if (vehicle.approvalStatus !== "APPROVED") {
+            return res.status(403).json({
+                success: false,
+                message:
+                    vehicle.approvalStatus === "PENDING"
+                        ? "This vehicle is pending admin approval. You can change its status once it's approved."
+                        : "This vehicle was rejected and cannot be activated. Please contact support.",
+            })
+        }
+
+        // Don't let the partner flip a vehicle that is currently on a trip.
+        if (vehicle.status === "BOOKED") {
+            return res.status(409).json({
+                success: false,
+                message: "This vehicle is currently booked and cannot change status until the trip ends.",
+            })
+        }
+
+        vehicle.status = status
+        await vehicle.save() // runs schema validators on the enum
 
         res.status(200).json({
             success: true,

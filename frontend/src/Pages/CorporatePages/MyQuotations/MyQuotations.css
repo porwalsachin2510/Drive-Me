@@ -105,6 +105,51 @@
   margin-bottom: 40px;
 }
 
+/* Multi-partner request group: spans the full width and nests the child
+   partner quotation cards in their own grid. */
+.drivemego-corporate-quotation-group {
+  grid-column: 1 / -1;
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+  padding: 20px;
+  background: #f9fafb;
+}
+
+.drivemego-corporate-quotation-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.drivemego-corporate-quotation-group-badge {
+  background: #059669;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.drivemego-corporate-quotation-group-number {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.drivemego-corporate-quotation-group-meta {
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.drivemego-corporate-quotation-group-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
 /* No Quotations State */
 .drivemego-corporate-no-quotations {
   grid-column: 1 / -1;

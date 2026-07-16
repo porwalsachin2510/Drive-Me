@@ -75,14 +75,50 @@
   font-weight: 600;
 }
 
-.b2b-operator-dashboard-vehicles-tab-status-badge.b2b-operator-dashboard-vehicles-tab-success {
+.b2b-operator-dashboard-vehicles-tab-status-badge.success {
   background-color: #e8f5e9;
-  color: #4caf50;
+  color: #2e7d32;
 }
 
-.b2b-operator-dashboard-vehicles-tab-status-badge.b2b-operator-dashboard-vehicles-tab-warning {
+.b2b-operator-dashboard-vehicles-tab-status-badge.warning {
   background-color: #fff3e0;
-  color: #ff9800;
+  color: #ef6c00;
+}
+
+.b2b-operator-dashboard-vehicles-tab-status-badge.danger {
+  background-color: #fdecea;
+  color: #c62828;
+}
+
+.b2b-operator-dashboard-vehicles-tab-status-badge.info {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.b2b-operator-dashboard-vehicles-tab-status-badge.pending {
+  background-color: #fff8e1;
+  color: #b26a00;
+}
+
+/* Approval notice shown in place of status actions until approved */
+.b2b-operator-dashboard-vehicles-tab-approval-notice {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.b2b-operator-dashboard-vehicles-tab-approval-notice.pending {
+  background-color: #fff8e1;
+  color: #8a5a00;
+  border: 1px solid #ffe082;
+}
+
+.b2b-operator-dashboard-vehicles-tab-approval-notice.rejected {
+  background-color: #fdecea;
+  color: #b71c1c;
+  border: 1px solid #f5c6cb;
 }
 
 .b2b-operator-dashboard-vehicles-tab-vehicle-name {

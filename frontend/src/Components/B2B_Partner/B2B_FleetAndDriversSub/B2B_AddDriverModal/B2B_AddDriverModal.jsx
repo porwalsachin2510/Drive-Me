@@ -34,9 +34,9 @@ function B2B_AddDriverModal({ onClose }) {
   const licenseTypes = dropdownOptions[DROPDOWN_CATEGORIES.LICENSE_TYPES]
     ?.options || [
     { value: "Light", label: "Light" },
+    { value: "Medium", label: "Medium" },
     { value: "Heavy", label: "Heavy" },
     { value: "Commercial", label: "Commercial" },
-    { value: "Private", label: "Private" },
   ];
 
   // A driver is based in the partner's country, so the city list is scoped to

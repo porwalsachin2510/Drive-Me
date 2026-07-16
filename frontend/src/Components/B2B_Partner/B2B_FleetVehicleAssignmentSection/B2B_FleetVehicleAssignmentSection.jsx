@@ -23,20 +23,23 @@ const B2B_FleetVehicleAssignmentSection = ({
     contract.financials?.securityDeposit?.status === "WAIVED_FOR_EMI";
   const isActive = contract.status === "ACTIVE";
   const currency =
-    contract.financials?.currency || contract.quotationId?.currency || getActiveCurrency();
+    contract.financials?.currency ||
+    contract.quotationId?.currency ||
+    getActiveCurrency();
 
   // For EMI mode, contract is ready for vehicle assignment when ACTIVE
   // For STANDARD mode, advance payment must be completed
   const isPaymentConditionMet = isEMIPaymentMode || isAdvancePaid;
 
-  // Check if all vehicles are assigned
+  // Check if all vehicles are assigned. A type is only fully assigned when the
+  // number of assigned vehicles matches the requested quantity (e.g. 2/2), not
+  // merely when at least one has been assigned.
   const areAllVehiclesAssigned = contract.vehicles?.every(
     (vehicle) =>
-      vehicle.assignedVehicles && vehicle.assignedVehicles.length > 0,
+      (vehicle.assignedVehicles?.length || 0) >= (vehicle.quantity || 0),
   );
   const hasSomeVehiclesAssigned = contract.vehicles?.some(
-    (vehicle) =>
-      vehicle.assignedVehicles && vehicle.assignedVehicles.length > 0,
+    (vehicle) => (vehicle.assignedVehicles?.length || 0) > 0,
   );
 
   const getPaymentStatus = () => {

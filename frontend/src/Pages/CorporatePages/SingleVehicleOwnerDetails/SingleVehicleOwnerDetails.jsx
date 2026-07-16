@@ -1,10 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import ManagedServiceBriefModal from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBriefModal";
 import { requestQuotation } from "../../../Redux/slices/quotationSlice";
+import {
+  addVehicleToCart,
+  setRequirement,
+  selectCartTotalUnits,
+  selectCartPartnerCount,
+} from "../../../Redux/slices/requestCartSlice";
+import api from "../../../utils/api";
 import "./SingleVehicleOwnerDetails.css";
 
 const SingleVehicleOwnerDetails = () => {
@@ -23,6 +30,44 @@ const SingleVehicleOwnerDetails = () => {
   const [selectedVehicles, setSelectedVehicles] = useState({});
   const [filterType, setFilterType] = useState("ALL");
   const [activeTab, setActiveTab] = useState("commuters");
+
+  const cartUnits = useSelector(selectCartTotalUnits);
+  const cartPartnerCount = useSelector(selectCartPartnerCount);
+
+  // The corporate should be able to combine ANY of this partner's vehicles in
+  // the chosen service category — not just the types that matched the search.
+  // We seed from the search results, then fetch the partner's full APPROVED +
+  // AVAILABLE catalogue for the category and use that instead.
+  const [vehicleList, setVehicleList] = useState(ownerData.vehicles || []);
+
+  useEffect(() => {
+    const fleetOwnerId = ownerData.fleetOwnerId || ownerData._id;
+    if (!fleetOwnerId) return;
+    const serviceType = corporateuserrequirements?.serviceType || "passenger";
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get(`/vehicles/fleet-owner/${fleetOwnerId}`, {
+          params: {
+            serviceType,
+            status: "AVAILABLE",
+            approvalStatus: "APPROVED",
+          },
+        });
+        const fetched = res?.data?.data?.vehicles;
+        if (!cancelled && Array.isArray(fetched) && fetched.length > 0) {
+          setVehicleList(fetched);
+        }
+      } catch (error) {
+        console.error("Failed to load partner catalogue:", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerData, corporateuserrequirements]);
 
   // Managed-service requests must carry an operations brief. We hold the built
   // quotation payload here while the corporate fills the brief in the modal,
@@ -69,7 +114,7 @@ const SingleVehicleOwnerDetails = () => {
             [vehicleId]: {
               quantity: 1,
               data: {
-                vehicle: ownerData.vehicles.find((v) => v._id === vehicleId),
+                vehicle: vehicleList.find((v) => v._id === vehicleId),
               },
             },
           };
@@ -131,22 +176,18 @@ const SingleVehicleOwnerDetails = () => {
 
   // Filter vehicles based on selected filter
   const getFilteredVehicles = () => {
-    if (filterType === "ALL") return ownerData.vehicles;
+    if (filterType === "ALL") return vehicleList;
     if (filterType === "PASSENGER")
-      return ownerData.vehicles.filter((v) => v.serviceType === "PASSENGER");
+      return vehicleList.filter((v) => v.serviceType === "PASSENGER");
     if (filterType === "GOODS")
-      return ownerData.vehicles.filter(
-        (v) => v.serviceType === "GOODS_CARRIER",
-      );
+      return vehicleList.filter((v) => v.serviceType === "GOODS_CARRIER");
     if (filterType === "MANAGED")
-      return ownerData.vehicles.filter(
-        (v) => v.serviceType === "MANAGED_SERVICES",
-      );
+      return vehicleList.filter((v) => v.serviceType === "MANAGED_SERVICES");
     if (filterType === "WITH_DRIVER")
-      return ownerData.vehicles.filter((v) => v.driverAvailability?.withDriver);
+      return vehicleList.filter((v) => v.driverAvailability?.withDriver);
     if (filterType === "FUEL_INCLUDED")
-      return ownerData.vehicles.filter((v) => v.fuelOptions?.fuelIncluded);
-    return ownerData.vehicles;
+      return vehicleList.filter((v) => v.fuelOptions?.fuelIncluded);
+    return vehicleList;
   };
 
   // Calculate total monthly cost
@@ -317,6 +358,61 @@ const SingleVehicleOwnerDetails = () => {
           : error?.message || "Failed to create quotation. Please try again.",
       );
     }
+  };
+
+  // Add this partner's currently-selected vehicles to the cross-partner request
+  // cart, then take the corporate to the review page where they can add more
+  // partners or submit the whole multi-partner request at once.
+  const handleAddToRequest = () => {
+    const selectedEntries = Object.entries(selectedVehicles);
+    if (selectedEntries.length === 0) return;
+
+    const fleetOwnerId = ownerData.fleetOwnerId || ownerData._id;
+
+    // Persist the shared requirement snapshot (used to build the rental period
+    // and shared requirements when the grouped request is submitted).
+    const isManaged =
+      String(corporateuserrequirements?.serviceType || "").toLowerCase() ===
+      "managed";
+    dispatch(
+      setRequirement({
+        serviceType: corporateuserrequirements?.serviceType || "passenger",
+        serviceMode: isManaged ? "MANAGED" : "STANDARD",
+        rentalDuration: corporateuserrequirements?.rentalDuration || "monthly",
+        durationValue: corporateuserrequirements?.durationValue || "",
+        startDate: corporateuserrequirements?.startDate || "",
+        location: corporateuserrequirements?.location || "",
+        budgetRange: corporateuserrequirements?.budget || "",
+        driverRequired: Boolean(corporateuserrequirements?.driverRequired),
+        fuelIncluded: Boolean(corporateuserrequirements?.fuelIncluded),
+        vehicleTypes: corporateuserrequirements?.vehicleTypes || [],
+        features: corporateuserrequirements?.features || [],
+      }),
+    );
+
+    const ownerSummary = {
+      fleetOwnerId,
+      fullName: ownerData.fullName,
+      companyName: ownerData.companyName,
+      email: ownerData.email,
+      whatsappNumber: ownerData.whatsappNumber,
+    };
+
+    selectedEntries.forEach(([vehicleId, item]) => {
+      const vehicle =
+        item.data?.vehicle || vehicleList.find((v) => v._id === vehicleId);
+      if (!vehicle) return;
+      dispatch(
+        addVehicleToCart({
+          fleetOwnerId,
+          ownerData: ownerSummary,
+          vehicle,
+          quantity: item.quantity,
+        }),
+      );
+    });
+
+    navigate("/request-review");
   };
 
   // Get category label
@@ -643,13 +739,31 @@ const SingleVehicleOwnerDetails = () => {
                     {getTotalSelectedCount()} vehicles
                   </span>
                 </div>
+                {cartUnits > 0 && (
+                  <div className="single-owner-vehicle-summary-item">
+                    <span className="single-owner-vehicle-summary-label">
+                      In request:
+                    </span>
+                    <span className="single-owner-vehicle-summary-value">
+                      {cartUnits} vehicle(s) · {cartPartnerCount} partner(s)
+                    </span>
+                  </div>
+                )}
               </div>
-              <button
-                className="single-owner-vehicle-btn-quotation"
-                onClick={handleRequestQuotation}
-              >
-                Request Quotation for Selected ({getTotalSelectedCount()})
-              </button>
+              <div className="single-owner-vehicle-footer-actions">
+                <button
+                  className="single-owner-vehicle-btn-add-request"
+                  onClick={handleAddToRequest}
+                >
+                  Add to Request &amp; Review
+                </button>
+                <button
+                  className="single-owner-vehicle-btn-quotation"
+                  onClick={handleRequestQuotation}
+                >
+                  Request from this Partner ({getTotalSelectedCount()})
+                </button>
+              </div>
             </div>
           </div>
         )}

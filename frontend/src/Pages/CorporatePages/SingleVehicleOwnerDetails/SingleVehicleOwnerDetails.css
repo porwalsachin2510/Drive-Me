@@ -635,6 +635,30 @@
   transform: translateY(-1px);
 }
 
+.single-owner-vehicle-footer-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.single-owner-vehicle-btn-add-request {
+  background: #ffffff;
+  color: #059669;
+  border: 2px solid #10b981;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.single-owner-vehicle-btn-add-request:hover {
+  background: #ecfdf5;
+  transform: translateY(-2px);
+}
+
 /* Error State */
 .single-owner-vehicle-error {
   text-align: center;

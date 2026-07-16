@@ -3,6 +3,7 @@ import Quotation from "../models/Quotation.js"
 import AdminNegotiation from "../models/AdminNegotiation.js"
 import Route from "../models/Route.js"
 import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js"
+import Driver from "../models/Driver.js"
 import { uploadToCloudinary } from "../Config/Cloudinary.js"
 import { createNotification, sendAdminNotification, sendRealTimeNotification } from "../Services/notificationService.js"
 import { syncInvoicesForContract } from "../Services/invoiceService.js"
@@ -1263,6 +1264,97 @@ export const assignVehicles = async (req, res) => {
             })
         }
 
+        // ---- Driver de-duplication guard (real DB enforcement) ----
+        // A single driver can only ever be assigned to ONE vehicle. We check for:
+        //   1) duplicates inside the incoming payload, and
+        //   2) drivers that are already assigned to another vehicle in this
+        //      contract from an earlier save.
+        // This mirrors the B2C route-assignment rule so the same driver can
+        // never be double-booked, even across separate assignment submissions.
+        const incomingDriverIds = vehicleAssignments
+            .map((a) => a.driverId)
+            .filter(Boolean)
+            .map((d) => d.toString())
+
+        // 1) Duplicate within the same submission.
+        const duplicateInPayload = incomingDriverIds.find(
+            (id, idx) => incomingDriverIds.indexOf(id) !== idx,
+        )
+        if (duplicateInPayload) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "The same driver cannot be assigned to more than one vehicle. Please pick a different driver for each vehicle.",
+            })
+        }
+
+        // 2) Already assigned to another vehicle in this contract.
+        const alreadyAssignedDriverIds = new Set()
+        contract.vehicles.forEach((v) => {
+            ; (v.assignedVehicles || []).forEach((av) => {
+                const did = av.driverId?._id?.toString() || av.driverId?.toString()
+                if (did) alreadyAssignedDriverIds.add(did)
+            })
+        })
+        const conflictDriverId = incomingDriverIds.find((id) =>
+            alreadyAssignedDriverIds.has(id),
+        )
+        if (conflictDriverId) {
+            const conflictDriver = await Driver.findById(conflictDriverId).select("name")
+            return res.status(400).json({
+                success: false,
+                message: `Driver ${conflictDriver?.name || ""} is already assigned to another vehicle in this contract. Please choose a different driver.`.trim(),
+            })
+        }
+
+        // 3) Validate ownership + availability of every incoming driver.
+        if (incomingDriverIds.length > 0) {
+            const validDrivers = await Driver.find({
+                _id: { $in: incomingDriverIds },
+                fleetOwnerId: userId,
+            }).select("_id status name")
+
+            if (validDrivers.length !== incomingDriverIds.length) {
+                return res.status(400).json({
+                    success: false,
+                    message: "One or more selected drivers were not found in your fleet.",
+                })
+            }
+
+            const unavailable = validDrivers.find((d) => d.status === "INACTIVE")
+            if (unavailable) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Driver ${unavailable.name} is inactive and cannot be assigned.`,
+                })
+            }
+        }
+
+        // ---- Over-assignment guard ----
+        // Each incoming assignment object represents ONE physical vehicle
+        // (one unit of the requested quantity). The number of already-assigned
+        // vehicles plus the incoming ones for a given type must never exceed the
+        // quantity the corporate requested.
+        const incomingCountByType = {}
+        vehicleAssignments.forEach((a) => {
+            const key = a.vehicleId?.toString()
+            if (!key) return
+            incomingCountByType[key] = (incomingCountByType[key] || 0) + 1
+        })
+        for (const [vehicleTypeId, incomingCount] of Object.entries(incomingCountByType)) {
+            const group = contract.vehicles.find(
+                (v) => v.vehicleId._id.toString() === vehicleTypeId,
+            )
+            if (!group) continue
+            const alreadyAssigned = group.assignedVehicles?.length || 0
+            if (alreadyAssigned + incomingCount > group.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `You are trying to assign ${alreadyAssigned + incomingCount} vehicle(s) for ${group.vehicleId.vehicleName || "a vehicle"}, but only ${group.quantity} were requested.`,
+                })
+            }
+        }
+
         for (const assignment of vehicleAssignments) {
             const vehicleIndex = contract.vehicles.findIndex(
                 (v) => v.vehicleId._id.toString() === assignment.vehicleId.toString(),
@@ -1314,6 +1406,15 @@ export const assignVehicles = async (req, res) => {
         })
 
         await contract.save()
+
+        // Mark the newly assigned drivers as ASSIGNED so they stop appearing in
+        // the "available drivers" list and can't be double-booked elsewhere.
+        if (incomingDriverIds.length > 0) {
+            await Driver.updateMany(
+                { _id: { $in: incomingDriverIds }, fleetOwnerId: userId },
+                { $set: { status: "ASSIGNED" } },
+            )
+        }
 
         await contract.populate([
             {

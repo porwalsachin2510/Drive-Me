@@ -42,10 +42,15 @@ export const validateSearchFilters = (filters) => {
  * @returns {Boolean} - True if all required fields are filled
  */
 export const isSearchFormComplete = (filters) => {
+    // Vehicle type may be a legacy single string (`vehicleType`) or the new
+    // multi-select array (`vehicleTypes`). At least one type must be chosen.
+    const hasVehicleType =
+        (Array.isArray(filters.vehicleTypes) && filters.vehicleTypes.length > 0) ||
+        (typeof filters.vehicleType === "string" && filters.vehicleType.trim() !== "");
+
     // Check basic fields
     const basicFieldsComplete =
-        filters.vehicleType &&
-        filters.vehicleType.trim() !== "" &&
+        hasVehicleType &&
         filters.minseatsrequired &&
         filters.minseatsrequired !== "" &&
         filters.minseatsrequired !== "0" &&

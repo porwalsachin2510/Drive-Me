@@ -600,3 +600,175 @@
     break-inside: avoid;
   }
 }
+
+/* ==================== Filter Panel ==================== */
+.drivemego-searchresults-filter-active {
+  border-color: #3b82f6 !important;
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  font-weight: 600;
+}
+
+.drivemego-searchresults-filter-panel {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.drivemego-searchresults-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.drivemego-searchresults-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drivemego-searchresults-filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.drivemego-searchresults-filter-price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drivemego-searchresults-filter-input,
+.drivemego-searchresults-filter-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.drivemego-searchresults-filter-input:focus,
+.drivemego-searchresults-filter-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.drivemego-searchresults-filter-dash {
+  color: #94a3b8;
+}
+
+.drivemego-searchresults-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.drivemego-searchresults-filter-chip {
+  padding: 7px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background-color: white;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: all 0.2s ease;
+}
+
+.drivemego-searchresults-filter-chip:hover {
+  border-color: #cbd5e1;
+}
+
+.drivemego-searchresults-filter-chip-on {
+  border-color: #3b82f6;
+  background-color: #3b82f6;
+  color: white;
+}
+
+.drivemego-searchresults-filter-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drivemego-searchresults-filter-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.drivemego-searchresults-filter-check input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.drivemego-searchresults-filter-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.drivemego-searchresults-reset-button {
+  padding: 9px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: white;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.drivemego-searchresults-reset-button:hover:not(:disabled) {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.drivemego-searchresults-reset-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.drivemego-searchresults-no-match {
+  background-color: white;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.drivemego-searchresults-no-match h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: #1e293b;
+}
+
+.drivemego-searchresults-no-match p {
+  margin: 0 0 20px;
+  color: #64748b;
+}
+
+.drivemego-searchresults-no-match .drivemego-searchresults-reset-button {
+  margin: 0 auto;
+}

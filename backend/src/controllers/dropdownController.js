@@ -112,9 +112,9 @@ const defaultDropdownOptions = [
         isSystemDefault: true,
         options: [
             { value: "Light", label: "Light", description: "Light vehicles", order: 1 },
-            { value: "Heavy", label: "Heavy", description: "Heavy vehicles", order: 2 },
-            { value: "Commercial", label: "Commercial", description: "Commercial vehicles", order: 3 },
-            { value: "Private", label: "Private", description: "Private vehicles", order: 4 },
+            { value: "Medium", label: "Medium", description: "Medium vehicles", order: 2 },
+            { value: "Heavy", label: "Heavy", description: "Heavy vehicles", order: 3 },
+            { value: "Commercial", label: "Commercial", description: "Commercial vehicles", order: 4 },
         ],
     },
     {

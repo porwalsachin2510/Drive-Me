@@ -104,7 +104,9 @@ const Corporate = () => {
 
   const [filters, setFilters] = useState({
     serviceType: serviceType,
-    vehicleType: "",
+    // Multi-select: a corporate can request several vehicle types (e.g. Sedan
+    // + SUV + Minivan) in one search instead of being limited to a single type.
+    vehicleTypes: [],
     // numberOfVehicles: 1,
     minseatsrequired: 1,
     rentalDuration: "monthly",
@@ -316,11 +318,28 @@ const Corporate = () => {
     }));
   };
 
+  // Toggle a vehicle type in/out of the multi-select set.
+  const handleVehicleTypeToggle = (value) => {
+    setFilters((prev) => {
+      const current = prev.vehicleTypes || [];
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      return { ...prev, vehicleTypes: next };
+    });
+    // Clear the validation error as soon as the user picks a type.
+    setValidationErrors((prev) => {
+      if (!prev.vehicleTypes) return prev;
+      const { vehicleTypes, ...rest } = prev;
+      return rest;
+    });
+  };
+
   const validateForm = () => {
     const errors = {};
 
-    if (!filters.vehicleType) {
-      errors.vehicleType = "Please select a vehicle type";
+    if (!filters.vehicleTypes || filters.vehicleTypes.length === 0) {
+      errors.vehicleTypes = "Please select at least one vehicle type";
     }
     if (!filters.minseatsrequired || filters.minseatsrequired < 1) {
       errors.minseatsrequired = "Please enter minimum seats/capacity required";
@@ -359,7 +378,14 @@ const Corporate = () => {
     }
 
     try {
-      const result = await dispatch(searchVehicles(filters)).unwrap();
+      // Send the selected types as a comma-separated list so the backend can
+      // match ANY of them ($in). We omit the legacy single `vehicleType`.
+      const { vehicleTypes, ...rest } = filters;
+      const searchParams = {
+        ...rest,
+        vehicleTypes: (vehicleTypes || []).join(","),
+      };
+      const result = await dispatch(searchVehicles(searchParams)).unwrap();
       navigate("/search-results", { state: { filters, results: result } });
     } catch (error) {
       console.error("Search failed:", error);
@@ -393,28 +419,43 @@ const Corporate = () => {
           </div>
 
           <div className="filter-form">
-            {/* Vehicle Type Selection */}
+            {/* Vehicle Type Selection (multi-select) */}
             <div
-              className={`filter-section ${validationErrors.vehicleType ? "filter-section-error" : ""}`}
+              className={`filter-section ${validationErrors.vehicleTypes ? "filter-section-error" : ""}`}
             >
-              <h3>Select Vehicle Type *</h3>
+              <h3>Select Vehicle Type(s) *</h3>
+              <p className="filter-hint">
+                Select one or more vehicle types you need. You can request
+                multiple types &amp; quantities in a single request.
+              </p>
               <div className="vehicle-type-grid">
                 {vehicleTypeOptions[serviceType].map((type) => (
                   <div
                     key={type.value}
                     className={`vehicle-type-option ${
-                      filters.vehicleType === type.value ? "selected" : ""
+                      filters.vehicleTypes.includes(type.value)
+                        ? "selected"
+                        : ""
                     }`}
-                    onClick={() => handleInputChange("vehicleType", type.value)}
+                    onClick={() => handleVehicleTypeToggle(type.value)}
+                    role="checkbox"
+                    aria-checked={filters.vehicleTypes.includes(type.value)}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleVehicleTypeToggle(type.value);
+                      }
+                    }}
                   >
                     <span className="vehicle-icon">{type.icon}</span>
                     <span className="vehicle-label">{type.label}</span>
                   </div>
                 ))}
               </div>
-              {validationErrors.vehicleType && (
+              {validationErrors.vehicleTypes && (
                 <span className="validation-error">
-                  {validationErrors.vehicleType}
+                  {validationErrors.vehicleTypes}
                 </span>
               )}
             </div>

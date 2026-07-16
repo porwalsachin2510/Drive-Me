@@ -1,0 +1,254 @@
+.request-review {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.request-review-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.request-review-header p {
+  color: #6b7280;
+  line-height: 1.6;
+  max-width: 640px;
+}
+
+.request-review-empty {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f9fafb;
+  border-radius: 16px;
+  margin-top: 32px;
+}
+
+.request-review-empty p {
+  color: #6b7280;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+}
+
+.request-review-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-top: 32px;
+}
+
+@media (min-width: 900px) {
+  .request-review-content {
+    grid-template-columns: 2fr 1fr;
+    align-items: start;
+  }
+}
+
+.request-review-partners {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.request-review-partner-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.request-review-partner-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.request-review-partner-head h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.request-review-partner-meta {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.request-review-vehicle-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.request-review-vehicle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.request-review-vehicle-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.request-review-vehicle-name {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.request-review-vehicle-cat {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.request-review-vehicle-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.request-review-qty-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.request-review-qty-input {
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.request-review-brief-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.request-review-brief-ok {
+  color: #059669;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.request-review-brief-missing {
+  color: #b45309;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.request-review-summary {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  position: sticky;
+  top: 20px;
+}
+
+.request-review-summary h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.request-review-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.request-review-summary-row span:last-child {
+  font-weight: 600;
+}
+
+.request-review-error {
+  color: #dc2626;
+  font-size: 0.88rem;
+  margin: 14px 0 0;
+  line-height: 1.5;
+}
+
+.request-review-btn-primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.request-review-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.request-review-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.request-review-submit {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.request-review-btn-secondary {
+  background: #ffffff;
+  color: #059669;
+  border: 2px solid #10b981;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.request-review-btn-secondary:hover:not(:disabled) {
+  background: #ecfdf5;
+}
+
+.request-review-btn-link-danger {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.request-review-btn-link-danger:hover {
+  text-decoration: underline;
+}

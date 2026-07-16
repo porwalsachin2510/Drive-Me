@@ -22,6 +22,20 @@ const quotationSchema = new mongoose.Schema(
             ref: "Requirement",
             default: null,
         },
+        // Optional: when a corporate submits ONE multi-partner request (a cart
+        // that spans several fleet owners), each partner gets its own quotation
+        // but they are all linked back to a single QuotationRequestGroup so the
+        // corporate can see and manage them together. Null for legacy single-
+        // partner requests.
+        requestGroupId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "QuotationRequestGroup",
+            default: null,
+        },
+        requestGroupNumber: {
+            type: String,
+            default: null,
+        },
         // Service mode: STANDARD = corporate runs operations itself (passenger/goods),
         // MANAGED = corporate selected "Managed Services" and the B2B partner runs
         // all operations (routes, schedules, employees, trips, invitations) on their behalf.
@@ -44,7 +58,7 @@ const quotationSchema = new mongoose.Schema(
                 },
             },
         ],
-        
+
         rentalPeriod: {
             startDate: {
                 type: Date,
@@ -65,13 +79,13 @@ const quotationSchema = new mongoose.Schema(
             withDriver: Boolean,
             fuelIncluded: Boolean,
         },
-        
+
         // Fleet Owner Response
         quotedPrice: {
             currency: {
                 type: String,
                 enum: ["KWD", "AED", "SAR", "QAR", "BHD", "OMR", "USD", "EUR"],
-                required: false, 
+                required: false,
             },
             totalAmount: Number,
             // B2B partner's management/service charge for MANAGED quotations.
@@ -165,7 +179,7 @@ const quotationSchema = new mongoose.Schema(
             },
         },
     },
-        
+
     {
         timestamps: true,
     },

@@ -1,4 +1,5 @@
 import Quotation from "../models/Quotation.js"
+import QuotationRequestGroup from "../models/QuotationRequestGroup.js"
 import Notification from "../models/Notification.js"
 import { createNotification as createNotificationService, sendAdminNotification, sendRealTimeNotification } from "../Services/notificationService.js"
 import User from "../models/User.js"
@@ -118,111 +119,122 @@ const getUserName = async (userId) => {
     }
 }
 
-export const requestQuotation = async (req, res) => {
-    try {
-        const { fleetOwnerId, vehicles, rentalPeriod, requirements, validUntil } = req.body;
+/**
+ * Typed error for quotation-request validation problems so callers can map it
+ * to the correct HTTP status instead of a generic 500.
+ */
+class QuotationRequestError extends Error {
+    constructor(message, statusCode = 400) {
+        super(message)
+        this.name = "QuotationRequestError"
+        this.statusCode = statusCode
+    }
+}
 
-        if (
-            !fleetOwnerId ||
-            !vehicles ||
-            !Array.isArray(vehicles) ||
-            vehicles.length === 0
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: "Fleet owner and at least one vehicle are required",
-            })
+/**
+ * Core per-partner quotation creation shared by the single-partner
+ * `requestQuotation` endpoint and the multi-partner `createGroupedQuotations`
+ * endpoint. Validates input, resolves the service mode, persists the quotation
+ * (plus a Managed-Service brief when required) and fires notifications.
+ *
+ * Throws `QuotationRequestError` for validation problems. Returns the created
+ * quotation and brief so the caller can populate/respond as needed.
+ */
+const buildAndCreateQuotation = async ({
+    corporateOwnerId,
+    fleetOwnerId,
+    vehicles,
+    rentalPeriod,
+    requirements,
+    validUntil,
+    serviceModeRaw,
+    managedServiceBrief,
+    requestGroupId = null,
+    requestGroupNumber = null,
+    notify = true,
+}) => {
+    if (!fleetOwnerId || !Array.isArray(vehicles) || vehicles.length === 0) {
+        throw new QuotationRequestError("Fleet owner and at least one vehicle are required")
+    }
+
+    if (!rentalPeriod || !rentalPeriod.startDate || !rentalPeriod.endDate || !rentalPeriod.durationType) {
+        throw new QuotationRequestError("Complete rental period information is required")
+    }
+
+    // Determine service mode. Prefer an explicit value from the client
+    // (selected on the Service Selection screen), otherwise derive it from
+    // the vehicles (any MANAGED_SERVICES vehicle => MANAGED).
+    const requestedMode =
+        typeof serviceModeRaw === "string" ? serviceModeRaw.toUpperCase() : null
+    const serviceMode =
+        requestedMode === "MANAGED" || requestedMode === "STANDARD"
+            ? requestedMode
+            : await deriveServiceMode(vehicles)
+
+    // For MANAGED-service requests the corporate MUST hand the partner an
+    // operations brief (work locations & shifts + the routes to operate)
+    // BEFORE the partner prices anything.
+    let cleanBrief = null
+    if (serviceMode === "MANAGED") {
+        cleanBrief = sanitizeManagedBrief(managedServiceBrief || {})
+
+        if (cleanBrief.workLocations.length === 0) {
+            throw new QuotationRequestError(
+                "Add at least one work location & shift to the service brief before requesting a managed-service quotation.",
+            )
         }
-
-        if (!rentalPeriod || !rentalPeriod.startDate || !rentalPeriod.endDate || !rentalPeriod.durationType) {
-            return res.status(400).json({
-                success: false,
-                message: "Complete rental period information is required",
-            })
+        if (cleanBrief.routeRequests.length === 0) {
+            throw new QuotationRequestError(
+                "Add at least one route / coverage request to the service brief so the partner knows which routes to operate before quoting.",
+            )
         }
+    }
 
-        // Determine service mode. Prefer an explicit value from the client
-        // (selected on the Service Selection screen), otherwise derive it from
-        // the vehicles (any MANAGED_SERVICES vehicle => MANAGED).
-        const requestedMode =
-            typeof req.body.serviceMode === "string" ? req.body.serviceMode.toUpperCase() : null
-        const serviceMode =
-            requestedMode === "MANAGED" || requestedMode === "STANDARD"
-                ? requestedMode
-                : await deriveServiceMode(vehicles)
+    // Create quotation with the schema structure
+    const quotation = await Quotation.create({
+        corporateOwnerId,
+        fleetOwnerId,
+        vehicles, // Array of { vehicleId, quantity }
+        serviceMode,
+        requestGroupId,
+        requestGroupNumber,
+        rentalPeriod: {
+            startDate: rentalPeriod.startDate,
+            endDate: rentalPeriod.endDate,
+            durationType: rentalPeriod.durationType,
+            duration: rentalPeriod.duration,
+        },
+        requirements: {
+            withDriver: requirements?.withDriver || false,
+            fuelIncluded: requirements?.fuelIncluded || false,
+        },
+        validUntil: validUntil || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default 7 days
+        status: "REQUESTED",
+    })
 
-        // For MANAGED-service requests the corporate MUST hand the partner an
-        // operations brief (work locations & shifts + the routes to operate)
-        // BEFORE the partner prices anything. Without it the partner has no way
-        // to know whether it can even serve those routes, so we refuse to create
-        // the quotation until a valid brief is attached to the request.
-        let cleanBrief = null
-        if (serviceMode === "MANAGED") {
-            cleanBrief = sanitizeManagedBrief(req.body.managedServiceBrief || {})
+    const totalQty = vehicles.reduce((sum, v) => sum + (v.quantity || 0), 0)
 
-            if (cleanBrief.workLocations.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "Add at least one work location & shift to the service brief before requesting a managed-service quotation.",
-                })
-            }
-            if (cleanBrief.routeRequests.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "Add at least one route / coverage request to the service brief so the partner knows which routes to operate before quoting.",
-                })
-            }
-        }
-
-        // Create quotation with the schema structure
-        const quotation = await Quotation.create({
-            corporateOwnerId: req.userId, // From auth middleware
-            fleetOwnerId,
-            vehicles, // Array of vehicle IDs
-            serviceMode,
-            rentalPeriod: {
-                startDate: rentalPeriod.startDate,
-                endDate: rentalPeriod.endDate,
-                durationType: rentalPeriod.durationType,
-                duration: rentalPeriod.duration,
-            },
-            requirements: {
-                withDriver: requirements?.withDriver || false,
-                fuelIncluded: requirements?.fuelIncluded || false,
-            },
-            validUntil: validUntil || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default 7 days
-            status: "REQUESTED",
+    // For MANAGED requests, persist the operations brief AGAINST this quotation
+    // and mark it SUBMITTED immediately.
+    let createdBrief = null
+    if (serviceMode === "MANAGED" && cleanBrief) {
+        createdBrief = await ManagedServiceBrief.create({
+            quotationId: quotation._id,
+            corporateOwnerId,
+            b2bPartnerId: fleetOwnerId,
+            status: "SUBMITTED",
+            submittedAt: new Date(),
+            summary: cleanBrief.summary,
+            serviceStartDate: cleanBrief.serviceStartDate,
+            sla: cleanBrief.sla,
+            pointOfContact: cleanBrief.pointOfContact,
+            workLocations: cleanBrief.workLocations,
+            routeRequests: cleanBrief.routeRequests,
+            employeeRoster: cleanBrief.employeeRoster,
         })
+    }
 
-        // 🔹 total quantity calculate karo
-        const totalQty = vehicles.reduce((sum, v) => sum + v.quantity, 0);
-
-        // For MANAGED requests, persist the operations brief AGAINST this
-        // quotation and mark it SUBMITTED immediately, so the partner sees the
-        // required routes, work locations & shifts and employee roster the very
-        // first time it opens the request — before it prices or agrees.
-        let createdBrief = null
-        if (serviceMode === "MANAGED" && cleanBrief) {
-            createdBrief = await ManagedServiceBrief.create({
-                quotationId: quotation._id,
-                corporateOwnerId: req.userId,
-                b2bPartnerId: fleetOwnerId,
-                status: "SUBMITTED",
-                submittedAt: new Date(),
-                summary: cleanBrief.summary,
-                serviceStartDate: cleanBrief.serviceStartDate,
-                sla: cleanBrief.sla,
-                pointOfContact: cleanBrief.pointOfContact,
-                workLocations: cleanBrief.workLocations,
-                routeRequests: cleanBrief.routeRequests,
-                employeeRoster: cleanBrief.employeeRoster,
-            })
-        }
-
-        // Managed requests get a brief-aware notification so the partner knows
-        // to review the operational requirements before quoting.
+    if (notify) {
         const briefSummaryText = createdBrief
             ? ` It includes an operations brief: ${createdBrief.routeRequests.length} route request(s), ${createdBrief.workLocations.length} work location(s) and ${createdBrief.employeeRoster.length} employee(s). Review it before you quote.`
             : ""
@@ -238,7 +250,7 @@ export const requestQuotation = async (req, res) => {
         )
 
         // Send real-time notification to B2B Partner
-        const corporateName = await getUserName(req.userId);
+        const corporateName = await getUserName(corporateOwnerId)
         const realTimeNotif = await createNotificationService({
             userId: fleetOwnerId,
             type: "QUOTATION_REQUEST",
@@ -246,27 +258,45 @@ export const requestQuotation = async (req, res) => {
             message: `${corporateName} has requested a quotation for ${totalQty} vehicle(s).${briefSummaryText} Please respond within 48 hours.`,
             metadata: {
                 quotationId: quotation._id,
-                corporateId: req.userId,
+                corporateId: corporateOwnerId,
                 corporateName,
                 vehicleCount: totalQty,
-                rentalPeriod: rentalPeriod,
+                rentalPeriod,
                 serviceMode,
                 hasBrief: Boolean(createdBrief),
                 briefId: createdBrief?._id || null,
+                requestGroupNumber: requestGroupNumber || null,
             },
         })
         sendRealTimeNotification(fleetOwnerId.toString(), realTimeNotif)
 
-        // Get fleet name for admin notification (corporateName already declared above)
-        const fleetName = await getUserName(fleetOwnerId);
-
         // Send notification to ADMIN
+        const fleetName = await getUserName(fleetOwnerId)
         await sendAdminNotification(
             "New Quotation Request",
             `${corporateName} (CORPORATE) requested quotation for ${totalQty} vehicle(s) from ${fleetName} (B2B_PARTNER)`,
             "QUOTATION_REQUEST",
-            { quotationId: quotation._id, corporateId: req.userId, fleetOwnerId, vehicleCount: totalQty }
+            { quotationId: quotation._id, corporateId: corporateOwnerId, fleetOwnerId, vehicleCount: totalQty },
         )
+    }
+
+    return { quotation, createdBrief, totalQty, serviceMode }
+}
+
+export const requestQuotation = async (req, res) => {
+    try {
+        const { fleetOwnerId, vehicles, rentalPeriod, requirements, validUntil } = req.body
+
+        const { quotation, createdBrief } = await buildAndCreateQuotation({
+            corporateOwnerId: req.userId,
+            fleetOwnerId,
+            vehicles,
+            rentalPeriod,
+            requirements,
+            validUntil,
+            serviceModeRaw: req.body.serviceMode,
+            managedServiceBrief: req.body.managedServiceBrief,
+        })
 
         // Populate the quotation with related data
         const populatedQuotation = await Quotation.findById(quotation._id)
@@ -284,10 +314,182 @@ export const requestQuotation = async (req, res) => {
             },
         })
     } catch (error) {
+        if (error instanceof QuotationRequestError) {
+            return res.status(error.statusCode).json({ success: false, message: error.message })
+        }
         console.error("Request quotation error:", error)
         res.status(500).json({
             success: false,
             message: error.message || "Failed to request quotation",
+        })
+    }
+}
+
+/**
+ * Create a multi-partner grouped quotation request. The corporate builds a cart
+ * that can span several B2B partners (and multiple vehicle types); we create
+ * ONE quotation per partner (reusing buildAndCreateQuotation) and link them all
+ * under a single QuotationRequestGroup. Each partner still quotes, negotiates
+ * and contracts independently.
+ *
+ * Body: {
+ *   serviceType, serviceMode, requirementSnapshot,
+ *   rentalPeriod, requirements, validUntil,
+ *   partners: [{ fleetOwnerId, vehicles:[{vehicleId,quantity}], managedServiceBrief? }]
+ * }
+ */
+export const createGroupedQuotations = async (req, res) => {
+    let group = null
+    const createdQuotationIds = []
+    try {
+        const {
+            serviceType,
+            serviceMode,
+            requirementSnapshot,
+            rentalPeriod,
+            requirements,
+            validUntil,
+            partners,
+        } = req.body
+
+        if (!Array.isArray(partners) || partners.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "At least one partner with selected vehicles is required",
+            })
+        }
+
+        // Validate each partner has vehicles up front (fail fast, no writes yet).
+        for (const p of partners) {
+            if (!p?.fleetOwnerId || !Array.isArray(p.vehicles) || p.vehicles.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Each partner in the request must have at least one vehicle selected",
+                })
+            }
+        }
+
+        const normalizedMode =
+            typeof serviceMode === "string" && serviceMode.toUpperCase() === "MANAGED"
+                ? "MANAGED"
+                : "STANDARD"
+
+        // 1) Create the parent group first so children can reference it.
+        group = await QuotationRequestGroup.create({
+            corporateOwnerId: req.userId,
+            serviceType: serviceType || "passenger",
+            serviceMode: normalizedMode,
+            requirementSnapshot: {
+                rentalDurationType: requirementSnapshot?.rentalDurationType || rentalPeriod?.durationType || null,
+                durationValue: requirementSnapshot?.durationValue || rentalPeriod?.duration || null,
+                startDate: requirementSnapshot?.startDate || rentalPeriod?.startDate || null,
+                endDate: requirementSnapshot?.endDate || rentalPeriod?.endDate || null,
+                location: requirementSnapshot?.location || null,
+                budgetRange: requirementSnapshot?.budgetRange || null,
+                driverRequired: Boolean(requirementSnapshot?.driverRequired ?? requirements?.withDriver),
+                fuelIncluded: Boolean(requirementSnapshot?.fuelIncluded ?? requirements?.fuelIncluded),
+                vehicleTypes: Array.isArray(requirementSnapshot?.vehicleTypes) ? requirementSnapshot.vehicleTypes : [],
+                features: Array.isArray(requirementSnapshot?.features) ? requirementSnapshot.features : [],
+            },
+            partnerCount: partners.length,
+            status: "OPEN",
+        })
+
+        // 2) Create one quotation per partner, linked to the group.
+        const createdQuotations = []
+        for (const partner of partners) {
+            const { quotation } = await buildAndCreateQuotation({
+                corporateOwnerId: req.userId,
+                fleetOwnerId: partner.fleetOwnerId,
+                vehicles: partner.vehicles,
+                rentalPeriod,
+                requirements,
+                validUntil,
+                serviceModeRaw: serviceMode,
+                managedServiceBrief: partner.managedServiceBrief,
+                requestGroupId: group._id,
+                requestGroupNumber: group.requestGroupNumber,
+            })
+            createdQuotationIds.push(quotation._id)
+            createdQuotations.push(quotation)
+        }
+
+        // 3) Link the children back onto the group.
+        group.quotationIds = createdQuotationIds
+        await group.save()
+
+        const populatedQuotations = await Quotation.find({ requestGroupId: group._id })
+            .populate("fleetOwnerId", "fullName businessName email whatsappNumber")
+            .populate("vehicles.vehicleId", "vehicleName vehicleCategory serviceType location capacity pricing photos")
+
+        return res.status(201).json({
+            success: true,
+            message: `Request sent to ${partners.length} partner(s) successfully`,
+            data: {
+                requestGroupId: group._id,
+                requestGroupNumber: group.requestGroupNumber,
+                quotations: populatedQuotations,
+            },
+        })
+    } catch (error) {
+        // Best-effort cleanup so a partial failure doesn't leave orphans.
+        try {
+            if (createdQuotationIds.length > 0) {
+                await Quotation.deleteMany({ _id: { $in: createdQuotationIds } })
+                await ManagedServiceBrief.deleteMany({ quotationId: { $in: createdQuotationIds } })
+            }
+            if (group?._id) {
+                await QuotationRequestGroup.deleteOne({ _id: group._id })
+            }
+        } catch (cleanupErr) {
+            console.error("Grouped request cleanup error:", cleanupErr)
+        }
+
+        if (error instanceof QuotationRequestError) {
+            return res.status(error.statusCode).json({ success: false, message: error.message })
+        }
+        console.error("Grouped quotation request error:", error)
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to create grouped quotation request",
+        })
+    }
+}
+
+/**
+ * List the corporate's request groups with their child quotations, so "My
+ * Quotations" can render a multi-partner request as a single collapsible card.
+ */
+export const getCorporateRequestGroups = async (req, res) => {
+    try {
+        const groups = await QuotationRequestGroup.find({ corporateOwnerId: req.userId })
+            .sort({ createdAt: -1 })
+            .lean()
+
+        const groupIds = groups.map((g) => g._id)
+        const childQuotations = await Quotation.find({ requestGroupId: { $in: groupIds } })
+            .populate("fleetOwnerId", "fullName businessName email whatsappNumber")
+            .populate("vehicles.vehicleId", "vehicleName vehicleCategory serviceType location capacity pricing photos")
+            .lean()
+
+        const byGroup = {}
+        for (const q of childQuotations) {
+            const key = String(q.requestGroupId)
+            if (!byGroup[key]) byGroup[key] = []
+            byGroup[key].push(q)
+        }
+
+        const data = groups.map((g) => ({
+            ...g,
+            quotations: byGroup[String(g._id)] || [],
+        }))
+
+        return res.status(200).json({ success: true, data: { groups: data } })
+    } catch (error) {
+        console.error("Get corporate request groups error:", error)
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to fetch request groups",
         })
     }
 }

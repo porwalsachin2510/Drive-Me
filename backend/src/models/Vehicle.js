@@ -111,7 +111,7 @@ const vehicleSchema = new mongoose.Schema(
                 required: true,
                 default: "AED",
             },
-            
+
             dailyRate: {
                 type: Number,
                 required: true,
@@ -201,7 +201,9 @@ const vehicleSchema = new mongoose.Schema(
         ],
         status: {
             type: String,
-            enum: ["AVAILABLE", "BOOKED", "MAINTENANCE", "INACTIVE"],
+            // AVAILABLE = active/ready, BOOKED = system-set when on a trip,
+            // MAINTENANCE / OFF_ROAD / INACTIVE = partner-set operational states.
+            enum: ["AVAILABLE", "BOOKED", "MAINTENANCE", "OFF_ROAD", "INACTIVE"],
             default: "AVAILABLE",
         },
         approvalStatus: {

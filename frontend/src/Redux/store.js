@@ -21,6 +21,7 @@ import corporateOperationsReducer from "./slices/corporateOperationsSlice"
 import corporateOperationsEnhancedReducer from "./slices/corporateOperationsSliceEnhanced"
 import emiPaymentReducer from "./slices/emiPaymentSlice"
 import localeReducer from "./slices/localeSlice"
+import requestCartReducer from "./slices/requestCartSlice"
 
 export const store = configureStore({
     reducer: {
@@ -46,6 +47,7 @@ export const store = configureStore({
         corporateOperations: corporateOperationsReducer,
         corporateOpsEnhanced: corporateOperationsEnhancedReducer,
         emiPayment: emiPaymentReducer,
+        requestCart: requestCartReducer,
     },
 })
 

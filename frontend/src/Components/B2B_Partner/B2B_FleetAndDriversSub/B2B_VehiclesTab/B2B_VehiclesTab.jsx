@@ -11,45 +11,59 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
   const [expandedCards, setExpandedCards] = useState({});
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  
+
   const getVehicleIcon = (category) => {
     switch (category?.toLowerCase()) {
-      case 'coaster_bus':
-        return '🚌';
-      case 'minibus':
-        return '🚐';
-      case 'van':
-        return '🚐';
-      case 'sedan':
-        return '🚗';
-      case 'suv':
-        return '🚙';
+      case "coaster_bus":
+        return "🚌";
+      case "minibus":
+        return "🚐";
+      case "van":
+        return "🚐";
+      case "sedan":
+        return "🚗";
+      case "suv":
+        return "🚙";
       default:
-        return '🚗';
+        return "🚗";
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'AVAILABLE':
-        return 'success';
-      case 'MAINTENANCE':
-        return 'warning';
-      case 'UNAVAILABLE':
-        return 'danger';
+  // Approval must come first: a vehicle that isn't APPROVED yet should never
+  // read as "available", regardless of its operational status field.
+  const getDisplayStatus = (vehicle) => {
+    const approval = vehicle.approvalStatus?.toUpperCase();
+    if (approval === "PENDING") {
+      return { label: "Pending Approval", cls: "pending" };
+    }
+    if (approval === "REJECTED") {
+      return { label: "Rejected", cls: "danger" };
+    }
+    // Approved -> reflect the operational status the partner controls.
+    switch (vehicle.status?.toUpperCase()) {
+      case "AVAILABLE":
+        return { label: "Active", cls: "success" };
+      case "BOOKED":
+        return { label: "Booked", cls: "info" };
+      case "MAINTENANCE":
+        return { label: "Maintenance", cls: "warning" };
+      case "OFF_ROAD":
+        return { label: "Off Road", cls: "danger" };
+      case "INACTIVE":
+        return { label: "Inactive", cls: "danger" };
       default:
-        return 'success';
+        return { label: "Active", cls: "success" };
     }
   };
 
   const handleStatusUpdate = async (vehicleId, newStatus) => {
     try {
-      setLoading(prev => ({ ...prev, [vehicleId]: true }));
-      
+      setLoading((prev) => ({ ...prev, [vehicleId]: true }));
+
       const response = await api.patch(`/vehicles/${vehicleId}/status`, {
-        status: newStatus
+        status: newStatus,
       });
-      
+
       if (response.data.success) {
         // Refresh the vehicles list
         if (onRefresh) {
@@ -60,21 +74,21 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
       console.error("Error updating vehicle status:", error);
       alert("Failed to update vehicle status. Please try again.");
     } finally {
-      setLoading(prev => ({ ...prev, [vehicleId]: false }));
+      setLoading((prev) => ({ ...prev, [vehicleId]: false }));
     }
   };
 
   const toggleActions = (vehicleId) => {
-    setShowActions(prev => ({
+    setShowActions((prev) => ({
       ...prev,
-      [vehicleId]: !prev[vehicleId]
+      [vehicleId]: !prev[vehicleId],
     }));
   };
 
   const toggleExpand = (vehicleId) => {
-    setExpandedCards(prev => ({
+    setExpandedCards((prev) => ({
       ...prev,
-      [vehicleId]: !prev[vehicleId]
+      [vehicleId]: !prev[vehicleId],
     }));
   };
 
@@ -114,6 +128,10 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
       <div className="b2b-operator-dashboard-vehicles-tab-vehicles-grid">
         {vehicles.map((vehicle) => {
           const isExpanded = expandedCards[vehicle._id];
+          const displayStatus = getDisplayStatus(vehicle);
+          const isApproved =
+            vehicle.approvalStatus?.toUpperCase() === "APPROVED";
+          const isBooked = vehicle.status?.toUpperCase() === "BOOKED";
 
           return (
             <div
@@ -125,9 +143,9 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
                   {getVehicleIcon(vehicle.vehicleCategory)}
                 </div>
                 <span
-                  className={`b2b-operator-dashboard-vehicles-tab-status-badge ${getStatusColor(vehicle.status)}`}
+                  className={`b2b-operator-dashboard-vehicles-tab-status-badge ${displayStatus.cls}`}
                 >
-                  {vehicle.status?.toLowerCase() || "available"}
+                  {displayStatus.label}
                 </span>
               </div>
               <h3 className="b2b-operator-dashboard-vehicles-tab-vehicle-name">
@@ -216,78 +234,104 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
                 </div>
               </div>
 
-              <div className="b2b-operator-dashboard-vehicles-tab-vehicle-actions">
-                {vehicle.status === "MAINTENANCE" ? (
-                  <button
-                    className="b2b-operator-dashboard-vehicles-tab-action-btn b2b-operator-dashboard-vehicles-tab-activate"
-                    onClick={() => handleStatusUpdate(vehicle._id, "AVAILABLE")}
-                    disabled={loading[vehicle._id]}
-                  >
-                    {loading[vehicle._id] ? "Activating..." : "✅ Activate"}
-                  </button>
-                ) : (
-                  <button
-                    className="b2b-operator-dashboard-vehicles-tab-action-btn b2b-operator-dashboard-vehicles-tab-maintenance"
-                    onClick={() =>
-                      handleStatusUpdate(vehicle._id, "MAINTENANCE")
-                    }
-                    disabled={loading[vehicle._id]}
-                  >
-                    {loading[vehicle._id] ? "Updating..." : "⚡ Maintenance"}
-                  </button>
-                )}
-                <div className="b2b-operator-dashboard-vehicles-tab-action-dropdown">
-                  <button
-                    className="b2b-operator-dashboard-vehicles-tab-action-btn-more"
-                    onClick={() => toggleActions(vehicle._id)}
-                  >
-                    ⋯
-                  </button>
-                  {showActions[vehicle._id] && (
-                    <div className="b2b-operator-dashboard-vehicles-tab-dropdown-menu">
-                      <button
-                        className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
-                        onClick={() =>
-                          handleStatusUpdate(vehicle._id, "AVAILABLE")
-                        }
-                      >
-                        ✅ Set Available
-                      </button>
-                      <button
-                        className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
-                        onClick={() =>
-                          handleStatusUpdate(vehicle._id, "MAINTENANCE")
-                        }
-                      >
-                        🔧 Set Maintenance
-                      </button>
-                      <button
-                        className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
-                        onClick={() =>
-                          handleStatusUpdate(vehicle._id, "UNAVAILABLE")
-                        }
-                      >
-                        ❌ Set Unavailable
-                      </button>
-                      <button
-                        className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
-                        onClick={() => handleEditVehicle(vehicle)}
-                      >
-                        ✏️ Edit Vehicle
-                      </button>
-                      <button
-                        className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
-                        onClick={() => {
-                          alert("Delete vehicle functionality coming soon!");
-                          toggleActions(vehicle._id);
-                        }}
-                      >
-                        🗑️ Delete Vehicle
-                      </button>
-                    </div>
+              {/* Status management is only available after admin approval. */}
+              {!isApproved ? (
+                <div
+                  className={`b2b-operator-dashboard-vehicles-tab-approval-notice ${vehicle.approvalStatus?.toUpperCase() === "REJECTED" ? "rejected" : "pending"}`}
+                >
+                  {vehicle.approvalStatus?.toUpperCase() === "REJECTED" ? (
+                    <>
+                      <strong>Rejected by admin.</strong>
+                      {vehicle.rejectionReason
+                        ? ` Reason: ${vehicle.rejectionReason}`
+                        : " Please contact support."}
+                    </>
+                  ) : (
+                    <>
+                      <strong>Pending admin approval.</strong> You can manage
+                      this vehicle&apos;s status once it&apos;s approved.
+                    </>
                   )}
                 </div>
-              </div>
+              ) : (
+                <div className="b2b-operator-dashboard-vehicles-tab-vehicle-actions">
+                  {vehicle.status === "AVAILABLE" ? (
+                    <button
+                      className="b2b-operator-dashboard-vehicles-tab-action-btn b2b-operator-dashboard-vehicles-tab-maintenance"
+                      onClick={() =>
+                        handleStatusUpdate(vehicle._id, "MAINTENANCE")
+                      }
+                      disabled={loading[vehicle._id] || isBooked}
+                    >
+                      {loading[vehicle._id] ? "Updating..." : "Maintenance"}
+                    </button>
+                  ) : (
+                    <button
+                      className="b2b-operator-dashboard-vehicles-tab-action-btn b2b-operator-dashboard-vehicles-tab-activate"
+                      onClick={() =>
+                        handleStatusUpdate(vehicle._id, "AVAILABLE")
+                      }
+                      disabled={loading[vehicle._id] || isBooked}
+                    >
+                      {loading[vehicle._id] ? "Activating..." : "Set Active"}
+                    </button>
+                  )}
+                  <div className="b2b-operator-dashboard-vehicles-tab-action-dropdown">
+                    <button
+                      className="b2b-operator-dashboard-vehicles-tab-action-btn-more"
+                      onClick={() => toggleActions(vehicle._id)}
+                    >
+                      ⋯
+                    </button>
+                    {showActions[vehicle._id] && (
+                      <div className="b2b-operator-dashboard-vehicles-tab-dropdown-menu">
+                        <button
+                          className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                          onClick={() =>
+                            handleStatusUpdate(vehicle._id, "AVAILABLE")
+                          }
+                          disabled={isBooked}
+                        >
+                          Set Active
+                        </button>
+                        <button
+                          className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                          onClick={() =>
+                            handleStatusUpdate(vehicle._id, "MAINTENANCE")
+                          }
+                          disabled={isBooked}
+                        >
+                          Set Maintenance
+                        </button>
+                        <button
+                          className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                          onClick={() =>
+                            handleStatusUpdate(vehicle._id, "OFF_ROAD")
+                          }
+                          disabled={isBooked}
+                        >
+                          Set Off Road
+                        </button>
+                        <button
+                          className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                          onClick={() =>
+                            handleStatusUpdate(vehicle._id, "INACTIVE")
+                          }
+                          disabled={isBooked}
+                        >
+                          Set Inactive
+                        </button>
+                        <button
+                          className="b2b-operator-dashboard-vehicles-tab-dropdown-item"
+                          onClick={() => handleEditVehicle(vehicle)}
+                        >
+                          Edit Vehicle
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

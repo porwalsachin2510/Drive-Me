@@ -13,6 +13,32 @@ export const requestQuotation = createAsyncThunk(
     },
 )
 
+// Submit a multi-partner cart as one grouped request (one quotation per partner).
+export const createGroupedQuotations = createAsyncThunk(
+    "quotation/createGroupedQuotations",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await api.post("/quotations/corporate/grouped-request", payload)
+            return response.data.data
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to submit grouped request")
+        }
+    },
+)
+
+// Fetch the corporate's multi-partner request groups (with their child quotations).
+export const getRequestGroups = createAsyncThunk(
+    "quotation/getRequestGroups",
+    async (_arg, { rejectWithValue }) => {
+        try {
+            const response = await api.get("/quotations/corporate/groups")
+            return response.data.data
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to fetch request groups")
+        }
+    },
+)
+
 export const getMyQuotations = createAsyncThunk("quotation/getMyQuotations", async (params, { rejectWithValue }) => {
     try {
         const response = await api.post("/quotations/getcorporateownerquotations", params)
@@ -170,8 +196,10 @@ const quotationSlice = createSlice({
     name: "quotation",
     initialState: {
         quotations: [],
+        requestGroups: [],
         currentQuotation: null,
         loading: false,
+        submittingGroup: false,
         error: null,
         stats: null,
     },
@@ -192,6 +220,35 @@ const quotationSlice = createSlice({
                 state.quotations.push(action.payload.quotation)
             })
             .addCase(requestQuotation.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.payload
+            })
+            // Create Grouped Quotations (multi-partner request)
+            .addCase(createGroupedQuotations.pending, (state) => {
+                state.submittingGroup = true
+                state.error = null
+            })
+            .addCase(createGroupedQuotations.fulfilled, (state, action) => {
+                state.submittingGroup = false
+                const created = action.payload?.quotations
+                if (Array.isArray(created)) {
+                    state.quotations.push(...created)
+                }
+            })
+            .addCase(createGroupedQuotations.rejected, (state, action) => {
+                state.submittingGroup = false
+                state.error = action.payload
+            })
+            // Get Request Groups
+            .addCase(getRequestGroups.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(getRequestGroups.fulfilled, (state, action) => {
+                state.loading = false
+                state.requestGroups = action.payload?.groups || []
+            })
+            .addCase(getRequestGroups.rejected, (state, action) => {
                 state.loading = false
                 state.error = action.payload
             })

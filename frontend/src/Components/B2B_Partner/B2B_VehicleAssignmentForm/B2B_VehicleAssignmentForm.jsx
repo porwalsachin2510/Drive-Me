@@ -9,37 +9,57 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
   const dispatch = useDispatch();
 
   const { availableDrivers = [], loading: driversLoading } = useSelector(
-    (state) => state.driver || {}
+    (state) => state.driver || {},
   );
 
-  const [selectedVehicles, setSelectedVehicles] = useState({});
-  const [vehicleSettings, setVehicleSettings] = useState({});
-  const [routes, setRoutes] = useState({});
-  const [driverAssignment, setDriverAssignment] = useState({});
-  const [fuelCardNumbers, setFuelCardNumbers] = useState({});
+  // Per-slot state. A "slot" is a single physical vehicle deployment that
+  // fulfills one unit of the requested quantity. Each slot has its OWN driver
+  // and its OWN fuel card, because in the real world you cannot run two
+  // vehicles with one driver or one fuel card.
+  // Keyed by `${vehicleTypeId}::${slotIndex}`.
+  const [slotDriver, setSlotDriver] = useState({});
+  const [slotFuelCard, setSlotFuelCard] = useState({});
+  const [slotMode, setSlotMode] = useState({});
+  const [slotRoute, setSlotRoute] = useState({});
   const [loading, setLoading] = useState(false);
 
   const vehicles = useMemo(
     () => contract?.vehicles || [],
-    [contract?.vehicles]
+    [contract?.vehicles],
   );
+
+  // Drivers already assigned to a vehicle in THIS contract from an earlier
+  // save. They must not be selectable again anywhere in the form.
+  const alreadyAssignedDriverIds = useMemo(() => {
+    const set = new Set();
+    vehicles.forEach((v) => {
+      (v.assignedVehicles || []).forEach((av) => {
+        const did = av.driverId?._id || av.driverId;
+        if (did) set.add(String(did));
+      });
+    });
+    return set;
+  }, [vehicles]);
+
   const quotation = contract?.quotationId;
   const requiresDriver = quotation?.requirements?.withDriver || false;
   const requiresFuel = quotation?.requirements?.fuelIncluded || false;
 
-  useEffect(() => {
-    if (requiresFuel) {
-      const newVehicleSettings = {};
-      vehicles.forEach((vehicle) => {
-        const vehicleTypeId = vehicle.vehicleId._id;
-        newVehicleSettings[vehicleTypeId] = {
-          mode: "active",
-          fuelType: "included",
-        };
-      });
-      setVehicleSettings(newVehicleSettings);
-    }
-  }, [requiresFuel, vehicles]);
+  // How many slots still need to be filled for each vehicle type.
+  const remainingByType = useMemo(() => {
+    const map = {};
+    vehicles.forEach((v) => {
+      const typeId = v.vehicleId?._id;
+      if (!typeId) return;
+      const already = v.assignedVehicles?.length || 0;
+      map[typeId] = {
+        already,
+        remaining: Math.max(0, (v.quantity || 0) - already),
+        quantity: v.quantity || 0,
+      };
+    });
+    return map;
+  }, [vehicles]);
 
   useEffect(() => {
     if (requiresDriver) {
@@ -49,44 +69,25 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
 
   if (!contract) return null;
 
-  const handleVehicleSelectionChange = (vehicleTypeId, quantity) => {
-    const maxQuantity =
-      vehicles.find((v) => v.vehicleId._id === vehicleTypeId)?.quantity || 0;
-    setSelectedVehicles((prev) => ({
-      ...prev,
-      [vehicleTypeId]: Math.max(0, Math.min(quantity, maxQuantity)),
-    }));
-  };
+  const slotKey = (typeId, index) => `${typeId}::${index}`;
 
-  const handleVehicleSettingChange = (vehicleTypeId, setting, value) => {
-    setVehicleSettings((prev) => ({
-      ...prev,
-      [vehicleTypeId]: {
-        ...prev[vehicleTypeId],
-        [setting]: value,
-      },
-    }));
-  };
+  const handleSlotDriver = (key, driverId) =>
+    setSlotDriver((p) => ({ ...p, [key]: driverId }));
+  const handleSlotFuel = (key, value) =>
+    setSlotFuelCard((p) => ({ ...p, [key]: value }));
+  const handleSlotMode = (key, value) =>
+    setSlotMode((p) => ({ ...p, [key]: value }));
+  const handleSlotRoute = (key, value) =>
+    setSlotRoute((p) => ({ ...p, [key]: value }));
 
-  const handleRouteChange = (vehicleTypeId, route) => {
-    setRoutes((prev) => ({
-      ...prev,
-      [vehicleTypeId]: route,
-    }));
-  };
-
-  const handleDriverChange = (vehicleTypeId, driverId) => {
-    setDriverAssignment((prev) => ({
-      ...prev,
-      [vehicleTypeId]: driverId,
-    }));
-  };
-
-  const handleFuelCardChange = (vehicleTypeId, cardNumber) => {
-    setFuelCardNumbers((prev) => ({
-      ...prev,
-      [vehicleTypeId]: cardNumber,
-    }));
+  // A driver chosen for one slot cannot be picked in any other slot of this
+  // form. Returns the slot label the driver is already used in (or null).
+  const driverUsedInAnotherSlot = (driverId, currentKey) => {
+    if (!driverId) return null;
+    const entry = Object.entries(slotDriver).find(
+      ([k, d]) => k !== currentKey && d === driverId,
+    );
+    return entry ? entry[0] : null;
   };
 
   const handleSubmit = async (e) => {
@@ -94,67 +95,80 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
     setLoading(true);
 
     try {
-      const allSelected = vehicles.every((vehicle) => {
-        const vehicleTypeId = vehicle.vehicleId._id;
-        const selected = selectedVehicles[vehicleTypeId] || 0;
-        return selected === vehicle.quantity;
-      });
+      const toAssign = [];
 
-      if (!allSelected) {
-        alert("Please assign all required quantities for each vehicle type");
+      for (const vehicle of vehicles) {
+        const typeId = vehicle.vehicleId?._id;
+        const info = remainingByType[typeId] || { remaining: 0 };
+
+        for (let i = 0; i < info.remaining; i++) {
+          const key = slotKey(typeId, i);
+          const driver = slotDriver[key] || "";
+          const fuel = slotFuelCard[key] || "";
+
+          // Decide whether this slot is being submitted.
+          const started =
+            (requiresDriver && !!driver) || (requiresFuel && !!fuel);
+          const counted = requiresDriver || requiresFuel ? started : true;
+          if (!counted) continue;
+
+          if (requiresDriver && !driver) {
+            alert(
+              `Please select a driver for every vehicle you are assigning (${vehicle.vehicleId?.vehicleName}).`,
+            );
+            setLoading(false);
+            return;
+          }
+          if (requiresFuel && !fuel) {
+            alert(
+              `Please provide a fuel card number for every vehicle you are assigning (${vehicle.vehicleId?.vehicleName}).`,
+            );
+            setLoading(false);
+            return;
+          }
+
+          toAssign.push({
+            vehicleId: typeId,
+            driverId: requiresDriver ? driver : undefined,
+            fuelCardNumber: requiresFuel ? fuel : undefined,
+            settings: {
+              mode: slotMode[key] || "active",
+              ...(requiresFuel ? { fuelType: "included" } : {}),
+            },
+            route: slotRoute[key] || "",
+          });
+        }
+      }
+
+      if (toAssign.length === 0) {
+        alert("Please assign at least one vehicle before submitting.");
         setLoading(false);
         return;
       }
 
+      // Driver de-duplication across all slots + against prior saves.
       if (requiresDriver) {
-        const allDriversAssigned = vehicles.every((vehicle) => {
-          const vehicleTypeId = vehicle.vehicleId._id;
-          return driverAssignment[vehicleTypeId];
-        });
-
-        if (!allDriversAssigned) {
-          alert("Please assign a driver to all vehicle types");
+        const driverIds = toAssign.map((a) => a.driverId).filter(Boolean);
+        if (new Set(driverIds).size !== driverIds.length) {
+          alert(
+            "The same driver cannot be assigned to more than one vehicle. Please pick a different driver for each vehicle.",
+          );
+          setLoading(false);
+          return;
+        }
+        const reused = driverIds.find((id) =>
+          alreadyAssignedDriverIds.has(String(id)),
+        );
+        if (reused) {
+          alert(
+            "One of the selected drivers is already assigned to another vehicle on this contract. Please choose a different driver.",
+          );
           setLoading(false);
           return;
         }
       }
 
-      if (requiresFuel) {
-        const allFuelCardsProvided = vehicles.every((vehicle) => {
-          const vehicleTypeId = vehicle.vehicleId._id;
-          return fuelCardNumbers[vehicleTypeId];
-        });
-
-        if (!allFuelCardsProvided) {
-          alert("Please provide fuel card number for all vehicles");
-          setLoading(false);
-          return;
-        }
-      }
-
-      const vehicleAssignments = vehicles.map((vehicle) => {
-        const vehicleTypeId = vehicle.vehicleId._id;
-        const selectedCount = selectedVehicles[vehicleTypeId] || 0;
-
-        const assignment = {
-          vehicleId: vehicleTypeId,
-          quantity: selectedCount,
-          settings: vehicleSettings[vehicleTypeId] || {},
-          route: routes[vehicleTypeId] || "",
-        };
-
-        if (requiresDriver) {
-          assignment.driverId = driverAssignment[vehicleTypeId];
-        }
-
-        if (requiresFuel) {
-          assignment.fuelCardNumber = fuelCardNumbers[vehicleTypeId];
-        }
-
-        return assignment;
-      });
-
-      onComplete(vehicleAssignments);
+      onComplete(toAssign);
     } catch (error) {
       console.error("Error submitting assignment:", error);
       alert("Error assigning vehicles");
@@ -164,11 +178,8 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
   };
 
   return (
-    <div className="b2b-vehicle-assignment-modal-overlay" onClick={onCancel}>
-      <div
-        className="b2b-vehicle-assignment-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="b2b-vehicle-assignment-modal-overlay">
+      <div className="b2b-vehicle-assignment-modal">
         <div className="b2b-vehicle-assignment-header">
           <h2>Assign Vehicles to Contract</h2>
           <button className="b2b-vehicle-assignment-close" onClick={onCancel}>
@@ -181,8 +192,11 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
             {vehicles.map((vehicle, index) => {
               const vehicleData = vehicle.vehicleId || {};
               const vehicleTypeId = vehicleData._id;
-              const requiredQuantity = vehicle.quantity || 0;
-              const selectedCount = selectedVehicles[vehicleTypeId] || 0;
+              const info = remainingByType[vehicleTypeId] || {
+                already: 0,
+                remaining: 0,
+                quantity: vehicle.quantity || 0,
+              };
               const photo =
                 vehicleData.photos?.[0]?.url || "/diverse-city-street.png";
 
@@ -207,32 +221,21 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
                       </p>
 
                       <div className="b2b-vehicle-assignment-requirements">
-                        {requiresDriver && (
-                          <span
-                            className={`requirement-pill requirement-pill-yes`}
-                          >
+                        {requiresDriver ? (
+                          <span className="requirement-pill requirement-pill-yes">
                             ✓ Driver Included
                           </span>
-                        )}
-                        {!requiresDriver && (
-                          <span
-                            className={`requirement-pill requirement-pill-no`}
-                          >
+                        ) : (
+                          <span className="requirement-pill requirement-pill-no">
                             ✕ No Driver
                           </span>
                         )}
-
-                        {requiresFuel && (
-                          <span
-                            className={`requirement-pill requirement-pill-yes`}
-                          >
+                        {requiresFuel ? (
+                          <span className="requirement-pill requirement-pill-yes">
                             ✓ Fuel Included
                           </span>
-                        )}
-                        {!requiresFuel && (
-                          <span
-                            className={`requirement-pill requirement-pill-no`}
-                          >
+                        ) : (
+                          <span className="requirement-pill requirement-pill-no">
                             ✕ No Fuel
                           </span>
                         )}
@@ -240,181 +243,162 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
                     </div>
                   </div>
 
-                  <div className="b2b-vehicle-assignment-details">
-                    <div className="b2b-vehicle-assignment-quantity">
-                      <label>Required Quantity: {requiredQuantity}</label>
-                      <div className="quantity-selector">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleVehicleSelectionChange(
-                              vehicleTypeId,
-                              selectedCount > 0 ? selectedCount - 1 : 0
-                            )
-                          }
-                        >
-                          −
-                        </button>
-                        <input
-                          type="number"
-                          min="0"
-                          max={requiredQuantity}
-                          value={selectedCount}
-                          onChange={(e) =>
-                            handleVehicleSelectionChange(
-                              vehicleTypeId,
-                              Number.parseInt(e.target.value) || 0
-                            )
-                          }
-                          readOnly
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleVehicleSelectionChange(
-                              vehicleTypeId,
-                              Math.min(selectedCount + 1, requiredQuantity)
-                            )
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
-                      <span className="quantity-display">
-                        {selectedCount} / {requiredQuantity} assigned
-                      </span>
-                    </div>
-
-                    {selectedCount > 0 && (
-                      <>
-                        <div className="b2b-vehicle-assignment-settings">
-                          <label>Mode</label>
-                          <select
-                            value={
-                              vehicleSettings[vehicleTypeId]?.mode || "active"
-                            }
-                            onChange={(e) =>
-                              handleVehicleSettingChange(
-                                vehicleTypeId,
-                                "mode",
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="active">Active</option>
-                            <option value="maintenance">Maintenance</option>
-                          </select>
-                        </div>
-
-                        {requiresDriver && (
-                          <div className="b2b-vehicle-assignment-settings">
-                            <label>
-                              Select Driver <span className="required">*</span>
-                            </label>
-                            <select
-                              value={driverAssignment[vehicleTypeId] || ""}
-                              onChange={(e) =>
-                                handleDriverChange(
-                                  vehicleTypeId,
-                                  e.target.value
-                                )
-                              }
-                              required
-                            >
-                              <option value="">Select Driver</option>
-                              {Array.isArray(availableDrivers) &&
-                              availableDrivers.length > 0 ? (
-                                availableDrivers.map((driver) => (
-                                  <option key={driver._id} value={driver._id}>
-                                    {driver.name} - {driver.licenseNumber}
-                                  </option>
-                                ))
-                              ) : (
-                                <option disabled>No drivers available</option>
-                              )}
-                            </select>
-                            {driversLoading && (
-                              <span className="loading-text">
-                                Loading drivers...
-                              </span>
-                            )}
-
-                            {/* {driverAssignment[vehicleTypeId] && (
-                              <div className="assignment-source-group">
-                                <p className="source-info">
-                                  ✓ Driver assigned by B2B Partner
-                                </p>
-                              </div>
-                            )} */}
-                          </div>
-                        )}
-
-                        {requiresFuel && (
-                          <>
-                            <div className="b2b-vehicle-assignment-settings">
-                              <label>
-                                Fuel Included{" "}
-                                <span className="required">*</span>
-                              </label>
-                              <select
-                                value={
-                                  vehicleSettings[vehicleTypeId]?.fuelType ||
-                                  "included"
-                                }
-                                onChange={(e) =>
-                                  handleVehicleSettingChange(
-                                    vehicleTypeId,
-                                    "fuelType",
-                                    e.target.value
-                                  )
-                                }
-                              >
-                                <option value="included">Included</option>
-                              </select>
-                            </div>
-
-                            <div className="b2b-vehicle-assignment-route">
-                              <label>
-                                Fuel Card Number{" "}
-                                <span className="required">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="Enter fuel card number"
-                                value={fuelCardNumbers[vehicleTypeId] || ""}
-                                onChange={(e) =>
-                                  handleFuelCardChange(
-                                    vehicleTypeId,
-                                    e.target.value
-                                  )
-                                }
-                                required
-                              />
-                              {/* {fuelCardNumbers[vehicleTypeId] && (
-                                <div className="assignment-source-group">
-                                  <p className="source-info">
-                                    ✓ Fuel card provided by B2B Partner
-                                  </p>
-                                </div>
-                              )} */}
-                            </div>
-                          </>
-                        )}
-
-                        <div className="b2b-vehicle-assignment-route">
-                          <label>Assigned Route (Optional)</label>
-                          <input
-                            type="text"
-                            placeholder="e.g., Dubai - Abu Dhabi, Daily Commute Route"
-                            value={routes[vehicleTypeId] || ""}
-                            onChange={(e) =>
-                              handleRouteChange(vehicleTypeId, e.target.value)
-                            }
-                          />
-                        </div>
-                      </>
-                    )}
+                  <div className="b2b-vehicle-assignment-qty-summary">
+                    <span className="b2b-qty-required">
+                      Required Quantity: <strong>{info.quantity}</strong>
+                    </span>
+                    <span
+                      className={`b2b-qty-progress ${
+                        info.remaining === 0 ? "complete" : ""
+                      }`}
+                    >
+                      {info.already} / {info.quantity} assigned
+                    </span>
                   </div>
+
+                  {info.remaining === 0 ? (
+                    <div className="b2b-slot-all-done">
+                      ✓ All {info.quantity} vehicle(s) of this type are
+                      assigned.
+                    </div>
+                  ) : (
+                    <div className="b2b-slot-list">
+                      {Array.from({ length: info.remaining }).map((_, i) => {
+                        const key = slotKey(vehicleTypeId, i);
+                        const unitNumber = info.already + i + 1;
+                        const selectedDriver = slotDriver[key] || "";
+
+                        return (
+                          <div className="b2b-slot-card" key={key}>
+                            <div className="b2b-slot-title">
+                              Vehicle {unitNumber} of {info.quantity}
+                            </div>
+
+                            <div className="b2b-slot-fields">
+                              <div className="b2b-vehicle-assignment-settings">
+                                <label>Mode</label>
+                                <select
+                                  value={slotMode[key] || "active"}
+                                  onChange={(e) =>
+                                    handleSlotMode(key, e.target.value)
+                                  }
+                                >
+                                  <option value="active">Active</option>
+                                  <option value="maintenance">
+                                    Maintenance
+                                  </option>
+                                </select>
+                              </div>
+
+                              {requiresDriver && (
+                                <div className="b2b-vehicle-assignment-settings">
+                                  <label>
+                                    Select Driver{" "}
+                                    <span className="required">*</span>
+                                  </label>
+                                  <select
+                                    value={selectedDriver}
+                                    onChange={(e) =>
+                                      handleSlotDriver(key, e.target.value)
+                                    }
+                                  >
+                                    <option value="">Select Driver</option>
+                                    {Array.isArray(availableDrivers) &&
+                                    availableDrivers.length > 0 ? (
+                                      availableDrivers.map((driver) => {
+                                        const usedElsewhere =
+                                          !!driverUsedInAnotherSlot(
+                                            driver._id,
+                                            key,
+                                          );
+                                        const onContract =
+                                          alreadyAssignedDriverIds.has(
+                                            String(driver._id),
+                                          );
+                                        const disabled =
+                                          usedElsewhere || onContract;
+                                        const icon = onContract
+                                          ? "🔒"
+                                          : usedElsewhere
+                                            ? "🔵"
+                                            : "🟢";
+                                        const suffix = onContract
+                                          ? " (Already on this contract)"
+                                          : usedElsewhere
+                                            ? " (Assigned to another vehicle)"
+                                            : "";
+                                        return (
+                                          <option
+                                            key={driver._id}
+                                            value={driver._id}
+                                            disabled={disabled}
+                                            style={{
+                                              color: disabled
+                                                ? "#9ca3af"
+                                                : "inherit",
+                                            }}
+                                          >
+                                            {icon} {driver.name} -{" "}
+                                            {driver.licenseNumber}
+                                            {suffix}
+                                          </option>
+                                        );
+                                      })
+                                    ) : (
+                                      <option disabled>
+                                        No drivers available
+                                      </option>
+                                    )}
+                                  </select>
+                                  {driversLoading && (
+                                    <span className="loading-text">
+                                      Loading drivers...
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {requiresFuel && (
+                                <div className="b2b-vehicle-assignment-route">
+                                  <label>
+                                    Fuel Card Number{" "}
+                                    <span className="required">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="Enter fuel card number"
+                                    value={slotFuelCard[key] || ""}
+                                    onChange={(e) =>
+                                      handleSlotFuel(key, e.target.value)
+                                    }
+                                  />
+                                </div>
+                              )}
+
+                              <div className="b2b-vehicle-assignment-route">
+                                <label>Assigned Route (Optional)</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g., Dubai - Abu Dhabi, Daily Commute Route"
+                                  value={slotRoute[key] || ""}
+                                  onChange={(e) =>
+                                    handleSlotRoute(key, e.target.value)
+                                  }
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {requiresDriver && (
+                        <p className="b2b-driver-assign-hint">
+                          Each vehicle needs its own driver — a driver can only
+                          be assigned to one vehicle in this contract.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

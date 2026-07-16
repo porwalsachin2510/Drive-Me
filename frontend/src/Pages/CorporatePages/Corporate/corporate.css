@@ -54,6 +54,13 @@
   font-weight: 600;
 }
 
+.filter-hint {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: -12px 0 16px;
+  line-height: 1.5;
+}
+
 .validation-error {
   color: #ef4444;
   font-size: 0.85rem;

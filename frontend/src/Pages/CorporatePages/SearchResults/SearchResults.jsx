@@ -1,5 +1,5 @@
 import { getActiveCurrency } from "../../../config/localeConfig";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
@@ -36,6 +36,18 @@ const FleetSearchResults = () => {
   const [showRoleRestrictionModal, setShowRoleRestrictionModal] =
     useState(false);
 
+  // Filters the corporate user can apply to refine the partner/vehicle list.
+  const [filters, setFilters] = useState({
+    priceMin: "",
+    priceMax: "",
+    driverOnly: false,
+    fuelOnly: false,
+    minRating: 0,
+    categories: [],
+    facilities: { AC: false, WiFi: false, GPS: false, Music: false },
+    requireAllCategories: false,
+  });
+
   useEffect(() => {
     localStorage.setItem("activeTab", "corporate");
   }, []);
@@ -44,8 +56,119 @@ const FleetSearchResults = () => {
   const searchData = location.state?.results;
   const userfilters = location.state?.filters;
 
+  // Vehicle types the corporate actually searched for (supports the multi-select
+  // search: userfilters.vehicleTypes[] with legacy single userfilters.vehicleType).
+  const searchedTypes = useMemo(() => {
+    const t = userfilters?.vehicleTypes ?? userfilters?.vehicleType;
+    if (!t) return [];
+    return (Array.isArray(t) ? t : [t])
+      .filter(Boolean)
+      .map((x) => String(x).toUpperCase());
+  }, [userfilters]);
+
+  // Distinct vehicle categories present across all returned owners (for the
+  // category filter checkboxes).
+  const availableCategories = useMemo(() => {
+    const set = new Set();
+    (searchData?.fleetOwners || []).forEach((o) =>
+      (o.vehicles || []).forEach(
+        (v) => v.vehicleCategory && set.add(v.vehicleCategory),
+      ),
+    );
+    return Array.from(set);
+  }, [searchData]);
+
+  // Apply active filters + sort. Filtering runs on each owner's previewed
+  // vehicles; owners left with no matching vehicle are hidden. Sorting orders
+  // both the vehicles inside each owner and the owners themselves.
+  const processedOwners = useMemo(() => {
+    const duration = userfilters?.rentalDuration || "monthly";
+    const priceOf = (vehicle) => {
+      const p = vehicle.pricing || {};
+      switch (duration) {
+        case "daily":
+          return p.dailyRate || 0;
+        case "weekly":
+          return p.weeklyRate > 0 ? p.weeklyRate : (p.dailyRate || 0) * 7;
+        case "long-term":
+          return p.yearlyRate > 0 ? p.yearlyRate : (p.monthlyRate || 0) * 12;
+        case "monthly":
+        default:
+          return p.monthlyRate || 0;
+      }
+    };
+
+    const min = filters.priceMin === "" ? 0 : Number(filters.priceMin) || 0;
+    const max =
+      filters.priceMax === "" ? Infinity : Number(filters.priceMax) || Infinity;
+    const facilityKeyMap = {
+      AC: "airConditioning",
+      WiFi: "wifiOnboard",
+      GPS: "gpsTracking",
+      Music: "musicSystem",
+    };
+
+    let owners = (searchData?.fleetOwners || []).map((owner) => {
+      let vehicles = (owner.vehicles || []).filter((v) => {
+        const price = priceOf(v);
+        if (price < min || price > max) return false;
+        if (filters.driverOnly && !v.driverAvailability?.withDriver)
+          return false;
+        if (filters.fuelOnly && !v.fuelOptions?.fuelIncluded) return false;
+        if (
+          filters.categories.length > 0 &&
+          !filters.categories.includes(v.vehicleCategory)
+        )
+          return false;
+        for (const [label, on] of Object.entries(filters.facilities)) {
+          if (on && !v.facilities?.[facilityKeyMap[label]]) return false;
+        }
+        return true;
+      });
+
+      if (sortBy === "price-low")
+        vehicles = [...vehicles].sort((a, b) => priceOf(a) - priceOf(b));
+      else if (sortBy === "price-high")
+        vehicles = [...vehicles].sort((a, b) => priceOf(b) - priceOf(a));
+
+      return { ...owner, vehicles };
+    });
+
+    owners = owners.filter((o) => o.vehicles.length > 0);
+
+    if (filters.minRating > 0)
+      owners = owners.filter(
+        (o) => parseFloat(o.rating || 0) >= filters.minRating,
+      );
+
+    if (filters.requireAllCategories && searchedTypes.length > 1)
+      owners = owners.filter((o) => {
+        const cats = new Set(
+          o.vehicles.map((v) => String(v.vehicleCategory).toUpperCase()),
+        );
+        return searchedTypes.every((t) => cats.has(t));
+      });
+
+    const ownerMin = (o) => Math.min(...o.vehicles.map(priceOf));
+    const ownerMax = (o) => Math.max(...o.vehicles.map(priceOf));
+    if (sortBy === "price-low")
+      owners = [...owners].sort((a, b) => ownerMin(a) - ownerMin(b));
+    else if (sortBy === "price-high")
+      owners = [...owners].sort((a, b) => ownerMax(b) - ownerMax(a));
+    else if (sortBy === "rating")
+      owners = [...owners].sort(
+        (a, b) => parseFloat(b.rating || 0) - parseFloat(a.rating || 0),
+      );
+
+    return owners;
+  }, [searchData, userfilters, sortBy, filters, searchedTypes]);
+
   // If no search data, redirect to corporate search page
-  if (searchData.fleetOwners.length === 0) {
+  if (
+    !searchData ||
+    !searchData.fleetOwners ||
+    searchData.fleetOwners.length === 0
+  ) {
     return (
       <>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -84,6 +207,52 @@ const FleetSearchResults = () => {
       };
     });
   };
+
+  const updateFilter = (key, value) =>
+    setFilters((prev) => ({ ...prev, [key]: value }));
+
+  const toggleCategory = (cat) =>
+    setFilters((prev) => ({
+      ...prev,
+      categories: prev.categories.includes(cat)
+        ? prev.categories.filter((c) => c !== cat)
+        : [...prev.categories, cat],
+    }));
+
+  const toggleFacility = (label) =>
+    setFilters((prev) => ({
+      ...prev,
+      facilities: { ...prev.facilities, [label]: !prev.facilities[label] },
+    }));
+
+  const resetFilters = () =>
+    setFilters({
+      priceMin: "",
+      priceMax: "",
+      driverOnly: false,
+      fuelOnly: false,
+      minRating: 0,
+      categories: [],
+      facilities: { AC: false, WiFi: false, GPS: false, Music: false },
+      requireAllCategories: false,
+    });
+
+  const priceDurationLabel =
+    {
+      daily: "per day",
+      weekly: "per week",
+      "long-term": "per year",
+      monthly: "per month",
+    }[userfilters?.rentalDuration || "monthly"] || "per month";
+
+  const activeFilterCount =
+    (filters.priceMin !== "" || filters.priceMax !== "" ? 1 : 0) +
+    (filters.driverOnly ? 1 : 0) +
+    (filters.fuelOnly ? 1 : 0) +
+    (filters.minRating > 0 ? 1 : 0) +
+    filters.categories.length +
+    Object.values(filters.facilities).filter(Boolean).length +
+    (filters.requireAllCategories ? 1 : 0);
 
   const formatCurrency = (amount, currency = getActiveCurrency()) => {
     return `${amount?.toLocaleString() || 0} ${currency}`;
@@ -186,9 +355,10 @@ const FleetSearchResults = () => {
               Vehicle Search Results
             </h1>
             <p className="drivemego-searchresults-subtitle">
-              Showing {searchData.totalVehicles} vehicles from{" "}
-              {searchData.totalFleetOwners} fleet owner
-              {searchData.totalFleetOwners !== 1 ? "s" : ""}
+              Showing {processedOwners.length} fleet owner
+              {processedOwners.length !== 1 ? "s" : ""} of{" "}
+              {searchData.totalFleetOwners} matched
+              {activeFilterCount > 0 ? " · filtered" : ""}
             </p>
           </div>
 
@@ -205,10 +375,14 @@ const FleetSearchResults = () => {
             </select>
 
             <button
-              className="drivemego-searchresults-filter-button"
+              className={`drivemego-searchresults-filter-button${
+                showFilters || activeFilterCount > 0
+                  ? " drivemego-searchresults-filter-active"
+                  : ""
+              }`}
               onClick={() => setShowFilters(!showFilters)}
             >
-              Filter
+              Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
             </button>
 
             <button
@@ -219,6 +393,160 @@ const FleetSearchResults = () => {
             </button>
           </div>
         </div>
+
+        {/* Filter Panel */}
+        {showFilters && (
+          <div className="drivemego-searchresults-filter-panel">
+            <div className="drivemego-searchresults-filter-grid">
+              {/* Price range */}
+              <div className="drivemego-searchresults-filter-group">
+                <label className="drivemego-searchresults-filter-label">
+                  Price ({priceDurationLabel})
+                </label>
+                <div className="drivemego-searchresults-filter-price-row">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Min"
+                    className="drivemego-searchresults-filter-input"
+                    value={filters.priceMin}
+                    onChange={(e) => updateFilter("priceMin", e.target.value)}
+                  />
+                  <span className="drivemego-searchresults-filter-dash">–</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Max"
+                    className="drivemego-searchresults-filter-input"
+                    value={filters.priceMax}
+                    onChange={(e) => updateFilter("priceMax", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Vehicle category */}
+              {availableCategories.length > 0 && (
+                <div className="drivemego-searchresults-filter-group">
+                  <label className="drivemego-searchresults-filter-label">
+                    Vehicle Type
+                  </label>
+                  <div className="drivemego-searchresults-filter-chips">
+                    {availableCategories.map((cat) => (
+                      <button
+                        type="button"
+                        key={cat}
+                        className={`drivemego-searchresults-filter-chip${
+                          filters.categories.includes(cat)
+                            ? " drivemego-searchresults-filter-chip-on"
+                            : ""
+                        }`}
+                        onClick={() => toggleCategory(cat)}
+                      >
+                        {cat.replace(/_/g, " ")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Amenities */}
+              <div className="drivemego-searchresults-filter-group">
+                <label className="drivemego-searchresults-filter-label">
+                  Amenities
+                </label>
+                <div className="drivemego-searchresults-filter-checks">
+                  <label className="drivemego-searchresults-filter-check">
+                    <input
+                      type="checkbox"
+                      checked={filters.driverOnly}
+                      onChange={(e) =>
+                        updateFilter("driverOnly", e.target.checked)
+                      }
+                    />
+                    <span>Driver included</span>
+                  </label>
+                  <label className="drivemego-searchresults-filter-check">
+                    <input
+                      type="checkbox"
+                      checked={filters.fuelOnly}
+                      onChange={(e) =>
+                        updateFilter("fuelOnly", e.target.checked)
+                      }
+                    />
+                    <span>Fuel included</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Facilities */}
+              <div className="drivemego-searchresults-filter-group">
+                <label className="drivemego-searchresults-filter-label">
+                  Facilities
+                </label>
+                <div className="drivemego-searchresults-filter-chips">
+                  {["AC", "WiFi", "GPS", "Music"].map((label) => (
+                    <button
+                      type="button"
+                      key={label}
+                      className={`drivemego-searchresults-filter-chip${
+                        filters.facilities[label]
+                          ? " drivemego-searchresults-filter-chip-on"
+                          : ""
+                      }`}
+                      onClick={() => toggleFacility(label)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Minimum rating */}
+              <div className="drivemego-searchresults-filter-group">
+                <label className="drivemego-searchresults-filter-label">
+                  Minimum Rating
+                </label>
+                <select
+                  className="drivemego-searchresults-filter-select"
+                  value={filters.minRating}
+                  onChange={(e) =>
+                    updateFilter("minRating", Number(e.target.value))
+                  }
+                >
+                  <option value={0}>Any rating</option>
+                  <option value={3}>3.0+</option>
+                  <option value={4}>4.0+</option>
+                  <option value={4.5}>4.5+</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="drivemego-searchresults-filter-footer">
+              {searchedTypes.length > 1 && (
+                <label className="drivemego-searchresults-filter-check">
+                  <input
+                    type="checkbox"
+                    checked={filters.requireAllCategories}
+                    onChange={(e) =>
+                      updateFilter("requireAllCategories", e.target.checked)
+                    }
+                  />
+                  <span>
+                    Only partners offering all my requested vehicle types
+                  </span>
+                </label>
+              )}
+              <button
+                type="button"
+                className="drivemego-searchresults-reset-button"
+                onClick={resetFilters}
+                disabled={activeFilterCount === 0}
+              >
+                Reset Filters
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Search Parameters Display */}
         <div className="drivemego-searchresults-search-params-bar">
@@ -245,7 +573,21 @@ const FleetSearchResults = () => {
 
         {/* Fleet Owners List */}
         <div className="drivemego-searchresults-search-param-results-container">
-          {searchData.fleetOwners.map((owner) => (
+          {processedOwners.length === 0 && (
+            <div className="drivemego-searchresults-no-match">
+              <h3>No vehicles match your filters</h3>
+              <p>
+                Try adjusting or resetting your filters to see more results.
+              </p>
+              <button
+                className="drivemego-searchresults-reset-button"
+                onClick={resetFilters}
+              >
+                Reset Filters
+              </button>
+            </div>
+          )}
+          {processedOwners.map((owner) => (
             <div
               key={owner.fleetOwnerId}
               className="drivemego-searchresults-search-param-fleet-owner-card"

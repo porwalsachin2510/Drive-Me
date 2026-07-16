@@ -1,6 +1,8 @@
 import express from "express"
 import {
     requestQuotation,
+    createGroupedQuotations,
+    getCorporateRequestGroups,
     getCorporateOwnerQuotations,
     getCorporateOwnerQuotationById,
     respondToQuotation,
@@ -15,6 +17,16 @@ const router = express.Router()
 
 // Corporate Owner routes
 router.post("/request", verifyToken, checkCorporateOwnerRole, requestQuotation)
+
+// @route   POST /api/quotations/corporate/grouped-request
+// @desc    Create one quotation per partner for a multi-partner cart request
+// @access  Private (CORPORATE only)
+router.post("/corporate/grouped-request", verifyToken, checkCorporateOwnerRole, createGroupedQuotations)
+
+// @route   GET /api/quotations/corporate/groups
+// @desc    List the corporate's multi-partner request groups (with children)
+// @access  Private (CORPORATE only)
+router.get("/corporate/groups", verifyToken, checkCorporateOwnerRole, getCorporateRequestGroups)
 
 // Corporate Owner Routes
 router.post(

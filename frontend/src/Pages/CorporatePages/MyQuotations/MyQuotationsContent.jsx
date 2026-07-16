@@ -4,6 +4,30 @@ import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import QuotationCard from "../../../Components/QuotationCard/QuotationCard";
 import "./MyQuotations.css";
 
+// Group quotations that belong to the same multi-partner request (they share a
+// requestGroupNumber) into a single collapsible block, while leaving standalone
+// single-partner quotations rendered on their own. Order is preserved based on
+// the first time each group/quotation appears in the list.
+const buildQuotationGroups = (quotations) => {
+  const groups = [];
+  const indexByKey = {};
+
+  quotations.forEach((q) => {
+    const groupNumber = q.requestGroupNumber;
+    if (groupNumber) {
+      if (indexByKey[groupNumber] === undefined) {
+        indexByKey[groupNumber] = groups.length;
+        groups.push({ isGroup: true, key: groupNumber, items: [] });
+      }
+      groups[indexByKey[groupNumber]].items.push(q);
+    } else {
+      groups.push({ isGroup: false, key: q._id, items: [q] });
+    }
+  });
+
+  return groups;
+};
+
 const MyQuotationsContent = () => {
   const [quotations, setQuotations] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -225,9 +249,36 @@ const MyQuotationsContent = () => {
             </p>
           </div>
         ) : (
-          quotations.map((quotation) => (
-            <QuotationCard key={quotation._id} quotation={quotation} />
-          ))
+          buildQuotationGroups(quotations).map((group) =>
+            group.isGroup ? (
+              <div
+                key={group.key}
+                className="drivemego-corporate-quotation-group"
+              >
+                <div className="drivemego-corporate-quotation-group-header">
+                  <span className="drivemego-corporate-quotation-group-badge">
+                    Multi-partner request
+                  </span>
+                  <span className="drivemego-corporate-quotation-group-number">
+                    {group.key}
+                  </span>
+                  <span className="drivemego-corporate-quotation-group-meta">
+                    {group.items.length} partner quotation(s)
+                  </span>
+                </div>
+                <div className="drivemego-corporate-quotation-group-items">
+                  {group.items.map((quotation) => (
+                    <QuotationCard key={quotation._id} quotation={quotation} />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <QuotationCard
+                key={group.items[0]._id}
+                quotation={group.items[0]}
+              />
+            ),
+          )
         )}
       </div>
 

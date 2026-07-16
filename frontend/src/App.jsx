@@ -30,6 +30,7 @@ import SearchResults from "./Pages/CorporatePages/SearchResults/SearchResults";
 import VehicleDetails from "./Pages/CorporatePages/VehicleDetails/VehicleDetails";
 import FleetOwnerPortfolio from "./Pages/CorporatePages/FleetOwnerPortfolio/FleetOwnerPortfolio";
 import SingleVehicleOwnerDetails from "./Pages/CorporatePages/SingleVehicleOwnerDetails/SingleVehicleOwnerDetails";
+import RequestReview from "./Pages/CorporatePages/RequestReview/RequestReview";
 import MyQuotations from "./Pages/CorporatePages/MyQuotations/MyQuotations";
 import QuotationDetails from "./Pages/CorporatePages/QuotationDetails/QuotationDetails";
 import CorporateContractDetails from "./Pages/CorporatePages/CorporateContractDetails/CorporateContractDetails";
@@ -210,6 +211,14 @@ function App() {
             element={
               <ProtectedRoleBasedRoute allowedRoles={["CORPORATE"]}>
                 <SingleVehicleOwnerDetails />
+              </ProtectedRoleBasedRoute>
+            }
+          />
+          <Route
+            path="/request-review"
+            element={
+              <ProtectedRoleBasedRoute allowedRoles={["CORPORATE"]}>
+                <RequestReview />
               </ProtectedRoleBasedRoute>
             }
           />

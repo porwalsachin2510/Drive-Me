@@ -90,12 +90,21 @@
   color: #10b981;
 }
 
-.status-text.drivemego-companyprofile-pending {
+.drivemego-companyprofile-status-text.drivemego-companyprofile-pending {
   color: #f59e0b;
+}
+
+.drivemego-companyprofile-status-text.drivemego-companyprofile-suspended {
+  color: #ef4444;
 }
 
 .drivemego-companyprofile-pending-icon {
   color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.drivemego-companyprofile-suspended-icon {
+  color: #ef4444;
   flex-shrink: 0;
 }
 

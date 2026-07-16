@@ -460,9 +460,9 @@ function AddDriverModal({ onClose, onSuccess }) {
               disabled={loading}
             >
               <option value="Light">Light</option>
+              <option value="Medium">Medium</option>
               <option value="Heavy">Heavy</option>
               <option value="Commercial">Commercial</option>
-              <option value="Private">Private</option>
             </select>
           </div>
 

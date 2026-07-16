@@ -11,6 +11,10 @@ const CompanyProfile = () => {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [logoPreview, setLogoPreview] = useState(null);
+  // Authoritative account status pulled fresh from the server. The admin sets
+  // this to "ACTIVE" when they activate the account, so the verification badge
+  // must reflect it (the Redux `user` copy can be stale after activation).
+  const [accountStatus, setAccountStatus] = useState(user?.status || null);
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -31,6 +35,7 @@ const CompanyProfile = () => {
       const response = await api.get("/users/me");
       if (response.data.success && response.data.user) {
         const u = response.data.user;
+        setAccountStatus(u.status || null);
         setFormData({
           companyName: u.companyName || u.fullName || "",
           website: u.website || "",
@@ -90,19 +95,25 @@ const CompanyProfile = () => {
       // Upload via backend API which handles Cloudinary
       const response = await api.put("/users/profile/logo", uploadFormData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       if (response.data.success && response.data.logoUrl) {
         setLogoPreview(response.data.logoUrl);
         setMessage({ type: "success", text: "Logo updated successfully" });
       } else {
-        setMessage({ type: "error", text: response.data.message || "Failed to upload logo" });
+        setMessage({
+          type: "error",
+          text: response.data.message || "Failed to upload logo",
+        });
       }
     } catch (error) {
       console.error("Error uploading logo:", error);
-      setMessage({ type: "error", text: error.response?.data?.message || "Failed to upload logo" });
+      setMessage({
+        type: "error",
+        text: error.response?.data?.message || "Failed to upload logo",
+      });
     } finally {
       setUploading(false);
     }
@@ -127,11 +138,17 @@ const CompanyProfile = () => {
       if (response.data.success) {
         setMessage({ type: "success", text: "Profile updated successfully" });
       } else {
-        setMessage({ type: "error", text: response.data.message || "Update failed" });
+        setMessage({
+          type: "error",
+          text: response.data.message || "Update failed",
+        });
       }
     } catch (error) {
       console.error("Error updating profile:", error);
-      setMessage({ type: "error", text: error.response?.data?.message || "Failed to update profile" });
+      setMessage({
+        type: "error",
+        text: error.response?.data?.message || "Failed to update profile",
+      });
     } finally {
       setSaving(false);
       setTimeout(() => setMessage({ type: "", text: "" }), 4000);
@@ -232,7 +249,7 @@ const CompanyProfile = () => {
               Verification Status
             </div>
             <div className="drivemego-companyprofile-verification-status">
-              {user?.tradeLicense ? (
+              {accountStatus === "ACTIVE" ? (
                 <>
                   <svg
                     className="drivemego-companyprofile-check-icon"
@@ -246,7 +263,26 @@ const CompanyProfile = () => {
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
                   <span className="drivemego-companyprofile-status-text drivemego-companyprofile-verified">
-                    Trade License Verified
+                    Verified &amp; Active
+                  </span>
+                </>
+              ) : accountStatus === "SUSPENDED" ? (
+                <>
+                  <svg
+                    className="drivemego-companyprofile-suspended-icon"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  <span className="drivemego-companyprofile-status-text drivemego-companyprofile-suspended">
+                    Account Suspended
                   </span>
                 </>
               ) : (
