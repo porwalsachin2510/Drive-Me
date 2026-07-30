@@ -9,7 +9,7 @@ import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
 import "./CorporateAssignedVehiclesPage.css";
 import AddDriverModal from "../../../Components/Corporate/AddDriverModal/AddDriverModal";
-import ImportExportControls from "../../../Components/common/ImportExportControls/ImportExportControls";
+import ImportExportControls from "../../../Components/Common/ImportExportControls/ImportExportControls";
 import { notify } from "../../../utils/toast";
 
 const CorporateAssignedVehiclesPage = ({
