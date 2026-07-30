@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "../../../utils/api";
 import "./AdminDropdownManagement.css";
+import { notify } from "../../../utils/toast";
 
 function AdminDropdownManagement() {
   const [dropdowns, setDropdowns] = useState([]);
@@ -40,10 +41,10 @@ function AdminDropdownManagement() {
       setSaving(true);
       await api.post("/dropdowns/seed");
       await fetchDropdowns();
-      alert("Default dropdown options seeded successfully!");
+      notify("Default dropdown options seeded successfully!");
     } catch (error) {
       console.error("Error seeding defaults:", error);
-      alert("Failed to seed defaults. Please try again.");
+      notify("Failed to seed defaults. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -51,7 +52,7 @@ function AdminDropdownManagement() {
 
   const handleAddOption = async () => {
     if (!selectedCategory || !newOption.value || !newOption.label) {
-      alert("Please fill in value and label");
+      notify("Please fill in value and label");
       return;
     }
 
@@ -74,7 +75,7 @@ function AdminDropdownManagement() {
       }
     } catch (error) {
       console.error("Error adding option:", error);
-      alert(error.response?.data?.message || "Failed to add option");
+      notify(error.response?.data?.message || "Failed to add option");
     } finally {
       setSaving(false);
     }
@@ -103,7 +104,7 @@ function AdminDropdownManagement() {
       }
     } catch (error) {
       console.error("Error updating option:", error);
-      alert("Failed to update option");
+      notify("Failed to update option");
     } finally {
       setSaving(false);
     }
@@ -131,7 +132,7 @@ function AdminDropdownManagement() {
       }
     } catch (error) {
       console.error("Error deleting option:", error);
-      alert("Failed to delete option");
+      notify("Failed to delete option");
     } finally {
       setSaving(false);
     }

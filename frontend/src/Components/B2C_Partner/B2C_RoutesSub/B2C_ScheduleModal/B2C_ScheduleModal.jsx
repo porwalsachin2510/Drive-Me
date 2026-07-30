@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import "./b2c_schedulemodal.css";
 import api from "../../../../utils/api";
+import { notify } from "../../../../utils/toast";
 
 function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
   const [existingSchedules, setExistingSchedules] = useState([]); // Store ALL schedules
@@ -352,7 +353,7 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
         (trip) => trip.departureTime,
       );
       if (validTripTimes.length === 0) {
-        alert("Please add at least one departure time");
+        notify("Please add at least one departure time");
         setLoading(false);
         return;
       }
@@ -380,13 +381,13 @@ function B2C_ScheduleModal({ route, onClose, onScheduleCreated }) {
           : isEditMode
             ? "Schedule updated successfully!"
             : "Schedule created successfully!";
-        alert(message);
+        notify(message);
         onScheduleCreated && onScheduleCreated();
         onClose();
       }
     } catch (error) {
       console.error("Error saving schedule:", error);
-      alert(
+      notify(
         error.response?.data?.message ||
           "Failed to save schedule. Please try again.",
       );

@@ -6,6 +6,7 @@ import api from "../../../utils/api";
 import LoadingSpinner from "../../../Components/LoadingSpinner/LoadingSpinner";
 import Navbar from "../../../Components/Navbar/Navbar";
 import "./B2B_PartnerAssignedVehicles.css";
+import { notify } from "../../../utils/toast";
 
 const B2B_PartnerAssignedVehicles = () => {
   const { contractId } = useParams();
@@ -127,7 +128,7 @@ const B2B_PartnerAssignedVehicles = () => {
 
   const handleUpdateDriver = async () => {
     if (!updateForm.newDriverId) {
-      alert("Please select a driver");
+      notify("Please select a driver");
       return;
     }
 
@@ -139,12 +140,12 @@ const B2B_PartnerAssignedVehicles = () => {
       );
 
       if (response.data.success) {
-        alert("Driver updated successfully across all records");
+        notify("Driver updated successfully across all records");
         closeModal();
         fetchAssignedVehicles();
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to update driver");
+      notify(err.response?.data?.message || "Failed to update driver");
     } finally {
       setUpdating(false);
     }
@@ -152,7 +153,7 @@ const B2B_PartnerAssignedVehicles = () => {
 
   const handleUpdateVehicle = async () => {
     if (!updateForm.newVehicleId) {
-      alert("Please select a vehicle");
+      notify("Please select a vehicle");
       return;
     }
 
@@ -164,12 +165,12 @@ const B2B_PartnerAssignedVehicles = () => {
       );
 
       if (response.data.success) {
-        alert("Vehicle updated successfully across all records");
+        notify("Vehicle updated successfully across all records");
         closeModal();
         fetchAssignedVehicles();
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to update vehicle");
+      notify(err.response?.data?.message || "Failed to update vehicle");
     } finally {
       setUpdating(false);
     }

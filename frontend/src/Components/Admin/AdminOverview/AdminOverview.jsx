@@ -8,6 +8,7 @@ import AdminRevenueChart from "../AdminRevenueChart/AdminRevenueChart";
 import AdminUserDistribution from "../AdminUserDistribution/AdminUserDistribution";
 import AdminBookingTrends from "../AdminBookingTrends/AdminBookingTrends";
 import api from "../../../utils/api";
+import { notify } from "../../../utils/toast";
 
 function AdminOverview() {
   const [stats, setStats] = useState({
@@ -164,7 +165,7 @@ function AdminOverview() {
       });
     } catch (error) {
       console.error("Error toggling online payments:", error);
-      alert("Failed to toggle online payments. Please try again.");
+      notify("Failed to toggle online payments. Please try again.");
     }
   };
 

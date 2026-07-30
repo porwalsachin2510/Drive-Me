@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { createContractFromQuotation } from "../../../Redux/slices/contractSlice";
 import "./ContractRequestModal.css";
+import { notify } from "../../../utils/toast";
 
 const ContractRequestModal = ({ quotation, onClose, onSuccess }) => {
   const dispatch = useDispatch();
@@ -37,15 +38,15 @@ const ContractRequestModal = ({ quotation, onClose, onSuccess }) => {
           onSuccess(result.payload.data.contract);
         } else {
           // Fallback behavior if onSuccess is not provided
-          alert("Contract created successfully!");
+          notify("Contract created successfully!");
           onClose();
         }
       } else {
-        alert("Failed to create contract request. Please try again.");
+        notify("Failed to create contract request. Please try again.");
       }
     } catch (error) {
       console.error("Contract creation error:", error);
-      alert("An error occurred. Please try again.");
+      notify("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }

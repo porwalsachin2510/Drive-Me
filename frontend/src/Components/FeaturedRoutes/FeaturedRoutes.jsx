@@ -7,6 +7,7 @@ import { normalizeTime } from "../../utils/helperutility";
 import { storeNavigationState } from "../../utils/loginRedirect";
 import { useLocale } from "../../hooks/useLocale";
 import "./featuredroutes.css";
+import { notify } from "../../utils/toast";
 
 const FeaturedRoutes = ({ routes, loading }) => {
   const { currency: localeCurrency } = useLocale();
@@ -211,7 +212,7 @@ const FeaturedRoutes = ({ routes, loading }) => {
   };
 
   const handleBookingSuccess = () => {
-    alert("Booking successful!");
+    notify("Booking successful!");
     handleCloseBookingModal();
   };
 

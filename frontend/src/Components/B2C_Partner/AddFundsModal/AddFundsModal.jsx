@@ -4,7 +4,11 @@ import "./addfundsmodal.css";
 import api from "../../../utils/api";
 import useCurrency from "../../../hooks/useCurrency";
 import { useLocale } from "../../../hooks/useLocale";
-import { getGatewayForCurrency, getCurrencyDecimals } from "../../../config/localeConfig";
+import {
+  getGatewayForCurrency,
+  getCurrencyDecimals,
+} from "../../../config/localeConfig";
+import { notify } from "../../../utils/toast";
 
 const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
   const { formatCurrency, getCurrencySymbol } = useCurrency();
@@ -83,7 +87,7 @@ const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
     e.preventDefault();
 
     if (!amount || amount <= 0) {
-      alert("Please enter a valid amount");
+      notify("Please enter a valid amount");
       return;
     }
 
@@ -99,7 +103,7 @@ const AddFundsModal = ({ isOpen, onClose, currentBalance, onAddFunds }) => {
       onClose();
     } catch (error) {
       console.error("[v0] Error adding funds:", error);
-      alert("Failed to add funds. Please try again.");
+      notify("Failed to add funds. Please try again.");
     } finally {
       setLoading(false);
     }

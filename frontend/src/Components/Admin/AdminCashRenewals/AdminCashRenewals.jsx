@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import api from "../../../utils/api";
 import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./AdminCashRenewals.css";
+import { notify } from "../../../utils/toast";
 
 function AdminCashRenewals() {
   const [requests, setRequests] = useState([]);
@@ -68,7 +69,7 @@ function AdminCashRenewals() {
       await fetchPendingCashRenewals();
     } catch (err) {
       console.error("Error confirming cash renewal:", err);
-      alert(
+      notify(
         err?.response?.data?.message ||
           "Failed to confirm the cash renewal. Please try again.",
       );

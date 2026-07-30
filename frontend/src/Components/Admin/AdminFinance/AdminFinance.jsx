@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import "./AdminFinance.css";
 import api from "../../../utils/api";
+import { notify } from "../../../utils/toast";
 
 function AdminFinance() {
   const [activeTab, setActiveTab] = useState("payout");
@@ -125,7 +126,7 @@ function AdminFinance() {
       fetchFinanceData();
     } catch (error) {
       console.error("Error approving payout:", error);
-      alert(error.response?.data?.message || "Error approving payout");
+      notify(error.response?.data?.message || "Error approving payout");
     } finally {
       setActionLoading(null);
     }
@@ -144,7 +145,7 @@ function AdminFinance() {
       fetchFinanceData();
     } catch (error) {
       console.error("Error rejecting payout:", error);
-      alert(error.response?.data?.message || "Error rejecting payout");
+      notify(error.response?.data?.message || "Error rejecting payout");
     } finally {
       setActionLoading(null);
     }
@@ -175,7 +176,7 @@ function AdminFinance() {
         );
 
         if (!response.data.success && response.data.canProcessManually) {
-          alert(
+          notify(
             response.data.message + "\n\nPlease use manual transfer instead.",
           );
           return;
@@ -188,10 +189,10 @@ function AdminFinance() {
       setSelectedPaymentMethod("MANUAL");
       fetchFinanceData();
 
-      alert("Payment processed successfully!");
+      notify("Payment processed successfully!");
     } catch (error) {
       console.error("Error processing payment:", error);
-      alert(error.response?.data?.message || "Error processing payment");
+      notify(error.response?.data?.message || "Error processing payment");
     } finally {
       setActionLoading(null);
     }

@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import "./b2b_settings.css"
-import api from "../../../utils/api"
+import { useState, useEffect } from "react";
+import "./b2b_settings.css";
+import api from "../../../utils/api";
+import { notify } from "../../../utils/toast";
 
 function B2B_Settings() {
   const [formData, setFormData] = useState({
@@ -12,29 +13,29 @@ function B2B_Settings() {
     email: "",
     phone: "",
     website: "",
-  })
+  });
 
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
     smsNotifications: true,
     bookingAlerts: true,
     paymentAlerts: true,
-  })
+  });
 
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [dataLoaded, setDataLoaded] = useState(false)
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
-    fetchSettings()
-  }, [])
+    fetchSettings();
+  }, []);
 
   const fetchSettings = async () => {
     try {
-      setLoading(true)
-      const response = await api.get('/b2b-partner/settings')
-      const settings = response.data.data.settings
-      
+      setLoading(true);
+      const response = await api.get("/b2b-partner/settings");
+      const settings = response.data.data.settings;
+
       setFormData({
         companyName: settings.companyName || "",
         tradeLicense: settings.tradeLicense || "",
@@ -42,21 +43,23 @@ function B2B_Settings() {
         email: settings.email || "",
         phone: settings.phone || "",
         website: settings.website || "",
-      })
+      });
 
-      setNotifications(settings.notifications || {
-        emailNotifications: true,
-        smsNotifications: true,
-        bookingAlerts: true,
-        paymentAlerts: true,
-      })
+      setNotifications(
+        settings.notifications || {
+          emailNotifications: true,
+          smsNotifications: true,
+          bookingAlerts: true,
+          paymentAlerts: true,
+        },
+      );
     } catch (error) {
-      console.error("Error fetching settings:", error)
+      console.error("Error fetching settings:", error);
     } finally {
-      setLoading(false)
-      setDataLoaded(true)
+      setLoading(false);
+      setDataLoaded(true);
     }
-  }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -75,19 +78,19 @@ function B2B_Settings() {
 
   const handleSave = async () => {
     try {
-      setSaving(true)
-      await api.put('/b2b-partner/settings', {
+      setSaving(true);
+      await api.put("/b2b-partner/settings", {
         companyInfo: formData,
-        notifications
-      })
-      alert("Settings saved successfully!")
+        notifications,
+      });
+      notify("Settings saved successfully!");
     } catch (error) {
-      console.error("Error saving settings:", error)
-      alert("Failed to save settings")
+      console.error("Error saving settings:", error);
+      notify("Failed to save settings");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (loading || !dataLoaded) {
     return (
@@ -246,4 +249,4 @@ function B2B_Settings() {
   );
 }
 
-export default B2B_Settings
+export default B2B_Settings;

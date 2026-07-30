@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../../../Redux/slices/authSlice";
 import api from "../../../utils/api";
 import "../../B2C_Partner/Tabs/Account/account.css";
+import { notify } from "../../../utils/toast";
 
 function AdminAccount() {
   const dispatch = useDispatch();
@@ -110,11 +111,11 @@ function AdminAccount() {
         setProfileData(nextProfile);
         setImagePreview(null);
         syncReduxUser(nextProfile);
-        alert("Profile image updated successfully!");
+        notify("Profile image updated successfully!");
       }
     } catch (error) {
       console.error("Error uploading profile image:", error);
-      alert(error.response?.data?.message || "Failed to upload profile image");
+      notify(error.response?.data?.message || "Failed to upload profile image");
       setImagePreview(null);
     } finally {
       setUploadingImage(false);
@@ -133,11 +134,11 @@ function AdminAccount() {
         if (response.data.preferences)
           setPreferences(response.data.preferences);
         syncReduxUser(response.data.profile);
-        alert("Profile updated successfully!");
+        notify("Profile updated successfully!");
       }
     } catch (error) {
       console.error("Error updating admin profile:", error);
-      alert(error.response?.data?.message || "Failed to update profile");
+      notify(error.response?.data?.message || "Failed to update profile");
     } finally {
       setSaving(false);
     }
@@ -149,11 +150,11 @@ function AdminAccount() {
       !passwordData.newPassword ||
       !passwordData.confirmPassword
     ) {
-      alert("Please fill in all password fields");
+      notify("Please fill in all password fields");
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("New password and confirmation do not match");
+      notify("New password and confirmation do not match");
       return;
     }
 
@@ -169,11 +170,11 @@ function AdminAccount() {
           newPassword: "",
           confirmPassword: "",
         });
-        alert("Password changed successfully!");
+        notify("Password changed successfully!");
       }
     } catch (error) {
       console.error("Error changing password:", error);
-      alert(error.response?.data?.message || "Failed to change password");
+      notify(error.response?.data?.message || "Failed to change password");
     } finally {
       setChangingPassword(false);
     }

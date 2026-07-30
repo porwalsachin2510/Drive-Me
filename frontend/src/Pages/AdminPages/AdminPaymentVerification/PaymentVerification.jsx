@@ -7,6 +7,7 @@ import api from "../../../utils/api";
 import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import PaymentBreakdown from "../../../Components/Corporate/PaymentBreakdown/PaymentBreakdown";
 import "./PaymentVerification.css";
+import { notify } from "../../../utils/toast";
 
 const PaymentVerification = () => {
   const [pendingPayments, setPendingPayments] = useState([]);
@@ -88,7 +89,7 @@ const PaymentVerification = () => {
 
   const handleVerification = async (action) => {
     if (action === "REJECT" && !rejectionReason.trim()) {
-      alert("Please provide a reason for rejection");
+      notify("Please provide a reason for rejection");
       return;
     }
 

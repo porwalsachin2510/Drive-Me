@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import "./b2c_addschedulemodal.css";
 import api from "../../../../utils/api";
+import { notify } from "../../../../utils/toast";
 
 function B2C_AddScheduleModal({ onClose, onSave, routes }) {
   const [formData, setFormData] = useState({
@@ -156,7 +157,7 @@ function B2C_AddScheduleModal({ onClose, onSave, routes }) {
       onSave(scheduleData);
     } catch (error) {
       console.error("Error creating schedule:", error);
-      alert("Failed to create schedule. Please try again.");
+      notify("Failed to create schedule. Please try again.");
     } finally {
       setLoading(false);
     }

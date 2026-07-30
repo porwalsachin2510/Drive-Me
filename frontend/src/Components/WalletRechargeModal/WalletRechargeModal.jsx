@@ -2,8 +2,13 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { useLocale } from "../../hooks/useLocale";
-import { getNativeSymbol, getPaymentMethods, getCurrencyDecimals } from "../../config/localeConfig";
+import {
+  getNativeSymbol,
+  getPaymentMethods,
+  getCurrencyDecimals,
+} from "../../config/localeConfig";
 import "./WalletRechargeModal.css";
+import { notify } from "../../utils/toast";
 
 const WalletRechargeModal = ({
   isOpen,
@@ -63,7 +68,10 @@ const WalletRechargeModal = ({
       .map((m) => ({ icon: "💳", ...m }));
     setPaymentMethods(methods);
     // Ensure the selected method is valid for this country.
-    if (methods.length && !methods.some((m) => m.id === selectedPaymentMethod)) {
+    if (
+      methods.length &&
+      !methods.some((m) => m.id === selectedPaymentMethod)
+    ) {
       setSelectedPaymentMethod(methods[0].id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -89,7 +97,7 @@ const WalletRechargeModal = ({
 
   const handleRecharge = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid amount");
+      notify("Please enter a valid amount");
       return;
     }
 
@@ -125,11 +133,11 @@ const WalletRechargeModal = ({
         window.location.href = response.data.data.paymentUrl;
       } else {
         console.error("[v0] Invalid payment response:", response.data);
-        alert(response.data.message || "Payment initialization failed");
+        notify(response.data.message || "Payment initialization failed");
       }
     } catch (error) {
       console.error("[v0] Recharge error:", error);
-      alert("Failed to process recharge. Please try again.");
+      notify("Failed to process recharge. Please try again.");
     } finally {
       setIsProcessing(false);
     }

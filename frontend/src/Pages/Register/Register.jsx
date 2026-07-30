@@ -11,6 +11,7 @@ import {
   clearError,
 } from "../../Redux/slices/authSlice";
 import api from "../../utils/api";
+import { showSuccess, showError } from "../../utils/toast";
 import Navbar from "../../Components/Navbar/Navbar";
 import Footer from "../../Components/Footer/Footer";
 import OTPVerification from "../../Components/OTPVerification/OTPVerification";
@@ -661,6 +662,9 @@ const Register = () => {
           setSuccess(
             "Registration initiated! Please check your email for verification code.",
           );
+          showSuccess(
+            "Registration initiated! Check your email for the verification code.",
+          );
         } else {
           // Legacy flow (shouldn't happen with new backend)
           dispatch(
@@ -689,6 +693,7 @@ const Register = () => {
             "Registration failed. Please try again.",
         ),
       );
+      showError(err, "Registration failed. Please try again.");
       console.error("Registration error:", err);
     }
   };
@@ -702,6 +707,7 @@ const Register = () => {
   const handleOTPVerified = (user) => {
     setShowOTPVerification(false);
     setSuccess("Email verified and registration completed successfully!");
+    showSuccess("Email verified! Your registration is complete.");
 
     const userRole = user?.role;
     const redirectPath = roleRedirectMap[userRole] || "/dashboard";

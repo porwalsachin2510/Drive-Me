@@ -9,6 +9,7 @@ import {
 } from "../../../Redux/slices/vehicleAssignmentSlice";
 import api from "../../../utils/api";
 import "./B2B_PartnerVehicleAssignmentForm.css";
+import { notify } from "../../../utils/toast";
 
 const B2B_PartnerVehicleAssignmentForm = () => {
   const { assignmentId } = useParams();
@@ -16,7 +17,7 @@ const B2B_PartnerVehicleAssignmentForm = () => {
   const navigate = useNavigate();
 
   const { currentAssignment, loading, error } = useSelector(
-    (state) => state.vehicleAssignment
+    (state) => state.vehicleAssignment,
   );
 
   const [availableVehicles, setAvailableVehicles] = useState([]);
@@ -41,19 +42,30 @@ const B2B_PartnerVehicleAssignmentForm = () => {
       try {
         // Fetch available vehicles
         const vehiclesResponse = await api.get(
-          `/b2b-operations/vehicles/available`, {
-            params: { vehicleType: currentAssignment.contractId?.vehicleType }
-          }
+          `/b2b-operations/vehicles/available`,
+          {
+            params: { vehicleType: currentAssignment.contractId?.vehicleType },
+          },
         );
         if (isMounted && vehiclesResponse.data?.success) {
-          setAvailableVehicles(vehiclesResponse.data.data?.vehicles || vehiclesResponse.data.vehicles || []);
+          setAvailableVehicles(
+            vehiclesResponse.data.data?.vehicles ||
+              vehiclesResponse.data.vehicles ||
+              [],
+          );
         }
 
         // Fetch available drivers if needed
         if (currentAssignment.contractId?.includeDriver) {
-          const driversResponse = await api.get(`/b2b-operations/drivers/available`);
+          const driversResponse = await api.get(
+            `/b2b-operations/drivers/available`,
+          );
           if (isMounted && driversResponse.data?.success) {
-            setAvailableDrivers(driversResponse.data.data?.drivers || driversResponse.data.drivers || []);
+            setAvailableDrivers(
+              driversResponse.data.data?.drivers ||
+                driversResponse.data.drivers ||
+                [],
+            );
           }
         }
 
@@ -65,7 +77,7 @@ const B2B_PartnerVehicleAssignmentForm = () => {
               driverId: v.driverId?._id || v.driverId || null,
               fuelCardNumber: v.fuelCardNumber || "",
               assignmentDate: v.assignmentDate || new Date().toISOString(),
-            }))
+            })),
           );
         }
       } catch (error) {
@@ -118,8 +130,8 @@ const B2B_PartnerVehicleAssignmentForm = () => {
     if (
       selectedVehicles.length !== currentAssignment.contractId?.vehicleQuantity
     ) {
-      alert(
-        `Please select exactly ${currentAssignment.contractId?.vehicleQuantity} vehicle(s)`
+      notify(
+        `Please select exactly ${currentAssignment.contractId?.vehicleQuantity} vehicle(s)`,
       );
       return;
     }
@@ -127,7 +139,7 @@ const B2B_PartnerVehicleAssignmentForm = () => {
     if (currentAssignment.contractId?.includeDriver) {
       const missingDrivers = selectedVehicles.some((v) => !v.driverId);
       if (missingDrivers) {
-        alert("Please assign a driver to all vehicles");
+        notify("Please assign a driver to all vehicles");
         return;
       }
     }
@@ -135,7 +147,7 @@ const B2B_PartnerVehicleAssignmentForm = () => {
     if (currentAssignment.contractId?.includeFuel) {
       const missingFuelCards = selectedVehicles.some((v) => !v.fuelCardNumber);
       if (missingFuelCards) {
-        alert("Please provide fuel card number for all vehicles");
+        notify("Please provide fuel card number for all vehicles");
         return;
       }
     }
@@ -150,11 +162,11 @@ const B2B_PartnerVehicleAssignmentForm = () => {
     };
 
     const result = await dispatch(
-      assignVehiclesToContract({ assignmentId, data: payload })
+      assignVehiclesToContract({ assignmentId, data: payload }),
     );
 
     if (result.meta.requestStatus === "fulfilled") {
-      alert("Vehicles assigned successfully!");
+      notify("Vehicles assigned successfully!");
       navigate("/b2b/vehicle-assignments");
     }
   };
@@ -163,13 +175,13 @@ const B2B_PartnerVehicleAssignmentForm = () => {
     (vehicle) =>
       vehicle.make?.toLowerCase().includes(searchVehicle.toLowerCase()) ||
       vehicle.model?.toLowerCase().includes(searchVehicle.toLowerCase()) ||
-      vehicle.licensePlate?.toLowerCase().includes(searchVehicle.toLowerCase())
+      vehicle.licensePlate?.toLowerCase().includes(searchVehicle.toLowerCase()),
   );
 
   const filteredDrivers = availableDrivers.filter(
     (driver) =>
       driver.name?.toLowerCase().includes(searchDriver.toLowerCase()) ||
-      driver.licenseNumber?.toLowerCase().includes(searchDriver.toLowerCase())
+      driver.licenseNumber?.toLowerCase().includes(searchDriver.toLowerCase()),
   );
 
   if (loading) {
@@ -226,11 +238,11 @@ const B2B_PartnerVehicleAssignmentForm = () => {
               <span className="label">Contract Period:</span>
               <span className="value">
                 {new Date(
-                  currentAssignment.contractId?.startDate
+                  currentAssignment.contractId?.startDate,
                 ).toLocaleDateString()}{" "}
                 -{" "}
                 {new Date(
-                  currentAssignment.contractId?.endDate
+                  currentAssignment.contractId?.endDate,
                 ).toLocaleDateString()}
               </span>
             </div>
@@ -335,7 +347,7 @@ const B2B_PartnerVehicleAssignmentForm = () => {
                                 value={driver._id}
                                 disabled={selectedVehicles.some(
                                   (v, i) =>
-                                    i !== index && v.driverId === driver._id
+                                    i !== index && v.driverId === driver._id,
                                 )}
                               >
                                 {driver.name} - {driver.licenseNumber}

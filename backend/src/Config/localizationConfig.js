@@ -377,6 +377,50 @@ export const getCountryLocations = (input) => {
     return COUNTRY_LOCATIONS[code] || COUNTRY_LOCATIONS[DEFAULT_COUNTRY];
 };
 
+/**
+ * Location selection granularity per country.
+ *  - "CITY"    : large markets with several distinct service areas (emirates /
+ *                major cities) where a corporate should pick a specific city.
+ *  - "COUNTRY" : small single-metro markets (e.g. Kuwait) where splitting into
+ *                cities adds no value — the corporate selects the whole country
+ *                and sees every partner in it. Kept data-driven so launching a
+ *                new market is a one-line change.
+ */
+export const LOCATION_SCOPE = {
+    UAE: "CITY",
+    SA: "CITY",
+    OM: "CITY",
+    KW: "COUNTRY",
+    BH: "COUNTRY",
+    QA: "COUNTRY",
+};
+
+export const getLocationScope = (input) =>
+    LOCATION_SCOPE[normalizeCountry(input)] || "CITY";
+
+/**
+ * Strict country match: returns the canonical code ONLY when `input` is a real
+ * country identifier (code / full name / display name / ISO code). Unlike
+ * normalizeCountry it never falls back to a default, and it deliberately does
+ * NOT match city aliases like "Dubai". This lets the search tell a whole-country
+ * location selection ("Kuwait") apart from a specific city ("Salmiya").
+ */
+export const matchCountryStrict = (input) => {
+    if (!input || typeof input !== "string") return null;
+    const key = input.trim().toUpperCase();
+    for (const [code, cfg] of Object.entries(COUNTRY_CONFIG)) {
+        if (
+            code === key ||
+            (cfg.name && cfg.name.toUpperCase() === key) ||
+            (cfg.displayName && cfg.displayName.toUpperCase() === key) ||
+            (cfg.isoCode && cfg.isoCode.toUpperCase() === key)
+        ) {
+            return code;
+        }
+    }
+    return null;
+};
+
 /** Reverse lookup: which canonical country does a location name belong to? */
 export const getLocationCountry = (locationName) => {
     if (!locationName || typeof locationName !== "string") return null;
@@ -457,4 +501,7 @@ export default {
     getCountryLocations,
     getLocationCountry,
     isLocationInCountry,
+    LOCATION_SCOPE,
+    getLocationScope,
+    matchCountryStrict,
 };

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { notify } from "../../utils/toast";
 import { useDispatch, useSelector } from "react-redux";
 import {
   createB2CBooking,
@@ -853,20 +854,20 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     // One-Way pass could proceed without choosing any outbound schedule and the
     // code silently fell back to the first available trip.
     if (outboundTrips.length > 0 && !selectedTrip) {
-      alert("Please select a trip time before continuing.");
+      notify("Please select a trip time before continuing.");
       return;
     }
 
     // For a Round Trip pass the return schedule must also be selected.
     if (selectedPassType === "ROUND_TRIP") {
       if (returnTrips.length === 0) {
-        alert(
+        notify(
           "No return trips available for this route. Please select One-Way Monthly Pass instead.",
         );
         return;
       }
       if (!selectedReturnTrip) {
-        alert("Please select a return trip time before continuing.");
+        notify("Please select a return trip time before continuing.");
         return;
       }
     }
@@ -950,11 +951,11 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
         } else {
           // Payment method without redirect
           console.log("[v0] Payment method without redirect:", method);
-          alert("Payment method not fully configured");
+          notify("Payment method not fully configured");
         }
       } else {
         console.error("Monthly pass creation failed:", response.data.message);
-        alert(response.data.message || "Failed to create monthly pass");
+        notify(response.data.message || "Failed to create monthly pass");
       }
     } catch (err) {
       console.error("Booking error:", err);
@@ -963,7 +964,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
       // commuter understands why the booking was blocked, instead of a generic
       // failure message.
       const serverMessage = err?.response?.data?.message;
-      alert(
+      notify(
         serverMessage || "Failed to create monthly pass. Please try again.",
       );
     } finally {
@@ -979,7 +980,7 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
     if (!driverId) {
       console.error("No driver assigned to this corporate route");
       setIsProcessing(false);
-      alert(
+      notify(
         "This route has no assigned driver. Please contact your company administrator.",
       );
       return;

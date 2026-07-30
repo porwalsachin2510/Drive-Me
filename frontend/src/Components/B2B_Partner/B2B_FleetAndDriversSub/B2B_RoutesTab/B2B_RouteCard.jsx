@@ -3,6 +3,7 @@
 import { useState } from "react";
 import "./b2b_routecard.css";
 import api from "../../../../utils/api";
+import { notify } from "../../../../utils/toast";
 
 function B2B_RouteCard({ route, onRefresh }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -91,7 +92,7 @@ function B2B_RouteCard({ route, onRefresh }) {
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error deleting route:", error);
-      alert(error.response?.data?.message || "Failed to delete route");
+      notify(error.response?.data?.message || "Failed to delete route");
     } finally {
       setDeleting(false);
     }

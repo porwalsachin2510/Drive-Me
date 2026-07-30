@@ -4,6 +4,7 @@ import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import api from "../../../../utils/api";
 import B2B_EditVehicleModal from "../B2B_EditVehicleModal/B2B_EditVehicleModal";
 import "./b2b_vehiclestab.css";
+import { notify } from "../../../../utils/toast";
 
 function B2B_VehiclesTab({ vehicles, onRefresh }) {
   const [loading, setLoading] = useState({});
@@ -72,7 +73,7 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
       }
     } catch (error) {
       console.error("Error updating vehicle status:", error);
-      alert("Failed to update vehicle status. Please try again.");
+      notify("Failed to update vehicle status. Please try again.");
     } finally {
       setLoading((prev) => ({ ...prev, [vehicleId]: false }));
     }

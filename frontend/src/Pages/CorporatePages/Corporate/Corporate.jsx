@@ -14,10 +14,11 @@ import {
 } from "../../../hooks/useDropdownOptions";
 import {
   normalizeCountry,
-  getActiveCountry,
-  getCountryLocations,
   getCurrencyForLocation,
+  getLocationScope,
+  getLocationOptions,
 } from "../../../config/localeConfig";
+import { useLocale } from "../../../hooks/useLocale";
 import "./corporate.css";
 
 const Corporate = () => {
@@ -30,10 +31,23 @@ const Corporate = () => {
   const [activeTab, setActiveTab] = useState("corporate");
   const [validationErrors, setValidationErrors] = useState({});
 
-  // The corporate account's country (identity-locked). Locations and currency
-  // are scoped to this so a Kuwait corporate only sees Kuwait cities + KWD and
-  // a UAE corporate only sees UAE cities + AED. Data-driven via localeConfig.
-  const formCountry = normalizeCountry(user?.country) || getActiveCountry();
+  // Live, dynamically-detected locale (IP/GPS) — the same detection the commuter
+  // home page uses. Hydrated by the initLocale/refineLocaleByLocation thunks.
+  const { country: detectedCountry } = useLocale();
+
+  // Country that scopes the locations + currency shown in this form:
+  //   • A logged-in corporate → their own account country (source of truth).
+  //   • Anonymous / no country on file → the DETECTED locale country.
+  // Previously this always resolved to the platform default (Kuwait) because
+  // normalizeCountry(undefined) never returns falsy, so a UAE visitor wrongly
+  // saw Kuwait cities. We now only normalize a real account country, else use
+  // the detected one.
+  const formCountry = user?.country
+    ? normalizeCountry(user.country)
+    : normalizeCountry(detectedCountry);
+
+  // Whether this market picks a specific city (UAE) or the whole country (Kuwait).
+  const locationScope = getLocationScope(formCountry);
 
   // Currency for the budget dropdown: driven by the chosen location's country,
   // falling back to the corporate's own country currency.
@@ -102,6 +116,22 @@ const Corporate = () => {
     localStorage.setItem("activeTab", "corporate");
   }, []);
 
+  // Keep the Location field in sync with the resolved country. For a
+  // COUNTRY-scope market (e.g. Kuwait) we auto-select the whole country so the
+  // corporate immediately sees every partner there; for a CITY-scope market we
+  // clear it so the corporate consciously picks a city. Runs whenever the
+  // detected/account country changes (e.g. once IP detection resolves).
+  useEffect(() => {
+    const scope = getLocationScope(formCountry);
+    const nextLocation =
+      scope === "COUNTRY" ? getLocationOptions(formCountry)[0] : "";
+    setFilters((prev) =>
+      prev.location === nextLocation
+        ? prev
+        : { ...prev, location: nextLocation },
+    );
+  }, [formCountry]);
+
   const [filters, setFilters] = useState({
     serviceType: serviceType,
     // Multi-select: a corporate can request several vehicle types (e.g. Sedan
@@ -116,7 +146,9 @@ const Corporate = () => {
     location: "",
     startDate: "",
     driverRequired: true,
-    fuelIncluded: false,
+    // Fuel Included is checked by default — most corporate rentals expect an
+    // all-inclusive (fuel + driver) package, matching real-world B2B leasing.
+    fuelIncluded: true,
     features: [],
   });
 
@@ -288,9 +320,10 @@ const Corporate = () => {
     "Child Safety Seats",
   ];
 
-  // Locations are scoped to the corporate's country (multi-country). We do NOT
-  // use the global LOCATIONS dropdown here because it mixes every country.
-  const locations = getCountryLocations(formCountry);
+  // Locations are scoped to the resolved country AND its granularity: a
+  // CITY-scope market (UAE) lists cities/emirates; a COUNTRY-scope market
+  // (Kuwait) offers just the whole country. We never mix countries here.
+  const locations = getLocationOptions(formCountry);
 
   const handleInputChange = (field, value) => {
     setFilters((prev) => {
@@ -338,11 +371,11 @@ const Corporate = () => {
   const validateForm = () => {
     const errors = {};
 
+    // Only Vehicle Type, Rental Duration, Duration value and Budget are
+    // mandatory. Minimum Seats, Location and Start Date are optional refinements
+    // — leaving them blank simply widens the search instead of blocking it.
     if (!filters.vehicleTypes || filters.vehicleTypes.length === 0) {
       errors.vehicleTypes = "Please select at least one vehicle type";
-    }
-    if (!filters.minseatsrequired || filters.minseatsrequired < 1) {
-      errors.minseatsrequired = "Please enter minimum seats/capacity required";
     }
     if (!filters.rentalDuration) {
       errors.rentalDuration = "Please select a rental duration";
@@ -352,12 +385,6 @@ const Corporate = () => {
     }
     if (!filters.budget) {
       errors.budget = "Please select a budget range";
-    }
-    if (!filters.location) {
-      errors.location = "Please select a location";
-    }
-    if (!filters.startDate) {
-      errors.startDate = "Please select a start date";
     }
 
     setValidationErrors(errors);
@@ -462,7 +489,7 @@ const Corporate = () => {
 
             {MinimumSeatsRequiredOptions[serviceType].map((type) => (
               <div className="filter-section" key={type.value}>
-                <h3>{type.label}</h3>
+                <h3>{type.label.replace(/\s*\*\s*$/, "")}</h3>
                 <input
                   type="number"
                   min="1"
@@ -555,19 +582,39 @@ const Corporate = () => {
             <div
               className={`filter-section ${validationErrors.location ? "filter-section-error" : ""}`}
             >
-              <h3>Location *</h3>
+              <h3>Location</h3>
               <select
                 value={filters.location}
                 onChange={(e) => handleInputChange("location", e.target.value)}
                 className="select-field"
               >
-                <option value="">Select Location</option>
+                {locationScope === "CITY" && (
+                  <option value="">Select Location</option>
+                )}
                 {locations.map((loc) => (
                   <option key={loc} value={loc}>
                     {loc}
                   </option>
                 ))}
               </select>
+              {locationScope === "COUNTRY" && (
+                <p className="location-hint">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                  <span>{`Showing all verified partners across ${locations[0]}.`}</span>
+                </p>
+              )}
               {validationErrors.location && (
                 <span className="validation-error">
                   {validationErrors.location}
@@ -605,7 +652,7 @@ const Corporate = () => {
             <div
               className={`filter-section ${validationErrors.startDate ? "filter-section-error" : ""}`}
             >
-              <h3>Required Start Date *</h3>
+              <h3>Required Start Date</h3>
               <input
                 type="date"
                 value={filters.startDate}

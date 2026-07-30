@@ -6,6 +6,7 @@ import AdminUserDetailsModal from "./AdminUserDetailsModal/AdminUserDetailsModal
 import SuspendUserModal from "./SuspendUserModal/SuspendUserModal";
 import ActivateUserModal from "./ActivateUserModal/ActivateUserModal";
 import api from "../../../utils/api";
+import { notify } from "../../../utils/toast";
 
 function AdminUsers() {
   const [activeTab, setActiveTab] = useState("all-users");
@@ -100,7 +101,7 @@ function AdminUsers() {
       setSelectedUser(null);
     } catch (error) {
       console.error(`Error ${action} user:`, error);
-      alert(`Failed to ${action} user. Please try again.`);
+      notify(`Failed to ${action} user. Please try again.`);
     }
   };
 

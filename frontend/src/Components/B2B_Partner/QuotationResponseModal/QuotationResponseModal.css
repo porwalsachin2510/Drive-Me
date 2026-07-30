@@ -492,3 +492,200 @@
     width: 100%;
   }
 }
+
+/* Availability control (how many vehicles the partner can supply now) */
+.availability-control {
+  background: #f7fafc;
+  border: 1px dashed #cbd5e0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.availability-control > label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.92rem;
+  margin-bottom: 8px;
+}
+
+.availability-hint {
+  font-weight: 500;
+  color: #718096;
+  font-size: 0.82rem;
+}
+
+.availability-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.availability-input-row input {
+  width: 90px;
+  padding: 8px 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.availability-input-row input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.availability-of {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.availability-warning {
+  margin: 10px 0 0;
+  color: #c05621;
+  background: #fffaf0;
+  border-left: 3px solid #dd6b20;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Partial-offer summary + future availability */
+.partial-offer-section {
+  background: #fffaf0;
+  border: 1px solid #fbd38d;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.partial-offer-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.partial-offer-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #dd6b20;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.partial-offer-banner strong {
+  color: #9c4221;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.partial-offer-banner p {
+  margin: 0;
+  color: #7b341e;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.future-availability-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  font-weight: 600;
+  color: #2d3748;
+  cursor: pointer;
+}
+
+.future-availability-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #667eea;
+  cursor: pointer;
+}
+
+.future-availability-fields {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Inline "Reject" link inside the partial-offer explanation */
+.inline-reject-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #c53030;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.inline-reject-link:hover {
+  color: #9b2c2c;
+}
+
+/* Rejection section: intro + quick-pick reason chips */
+.rejection-intro {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.rejection-intro strong {
+  color: #9b2c2c;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.rejection-intro p {
+  margin: 0;
+  color: #742a2a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.rejection-quick-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.rejection-reason-chip {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rejection-reason-chip:hover {
+  border-color: #fc8181;
+  color: #c53030;
+}
+
+.rejection-reason-chip.active {
+  background: #c53030;
+  border-color: #c53030;
+  color: #fff;
+}

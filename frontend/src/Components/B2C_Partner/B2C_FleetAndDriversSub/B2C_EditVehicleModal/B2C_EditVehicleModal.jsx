@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import "./b2c_editvehiclemodal.css";
 import api from "../../../../utils/api";
+import { notify } from "../../../../utils/toast";
 
 function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
   const [formData, setFormData] = useState({
@@ -15,7 +16,7 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
     insuranceExpiry: "",
     registrationExpiry: "",
     status: "Active",
-    features: []
+    features: [],
   });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -30,12 +31,18 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
         licensePlate: vehicle.licensePlate || vehicle.registrationNumber || "",
         vehicleType: vehicle.vehicleType || "CAR",
         year: vehicle.year ? String(vehicle.year) : "",
-        seatingCapacity: vehicle.seatingCapacity ? String(vehicle.seatingCapacity) : "",
+        seatingCapacity: vehicle.seatingCapacity
+          ? String(vehicle.seatingCapacity)
+          : "",
         vehicleColor: vehicle.vehicleColor || "",
-        insuranceExpiry: vehicle.insuranceExpiry ? new Date(vehicle.insuranceExpiry).toISOString().split('T')[0] : "",
-        registrationExpiry: vehicle.registrationExpiry ? new Date(vehicle.registrationExpiry).toISOString().split('T')[0] : "",
+        insuranceExpiry: vehicle.insuranceExpiry
+          ? new Date(vehicle.insuranceExpiry).toISOString().split("T")[0]
+          : "",
+        registrationExpiry: vehicle.registrationExpiry
+          ? new Date(vehicle.registrationExpiry).toISOString().split("T")[0]
+          : "",
         status: vehicle.status || "Active",
-        features: Array.isArray(vehicle.features) ? vehicle.features : []
+        features: Array.isArray(vehicle.features) ? vehicle.features : [],
       });
       setImages([]); // Reset new images when modal opens
     }
@@ -43,53 +50,53 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     // Clear error for this field
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ""
+        [name]: "",
       }));
     }
   };
 
   const handleFeatureChange = (e) => {
     const value = e.target.value;
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       const newFeature = value.trim();
       if (newFeature && !formData.features.includes(newFeature)) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          features: [...prev.features, newFeature]
+          features: [...prev.features, newFeature],
         }));
-        e.target.value = '';
+        e.target.value = "";
       }
     }
   };
 
   const removeFeature = (indexToRemove) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      features: prev.features.filter((_, index) => index !== indexToRemove)
+      features: prev.features.filter((_, index) => index !== indexToRemove),
     }));
   };
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    setImages(prev => [...prev, ...files]);
+    setImages((prev) => [...prev, ...files]);
   };
 
   const removeImage = (indexToRemove) => {
-    setImages(prev => prev.filter((_, index) => index !== indexToRemove));
+    setImages((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.model.trim()) {
       newErrors.model = "Vehicle model is required";
     }
@@ -102,56 +109,60 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
     if (!formData.seatingCapacity) {
       newErrors.seatingCapacity = "Seating capacity is required";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     console.log("Edit Vehicle - Form Data:", formData);
     console.log("Edit Vehicle - New Images:", images);
     console.log("Edit Vehicle - Vehicle ID:", vehicle._id);
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       const formDataToSend = new FormData();
-      
+
       // Add all form fields
-      Object.keys(formData).forEach(key => {
-        if (key !== 'features') {
+      Object.keys(formData).forEach((key) => {
+        if (key !== "features") {
           formDataToSend.append(key, formData[key]);
           console.log(`Adding field ${key}:`, formData[key]);
         } else {
-          formDataToSend.append('features', JSON.stringify(formData[key]));
+          formDataToSend.append("features", JSON.stringify(formData[key]));
           console.log("Adding features:", JSON.stringify(formData[key]));
         }
       });
-      
+
       // Add new images
       images.forEach((image, index) => {
         formDataToSend.append(`images`, image);
         console.log(`Adding image ${index}:`, image.name);
       });
-      
+
       console.log("Sending FormData to backend...");
-      
-      const response = await api.put(`/b2c-partner/vehicles/${vehicle._id}`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      
+
+      const response = await api.put(
+        `/b2c-partner/vehicles/${vehicle._id}`,
+        formDataToSend,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
       console.log("Backend response:", response.data);
-      
+
       if (response.data.success) {
-        alert("Vehicle updated successfully!");
+        notify("Vehicle updated successfully!");
         if (onVehicleUpdated) {
           onVehicleUpdated(response.data.vehicle);
         }
@@ -161,7 +172,9 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
       }
     } catch (error) {
       console.error("Error updating vehicle:", error);
-      alert(`Failed to update vehicle: ${error.response?.data?.message || error.message}`);
+      notify(
+        `Failed to update vehicle: ${error.response?.data?.message || error.message}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -192,7 +205,9 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
                 className={errors.model ? "error" : ""}
                 placeholder="e.g., Toyota Camry"
               />
-              {errors.model && <span className="b2c-edit-vehicle-error">{errors.model}</span>}
+              {errors.model && (
+                <span className="b2c-edit-vehicle-error">{errors.model}</span>
+              )}
             </div>
 
             {/* License Plate */}
@@ -206,13 +221,21 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
                 className={errors.licensePlate ? "error" : ""}
                 placeholder="e.g., KWT 1234"
               />
-              {errors.licensePlate && <span className="b2c-edit-vehicle-error">{errors.licensePlate}</span>}
+              {errors.licensePlate && (
+                <span className="b2c-edit-vehicle-error">
+                  {errors.licensePlate}
+                </span>
+              )}
             </div>
 
             {/* Vehicle Type */}
             <div className="b2c-edit-vehicle-form-group">
               <label>Vehicle Type</label>
-              <select name="vehicleType" value={formData.vehicleType} onChange={handleChange}>
+              <select
+                name="vehicleType"
+                value={formData.vehicleType}
+                onChange={handleChange}
+              >
                 <option value="CAR">Car</option>
                 <option value="SUV">SUV</option>
                 <option value="VAN">Van</option>
@@ -233,7 +256,9 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
                 min="2000"
                 max={new Date().getFullYear() + 1}
               />
-              {errors.year && <span className="b2c-edit-vehicle-error">{errors.year}</span>}
+              {errors.year && (
+                <span className="b2c-edit-vehicle-error">{errors.year}</span>
+              )}
             </div>
 
             {/* Seating Capacity */}
@@ -248,7 +273,11 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
                 min="1"
                 max="50"
               />
-              {errors.seatingCapacity && <span className="b2c-edit-vehicle-error">{errors.seatingCapacity}</span>}
+              {errors.seatingCapacity && (
+                <span className="b2c-edit-vehicle-error">
+                  {errors.seatingCapacity}
+                </span>
+              )}
             </div>
 
             {/* Vehicle Color */}
@@ -288,7 +317,11 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
             {/* Status */}
             <div className="b2c-edit-vehicle-form-group">
               <label>Status</label>
-              <select name="status" value={formData.status} onChange={handleChange}>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+              >
                 <option value="Active">Active</option>
                 <option value="Maintenance">Maintenance</option>
                 <option value="Inactive">Inactive</option>
@@ -309,7 +342,9 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
               {formData.features.map((feature, index) => (
                 <span key={index} className="b2c-edit-vehicle-feature-tag">
                   {feature}
-                  <button type="button" onClick={() => removeFeature(index)}>×</button>
+                  <button type="button" onClick={() => removeFeature(index)}>
+                    ×
+                  </button>
                 </span>
               ))}
             </div>
@@ -318,7 +353,7 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
           {/* Images */}
           <div className="b2c-edit-vehicle-form-group">
             <label>Vehicle Images</label>
-            
+
             {/* Current Images */}
             {vehicle && vehicle.images && vehicle.images.length > 0 && (
               <div className="b2c-edit-vehicle-current-images">
@@ -326,14 +361,16 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
                 <div className="b2c-edit-vehicle-current-images-grid">
                   {vehicle.images.map((image, index) => (
                     <div key={index} className="b2c-edit-vehicle-current-image">
-                      <img 
-                        src={image} 
+                      <img
+                        src={image}
                         alt={`Current vehicle image ${index + 1}`}
                         onError={(e) => {
                           e.target.src = `https://via.placeholder.com/80x80/ef4444/ffffff?text=Error`;
                         }}
                       />
-                      <span className="b2c-edit-vehicle-image-index">#{index + 1}</span>
+                      <span className="b2c-edit-vehicle-image-index">
+                        #{index + 1}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -352,10 +389,15 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
                   className="b2c-edit-vehicle-images-input"
                   id="new-images-input"
                 />
-                <label htmlFor="new-images-input" className="b2c-edit-vehicle-file-input-label">
+                <label
+                  htmlFor="new-images-input"
+                  className="b2c-edit-vehicle-file-input-label"
+                >
                   <span className="b2c-edit-vehicle-file-input-icon">📷</span>
                   <span className="b2c-edit-vehicle-file-input-text">
-                    {images.length > 0 ? `${images.length} images selected` : 'Choose images to upload'}
+                    {images.length > 0
+                      ? `${images.length} images selected`
+                      : "Choose images to upload"}
                   </span>
                   <span className="b2c-edit-vehicle-file-input-subtext">
                     Click to browse or drag and drop
@@ -365,8 +407,17 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
               <div className="b2c-edit-vehicle-images-preview">
                 {images.map((image, index) => (
                   <div key={index} className="b2c-edit-vehicle-image-preview">
-                    <img src={URL.createObjectURL(image)} alt={`New preview ${index + 1}`} />
-                    <button type="button" onClick={() => removeImage(index)} className="b2c-edit-vehicle-remove-image-btn">×</button>
+                    <img
+                      src={URL.createObjectURL(image)}
+                      alt={`New preview ${index + 1}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="b2c-edit-vehicle-remove-image-btn"
+                    >
+                      ×
+                    </button>
                   </div>
                 ))}
               </div>
@@ -379,11 +430,19 @@ function B2C_EditVehicleModal({ vehicle, isOpen, onClose, onVehicleUpdated }) {
           </div>
 
           <div className="b2c-edit-vehicle-form-actions">
-            <button type="button" onClick={onClose} className="b2c-edit-vehicle-cancel-btn">
+            <button
+              type="button"
+              onClick={onClose}
+              className="b2c-edit-vehicle-cancel-btn"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="b2c-edit-vehicle-submit-btn">
-              {loading ? 'Updating...' : 'Update Vehicle'}
+            <button
+              type="submit"
+              disabled={loading}
+              className="b2c-edit-vehicle-submit-btn"
+            >
+              {loading ? "Updating..." : "Update Vehicle"}
             </button>
           </div>
         </form>

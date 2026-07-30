@@ -24,6 +24,7 @@ import AdminNegotiations from "../../../Components/Admin/AdminNegotiations/Admin
 import AdminTermsManagement from "../../../Components/Admin/AdminTermsManagement/AdminTermsManagement";
 import AdminCashRenewals from "../../../Components/Admin/AdminCashRenewals/AdminCashRenewals";
 import ExpansionManagement from "../ExpansionManagement/ExpansionManagement";
+import DemandGeneration from "../../../Components/Admin/DemandGeneration";
 import AdminAccount from "../../../Components/Admin/AdminAccount/AdminAccount";
 import "./admindashboardpage.css";
 
@@ -76,6 +77,8 @@ function AdminDashboardPage() {
         return <AdminTermsManagement />;
       case "expansion-management":
         return <ExpansionManagement />;
+      case "demand-generation":
+        return <DemandGeneration />;
       case "account":
         return <AdminAccount />;
       default:

@@ -107,3 +107,11 @@
     padding: 6px 12px;
   }
 }
+
+/* Import/Export + Add button row */
+.drivemego-fad-b2b-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}

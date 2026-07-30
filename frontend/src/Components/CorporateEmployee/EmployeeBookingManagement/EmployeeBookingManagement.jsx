@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import api from '../../../utils/api';
-import './EmployeeBookingManagement.css';
+import React, { useState, useEffect } from "react";
+import api from "../../../utils/api";
+import "./EmployeeBookingManagement.css";
+import { notify } from "../../../utils/toast";
 
 const EmployeeBookingManagement = () => {
   const [bookings, setBookings] = useState([]);
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('current');
+  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("current");
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('');
-  const [bookingAction, setBookingAction] = useState('book'); // 'book' or 'cancel'
+  const [selectedDate, setSelectedDate] = useState("");
+  const [bookingAction, setBookingAction] = useState("book"); // 'book' or 'cancel'
 
   useEffect(() => {
     fetchCurrentBookings();
@@ -20,16 +21,18 @@ const EmployeeBookingManagement = () => {
   const fetchCurrentBookings = async () => {
     try {
       // Backend: GET /api/corporate-employee-users/dashboard
-      const response = await api.get('/corporate-employee-users/dashboard');
+      const response = await api.get("/corporate-employee-users/dashboard");
 
       if (response.data.success) {
-        setBookings(response.data.data?.todayTrips || response.data.data?.bookings || []);
+        setBookings(
+          response.data.data?.todayTrips || response.data.data?.bookings || [],
+        );
       } else {
-        setError(response.data.message || 'Failed to fetch current bookings');
+        setError(response.data.message || "Failed to fetch current bookings");
       }
     } catch (error) {
-      console.error('Error fetching current bookings:', error);
-      setError('Network error. Please try again.');
+      console.error("Error fetching current bookings:", error);
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -38,70 +41,77 @@ const EmployeeBookingManagement = () => {
   const fetchUpcomingBookings = async () => {
     try {
       // Backend: GET /api/corporate-employee-users/dashboard (includes upcoming trips)
-      const response = await api.get('/corporate-employee-users/dashboard');
+      const response = await api.get("/corporate-employee-users/dashboard");
 
       if (response.data.success) {
-        setUpcomingBookings(response.data.data?.upcomingTrips || response.data.data?.bookings || []);
+        setUpcomingBookings(
+          response.data.data?.upcomingTrips ||
+            response.data.data?.bookings ||
+            [],
+        );
       } else {
-        console.error('Failed to fetch upcoming bookings:', response.data.message);
+        console.error(
+          "Failed to fetch upcoming bookings:",
+          response.data.message,
+        );
       }
     } catch (error) {
-      console.error('Error fetching upcoming bookings:', error);
+      console.error("Error fetching upcoming bookings:", error);
     }
   };
 
   const handleBookingAction = async (e) => {
     e.preventDefault();
-    
+
     try {
       // Backend: POST /api/corporate-employee-users/booking (manageBooking)
-      const response = await api.post('/corporate-employee-users/booking', {
+      const response = await api.post("/corporate-employee-users/booking", {
         action: bookingAction,
-        bookingDate: selectedDate
+        bookingDate: selectedDate,
       });
 
       if (response.data.success) {
         // Success - refresh data and close modal
         setShowBookingModal(false);
-        setSelectedDate('');
-        
+        setSelectedDate("");
+
         // Refresh bookings
         fetchCurrentBookings();
         fetchUpcomingBookings();
       } else {
-        alert(response.data.message || `Failed to ${bookingAction} booking`);
+        notify(response.data.message || `Failed to ${bookingAction} booking`);
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert(`Error trying to ${bookingAction} booking`);
+      console.error("Error:", error);
+      notify(`Error trying to ${bookingAction} booking`);
     }
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   const formatTime = (timeString) => {
     const time = new Date(timeString);
-    return time.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
+    return time.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
-  const openBookingModal = (action, date = '') => {
+  const openBookingModal = (action, date = "") => {
     setBookingAction(action);
     setSelectedDate(date);
     setShowBookingModal(true);
   };
 
-  const currentBookings = activeTab === 'current' ? bookings : upcomingBookings;
+  const currentBookings = activeTab === "current" ? bookings : upcomingBookings;
 
   if (loading) {
     return (
@@ -118,9 +128,9 @@ const EmployeeBookingManagement = () => {
     <div className="employee-booking-management">
       <div className="booking-header">
         <h2>My Bookings</h2>
-        <button 
+        <button
           className="book-trip-btn"
-          onClick={() => openBookingModal('book')}
+          onClick={() => openBookingModal("book")}
         >
           Book a Trip
         </button>
@@ -130,14 +140,14 @@ const EmployeeBookingManagement = () => {
 
       <div className="tab-navigation">
         <button
-          className={`tab-btn ${activeTab === 'current' ? 'active' : ''}`}
-          onClick={() => setActiveTab('current')}
+          className={`tab-btn ${activeTab === "current" ? "active" : ""}`}
+          onClick={() => setActiveTab("current")}
         >
           Current Month
         </button>
         <button
-          className={`tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
-          onClick={() => setActiveTab('upcoming')}
+          className={`tab-btn ${activeTab === "upcoming" ? "active" : ""}`}
+          onClick={() => setActiveTab("upcoming")}
         >
           Upcoming
         </button>
@@ -146,10 +156,13 @@ const EmployeeBookingManagement = () => {
       <div className="bookings-list">
         {currentBookings.length === 0 ? (
           <div className="no-bookings">
-            <p>No {activeTab === 'current' ? 'current' : 'upcoming'} bookings found.</p>
-            <button 
+            <p>
+              No {activeTab === "current" ? "current" : "upcoming"} bookings
+              found.
+            </p>
+            <button
               className="book-now-btn"
-              onClick={() => openBookingModal('book')}
+              onClick={() => openBookingModal("book")}
             >
               Book a Trip Now
             </button>
@@ -162,47 +175,73 @@ const EmployeeBookingManagement = () => {
                   <h3>{formatDate(booking.tripDate)}</h3>
                   <span className="trip-type">{booking.tripType}</span>
                 </div>
-                
+
                 <div className="booking-details">
                   <div className="route-info">
-                    <p><strong>Route:</strong> {booking.routeName}</p>
-                    <p><strong>Pickup:</strong> {booking.pickupLocation}</p>
-                    <p><strong>Dropoff:</strong> {booking.dropoffLocation}</p>
+                    <p>
+                      <strong>Route:</strong> {booking.routeName}
+                    </p>
+                    <p>
+                      <strong>Pickup:</strong> {booking.pickupLocation}
+                    </p>
+                    <p>
+                      <strong>Dropoff:</strong> {booking.dropoffLocation}
+                    </p>
                   </div>
-                  
+
                   <div className="time-info">
-                    <p><strong>Pickup Time:</strong> {formatTime(booking.pickupTime)}</p>
-                    <p><strong>Dropoff Time:</strong> {formatTime(booking.dropoffTime)}</p>
-                    <p><strong>Vehicle:</strong> {booking.vehicleNumber}</p>
+                    <p>
+                      <strong>Pickup Time:</strong>{" "}
+                      {formatTime(booking.pickupTime)}
+                    </p>
+                    <p>
+                      <strong>Dropoff Time:</strong>{" "}
+                      {formatTime(booking.dropoffTime)}
+                    </p>
+                    <p>
+                      <strong>Vehicle:</strong> {booking.vehicleNumber}
+                    </p>
                   </div>
-                  
+
                   <div className="seat-info">
-                    <p><strong>Seat Number:</strong> {booking.seatNumber}</p>
-                    <p><strong>Driver:</strong> {booking.driverName}</p>
-                    <p><strong>Contact:</strong> {booking.driverContact}</p>
+                    <p>
+                      <strong>Seat Number:</strong> {booking.seatNumber}
+                    </p>
+                    <p>
+                      <strong>Driver:</strong> {booking.driverName}
+                    </p>
+                    <p>
+                      <strong>Contact:</strong> {booking.driverContact}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="booking-status">
-                <span className={`status-badge ${booking.status.toLowerCase()}`}>
+                <span
+                  className={`status-badge ${booking.status.toLowerCase()}`}
+                >
                   {booking.status}
                 </span>
-                
+
                 <div className="booking-actions">
-                  {booking.status === 'CONFIRMED' && (
+                  {booking.status === "CONFIRMED" && (
                     <button
                       className="cancel-btn"
-                      onClick={() => openBookingModal('cancel', booking.tripDate)}
+                      onClick={() =>
+                        openBookingModal("cancel", booking.tripDate)
+                      }
                     >
                       Cancel Booking
                     </button>
                   )}
-                  
-                  {booking.status === 'COMPLETED' && (
+
+                  {booking.status === "COMPLETED" && (
                     <button
                       className="feedback-btn"
-                      onClick={() => window.location.href = '/employee-feedback'}
+                      onClick={() =>
+                        (window.location.href = "/employee-feedback")
+                      }
                     >
                       Give Feedback
                     </button>
@@ -219,16 +258,16 @@ const EmployeeBookingManagement = () => {
           <div className="booking-modal">
             <div className="modal-header">
               <h3>
-                {bookingAction === 'book' ? 'Book a Trip' : 'Cancel Booking'}
+                {bookingAction === "book" ? "Book a Trip" : "Cancel Booking"}
               </h3>
-              <button 
-                className="close-btn" 
+              <button
+                className="close-btn"
                 onClick={() => setShowBookingModal(false)}
               >
                 ×
               </button>
             </div>
-            
+
             <form onSubmit={handleBookingAction} className="booking-form">
               <div className="form-group">
                 <label>Select Date</label>
@@ -236,14 +275,17 @@ const EmployeeBookingManagement = () => {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={new Date().toISOString().split("T")[0]}
                   required
                 />
               </div>
 
               <div className="form-group">
                 <label>Trip Type</label>
-                <select value={activeTab === 'current' ? 'today' : 'upcoming'} disabled>
+                <select
+                  value={activeTab === "current" ? "today" : "upcoming"}
+                  disabled
+                >
                   <option value="today">Today's Trip</option>
                   <option value="upcoming">Upcoming Trip</option>
                 </select>
@@ -257,11 +299,8 @@ const EmployeeBookingManagement = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={`submit-btn ${bookingAction}`}
-                >
-                  {bookingAction === 'book' ? 'Book Trip' : 'Cancel Booking'}
+                <button type="submit" className={`submit-btn ${bookingAction}`}>
+                  {bookingAction === "book" ? "Book Trip" : "Cancel Booking"}
                 </button>
               </div>
             </form>

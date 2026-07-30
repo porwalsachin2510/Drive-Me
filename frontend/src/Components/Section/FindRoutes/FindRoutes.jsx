@@ -4,6 +4,7 @@ import "./find-routes.css";
 import api from "../../../utils/api";
 import BookingModal from "../../BookingModal/BookingModal";
 import { useLocale } from "../../../hooks/useLocale";
+import { notify } from "../../../utils/toast";
 
 export default function FindRoutes() {
   const [routes, setRoutes] = useState([]);
@@ -78,7 +79,7 @@ export default function FindRoutes() {
       fetchRoutes();
     } catch (error) {
       console.error("Error updating saved route:", error);
-      alert(error.response?.data?.message || "Failed to update saved route");
+      notify(error.response?.data?.message || "Failed to update saved route");
     } finally {
       setSavingId(null);
     }

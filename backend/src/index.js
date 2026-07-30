@@ -58,6 +58,9 @@ import termsRoutes from "./routes/termsRoutes.js"
 import emiPaymentRoutes from "./routes/emiPaymentRoutes.js"
 import rosterChangeRequestRoutes from "./routes/rosterChangeRequestRoutes.js"
 import sosRoutes from "./routes/sosRoutes.js"
+import demandRoutes from "./routes/demandRoutes.js"
+import demandPortalRoutes from "./routes/demandPortalRoutes.js"
+import importExportRoutes from "./routes/importExportRoutes.js"
 import { seedDropdownOptions } from "./controllers/dropdownController.js"
 // import { dailyTripGeneration, frequentTripGeneration, hourlyTripGeneration, runImmediateGeneration, corporateTripGeneration } from "./cron/tripGenerationCron.js"
 import { processDailyRenewals, sendDailyRenewalReminders } from "./cron/subscriptionCron.js"
@@ -852,6 +855,9 @@ app.use("/api", negotiationRoutes)
 app.use("/api/terms", termsRoutes)
 app.use("/api/roster-change-requests", rosterChangeRequestRoutes)
 app.use("/api/sos", sosRoutes)
+app.use("/api/demand", demandRoutes)
+app.use("/api/demand-portal", demandPortalRoutes)
+app.use("/api/import-export", importExportRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

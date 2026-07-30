@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import B2C_VehicleCard from "../B2C_VehicleCard/B2C_VehicleCard";
 import { fetchB2CPartnerVehicles } from "../../../../Redux/slices/b2cPartnerSlice";
 import api from "../../../../utils/api";
+import ImportExportControls from "../../../Common/ImportExportControls/ImportExportControls";
 import "./b2c_vehiclestab.css";
 
 function B2C_VehiclesTab({ vehicles: propVehicles, onVehicleUpdated }) {
@@ -58,6 +59,13 @@ function B2C_VehiclesTab({ vehicles: propVehicles, onVehicleUpdated }) {
 
   return (
     <div className="b2c-vehicles-tab">
+      <div className="b2c-ie-toolbar">
+        <ImportExportControls
+          entity="b2c-vehicles"
+          entityLabel="Vehicles"
+          onImported={() => dispatch(fetchB2CPartnerVehicles())}
+        />
+      </div>
       {!vehicles || vehicles.length === 0 ? (
         <div className="b2c-empty-state">
           <div className="b2c-empty-icon">🚗</div>

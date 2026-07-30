@@ -148,6 +148,50 @@ export const checkCorporateEmployeeRole = (req, res, next) => {
     next()
 }
 
+// ===== Demand Generation Staff Portal auth =====
+// These tokens are issued by the Staff Portal login (a DemandEmployee, NOT a
+// User). They are marked with kind: "DEMAND_PORTAL" so they can never be
+// confused with a customer/admin session token.
+export const verifyDemandPortalToken = (req, res, next) => {
+    const token = req.cookies?.demandPortalToken || req.headers.authorization?.split(" ")[1]
+
+    if (!token) {
+        return res.status(401).json({ success: false, message: "No token provided" })
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        if (decoded.kind !== "DEMAND_PORTAL" || !decoded.demandEmployeeId) {
+            return res.status(401).json({ success: false, message: "Invalid portal token" })
+        }
+        req.demandEmployeeId = decoded.demandEmployeeId
+        req.portalRole = decoded.portalRole
+        next()
+    } catch (error) {
+        return res.status(401).json({ success: false, message: "Invalid or expired token" })
+    }
+}
+
+export const checkFieldRole = (req, res, next) => {
+    if (req.portalRole !== "FIELD") {
+        return res.status(403).json({
+            success: false,
+            message: "Access denied. Field staff only.",
+        })
+    }
+    next()
+}
+
+export const checkFinanceRole = (req, res, next) => {
+    if (req.portalRole !== "FINANCE") {
+        return res.status(403).json({
+            success: false,
+            message: "Access denied. Finance staff only.",
+        })
+    }
+    next()
+}
+
 export const requireRole = (roles) => {
     return (req, res, next) => {
         if (!roles.includes(req.userRole)) {

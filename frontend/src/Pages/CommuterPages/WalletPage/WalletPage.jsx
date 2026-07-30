@@ -14,6 +14,7 @@ import PaymentModal from "../../../Components/Payment/PaymentModal";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import { useLocale } from "../../../hooks/useLocale";
+import { showSuccess, showError } from "../../../utils/toast";
 import "./walletpage.css";
 
 function WalletPage() {
@@ -67,7 +68,7 @@ function WalletPage() {
 
   const handleAddFunds = () => {
     if (!addFundsAmount || parseFloat(addFundsAmount) <= 0) {
-      alert("Please enter a valid amount");
+      showError("Please enter a valid amount");
       return;
     }
     // Close the amount entry modal and open the payment modal
@@ -94,7 +95,7 @@ function WalletPage() {
         }),
       ).unwrap();
 
-      alert(
+      showSuccess(
         "Withdrawal initiated successfully! Your funds will be transferred to your bank account.",
       );
       setShowWithdrawModal(false);
@@ -109,7 +110,7 @@ function WalletPage() {
       dispatch(getWalletTransactions({ page: 1, limit: 100 }));
     } catch (error) {
       console.error("Withdraw error:", error);
-      alert(error || "Withdrawal failed. Please try again.");
+      showError(error, "Withdrawal failed. Please try again.");
     }
   };
 

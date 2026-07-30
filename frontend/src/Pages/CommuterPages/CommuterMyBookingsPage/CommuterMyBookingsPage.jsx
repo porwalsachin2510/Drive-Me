@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { notify } from "../../../utils/toast";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getPassengerBookings } from "../../../Redux/slices/bookingSlice";
@@ -70,7 +71,7 @@ const CommuterMyBookingsPage = () => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error downloading pass certificate:", error);
-      alert("Failed to download pass certificate. Please try again.");
+      notify("Failed to download pass certificate. Please try again.");
     }
   }, []);
 
@@ -907,11 +908,11 @@ const CommuterMyBookingsPage = () => {
 
   const handleSubmitNoShow = async () => {
     if (!noShowReason) {
-      alert("Please select a reason for no-show");
+      notify("Please select a reason for no-show");
       return;
     }
     if (noShowReason === "OTHER" && !noShowCustomReason.trim()) {
-      alert("Please provide a custom reason");
+      notify("Please provide a custom reason");
       return;
     }
     try {
@@ -925,12 +926,12 @@ const CommuterMyBookingsPage = () => {
         customReason: noShowReason === "OTHER" ? noShowCustomReason : null,
         date: new Date().toISOString(),
       });
-      alert("No-show marked successfully. Your seat has been released.");
+      notify("No-show marked successfully. Your seat has been released.");
       setShowNoShowModal(false);
       setNoShowBooking(null);
       dispatch(getPassengerBookings());
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to mark no-show");
+      notify(error.response?.data?.message || "Failed to mark no-show");
     } finally {
       setNoShowLoading(false);
     }

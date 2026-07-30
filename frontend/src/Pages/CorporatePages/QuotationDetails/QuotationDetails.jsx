@@ -18,6 +18,7 @@ import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
 import api from "../../../utils/api";
 import "./QuotationDetails.css";
+import { notify } from "../../../utils/toast";
 
 // Admin Negotiation Request Modal Component
 const AdminNegotiationModal = ({ quotation, onClose, onSuccess }) => {
@@ -247,11 +248,13 @@ const QuotationDetails = () => {
   };
 
   const handleAcceptQuotation = async () => {
-    if (
-      window.confirm(
-        "Are you sure you want to accept this quotation? This will move it forward for contract processing.",
-      )
-    ) {
+    const isPartial =
+      (currentQuotation?.quotation || currentQuotation)?.fulfillment?.type ===
+      "PARTIAL";
+    const confirmText = isPartial
+      ? "This is a partial offer — the partner will supply fewer vehicles than you originally requested. Accept this partial quotation and move it forward for contract processing?"
+      : "Are you sure you want to accept this quotation? This will move it forward for contract processing.";
+    if (window.confirm(confirmText)) {
       const data = {
         decision: "accept",
         message: "Quotation accepted. Looking forward to working together.",
@@ -260,7 +263,7 @@ const QuotationDetails = () => {
       const result = await dispatch(acceptQuotation({ quotationId: id, data }));
 
       if (result.type === "quotation/acceptQuotation/fulfilled") {
-        alert("Quotation accepted successfully!");
+        notify("Quotation accepted successfully!");
         navigate(`/quotation/${id}`);
       }
     }
@@ -268,7 +271,7 @@ const QuotationDetails = () => {
 
   const handleReject = async () => {
     if (!rejectMessage.trim()) {
-      alert("Please provide a reason for rejection");
+      notify("Please provide a reason for rejection");
       return;
     }
 
@@ -280,7 +283,7 @@ const QuotationDetails = () => {
     const result = await dispatch(rejectQuotation({ quotationId: id, data }));
 
     if (result.type === "quotation/rejectQuotation/fulfilled") {
-      alert("Quotation rejected successfully!");
+      notify("Quotation rejected successfully!");
       setShowRejectModal(false);
       navigate("/corporate-profile?tab=my-quotations");
     }
@@ -288,7 +291,7 @@ const QuotationDetails = () => {
 
   const handleNegotiate = async () => {
     if (!negotiateAmount || parseFloat(negotiateAmount) <= 0) {
-      alert("Please enter a valid counter offer amount");
+      notify("Please enter a valid counter offer amount");
       return;
     }
 
@@ -301,7 +304,7 @@ const QuotationDetails = () => {
     );
 
     if (result.type === "quotation/negotiateQuotation/fulfilled") {
-      alert("Counter offer submitted successfully!");
+      notify("Counter offer submitted successfully!");
       setShowNegotiateModal(false);
       setNegotiateAmount("");
       setNegotiateMessage("");
@@ -316,7 +319,7 @@ const QuotationDetails = () => {
   // eslint-disable-next-line no-unused-vars
   const handleContractSuccess = (contract) => {
     setShowContractModal(false);
-    alert("Contract created successfully!");
+    notify("Contract created successfully!");
     // Optionally navigate to the contract details page or contracts list
     navigate(`/corporate-profile?tab=contracts`);
     // Or refresh the quotation to show updated status
@@ -326,7 +329,7 @@ const QuotationDetails = () => {
   const handleAdminNegotiationSuccess = (negotiation) => {
     setShowAdminNegotiationModal(false);
     setAdminNegotiationStatus("REQUESTED");
-    alert(
+    notify(
       "Admin Negotiation request submitted successfully! You will be notified when there are updates.",
     );
     dispatch(getQuotationById(id)); // Refresh quotation to show updated status
@@ -745,6 +748,52 @@ const QuotationDetails = () => {
           {quotation?.status?.toUpperCase() === "QUOTED" &&
             quotation?.quotedPrice && (
               <>
+                {/* Partial-offer notice: the partner could not supply every
+                    vehicle requested, so they are quoting for what they have
+                    available now. The corporate can accept this partial offer
+                    or reject it. */}
+                {quotation?.fulfillment?.type === "PARTIAL" && (
+                  <div className="single-quotation-partial-banner">
+                    <div className="single-quotation-partial-header">
+                      <span className="single-quotation-partial-icon">!</span>
+                      <div>
+                        <strong>
+                          Partial availability:{" "}
+                          {quotation.fulfillment.totalOfferedVehicles} of{" "}
+                          {quotation.fulfillment.totalRequestedVehicles}{" "}
+                          vehicles offered now
+                        </strong>
+                        <p>
+                          {fleetOwner.companyName ||
+                            fleetOwner.fullName ||
+                            "The partner"}{" "}
+                          currently has{" "}
+                          {quotation.fulfillment.totalOfferedVehicles}{" "}
+                          vehicle(s) available and is quoting for those. You can
+                          accept this partial offer or reject it.
+                        </p>
+                      </div>
+                    </div>
+                    {quotation.fulfillment.hasFutureAvailability && (
+                      <div className="single-quotation-partial-future">
+                        <strong>More vehicles coming:</strong>{" "}
+                        {quotation.fulfillment.futureAvailabilityNote ||
+                          "The partner expects additional vehicles soon."}
+                        {quotation.fulfillment.futureAvailabilityDate && (
+                          <span>
+                            {" "}
+                            (expected by{" "}
+                            {formatDate(
+                              quotation.fulfillment.futureAvailabilityDate,
+                            )}
+                            )
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Overall Breakdown */}
                 <div className="single-quotation-breakdown-section">
                   <h3 className="single-quotation-breakdown-title">
@@ -832,6 +881,14 @@ const QuotationDetails = () => {
                               <span>{breakdown.vehicleName}</span>
                               <span className="single-quotation-vehicle-breakdown-qty">
                                 Qty: {breakdown.quantity}
+                                {breakdown.requestedQuantity &&
+                                  breakdown.requestedQuantity >
+                                    breakdown.quantity && (
+                                    <span className="single-quotation-qty-requested">
+                                      {" "}
+                                      of {breakdown.requestedQuantity} requested
+                                    </span>
+                                  )}
                               </span>
                             </div>
                             <div className="single-quotation-breakdown-rows">

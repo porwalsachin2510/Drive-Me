@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import api from "../../../utils/api";
 import { FiCheck, FiTruck, FiAlertCircle, FiChevronDown } from "react-icons/fi";
 import "./B2B_PartnerAssignmentUI.css";
+import { notify } from "../../../utils/toast";
 
 const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
   const [expandedSection, setExpandedSection] = useState("overview");
@@ -70,11 +71,11 @@ const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
       if (response.data.success) {
         setSelectedVehicles([]);
         await fetchVehiclesAndAssignments();
-        alert("Vehicles assigned successfully!");
+        notify("Vehicles assigned successfully!");
       }
     } catch (error) {
       console.error("Error assigning vehicles:", error);
-      alert(error.response?.data?.message || "Failed to assign vehicles");
+      notify(error.response?.data?.message || "Failed to assign vehicles");
     } finally {
       setLoading(false);
     }
@@ -299,6 +300,6 @@ const B2B_PartnerAssignmentUI = ({ contractId, contract }) => {
       </div>
     </div>
   );
-};;
+};
 
 export default B2B_PartnerAssignmentUI;

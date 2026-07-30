@@ -48,17 +48,11 @@ export const isSearchFormComplete = (filters) => {
         (Array.isArray(filters.vehicleTypes) && filters.vehicleTypes.length > 0) ||
         (typeof filters.vehicleType === "string" && filters.vehicleType.trim() !== "");
 
-    // Check basic fields
+    // Only Vehicle Type, Duration value and Budget are mandatory.
+    // Minimum Seats, Location and Start Date are optional refinements, so they
+    // must NOT block the Search button.
     const basicFieldsComplete =
         hasVehicleType &&
-        filters.minseatsrequired &&
-        filters.minseatsrequired !== "" &&
-        filters.minseatsrequired !== "0" &&
-        filters.minseatsrequired !== 0 &&
-        filters.location &&
-        filters.location.trim() !== "" &&
-        filters.startDate &&
-        filters.startDate.trim() !== "" &&
         filters.durationValue &&
         filters.durationValue !== "" &&
         filters.durationValue !== "0" &&

@@ -6,6 +6,7 @@ import "./b2c_vehiclecard.css";
 import api from "../../../../utils/api";
 import B2C_EditVehicleModal from "../B2C_EditVehicleModal/B2C_EditVehicleModal";
 import { updateVehicleAvailabilityInStore } from "../../../../Redux/slices/b2cPartnerSlice";
+import { notify } from "../../../../utils/toast";
 
 function B2C_VehicleCard({ vehicle, onVehicleUpdated, onVehicleDeleted }) {
   const dispatch = useDispatch();
@@ -90,7 +91,7 @@ function B2C_VehicleCard({ vehicle, onVehicleUpdated, onVehicleDeleted }) {
     } catch (error) {
       console.error("Error updating vehicle availability:", error);
       // Show the error message from the backend (e.g., "Vehicle has incomplete trips")
-      alert(
+      notify(
         error.response?.data?.message ||
           "Failed to update vehicle availability",
       );
@@ -185,7 +186,7 @@ function B2C_VehicleCard({ vehicle, onVehicleUpdated, onVehicleDeleted }) {
         );
 
         if (response.data.success) {
-          alert("Vehicle deleted successfully!");
+          notify("Vehicle deleted successfully!");
           // Call the parent callback to refresh the vehicle list
           if (onVehicleDeleted) {
             onVehicleDeleted(vehicle._id);
@@ -198,7 +199,7 @@ function B2C_VehicleCard({ vehicle, onVehicleUpdated, onVehicleDeleted }) {
         }
       } catch (error) {
         console.error("Error deleting vehicle:", error);
-        alert(
+        notify(
           `Failed to delete vehicle: ${error.response?.data?.message || error.message}`,
         );
       } finally {

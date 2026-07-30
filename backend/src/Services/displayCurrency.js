@@ -32,6 +32,15 @@ const COUNTRY_TO_CURRENCY = {
 export const DEFAULT_DISPLAY_CURRENCY = "AED";
 
 /**
+ * The currency every stored amount is denominated in when a record has no
+ * explicit `currency` field of its own. The Demand Generation module (leads,
+ * campaigns, salaries, commissions, expenses) stores plain numbers in this
+ * platform base currency, so reads convert BASE -> displayCurrency and writes
+ * convert the admin's entered displayCurrency -> BASE before persisting.
+ */
+export const BASE_CURRENCY = "AED";
+
+/**
  * Resolve the currency the admin wants to view amounts in, from the request.
  * Accepts `displayCurrency`, `currency`, or `country` query params. Falls back
  * to AED when nothing valid is supplied.
@@ -55,6 +64,27 @@ export const convertForDisplay = (amount, fromCurrency, displayCurrency) =>
         fromCurrency || DEFAULT_DISPLAY_CURRENCY,
         displayCurrency || DEFAULT_DISPLAY_CURRENCY
     );
+
+/**
+ * Convert a BASE-currency amount into the requested display currency, rounded
+ * to that currency's decimal places. Convenience wrapper for modules (like
+ * Demand Generation) whose records are all stored in BASE_CURRENCY.
+ */
+export const fromBase = (amount, displayCurrency) => {
+    const cur = displayCurrency || BASE_CURRENCY;
+    const value = currencyConversionService.convertAmount(amount, BASE_CURRENCY, cur);
+    const d = decimalsFor(cur);
+    const f = Math.pow(10, d);
+    return Math.round((Number(value) || 0) * f) / f;
+};
+
+/**
+ * Convert an amount the admin ENTERED in their display currency back into the
+ * BASE currency for storage. Identity when the admin is already viewing in the
+ * base currency, so single-market (AED) usage is completely unaffected.
+ */
+export const toBase = (amount, displayCurrency) =>
+    currencyConversionService.convertAmount(amount, displayCurrency || BASE_CURRENCY, BASE_CURRENCY);
 
 /**
  * Given aggregation buckets of the shape { _id: <currency>, total: <number> }

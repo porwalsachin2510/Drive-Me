@@ -4,6 +4,7 @@ import { getCurrencyDecimals } from "../../../../config/localeConfig";
 import { getActiveCurrency } from "../../../../config/localeConfig";
 import { useState } from "react";
 import "./AdminReassignModal.css";
+import { notify } from "../../../../utils/toast";
 
 const AdminReassignModal = ({
   booking,
@@ -60,7 +61,7 @@ const AdminReassignModal = ({
 
   const handleReject = () => {
     if (!reason.trim()) {
-      alert("Please provide a reason for rejection");
+      notify("Please provide a reason for rejection");
       return;
     }
     onProcess(booking._id, "reject", reason);
@@ -68,7 +69,7 @@ const AdminReassignModal = ({
 
   const handleReassign = () => {
     if (!selectedRoute) {
-      alert("Please select a new route");
+      notify("Please select a new route");
       return;
     }
     onProcess(booking._id, "reassign", reason, { newRouteId: selectedRoute });
@@ -76,7 +77,7 @@ const AdminReassignModal = ({
 
   const handleCancel = () => {
     if (!reason.trim()) {
-      alert("Please provide a reason for cancellation");
+      notify("Please provide a reason for cancellation");
       return;
     }
     onProcess(booking._id, "cancel", reason);

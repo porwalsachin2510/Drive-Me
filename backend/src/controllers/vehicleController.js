@@ -5,6 +5,8 @@ import {
     getEffectiveCountry,
     getCountryCurrency,
     isLocationInCountry,
+    matchCountryStrict,
+    getCountryLocations,
 } from "../Config/localizationConfig.js"
 
 export const addVehicle = async (req, res) => {
@@ -284,9 +286,13 @@ export const searchVehicles = async (req, res) => {
 
 
         // Step 1: Find all B2B Partners (Fleet Owners)
+        // NOTE: We intentionally DO NOT select the partner's private contact
+        // details (email / whatsappNumber) here. During discovery the corporate
+        // must not be able to reach the partner off-platform. Contact info is
+        // only shared after a quotation/contract is confirmed through DriveMeGo.
         const fleetOwners = await User.find({
             role: "B2B_PARTNER"
-        }).select("_id fullName companyName email whatsappNumber nationality acceptedPaymentMethods");
+        }).select("_id fullName companyName nationality acceptedPaymentMethods");
 
         if (!fleetOwners || fleetOwners.length === 0) {
             return res.status(200).json({
@@ -396,8 +402,23 @@ export const searchVehicles = async (req, res) => {
         }
 
         // Location Filter
+        // A location value can be either a specific city ("Salmiya", "Dubai") or
+        // a whole country ("Kuwait"). Small single-metro markets like Kuwait let
+        // the corporate pick the entire country, so we expand that to EVERY
+        // service city in the country and match any of them; otherwise we match
+        // the single city. This keeps small-country discovery working without a
+        // city-level filter that would exclude most partners.
         if (location) {
-            vehicleQuery.location = new RegExp(location, "i"); // case-insensitive search
+            const countryCode = matchCountryStrict(location);
+            if (countryCode) {
+                const cities = getCountryLocations(countryCode);
+                const escape = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                vehicleQuery.location = {
+                    $in: cities.map((c) => new RegExp(`^${escape(c)}$`, "i")),
+                };
+            } else {
+                vehicleQuery.location = new RegExp(location, "i"); // case-insensitive city search
+            }
         }
 
         // Budget Range Filter based on rental duration
@@ -520,8 +541,6 @@ export const searchVehicles = async (req, res) => {
                 fleetOwnerId: owner._id,
                 fullName: owner.fullName,
                 companyName: owner.companyName,
-                email: owner.email,
-                whatsappNumber: owner.whatsappNumber,
                 nationality: owner.nationality,
                 acceptedPaymentMethods: owner.acceptedPaymentMethods,
                 vehicles: [],
@@ -632,15 +651,14 @@ export const getVehicleById = async (req, res) => {
 export const getFleetOwnerVehicles = async (req, res) => {
     try {
         const { fleetOwnerId } = req.params
-        const { status, serviceType, approvalStatus } = req.query
+        const { status, serviceType, approvalStatus, vehicleTypes } = req.query
 
         const query = { fleetOwnerId, isActive: true }
         if (status) query.status = status
         if (approvalStatus) query.approvalStatus = approvalStatus
 
         // Map the frontend service-type slug ("passenger"/"goods"/"managed") to
-        // the backend enum so the corporate owner page can list ALL of a
-        // partner's vehicles in the chosen category, not just searched types.
+        // the backend enum.
         if (serviceType) {
             const serviceTypeMap = {
                 passenger: "PASSENGER",
@@ -654,8 +672,39 @@ export const getFleetOwnerVehicles = async (req, res) => {
             query.serviceType = serviceTypeMap[normalized] || String(serviceType).toUpperCase()
         }
 
+        // Vehicle Category Filter — only surface the vehicle types the corporate
+        // actually searched for. Previously this endpoint returned EVERY vehicle
+        // the partner owns in the category, which meant a corporate who searched
+        // only "Sedan" would still be shown the partner's SUVs, etc. We now honor
+        // the requested types so the detail page matches the search intent.
+        let requestedTypes = []
+        if (Array.isArray(vehicleTypes)) {
+            requestedTypes = vehicleTypes
+        } else if (typeof vehicleTypes === "string" && vehicleTypes.trim()) {
+            requestedTypes = vehicleTypes.split(",")
+        }
+        requestedTypes = [
+            ...new Set(
+                requestedTypes
+                    .map((t) => String(t).trim().toUpperCase())
+                    .filter((t) => t && t !== "ANY_TYPE"),
+            ),
+        ]
+        if (requestedTypes.length === 1) {
+            query.vehicleCategory = requestedTypes[0]
+        } else if (requestedTypes.length > 1) {
+            query.vehicleCategory = { $in: requestedTypes }
+        }
+
         const vehicles = await Vehicle.find(query).sort({ createdAt: -1 })
-        const fleetOwner = await User.findById(fleetOwnerId).select("-password")
+
+        // Expose the partner's public/business profile but deliberately withhold
+        // private contact details (email, whatsapp, country code) and auth/token
+        // fields, so the corporate cannot bypass DriveMeGo and deal with the
+        // partner directly. All other profile/rating fields remain available.
+        const fleetOwner = await User.findById(fleetOwnerId).select(
+            "-password -email -whatsappNumber -countryCode -emailVerificationToken -passwordSetupToken -passwordSetupTokenExpiry",
+        )
 
         res.status(200).json({
             success: true,

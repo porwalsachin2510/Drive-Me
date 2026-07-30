@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import api from "../../../utils/api";
 import { SocketContext } from "../../../context/SocketContext";
 import "./driverlocationtracking.css";
+import { notify } from "../../../utils/toast";
 
 function DriverLocationTracking() {
   const { user } = useSelector((state) => state.auth);
@@ -24,10 +25,12 @@ function DriverLocationTracking() {
 
   const fetchActiveTrip = async () => {
     try {
-      const response = await api.get('/driver/active-trip');
+      const response = await api.get("/driver/active-trip");
       if (response.data.success && response.data.trip) {
         setCurrentTrip(response.data.trip);
-        setTripStatus(response.data.trip.status === "In Progress" ? "started" : "idle");
+        setTripStatus(
+          response.data.trip.status === "In Progress" ? "started" : "idle",
+        );
       }
     } catch (error) {
       console.error("Error fetching active trip:", error);
@@ -53,7 +56,7 @@ function DriverLocationTracking() {
 
     // Join driver room for socket events
     if (socket && user?._id) {
-      socket.emit('join-driver-room', user._id);
+      socket.emit("join-driver-room", user._id);
     }
 
     return () => {
@@ -63,7 +66,7 @@ function DriverLocationTracking() {
 
   const startLocationTracking = async () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by this browser.");
+      notify("Geolocation is not supported by this browser.");
       return;
     }
 
@@ -79,13 +82,15 @@ function DriverLocationTracking() {
         },
         (error) => {
           console.error("Location tracking error:", error);
-          alert("Unable to track location. Please check your location permissions.");
+          notify(
+            "Unable to track location. Please check your location permissions.",
+          );
         },
         {
           enableHighAccuracy: true,
           timeout: 5000,
           maximumAge: 0,
-        }
+        },
       );
 
       setWatchId(watchId);
@@ -97,27 +102,23 @@ function DriverLocationTracking() {
       }, 10000); // Send location every 10 seconds
     } catch (error) {
       console.error("Error starting location tracking:", error);
-      alert("Failed to start location tracking.");
+      notify("Failed to start location tracking.");
     }
   };
 
   const getCurrentPosition = () => {
     return new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(
-        resolve,
-        reject,
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        }
-      );
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      });
     });
   };
 
   const updateLocation = (position) => {
     const { latitude, longitude, speed, heading } = position.coords;
-    
+
     setLocation({
       latitude,
       longitude,
@@ -136,12 +137,12 @@ function DriverLocationTracking() {
     try {
       // Using OpenStreetMap Nominatim for reverse geocoding
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
       );
       const data = await response.json();
-      
+
       if (data.display_name) {
-        setLocation(prev => ({
+        setLocation((prev) => ({
           ...prev,
           address: data.display_name,
         }));
@@ -158,7 +159,7 @@ function DriverLocationTracking() {
 
     try {
       // Send via REST API for persistence
-      await api.post('/driver/update-location', {
+      await api.post("/driver/update-location", {
         tripId: currentTrip._id,
         latitude: location.latitude,
         longitude: location.longitude,
@@ -169,7 +170,7 @@ function DriverLocationTracking() {
 
       // Also emit via socket for real-time tracking by passengers
       if (socket) {
-        socket.emit('driver-location-update', {
+        socket.emit("driver-location-update", {
           driverId: user?.driverId || user?._id,
           userId: user?._id,
           location: {
@@ -187,7 +188,7 @@ function DriverLocationTracking() {
 
   const startTrip = async () => {
     if (!currentTrip) {
-      alert("No active trip found");
+      notify("No active trip found");
       return;
     }
 
@@ -199,7 +200,7 @@ function DriverLocationTracking() {
 
         // Emit socket event for real-time notification to passengers
         if (socket) {
-          socket.emit('start-trip', {
+          socket.emit("start-trip", {
             bookingId: currentTrip.bookingId || currentTrip._id,
             driverId: user?._id,
           });
@@ -207,25 +208,27 @@ function DriverLocationTracking() {
       }
     } catch (error) {
       console.error("Error starting trip:", error);
-      alert("Failed to start trip");
+      notify("Failed to start trip");
     }
   };
 
   const completeTrip = async () => {
     if (!currentTrip) {
-      alert("No active trip found");
+      notify("No active trip found");
       return;
     }
 
     try {
-      const response = await api.post(`/driver/trips/${currentTrip._id}/complete`);
+      const response = await api.post(
+        `/driver/trips/${currentTrip._id}/complete`,
+      );
       if (response.data.success) {
         setTripStatus("completed");
         stopLocationTracking();
 
         // Emit socket event for real-time notification to passengers
         if (socket) {
-          socket.emit('complete-trip', {
+          socket.emit("complete-trip", {
             bookingId: currentTrip.bookingId || currentTrip._id,
             driverId: user?._id,
           });
@@ -233,17 +236,19 @@ function DriverLocationTracking() {
       }
     } catch (error) {
       console.error("Error completing trip:", error);
-      alert("Failed to complete trip");
+      notify("Failed to complete trip");
     }
   };
 
   const reportEmergency = async () => {
     if (!currentTrip) {
-      alert("No active trip found");
+      notify("No active trip found");
       return;
     }
 
-    const emergencyType = prompt("Enter emergency type (accident/medical/breakdown/other):");
+    const emergencyType = prompt(
+      "Enter emergency type (accident/medical/breakdown/other):",
+    );
     const message = prompt("Enter emergency message:");
 
     if (!emergencyType || !message) {
@@ -251,23 +256,26 @@ function DriverLocationTracking() {
     }
 
     try {
-      const response = await api.post(`/driver/trips/${currentTrip._id}/emergency`, {
-        emergencyType,
-        message,
-        location: {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          address: location.address,
+      const response = await api.post(
+        `/driver/trips/${currentTrip._id}/emergency`,
+        {
+          emergencyType,
+          message,
+          location: {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            address: location.address,
+          },
         },
-      });
+      );
 
       if (response.data.success) {
         setTripStatus("emergency");
-        alert("Emergency reported successfully!");
+        notify("Emergency reported successfully!");
       }
     } catch (error) {
       console.error("Error reporting emergency:", error);
-      alert("Failed to report emergency");
+      notify("Failed to report emergency");
     }
   };
 
@@ -284,7 +292,10 @@ function DriverLocationTracking() {
       <div className="tracking-header">
         <h1>Driver Location Tracking</h1>
         <div className="status-badge">
-          Status: <span className={`status ${tripStatus}`}>{tripStatus.toUpperCase()}</span>
+          Status:{" "}
+          <span className={`status ${tripStatus}`}>
+            {tripStatus.toUpperCase()}
+          </span>
         </div>
       </div>
 
@@ -293,10 +304,19 @@ function DriverLocationTracking() {
           <div className="trip-details">
             <h3>Current Trip</h3>
             <div className="trip-route">
-              <p><strong>From:</strong> {currentTrip.fromLocation}</p>
-              <p><strong>To:</strong> {currentTrip.toLocation}</p>
-              <p><strong>Start Time:</strong> {currentTrip.startTime}</p>
-              <p><strong>Passengers:</strong> {currentTrip.passengers?.length || 0}</p>
+              <p>
+                <strong>From:</strong> {currentTrip.fromLocation}
+              </p>
+              <p>
+                <strong>To:</strong> {currentTrip.toLocation}
+              </p>
+              <p>
+                <strong>Start Time:</strong> {currentTrip.startTime}
+              </p>
+              <p>
+                <strong>Passengers:</strong>{" "}
+                {currentTrip.passengers?.length || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -310,12 +330,21 @@ function DriverLocationTracking() {
         <h3>Current Location</h3>
         <div className="location-details">
           <div className="location-coords">
-            <p><strong>Latitude:</strong> {location.latitude || "N/A"}</p>
-            <p><strong>Longitude:</strong> {location.longitude || "N/A"}</p>
-            <p><strong>Speed:</strong> {formatSpeed(location.speed)}</p>
+            <p>
+              <strong>Latitude:</strong> {location.latitude || "N/A"}
+            </p>
+            <p>
+              <strong>Longitude:</strong> {location.longitude || "N/A"}
+            </p>
+            <p>
+              <strong>Speed:</strong> {formatSpeed(location.speed)}
+            </p>
           </div>
           <div className="location-address">
-            <p><strong>Address:</strong> {location.address || "Getting address..."}</p>
+            <p>
+              <strong>Address:</strong>{" "}
+              {location.address || "Getting address..."}
+            </p>
           </div>
         </div>
       </div>
@@ -329,17 +358,19 @@ function DriverLocationTracking() {
 
         {tripStatus === "started" && (
           <>
-            <button 
+            <button
               className={`control-btn ${isTracking ? "stop" : "start"}`}
-              onClick={isTracking ? stopLocationTracking : startLocationTracking}
+              onClick={
+                isTracking ? stopLocationTracking : startLocationTracking
+              }
             >
               {isTracking ? "⏹ Stop Tracking" : "▶ Start Tracking"}
             </button>
-            
+
             <button className="control-btn complete" onClick={completeTrip}>
               ✅ Complete Trip
             </button>
-            
+
             <button className="control-btn emergency" onClick={reportEmergency}>
               🚨 Emergency
             </button>
@@ -366,11 +397,13 @@ function DriverLocationTracking() {
       <div className="tracking-status">
         <div className="status-item">
           <span className="status-label">Tracking:</span>
-          <span className={`status-value ${isTracking ? "active" : "inactive"}`}>
+          <span
+            className={`status-value ${isTracking ? "active" : "inactive"}`}
+          >
             {isTracking ? "🟢 Active" : "🔴 Inactive"}
           </span>
         </div>
-        
+
         <div className="status-item">
           <span className="status-label">Last Update:</span>
           <span className="status-value">

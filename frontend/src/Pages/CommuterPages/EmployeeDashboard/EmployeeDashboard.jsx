@@ -6,6 +6,7 @@ import api from "../../../utils/api";
 import DashboardLayout from "../../../Components/DashboardLayout/DashboardLayout";
 import EmployeeFeedback from "../../../Components/CorporateEmployee/EmployeeFeedback/EmployeeFeedback";
 import "./employeedashboard.css";
+import { notify } from "../../../utils/toast";
 
 export default function EmployeeDashboard() {
   const user = useSelector((state) => state.auth.user);
@@ -115,7 +116,7 @@ export default function EmployeeDashboard() {
         reason,
         preferredRoute,
       });
-      alert("Route change request submitted successfully");
+      notify("Route change request submitted successfully");
     } catch (err) {
       console.error("Error requesting route change:", err);
     }

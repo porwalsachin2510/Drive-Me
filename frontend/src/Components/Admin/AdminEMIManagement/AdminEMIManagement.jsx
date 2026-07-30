@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import "./AdminEMIManagement.css";
+import { notify } from "../../../utils/toast";
 
 const AdminEMIManagement = () => {
   const dispatch = useDispatch();
@@ -97,7 +98,7 @@ const AdminEMIManagement = () => {
 
   const handleSendWarning = async () => {
     if (!selectedEMI || !warningMessage.trim()) {
-      alert("Please provide a warning message");
+      notify("Please provide a warning message");
       return;
     }
 
@@ -110,13 +111,13 @@ const AdminEMIManagement = () => {
           message: warningMessage,
         }),
       ).unwrap();
-      alert("Warning email sent successfully to the Corporate user");
+      notify("Warning email sent successfully to the Corporate user");
       setShowWarningModal(false);
       setWarningMessage("");
       setSelectedEMI(null);
       fetchEMIPayments();
     } catch (error) {
-      alert(error || "Failed to send warning");
+      notify(error || "Failed to send warning");
     } finally {
       setProcessing(false);
     }
@@ -124,7 +125,7 @@ const AdminEMIManagement = () => {
 
   const handleSuspendServices = async () => {
     if (!selectedEMI || !suspendReason.trim()) {
-      alert("Please provide a reason for suspension");
+      notify("Please provide a reason for suspension");
       return;
     }
 
@@ -137,13 +138,13 @@ const AdminEMIManagement = () => {
           reason: suspendReason,
         }),
       ).unwrap();
-      alert("Corporate services suspended successfully");
+      notify("Corporate services suspended successfully");
       setShowSuspendModal(false);
       setSuspendReason("");
       setSelectedEMI(null);
       fetchEMIPayments();
     } catch (error) {
-      alert(error || "Failed to suspend services");
+      notify(error || "Failed to suspend services");
     } finally {
       setProcessing(false);
     }
@@ -161,12 +162,12 @@ const AdminEMIManagement = () => {
           reason: "Services reactivated by admin",
         }),
       ).unwrap();
-      alert("Corporate services reactivated successfully");
+      notify("Corporate services reactivated successfully");
       setShowReactivateModal(false);
       setSelectedEMI(null);
       fetchEMIPayments();
     } catch (error) {
-      alert(error || "Failed to reactivate services");
+      notify(error || "Failed to reactivate services");
     } finally {
       setProcessing(false);
     }

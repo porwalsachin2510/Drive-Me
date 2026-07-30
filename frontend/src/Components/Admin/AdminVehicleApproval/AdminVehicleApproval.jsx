@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import api from "../../../utils/api";
 import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./adminvehicleapproval.css";
+import { notify } from "../../../utils/toast";
 
 function AdminVehicleApproval() {
   const [vehicles, setVehicles] = useState([]);
@@ -84,12 +85,12 @@ function AdminVehicleApproval() {
       if (response.data.success) {
         setVehicles(vehicles.filter((v) => v._id !== vehicleId));
         setSelectedVehicle(null);
-        alert("Vehicle approved successfully!");
+        notify("Vehicle approved successfully!");
         fetchPendingVehicles();
       }
     } catch (err) {
       console.error("Error approving vehicle:", err);
-      alert("Failed to approve vehicle");
+      notify("Failed to approve vehicle");
     } finally {
       setActionLoading(false);
     }
@@ -97,7 +98,7 @@ function AdminVehicleApproval() {
 
   const rejectVehicle = async (vehicleId) => {
     if (!rejectionReason.trim()) {
-      alert("Please enter a rejection reason");
+      notify("Please enter a rejection reason");
       return;
     }
 
@@ -111,12 +112,12 @@ function AdminVehicleApproval() {
         setVehicles(vehicles.filter((v) => v._id !== vehicleId));
         setSelectedVehicle(null);
         setRejectionReason("");
-        alert("Vehicle rejected successfully!");
+        notify("Vehicle rejected successfully!");
         fetchPendingVehicles();
       }
     } catch (err) {
       console.error("Error rejecting vehicle:", err);
-      alert("Failed to reject vehicle");
+      notify("Failed to reject vehicle");
     } finally {
       setActionLoading(false);
     }

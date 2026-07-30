@@ -196,3 +196,16 @@
     justify-content: space-between;
   }
 }
+
+/* Import/Export toolbar row */
+.b2c-section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.b2c-section-header-row .b2c-section-subtitle {
+    margin: 0;
+}

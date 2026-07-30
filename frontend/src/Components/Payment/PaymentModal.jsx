@@ -5,6 +5,7 @@ import api from "../../utils/api";
 import { useLocale } from "../../hooks/useLocale";
 import { getPaymentMethods } from "../../config/localeConfig";
 import "./PaymentModal.css";
+import { notify } from "../../utils/toast";
 
 const METHOD_ICONS = {
   card: "💳",
@@ -92,7 +93,7 @@ function PaymentModal({
         // Redirect to the payment gateway's secure hosted page.
         window.location.href = data.data.paymentUrl;
       } else {
-        alert(
+        notify(
           "Payment failed: " +
             (data.message || "Could not create payment session"),
         );
@@ -101,7 +102,7 @@ function PaymentModal({
       console.error("Payment error:", error);
       const errorMessage =
         error.response?.data?.message || "Payment failed. Please try again.";
-      alert(errorMessage);
+      notify(errorMessage);
     } finally {
       setIsProcessing(false);
     }

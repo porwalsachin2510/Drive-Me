@@ -37,6 +37,28 @@ import { normalizeCountry, getCountryCurrency, getEffectiveCountry, getCurrencyD
 import { resolveDisplayCurrency, convertForDisplay, sumByCurrency } from "../Services/displayCurrency.js";
 import { getOrCreateWallet } from "../Services/walletService.js";
 import { isPrimaryOwnerId, ALL_ADMIN_MODULES } from "../Services/ownerService.js";
+import DemandNotification from "../models/DemandNotification.js";
+
+// Route a payout status notification to the correct inbox. Demand Generation
+// staff (ownerModel === "DemandEmployee") read the DemandNotification feed in
+// their portal; every other user gets the standard platform notification.
+const notifyPayoutTarget = async (payout, { type, title, message, data }) => {
+    try {
+        if (payout?.ownerModel === "DemandEmployee") {
+            await DemandNotification.create({
+                employee: payout.userId,
+                type: "GENERAL",
+                title,
+                message,
+                data: data || {},
+            });
+            return;
+        }
+        await createNotification({ userId: payout.userId, type, title, message, data });
+    } catch (err) {
+        console.error("[notifyPayoutTarget] failed:", err?.message);
+    }
+};
 
 // Get all users for admin
 export const getAllUsers = async (req, res) => {
@@ -1049,9 +1071,8 @@ export const approvePayout = async (req, res) => {
             }
         }
 
-        // Send notification to user
-        await createNotification({
-            userId: payout.userId,
+        // Send notification to user (staff read the DG portal feed)
+        await notifyPayoutTarget(payout, {
             type: 'PAYOUT_APPROVED',
             title: 'Withdrawal Approved',
             message: `Your withdrawal request of ${payout.currency} ${payout.amount} has been approved. Payment will be processed shortly.`,
@@ -1128,9 +1149,8 @@ export const rejectPayout = async (req, res) => {
             await wallet.save();
         }
 
-        // Send notification to user
-        await createNotification({
-            userId: payout.userId,
+        // Send notification to user (staff read the DG portal feed)
+        await notifyPayoutTarget(payout, {
             type: 'PAYOUT_REJECTED',
             title: 'Withdrawal Rejected',
             message: `Your withdrawal request of ${payout.currency} ${payout.amount} has been rejected. Reason: ${payout.rejectionReason}. The amount has been refunded to your wallet.`,
@@ -1194,9 +1214,8 @@ export const completePayout = async (req, res) => {
             }
         }
 
-        // Send notification to user
-        await createNotification({
-            userId: payout.userId,
+        // Send notification to user (staff read the DG portal feed)
+        await notifyPayoutTarget(payout, {
             type: 'PAYOUT_COMPLETED',
             title: 'Withdrawal Completed',
             message: `Your withdrawal of ${payout.currency} ${payout.amount} has been transferred to your bank account (${payout.bankName}).`,

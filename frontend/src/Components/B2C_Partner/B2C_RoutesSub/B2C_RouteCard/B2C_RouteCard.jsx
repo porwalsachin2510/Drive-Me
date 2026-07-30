@@ -8,6 +8,7 @@ import api from "../../../../utils/api";
 import B2C_TripModal from "../B2C_TripModal/B2C_TripModal.jsx";
 import B2C_EditRouteModal from "../B2C_EditRouteModal/B2C_EditRouteModal.jsx";
 import B2C_ChangeAssignmentModal from "../B2C_ChangeAssignmentModal/B2C_ChangeAssignmentModal.jsx";
+import { notify } from "../../../../utils/toast";
 
 function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -148,7 +149,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
             ).toFixed(2)}.`,
           );
         }
-        alert(lines.join("\n"));
+        notify(lines.join("\n"));
       }
       if (onRouteUpdated) onRouteUpdated();
     } catch (error) {
@@ -161,7 +162,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
         });
         setShowDeleteWarning(true);
       } else {
-        alert(error.response?.data?.message || "Failed to delete route");
+        notify(error.response?.data?.message || "Failed to delete route");
       }
     } finally {
       setDeleting(false);

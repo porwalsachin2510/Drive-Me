@@ -437,6 +437,8 @@ const userSchema = new mongoose.Schema(
                 content: { type: Boolean, default: false },
                 adminManagement: { type: Boolean, default: false },
                 termsAndConditions: { type: Boolean, default: false },
+                expansionManagement: { type: Boolean, default: false },
+                demandGeneration: { type: Boolean, default: false },
             },
         },
         // Reference to the admin who created this admin
@@ -444,6 +446,17 @@ const userSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             default: null,
+        },
+
+        // ===== Demand Generation acquisition attribution =====
+        // Set when this account was created (or linked) by a field employee
+        // onboarding a demand-generation lead. Lets us trace which lead and
+        // which acquisition employee brought this user onto the platform.
+        acquisition: {
+            lead: { type: mongoose.Schema.Types.ObjectId, ref: "Lead", default: null },
+            acquiredByEmployee: { type: mongoose.Schema.Types.ObjectId, ref: "DemandEmployee", default: null },
+            onboardedAt: { type: Date, default: null },
+            source: { type: String, default: null }, // e.g. "DEMAND_GENERATION"
         },
         // Terms and Conditions acceptance
         termsAndConditions: {

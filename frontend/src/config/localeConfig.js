@@ -166,6 +166,37 @@ export const getCountryLocations = (input) => {
 };
 
 /**
+ * Location selection granularity per country (mirrors backend localizationConfig).
+ *  - "CITY"    : large markets (UAE, Saudi) — pick a specific city/emirate.
+ *  - "COUNTRY" : small single-metro markets (Kuwait, Bahrain, Qatar) — select
+ *                the whole country and see every partner in it.
+ */
+export const LOCATION_SCOPE = {
+    UAE: "CITY",
+    SA: "CITY",
+    OM: "CITY",
+    KW: "COUNTRY",
+    BH: "COUNTRY",
+    QA: "COUNTRY",
+};
+
+export const getLocationScope = (input) =>
+    LOCATION_SCOPE[normalizeCountry(input)] || "CITY";
+
+/**
+ * Options for the location dropdown, honoring the country's scope. For a
+ * COUNTRY-scope market this is a single whole-country option (e.g. ["Kuwait"]);
+ * for a CITY-scope market it's the list of cities/emirates.
+ */
+export const getLocationOptions = (input) => {
+    const code = normalizeCountry(input);
+    if (getLocationScope(code) === "COUNTRY") {
+        return [getCountryConfig(code).displayName];
+    }
+    return getCountryLocations(code);
+};
+
+/**
  * Reverse lookup: which canonical country does a location name belong to?
  * Used to resolve the correct currency from a chosen location. Returns null
  * when the location is not recognized so callers can fall back to the viewer's

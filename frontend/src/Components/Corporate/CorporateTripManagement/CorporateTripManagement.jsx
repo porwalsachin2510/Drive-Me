@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import api from "../../../utils/api";
 import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./CorporateTripManagement.css";
+import { notify } from "../../../utils/toast";
 
 function CorporateTripManagement() {
   const [trips, setTrips] = useState([]);
@@ -69,10 +70,10 @@ function CorporateTripManagement() {
       await api.post("/trips/create-from-route", formData);
       setShowCreateModal(false);
       fetchTrips();
-      alert("Trips created successfully!");
+      notify("Trips created successfully!");
     } catch (error) {
       console.error("Error creating trips:", error);
-      alert("Failed to create trips");
+      notify("Failed to create trips");
     } finally {
       setLoading(false);
     }

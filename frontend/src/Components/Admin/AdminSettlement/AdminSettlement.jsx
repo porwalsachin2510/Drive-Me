@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import api from "../../../utils/api";
 import "./adminsettlement.css";
+import { notify } from "../../../utils/toast";
 
 const MONTHS = [
   "January",
@@ -143,13 +144,13 @@ function AdminSettlement() {
         `/settlement/monthly-settlement?month=${filterMonth}&year=${filterYear}`,
       );
       if (response.data.success) {
-        alert(response.data.message);
+        notify(response.data.message);
         setPagination((prev) => ({ ...prev, page: 1 }));
         fetchSettlements();
       }
     } catch (err) {
       console.error("Error calculating settlement:", err);
-      alert(err.response?.data?.message || "Failed to calculate settlement");
+      notify(err.response?.data?.message || "Failed to calculate settlement");
     } finally {
       setActionLoading(false);
     }
@@ -167,12 +168,12 @@ function AdminSettlement() {
       setActionLoading(true);
       const response = await api.post(`/settlement/collect-debt`);
       if (response.data.success) {
-        alert(response.data.message);
+        notify(response.data.message);
         fetchSettlements();
       }
     } catch (err) {
       console.error("Error collecting debt:", err);
-      alert(err.response?.data?.message || "Failed to run debt collection");
+      notify(err.response?.data?.message || "Failed to run debt collection");
     } finally {
       setActionLoading(false);
     }

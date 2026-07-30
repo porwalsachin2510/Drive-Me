@@ -9,6 +9,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
+import { notify } from "../../../utils/toast";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../../Redux/slices/authSlice";
@@ -122,7 +123,7 @@ function B2CPartnerDriverDashboard() {
     };
 
     fetchAvailabilityStatus();
-     // Also check and auto-update availability based on scheduled trips
+    // Also check and auto-update availability based on scheduled trips
     checkAndAutoUpdateAvailability();
     // Silent polling: refresh availability status every 5 seconds
     const pollInterval = setInterval(fetchAvailabilityStatusSilent, 5000);
@@ -184,7 +185,7 @@ function B2CPartnerDriverDashboard() {
         await fetchDetailedAvailabilityInfo();
         setShowAvailabilityPopup(true);
       } else {
-        alert(errorMessage);
+        notify(errorMessage);
       }
     } finally {
       setUpdatingAvailability(false);
@@ -209,7 +210,7 @@ function B2CPartnerDriverDashboard() {
       console.error("Error updating availability:", error);
       const errorMessage =
         error.response?.data?.message || "Failed to update availability status";
-      alert(errorMessage);
+      notify(errorMessage);
     } finally {
       setUpdatingAvailability(false);
     }

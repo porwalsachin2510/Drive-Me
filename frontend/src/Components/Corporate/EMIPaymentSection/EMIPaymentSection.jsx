@@ -8,6 +8,7 @@ import {
 import api from "../../../utils/api";
 import CashPaymentDetails from "../../CashPaymentDetails/CashPaymentDetails";
 import "./EMIPaymentSection.css";
+import { notify } from "../../../utils/toast";
 
 const EMIPaymentSection = ({ contract, onRefresh }) => {
   const dispatch = useDispatch();
@@ -57,7 +58,7 @@ const EMIPaymentSection = ({ contract, onRefresh }) => {
 
   const handlePayInstallment = async () => {
     if (!selectedPaymentMethod) {
-      alert("Please select a payment method");
+      notify("Please select a payment method");
       return;
     }
 
@@ -75,7 +76,7 @@ const EMIPaymentSection = ({ contract, onRefresh }) => {
       if (result.data?.paymentSession?.paymentUrl) {
         window.location.href = result.data.paymentSession.paymentUrl;
       } else {
-        alert(result.message || "Payment submitted successfully!");
+        notify(result.message || "Payment submitted successfully!");
         setShowPayModal(false);
         setSelectedInstallment(null);
         setSelectedPaymentMethod("");
@@ -83,7 +84,7 @@ const EMIPaymentSection = ({ contract, onRefresh }) => {
         if (onRefresh) onRefresh();
       }
     } catch (error) {
-      alert(error || "Failed to process payment");
+      notify(error || "Failed to process payment");
     } finally {
       setProcessingPayment(false);
     }

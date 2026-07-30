@@ -4,6 +4,7 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import "./corporateemployeemanagement.css";
 import api, { getOnBehalfContract } from "../../../utils/api";
+import { notify } from "../../../utils/toast";
 
 const emptyAddEmpForm = {
   fullName: "",
@@ -124,7 +125,7 @@ export default function CorporateEmployeeManagementPage({
   const handleAddEmployeeFromBrief = async (e) => {
     e.preventDefault();
     if (!addEmpForm.fullName || !addEmpForm.email) {
-      alert("Please provide at least the employee's name and email.");
+      notify("Please provide at least the employee's name and email.");
       return;
     }
     try {
@@ -147,7 +148,7 @@ export default function CorporateEmployeeManagementPage({
       const summary = res.data?.data?.summary;
       const linked = res.data?.data?.results?.success?.[0]?.briefAutoFulfilled;
       if (summary?.successful > 0) {
-        alert(
+        notify(
           linked
             ? "Employee added and linked to the brief. It's now awaiting the corporate's approval."
             : "Employee added successfully.",
@@ -157,13 +158,13 @@ export default function CorporateEmployeeManagementPage({
         fetchEmployees();
         if (embedded) fetchBriefRosterItems();
       } else if (summary?.duplicates > 0) {
-        alert("That employee already exists.");
+        notify("That employee already exists.");
       } else {
         const err = res.data?.data?.results?.errors?.[0]?.error;
-        alert(err || "Failed to add employee.");
+        notify(err || "Failed to add employee.");
       }
     } catch (error) {
-      alert(
+      notify(
         `Failed to add employee: ${error.response?.data?.message || error.message}`,
       );
     } finally {
@@ -193,7 +194,7 @@ export default function CorporateEmployeeManagementPage({
   const handleFileUpload = async (e) => {
     e.preventDefault();
     if (!uploadFile) {
-      alert("Please select a file");
+      notify("Please select a file");
       return;
     }
 
@@ -217,7 +218,7 @@ export default function CorporateEmployeeManagementPage({
         },
       );
 
-      alert(
+      notify(
         `Upload successful! Added ${response.data.data.summary.successful} employees`,
       );
       setShowUploadModal(false);
@@ -225,14 +226,16 @@ export default function CorporateEmployeeManagementPage({
       setUploadProgress(0);
       fetchEmployees();
     } catch (error) {
-      alert(`Upload failed: ${error.response?.data?.message || error.message}`);
+      notify(
+        `Upload failed: ${error.response?.data?.message || error.message}`,
+      );
     }
   };
 
   const handleAssignRoute = async (e) => {
     e.preventDefault();
     if (!selectedEmployee || !assignmentData.routeId) {
-      alert("Please select employee and route");
+      notify("Please select employee and route");
       return;
     }
 
@@ -247,7 +250,7 @@ export default function CorporateEmployeeManagementPage({
         },
       );
 
-      alert("Route assigned successfully!");
+      notify("Route assigned successfully!");
       setShowAssignmentModal(false);
       setSelectedEmployee(null);
       setAssignmentData({
@@ -257,7 +260,7 @@ export default function CorporateEmployeeManagementPage({
       });
       fetchEmployees();
     } catch (error) {
-      alert(
+      notify(
         `Assignment failed: ${error.response?.data?.message || error.message}`,
       );
     }
@@ -267,10 +270,10 @@ export default function CorporateEmployeeManagementPage({
     if (window.confirm("Are you sure you want to delete this employee?")) {
       try {
         await api.delete(`/corporate-employees/${employeeId}`);
-        alert("Employee deleted successfully!");
+        notify("Employee deleted successfully!");
         fetchEmployees();
       } catch (error) {
-        alert(
+        notify(
           `Delete failed: ${error.response?.data?.message || error.message}`,
         );
       }
@@ -280,10 +283,10 @@ export default function CorporateEmployeeManagementPage({
   const handleDeactivateEmployee = async (employeeId) => {
     try {
       await api.put(`/corporate-employees/${employeeId}/deactivate`, {});
-      alert("Employee deactivated successfully!");
+      notify("Employee deactivated successfully!");
       fetchEmployees();
     } catch (error) {
-      alert(
+      notify(
         `Deactivation failed: ${error.response?.data?.message || error.message}`,
       );
     }
@@ -291,7 +294,7 @@ export default function CorporateEmployeeManagementPage({
 
   const handleSendInvitations = async () => {
     if (selectedEmployeeIds.length === 0) {
-      alert("Please select at least one employee to send invitations.");
+      notify("Please select at least one employee to send invitations.");
       return;
     }
 
@@ -310,12 +313,12 @@ export default function CorporateEmployeeManagementPage({
       });
 
       const { summary } = response.data.data;
-      alert(
+      notify(
         `Invitations sent successfully!\nSent: ${summary.sent}\nFailed: ${summary.failed}`,
       );
       setSelectedEmployeeIds([]);
     } catch (error) {
-      alert(
+      notify(
         `Failed to send invitations: ${error.response?.data?.message || error.message}`,
       );
     } finally {

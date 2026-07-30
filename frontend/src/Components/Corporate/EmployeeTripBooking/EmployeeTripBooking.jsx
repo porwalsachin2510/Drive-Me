@@ -7,6 +7,7 @@ import { logout } from "../../../Redux/slices/authSlice";
 import { useSocket } from "../../../hooks/useSocket";
 import api from "../../../utils/api";
 import "./EmployeeTripBooking.css";
+import { notify } from "../../../utils/toast";
 
 function EmployeeTripBooking() {
   const user = useSelector((state) => state.auth.user);
@@ -351,10 +352,10 @@ function EmployeeTripBooking() {
       await api.post(`/trips/${selectedTrip._id}/book`, bookingData);
       setShowBookingModal(false);
       fetchMyBookings();
-      alert("Seat booked successfully!");
+      notify("Seat booked successfully!");
     } catch (error) {
       console.error("Error booking seat:", error);
-      alert(error.response?.data?.message || "Failed to book seat");
+      notify(error.response?.data?.message || "Failed to book seat");
     } finally {
       setLoading(false);
     }
@@ -369,10 +370,10 @@ function EmployeeTripBooking() {
       // Use the trip cancel endpoint which removes the employee from the passengers array
       await api.delete(`/trips/${tripId}/cancel`);
       fetchMyBookings();
-      alert("Booking cancelled successfully!");
+      notify("Booking cancelled successfully!");
     } catch (error) {
       console.error("Error canceling booking:", error);
-      alert(error.response?.data?.message || "Failed to cancel booking");
+      notify(error.response?.data?.message || "Failed to cancel booking");
     }
   };
 

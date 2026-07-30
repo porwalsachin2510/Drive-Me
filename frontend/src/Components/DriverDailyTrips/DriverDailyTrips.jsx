@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../utils/api";
+import { notify } from "../../utils/toast";
 import "./DriverDailyTrips.css";
 
 /**
@@ -90,7 +91,7 @@ const DriverDailyTrips = ({
         "[DriverDailyTrips] Error starting trip:",
         error?.response?.data || error.message,
       );
-      alert(error?.response?.data?.message || "Failed to start trip");
+      notify(error?.response?.data?.message || "Failed to start trip");
     } finally {
       setActionLoading(null);
     }
@@ -115,7 +116,7 @@ const DriverDailyTrips = ({
         "[DriverDailyTrips] Error completing trip:",
         error?.response?.data || error.message,
       );
-      alert(error?.response?.data?.message || "Failed to complete trip");
+      notify(error?.response?.data?.message || "Failed to complete trip");
     } finally {
       setActionLoading(null);
     }

@@ -14,6 +14,7 @@ import "./b2c_trip_stops.css";
 import api from "../../../../utils/api";
 import useCurrency from "../../../../hooks/useCurrency";
 import { updateVehicleAvailabilityInStore } from "../../../../Redux/slices/b2cPartnerSlice";
+import { notify } from "../../../../utils/toast";
 
 function B2C_AddRouteModal({ onClose }) {
   const dispatch = useDispatch();
@@ -842,7 +843,7 @@ function B2C_AddRouteModal({ onClose }) {
         (trip) => trip.departureTime,
       );
       if (validTripTimes.length === 0) {
-        alert("Please add at least one departure time");
+        notify("Please add at least one departure time");
         setLoading(false);
         return;
       }
@@ -852,7 +853,7 @@ function B2C_AddRouteModal({ onClose }) {
         (trip) => trip.tripType === "Round Trip" && !trip.arrivalTime,
       );
       if (invalidRoundTrips.length > 0) {
-        alert("Round trips must have return times");
+        notify("Round trips must have return times");
         setLoading(false);
         return;
       }
@@ -929,7 +930,7 @@ function B2C_AddRouteModal({ onClose }) {
         if (scheduleResponse.data.success) {
           // Check if it was an update (merged with existing) or new creation
           const isUpdate = scheduleResponse.data.isUpdate;
-          alert(
+          notify(
             isUpdate
               ? "New trip times added to existing schedule successfully!"
               : "New schedule added to existing route! Trips will be generated automatically.",
@@ -1005,7 +1006,7 @@ function B2C_AddRouteModal({ onClose }) {
         );
 
         if (scheduleResponse.data.success) {
-          alert(
+          notify(
             "Route and Schedule created successfully! Trips will be generated automatically.",
           );
 
@@ -1030,12 +1031,12 @@ function B2C_AddRouteModal({ onClose }) {
         const conflictMessage =
           error.response.data.message ||
           `Scheduling conflict detected! The selected ${conflict.conflictType.includes("DRIVER") ? "driver" : "vehicle"} is already assigned to route "${conflict.existingRoute}" at ${conflict.conflictingTime} on ${conflict.overlappingDays?.join(", ")}. Please choose a different time, ${conflict.conflictType.includes("DRIVER") ? "driver" : "vehicle"}, or days.`;
-        alert(conflictMessage);
+        notify(conflictMessage);
       } else if (error.response?.data?.message) {
         // Handle other backend validation errors
-        alert(error.response.data.message);
+        notify(error.response.data.message);
       } else {
-        alert("Failed to create route. Please try again.");
+        notify("Failed to create route. Please try again.");
       }
     } finally {
       setLoading(false);

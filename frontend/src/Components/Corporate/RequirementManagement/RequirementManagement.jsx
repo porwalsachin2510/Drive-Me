@@ -3,6 +3,7 @@ import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import api from "../../../utils/api";
 import "./RequirementManagement.css";
+import { notify } from "../../../utils/toast";
 
 function RequirementManagement() {
   const [requirements, setRequirements] = useState([]);
@@ -142,10 +143,10 @@ function RequirementManagement() {
       resetRequirementForm();
       fetchRequirements();
       fetchStatistics();
-      alert("Requirement created successfully!");
+      notify("Requirement created successfully!");
     } catch (error) {
       console.error("Error creating requirement:", error);
-      alert(error.response?.data?.message || "Failed to create requirement");
+      notify(error.response?.data?.message || "Failed to create requirement");
     } finally {
       setLoading(false);
     }
@@ -156,10 +157,10 @@ function RequirementManagement() {
       await api.post(`/requirements/${requirementId}/publish`);
       fetchRequirements();
       fetchStatistics();
-      alert("Requirement published successfully!");
+      notify("Requirement published successfully!");
     } catch (error) {
       console.error("Error publishing requirement:", error);
-      alert(error.response?.data?.message || "Failed to publish requirement");
+      notify(error.response?.data?.message || "Failed to publish requirement");
     }
   };
 
@@ -172,10 +173,10 @@ function RequirementManagement() {
       await api.post(`/requirements/${requirementId}/close`);
       fetchRequirements();
       fetchStatistics();
-      alert("Requirement closed successfully!");
+      notify("Requirement closed successfully!");
     } catch (error) {
       console.error("Error closing requirement:", error);
-      alert(error.response?.data?.message || "Failed to close requirement");
+      notify(error.response?.data?.message || "Failed to close requirement");
     }
   };
 
@@ -188,10 +189,10 @@ function RequirementManagement() {
       await api.delete(`/requirements/${requirementId}`);
       fetchRequirements();
       fetchStatistics();
-      alert("Requirement deleted successfully!");
+      notify("Requirement deleted successfully!");
     } catch (error) {
       console.error("Error deleting requirement:", error);
-      alert(error.response?.data?.message || "Failed to delete requirement");
+      notify(error.response?.data?.message || "Failed to delete requirement");
     }
   };
 
@@ -206,7 +207,7 @@ function RequirementManagement() {
       setQuotationsForRequirement(response.data.data.quotations || []);
     } catch (error) {
       console.error("Error fetching quotations:", error);
-      alert(error.response?.data?.message || "Failed to fetch quotations");
+      notify(error.response?.data?.message || "Failed to fetch quotations");
     } finally {
       setLoadingQuotations(false);
     }
@@ -226,7 +227,7 @@ function RequirementManagement() {
         quotationId,
         message: "Quotation selected for contract creation",
       });
-      alert(
+      notify(
         "Quotation selected successfully! You can now proceed to create a contract.",
       );
       setShowQuotationsModal(false);
@@ -234,7 +235,7 @@ function RequirementManagement() {
       fetchStatistics();
     } catch (error) {
       console.error("Error selecting quotation:", error);
-      alert(error.response?.data?.message || "Failed to select quotation");
+      notify(error.response?.data?.message || "Failed to select quotation");
     } finally {
       setLoadingQuotations(false);
     }
@@ -252,7 +253,7 @@ function RequirementManagement() {
       setResponsesForRequirement(response.data.data.responses || []);
     } catch (error) {
       console.error("Error fetching responses:", error);
-      alert(error.response?.data?.message || "Failed to fetch responses");
+      notify(error.response?.data?.message || "Failed to fetch responses");
     } finally {
       setLoadingResponses(false);
     }
@@ -1289,7 +1290,8 @@ function RequirementManagement() {
                           >
                             {quotation.quotedPrice?.totalAmount?.toLocaleString() ||
                               0}{" "}
-                            {quotation.quotedPrice?.currency || getActiveCurrency()}
+                            {quotation.quotedPrice?.currency ||
+                              getActiveCurrency()}
                           </div>
                         </div>
                         <div

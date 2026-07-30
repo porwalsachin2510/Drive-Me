@@ -78,4 +78,34 @@ export const showLoading = (message = "Please wait...") =>
 
 export const dismissToast = (id) => toast.dismiss(id);
 
+// Patterns that indicate a failure / validation problem. Checked first so a
+// message like "Failed to update driver" is treated as an error even though it
+// also contains the positive word "update".
+const NEGATIVE_PATTERN =
+    /(fail|error|invalid|not found|not support|unsupport|unable|cannot|can't|can not|must |is required|are required|please |already exist|no active|not available|denied|wrong|unauthor|expired|insufficient|missing|select |enter |provide |fill in|fill the|at least|valid )/i;
+
+// Patterns that indicate a successful action.
+const POSITIVE_PATTERN =
+    /(success|initiat|sent|added|create|updat|delete|removed|saved|complete|approv|submitt|assign|activat|deactivat|uploaded|downloaded|verif|accept|reject|schedul|register|booked|confirm|renew|copied|generat|enabled|disabled|resolved|marked)/i;
+
+/**
+ * Smart notification used across the app in place of the native `alert()`.
+ * Automatically picks a success (green), error (red) or info (blue) toast based
+ * on the message content, and cleanly parses axios / Error objects. This lets
+ * every legacy `alert(...)` call become a consistent, on-brand toast.
+ */
+export const notify = (message, fallback) => {
+    // Non-string values (Error, axios error, object) are always failures.
+    if (message && typeof message !== "string") {
+        return showError(message, fallback);
+    }
+
+    const text = (message || fallback || "").toString();
+    if (!text) return showInfo("Done.");
+
+    if (NEGATIVE_PATTERN.test(text)) return showError(text);
+    if (POSITIVE_PATTERN.test(text)) return showSuccess(text);
+    return showInfo(text);
+};
+
 export default toast;

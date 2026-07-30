@@ -11,6 +11,7 @@ import {
   getActiveCountry,
   getExampleLocations,
 } from "../../../../config/localeConfig";
+import { notify } from "../../../../utils/toast";
 
 function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
   const { formatAmount, getCurrencyDecimals, getCurrencySymbol } =
@@ -558,7 +559,7 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
         (trip) => trip.departureTime,
       );
       if (validTripTimes.length === 0) {
-        alert("Please add at least one departure time");
+        notify("Please add at least one departure time");
         setLoading(false);
         return;
       }
@@ -568,7 +569,7 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
         (trip) => trip.tripType === "Round Trip" && !trip.arrivalTime,
       );
       if (invalidRoundTrips.length > 0) {
-        alert("Round trips must have return times");
+        notify("Round trips must have return times");
         setLoading(false);
         return;
       }
@@ -648,13 +649,13 @@ function B2C_EditRouteModal({ route, onClose, onRouteUpdated }) {
           await api.post("/b2c-schedules/schedules", scheduleData);
         }
 
-        alert("Route and Schedule updated successfully!");
+        notify("Route and Schedule updated successfully!");
         onClose();
         if (onRouteUpdated) onRouteUpdated();
       }
     } catch (error) {
       console.error("Error updating route:", error);
-      alert(
+      notify(
         error.response?.data?.message ||
           "Failed to update route. Please try again.",
       );

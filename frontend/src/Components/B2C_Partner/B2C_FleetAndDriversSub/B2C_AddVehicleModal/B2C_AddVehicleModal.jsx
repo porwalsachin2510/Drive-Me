@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import "./b2c_addvehiclemodal.css";
 import api from "../../../../utils/api";
+import { notify } from "../../../../utils/toast";
 
 function B2C_AddVehicleModal({ onClose }) {
   const [formData, setFormData] = useState({
@@ -169,7 +170,7 @@ function B2C_AddVehicleModal({ onClose }) {
 
       if (response.data.success) {
         console.log("Vehicle created successfully:", response.data.vehicle);
-        alert("Vehicle added successfully!");
+        notify("Vehicle added successfully!");
         onClose();
         // Optionally trigger a refresh of parent component
         if (window.onVehicleAdded) {
@@ -182,7 +183,7 @@ function B2C_AddVehicleModal({ onClose }) {
       }
     } catch (error) {
       console.error("Error adding vehicle:", error);
-      alert(
+      notify(
         `Failed to add vehicle: ${error.response?.data?.message || error.message}`,
       );
     } finally {

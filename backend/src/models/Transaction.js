@@ -34,7 +34,10 @@ const transactionSchema = new mongoose.Schema(
                 "EARNINGS_REVERSAL",
                 "CANCELLATION_FEE",
                 "BOOKING_PAYMENT",
-                "PAYOUT_REQUESTED"],
+                "PAYOUT_REQUESTED",
+                // Company treasury disbursement to a Demand Generation staff member
+                // (commission / salary / expense reimbursement paid into their wallet).
+                "STAFF_PAYOUT"],
         },
         description: {
             type: String,

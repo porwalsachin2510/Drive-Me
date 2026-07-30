@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import "./AdminUserSuggestedRoutes.css";
 import api from "../../../../utils/api";
+import { notify } from "../../../../utils/toast";
 
 const AdminUserSuggestedRoutes = () => {
   const [routes, setRoutes] = useState([]);
@@ -72,7 +73,7 @@ const AdminUserSuggestedRoutes = () => {
     } catch (error) {
       console.error("Error opening route to marketplace:", error);
       setSubmitting(false);
-      alert(
+      notify(
         error.response?.data?.message || "Failed to open route to marketplace",
       );
     }

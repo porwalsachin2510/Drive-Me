@@ -61,6 +61,24 @@
   line-height: 1.5;
 }
 
+/* Helper note shown under the Location select for whole-country markets.
+   Uses positive top spacing (unlike .filter-hint's negative margin) so it sits
+   cleanly below the dropdown instead of overlapping its border. */
+.location-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 10px 0 0;
+  line-height: 1.4;
+}
+
+.location-hint svg {
+  flex-shrink: 0;
+  color: #10b981;
+}
+
 .validation-error {
   color: #ef4444;
   font-size: 0.85rem;

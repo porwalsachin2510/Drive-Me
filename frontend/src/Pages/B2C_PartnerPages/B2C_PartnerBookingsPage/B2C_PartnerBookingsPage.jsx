@@ -22,6 +22,7 @@ import {
   getCashAcceptanceBuffer,
 } from "../../../config/localeConfig";
 import "./b2c_partnerbookingspage.css";
+import { notify } from "../../../utils/toast";
 
 const B2C_PartnerBookingsPage = () => {
   const dispatch = useDispatch();
@@ -894,11 +895,11 @@ const B2C_PartnerBookingsPage = () => {
                 .then(() => {
                   dispatch(getPartnerBookings({ status: filterStatus }));
                   fetchWalletBalance();
-                  alert("Booking accepted successfully!");
+                  notify("Booking accepted successfully!");
                 })
                 .catch((error) => {
                   console.error("[v0] Retry accept booking failed:", error);
-                  alert("Failed to accept booking. Please try again.");
+                  notify("Failed to accept booking. Please try again.");
                 });
             }, 1000);
           }

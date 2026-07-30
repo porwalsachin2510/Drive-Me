@@ -2,15 +2,7 @@ import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import {
-  MapPin,
-  Star,
-  Phone,
-  Mail,
-  Calendar,
-  Users,
-  CheckCircle,
-} from "lucide-react";
+import { MapPin, Star, Calendar, Users, CheckCircle } from "lucide-react";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import RoleRestrictionModal from "../../../Components/RoleRestrictionModal/RoleRestrictionModal";
@@ -597,7 +589,7 @@ const FleetSearchResults = () => {
                 <div className="drivemego-searchresults-owner-info">
                   <div className="drivemego-searchresults-owner-name-row">
                     <h2 className="drivemego-searchresults-owner-name">
-                      🚐 {owner.fullName}
+                      🚐 {owner.companyName || owner.fullName}
                     </h2>
                     {parseFloat(owner.rating) > 0 && (
                       <div className="drivemego-searchresults-rating-badge">
@@ -627,14 +619,14 @@ const FleetSearchResults = () => {
                     </div>
                   </div>
 
+                  {/* Partner contact details are intentionally hidden during
+                      discovery. Corporates connect with the partner only after a
+                      quotation/contract is confirmed through DriveMeGo, so the
+                      platform stays in the loop. */}
                   <div className="drivemego-searchresults-contact-info">
                     <div className="drivemego-searchresults-contact-item">
-                      <Phone size={14} />
-                      <span>{owner.whatsappNumber}</span>
-                    </div>
-                    <div className="drivemego-searchresults-contact-item">
-                      <Mail size={14} />
-                      <span>{owner.email}</span>
+                      <CheckCircle size={14} />
+                      <span>Contact shared after booking</span>
                     </div>
                   </div>
                 </div>

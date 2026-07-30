@@ -5,6 +5,7 @@ import "./settings.css";
 import api from "../../../utils/api";
 import { useLocale } from "../../../hooks/useLocale";
 import { getCurrencyOptions } from "../../../config/localeConfig";
+import { notify } from "../../../utils/toast";
 
 export default function Settings() {
   const { currency: localeCurrency } = useLocale();
@@ -13,20 +14,20 @@ export default function Settings() {
     email: "",
     phone: "",
     language: "en",
-    currency: localeCurrency
+    currency: localeCurrency,
   });
-  
+
   const [preferences, setPreferences] = useState({
     pushNotifications: true,
     marketingEmails: false,
     tripReminders: true,
-    promotionalOffers: true
+    promotionalOffers: true,
   });
 
   const [passwords, setPasswords] = useState({
     current: "",
     new: "",
-    confirm: ""
+    confirm: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -39,14 +40,16 @@ export default function Settings() {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/commuter/profile');
+      const response = await api.get("/commuter/profile");
       setProfileData(response.data.profile);
-      setPreferences(response.data.preferences || {
-        pushNotifications: true,
-        marketingEmails: false,
-        tripReminders: true,
-        promotionalOffers: true
-      });
+      setPreferences(
+        response.data.preferences || {
+          pushNotifications: true,
+          marketingEmails: false,
+          tripReminders: true,
+          promotionalOffers: true,
+        },
+      );
     } catch (error) {
       console.error("Error fetching profile data:", error);
     } finally {
@@ -55,38 +58,38 @@ export default function Settings() {
   };
 
   const handleProfileChange = (field, value) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const handlePreferenceToggle = (key) => {
-    setPreferences(prev => ({
+    setPreferences((prev) => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: !prev[key],
     }));
   };
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    setPasswords(prev => ({
+    setPasswords((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSaveProfile = async () => {
     try {
       setSaving(true);
-      await api.put('/commuter/profile', {
+      await api.put("/commuter/profile", {
         profile: profileData,
-        preferences
+        preferences,
       });
-      alert("Profile updated successfully!");
+      notify("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert("Failed to update profile");
+      notify("Failed to update profile");
     } finally {
       setSaving(false);
     }
@@ -94,26 +97,26 @@ export default function Settings() {
 
   const handleChangePassword = async () => {
     if (passwords.new !== passwords.confirm) {
-      alert("New password and confirmation don't match");
+      notify("New password and confirmation don't match");
       return;
     }
 
     if (passwords.new.length < 6) {
-      alert("Password must be at least 6 characters long");
+      notify("Password must be at least 6 characters long");
       return;
     }
 
     try {
       setSaving(true);
-      await api.put('/commuter/change-password', {
+      await api.put("/commuter/change-password", {
         currentPassword: passwords.current,
-        newPassword: passwords.new
+        newPassword: passwords.new,
       });
-      alert("Password changed successfully!");
+      notify("Password changed successfully!");
       setPasswords({ current: "", new: "", confirm: "" });
     } catch (error) {
       console.error("Error changing password:", error);
-      alert("Failed to change password");
+      notify("Failed to change password");
     } finally {
       setSaving(false);
     }

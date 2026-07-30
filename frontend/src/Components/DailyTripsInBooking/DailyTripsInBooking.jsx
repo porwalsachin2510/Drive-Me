@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../utils/api";
+import { notify } from "../../utils/toast";
 import "./DailyTripsInBooking.css";
 
 const DailyTripsInBooking = ({
@@ -75,7 +76,7 @@ const DailyTripsInBooking = ({
         "[DailyTrips] Error starting trip:",
         error?.response?.data || error.message,
       );
-      alert(error?.response?.data?.message || "Failed to start trip");
+      notify(error?.response?.data?.message || "Failed to start trip");
     } finally {
       setActionLoading(null);
     }
@@ -96,7 +97,7 @@ const DailyTripsInBooking = ({
         "[DailyTrips] Error completing trip:",
         error?.response?.data || error.message,
       );
-      alert(error?.response?.data?.message || "Failed to complete trip");
+      notify(error?.response?.data?.message || "Failed to complete trip");
     } finally {
       setActionLoading(null);
     }

@@ -3,7 +3,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import api from "../../../utils/api";
+import ImportExportControls from "../../Common/ImportExportControls/ImportExportControls";
 import "./CorporateEmployeeManagement.css";
+import { notify } from "../../../utils/toast";
 
 function CorporateEmployeeManagement() {
   const [employees, setEmployees] = useState([]);
@@ -349,10 +351,10 @@ function CorporateEmployeeManagement() {
       setShowAddModal(false);
       resetEmployeeForm();
       fetchEmployees();
-      alert("Employee added successfully!");
+      notify("Employee added successfully!");
     } catch (error) {
       console.error("Error adding employee:", error);
-      alert(error.response?.data?.message || "Failed to add employee");
+      notify(error.response?.data?.message || "Failed to add employee");
     } finally {
       setLoading(false);
     }
@@ -369,7 +371,7 @@ function CorporateEmployeeManagement() {
         !Array.isArray(bulkUploadData.employees) ||
         bulkUploadData.employees.length === 0
       ) {
-        alert("No employees data to upload. Please select a valid JSON file.");
+        notify("No employees data to upload. Please select a valid JSON file.");
         return;
       }
 
@@ -388,12 +390,12 @@ function CorporateEmployeeManagement() {
         0;
       const failCount =
         response.data?.data?.failed?.length || response.data?.data?.errors || 0;
-      alert(
+      notify(
         `Bulk upload completed! ${successCount} successful, ${failCount} failed`,
       );
     } catch (error) {
       console.error("Error in bulk upload:", error);
-      alert(error.response?.data?.message || "Failed to complete bulk upload");
+      notify(error.response?.data?.message || "Failed to complete bulk upload");
     } finally {
       setLoading(false);
     }
@@ -403,10 +405,10 @@ function CorporateEmployeeManagement() {
     try {
       await api.put(`/corporate-employees/${employeeId}`, transportData);
       fetchEmployees();
-      alert("Transport details updated successfully!");
+      notify("Transport details updated successfully!");
     } catch (error) {
       console.error("Error updating transport:", error);
-      alert(error.response?.data?.message || "Failed to update transport");
+      notify(error.response?.data?.message || "Failed to update transport");
     }
   };
 
@@ -418,10 +420,10 @@ function CorporateEmployeeManagement() {
     try {
       await api.delete(`/corporate-employees/${employeeId}`);
       fetchEmployees();
-      alert("Employee deleted successfully!");
+      notify("Employee deleted successfully!");
     } catch (error) {
       console.error("Error deleting employee:", error);
-      alert(error.response?.data?.message || "Failed to delete employee");
+      notify(error.response?.data?.message || "Failed to delete employee");
     }
   };
 
@@ -568,13 +570,13 @@ function CorporateEmployeeManagement() {
             setBulkUploadData({ employees });
           } catch (error) {
             console.error("Error parsing Excel:", error);
-            alert("Invalid Excel file. Please check the format.");
+            notify("Invalid Excel file. Please check the format.");
           }
         };
         reader.readAsArrayBuffer(file);
       } catch (error) {
         console.error("Error loading xlsx library:", error);
-        alert("Error processing Excel file");
+        notify("Error processing Excel file");
       }
     } else if (fileExtension === "json") {
       // Handle JSON file (legacy support)
@@ -586,12 +588,12 @@ function CorporateEmployeeManagement() {
             employees: Array.isArray(jsonData) ? jsonData : [jsonData],
           });
         } catch (error) {
-          alert("Invalid JSON file");
+          notify("Invalid JSON file");
         }
       };
       reader.readAsText(file);
     } else {
-      alert("Please upload an Excel (.xlsx, .xls) file");
+      notify("Please upload an Excel (.xlsx, .xls) file");
     }
   };
 
@@ -642,7 +644,7 @@ function CorporateEmployeeManagement() {
       XLSX.writeFile(workbook, "employee_template.xlsx");
     } catch (error) {
       console.error("Error generating Excel template:", error);
-      alert(
+      notify(
         "Error generating template. Please make sure xlsx package is installed.",
       );
     }
@@ -765,10 +767,10 @@ function CorporateEmployeeManagement() {
       setEditingEmployee(null);
       resetEmployeeForm();
       fetchEmployees();
-      alert("Employee updated successfully!");
+      notify("Employee updated successfully!");
     } catch (error) {
       console.error("Error updating employee:", error);
-      alert(error.response?.data?.message || "Failed to update employee");
+      notify(error.response?.data?.message || "Failed to update employee");
     } finally {
       setLoading(false);
     }
@@ -776,7 +778,7 @@ function CorporateEmployeeManagement() {
 
   const handleSendInvitations = async () => {
     if (selectedEmployeeIds.length === 0) {
-      alert("Please select at least one employee to send invitations.");
+      notify("Please select at least one employee to send invitations.");
       return;
     }
     if (
@@ -793,11 +795,11 @@ function CorporateEmployeeManagement() {
       });
       const sent = response.data?.data?.results?.sent?.length || 0;
       const failed = response.data?.data?.results?.failed?.length || 0;
-      alert(`Invitations sent: ${sent} successful, ${failed} failed`);
+      notify(`Invitations sent: ${sent} successful, ${failed} failed`);
       setSelectedEmployeeIds([]);
     } catch (error) {
       console.error("Error sending invitations:", error);
-      alert(error.response?.data?.message || "Failed to send invitations");
+      notify(error.response?.data?.message || "Failed to send invitations");
     } finally {
       setSendingInvitations(false);
     }
@@ -920,6 +922,11 @@ function CorporateEmployeeManagement() {
                       : `Send Invitations (${selectedEmployeeIds.length})`}
                   </button>
                 )}
+                <ImportExportControls
+                  entity="corporate-employees"
+                  entityLabel="Employees"
+                  onImported={fetchEmployees}
+                />
               </div>
             </div>
 

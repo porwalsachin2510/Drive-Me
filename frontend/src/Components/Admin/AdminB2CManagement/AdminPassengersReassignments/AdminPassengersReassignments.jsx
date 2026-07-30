@@ -7,6 +7,7 @@ import "./AdminPassengersReassignments.css";
 import AdminReassignModal from "../AdminReassignModal/AdminReassignModal";
 import api from "../../../../utils/api";
 import { useAutoRefresh } from "../../../../hooks/useAutoRefresh";
+import { notify } from "../../../../utils/toast";
 
 function AdminPassengersReassignments() {
   const [reassignments, setReassignments] = useState([]);
@@ -89,7 +90,7 @@ function AdminPassengersReassignments() {
 
       if (response.data.success) {
         // Show success message
-        alert(response.data.message || `Booking ${action} successfully!`);
+        notify(response.data.message || `Booking ${action} successfully!`);
         // Refresh the list
         fetchReassignments();
         // Close modal if open
@@ -100,7 +101,7 @@ function AdminPassengersReassignments() {
       }
     } catch (error) {
       console.error("Error processing reassignment:", error);
-      alert(
+      notify(
         error.response?.data?.message ||
           "Error processing booking. Please try again.",
       );

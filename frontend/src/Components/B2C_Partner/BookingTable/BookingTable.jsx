@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale } from "../../../hooks/useLocale";
+import { notify } from "../../../utils/toast";
 import { getCashAcceptanceBuffer } from "../../../config/localeConfig";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -353,7 +354,7 @@ function BookingTable() {
           setPendingAcceptBooking(booking);
           setShowWalletWarning(true);
         } else {
-          alert(
+          notify(
             `Failed to accept booking: ${result.payload?.message || "Unknown error"}`,
           );
         }
@@ -389,13 +390,13 @@ function BookingTable() {
             setRejectionReason("");
           } else {
             // Error - show alert
-            alert(
+            notify(
               `Failed to reject booking: ${result.payload || "Unknown error"}`,
             );
           }
         })
         .catch((err) => {
-          alert(`Error rejecting booking: ${err.message}`);
+          notify(`Error rejecting booking: ${err.message}`);
         });
     }
   };

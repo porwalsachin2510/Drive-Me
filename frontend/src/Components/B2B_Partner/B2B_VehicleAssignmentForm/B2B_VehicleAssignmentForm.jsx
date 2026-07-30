@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAvailableDrivers } from "../../../Redux/slices/driverSlice";
 import "./B2B_VehicleAssignmentForm.css";
+import { notify } from "../../../utils/toast";
 
 const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
   const dispatch = useDispatch();
@@ -113,14 +114,14 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
           if (!counted) continue;
 
           if (requiresDriver && !driver) {
-            alert(
+            notify(
               `Please select a driver for every vehicle you are assigning (${vehicle.vehicleId?.vehicleName}).`,
             );
             setLoading(false);
             return;
           }
           if (requiresFuel && !fuel) {
-            alert(
+            notify(
               `Please provide a fuel card number for every vehicle you are assigning (${vehicle.vehicleId?.vehicleName}).`,
             );
             setLoading(false);
@@ -141,7 +142,7 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
       }
 
       if (toAssign.length === 0) {
-        alert("Please assign at least one vehicle before submitting.");
+        notify("Please assign at least one vehicle before submitting.");
         setLoading(false);
         return;
       }
@@ -150,7 +151,7 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
       if (requiresDriver) {
         const driverIds = toAssign.map((a) => a.driverId).filter(Boolean);
         if (new Set(driverIds).size !== driverIds.length) {
-          alert(
+          notify(
             "The same driver cannot be assigned to more than one vehicle. Please pick a different driver for each vehicle.",
           );
           setLoading(false);
@@ -160,7 +161,7 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
           alreadyAssignedDriverIds.has(String(id)),
         );
         if (reused) {
-          alert(
+          notify(
             "One of the selected drivers is already assigned to another vehicle on this contract. Please choose a different driver.",
           );
           setLoading(false);
@@ -171,7 +172,7 @@ const B2B_VehicleAssignmentForm = ({ contract, onComplete, onCancel }) => {
       onComplete(toAssign);
     } catch (error) {
       console.error("Error submitting assignment:", error);
-      alert("Error assigning vehicles");
+      notify("Error assigning vehicles");
     } finally {
       setLoading(false);
     }

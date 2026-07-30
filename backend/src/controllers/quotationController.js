@@ -992,7 +992,7 @@ export const respondToQuotation = async (req, res) => {
     try {
         const { quotationId } = req.params
         const fleetOwnerId = req.userId
-        const { status, message, terms, quotedPrice } = req.body
+        const { status, message, terms, quotedPrice, fulfillment: fulfillmentInput } = req.body
 
         console.log("[Backend] Received quotation response:", {
             quotationId,
@@ -1118,6 +1118,49 @@ export const respondToQuotation = async (req, res) => {
             const baseTotal = vehiclesTotal > 0 ? vehiclesTotal : Math.max(0, incomingTotal - serviceCharge)
             const finalTotal = baseTotal + serviceCharge
 
+            // Map the corporate's originally-requested quantity per vehicle so we
+            // can validate the partner's offered quantity and detect partial offers.
+            const requestedByVehicle = new Map()
+            for (const v of quotation.vehicles || []) {
+                const vid = String(v.vehicleId?._id || v.vehicleId)
+                requestedByVehicle.set(vid, Number(v.quantity) || 0)
+            }
+
+            let totalRequestedVehicles = 0
+            for (const qty of requestedByVehicle.values()) totalRequestedVehicles += qty
+
+            let totalOfferedVehicles = 0
+            const normalizedBreakdown = quotedPrice.perVehicleBreakdown.map((breakdown) => {
+                const vid = String(breakdown.vehicleId)
+                const requestedQuantity =
+                    requestedByVehicle.has(vid)
+                        ? requestedByVehicle.get(vid)
+                        : Number(breakdown.requestedQuantity) || Number(breakdown.quantity) || 0
+
+                // Offered quantity must be at least 1 and can never exceed what the
+                // corporate requested (a partner can offer fewer, never more).
+                let offeredQuantity = Number(breakdown.quantity) || 0
+                if (offeredQuantity < 1) offeredQuantity = 1
+                if (requestedQuantity > 0 && offeredQuantity > requestedQuantity) {
+                    offeredQuantity = requestedQuantity
+                }
+                totalOfferedVehicles += offeredQuantity
+
+                return {
+                    vehicleId: breakdown.vehicleId,
+                    vehicleName: breakdown.vehicleName,
+                    quantity: offeredQuantity,
+                    requestedQuantity,
+                    baseRental: Number.parseFloat(breakdown.baseRental) || 0,
+                    driverCharges: Number.parseFloat(breakdown.driverCharges) || 0,
+                    fuelCharges: Number.parseFloat(breakdown.fuelCharges) || 0,
+                    totalAmount: Number.parseFloat(breakdown.totalAmount) || 0,
+                }
+            })
+
+            const isPartial =
+                totalRequestedVehicles > 0 && totalOfferedVehicles < totalRequestedVehicles
+
             quotation.quotedPrice = {
                 totalAmount: finalTotal,
                 currency: quotationCurrency,
@@ -1127,18 +1170,28 @@ export const respondToQuotation = async (req, res) => {
                     driverCharges: Number.parseFloat(quotedPrice.breakdown?.driverCharges) || 0,
                     fuelCharges: Number.parseFloat(quotedPrice.breakdown?.fuelCharges) || 0,
                 },
-                perVehicleBreakdown: quotedPrice.perVehicleBreakdown.map((breakdown) => ({
-                    vehicleId: breakdown.vehicleId,
-                    vehicleName: breakdown.vehicleName,
-                    quantity: Number(breakdown.quantity) || 0,
-                    baseRental: Number.parseFloat(breakdown.baseRental) || 0,
-                    driverCharges: Number.parseFloat(breakdown.driverCharges) || 0,
-                    fuelCharges: Number.parseFloat(breakdown.fuelCharges) || 0,
-                    totalAmount: Number.parseFloat(breakdown.totalAmount) || 0,
-                })),
+                perVehicleBreakdown: normalizedBreakdown,
+            }
+
+            // Persist availability-aware fulfilment so the corporate sees exactly
+            // how many vehicles are being offered now vs what they asked for, plus
+            // any future-availability promise from the partner.
+            quotation.fulfillment = {
+                type: isPartial ? "PARTIAL" : "FULL",
+                totalRequestedVehicles,
+                totalOfferedVehicles,
+                hasFutureAvailability: Boolean(fulfillmentInput?.hasFutureAvailability),
+                futureAvailabilityNote: fulfillmentInput?.hasFutureAvailability
+                    ? String(fulfillmentInput?.futureAvailabilityNote || "").trim()
+                    : "",
+                futureAvailabilityDate:
+                    fulfillmentInput?.hasFutureAvailability && fulfillmentInput?.futureAvailabilityDate
+                        ? fulfillmentInput.futureAvailabilityDate
+                        : null,
             }
 
             console.log("[Backend] Quotation price set:", JSON.stringify(quotation.quotedPrice, null, 2))
+            console.log("[Backend] Quotation fulfillment:", JSON.stringify(quotation.fulfillment, null, 2))
 
             quotation.status = "QUOTED"
             quotation.responseMessage = message
@@ -1176,12 +1229,17 @@ export const respondToQuotation = async (req, res) => {
         const fleetName = await getUserName(fleetOwnerId);
         const corporateName = quotation.corporateOwnerId?.companyName || quotation.corporateOwnerId?.fullName || 'Corporate';
 
+        const isPartialOffer = quotation.fulfillment?.type === "PARTIAL"
+        const partialNote = isPartialOffer
+            ? ` Note: the partner can currently supply ${quotation.fulfillment.totalOfferedVehicles} of your ${quotation.fulfillment.totalRequestedVehicles} requested vehicle(s).`
+            : ""
+
         if (status === "approved") {
             await createNotification(
                 quotation.corporateOwnerId._id,
                 "QUOTATION_RESPONSE",
-                "Quotation Received",
-                `${fleetName} has sent you a quotation for ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'}`,
+                isPartialOffer ? "Partial Quotation Received" : "Quotation Received",
+                `${fleetName} has sent you a ${isPartialOffer ? "partial " : ""}quotation for ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'}.${partialNote}`,
                 quotation._id,
                 "QUOTATION"
             );
@@ -1190,8 +1248,8 @@ export const respondToQuotation = async (req, res) => {
             const realTimeNotif = await createNotificationService({
                 userId: quotation.corporateOwnerId._id,
                 type: "QUOTATION_RECEIVED",
-                title: "Quotation Received",
-                message: `${fleetName} has sent you a quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'}. Please review and accept or reject within 7 days.`,
+                title: isPartialOffer ? "Partial Quotation Received" : "Quotation Received",
+                message: `${fleetName} has sent you a ${isPartialOffer ? "partial " : ""}quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'}.${partialNote} Please review and accept or reject within 7 days.`,
                 metadata: {
                     quotationId: quotation._id,
                     quotationNumber: quotation.quotationNumber,

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import "./account.css";
 import api from "../../../../utils/api";
+import { notify } from "../../../../utils/toast";
 
 function Account() {
   const [profileData, setProfileData] = useState({
@@ -82,11 +83,11 @@ function Account() {
           profileImage: response.data.profileImage,
         }));
         setImagePreview(null);
-        alert("Profile image updated successfully!");
+        notify("Profile image updated successfully!");
       }
     } catch (error) {
       console.error("Error uploading profile image:", error);
-      alert("Failed to upload profile image");
+      notify("Failed to upload profile image");
       setImagePreview(null);
     } finally {
       setUploadingImage(false);
@@ -107,10 +108,10 @@ function Account() {
         profile: profileData,
         preferences,
       });
-      alert("Profile updated successfully!");
+      notify("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert("Failed to update profile");
+      notify("Failed to update profile");
     } finally {
       setSaving(false);
     }

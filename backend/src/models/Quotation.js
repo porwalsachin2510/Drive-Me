@@ -106,13 +106,51 @@ const quotationSchema = new mongoose.Schema(
                         ref: "Vehicle",
                     },
                     vehicleName: String,
+                    // `quantity` = the number the partner is actually OFFERING to
+                    // supply now (may be less than what the corporate requested).
                     quantity: Number,
+                    // What the corporate originally asked for, kept for reference so
+                    // the corporate can clearly see "offered X of requested Y".
+                    requestedQuantity: Number,
                     baseRental: Number,
                     driverCharges: Number,
                     fuelCharges: Number,
                     totalAmount: Number,
                 },
             ],
+        },
+
+        // Availability-aware fulfilment. A B2B partner may not have enough
+        // vehicles to cover the whole request, so they can quote a PARTIAL
+        // offer (fewer vehicles now) and optionally promise more later. The
+        // corporate then decides whether to accept the partial offer or reject.
+        fulfillment: {
+            type: {
+                type: String,
+                enum: ["FULL", "PARTIAL"],
+                default: "FULL",
+            },
+            totalRequestedVehicles: {
+                type: Number,
+                default: 0,
+            },
+            totalOfferedVehicles: {
+                type: Number,
+                default: 0,
+            },
+            // Partner indicates more vehicles are expected in the future.
+            hasFutureAvailability: {
+                type: Boolean,
+                default: false,
+            },
+            futureAvailabilityNote: {
+                type: String,
+                default: "",
+            },
+            futureAvailabilityDate: {
+                type: Date,
+                default: null,
+            },
         },
 
         responseMessage: String, // Fleet owner's response message

@@ -9,6 +9,8 @@ import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
 import "./CorporateAssignedVehiclesPage.css";
 import AddDriverModal from "../../../Components/Corporate/AddDriverModal/AddDriverModal";
+import ImportExportControls from "../../../Components/common/ImportExportControls/ImportExportControls";
+import { notify } from "../../../utils/toast";
 
 const CorporateAssignedVehiclesPage = ({
   embedded = false,
@@ -114,7 +116,7 @@ const CorporateAssignedVehiclesPage = ({
       }
     } catch (err) {
       console.error("Error fetching drivers", err);
-      alert("Failed to load available drivers");
+      notify("Failed to load available drivers");
     } finally {
       setDriversLoading(false);
     }
@@ -185,12 +187,12 @@ const CorporateAssignedVehiclesPage = ({
     e.preventDefault();
 
     if (type === "driver" && !assignmentForm.driverId) {
-      alert("Please enter driver ID");
+      notify("Please enter driver ID");
       return;
     }
 
     if (type === "fuel" && !assignmentForm.fuelCardNumber) {
-      alert("Please enter fuel card number");
+      notify("Please enter fuel card number");
       return;
     }
 
@@ -206,14 +208,14 @@ const CorporateAssignedVehiclesPage = ({
       );
 
       if (response.data.success) {
-        alert(
+        notify(
           `${type === "driver" ? "Driver" : "Fuel card"} assigned successfully`,
         );
         closeModal();
         await fetchAssignedVehicles();
       }
     } catch (err) {
-      alert(err.response?.data?.message || `Failed to assign ${type}`);
+      notify(err.response?.data?.message || `Failed to assign ${type}`);
       console.error("Error updating assignment:", err);
     }
   };
@@ -222,7 +224,7 @@ const CorporateAssignedVehiclesPage = ({
     e.preventDefault();
 
     if (!routeForm.fromLocation || !routeForm.toLocation) {
-      alert("Please fill in required route details");
+      notify("Please fill in required route details");
       return;
     }
 
@@ -231,7 +233,7 @@ const CorporateAssignedVehiclesPage = ({
       const trip = routeForm.tripTimes[i];
       if (trip.tripType === "One Way") {
         if (!trip.departureTime) {
-          alert(`Trip ${i + 1}: Please enter departure time for One Way trip`);
+          notify(`Trip ${i + 1}: Please enter departure time for One Way trip`);
           return;
         }
       } else if (trip.tripType === "Round Trip") {
@@ -241,7 +243,7 @@ const CorporateAssignedVehiclesPage = ({
           !trip.returnStartTime ||
           !trip.returnEndTime
         ) {
-          alert(
+          notify(
             `Trip ${i + 1}: Please enter all time fields for Round Trip (Pickup Start/End and Return Start/End)`,
           );
           return;
@@ -256,7 +258,7 @@ const CorporateAssignedVehiclesPage = ({
       );
 
       if (response.data.success) {
-        alert(
+        notify(
           response.data.briefAutoFulfilled
             ? "Route assigned and linked to the brief. It's now awaiting the corporate's approval."
             : "Route assigned successfully",
@@ -266,14 +268,14 @@ const CorporateAssignedVehiclesPage = ({
         if (embedded) await fetchBriefRouteItems();
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to assign route");
+      notify(err.response?.data?.message || "Failed to assign route");
       console.error("Error assigning route:", err);
     }
   };
 
   const handleAddStopPoint = () => {
     if (!newStopPoint.location || !newStopPoint.time) {
-      alert("Please fill in location and time for the stop point");
+      notify("Please fill in location and time for the stop point");
       return;
     }
 
@@ -322,7 +324,7 @@ const CorporateAssignedVehiclesPage = ({
     e.preventDefault();
 
     if (!assignmentForm.driverId) {
-      alert("Please select a driver");
+      notify("Please select a driver");
       return;
     }
 
@@ -333,12 +335,12 @@ const CorporateAssignedVehiclesPage = ({
       );
 
       if (response.data.success) {
-        alert("Driver updated successfully across all records");
+        notify("Driver updated successfully across all records");
         closeModal();
         await fetchAssignedVehicles();
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to update driver");
+      notify(err.response?.data?.message || "Failed to update driver");
       console.error("Error updating driver:", err);
     }
   };
@@ -422,11 +424,11 @@ const CorporateAssignedVehiclesPage = ({
       );
 
       if (response.data.success) {
-        alert("Route deleted successfully");
+        notify("Route deleted successfully");
         await fetchAssignedVehicles();
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete route");
+      notify(err.response?.data?.message || "Failed to delete route");
       console.error("Error deleting route:", err);
     }
   };
@@ -1006,6 +1008,19 @@ const CorporateAssignedVehiclesPage = ({
         {/* Drivers Tab */}
         {activeTab === "drivers" && (
           <div className="corporate-assigned-vehicles-content">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginBottom: "1rem",
+              }}
+            >
+              <ImportExportControls
+                entity="corporate-drivers"
+                entityLabel="Drivers"
+                onImported={fetchCorporateDrivers}
+              />
+            </div>
             {corporateDrivers.length === 0 ? (
               <div className="empty-state">
                 <p>No drivers added yet. Click "+ Add Driver" to add one.</p>

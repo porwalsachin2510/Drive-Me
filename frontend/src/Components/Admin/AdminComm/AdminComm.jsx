@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import "./AdminComm.css";
 import api from "../../../utils/api";
+import { notify } from "../../../utils/toast";
 
 function AdminComm() {
   const [activeTab, setActiveTab] = useState("whatsapp");
@@ -159,7 +160,7 @@ function AdminComm() {
     const recipients = getRecipients();
 
     if (recipients.length === 0) {
-      alert("Please add at least one recipient");
+      notify("Please add at least one recipient");
       return;
     }
 

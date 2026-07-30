@@ -33,6 +33,7 @@ import ManagedSLADashboard from "../../../Components/Corporate/ManagedSLADashboa
 import ManagedBilling from "../../../Components/Corporate/ManagedBilling/ManagedBilling";
 import { syncNegotiationCommission } from "../../../services/corporateOperationsAPI";
 import "./CorporateContractDetails.css";
+import { notify } from "../../../utils/toast";
 
 // Normalize payment method strings between DB format and code format
 // DB stores: "Cash", "Credit Card", "Bank Transfer", "Mobile Wallet"
@@ -234,16 +235,16 @@ const CorporateContractDetails = () => {
           acceptanceNotes: "Accepted by corporate owner",
         }),
       ).unwrap();
-      alert("Contract accepted successfully!");
+      notify("Contract accepted successfully!");
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
-      alert(error || "Failed to accept contract");
+      notify(error || "Failed to accept contract");
     }
   };
 
   const handleRejectContract = async () => {
     if (!contractRejectionReason.trim()) {
-      alert("Please provide a reason for rejection");
+      notify("Please provide a reason for rejection");
       return;
     }
     try {
@@ -255,16 +256,16 @@ const CorporateContractDetails = () => {
       ).unwrap();
       setShowRejectContractModal(false);
       setContractRejectionReason("");
-      alert("Contract rejected successfully");
+      notify("Contract rejected successfully");
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
-      alert(error || "Failed to reject contract");
+      notify(error || "Failed to reject contract");
     }
   };
 
   const handleSignContract = async () => {
     if (!signature.trim()) {
-      alert("Please enter your signature");
+      notify("Please enter your signature");
       return;
     }
 
@@ -278,10 +279,10 @@ const CorporateContractDetails = () => {
       ).unwrap();
       setShowSignModal(false);
       setSignature("");
-      alert("Contract signed successfully!");
+      notify("Contract signed successfully!");
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
-      alert(error || "Failed to sign contract");
+      notify(error || "Failed to sign contract");
     }
   };
 
@@ -295,14 +296,14 @@ const CorporateContractDetails = () => {
     }
 
     if (file.type !== "application/pdf") {
-      alert("Only PDF files are allowed for signed contract documents.");
+      notify("Only PDF files are allowed for signed contract documents.");
       event.target.value = null;
       setSignedDocumentFile(null);
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert("File size must be less than 10MB.");
+      notify("File size must be less than 10MB.");
       event.target.value = null;
       setSignedDocumentFile(null);
       return;
@@ -314,7 +315,7 @@ const CorporateContractDetails = () => {
   // Handle upload signed document
   const handleUploadSignedDocument = async () => {
     if (!signedDocumentFile) {
-      alert("Please select a signed document file first");
+      notify("Please select a signed document file first");
       return;
     }
 
@@ -328,7 +329,7 @@ const CorporateContractDetails = () => {
         uploadSignedContractDocument({ contractId: contract._id, formData }),
       ).unwrap();
 
-      alert(
+      notify(
         "Signed contract document uploaded successfully! Waiting for B2B Partner verification.",
       );
       setShowUploadSignedDocModal(false);
@@ -336,7 +337,7 @@ const CorporateContractDetails = () => {
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Upload signed document error:", error);
-      alert(error || "Failed to upload signed document");
+      notify(error || "Failed to upload signed document");
     } finally {
       setUploadingSignedDoc(false);
     }
@@ -362,7 +363,7 @@ const CorporateContractDetails = () => {
       }
     } catch (error) {
       console.error("Download error:", error);
-      alert(error || "Failed to download document");
+      notify(error || "Failed to download document");
     }
   };
 
@@ -400,7 +401,7 @@ const CorporateContractDetails = () => {
       } else if (paymentMethod === "BANK_TRANSFER") {
         // Bank transfer - show reference info
         const ref = result.data?.payment?.reference || "N/A";
-        alert(
+        notify(
           `Bank Transfer Payment Created\n\nReference: ${ref}\n\nPlease complete the bank transfer and it will be verified by admin.`,
         );
         dispatch(getContractById({ contractId: id }));
@@ -408,20 +409,20 @@ const CorporateContractDetails = () => {
       } else if (paymentMethod === "CASH") {
         // Cash payment - show reference info
         const ref = result.data?.payment?.reference || "N/A";
-        alert(
+        notify(
           `Cash Payment Created\n\nReference: ${ref}\n\n${result.message || "Payment record created. Awaiting admin verification."}`,
         );
         dispatch(getContractById({ contractId: id }));
         dispatch(getPaymentByContract({ contractId: id }));
       } else {
         // Fallback for any other method
-        alert(result.message || "Payment initiated successfully");
+        notify(result.message || "Payment initiated successfully");
         dispatch(getContractById({ contractId: id }));
         dispatch(getPaymentByContract({ contractId: id }));
       }
     } catch (error) {
       console.error("Payment error:", error);
-      alert(error || "Failed to initiate payment");
+      notify(error || "Failed to initiate payment");
     } finally {
       setProcessingPayment(false);
     }

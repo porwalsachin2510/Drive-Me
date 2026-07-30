@@ -9,6 +9,7 @@ import { storeNavigationState } from "../../utils/loginRedirect";
 import { useLocale } from "../../hooks/useLocale";
 import api from "../../utils/api";
 import "./availablesection.css";
+import { notify } from "../../utils/toast";
 
 const AvailableSection = ({
   routes,
@@ -332,7 +333,7 @@ const AvailableSection = ({
   };
 
   const handleBookingSuccess = () => {
-    alert("Booking successful!");
+    notify("Booking successful!");
     handleCloseBookingModal();
   };
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import "./SuspendUserModal.css";
+import { notify } from "../../../../utils/toast";
 
 function SuspendUserModal({ user, onClose, onConfirm }) {
   const [suspensionType, setSuspensionType] = useState("default"); // default or custom
@@ -43,13 +44,13 @@ function SuspendUserModal({ user, onClose, onConfirm }) {
     e.preventDefault();
 
     if (!reason.trim()) {
-      alert("Please provide a reason for suspension");
+      notify("Please provide a reason for suspension");
       return;
     }
 
     const durationDays = getDurationDays();
     if (durationDays <= 0) {
-      alert("Please select a valid suspension duration");
+      notify("Please select a valid suspension duration");
       return;
     }
 

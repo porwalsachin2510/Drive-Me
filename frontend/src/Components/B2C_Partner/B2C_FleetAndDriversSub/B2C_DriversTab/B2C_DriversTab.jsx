@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import api from "../../../../utils/api";
 import B2C_DriverCard from "../B2C_DriverCard/B2C_DriverCard";
 import B2C_EditDriverModal from "../B2C_EditDriverModal/B2C_EditDriverModal";
+import ImportExportControls from "../../../common/ImportExportControls/ImportExportControls";
 import "./b2c_driverstab.css";
+import { notify } from "../../../../utils/toast";
 
 function B2C_DriversTab({ onDriversCountChange }) {
   const [drivers, setDrivers] = useState([]);
@@ -72,12 +74,12 @@ function B2C_DriversTab({ onDriversCountChange }) {
         // Refresh drivers list to show/hide self in the list
         fetchDrivers();
       } else {
-        alert(response.data.message || "Failed to update self-driver status");
+        notify(response.data.message || "Failed to update self-driver status");
         setSelfDriverStatus((prev) => ({ ...prev, toggling: false }));
       }
     } catch (error) {
       console.error("Error toggling self-driver status:", error);
-      alert(
+      notify(
         error.response?.data?.message || "Error updating self-driver status",
       );
       setSelfDriverStatus((prev) => ({ ...prev, toggling: false }));
@@ -124,12 +126,12 @@ function B2C_DriversTab({ onDriversCountChange }) {
         await fetchDrivers();
         return true;
       } else {
-        alert(response.data.message || "Failed to delete driver");
+        notify(response.data.message || "Failed to delete driver");
         return false;
       }
     } catch (error) {
       console.error("Error deleting driver:", error);
-      alert(error.response?.data?.message || "Error deleting driver");
+      notify(error.response?.data?.message || "Error deleting driver");
       return false;
     }
   };
@@ -198,7 +200,14 @@ function B2C_DriversTab({ onDriversCountChange }) {
 
       {/* External Drivers List */}
       <div className="b2c-external-drivers-section">
-        <h4 className="b2c-section-subtitle">Your Drivers</h4>
+        <div className="b2c-section-header-row">
+          <h4 className="b2c-section-subtitle">Your Drivers</h4>
+          <ImportExportControls
+            entity="b2c-drivers"
+            entityLabel="Drivers"
+            onImported={fetchDrivers}
+          />
+        </div>
         {externalDrivers.length === 0 ? (
           <div className="b2c-empty-state">
             <div className="b2c-empty-icon">Users</div>

@@ -4,6 +4,7 @@ import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import "./wallet.css";
 import api from "../../../utils/api";
+import { notify } from "../../../utils/toast";
 
 export default function Wallet() {
   const [walletData, setWalletData] = useState(null);
@@ -56,7 +57,7 @@ export default function Wallet() {
 
   const handleAddFunds = async () => {
     if (!addAmount || parseFloat(addAmount) <= 0) {
-      alert("Please enter a valid amount");
+      notify("Please enter a valid amount");
       return;
     }
 
@@ -76,11 +77,11 @@ export default function Wallet() {
       if (data.success && paymentUrl) {
         window.location.href = paymentUrl;
       } else {
-        alert("Failed to create payment session. Please try again.");
+        notify("Failed to create payment session. Please try again.");
       }
     } catch (error) {
       console.error("Error adding funds:", error);
-      alert("Failed to add funds. Please try again.");
+      notify("Failed to add funds. Please try again.");
     } finally {
       setSubmitting(false);
     }

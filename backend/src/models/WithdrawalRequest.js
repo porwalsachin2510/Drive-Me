@@ -7,6 +7,16 @@ const withdrawalRequestSchema = new mongoose.Schema(
             ref: "User",
             required: true,
         },
+        // Which collection `userId` refers to. Defaults to "User" so all existing
+        // withdrawal requests are unchanged; Demand Generation staff withdrawals
+        // set this to "DemandEmployee". The admin still processes them through the
+        // same queue (they are matched to their wallet via `walletId`).
+        ownerModel: {
+            type: String,
+            enum: ["User", "DemandEmployee"],
+            default: "User",
+            index: true,
+        },
         walletId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Wallet",

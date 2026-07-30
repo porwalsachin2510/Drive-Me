@@ -14,6 +14,7 @@ import {
   DROPDOWN_CATEGORIES,
 } from "../../../../hooks/useDropdownOptions";
 import "./b2b_addvehiclemodal.css";
+import { notify } from "../../../../utils/toast";
 
 const B2B_AddVehicleModal = ({ onClose }) => {
   const dispatch = useDispatch();
@@ -198,7 +199,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length + images.length > 10) {
-      alert("Maximum 10 images allowed");
+      notify("Maximum 10 images allowed");
       return;
     }
 
@@ -367,16 +368,16 @@ const B2B_AddVehicleModal = ({ onClose }) => {
 
       if (addVehicle.fulfilled.match(result)) {
         // Show success alert
-        alert("Vehicle added successfully! Your vehicle is pending approval.");
+        notify("Vehicle added successfully! Your vehicle is pending approval.");
         // Close modal after success
         onClose();
       } else {
         // Show error if submission failed
-        alert(result.payload || "Failed to add vehicle. Please try again.");
+        notify(result.payload || "Failed to add vehicle. Please try again.");
       }
       // eslint-disable-next-line no-unused-vars
     } catch (err) {
-      alert("An error occurred while adding the vehicle. Please try again.");
+      notify("An error occurred while adding the vehicle. Please try again.");
     } finally {
       // Reset submitting state
       setIsSubmitting(false);

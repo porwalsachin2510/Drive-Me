@@ -4,6 +4,17 @@ import { useState } from "react";
 import { getActiveCurrency } from "../../../config/localeConfig";
 import ManagedServiceBrief from "../../Corporate/ManagedServiceBrief/ManagedServiceBrief";
 import "./QuotationResponseModal.css";
+import { notify } from "../../../utils/toast";
+
+// Common reasons a partner might reject a request. Presented as quick-pick
+// chips so the partner can reject in one tap (they can still edit the text).
+const QUICK_REJECTION_REASONS = [
+  "No vehicles available right now",
+  "Requested vehicles are already booked",
+  "Rental dates don't work for us",
+  "Route / location not serviceable",
+  "Pricing is not viable for us",
+];
 
 const QuotationResponseModal = ({
   quotation,
@@ -19,6 +30,23 @@ const QuotationResponseModal = ({
   const [rejectionReason, setRejectionReason] = useState("");
   const [serviceCharge, setServiceCharge] = useState("");
 
+  // Availability-aware quoting: the partner can offer fewer vehicles than the
+  // corporate requested and optionally promise more in the future.
+  const [hasFutureAvailability, setHasFutureAvailability] = useState(false);
+  const [futureAvailabilityNote, setFutureAvailabilityNote] = useState("");
+  const [futureAvailabilityDate, setFutureAvailabilityDate] = useState("");
+
+  // Totals used to detect whether this is a partial offer.
+  const totalRequested = responseData.reduce(
+    (sum, v) => sum + (Number(v.requestedQuantity ?? v.quantity) || 0),
+    0,
+  );
+  const totalOffered = responseData.reduce(
+    (sum, v) => sum + (Number(v.quantity) || 0),
+    0,
+  );
+  const isPartialOffer = totalRequested > 0 && totalOffered < totalRequested;
+
   // Managed-service quotations let the partner add a management/service charge
   // (any amount, including 0) for running operations on the corporate's behalf.
   const isManaged = quotation.serviceMode === "MANAGED";
@@ -32,6 +60,21 @@ const QuotationResponseModal = ({
     const updatedData = [...responseData];
     const numValue = Number.parseFloat(value) || 0;
     updatedData[index][field] = numValue;
+    setResponseData(updatedData);
+  };
+
+  // The partner sets how many of each vehicle they can actually supply now.
+  // Offered quantity must be between 1 and the requested quantity.
+  const handleOfferedQuantityChange = (index, value) => {
+    const updatedData = [...responseData];
+    const requested =
+      Number(
+        updatedData[index].requestedQuantity ?? updatedData[index].quantity,
+      ) || 1;
+    let offered = Math.floor(Number(value) || 0);
+    if (offered < 1) offered = 1;
+    if (offered > requested) offered = requested;
+    updatedData[index].quantity = offered;
     setResponseData(updatedData);
   };
 
@@ -76,7 +119,7 @@ const QuotationResponseModal = ({
   const handleSubmit = () => {
     if (responseType === "reject") {
       if (!rejectionReason.trim()) {
-        alert("Please provide a reason for rejection");
+        notify("Please provide a reason for rejection");
         return;
       }
       onSubmit(quotation._id, {
@@ -85,7 +128,7 @@ const QuotationResponseModal = ({
       });
     } else {
       if (!responseMessage.trim()) {
-        alert("Please provide a response message");
+        notify("Please provide a response message");
         return;
       }
 
@@ -131,6 +174,9 @@ const QuotationResponseModal = ({
           vehicleId: vehicle.vehicleId,
           vehicleName: vehicle.vehicleName,
           quantity: vehicle.quantity,
+          requestedQuantity: Number(
+            vehicle.requestedQuantity ?? vehicle.quantity,
+          ),
           baseRental: baseTotal,
           driverCharges: driverTotal,
           fuelCharges: fuelTotal,
@@ -151,6 +197,31 @@ const QuotationResponseModal = ({
         perVehicleBreakdown: perVehicleBreakdown,
       };
 
+      // If offering fewer vehicles now, a future-availability note is required
+      // so the corporate understands whether more are coming.
+      if (
+        isPartialOffer &&
+        hasFutureAvailability &&
+        !futureAvailabilityNote.trim()
+      ) {
+        notify(
+          "Please describe the future availability (e.g. how many more vehicles and roughly when).",
+        );
+        return;
+      }
+
+      const fulfillmentData = {
+        hasFutureAvailability: isPartialOffer ? hasFutureAvailability : false,
+        futureAvailabilityNote:
+          isPartialOffer && hasFutureAvailability
+            ? futureAvailabilityNote.trim()
+            : "",
+        futureAvailabilityDate:
+          isPartialOffer && hasFutureAvailability && futureAvailabilityDate
+            ? futureAvailabilityDate
+            : null,
+      };
+
       console.log("Quoted price object:", quotedPriceData);
       console.log("Total breakdown:", {
         totalVehicleRental,
@@ -164,6 +235,7 @@ const QuotationResponseModal = ({
         message: responseMessage,
         terms: terms,
         quotedPrice: quotedPriceData,
+        fulfillment: fulfillmentData,
       };
 
       console.log("Sending approval data:", approvalData);
@@ -270,12 +342,51 @@ const QuotationResponseModal = ({
                       <h4>{vehicle.vehicleName}</h4>
                       <div className="vehicle-meta">
                         <span className="quantity-badge">
-                          Quantity: {vehicle.quantity}
+                          Requested:{" "}
+                          {vehicle.requestedQuantity ?? vehicle.quantity}
                         </span>
                         <span className="days-badge">
                           Days: {vehicle.rentalDays}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Availability: how many of this vehicle the partner can
+                        actually supply now. Defaults to the full requested
+                        amount; lower it if you don't have enough. */}
+                    <div className="availability-control">
+                      <label>
+                        Vehicles you can supply now
+                        <span className="availability-hint">
+                          Corporate requested{" "}
+                          {vehicle.requestedQuantity ?? vehicle.quantity}
+                        </span>
+                      </label>
+                      <div className="availability-input-row">
+                        <input
+                          type="number"
+                          min="1"
+                          max={vehicle.requestedQuantity ?? vehicle.quantity}
+                          step="1"
+                          value={vehicle.quantity}
+                          onChange={(e) =>
+                            handleOfferedQuantityChange(index, e.target.value)
+                          }
+                        />
+                        <span className="availability-of">
+                          of {vehicle.requestedQuantity ?? vehicle.quantity}
+                        </span>
+                      </div>
+                      {Number(vehicle.quantity) <
+                        Number(
+                          vehicle.requestedQuantity ?? vehicle.quantity,
+                        ) && (
+                        <p className="availability-warning">
+                          Partial: you are offering {vehicle.quantity} of{" "}
+                          {vehicle.requestedQuantity ?? vehicle.quantity}{" "}
+                          requested.
+                        </p>
+                      )}
                     </div>
 
                     <div className="vehicle-requirements">
@@ -480,6 +591,79 @@ const QuotationResponseModal = ({
                 ))}
               </div>
 
+              {isPartialOffer && (
+                <div className="partial-offer-section">
+                  <div className="partial-offer-banner">
+                    <span className="partial-offer-icon">!</span>
+                    <div>
+                      <strong>
+                        Partial offer: {totalOffered} of {totalRequested}{" "}
+                        vehicles
+                      </strong>
+                      <p>
+                        You are quoting only for the vehicles you have available
+                        right now. That is perfectly fine &mdash; the corporate
+                        can accept this partial offer or reject it. If you have
+                        no vehicles available at all, use{" "}
+                        <button
+                          type="button"
+                          className="inline-reject-link"
+                          onClick={() => setResponseType("reject")}
+                        >
+                          Reject
+                        </button>{" "}
+                        instead.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Future availability is completely OPTIONAL. A partner is
+                      never required to promise more vehicles later. Only tick
+                      this if you genuinely expect more capacity. */}
+                  <label className="future-availability-toggle">
+                    <input
+                      type="checkbox"
+                      checked={hasFutureAvailability}
+                      onChange={(e) =>
+                        setHasFutureAvailability(e.target.checked)
+                      }
+                    />
+                    <span>
+                      (Optional) I may have more vehicles available later
+                    </span>
+                  </label>
+
+                  {hasFutureAvailability && (
+                    <div className="future-availability-fields">
+                      <div className="form-group">
+                        <label>
+                          Future availability details{" "}
+                          <span className="required">*</span>
+                        </label>
+                        <textarea
+                          rows="3"
+                          placeholder="e.g. 3 more sedans expected by mid next month; you can take these now and add the rest later."
+                          value={futureAvailabilityNote}
+                          onChange={(e) =>
+                            setFutureAvailabilityNote(e.target.value)
+                          }
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Expected availability date (optional)</label>
+                        <input
+                          type="date"
+                          value={futureAvailabilityDate}
+                          onChange={(e) =>
+                            setFutureAvailabilityDate(e.target.value)
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {isManaged && (
                 <div className="managed-service-charge-section">
                   <div className="managed-service-charge-note">
@@ -553,6 +737,30 @@ const QuotationResponseModal = ({
           ) : (
             <>
               <div className="rejection-section">
+                <div className="rejection-intro">
+                  <strong>Rejecting this request?</strong>
+                  <p>
+                    Pick a quick reason below or write your own. The corporate
+                    will see this message so they understand why you
+                    couldn&apos;t quote.
+                  </p>
+                </div>
+
+                <div className="rejection-quick-reasons">
+                  {QUICK_REJECTION_REASONS.map((reason) => (
+                    <button
+                      key={reason}
+                      type="button"
+                      className={`rejection-reason-chip ${
+                        rejectionReason === reason ? "active" : ""
+                      }`}
+                      onClick={() => setRejectionReason(reason)}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="form-group">
                   <label>
                     Reason for Rejection <span className="required">*</span>

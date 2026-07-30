@@ -29,6 +29,7 @@ import {
   selectVehicleInfo,
   selectBookings,
 } from "../../../Redux/slices/corporateEmployeeSlice";
+import { notify } from "../../../utils/toast";
 
 export default function CorporateEmployeeDashboard() {
   const dispatch = useDispatch();
@@ -192,7 +193,7 @@ export default function CorporateEmployeeDashboard() {
     try {
       // For corporate trips, employees are pre-assigned by the corporate admin
       // This is a confirmation/check-in action
-      alert(
+      notify(
         "Trip is already assigned to you. Please check in 15 minutes before departure.",
       );
       fetchEmployeeDashboardData();
@@ -209,14 +210,14 @@ export default function CorporateEmployeeDashboard() {
         // Cancel booking through trip endpoint
         const response = await api.delete(`/trips/${tripId}/cancel`);
         if (response.data.success) {
-          alert("Trip assignment cancelled successfully!");
+          notify("Trip assignment cancelled successfully!");
           fetchEmployeeDashboardData();
         } else {
-          alert(response.data.message || "Failed to cancel trip");
+          notify(response.data.message || "Failed to cancel trip");
         }
       } catch (error) {
         console.error("Error cancelling trip:", error);
-        alert(
+        notify(
           `Error cancelling trip: ${error.response?.data?.message || error.message}`,
         );
       }

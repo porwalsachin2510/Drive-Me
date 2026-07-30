@@ -14,6 +14,7 @@ import QuotationDetailsModal from "../QuotationDetailsModal/QuotationDetailsModa
 import QuotationResponseModal from "../QuotationResponseModal/QuotationResponseModal";
 import { getActiveCurrency } from "../../../config/localeConfig";
 import "./B2B_Quotation.css";
+import { notify } from "../../../utils/toast";
 
 const B2B_Quotation = () => {
   const dispatch = useDispatch();
@@ -258,6 +259,10 @@ const B2B_Quotation = () => {
       return {
         vehicleId: vehicle.vehicleId?._id || vehicle.vehicleId,
         vehicleName: vehicle.vehicleId?.vehicleName || "Unknown Vehicle",
+        // requestedQuantity = what the corporate asked for (fixed).
+        // quantity = what this partner is offering to supply now (editable,
+        // capped at requestedQuantity). Defaults to the full requested amount.
+        requestedQuantity: quantity,
         quantity: quantity,
         rentalDays: rentalDays,
         withDriver:
@@ -296,7 +301,7 @@ const B2B_Quotation = () => {
     console.log("Dispatch result:", result);
 
     if (result.type === "quotation/respondToQuotation/fulfilled") {
-      alert("Quotation response submitted successfully");
+      notify("Quotation response submitted successfully");
       setRespondModal(null);
       setResponseData([]);
       dispatch(fetchFleetQuotations());
@@ -306,7 +311,7 @@ const B2B_Quotation = () => {
         result.error?.message ||
         "Failed to respond to quotation";
       console.error("Error submitting quotation:", errorMessage);
-      alert(`Error: ${errorMessage}`);
+      notify(`Error: ${errorMessage}`);
     }
   };
 

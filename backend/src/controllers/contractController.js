@@ -125,11 +125,22 @@ export const createContractFromQuotation = async (req, res) => {
             corporateOwnerId: quotation.corporateOwnerId,
             fleetOwnerId: quotation.fleetOwnerId,
             serviceMode: quotation.serviceMode || "STANDARD",
-            vehicles: quotation.vehicles.map((v) => ({
-                vehicleId: v.vehicleId._id,
-                quantity: v.quantity,
-                assignedVehicles: [],
-            })),
+            // Use the quantity the partner actually OFFERED in their quote
+            // (per-vehicle breakdown), which for a PARTIAL offer is fewer than
+            // the corporate originally requested. Falls back to the requested
+            // quantity for legacy quotations without a breakdown.
+            vehicles: quotation.vehicles.map((v) => {
+                const vid = String(v.vehicleId._id || v.vehicleId)
+                const offered = (quotation.quotedPrice?.perVehicleBreakdown || []).find(
+                    (b) => String(b.vehicleId) === vid,
+                )
+                const offeredQty = Number(offered?.quantity)
+                return {
+                    vehicleId: v.vehicleId._id,
+                    quantity: offeredQty > 0 ? offeredQty : v.quantity,
+                    assignedVehicles: [],
+                }
+            }),
             rentalPeriod: quotation.rentalPeriod,
             financials: {
 

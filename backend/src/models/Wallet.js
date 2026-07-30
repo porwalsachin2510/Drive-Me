@@ -11,11 +11,27 @@ const walletSchema = new mongoose.Schema(
             // what lets an admin accumulate an AED wallet for UAE commission and a
             // separate KWD wallet for Kuwait commission, instead of dumping mixed
             // currencies into a single mislabeled balance.
+            //
+            // OWNERSHIP: `userId` usually points at the auth `User` collection, but
+            // Demand Generation staff (DemandEmployee) also hold their own wallet so
+            // they can be paid commissions/salary/expenses and withdraw like any
+            // other user. For those wallets `userId` stores the DemandEmployee _id
+            // and `ownerModel` is set to "DemandEmployee" (see below).
+        },
+
+        // Which collection `userId` refers to. Defaults to "User" so every
+        // pre-existing wallet keeps behaving exactly as before; Demand Generation
+        // staff wallets set this to "DemandEmployee".
+        ownerModel: {
+            type: String,
+            enum: ["User", "DemandEmployee"],
+            default: "User",
+            index: true,
         },
 
         role: {
             type: String,
-            enum: ["COMMUTER", "CORPORATE", "CORPORATE_EMPLOYEE", "B2C_PARTNER", "B2C_PARTNER_DRIVER", "B2B_PARTNER", "B2B_PARTNER_DRIVER", "CORPORATE_DRIVER", "ADMIN"],
+            enum: ["COMMUTER", "CORPORATE", "CORPORATE_EMPLOYEE", "B2C_PARTNER", "B2C_PARTNER_DRIVER", "B2B_PARTNER", "B2B_PARTNER_DRIVER", "CORPORATE_DRIVER", "ADMIN", "DEMAND_FIELD", "DEMAND_FINANCE"],
             required: true,
         },
 

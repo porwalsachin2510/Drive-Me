@@ -1,22 +1,23 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import "./AdminAds.css"
-import api from "../../../utils/api"
+import { useState, useEffect } from "react";
+import "./AdminAds.css";
+import api from "../../../utils/api";
+import { notify } from "../../../utils/toast";
 
 function AdminAds() {
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [selectedCampaign, setSelectedCampaign] = useState(null)
-  const [campaigns, setCampaigns] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalCampaigns: 0,
     activeCampaigns: 0,
     totalViews: 0,
     totalClicks: 0,
-    totalRevenue: 0
-  })
+    totalRevenue: 0,
+  });
 
   const defaultFormData = {
     title: "",
@@ -29,215 +30,243 @@ function AdminAds() {
     targetUrl: "",
     description: "",
     budget: 0,
-    dailyBudget: 0
-  }
-  const [formData, setFormData] = useState(defaultFormData)
-  const [campaignImage, setCampaignImage] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
-  const [uploading, setUploading] = useState(false)
-  const [imageSizeWarning, setImageSizeWarning] = useState("")
-  const [imageValid, setImageValid] = useState(false)
+    dailyBudget: 0,
+  };
+  const [formData, setFormData] = useState(defaultFormData);
+  const [campaignImage, setCampaignImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [imageSizeWarning, setImageSizeWarning] = useState("");
+  const [imageValid, setImageValid] = useState(false);
 
   useEffect(() => {
-    fetchCampaigns()
-    fetchStats()
-  }, [])
+    fetchCampaigns();
+    fetchStats();
+  }, []);
 
   const fetchCampaigns = async () => {
     try {
-      setLoading(true)
-      const response = await api.get('/admin/ads/campaigns')
-      setCampaigns(response.data.campaigns)
+      setLoading(true);
+      const response = await api.get("/admin/ads/campaigns");
+      setCampaigns(response.data.campaigns);
     } catch (error) {
-      console.error("Error fetching campaigns:", error)
+      console.error("Error fetching campaigns:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/admin/ads/stats')
-      setStats(response.data.stats)
+      const response = await api.get("/admin/ads/stats");
+      setStats(response.data.stats);
     } catch (error) {
-      console.error("Error fetching stats:", error)
+      console.error("Error fetching stats:", error);
     }
-  }
+  };
 
   const validateImageSize = (file, requiredSize) => {
     return new Promise((resolve) => {
-      const img = new window.Image()
-      img.crossOrigin = "anonymous"
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
       img.onload = () => {
-        const [reqWidth, reqHeight] = requiredSize.split('x').map(Number)
-        const actualWidth = img.width
-        const actualHeight = img.height
-        
+        const [reqWidth, reqHeight] = requiredSize.split("x").map(Number);
+        const actualWidth = img.width;
+        const actualHeight = img.height;
+
         if (actualWidth === reqWidth && actualHeight === reqHeight) {
-          resolve({ valid: true, width: actualWidth, height: actualHeight })
+          resolve({ valid: true, width: actualWidth, height: actualHeight });
         } else {
-          resolve({ valid: false, width: actualWidth, height: actualHeight, reqWidth, reqHeight })
+          resolve({
+            valid: false,
+            width: actualWidth,
+            height: actualHeight,
+            reqWidth,
+            reqHeight,
+          });
         }
-      }
+      };
       img.onerror = () => {
-        resolve({ valid: false, width: 0, height: 0 })
-      }
-      img.src = URL.createObjectURL(file)
-    })
-  }
+        resolve({ valid: false, width: 0, height: 0 });
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
 
   const handleImageChange = async (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files[0];
     if (file) {
-      const selectedSize = formData.size
-      const result = await validateImageSize(file, selectedSize)
-      
-      setCampaignImage(file)
-      const reader = new FileReader()
+      const selectedSize = formData.size;
+      const result = await validateImageSize(file, selectedSize);
+
+      setCampaignImage(file);
+      const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result)
-      }
-      reader.readAsDataURL(file)
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
 
       if (!result.valid) {
         setImageSizeWarning(
-          `Image size mismatch! Selected size is ${selectedSize} but uploaded image is ${result.width}x${result.height}. Please upload an image of exactly ${selectedSize} pixels.`
-        )
-        setImageValid(false)
+          `Image size mismatch! Selected size is ${selectedSize} but uploaded image is ${result.width}x${result.height}. Please upload an image of exactly ${selectedSize} pixels.`,
+        );
+        setImageValid(false);
       } else {
-        setImageSizeWarning("")
-        setImageValid(true)
+        setImageSizeWarning("");
+        setImageValid(true);
       }
     }
-  }
+  };
 
   const resetImageState = () => {
-    setCampaignImage(null)
-    setImagePreview(null)
-    setImageSizeWarning("")
-    setImageValid(false)
-  }
+    setCampaignImage(null);
+    setImagePreview(null);
+    setImageSizeWarning("");
+    setImageValid(false);
+  };
 
   const handleCreateCampaign = async () => {
     try {
       // Validate image size before submission
       if (campaignImage && !imageValid) {
-        alert(`Please upload an image with the correct size (${formData.size}). The current image does not match the required dimensions.`)
-        return
-      }
-      
-      if (!campaignImage) {
-        alert("Please select a campaign image.")
-        return
+        notify(
+          `Please upload an image with the correct size (${formData.size}). The current image does not match the required dimensions.`,
+        );
+        return;
       }
 
-      setUploading(true)
-      const submitData = new FormData()
-      
+      if (!campaignImage) {
+        notify("Please select a campaign image.");
+        return;
+      }
+
+      setUploading(true);
+      const submitData = new FormData();
+
       // Append all form fields
-      Object.keys(formData).forEach(key => {
+      Object.keys(formData).forEach((key) => {
         if (formData[key] !== undefined && formData[key] !== null) {
-          submitData.append(key, formData[key])
+          submitData.append(key, formData[key]);
         }
-      })
-      
+      });
+
       // Append image file if selected
       if (campaignImage) {
-        submitData.append('campaignImage', campaignImage)
+        submitData.append("campaignImage", campaignImage);
       }
 
-      await api.post('/admin/ads/campaigns', submitData, {
+      await api.post("/admin/ads/campaigns", submitData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      setShowCreateModal(false)
-      setFormData(defaultFormData)
-      resetImageState()
-      fetchCampaigns()
-      fetchStats()
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setShowCreateModal(false);
+      setFormData(defaultFormData);
+      resetImageState();
+      fetchCampaigns();
+      fetchStats();
     } catch (error) {
-      console.error("Error creating campaign:", error)
-      alert(error.response?.data?.message || "Error creating campaign")
+      console.error("Error creating campaign:", error);
+      notify(error.response?.data?.message || "Error creating campaign");
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
-  }
+  };
 
   const handleUpdateCampaign = async () => {
     try {
-      setUploading(true)
-      const submitData = new FormData()
-      
+      setUploading(true);
+      const submitData = new FormData();
+
       // Append all form fields
-      Object.keys(formData).forEach(key => {
-        if (formData[key] !== undefined && formData[key] !== null && key !== 'imageUrl' && key !== '_id' && key !== '__v') {
-          submitData.append(key, formData[key])
+      Object.keys(formData).forEach((key) => {
+        if (
+          formData[key] !== undefined &&
+          formData[key] !== null &&
+          key !== "imageUrl" &&
+          key !== "_id" &&
+          key !== "__v"
+        ) {
+          submitData.append(key, formData[key]);
         }
-      })
-      
+      });
+
       // Append image file if a new one is selected
       if (campaignImage) {
-        submitData.append('campaignImage', campaignImage)
+        submitData.append("campaignImage", campaignImage);
       }
 
-      await api.put(`/admin/ads/campaigns/${selectedCampaign._id}`, submitData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      setShowEditModal(false)
-      setSelectedCampaign(null)
-      setFormData(defaultFormData)
-      resetImageState()
-      fetchCampaigns()
-      fetchStats()
+      await api.put(
+        `/admin/ads/campaigns/${selectedCampaign._id}`,
+        submitData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+      setShowEditModal(false);
+      setSelectedCampaign(null);
+      setFormData(defaultFormData);
+      resetImageState();
+      fetchCampaigns();
+      fetchStats();
     } catch (error) {
-      console.error("Error updating campaign:", error)
-      alert(error.response?.data?.message || "Error updating campaign")
+      console.error("Error updating campaign:", error);
+      notify(error.response?.data?.message || "Error updating campaign");
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
-  }
+  };
 
   const handleDeleteCampaign = async (campaignId) => {
     try {
-      await api.delete(`/admin/ads/campaigns/${campaignId}`)
-      fetchCampaigns()
-      fetchStats()
+      await api.delete(`/admin/ads/campaigns/${campaignId}`);
+      fetchCampaigns();
+      fetchStats();
     } catch (error) {
-      console.error("Error deleting campaign:", error)
+      console.error("Error deleting campaign:", error);
     }
-  }
+  };
 
   const handleToggleStatus = async (campaignId, status) => {
     try {
-      await api.put(`/admin/ads/campaigns/${campaignId}/status`, { status })
-      fetchCampaigns()
-      fetchStats()
+      await api.put(`/admin/ads/campaigns/${campaignId}/status`, { status });
+      fetchCampaigns();
+      fetchStats();
     } catch (error) {
-      console.error("Error toggling status:", error)
+      console.error("Error toggling status:", error);
     }
-  }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "active": return "#28a745"
-      case "paused": return "#ffc107"
-      case "expired": return "#dc3545"
-      default: return "#6c757d"
+      case "active":
+        return "#28a745";
+      case "paused":
+        return "#ffc107";
+      case "expired":
+        return "#dc3545";
+      default:
+        return "#6c757d";
     }
-  }
+  };
 
   const renderCampaignCard = (campaign) => (
     <div key={campaign._id} className="campaign-card">
       <div className="campaign-preview">
-        <img src={campaign.imageUrl || "/placeholder.svg"} alt={campaign.title} />
-        <div className="campaign-status" style={{ backgroundColor: getStatusColor(campaign.status) }}>
+        <img
+          src={campaign.imageUrl || "/placeholder.svg"}
+          alt={campaign.title}
+        />
+        <div
+          className="campaign-status"
+          style={{ backgroundColor: getStatusColor(campaign.status) }}
+        >
           {campaign.status}
         </div>
       </div>
-      
+
       <div className="campaign-info">
         <h4>{campaign.title}</h4>
         <p className="provider">{campaign.provider}</p>
@@ -245,7 +274,7 @@ function AdminAds() {
           <span className="placement">{campaign.placement}</span>
           <span className="size">{campaign.size}</span>
         </div>
-        
+
         <div className="campaign-metrics">
           <div className="metric">
             <span className="label">Views:</span>
@@ -258,41 +287,50 @@ function AdminAds() {
           <div className="metric">
             <span className="label">CTR:</span>
             <span className="value">
-              {campaign.views ? ((campaign.clicks / campaign.views) * 100).toFixed(2) : 0}%
+              {campaign.views
+                ? ((campaign.clicks / campaign.views) * 100).toFixed(2)
+                : 0}
+              %
             </span>
           </div>
         </div>
-        
+
         <div className="campaign-dates">
-          <span className="date">{new Date(campaign.startDate).toLocaleDateString()}</span>
+          <span className="date">
+            {new Date(campaign.startDate).toLocaleDateString()}
+          </span>
           <span className="date">to</span>
-          <span className="date">{new Date(campaign.endDate).toLocaleDateString()}</span>
+          <span className="date">
+            {new Date(campaign.endDate).toLocaleDateString()}
+          </span>
         </div>
       </div>
-      
+
       <div className="campaign-actions">
-        <button 
+        <button
           className="edit-btn"
           onClick={() => {
-            setSelectedCampaign(campaign)
-            setFormData(campaign)
-            setShowEditModal(true)
+            setSelectedCampaign(campaign);
+            setFormData(campaign);
+            setShowEditModal(true);
           }}
         >
           Edit
         </button>
-        
-        <button 
+
+        <button
           className={`status-btn ${campaign.status}`}
-          onClick={() => handleToggleStatus(
-            campaign._id, 
-            campaign.status === 'active' ? 'paused' : 'active'
-          )}
+          onClick={() =>
+            handleToggleStatus(
+              campaign._id,
+              campaign.status === "active" ? "paused" : "active",
+            )
+          }
         >
-          {campaign.status === 'active' ? 'Pause' : 'Activate'}
+          {campaign.status === "active" ? "Pause" : "Activate"}
         </button>
-        
-        <button 
+
+        <button
           className="delete-btn"
           onClick={() => handleDeleteCampaign(campaign._id)}
         >
@@ -300,14 +338,14 @@ function AdminAds() {
         </button>
       </div>
     </div>
-  )
+  );
 
   if (loading) {
     return (
       <div className="admin-ads">
         <div className="loading">Loading campaigns...</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -864,4 +902,4 @@ function AdminAds() {
   );
 }
 
-export default AdminAds
+export default AdminAds;

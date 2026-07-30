@@ -13,6 +13,7 @@ import {
 } from "../../../Redux/slices/requestCartSlice";
 import api from "../../../utils/api";
 import "./SingleVehicleOwnerDetails.css";
+import { notify } from "../../../utils/toast";
 
 const SingleVehicleOwnerDetails = () => {
   const location = useLocation();
@@ -34,16 +35,29 @@ const SingleVehicleOwnerDetails = () => {
   const cartUnits = useSelector(selectCartTotalUnits);
   const cartPartnerCount = useSelector(selectCartPartnerCount);
 
-  // The corporate should be able to combine ANY of this partner's vehicles in
-  // the chosen service category — not just the types that matched the search.
-  // We seed from the search results, then fetch the partner's full APPROVED +
-  // AVAILABLE catalogue for the category and use that instead.
+  // The corporate should only see this partner's vehicles that match what they
+  // actually searched for. We seed from the search results, then fetch the
+  // partner's APPROVED + AVAILABLE catalogue restricted to the SAME vehicle
+  // type(s) the corporate requested — so a "Sedan" search never surfaces the
+  // partner's SUVs, etc.
   const [vehicleList, setVehicleList] = useState(ownerData.vehicles || []);
 
   useEffect(() => {
     const fleetOwnerId = ownerData.fleetOwnerId || ownerData._id;
     if (!fleetOwnerId) return;
     const serviceType = corporateuserrequirements?.serviceType || "passenger";
+
+    // Normalize the searched vehicle types (multi-select array or legacy single)
+    // into a comma-separated list the backend can filter on.
+    const searchedTypes =
+      corporateuserrequirements?.vehicleTypes ??
+      corporateuserrequirements?.vehicleType ??
+      [];
+    const vehicleTypesParam = (
+      Array.isArray(searchedTypes) ? searchedTypes : [searchedTypes]
+    )
+      .filter(Boolean)
+      .join(",");
 
     let cancelled = false;
     (async () => {
@@ -53,6 +67,7 @@ const SingleVehicleOwnerDetails = () => {
             serviceType,
             status: "AVAILABLE",
             approvalStatus: "APPROVED",
+            ...(vehicleTypesParam ? { vehicleTypes: vehicleTypesParam } : {}),
           },
         });
         const fetched = res?.data?.data?.vehicles;
@@ -258,6 +273,12 @@ const SingleVehicleOwnerDetails = () => {
       String(corporateuserrequirements?.serviceType || "").toLowerCase() ===
       "managed";
 
+    // Start Date is optional in the search form. If the corporate didn't pick
+    // one, default the rental period to start today so the quotation is valid.
+    const effectiveStartDate =
+      corporateuserrequirements.startDate ||
+      new Date().toISOString().split("T")[0];
+
     const quotationData = {
       // User IDs
       corporateOwnerId: user._id, // Logged-in corporate user
@@ -276,9 +297,9 @@ const SingleVehicleOwnerDetails = () => {
 
       // Rental Period
       rentalPeriod: {
-        startDate: corporateuserrequirements.startDate,
+        startDate: effectiveStartDate,
         endDate: calculateEndDate(
-          corporateuserrequirements.startDate,
+          effectiveStartDate,
           corporateuserrequirements.rentalDuration,
           corporateuserrequirements.durationValue,
         ),
@@ -352,7 +373,7 @@ const SingleVehicleOwnerDetails = () => {
     } catch (error) {
       console.error("Failed to create quotation:", error);
       // Surface the backend validation message (e.g. missing brief fields).
-      alert(
+      notify(
         typeof error === "string"
           ? error
           : error?.message || "Failed to create quotation. Please try again.",
@@ -380,7 +401,9 @@ const SingleVehicleOwnerDetails = () => {
         serviceMode: isManaged ? "MANAGED" : "STANDARD",
         rentalDuration: corporateuserrequirements?.rentalDuration || "monthly",
         durationValue: corporateuserrequirements?.durationValue || "",
-        startDate: corporateuserrequirements?.startDate || "",
+        startDate:
+          corporateuserrequirements?.startDate ||
+          new Date().toISOString().split("T")[0],
         location: corporateuserrequirements?.location || "",
         budgetRange: corporateuserrequirements?.budget || "",
         driverRequired: Boolean(corporateuserrequirements?.driverRequired),
@@ -390,12 +413,13 @@ const SingleVehicleOwnerDetails = () => {
       }),
     );
 
+    // Only the partner's public identity is carried in the cart — no private
+    // contact details, which are never exposed to the corporate before a
+    // booking is confirmed through DriveMeGo.
     const ownerSummary = {
       fleetOwnerId,
       fullName: ownerData.fullName,
       companyName: ownerData.companyName,
-      email: ownerData.email,
-      whatsappNumber: ownerData.whatsappNumber,
     };
 
     selectedEntries.forEach(([vehicleId, item]) => {
@@ -472,17 +496,16 @@ const SingleVehicleOwnerDetails = () => {
           </div>
 
           <div className="single-owner-vehicle-owner-details">
-            <div className="single-owner-vehicle-detail-item">
-              <span className="single-owner-vehicle-detail-icon">📧</span>
-              <span>{ownerData.email}</span>
-            </div>
-            <div className="single-owner-vehicle-detail-item">
-              <span className="single-owner-vehicle-detail-icon">📞</span>
-              <span>{ownerData.whatsappNumber}</span>
-            </div>
+            {/* Partner email & phone are intentionally NOT shown. The corporate
+                contacts the partner only after a request is confirmed through
+                DriveMeGo, so the platform stays in the loop and can't be bypassed. */}
             <div className="single-owner-vehicle-detail-item">
               <span className="single-owner-vehicle-detail-icon">🚗</span>
-              <span>{ownerData.totalVehicles} Vehicles Available</span>
+              <span>{filteredVehicles.length} Vehicles Available</span>
+            </div>
+            <div className="single-owner-vehicle-detail-item">
+              <span className="single-owner-vehicle-detail-icon">🔒</span>
+              <span>Contact shared after booking</span>
             </div>
           </div>
 

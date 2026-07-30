@@ -10,6 +10,7 @@ import { getCurrencyDecimals } from "../../../config/localeConfig";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import "./commuterBookingDetailsPage.css";
+import { notify } from "../../../utils/toast";
 
 const CommuterBookingDetailsPage = () => {
   const { bookingId } = useParams();
@@ -458,7 +459,7 @@ const CommuterBookingDetailsPage = () => {
 
   const handleCancelBooking = async () => {
     if (!cancelReason.trim()) {
-      alert("Please provide a reason for cancellation");
+      notify("Please provide a reason for cancellation");
       return;
     }
 
@@ -471,7 +472,7 @@ const CommuterBookingDetailsPage = () => {
       if (response.success) {
         // Show the detailed, settlement-aware message from the backend
         // (e.g. wallet refund vs. cash to be returned by the operator)
-        alert(response.message || "Booking cancelled successfully");
+        notify(response.message || "Booking cancelled successfully");
         setShowCancelModal(false);
         // Refresh booking data
         const updatedBooking =
@@ -481,7 +482,7 @@ const CommuterBookingDetailsPage = () => {
         }
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to cancel booking");
+      notify(err.response?.data?.message || "Failed to cancel booking");
     } finally {
       setCancelLoading(false);
     }

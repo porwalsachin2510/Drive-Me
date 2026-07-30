@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import "./b2c_createtripmodal.css";
 import api from "../../../../utils/api";
+import { notify } from "../../../../utils/toast";
 
 function B2C_CreateTripModal({ route, onClose }) {
   const [formData, setFormData] = useState({
@@ -125,7 +126,7 @@ function B2C_CreateTripModal({ route, onClose }) {
       }
     } catch (error) {
       console.error("Error creating trip:", error);
-      alert("Failed to create trip. Please try again.");
+      notify("Failed to create trip. Please try again.");
     } finally {
       setLoading(false);
     }

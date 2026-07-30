@@ -5,6 +5,11 @@
 
 .b2c-routes-filters {
   margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .b2c-filter-buttons {

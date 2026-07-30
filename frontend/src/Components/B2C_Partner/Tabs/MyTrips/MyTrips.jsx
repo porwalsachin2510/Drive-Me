@@ -6,6 +6,7 @@ import MyTripsHistory from "../../MyTripsSub/MyTripsHistory/MyTripsHistory";
 import AvailabilityStatusPopup from "../../../../Components/AvailabilityStatusPopup/AvailabilityStatusPopup";
 import api from "../../../../utils/api";
 import "./mytrips.css";
+import { notify } from "../../../../utils/toast";
 
 /**
  * MyTrips - Main trips management tab for B2C Partner
@@ -166,7 +167,7 @@ function MyTrips() {
         await fetchDetailedAvailabilityInfo();
         setShowAvailabilityPopup(true);
       } else {
-        alert(errorMessage);
+        notify(errorMessage);
       }
     } finally {
       setUpdatingAvailability(false);
@@ -191,7 +192,7 @@ function MyTrips() {
       console.error("[v0] Error updating availability:", error);
       const errorMessage =
         error.response?.data?.message || "Failed to update availability status";
-      alert(errorMessage);
+      notify(errorMessage);
     } finally {
       setUpdatingAvailability(false);
     }

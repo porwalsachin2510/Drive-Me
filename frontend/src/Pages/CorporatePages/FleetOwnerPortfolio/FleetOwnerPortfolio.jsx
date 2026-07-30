@@ -36,7 +36,7 @@ const FleetOwnerPortfolio = () => {
       setVehicles(vehiclesRes.data.data.vehicles);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Failed to load fleet owner data"
+        err.response?.data?.message || "Failed to load fleet owner data",
       );
     } finally {
       setLoading(false);
@@ -105,16 +105,14 @@ const FleetOwnerPortfolio = () => {
           <div className="owner-contact">
             <h3>Contact Information</h3>
             <div className="contact-grid">
+              {/* Direct contact details are shared only after a request is
+                  confirmed through DriveMeGo, keeping the platform in the loop. */}
               <div className="contact-item">
-                <span className="contact-label">Email:</span>
-                <span className="contact-value">{fleetOwner.email}</span>
+                <span className="contact-label">Contact:</span>
+                <span className="contact-value">
+                  Shared after booking is confirmed
+                </span>
               </div>
-              {fleetOwner.phone && (
-                <div className="contact-item">
-                  <span className="contact-label">Phone:</span>
-                  <span className="contact-value">{fleetOwner.phone}</span>
-                </div>
-              )}
               {fleetOwner.location && (
                 <div className="contact-item">
                   <span className="contact-label">Location:</span>

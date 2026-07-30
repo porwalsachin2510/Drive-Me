@@ -14,6 +14,7 @@ import {
   selectError,
 } from "../../Redux/selectors/authSelectors";
 import api from "../../utils/api";
+import { showSuccess, showError } from "../../utils/toast";
 import Navbar from "../../Components/Navbar/Navbar";
 import SuspendedAccountModal from "../../Components/SuspendedAccountModal/SuspendedAccountModal";
 import "./login.css";
@@ -98,6 +99,10 @@ const Login = () => {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
 
+        showSuccess(
+          `Welcome back${response.data.user?.fullName ? `, ${response.data.user.fullName}` : ""}!`,
+        );
+
         const userRole = response.data.user?.role;
         // If user came from a booking attempt, redirect back there
         if (returnTo) {
@@ -122,11 +127,10 @@ const Login = () => {
         setSuspensionDetails(err.response.data.suspensionDetails);
         setShowSuspendedModal(true);
       } else {
-        dispatch(
-          authError(
-            err.response?.data?.message || "Login failed. Please try again.",
-          ),
-        );
+        const message =
+          err.response?.data?.message || "Login failed. Please try again.";
+        dispatch(authError(message));
+        showError(err, "Login failed. Please try again.");
       }
     }
   };

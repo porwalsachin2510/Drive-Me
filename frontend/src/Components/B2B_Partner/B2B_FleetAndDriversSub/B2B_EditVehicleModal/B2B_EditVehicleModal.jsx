@@ -13,6 +13,7 @@ import {
   DROPDOWN_CATEGORIES,
 } from "../../../../hooks/useDropdownOptions";
 import "../B2B_AddVehicleModal/b2b_addvehiclemodal.css";
+import { notify } from "../../../../utils/toast";
 
 const B2B_EditVehicleModal = ({ vehicle, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -256,7 +257,7 @@ const B2B_EditVehicleModal = ({ vehicle, onClose, onSuccess }) => {
       });
 
       if (response.data.success) {
-        alert("Vehicle updated successfully!");
+        notify("Vehicle updated successfully!");
         if (onSuccess) onSuccess();
         onClose();
       }

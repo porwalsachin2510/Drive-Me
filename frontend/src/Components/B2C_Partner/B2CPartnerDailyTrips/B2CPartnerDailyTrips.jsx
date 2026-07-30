@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { notify } from "../../../utils/toast";
 import { useSelector } from "react-redux";
 import { useSocket } from "../../../hooks/useSocket";
 import api from "../../../utils/api";
@@ -225,7 +226,7 @@ const B2CPartnerDailyTrips = () => {
 
       // First check if geolocation is available
       if (!navigator.geolocation) {
-        alert(
+        notify(
           "Geolocation is not supported by your browser. Please use a modern browser with location services.",
         );
         return;
@@ -244,7 +245,7 @@ const B2CPartnerDailyTrips = () => {
           );
 
           if (permissionStatus.state === "denied") {
-            alert(
+            notify(
               "Location permission is denied. Please enable location access in your browser settings to share your location with passengers.",
             );
             return;
@@ -351,7 +352,7 @@ const B2CPartnerDailyTrips = () => {
         "[B2CPartnerDailyTrips] Error starting trip:",
         error?.response?.data || error.message,
       );
-      alert(error?.response?.data?.message || "Failed to start trip");
+      notify(error?.response?.data?.message || "Failed to start trip");
     } finally {
       setActionLoading(null);
     }
@@ -376,7 +377,7 @@ const B2CPartnerDailyTrips = () => {
         "[B2CPartnerDailyTrips] Error completing trip:",
         error?.response?.data || error.message,
       );
-      alert(error?.response?.data?.message || "Failed to complete trip");
+      notify(error?.response?.data?.message || "Failed to complete trip");
     } finally {
       setActionLoading(null);
     }

@@ -58,6 +58,11 @@ import CorporateDriverDashboard from "./Pages/DriverPages/CorporateDriverDashboa
 import DriverLocationTracking from "./Pages/DriverPages/DriverLocationTracking/DriverLocationTracking";
 import Navbar from "./Components/Navbar/Navbar";
 import Footer from "./Components/Footer/Footer";
+import StaffLogin from "./Pages/StaffPortal/StaffLogin";
+import StaffPortalGuard from "./Pages/StaffPortal/StaffPortalGuard";
+import FieldPortal from "./Pages/StaffPortal/FieldPortal";
+import FinancePortal from "./Pages/StaffPortal/FinancePortal";
+import EnquiryForm from "./Pages/PublicEnquiry/EnquiryForm";
 import SetPassword from "./Pages/SetPassword/SetPassword";
 import DynamicPage from "./Pages/DynamicPage/DynamicPage";
 import ForgotPassword from "./Pages/ForgotPassword/ForgotPassword";
@@ -85,6 +90,28 @@ function App() {
       <SocketProvider>
         <Routes>
           <Route path="/" element={<HomePage />} />
+
+          {/* ===== Public lead-capture enquiry form (no auth) ===== */}
+          <Route path="/enquiry/:slug" element={<EnquiryForm />} />
+
+          {/* ===== Demand Generation Staff Portal (field reps & finance) ===== */}
+          <Route path="/staff-login" element={<StaffLogin />} />
+          <Route
+            path="/staff/field"
+            element={
+              <StaffPortalGuard role="FIELD">
+                <FieldPortal />
+              </StaffPortalGuard>
+            }
+          />
+          <Route
+            path="/staff/finance"
+            element={
+              <StaffPortalGuard role="FINANCE">
+                <FinancePortal />
+              </StaffPortalGuard>
+            }
+          />
           <Route
             path="/commuter-profile"
             element={

@@ -22,6 +22,7 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import B2B_FleetVehicleAssignmentSection from "../../../Components/B2B_Partner/B2B_FleetVehicleAssignmentSection/B2B_FleetVehicleAssignmentSection";
 import B2B_VehicleAssignmentForm from "../../../Components/B2B_Partner/B2B_VehicleAssignmentForm/B2B_VehicleAssignmentForm";
 import "./B2B_PartnerContractDetails.css";
+import { notify } from "../../../utils/toast";
 
 const B2B_PartnerContractDetails = () => {
   const { id } = useParams();
@@ -132,7 +133,7 @@ const B2B_PartnerContractDetails = () => {
       socket.off("contract_update", handleContractUpdate);
     };
   }, [socket, id, dispatch]);
-  
+
   useEffect(() => {
     if (!id) return;
 
@@ -180,14 +181,14 @@ const B2B_PartnerContractDetails = () => {
     }
 
     if (file.type !== "application/pdf") {
-      alert("Only PDF files are allowed for contract documents.");
+      notify("Only PDF files are allowed for contract documents.");
       event.target.value = null;
       setUploadFile(null);
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert("File size must be less than 10MB.");
+      notify("File size must be less than 10MB.");
       event.target.value = null;
       setUploadFile(null);
       return;
@@ -198,7 +199,7 @@ const B2B_PartnerContractDetails = () => {
 
   const handleUploadDocument = async () => {
     if (!uploadFile) {
-      alert("Please select a document first");
+      notify("Please select a document first");
       return;
     }
 
@@ -233,7 +234,7 @@ const B2B_PartnerContractDetails = () => {
 
       console.log("Upload result:", result);
 
-      alert("Contract document uploaded successfully!");
+      notify("Contract document uploaded successfully!");
       setUploadFile(null);
 
       // Clear the file input
@@ -246,7 +247,7 @@ const B2B_PartnerContractDetails = () => {
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Upload error:", error);
-      alert(`Failed to upload document: ${error}`);
+      notify(`Failed to upload document: ${error}`);
     } finally {
       setUploading(false);
     }
@@ -262,19 +263,19 @@ const B2B_PartnerContractDetails = () => {
       ).unwrap();
 
       console.log("Approval result:", result);
-      alert("Contract approved successfully!");
+      notify("Contract approved successfully!");
       setShowApprovalModal(false);
       setApprovalNotes("");
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Approval error:", error);
-      alert(error || "Failed to approve contract");
+      notify(error || "Failed to approve contract");
     }
   };
 
   const handleSignContract = async () => {
     if (!signature || signature.trim().length < 3) {
-      alert("Please enter your full name as digital signature");
+      notify("Please enter your full name as digital signature");
       return;
     }
 
@@ -291,13 +292,13 @@ const B2B_PartnerContractDetails = () => {
       ).unwrap();
 
       console.log("Sign result:", result);
-      alert("Contract signed successfully!");
+      notify("Contract signed successfully!");
       setShowSignModal(false);
       setSignature("");
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Sign error:", error);
-      alert(error || "Failed to sign contract");
+      notify(error || "Failed to sign contract");
     }
   };
 
@@ -334,18 +335,18 @@ const B2B_PartnerContractDetails = () => {
         }),
       ).unwrap();
 
-      alert("Vehicles assigned successfully!");
+      notify("Vehicles assigned successfully!");
       setShowVehicleAssignmentForm(false);
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Assignment error:", error);
-      alert(error || "Failed to assign vehicles");
+      notify(error || "Failed to assign vehicles");
     }
   };
 
   const handleExtensionResponse = async () => {
     if (!extensionResponse.action) {
-      alert("Please select an action");
+      notify("Please select an action");
       return;
     }
 
@@ -353,7 +354,7 @@ const B2B_PartnerContractDetails = () => {
       extensionResponse.action === "COUNTER_OFFERED" &&
       !extensionResponse.counterOfferedDate
     ) {
-      alert("Please select a counter offered date");
+      notify("Please select a counter offered date");
       return;
     }
 
@@ -368,7 +369,7 @@ const B2B_PartnerContractDetails = () => {
         }),
       ).unwrap();
 
-      alert(
+      notify(
         `Due date extension ${extensionResponse.action.toLowerCase().replace("_", " ")} successfully!`,
       );
       setShowExtensionResponseModal(false);
@@ -380,7 +381,7 @@ const B2B_PartnerContractDetails = () => {
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Extension response error:", error);
-      alert(error || "Failed to respond to extension request");
+      notify(error || "Failed to respond to extension request");
     } finally {
       setProcessingExtension(false);
     }
@@ -389,12 +390,12 @@ const B2B_PartnerContractDetails = () => {
   // Handle signed document verification
   const handleVerifySignedDocument = async () => {
     if (!verificationAction) {
-      alert("Please select an action");
+      notify("Please select an action");
       return;
     }
 
     if (verificationAction === "REJECT" && !rejectionReason.trim()) {
-      alert("Please provide a rejection reason");
+      notify("Please provide a rejection reason");
       return;
     }
 
@@ -410,7 +411,7 @@ const B2B_PartnerContractDetails = () => {
         }),
       ).unwrap();
 
-      alert(
+      notify(
         verificationAction === "APPROVE"
           ? "Signed document verified successfully! You can now sign the contract."
           : "Signed document rejected. Corporate will be notified to re-upload.",
@@ -422,7 +423,7 @@ const B2B_PartnerContractDetails = () => {
       dispatch(getContractById({ contractId: id }));
     } catch (error) {
       console.error("Verification error:", error);
-      alert(error || "Failed to verify signed document");
+      notify(error || "Failed to verify signed document");
     } finally {
       setProcessingVerification(false);
     }
@@ -447,7 +448,7 @@ const B2B_PartnerContractDetails = () => {
       }
     } catch (error) {
       console.error("Download error:", error);
-      alert(error || "Failed to download document");
+      notify(error || "Failed to download document");
     }
   };
 
@@ -1648,6 +1649,6 @@ const B2B_PartnerContractDetails = () => {
       <Footer />
     </>
   );
-};;;;
+};
 
 export default B2B_PartnerContractDetails;

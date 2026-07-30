@@ -876,6 +876,72 @@
 
 
 /* ===============================================
+   Partial-availability offer banner (corporate view)
+   =============================================== */
+.single-quotation-partial-banner {
+  background: linear-gradient(135deg, #fffaf0 0%, #fef3c7 100%);
+  border: 1px solid #fbd38d;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.single-quotation-partial-header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.single-quotation-partial-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #dd6b20;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.single-quotation-partial-header strong {
+  color: #9c4221;
+  display: block;
+  margin-bottom: 5px;
+  font-size: 16px;
+}
+
+.single-quotation-partial-header p {
+  margin: 0;
+  color: #7b341e;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.single-quotation-partial-future {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px dashed #fbd38d;
+  border-radius: 8px;
+  color: #744210;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.single-quotation-partial-future strong {
+  color: #975a16;
+}
+
+.single-quotation-qty-requested {
+  font-weight: 500;
+  color: #a0aec0;
+  font-size: 12px;
+}
+
+/* ===============================================
    Admin Negotiation Styles
    =============================================== */
 

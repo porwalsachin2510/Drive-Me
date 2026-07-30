@@ -14,8 +14,13 @@ import {
   FiEdit3,
 } from "react-icons/fi";
 import "./PaymentScheduleSection.css";
+import { notify } from "../../../utils/toast";
 
-const PaymentScheduleSection = ({ contractId, currency = getActiveCurrency(), contract }) => {
+const PaymentScheduleSection = ({
+  contractId,
+  currency = getActiveCurrency(),
+  contract,
+}) => {
   const dispatch = useDispatch();
   const [showExtensionModal, setShowExtensionModal] = useState(false);
   const [extensionData, setExtensionData] = useState({
@@ -75,7 +80,7 @@ const PaymentScheduleSection = ({ contractId, currency = getActiveCurrency(), co
 
   const handleRequestExtension = async () => {
     if (!extensionData.newProposedDate || !extensionData.reason) {
-      alert("Please fill in all fields");
+      notify("Please fill in all fields");
       return;
     }
 
@@ -89,14 +94,14 @@ const PaymentScheduleSection = ({ contractId, currency = getActiveCurrency(), co
         }),
       ).unwrap();
 
-      alert("Due date extension request submitted successfully!");
+      notify("Due date extension request submitted successfully!");
       setShowExtensionModal(false);
       setExtensionData({ newProposedDate: "", reason: "" });
 
       // Refresh the schedule
       dispatch(getPaymentScheduleByContract(contractId));
     } catch (error) {
-      alert(error || "Failed to submit extension request");
+      notify(error || "Failed to submit extension request");
     } finally {
       setSubmitting(false);
     }

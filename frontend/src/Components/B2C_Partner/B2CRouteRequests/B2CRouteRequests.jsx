@@ -5,6 +5,7 @@ import { useSocket } from "../../../hooks/useSocket";
 import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import api from "../../../utils/api";
 import "./b2crouterequests.css";
+import { notify } from "../../../utils/toast";
 
 function B2CRouteRequests() {
   const [routeRequests, setRouteRequests] = useState([]);
@@ -101,7 +102,7 @@ function B2CRouteRequests() {
         },
       );
       if (response.data.success) {
-        alert(
+        notify(
           withdraw
             ? "Interest withdrawn."
             : "Interest submitted. The admin reviews demand and opens routes to all interested partners.",
@@ -113,7 +114,7 @@ function B2CRouteRequests() {
       }
     } catch (err) {
       console.error("Error expressing interest:", err);
-      alert(err.response?.data?.message || "Failed to submit interest");
+      notify(err.response?.data?.message || "Failed to submit interest");
     } finally {
       setSubmitting(false);
     }

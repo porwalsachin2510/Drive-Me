@@ -1,49 +1,51 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import B2B_VehiclesTab from "../B2B_FleetAndDriversSub/B2B_VehiclesTab/B2B_VehiclesTab"
-import B2B_DriversTab from "../B2B_FleetAndDriversSub/B2B_DriversTab/B2B_DriversTab"
-import B2B_RoutesTab from "../B2B_FleetAndDriversSub/B2B_RoutesTab/B2B_RoutesTab"
-import B2B_AddDriverModal from "../B2B_FleetAndDriversSub/B2B_AddDriverModal/B2B_AddDriverModal"
-import B2B_AddVehicleModal from "../B2B_FleetAndDriversSub/B2B_AddVehicleModal/B2B_AddVehicleModal"
-import B2B_AddRouteModal from "../B2B_FleetAndDriversSub/B2B_RoutesTab/B2B_AddRouteModal"
-import "./b2b_fleetanddrivers.css"
-import api from "../../../utils/api"
+import { useState, useEffect } from "react";
+import B2B_VehiclesTab from "../B2B_FleetAndDriversSub/B2B_VehiclesTab/B2B_VehiclesTab";
+import B2B_DriversTab from "../B2B_FleetAndDriversSub/B2B_DriversTab/B2B_DriversTab";
+import B2B_RoutesTab from "../B2B_FleetAndDriversSub/B2B_RoutesTab/B2B_RoutesTab";
+import B2B_AddDriverModal from "../B2B_FleetAndDriversSub/B2B_AddDriverModal/B2B_AddDriverModal";
+import B2B_AddVehicleModal from "../B2B_FleetAndDriversSub/B2B_AddVehicleModal/B2B_AddVehicleModal";
+import B2B_AddRouteModal from "../B2B_FleetAndDriversSub/B2B_RoutesTab/B2B_AddRouteModal";
+import ImportExportControls from "../../common/ImportExportControls/ImportExportControls";
+import "./b2b_fleetanddrivers.css";
+import api from "../../../utils/api";
+import { notify } from "../../../utils/toast";
 
 function B2B_FleetAndDrivers() {
-  const [activeSubTab, setActiveSubTab] = useState("vehicles")
-  const [showAddDriverModal, setShowAddDriverModal] = useState(false)
-  const [showAddVehicleModal, setShowAddVehicleModal] = useState(false)
-  const [showAddRouteModal, setShowAddRouteModal] = useState(false)
-  const [fleetData, setFleetData] = useState(null)
-   const [routes, setRoutes] = useState([])
-   const [contracts, setContracts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [activeSubTab, setActiveSubTab] = useState("vehicles");
+  const [showAddDriverModal, setShowAddDriverModal] = useState(false);
+  const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
+  const [showAddRouteModal, setShowAddRouteModal] = useState(false);
+  const [fleetData, setFleetData] = useState(null);
+  const [routes, setRoutes] = useState([]);
+  const [contracts, setContracts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchFleetData()
-    fetchRoutes()
-    fetchContracts()
-  }, [])
+    fetchFleetData();
+    fetchRoutes();
+    fetchContracts();
+  }, []);
 
   const fetchFleetData = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const [driversResponse, vehiclesResponse] = await Promise.all([
-        api.get('/b2b/drivers'),
-        api.get('/vehicles/my/vehicles')
-      ])
-      
+        api.get("/b2b/drivers"),
+        api.get("/vehicles/my/vehicles"),
+      ]);
+
       setFleetData({
         drivers: driversResponse.data.drivers || [],
-        vehicles: vehiclesResponse.data.data?.vehicles || []
-      })
+        vehicles: vehiclesResponse.data.data?.vehicles || [],
+      });
     } catch (error) {
-      console.error("Error fetching fleet data:", error)
+      console.error("Error fetching fleet data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchRoutes = async () => {
     try {
@@ -69,29 +71,29 @@ function B2B_FleetAndDrivers() {
 
   const handleAddDriver = async (driverData) => {
     try {
-      const response = await api.post('/b2b/drivers', driverData)
+      const response = await api.post("/b2b/drivers", driverData);
       if (response.data.success) {
-        setShowAddDriverModal(false)
-        fetchFleetData()
+        setShowAddDriverModal(false);
+        fetchFleetData();
       }
     } catch (error) {
-      console.error("Error adding driver:", error)
-      alert("Failed to add driver. Please try again.")
+      console.error("Error adding driver:", error);
+      notify("Failed to add driver. Please try again.");
     }
-  }
+  };
 
   const handleAddVehicle = async (vehicleData) => {
     try {
-      const response = await api.post('/vehicles/my/vehicles', vehicleData)
+      const response = await api.post("/vehicles/my/vehicles", vehicleData);
       if (response.data.success) {
-        setShowAddVehicleModal(false)
-        fetchFleetData()
+        setShowAddVehicleModal(false);
+        fetchFleetData();
       }
     } catch (error) {
-      console.error("Error adding vehicle:", error)
-      alert("Failed to add vehicle. Please try again.")
+      console.error("Error adding vehicle:", error);
+      notify("Failed to add vehicle. Please try again.");
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -119,28 +121,44 @@ function B2B_FleetAndDrivers() {
         <h2 className="drivemego-fad-b2b-operator-dashboard-fleet-title">
           Fleet Management
         </h2>
-        {activeSubTab === "drivers" ? (
-          <button
-            className="drivemego-fad-b2b-operator-dashboard-add-btn"
-            onClick={() => setShowAddDriverModal(true)}
-          >
-            + Add Driver
-          </button>
-        ) : activeSubTab === "routes" ? (
-          <button
-            className="drivemego-fad-b2b-operator-dashboard-add-btn"
-            onClick={() => setShowAddRouteModal(true)}
-          >
-            + Add Route
-          </button>
-        ) : (
-          <button
-            className="drivemego-fad-b2b-operator-dashboard-add-btn"
-            onClick={() => setShowAddVehicleModal(true)}
-          >
-            + Add Vehicle
-          </button>
-        )}
+        <div className="drivemego-fad-b2b-header-actions">
+          {activeSubTab === "drivers" && (
+            <ImportExportControls
+              entity="b2b-drivers"
+              entityLabel="Drivers"
+              onImported={fetchFleetData}
+            />
+          )}
+          {activeSubTab === "vehicles" && (
+            <ImportExportControls
+              entity="b2b-vehicles"
+              entityLabel="Vehicles"
+              onImported={fetchFleetData}
+            />
+          )}
+          {activeSubTab === "drivers" ? (
+            <button
+              className="drivemego-fad-b2b-operator-dashboard-add-btn"
+              onClick={() => setShowAddDriverModal(true)}
+            >
+              + Add Driver
+            </button>
+          ) : activeSubTab === "routes" ? (
+            <button
+              className="drivemego-fad-b2b-operator-dashboard-add-btn"
+              onClick={() => setShowAddRouteModal(true)}
+            >
+              + Add Route
+            </button>
+          ) : (
+            <button
+              className="drivemego-fad-b2b-operator-dashboard-add-btn"
+              onClick={() => setShowAddVehicleModal(true)}
+            >
+              + Add Vehicle
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="drivemego-fad-b2b-operator-dashboard-fleet-tabs">
@@ -216,4 +234,4 @@ function B2B_FleetAndDrivers() {
   );
 }
 
-export default B2B_FleetAndDrivers
+export default B2B_FleetAndDrivers;

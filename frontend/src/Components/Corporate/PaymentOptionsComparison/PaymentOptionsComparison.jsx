@@ -7,6 +7,7 @@ import {
 } from "../../../Redux/slices/emiPaymentSlice";
 import { getContractById } from "../../../Redux/slices/contractSlice";
 import "./PaymentOptionsComparison.css";
+import { notify } from "../../../utils/toast";
 
 // Helper to calculate contract duration in months
 const calculateContractDurationMonths = (contract) => {
@@ -150,7 +151,7 @@ const PaymentOptionsComparison = ({
 
   const handleCreateEMIPlan = async () => {
     if (!selectedTenure) {
-      alert("Please select an EMI tenure");
+      notify("Please select an EMI tenure");
       return;
     }
 
@@ -160,7 +161,7 @@ const PaymentOptionsComparison = ({
         createEMIPlan({ contractId: contract._id, tenure: selectedTenure }),
       ).unwrap();
 
-      alert(
+      notify(
         result.message ||
           "EMI plan created successfully! Contract is now active.",
       );
@@ -171,7 +172,7 @@ const PaymentOptionsComparison = ({
       dispatch(getEMIPlanByContract({ contractId: contract._id }));
       dispatch(getContractById({ contractId: contract._id }));
     } catch (error) {
-      alert(error || "Failed to create EMI plan");
+      notify(error || "Failed to create EMI plan");
     } finally {
       setCreatingEMI(false);
     }

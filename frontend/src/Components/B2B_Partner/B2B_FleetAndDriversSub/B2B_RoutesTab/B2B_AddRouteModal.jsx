@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import "./b2b_addroutemodal.css";
 import api from "../../../../utils/api";
+import { notify } from "../../../../utils/toast";
 
 function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
   const [formData, setFormData] = useState({
@@ -332,13 +333,13 @@ function B2B_AddRouteModal({ onClose, onSuccess, contracts }) {
       );
 
       if (response.data.success) {
-        alert("Route created successfully!");
+        notify("Route created successfully!");
         if (onSuccess) onSuccess();
         onClose();
       }
     } catch (error) {
       console.error("Error creating route:", error);
-      alert(error.response?.data?.message || "Failed to create route");
+      notify(error.response?.data?.message || "Failed to create route");
     } finally {
       setLoading(false);
     }
