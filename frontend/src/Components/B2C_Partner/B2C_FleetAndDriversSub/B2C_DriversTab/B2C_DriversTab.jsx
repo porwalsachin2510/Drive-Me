@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import api from "../../../../utils/api";
 import B2C_DriverCard from "../B2C_DriverCard/B2C_DriverCard";
 import B2C_EditDriverModal from "../B2C_EditDriverModal/B2C_EditDriverModal";
-import ImportExportControls from "../../../common/ImportExportControls/ImportExportControls";
+import ImportExportControls from "../../../Common/ImportExportControls/ImportExportControls";
 import "./b2c_driverstab.css";
 import { notify } from "../../../../utils/toast";
 

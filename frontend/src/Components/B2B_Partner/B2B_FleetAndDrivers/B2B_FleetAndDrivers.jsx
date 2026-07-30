@@ -7,7 +7,7 @@ import B2B_RoutesTab from "../B2B_FleetAndDriversSub/B2B_RoutesTab/B2B_RoutesTab
 import B2B_AddDriverModal from "../B2B_FleetAndDriversSub/B2B_AddDriverModal/B2B_AddDriverModal";
 import B2B_AddVehicleModal from "../B2B_FleetAndDriversSub/B2B_AddVehicleModal/B2B_AddVehicleModal";
 import B2B_AddRouteModal from "../B2B_FleetAndDriversSub/B2B_RoutesTab/B2B_AddRouteModal";
-import ImportExportControls from "../../common/ImportExportControls/ImportExportControls";
+import ImportExportControls from "../../Common/ImportExportControls/ImportExportControls";
 import "./b2b_fleetanddrivers.css";
 import api from "../../../utils/api";
 import { notify } from "../../../utils/toast";
