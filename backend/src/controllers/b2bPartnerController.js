@@ -24,7 +24,8 @@ export const getB2BPartnerOverview = async (req, res) => {
 
         // Get quotations for this B2B partner
         const quotations = await Quotation.find({ fleetOwnerId: userId })
-            .populate('corporateOwnerId', 'companyName email')
+            .populate('corporateOwnerId', 'companyName email fullName role userType whatsappNumber')
+            .populate('fleetOwnerId', 'businessName companyName email fullName role userType')
             .sort({ createdAt: -1 })
 
         // Calculate metrics

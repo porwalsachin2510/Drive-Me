@@ -4,10 +4,34 @@ import { useDispatch, useSelector } from "react-redux";
 import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import api from "../../../utils/api";
 import ImportExportControls from "../../Common/ImportExportControls/ImportExportControls";
+import BriefEmployeeImportModal from "../../Common/BriefImport/BriefEmployeeImportModal";
 import "./CorporateEmployeeManagement.css";
 import { notify } from "../../../utils/toast";
+import {
+  passengerNounSingular,
+  passengerNounPlural,
+  passengerFieldLabels,
+} from "../../../utils/roleFamilies";
 
-function CorporateEmployeeManagement() {
+function CorporateEmployeeManagement({ embedded = false, embeddedContractId = null }) {
+  // The passenger wording must follow the contract segment: a School Customer
+  // buys monthly passes for Students, a Corporate for Employees. Everything the
+  // customer sees on this screen is labelled off these two nouns.
+  const currentUserRole = useSelector((state) => state.auth.user?.role);
+  const passengerNoun = passengerNounSingular(currentUserRole); // "Student" | "Employee"
+  const passengerNounPluralLabel = passengerNounPlural(currentUserRole); // "Students" | "Employees"
+  const passengerNounLower = passengerNoun.toLowerCase();
+  const passengerNounPluralLower = passengerNounPluralLabel.toLowerCase();
+  // Segment-aware wording + dropdown catalogues for the three master-data
+  // fields (department/designation/workLocation columns). School Customer <->
+  // School Partner contracts render Grade / Member Type / Campus; Corporate <->
+  // B2B Partner contracts render Department / Designation / Work Location.
+  const fieldLabels = passengerFieldLabels(currentUserRole);
+  // "Import from the managed-service brief" screen. A managed brief lists many
+  // passengers (typed into the portal AND inside the requirement document the
+  // customer attached), so both the customer and the partner operating on their
+  // behalf can bulk-create the roster instead of adding people one by one.
+  const [showBriefEmployeeImport, setShowBriefEmployeeImport] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("list");
@@ -34,7 +58,25 @@ function CorporateEmployeeManagement() {
     shiftTypes: [],
   });
 
-  console.log("availableRoutes", availableRoutes);
+  // Shift / school-session choices. Normally these come from the segment's
+  // dropdown catalogue (SHIFT_TYPES vs SCHOOL_SHIFT_TYPES); the hardcoded list
+  // is only a fallback so the select is never empty if the catalogue is missing.
+  const fallbackShiftTypes = fieldLabels.isSchool
+    ? [
+        { value: "FULL_DAY", label: "Full School Day" },
+        { value: "MORNING", label: "Morning Session" },
+        { value: "AFTERNOON", label: "Afternoon Session" },
+      ]
+    : [
+        { value: "FULL_DAY", label: "Full Day" },
+        { value: "MORNING", label: "Morning" },
+        { value: "EVENING", label: "Evening" },
+        { value: "NIGHT", label: "Night" },
+      ];
+  const shiftTypeChoices =
+    dropdownOptions.shiftTypes?.length > 0
+      ? dropdownOptions.shiftTypes
+      : fallbackShiftTypes;
 
   // Form states - match backend CorporateEmployee model schema
   const [employeeForm, setEmployeeForm] = useState({
@@ -87,24 +129,31 @@ function CorporateEmployeeManagement() {
     fetchDropdownOptions();
   }, [currentPage, searchTerm, filterStatus]);
 
-  // Fetch dropdown options for master data fields (Department, Designation, Work Location)
+  // Fetch dropdown options for the three master-data fields. WHICH catalogue we
+  // load depends on the contract segment: a School Customer <-> School Partner
+  // contract needs Grades / Member Types / Campuses, a Corporate <-> B2B Partner
+  // contract needs Departments / Designations / Work Locations. The values land
+  // on the same CorporateEmployee columns either way.
   const fetchDropdownOptions = async () => {
     try {
       const response = await api.post("/dropdowns/multiple", {
         categories: [
-          "DEPARTMENTS",
-          "DESIGNATIONS",
-          "WORK_LOCATIONS",
-          "SHIFT_TYPES",
+          fieldLabels.department.category,
+          fieldLabels.designation.category,
+          fieldLabels.workLocation.category,
+          fieldLabels.shiftType.category,
         ],
       });
 
       const dropdownData = response.data?.data?.dropdowns || {};
       setDropdownOptions({
-        departments: dropdownData.DEPARTMENTS?.options || [],
-        designations: dropdownData.DESIGNATIONS?.options || [],
-        workLocations: dropdownData.WORK_LOCATIONS?.options || [],
-        shiftTypes: dropdownData.SHIFT_TYPES?.options || [],
+        departments:
+          dropdownData[fieldLabels.department.category]?.options || [],
+        designations:
+          dropdownData[fieldLabels.designation.category]?.options || [],
+        workLocations:
+          dropdownData[fieldLabels.workLocation.category]?.options || [],
+        shiftTypes: dropdownData[fieldLabels.shiftType.category]?.options || [],
       });
     } catch (error) {
       console.error("Error fetching dropdown options:", error);
@@ -351,10 +400,13 @@ function CorporateEmployeeManagement() {
       setShowAddModal(false);
       resetEmployeeForm();
       fetchEmployees();
-      notify("Employee added successfully!");
+      notify(`${passengerNoun} added successfully!`);
     } catch (error) {
       console.error("Error adding employee:", error);
-      notify(error.response?.data?.message || "Failed to add employee");
+      notify(
+        error.response?.data?.message ||
+          `Failed to add ${passengerNounLower}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -413,17 +465,24 @@ function CorporateEmployeeManagement() {
   };
 
   const handleDeleteEmployee = async (employeeId) => {
-    if (!window.confirm("Are you sure you want to delete this employee?")) {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete this ${passengerNounLower}?`,
+      )
+    ) {
       return;
     }
 
     try {
       await api.delete(`/corporate-employees/${employeeId}`);
       fetchEmployees();
-      notify("Employee deleted successfully!");
+      notify(`${passengerNoun} deleted successfully!`);
     } catch (error) {
       console.error("Error deleting employee:", error);
-      notify(error.response?.data?.message || "Failed to delete employee");
+      notify(
+        error.response?.data?.message ||
+          `Failed to delete ${passengerNounLower}`,
+      );
     }
   };
 
@@ -602,32 +661,64 @@ function CorporateEmployeeManagement() {
       const xlsxModule = await import("xlsx");
       const XLSX = xlsxModule.default || xlsxModule;
 
-      const sampleData = [
-        {
-          "Full Name": "John Doe",
-          Email: "john@company.com",
-          "Phone Number": "+1234567890",
-          Department: "IT",
-          Designation: "Software Engineer",
-          "Work Location": "Main Office",
-          "Home Address": "123 Main St, Downtown",
-          "Work Shift": "FULL_DAY",
-        },
-        {
-          "Full Name": "Jane Smith",
-          Email: "jane@company.com",
-          "Phone Number": "+0987654321",
-          Department: "HR",
-          Designation: "HR Manager",
-          "Work Location": "Main Office",
-          "Home Address": "456 Park Ave",
-          "Work Shift": "FULL_DAY",
-        },
-      ];
+      // The workbook columns are the SAME storage columns for every segment,
+      // but they are titled with the contract-appropriate wording so a school
+      // customer never has to fill a "Department / Designation" sheet for a
+      // student. `parseTemplateRow` below accepts either wording on upload.
+      const isSchool = fieldLabels.isSchool;
+      const sampleData = isSchool
+        ? [
+            {
+              "Full Name": "Aarav Sharma",
+              Email: "aarav.parent@example.com",
+              "Phone Number": "+971500000001",
+              [fieldLabels.department.label]: "Grade 8",
+              [fieldLabels.designation.label]: "Student",
+              [fieldLabels.workLocation.label]: "Main Campus",
+              "Home Address": "JBR Sadaf 5, Dubai Marina",
+              [fieldLabels.shiftType.label]: "MORNING_SESSION",
+            },
+            {
+              "Full Name": "Meera Nair",
+              Email: "meera.teacher@example.com",
+              "Phone Number": "+971500000002",
+              [fieldLabels.department.label]: "Grade 10",
+              [fieldLabels.designation.label]: "Teacher",
+              [fieldLabels.workLocation.label]: "Main Campus",
+              "Home Address": "Al Barsha 1",
+              [fieldLabels.shiftType.label]: "FULL_DAY",
+            },
+          ]
+        : [
+            {
+              "Full Name": "John Doe",
+              Email: "john@company.com",
+              "Phone Number": "+1234567890",
+              Department: "IT",
+              Designation: "Software Engineer",
+              "Work Location": "Main Office",
+              "Home Address": "123 Main St, Downtown",
+              "Work Shift": "FULL_DAY",
+            },
+            {
+              "Full Name": "Jane Smith",
+              Email: "jane@company.com",
+              "Phone Number": "+0987654321",
+              Department: "HR",
+              Designation: "HR Manager",
+              "Work Location": "Main Office",
+              "Home Address": "456 Park Ave",
+              "Work Shift": "FULL_DAY",
+            },
+          ];
 
       const worksheet = XLSX.utils.json_to_sheet(sampleData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        passengerNounPluralLabel,
+      );
 
       // Set column widths
       worksheet["!cols"] = [
@@ -767,10 +858,13 @@ function CorporateEmployeeManagement() {
       setEditingEmployee(null);
       resetEmployeeForm();
       fetchEmployees();
-      notify("Employee updated successfully!");
+      notify(`${passengerNoun} updated successfully!`);
     } catch (error) {
       console.error("Error updating employee:", error);
-      notify(error.response?.data?.message || "Failed to update employee");
+      notify(
+        error.response?.data?.message ||
+          `Failed to update ${passengerNounLower}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -778,12 +872,12 @@ function CorporateEmployeeManagement() {
 
   const handleSendInvitations = async () => {
     if (selectedEmployeeIds.length === 0) {
-      notify("Please select at least one employee to send invitations.");
+      notify(`Please select at least one ${passengerNounLower} to send invitations.`);
       return;
     }
     if (
       !window.confirm(
-        `Send invitations to ${selectedEmployeeIds.length} employee(s)?`,
+        `Send invitations to ${selectedEmployeeIds.length} ${passengerNounLower}(s)?`,
       )
     ) {
       return;
@@ -795,7 +889,18 @@ function CorporateEmployeeManagement() {
       });
       const sent = response.data?.data?.results?.sent?.length || 0;
       const failed = response.data?.data?.results?.failed?.length || 0;
-      notify(`Invitations sent: ${sent} successful, ${failed} failed`);
+      const noun = sent === 1 ? passengerNounLower : `${passengerNounLower}s`;
+      if (failed > 0 && sent > 0) {
+        notify(
+          `Invitation emails sent to ${sent} ${noun}. ${failed} could not be sent — please try again.`,
+        );
+      } else if (failed > 0 && sent === 0) {
+        notify(
+          `Could not send invitations to ${failed} ${passengerNounLower}(s). Please try again.`,
+        );
+      } else {
+        notify(`Invitation email${sent === 1 ? "" : "s"} sent to ${sent} ${noun}.`);
+      }
       setSelectedEmployeeIds([]);
     } catch (error) {
       console.error("Error sending invitations:", error);
@@ -883,7 +988,7 @@ function CorporateEmployeeManagement() {
               <div className="drivemego-cem-search-filters">
                 <input
                   type="text"
-                  placeholder="Search employees..."
+                  placeholder={`Search ${passengerNounPluralLower}...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="drivemego-cem-search-input"
@@ -903,7 +1008,7 @@ function CorporateEmployeeManagement() {
                   className="drivemego-cem-btn drivemego-cem-btn-primary"
                   onClick={() => setShowAddModal(true)}
                 >
-                  + Add Employee
+                  + Add {passengerNoun}
                 </button>
                 <button
                   className="drivemego-cem-btn drivemego-cem-btn-secondary"
@@ -922,16 +1027,25 @@ function CorporateEmployeeManagement() {
                       : `Send Invitations (${selectedEmployeeIds.length})`}
                   </button>
                 )}
+                <button
+                  className="drivemego-cem-btn drivemego-cem-btn-secondary"
+                  onClick={() => setShowBriefEmployeeImport(true)}
+                  title={`Create ${passengerNounPluralLower} from the managed-service requirement brief / document`}
+                >
+                  Import from Brief
+                </button>
                 <ImportExportControls
                   entity="corporate-employees"
-                  entityLabel="Employees"
+                  entityLabel={passengerNounPluralLabel}
                   onImported={fetchEmployees}
                 />
               </div>
             </div>
 
             {loading ? (
-              <div className="drivemego-cem-loading">Loading employees...</div>
+              <div className="drivemego-cem-loading">
+                Loading {passengerNounPluralLower}...
+              </div>
             ) : (
               <div className="drivemego-cem-employees-table">
                 <table>
@@ -950,8 +1064,8 @@ function CorporateEmployeeManagement() {
                       <th>Name</th>
                       <th>Email</th>
                       <th>Phone</th>
-                      <th>Department</th>
-                      <th>Designation</th>
+                      <th>{fieldLabels.department.label}</th>
+                      <th>{fieldLabels.designation.label}</th>
                       <th>Route</th>
                       <th>Trip Assignment</th>
                       <th>Status</th>
@@ -969,7 +1083,8 @@ function CorporateEmployeeManagement() {
                             color: "#888",
                           }}
                         >
-                          No employees found. Add employees to get started.
+                          No {passengerNounPluralLower} found. Add{" "}
+                          {passengerNounPluralLower} to get started.
                         </td>
                       </tr>
                     ) : (
@@ -1067,13 +1182,13 @@ function CorporateEmployeeManagement() {
   return (
     <div className="drivemego-cem-corporate-employee-management">
       <div className="drivemego-cem-management-header">
-        <h2>Employee Management</h2>
+        <h2>{passengerNoun} Management</h2>
         <div className="drivemego-cem-tab-navigation">
           <button
             className={`drivemego-cem-tab-btn ${activeTab === "list" ? "drivemego-cem-active" : ""}`}
             onClick={() => setActiveTab("list")}
           >
-            Employee List
+            {passengerNoun} List
           </button>
         </div>
       </div>
@@ -1085,7 +1200,7 @@ function CorporateEmployeeManagement() {
         <div className="drivemego-cem-modal-overlay">
           <div className="drivemego-cem-modal">
             <div className="drivemego-cem-modal-header">
-              <h3>Add New Employee</h3>
+              <h3>Add New {passengerNoun}</h3>
               <button
                 className="drivemego-cem-close-btn"
                 onClick={() => setShowAddModal(false)}
@@ -1098,7 +1213,7 @@ function CorporateEmployeeManagement() {
               className="drivemego-cem-modal-form"
             >
               <div className="drivemego-cem-form-section">
-                <h4>Personal Information</h4>
+                <h4>{fieldLabels.personalSection}</h4>
                 <div className="drivemego-cem-form-row">
                   <input
                     type="text"
@@ -1175,8 +1290,11 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
+                    aria-label={fieldLabels.department.label}
                   >
-                    <option value="">Select Department</option>
+                    <option value="">
+                      {fieldLabels.department.placeholder}
+                    </option>
                     {dropdownOptions.departments.map((dept) => (
                       <option key={dept.value} value={dept.value}>
                         {dept.label}
@@ -1194,8 +1312,11 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
+                    aria-label={fieldLabels.designation.label}
                   >
-                    <option value="">Select Designation</option>
+                    <option value="">
+                      {fieldLabels.designation.placeholder}
+                    </option>
                     {dropdownOptions.designations.map((desig) => (
                       <option key={desig.value} value={desig.value}>
                         {desig.label}
@@ -1215,8 +1336,11 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
+                    aria-label={fieldLabels.workLocation.label}
                   >
-                    <option value="">Select Work Location</option>
+                    <option value="">
+                      {fieldLabels.workLocation.placeholder}
+                    </option>
                     {dropdownOptions.workLocations.map((loc) => (
                       <option key={loc.value} value={loc.value}>
                         {loc.label}
@@ -1227,7 +1351,7 @@ function CorporateEmployeeManagement() {
                 <div className="drivemego-cem-form-row">
                   <input
                     type="text"
-                    placeholder="Home Address (Employee's residential area for nearest pickup stop)"
+                    placeholder={fieldLabels.homeAddressPlaceholder}
                     value={employeeForm.homeAddress}
                     onChange={(e) =>
                       setEmployeeForm((prev) => ({
@@ -1241,7 +1365,7 @@ function CorporateEmployeeManagement() {
               </div>
 
               <div className="drivemego-cem-form-section">
-                <h4>Transport Details</h4>
+                <h4>{fieldLabels.transportSection}</h4>
                 <div className="drivemego-cem-form-row">
                   <select
                     value={employeeForm.transportDetails.assignedRoute}
@@ -1266,11 +1390,14 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
+                    aria-label={fieldLabels.shiftType.label}
                   >
-                    <option value="FULL_DAY">Full Day</option>
-                    <option value="MORNING">Morning</option>
-                    <option value="EVENING">Evening</option>
-                    <option value="NIGHT">Night</option>
+                    <option value="">{fieldLabels.shiftType.placeholder}</option>
+                    {shiftTypeChoices.map((shift) => (
+                      <option key={shift.value} value={shift.value}>
+                        {shift.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -1408,7 +1535,7 @@ function CorporateEmployeeManagement() {
                           {selectedRouteSchedule.routeInfo?.toLocation}
                         </h5>
                         <p className="drivemego-cem-trip-section-subtitle">
-                          Morning commute - Employee travels from home to office
+                          {fieldLabels.outboundHint}
                         </p>
 
                         <div className="drivemego-cem-form-row">
@@ -1461,15 +1588,17 @@ function CorporateEmployeeManagement() {
                             </select>
                             {employeeForm.homeAddress && (
                               <small className="drivemego-cem-home-address-hint">
-                                Employee Home: {employeeForm.homeAddress}
+                                {passengerNoun} Home: {employeeForm.homeAddress}
                               </small>
                             )}
                           </div>
                           <div className="drivemego-cem-form-group">
-                            <label>Drop-off (Office)</label>
+                            <label>
+                              Drop-off ({fieldLabels.destinationNoun})
+                            </label>
                             <input
                               type="text"
-                              placeholder="Office Location"
+                              placeholder={`${fieldLabels.destinationNoun} Location`}
                               value={
                                 employeeForm.transportDetails
                                   .outboundDropoffStop ||
@@ -1500,16 +1629,17 @@ function CorporateEmployeeManagement() {
                             {selectedRouteSchedule.routeInfo?.fromLocation}
                           </h5>
                           <p className="drivemego-cem-trip-section-subtitle">
-                            Evening commute - Employee travels from office to
-                            home
+                            {fieldLabels.returnHint}
                           </p>
 
                           <div className="drivemego-cem-form-row">
                             <div className="drivemego-cem-form-group">
-                              <label>Pickup (Office)</label>
+                              <label>
+                                Pickup ({fieldLabels.destinationNoun})
+                              </label>
                               <input
                                 type="text"
-                                placeholder="Office Location"
+                                placeholder={`${fieldLabels.destinationNoun} Location`}
                                 value={
                                   employeeForm.transportDetails
                                     .returnPickupStop ||
@@ -1581,7 +1711,7 @@ function CorporateEmployeeManagement() {
                               </select>
                               {employeeForm.homeAddress && (
                                 <small className="drivemego-cem-home-address-hint">
-                                  Employee Home: {employeeForm.homeAddress}
+                                  {passengerNoun} Home: {employeeForm.homeAddress}
                                 </small>
                               )}
                             </div>
@@ -1593,8 +1723,8 @@ function CorporateEmployeeManagement() {
                       {employeeForm.transportDetails.tripType === "One Way" && (
                         <div className="drivemego-cem-one-way-notice">
                           <p>
-                            This is a One Way trip. Employee will only be
-                            transported in one direction.
+                            This is a One Way trip. The {passengerNounLower} will
+                            only be transported in one direction.
                           </p>
                         </div>
                       )}
@@ -1607,8 +1737,8 @@ function CorporateEmployeeManagement() {
                 <div className="drivemego-cem-form-section">
                   <h4>Pass Duration</h4>
                   <p className="drivemego-cem-section-description">
-                    Specify how long this route should be assigned to the
-                    employee
+                    Specify how long this route should be assigned to the{" "}
+                    {passengerNounLower}
                   </p>
 
                   <div className="drivemego-cem-form-row">
@@ -1728,7 +1858,7 @@ function CorporateEmployeeManagement() {
                   className="drivemego-cem-btn drivemego-cem-btn-primary"
                   disabled={loading}
                 >
-                  {loading ? "Adding..." : "Add Employee"}
+                  {loading ? "Adding..." : `Add ${passengerNoun}`}
                 </button>
               </div>
             </form>
@@ -1741,7 +1871,7 @@ function CorporateEmployeeManagement() {
         <div className="drivemego-cem-modal-overlay">
           <div className="drivemego-cem-modal">
             <div className="drivemego-cem-modal-header">
-              <h3>Bulk Upload Employees</h3>
+              <h3>Bulk Upload {passengerNounPluralLabel}</h3>
               <button
                 className="drivemego-cem-close-btn"
                 onClick={() => setShowBulkUploadModal(false)}
@@ -1754,7 +1884,9 @@ function CorporateEmployeeManagement() {
                 <h4>Instructions:</h4>
                 <ol>
                   <li>Download the Excel template below</li>
-                  <li>Fill in employee details in the spreadsheet</li>
+                  <li>
+                    Fill in {passengerNounLower} details in the spreadsheet
+                  </li>
                   <li>Upload the completed Excel file</li>
                 </ol>
                 <button
@@ -1783,7 +1915,8 @@ function CorporateEmployeeManagement() {
                 {bulkUploadData.employees.length > 0 && (
                   <div className="drivemego-cem-upload-preview">
                     <h4>
-                      Preview ({bulkUploadData.employees.length} employees)
+                      Preview ({bulkUploadData.employees.length}{" "}
+                      {passengerNounPluralLower})
                     </h4>
                     <div className="drivemego-cem-preview-list">
                       {bulkUploadData.employees
@@ -1820,7 +1953,9 @@ function CorporateEmployeeManagement() {
                     className="drivemego-cem-btn drivemego-cem-btn-primary"
                     disabled={loading || bulkUploadData.employees.length === 0}
                   >
-                    {loading ? "Uploading..." : "Upload Employees"}
+                    {loading
+                      ? "Uploading..."
+                      : `Upload ${passengerNounPluralLabel}`}
                   </button>
                 </div>
               </form>
@@ -1834,7 +1969,7 @@ function CorporateEmployeeManagement() {
         <div className="drivemego-cem-modal-overlay">
           <div className="drivemego-cem-modal">
             <div className="drivemego-cem-modal-header">
-              <h3>Employee Details</h3>
+              <h3>{passengerNoun} Details</h3>
               <button
                 className="drivemego-cem-close-btn"
                 onClick={() => setSelectedEmployee(null)}
@@ -1845,7 +1980,7 @@ function CorporateEmployeeManagement() {
             <div className="drivemego-cem-modal-content">
               <div className="drivemego-cem-employee-details-grid">
                 <div className="drivemego-cem-detail-section">
-                  <h4>Personal Information</h4>
+                  <h4>{fieldLabels.personalSection}</h4>
                   <p>
                     <strong>Name:</strong> {getEmployeeName(selectedEmployee)}
                   </p>
@@ -1856,16 +1991,16 @@ function CorporateEmployeeManagement() {
                     <strong>Phone:</strong> {getEmployeePhone(selectedEmployee)}
                   </p>
                   <p>
-                    <strong>Department:</strong>{" "}
+                    <strong>{fieldLabels.department.label}:</strong>{" "}
                     {getEmployeeDepartment(selectedEmployee)}
                   </p>
                   <p>
-                    <strong>Designation:</strong>{" "}
+                    <strong>{fieldLabels.designation.label}:</strong>{" "}
                     {getEmployeeDesignation(selectedEmployee)}
                   </p>
                 </div>
                 <div className="drivemego-cem-detail-section">
-                  <h4>Transport Details</h4>
+                  <h4>{fieldLabels.transportSection}</h4>
                   <p>
                     <strong>Route:</strong> {getEmployeeRoute(selectedEmployee)}
                   </p>
@@ -1978,7 +2113,7 @@ function CorporateEmployeeManagement() {
         <div className="drivemego-cem-modal-overlay">
           <div className="drivemego-cem-modal drivemego-cem-modal-large">
             <div className="drivemego-cem-modal-header">
-              <h3>Edit Employee</h3>
+              <h3>Edit {passengerNoun}</h3>
               <button
                 className="drivemego-cem-close-btn"
                 onClick={() => {
@@ -1995,7 +2130,7 @@ function CorporateEmployeeManagement() {
               className="drivemego-cem-modal-form"
             >
               <div className="drivemego-cem-form-section">
-                <h4>Personal Information</h4>
+                <h4>{fieldLabels.personalSection}</h4>
                 <div className="drivemego-cem-form-row">
                   <input
                     type="text"
@@ -2072,8 +2207,11 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
+                    aria-label={fieldLabels.department.label}
                   >
-                    <option value="">Select Department</option>
+                    <option value="">
+                      {fieldLabels.department.placeholder}
+                    </option>
                     {dropdownOptions.departments.map((dept) => (
                       <option key={dept.value} value={dept.value}>
                         {dept.label}
@@ -2091,8 +2229,11 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
+                    aria-label={fieldLabels.designation.label}
                   >
-                    <option value="">Select Designation</option>
+                    <option value="">
+                      {fieldLabels.designation.placeholder}
+                    </option>
                     {dropdownOptions.designations.map((desig) => (
                       <option key={desig.value} value={desig.value}>
                         {desig.label}
@@ -2112,8 +2253,11 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
+                    aria-label={fieldLabels.workLocation.label}
                   >
-                    <option value="">Select Work Location</option>
+                    <option value="">
+                      {fieldLabels.workLocation.placeholder}
+                    </option>
                     {dropdownOptions.workLocations.map((loc) => (
                       <option key={loc.value} value={loc.value}>
                         {loc.label}
@@ -2124,7 +2268,7 @@ function CorporateEmployeeManagement() {
                 <div className="drivemego-cem-form-row">
                   <input
                     type="text"
-                    placeholder="Home Address"
+                    placeholder={fieldLabels.homeAddressLabel}
                     value={employeeForm.homeAddress}
                     onChange={(e) =>
                       setEmployeeForm((prev) => ({
@@ -2138,7 +2282,7 @@ function CorporateEmployeeManagement() {
               </div>
 
               <div className="drivemego-cem-form-section">
-                <h4>Transport Details (Assign/Change Route)</h4>
+                <h4>{fieldLabels.transportSection} (Assign/Change Route)</h4>
                 <div className="drivemego-cem-form-row">
                   <select
                     value={employeeForm.transportDetails.assignedRoute}
@@ -2163,11 +2307,14 @@ function CorporateEmployeeManagement() {
                         },
                       }))
                     }
+                    aria-label={fieldLabels.shiftType.label}
                   >
-                    <option value="FULL_DAY">Full Day</option>
-                    <option value="MORNING">Morning</option>
-                    <option value="EVENING">Evening</option>
-                    <option value="NIGHT">Night</option>
+                    <option value="">{fieldLabels.shiftType.placeholder}</option>
+                    {shiftTypeChoices.map((shift) => (
+                      <option key={shift.value} value={shift.value}>
+                        {shift.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -2280,10 +2427,12 @@ function CorporateEmployeeManagement() {
                             </select>
                           </div>
                           <div className="drivemego-cem-form-group">
-                            <label>Drop-off (Office)</label>
+                            <label>
+                              Drop-off ({fieldLabels.destinationNoun})
+                            </label>
                             <input
                               type="text"
-                              placeholder="Office Location"
+                              placeholder={`${fieldLabels.destinationNoun} Location`}
                               value={
                                 employeeForm.transportDetails
                                   .outboundDropoffStop ||
@@ -2316,10 +2465,12 @@ function CorporateEmployeeManagement() {
 
                           <div className="drivemego-cem-form-row">
                             <div className="drivemego-cem-form-group">
-                              <label>Pickup (Office)</label>
+                              <label>
+                                Pickup ({fieldLabels.destinationNoun})
+                              </label>
                               <input
                                 type="text"
-                                placeholder="Office Location"
+                                placeholder={`${fieldLabels.destinationNoun} Location`}
                                 value={
                                   employeeForm.transportDetails
                                     .returnPickupStop ||
@@ -2430,6 +2581,17 @@ function CorporateEmployeeManagement() {
             </form>
           </div>
         </div>
+      )}
+
+      {showBriefEmployeeImport && (
+        <BriefEmployeeImportModal
+          contractId={embedded ? embeddedContractId : null}
+          onClose={() => setShowBriefEmployeeImport(false)}
+          onImported={() => {
+            setShowBriefEmployeeImport(false);
+            fetchEmployees();
+          }}
+        />
       )}
     </div>
   );

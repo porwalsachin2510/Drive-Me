@@ -6,6 +6,7 @@ import User from "../models/User.js"
 import { logManagedActivity } from "../utils/operationContext.js"
 import { createNotification } from "../Services/notificationService.js"
 import { broadcastManagedBriefUpdate } from "../Services/socketService.js"
+import { isCustomerRole, isPartnerRole } from "../utils/roleFamilies.js"
 
 /**
  * rosterChangeRequestController
@@ -53,10 +54,13 @@ const resolveAccess = async (req, res) => {
         return null
     }
 
+    // Normalise the customer/partner families to canonical side labels so the
+    // rest of this controller (which compares against "CORPORATE"/"B2B_PARTNER")
+    // works unchanged for SCHOOL_CUSTOMER / SCHOOL_PARTNER too.
     let role = null
-    if (req.userRole === "CORPORATE" && contract.corporateOwnerId.toString() === req.userId) {
+    if (isCustomerRole(req.userRole) && contract.corporateOwnerId.toString() === req.userId) {
         role = "CORPORATE"
-    } else if (req.userRole === "B2B_PARTNER" && contract.fleetOwnerId.toString() === req.userId) {
+    } else if (isPartnerRole(req.userRole) && contract.fleetOwnerId.toString() === req.userId) {
         role = "B2B_PARTNER"
     }
 

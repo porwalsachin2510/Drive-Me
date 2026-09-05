@@ -50,8 +50,8 @@ export const requestNegotiation = async (req, res) => {
 
         // Verify quotation exists and belongs to the corporate user
         const quotation = await Quotation.findById(quotationId)
-            .populate("corporateOwnerId", "fullName email companyName")
-            .populate("fleetOwnerId", "fullName email companyName")
+            .populate("corporateOwnerId", "fullName email companyName role userType")
+            .populate("fleetOwnerId", "fullName email companyName role userType")
 
         if (!quotation) {
             return res.status(404).json({
@@ -144,7 +144,7 @@ export const requestNegotiation = async (req, res) => {
 
         // Send real-time notification to Admin
         const corporateName = quotation.corporateOwnerId?.companyName || quotation.corporateOwnerId?.fullName || 'Corporate';
-        const fleetName = quotation.fleetOwnerId?.companyName || quotation.fleetOwnerId?.fullName || 'B2B Partner';
+        const fleetName = quotation.fleetOwnerId?.companyName || quotation.fleetOwnerId?.fullName || 'Service Partner';
 
         await sendAdminNotification(
             "New Negotiation Request",
@@ -165,7 +165,7 @@ export const requestNegotiation = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: "Negotiation request submitted. Admin will contact the B2B Partner on your behalf.",
+            message: "Negotiation request submitted. Admin will contact the service partner on your behalf.",
             negotiation,
         })
     } catch (error) {
@@ -193,8 +193,8 @@ export const getAllNegotiations = async (req, res) => {
 
         const negotiationDocs = await AdminNegotiation.find(query)
             .populate("quotationId", "quotationNumber quotedPrice vehicles rentalPeriod status")
-            .populate("corporateId", "fullName email companyName")
-            .populate("b2bPartnerId", "fullName email companyName")
+            .populate("corporateId", "fullName email companyName role userType")
+            .populate("b2bPartnerId", "fullName email companyName role userType")
             .populate("adminActions.adminId", "fullName email")
             .populate("completedBy", "fullName email")
             .sort({ createdAt: -1 })
@@ -273,8 +273,8 @@ export const getNegotiationDetails = async (req, res) => {
 
         const negotiation = await AdminNegotiation.findById(negotiationId)
             .populate("quotationId")
-            .populate("corporateId", "fullName email companyName whatsappNumber")
-            .populate("b2bPartnerId", "fullName email companyName whatsappNumber")
+            .populate("corporateId", "fullName email companyName whatsappNumber role userType")
+            .populate("b2bPartnerId", "fullName email companyName whatsappNumber role userType")
             .populate("adminActions.adminId", "fullName email")
             .populate("completedBy", "fullName email")
             .populate("cancelledBy", "fullName email")
@@ -325,8 +325,8 @@ export const adminNegotiationAction = async (req, res) => {
         const adminId = req.userId
 
         const negotiation = await AdminNegotiation.findById(negotiationId)
-            .populate("corporateId", "fullName email")
-            .populate("b2bPartnerId", "fullName email")
+            .populate("corporateId", "fullName email companyName role userType")
+            .populate("b2bPartnerId", "fullName email companyName role userType")
 
         if (!negotiation) {
             return res.status(404).json({
@@ -367,7 +367,7 @@ export const adminNegotiationAction = async (req, res) => {
             await quotation.save()
         }
 
-        // Send notification to B2B Partner
+        // Send notification to the partner participant
         try {
             await sendNegotiationUpdateEmail({
                 negotiation,
@@ -418,8 +418,8 @@ export const adminNegotiationAction = async (req, res) => {
         console.log("[v0] Real-time notification sent to B2B Partner for negotiation action:", action);
 
         const updatedNegotiation = await AdminNegotiation.findById(negotiationId)
-            .populate("corporateId", "fullName email companyName")
-            .populate("b2bPartnerId", "fullName email companyName")
+            .populate("corporateId", "fullName email companyName role userType")
+            .populate("b2bPartnerId", "fullName email companyName role userType")
             .populate("adminActions.adminId", "fullName email")
 
         // Push a live update so the B2B Partner's (and any admin's) open modal
@@ -452,8 +452,8 @@ export const b2bPartnerResponse = async (req, res) => {
         const b2bPartnerId = req.userId
 
         const negotiation = await AdminNegotiation.findById(negotiationId)
-            .populate("corporateId", "fullName email")
-            .populate("b2bPartnerId", "fullName email")
+            .populate("corporateId", "fullName email companyName role userType")
+            .populate("b2bPartnerId", "fullName email companyName role userType")
 
         if (!negotiation) {
             return res.status(404).json({
@@ -583,8 +583,8 @@ export const completeNegotiation = async (req, res) => {
         const adminId = req.userId
 
         const negotiation = await AdminNegotiation.findById(negotiationId)
-            .populate("corporateId", "fullName email")
-            .populate("b2bPartnerId", "fullName email")
+            .populate("corporateId", "fullName email companyName role userType")
+            .populate("b2bPartnerId", "fullName email companyName role userType")
 
         if (!negotiation) {
             return res.status(404).json({
@@ -877,8 +877,8 @@ export const cancelNegotiation = async (req, res) => {
         const userId = req.userId
 
         const negotiation = await AdminNegotiation.findById(negotiationId)
-            .populate("corporateId", "fullName email")
-            .populate("b2bPartnerId", "fullName email")
+            .populate("corporateId", "fullName email companyName role userType")
+            .populate("b2bPartnerId", "fullName email companyName role userType")
 
         if (!negotiation) {
             return res.status(404).json({
@@ -962,8 +962,8 @@ export const failNegotiation = async (req, res) => {
         const adminId = req.userId
 
         const negotiation = await AdminNegotiation.findById(negotiationId)
-            .populate("corporateId", "fullName email")
-            .populate("b2bPartnerId", "fullName email")
+            .populate("corporateId", "fullName email companyName role userType")
+            .populate("b2bPartnerId", "fullName email companyName role userType")
 
         if (!negotiation) {
             return res.status(404).json({

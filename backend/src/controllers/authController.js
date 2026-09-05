@@ -16,6 +16,7 @@ import {
     isIdentityLockedUser,
     normalizeCountry,
 } from "../Config/localizationConfig.js"
+import { CUSTOMER_ROLES, PASSENGER_ROLES, passengerRoleForOwner } from "../utils/roleFamilies.js"
 
 /**
  * Reconcile a user's stored `country` (and `nationality`) with the immutable
@@ -106,7 +107,16 @@ export const register = async (req, res) => {
             })
         }
 
-        const validRoles = ["COMMUTER", "CORPORATE", "B2C_PARTNER", "B2B_PARTNER", "CORPORATE_EMPLOYEE"]
+        const validRoles = [
+            "COMMUTER",
+            "CORPORATE",
+            "B2C_PARTNER",
+            "B2B_PARTNER",
+            "CORPORATE_EMPLOYEE",
+            "SCHOOL_STUDENT",
+            "SCHOOL_CUSTOMER",
+            "SCHOOL_PARTNER",
+        ]
         if (!validRoles.includes(role)) {
             return res.status(400).json({
                 success: false,
@@ -114,16 +124,20 @@ export const register = async (req, res) => {
             })
         }
 
-        // Additional validation for CORPORATE_EMPLOYEE
-        if (role === "CORPORATE_EMPLOYEE" && (!companyName || companyName.trim() === "")) {
+        // A managed passenger self-registers by naming the organisation that buys
+        // their monthly pass. That organisation is a CORPORATE (passenger is an
+        // employee) or a SCHOOL_CUSTOMER (passenger is a student / school staff
+        // member), so the wording here stays segment-neutral. The real segment is
+        // resolved further down from the organisation that actually matches.
+        if (PASSENGER_ROLES.includes(role) && (!companyName || companyName.trim() === "")) {
             return res.status(400).json({
                 success: false,
-                message: "Company name is required for corporate employee registration.",
+                message: "Organisation name is required for this registration.",
             })
         }
 
         // Validate T&C acceptance for roles that require it
-        const rolesRequiringTerms = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"]
+        const rolesRequiringTerms = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER", "SCHOOL_CUSTOMER", "SCHOOL_PARTNER"]
         if (rolesRequiringTerms.includes(role) && !termsAccepted) {
             return res.status(400).json({
                 success: false,
@@ -203,7 +217,12 @@ export const register = async (req, res) => {
         try {
             const terms = await TermsAndConditions.getLatest()
             if (terms && terms.commissionRanges) {
-                const roleKey = role === "B2C_PARTNER" ? "b2cPartner" : role === "B2B_PARTNER" ? "b2bPartner" : "corporate"
+                const roleKey =
+                    role === "B2C_PARTNER"
+                        ? "b2cPartner"
+                        : role === "B2B_PARTNER" || role === "SCHOOL_PARTNER"
+                            ? "b2bPartner"
+                            : "corporate"
                 commissionRange = terms.commissionRanges[roleKey] || commissionRange
             }
         } catch (e) {
@@ -572,32 +591,44 @@ export const verifyOTP = async (req, res) => {
             userData.status = "ACTIVE"
         }
 
-        if (userData.role === "CORPORATE_EMPLOYEE") {
+        // Managed-service passenger self-registration. The applicant may pick
+        // either passenger role from the public form (or an older client may only
+        // know CORPORATE_EMPLOYEE); the authoritative segment always comes from
+        // the organisation they name, so both entry points run the same lookup.
+        if (PASSENGER_ROLES.includes(userData.role)) {
             // Check if companyName exists and is not empty
             if (!userData.companyName || userData.companyName.trim() === "") {
                 return res.status(400).json({
                     success: false,
-                    message: "Company name is required for corporate employee registration.",
+                    message: "Organisation name is required for this registration.",
                 })
             }
 
+            // A managed passenger self-registers by naming the organisation that
+            // buys their monthly pass. That organisation can be a CORPORATE (the
+            // passenger is an employee) or a SCHOOL_CUSTOMER (the passenger is a
+            // student / school staff member). Look the organisation up across
+            // BOTH customer segments and then store the passenger under the role
+            // that matches its segment, so a school's people are never persisted
+            // as CORPORATE_EMPLOYEE.
             const matchingCorporateUser = await User.findOne({
-                role: "CORPORATE",
+                role: { $in: CUSTOMER_ROLES },
                 companyName: { $regex: new RegExp(`^${userData.companyName.trim()}$`, "i") },
             })
-                .select("companyName")
+                .select("companyName role")
                 .lean()
                 .exec()
 
             if (!matchingCorporateUser) {
                 return res.status(400).json({
                     success: false,
-                    message: "Company not found. Please contact your corporate admin.",
+                    message: "Organisation not found. Please contact your organisation's admin.",
                 })
             }
 
             userData.companyName = matchingCorporateUser.companyName
             userData.companyId = matchingCorporateUser._id
+            userData.role = passengerRoleForOwner(matchingCorporateUser.role)
         }
 
         if (userData.role === "B2C_PARTNER") {
@@ -637,10 +668,13 @@ export const verifyOTP = async (req, res) => {
             userData.acceptedPaymentMethods = JSON.parse(userData.acceptedPaymentMethods || "[]")
         }
 
-        if (userData.role === "B2B_PARTNER") {
+        if (userData.role === "B2B_PARTNER" || userData.role === "SCHOOL_PARTNER") {
             userData.fleetManagement = []
             userData.acceptedPaymentMethods = JSON.parse(userData.acceptedPaymentMethods || "[]")
         }
+
+        // SCHOOL_CUSTOMER mirrors CORPORATE: no special field parsing is needed
+        // beyond the shared company fields already present in registrationData.
 
         // Add T&C acceptance data to user
         if (registrationData.termsAccepted) {
@@ -693,7 +727,7 @@ export const verifyOTP = async (req, res) => {
         }
 
         // Send welcome email with T&C details for applicable roles
-        const rolesRequiringTerms = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"]
+        const rolesRequiringTerms = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER", "SCHOOL_CUSTOMER", "SCHOOL_PARTNER"]
         if (rolesRequiringTerms.includes(newUser.role) && registrationData.termsAccepted) {
             try {
                 await sendWelcomeEmailWithTerms({

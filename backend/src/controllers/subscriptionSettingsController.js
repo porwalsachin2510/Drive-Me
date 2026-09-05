@@ -10,7 +10,7 @@ import { sendEmail } from "../Services/emailService.js";
 import PaymentGatewayService from "../Services/paymentGatewayService.js";
 import { createNotification } from "../Services/notificationService.js";
 import { resolveDisplayCurrency, convertForDisplay } from "../Services/displayCurrency.js";
-import { getOrCreateWallet } from "../Services/walletService.js";
+import { getOrCreateWallet, resolvePlatformAdminId } from "../Services/walletService.js";
 import { computePassSeatAvailability } from "../Services/seatAvailabilityService.js";
 
 /*
@@ -69,8 +69,8 @@ const settleRenewalEarnings = async (pass, overrides = {}) => {
     const adminCommission = overrides.adminCommission ?? pass.adminCommission;
     const partnerEarnings = overrides.partnerEarnings ?? pass.partnerEarnings;
 
-    // Credit admin commission
-    const adminUserId = process.env.ADMIN_USER_ID;
+    // Credit admin commission (resolve the real platform admin, not a ghost id)
+    const adminUserId = await resolvePlatformAdminId();
     if (adminUserId && adminCommission > 0) {
         // Renewal commission settles into the admin wallet for the PASS'S
         // currency, keeping UAE (AED) and Kuwait (KWD) renewals separated.

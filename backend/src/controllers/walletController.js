@@ -1,5 +1,6 @@
 import Wallet from "../models/Wallet.js"
 import { getOrCreateWallet } from "../Services/walletService.js"
+import { expandRoleFamilies } from "../utils/roleFamilies.js"
 import User from "../models/User.js"
 import Transaction from "../models/Transaction.js"
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
@@ -153,7 +154,11 @@ export const getWalletBalance = async (req, res) => {
         }
         if (!wallet) {
             // Map role to valid wallet roles - some driver roles don't have wallets
-            const validWalletRoles = ["COMMUTER", "CORPORATE", "CORPORATE_EMPLOYEE", "B2C_PARTNER", "B2C_PARTNER_DRIVER", "B2B_PARTNER", "ADMIN"]
+            // Managed-service passengers share the same wallet pipeline: a
+            // SCHOOL_STUDENT is treated exactly like a CORPORATE_EMPLOYEE, and
+            // a SCHOOL_CUSTOMER like a CORPORATE. expandRoleFamilies adds the
+            // school equivalents so school users are not denied a wallet.
+            const validWalletRoles = expandRoleFamilies(["COMMUTER", "CORPORATE", "CORPORATE_EMPLOYEE", "B2C_PARTNER", "B2C_PARTNER_DRIVER", "B2B_PARTNER", "ADMIN"])
             const resolvedRole = validWalletRoles.includes(userRole)
                 ? userRole
                 : validWalletRoles.includes(user.role)
@@ -204,6 +209,27 @@ export const getWalletBalance = async (req, res) => {
                 wallet.currency = effectiveCurrency
                 await wallet.save()
             }
+        }
+
+        // PRODUCTION self-heal for the wallet ROLE: a partner/customer wallet may
+        // have been minted as COMMUTER before its role became a valid wallet role
+        // (e.g. a School Partner). The account's real role is the source of
+        // truth, so realign the stored role. Never downgrade to COMMUTER.
+        const roleSelfHealValid = expandRoleFamilies([
+            "CORPORATE",
+            "CORPORATE_EMPLOYEE",
+            "B2C_PARTNER",
+            "B2C_PARTNER_DRIVER",
+            "B2B_PARTNER",
+            "ADMIN",
+        ])
+        if (
+            user.role &&
+            roleSelfHealValid.includes(user.role) &&
+            wallet.role !== user.role
+        ) {
+            wallet.role = user.role
+            await wallet.save()
         }
 
         // ===== Compute real "spent" statistics =====

@@ -1,6 +1,6 @@
 import Payment from "../models/Payment.js"
 import Wallet from "../models/Wallet.js"
-import { getOrCreateWallet } from "../Services/walletService.js"
+import { getOrCreateWallet, resolvePlatformAdminId } from "../Services/walletService.js"
 import Transaction from "../models/Transaction.js"
 import Contract from "../models/Contract.js"
 import B2CPassengerBooking from "../models/B2CPassengerBooking.js"
@@ -10,6 +10,8 @@ import User from "../models/User.js"
 import AdminNegotiation from "../models/AdminNegotiation.js"
 import EMIPayment from "../models/EMIPayment.js"
 import ProcessedPayment from "../models/ProcessedPayment.js"
+import ExtraServiceRequest from "../models/ExtraServiceRequest.js"
+import Invoice from "../models/Invoice.js"
 import { creditAdminNegotiationCommission } from "./walletController.js"
 import { createNotification, sendRealTimeNotification, sendAdminNotification, sendPassActivatedNotification } from "../Services/notificationService.js"
 import paymentGatewayService, {
@@ -230,7 +232,7 @@ export const createPayment = async (req, res) => {
                         phone: contract.corporateOwnerId.phone,
                     },
                     contractId,
-                    redirectUrl: `${process.env.FRONTEND_URL.split(",")[0]}/payment/callback`,
+            redirectUrl: `${(process.env.FRONTEND_URL || "http://localhost:5173").split(",")[0].trim()}/payment/callback`,
                     metadata: {
                         paymentType,
                         advanceAmount: advancePaymentAmount,
@@ -414,8 +416,95 @@ export const verifyPayment = async (req, res) => {
             gatewaySessionId: session_id,
         })
 
-        // If no contract payment found, check for booking payment
+        // If no contract payment found, check for an extra-service-day payment.
+        // These are settled from the gateway session id stored on the request.
         if (!payment) {
+            const esr = await ExtraServiceRequest.findOne({ gatewaySessionId: session_id })
+            if (esr) {
+                console.log("[v0] Verifying extra-service-day payment:", esr._id.toString())
+                const esrRedirect = `/corporate/contracts/${esr.contractId}`
+                try {
+                    const verification = await paymentGatewayService.verifyPayment(
+                        provider.toUpperCase(),
+                        session_id
+                    )
+                    if (verification.success) {
+                        const { settleExtraServiceRequestPayment } = await import(
+                            "./extraServiceRequestController.js"
+                        )
+                        await settleExtraServiceRequestPayment(esr, {
+                            method: esr.paymentMethod,
+                            provider: provider.toUpperCase(),
+                            transactionId: verification.transactionId,
+                        })
+                        return res.status(200).json({
+                            success: true,
+                            message: "Extra service day payment completed successfully.",
+                            paymentType: "extra_service",
+                            data: { redirectUrl: esrRedirect },
+                        })
+                    }
+                    return res.status(200).json({
+                        success: false,
+                        message: "Extra service day payment not completed yet. Please try again.",
+                        paymentType: "extra_service",
+                        data: { redirectUrl: esrRedirect },
+                    })
+                } catch (esrError) {
+                    console.error("[v0] Extra-service verification error:", esrError.message)
+                    return res.status(200).json({
+                        success: false,
+                        message: "We could not verify your extra service day payment. Please contact support.",
+                        paymentType: "extra_service",
+                        data: { redirectUrl: esrRedirect },
+                    })
+                }
+            }
+
+            // If still nothing, check for an operational (managed monthly) invoice
+            // payment — settled from the gateway session id stored on the invoice.
+            const opsInvoice = await Invoice.findOne({ gatewaySessionId: session_id, type: "OPERATIONAL" })
+            if (opsInvoice) {
+                console.log("[v0] Verifying operational invoice payment:", opsInvoice._id.toString())
+                const invRedirect = `/corporate/contracts/${opsInvoice.contractId}`
+                try {
+                    const verification = await paymentGatewayService.verifyPayment(
+                        provider.toUpperCase(),
+                        session_id
+                    )
+                    if (verification.success) {
+                        const { settleOperationalInvoicePayment } = await import(
+                            "./managedServiceController.js"
+                        )
+                        await settleOperationalInvoicePayment(opsInvoice, {
+                            method: opsInvoice.paymentMethod,
+                            provider: provider.toUpperCase(),
+                            transactionId: verification.transactionId,
+                        })
+                        return res.status(200).json({
+                            success: true,
+                            message: "Operational invoice payment completed successfully.",
+                            paymentType: "operational_invoice",
+                            data: { redirectUrl: invRedirect },
+                        })
+                    }
+                    return res.status(200).json({
+                        success: false,
+                        message: "Operational invoice payment not completed yet. Please try again.",
+                        paymentType: "operational_invoice",
+                        data: { redirectUrl: invRedirect },
+                    })
+                } catch (invError) {
+                    console.error("[v0] Operational invoice verification error:", invError.message)
+                    return res.status(200).json({
+                        success: false,
+                        message: "We could not verify your invoice payment. Please contact support.",
+                        paymentType: "operational_invoice",
+                        data: { redirectUrl: invRedirect },
+                    })
+                }
+            }
+
             console.log("[v0] No contract payment found, checking bookings...")
 
             // For bookings, we need to retrieve the session from Stripe to get booking info
@@ -953,6 +1042,48 @@ export const stripeWebhook = async (req, res) => {
                 return res.json({ received: true })
             }
 
+            // Extra service day payment: settle the request the session belongs to.
+            // settleExtraServiceRequestPayment is idempotent (no-ops if already
+            // PAID), so it is safe even if the browser callback settled it first.
+            if (session.metadata?.type === "EXTRA_SERVICE") {
+                console.log("[v0] Processing extra-service-day payment from Stripe webhook")
+                const esr = await ExtraServiceRequest.findOne({ gatewaySessionId: session.id })
+                if (esr) {
+                    try {
+                        const { settleExtraServiceRequestPayment } = await import("./extraServiceRequestController.js")
+                        await settleExtraServiceRequestPayment(esr, {
+                            method: esr.paymentMethod,
+                            provider: "STRIPE",
+                            transactionId: session.payment_intent,
+                        })
+                    } catch (esrError) {
+                        console.error("[v0] Webhook extra-service settlement failed:", esrError.message)
+                    }
+                }
+                return res.json({ received: true })
+            }
+
+            // Operational (managed monthly) invoice payment: settle the invoice the
+            // session belongs to. settleOperationalInvoicePayment is idempotent, so
+            // it is safe even if the browser callback settled it first.
+            if (session.metadata?.type === "OPERATIONAL_INVOICE") {
+                console.log("[v0] Processing operational invoice payment from Stripe webhook")
+                const opsInvoice = await Invoice.findOne({ gatewaySessionId: session.id, type: "OPERATIONAL" })
+                if (opsInvoice) {
+                    try {
+                        const { settleOperationalInvoicePayment } = await import("./managedServiceController.js")
+                        await settleOperationalInvoicePayment(opsInvoice, {
+                            method: opsInvoice.paymentMethod,
+                            provider: "STRIPE",
+                            transactionId: session.payment_intent,
+                        })
+                    } catch (invError) {
+                        console.error("[v0] Webhook operational invoice settlement failed:", invError.message)
+                    }
+                }
+                return res.json({ received: true })
+            }
+
             // Handle contract payment
             const payment = await Payment.findOne({ gatewaySessionId: session.id })
 
@@ -1100,6 +1231,44 @@ export const tapWebhook = async (req, res) => {
                 return res.status(200).json({ status: "success" })
             }
 
+            // Extra service day payment (Tap / Kuwait). Idempotent settlement.
+            if (metadata.type === "EXTRA_SERVICE") {
+                console.log("[v0] Processing extra-service-day payment from Tap webhook")
+                const esr = await ExtraServiceRequest.findOne({ gatewaySessionId: chargeId })
+                if (esr) {
+                    try {
+                        const { settleExtraServiceRequestPayment } = await import("./extraServiceRequestController.js")
+                        await settleExtraServiceRequestPayment(esr, {
+                            method: esr.paymentMethod,
+                            provider: "TAP",
+                            transactionId: chargeId,
+                        })
+                    } catch (esrError) {
+                        console.error("[v0] Tap webhook extra-service settlement failed:", esrError.message)
+                    }
+                }
+                return res.status(200).json({ status: "success" })
+            }
+
+            // Operational (managed monthly) invoice payment (Tap / Kuwait).
+            if (metadata.type === "OPERATIONAL_INVOICE") {
+                console.log("[v0] Processing operational invoice payment from Tap webhook")
+                const opsInvoice = await Invoice.findOne({ gatewaySessionId: chargeId, type: "OPERATIONAL" })
+                if (opsInvoice) {
+                    try {
+                        const { settleOperationalInvoicePayment } = await import("./managedServiceController.js")
+                        await settleOperationalInvoicePayment(opsInvoice, {
+                            method: opsInvoice.paymentMethod,
+                            provider: "TAP",
+                            transactionId: chargeId,
+                        })
+                    } catch (invError) {
+                        console.error("[v0] Tap webhook operational invoice settlement failed:", invError.message)
+                    }
+                }
+                return res.status(200).json({ status: "success" })
+            }
+
             const payment = await Payment.findOne({ gatewaySessionId: chargeId })
 
             if (payment && payment.status !== "COMPLETED") {
@@ -1167,18 +1336,44 @@ const processPaymentToWallets = async (payment) => {
     // old code found "the user's single wallet" regardless of currency, which is
     // how foreign amounts ended up mislabeled under the wrong currency.
     const walletCurrency = payment.currency || "AED"
-    const adminUserId = process.env.ADMIN_USER_ID
+    // Resolve the REAL platform admin instead of blindly trusting
+    // process.env.ADMIN_USER_ID (which produced the ghost "Unknown" ADMIN wallet
+    // when the env var was stale). If no admin exists we skip the credit rather
+    // than mint an orphan wallet.
+    const adminUserId = await resolvePlatformAdminId()
+    if (!adminUserId) {
+        console.error("[v0] Skipping admin commission credit: no platform admin resolved")
+        // Release the walletCredited lock we acquired above so the credit can be
+        // retried once a real admin account exists — otherwise the payment would
+        // be marked credited forever without anyone actually receiving funds.
+        await Payment.findByIdAndUpdate(payment._id, {
+            $set: { walletCredited: false },
+            $unset: { walletCreditedAt: "" },
+        })
+        return {
+            success: false,
+            message: "Platform admin account not found; commission not credited.",
+        }
+    }
     let adminWallet = await getOrCreateWallet(adminUserId, {
         currency: walletCurrency,
         role: "ADMIN",
     })
     if (adminWallet.isNew) await adminWallet.save()
 
-    // Get or create fleet owner wallet with B2B_PARTNER role
+    // Get or create the partner (fleet owner) wallet using their REAL role, so a
+    // School Partner's wallet is labelled SCHOOL_PARTNER, not hardcoded as a B2B
+    // partner. Falls back to B2B_PARTNER only if the user can't be resolved.
+    const fleetOwner = await User.findById(payment.fleetOwnerId).select("role").lean()
+    const fleetWalletRole = fleetOwner?.role || "B2B_PARTNER"
     let fleetWallet = await getOrCreateWallet(payment.fleetOwnerId, {
         currency: walletCurrency,
-        role: "B2B_PARTNER",
+        role: fleetWalletRole,
     })
+    // Keep an existing wallet's role in sync if the user's role was corrected.
+    if (!fleetWallet.isNew && fleetOwner?.role && fleetWallet.role !== fleetOwner.role) {
+        fleetWallet.role = fleetOwner.role
+    }
     if (fleetWallet.isNew) await fleetWallet.save()
 
     // Log currency info for debugging

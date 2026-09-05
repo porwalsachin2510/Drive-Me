@@ -88,6 +88,11 @@ const menuConfigs = {
     { id: "notifications", label: "Notifications", icon: "alerts" },
     { id: "location", label: "Live Location", icon: "location" },
   ],
+  SCHOOL_PARTNER_DRIVER: [
+    { id: "bookings", label: "Bookings", icon: "bookings" },
+    { id: "notifications", label: "Notifications", icon: "alerts" },
+    { id: "location", label: "Live Location", icon: "location" },
+  ],
   CORPORATE_DRIVER: [
     { id: "bookings", label: "Bookings", icon: "bookings" },
     { id: "notifications", label: "Notifications", icon: "alerts" },
@@ -940,7 +945,33 @@ export default function DashboardLayout({
 
   // Get menu items based on user role and filter by admin permissions if applicable
   const getFilteredMenuItems = () => {
-    const baseMenuItems = menuConfigs[user?.role] || [];
+    // School partners use the same partner dashboard capabilities as B2B
+    // partners, while backend segment checks keep SCHOOL data isolated.
+    const menuRole =
+      user?.role === "SCHOOL_PARTNER"
+        ? "B2B_PARTNER"
+        : user?.role === "SCHOOL_CUSTOMER"
+          ? "CORPORATE"
+          : // A school customer's students/teachers are managed-service
+            // passengers exactly like corporate employees, so they get the same
+            // passenger menu (trip info, bookings, feedback, route change).
+            user?.role === "SCHOOL_STUDENT"
+            ? "CORPORATE_EMPLOYEE"
+            : user?.role;
+    let baseMenuItems = menuConfigs[menuRole] || [];
+
+    // Segment-aware labels: a SCHOOL_CUSTOMER manages "Students", not
+    // "Employees". Relabel the shared corporate menu entries so the school
+    // customer sees student-oriented wording.
+    if (user?.role === "SCHOOL_CUSTOMER") {
+      baseMenuItems = baseMenuItems.map((item) =>
+        item.id === "employee-management"
+          ? { ...item, label: "Students" }
+          : item.id === "employee-bookings"
+            ? { ...item, label: "Student Bookings" }
+            : item,
+      );
+    }
 
     // If not an admin or is a super admin, return all menu items
     if (user?.role !== "ADMIN" || user?.adminPermissions?.isSuperAdmin) {
@@ -957,7 +988,7 @@ export default function DashboardLayout({
       // If no moduleKey, allow the item (shouldn't happen with proper config)
       return true;
     });
-  };
+  };;
 
   const menuItems = getFilteredMenuItems();
 
@@ -1013,11 +1044,16 @@ export default function DashboardLayout({
       ADMIN: "Admin",
       COMMUTER: "Commuter",
       CORPORATE: "Corporate",
+      SCHOOL_CUSTOMER: "School Customer",
       B2C_PARTNER: "B2C Partner",
       B2B_PARTNER: "B2B Partner",
+      SCHOOL_PARTNER: "School Partner",
       CORPORATE_DRIVER: "Corporate Driver",
       B2B_PARTNER_DRIVER: "B2B Partner Driver",
+      SCHOOL_PARTNER_DRIVER: "School Partner Driver",
+      SCHOOL_CUSTOMER_DRIVER: "School Customer Driver",
       CORPORATE_EMPLOYEE: "Corporate Employee",
+      SCHOOL_STUDENT: "School Student",
       B2C_PARTNER_DRIVER: "B2C Partner Driver",
     };
     return roleMap[role] || role;
@@ -1103,7 +1139,9 @@ export default function DashboardLayout({
 
   const showWallet =
     user?.role &&
-    ["COMMUTER", "B2C_PARTNER", "B2B_PARTNER", "ADMIN"].includes(user.role);
+    ["COMMUTER", "B2C_PARTNER", "B2B_PARTNER", "SCHOOL_PARTNER", "ADMIN"].includes(
+      user.role,
+    );
 
   // Close dropdown when clicking outside
   useEffect(() => {

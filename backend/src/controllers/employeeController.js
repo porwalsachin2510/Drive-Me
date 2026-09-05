@@ -3,6 +3,7 @@ import CorporateEmployee from "../models/CorporateEmployee.js";
 import Route from "../models/Route.js";
 import MonthlyPass from "../models/MonthlyPass.js";
 import { generateOTP, sendVerificationOTP } from "../Services/emailService.js";
+import { PASSENGER_ROLES, passengerRoleForOwner } from "../utils/roleFamilies.js";
 import bcrypt from "bcryptjs";
 
 // @desc    Get all employees for a corporate
@@ -15,7 +16,7 @@ export const getCorporateEmployees = async (req, res) => {
 
         // Build query
         const query = {
-            role: "CORPORATE_EMPLOYEE",
+            role: { $in: PASSENGER_ROLES },
             companyId: corporateId
         };
 
@@ -98,9 +99,10 @@ export const addEmployee = async (req, res) => {
         const tempPassword = Math.random().toString(36).slice(-8);
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-        // Create user
+        // Create user — tag with the segment's passenger role so a school
+        // customer's students are stored as SCHOOL_STUDENT, not CORPORATE_EMPLOYEE.
         const user = new User({
-            role: "CORPORATE_EMPLOYEE",
+            role: passengerRoleForOwner(corporate.role),
             fullName,
             email,
             whatsappNumber,
@@ -211,7 +213,7 @@ export const bulkUploadEmployees = async (req, res) => {
 
                 // Create user
                 const user = new User({
-                    role: "CORPORATE_EMPLOYEE",
+                    role: passengerRoleForOwner(corporate.role),
                     fullName: empData.fullName,
                     email: empData.email,
                     whatsappNumber: empData.whatsappNumber,
@@ -341,7 +343,7 @@ export const getEmployeeDetails = async (req, res) => {
 
         const user = await User.findOne({
             _id: employeeId,
-            role: "CORPORATE_EMPLOYEE",
+            role: { $in: PASSENGER_ROLES },
             companyId: corporateId
         }).select("-password");
 
@@ -384,7 +386,7 @@ export const deleteEmployee = async (req, res) => {
         // Check if employee belongs to this corporate
         const employee = await User.findOne({
             _id: employeeId,
-            role: "CORPORATE_EMPLOYEE",
+            role: { $in: PASSENGER_ROLES },
             companyId: corporateId
         });
 

@@ -19,6 +19,7 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import api from "../../../utils/api";
 import "./QuotationDetails.css";
 import { notify } from "../../../utils/toast";
+import { partnerRoleLabel, customerRoleLabel } from "../../../utils/roleFamilies";
 
 // Admin Negotiation Request Modal Component
 const AdminNegotiationModal = ({ quotation, onClose, onSuccess }) => {
@@ -89,7 +90,7 @@ const AdminNegotiationModal = ({ quotation, onClose, onSuccess }) => {
               <strong>How Admin Negotiation Works:</strong>
               <ul>
                 <li>
-                  Admin will negotiate with the B2B Partner on your behalf
+                  Admin will negotiate with the {partnerRoleLabel(quotation.fleetOwnerId?.role)} on your behalf
                 </li>
                 <li>
                   If a better price is achieved, the quotation will be updated
@@ -364,6 +365,8 @@ const QuotationDetails = () => {
   }
 
   const fleetOwner = quotation.fleetOwnerId || {};
+  const partnerLabel = partnerRoleLabel(fleetOwner.role);
+  const customerLabel = customerRoleLabel(quotation.corporateOwnerId?.role);
   const vehicles = quotation.vehicles || [];
   const rentalPeriod = quotation.rentalPeriod || {};
   const requirements = quotation.requirements || {};
@@ -982,7 +985,7 @@ const QuotationDetails = () => {
                         {quotation.adminNegotiation.status ===
                           "IN_PROGRESS" && (
                           <p>
-                            Admin is actively negotiating with the B2B Partner.
+                            Admin is actively negotiating with the {partnerLabel}.
                             Please wait for updates.
                           </p>
                         )}

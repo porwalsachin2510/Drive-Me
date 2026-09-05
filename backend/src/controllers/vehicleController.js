@@ -285,13 +285,17 @@ export const searchVehicles = async (req, res) => {
 
 
 
-        // Step 1: Find all B2B Partners (Fleet Owners)
+        // Step 1: Find all partners (Fleet Owners) in the requester's segment.
+        // A CORPORATE customer only discovers B2B_PARTNER partners; a
+        // SCHOOL_CUSTOMER only discovers SCHOOL_PARTNER partners. This keeps the
+        // two ecosystems isolated end-to-end.
         // NOTE: We intentionally DO NOT select the partner's private contact
         // details (email / whatsappNumber) here. During discovery the corporate
         // must not be able to reach the partner off-platform. Contact info is
         // only shared after a quotation/contract is confirmed through DriveMeGo.
+        const partnerRole = req.userRole === "SCHOOL_CUSTOMER" ? "SCHOOL_PARTNER" : "B2B_PARTNER";
         const fleetOwners = await User.find({
-            role: "B2B_PARTNER"
+            role: partnerRole
         }).select("_id fullName companyName nationality acceptedPaymentMethods");
 
         if (!fleetOwners || fleetOwners.length === 0) {

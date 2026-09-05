@@ -83,8 +83,17 @@ const Register = () => {
     { id: "CORPORATE", label: "CORPORATE", icon: "🏢" },
     { id: "B2C_PARTNER", label: "B2C PARTNER", icon: "🚗" },
     { id: "B2B_PARTNER", label: "B2B PARTNER", icon: "🏭" },
+    { id: "SCHOOL_CUSTOMER", label: "SCHOOL CUSTOMER", icon: "🏫" },
+    { id: "SCHOOL_PARTNER", label: "SCHOOL PARTNER", icon: "🚌" },
     // { id: "CORPORATE_EMPLOYEE", label: "CORPORATE EMPLOYEE", icon: "👔" },
   ];
+
+  // School roles reuse the corporate/partner registration form and behaviour.
+  // SCHOOL_CUSTOMER mirrors CORPORATE; SCHOOL_PARTNER mirrors B2B_PARTNER.
+  const isCorporateLike =
+    selectedRole === "CORPORATE" || selectedRole === "SCHOOL_CUSTOMER";
+  const isB2BLike =
+    selectedRole === "B2B_PARTNER" || selectedRole === "SCHOOL_PARTNER";
 
   const roleRedirectMap = {
     COMMUTER: "/",
@@ -92,6 +101,8 @@ const Register = () => {
     B2C_PARTNER: "/",
     B2B_PARTNER: "/",
     CORPORATE_EMPLOYEE: "/",
+    SCHOOL_CUSTOMER: "/",
+    SCHOOL_PARTNER: "/",
   };
 
   const [formData, setFormData] = useState({
@@ -167,7 +178,13 @@ const Register = () => {
   };
 
   // Roles that require T&C acceptance
-  const rolesRequiringTerms = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"];
+  const rolesRequiringTerms = [
+    "CORPORATE",
+    "B2B_PARTNER",
+    "B2C_PARTNER",
+    "SCHOOL_CUSTOMER",
+    "SCHOOL_PARTNER",
+  ];
   const requiresTerms = rolesRequiringTerms.includes(selectedRole);
 
   // Fetch commission range when role changes
@@ -192,6 +209,8 @@ const Register = () => {
               B2C_PARTNER: "b2cPartner",
               B2B_PARTNER: "b2bPartner",
               CORPORATE: "corporate",
+              SCHOOL_CUSTOMER: "corporate",
+              SCHOOL_PARTNER: "b2bPartner",
             };
             const roleKey = roleKeyMap[selectedRole];
             const range = data.commissionRange ||
@@ -498,10 +517,16 @@ const Register = () => {
     }
 
     if (
-      selectedRole === "CORPORATE" &&
+      isCorporateLike &&
       (!formData.companyName || !formData.companyAddress)
     ) {
-      dispatch(authError("Please fill in company details"));
+      dispatch(
+        authError(
+          selectedRole === "SCHOOL_CUSTOMER"
+            ? "Please fill in your school details"
+            : "Please fill in company details"
+        )
+      );
       return false;
     }
 
@@ -544,7 +569,7 @@ const Register = () => {
     //   }
     // }
 
-    if (selectedRole === "B2B_PARTNER") {
+    if (isB2BLike) {
       if (formData.acceptedPaymentMethods.length === 0) {
         dispatch(authError("Please select payment methods"));
         return false;
@@ -600,7 +625,7 @@ const Register = () => {
         submitData.append("profileImage", formData.profileImage.file);
       }
 
-      if (selectedRole === "CORPORATE") {
+      if (isCorporateLike) {
         submitData.append("companyName", formData.companyName);
         submitData.append("companyAddress", formData.companyAddress);
         if (formData.tradeLicense?.file) {
@@ -608,8 +633,8 @@ const Register = () => {
         }
       }
 
-      if (selectedRole === "B2B_PARTNER") {
-        // Add profile image for B2B Partner
+      if (isB2BLike) {
+        // Add profile image for B2B / School Partner
         if (formData.profileImage?.file) {
           submitData.append("profileImage", formData.profileImage.file);
         }
@@ -889,9 +914,8 @@ const Register = () => {
                 </div>
               </div>
 
-              {/* Profile Image for COMMUTER and B2B_PARTNER */}
-              {(selectedRole === "COMMUTER" ||
-                selectedRole === "B2B_PARTNER") && (
+              {/* Profile Image for COMMUTER and B2B / School Partner */}
+              {(selectedRole === "COMMUTER" || isB2BLike) && (
                 <div className="register-form-row">
                   <div className="register-form-group register-profile-image-group">
                     <label className="register-form-label">
@@ -942,19 +966,27 @@ const Register = () => {
                 </div>
               )}
 
-              {/* Corporate Role Specific */}
-              {selectedRole === "CORPORATE" && (
+              {/* Corporate / School Customer Role Specific */}
+              {isCorporateLike && (
                 <>
                   <div className="register-form-divider"></div>
                   <div className="register-corp-section-header">
-                    <span className="register-section-icon">🏢</span>
-                    <span>Company Details</span>
+                    <span className="register-section-icon">
+                      {selectedRole === "SCHOOL_CUSTOMER" ? "🏫" : "🏢"}
+                    </span>
+                    <span>
+                      {selectedRole === "SCHOOL_CUSTOMER"
+                        ? "School Details"
+                        : "Company Details"}
+                    </span>
                   </div>
 
                   <div className="register-form-row">
                     <div className="register-form-group">
                       <label className="register-form-label">
-                        Company Name
+                        {selectedRole === "SCHOOL_CUSTOMER"
+                          ? "School Name"
+                          : "Company Name"}
                       </label>
                       <input
                         type="text"
@@ -962,7 +994,11 @@ const Register = () => {
                         name="companyName"
                         value={formData.companyName}
                         onChange={handleInputChange}
-                        placeholder="e.g. ABC Trading Co."
+                        placeholder={
+                          selectedRole === "SCHOOL_CUSTOMER"
+                            ? "e.g. Al Noor International School"
+                            : "e.g. ABC Trading Co."
+                        }
                       />
                     </div>
                     <div className="register-form-group">
@@ -992,14 +1028,20 @@ const Register = () => {
                   <div className="register-form-row full">
                     <div className="register-form-group">
                       <label className="register-form-label">
-                        Company Address
+                        {selectedRole === "SCHOOL_CUSTOMER"
+                          ? "School Address"
+                          : "Company Address"}
                       </label>
                       <textarea
                         className="register-form-input"
                         name="companyAddress"
                         value={formData.companyAddress}
                         onChange={handleInputChange}
-                        placeholder="Full office address..."
+                        placeholder={
+                          selectedRole === "SCHOOL_CUSTOMER"
+                            ? "Full school address..."
+                            : "Full office address..."
+                        }
                       ></textarea>
                     </div>
                   </div>
@@ -1175,8 +1217,7 @@ const Register = () => {
               )}
 
               {/* Payment Methods */}
-              {(selectedRole === "B2B_PARTNER" ||
-                selectedRole === "B2C_PARTNER") && (
+              {(isB2BLike || selectedRole === "B2C_PARTNER") && (
                 <>
                   <div className="register-form-divider"></div>
                   <div className="register-corp-section-header">

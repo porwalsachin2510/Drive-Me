@@ -11,6 +11,43 @@ import { notify } from "../../../utils/toast";
 
 function EmployeeTripBooking() {
   const user = useSelector((state) => state.auth.user);
+  // This portal serves both managed-service passenger segments: a CORPORATE's
+  // employees (CORPORATE_EMPLOYEE) and a SCHOOL_CUSTOMER's students/teachers
+  // (SCHOOL_STUDENT). Only the wording differs - the pipeline is identical.
+  const isSchoolPassenger = user?.role === "SCHOOL_STUDENT";
+  const ownerNoun = isSchoolPassenger ? "school" : "company";
+  const destinationNoun = isSchoolPassenger ? "School" : "Office";
+  const transportBadge = isSchoolPassenger
+    ? "School Transport"
+    : "Corporate Transport";
+
+  // Honest, destination-based direction label.
+  //
+  // The trip's `direction` enum (FORWARD/RETURN) assumes outbound is always
+  // "home -> office". That assumption breaks for one-way school/corporate routes
+  // set up as "Campus -> Home" (e.g. an evening-only shuttle): a FORWARD trip can
+  // actually be heading HOME while the old code still printed "To School".
+  //
+  // Every trip already carries its true endpoints (fromLocation/toLocation) and
+  // the passenger's own dropoff, so we label by the ACTUAL destination instead of
+  // trusting the enum. When the backend flags which endpoint is the school/office
+  // (destinationKind), we use the friendly "To School/Office"; otherwise we name
+  // the real destination so the label can never contradict the route shown above.
+  const getDirectionLabel = (t) => {
+    const destination =
+      t?.myDropoffStop || t?.dropoffLocation || t?.toLocation;
+    // Backend hint: "OFFICE" | "SCHOOL" | "HOME" for this trip's destination.
+    const kind = String(t?.destinationKind || "").toUpperCase();
+    if (kind === "OFFICE" || kind === "SCHOOL") return `To ${destinationNoun}`;
+    if (kind === "HOME") return "To Home";
+    if (destination) return `To ${destination}`;
+    // Last-resort fallback to the enum, then trip type.
+    return t?.direction === "FORWARD"
+      ? `To ${destinationNoun}`
+      : t?.direction === "RETURN"
+        ? "To Home"
+        : t?.tripType || "One Way";
+  };
   const socket = useSocket();
   const [trips, setTrips] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
@@ -80,6 +117,7 @@ function EmployeeTripBooking() {
       CORPORATE_DRIVER: "Corporate Driver",
       B2B_PARTNER_DRIVER: "B2B Partner Driver",
       CORPORATE_EMPLOYEE: "Corporate Employee",
+      SCHOOL_STUDENT: "School Student",
       B2C_PARTNER_DRIVER: "B2C Partner Driver",
     };
     return roleMap[role] || role;
@@ -682,8 +720,7 @@ function EmployeeTripBooking() {
               <div className="employee-trip-booking-info-banner">
                 <div className="info-icon">i</div>
                 <p>
-                  These trips have been scheduled by your company. You are
-                  automatically booked on these trips.
+                  {`These trips have been scheduled by your ${ownerNoun}. You are automatically booked on these trips.`}
                 </p>
               </div>
               {trips.length === 0 ? (
@@ -708,7 +745,7 @@ function EmployeeTripBooking() {
                           className="employee-trip-booking-trip-card corporate-assigned"
                         >
                           <div className="employee-trip-booking-corporate-badge">
-                            Corporate Transport
+                            {transportBadge}
                           </div>
                           <div className="employee-trip-booking-trip-route">
                             <h3>
@@ -738,11 +775,7 @@ function EmployeeTripBooking() {
                             </p>
                             <p>
                               <strong>Direction:</strong>{" "}
-                              {trip.direction === "FORWARD"
-                                ? "To Office"
-                                : trip.direction === "RETURN"
-                                  ? "To Home"
-                                  : trip.tripType || "One Way"}
+                              {getDirectionLabel(trip)}
                             </p>
                             <p>
                               <strong>Vehicle:</strong>{" "}
@@ -965,19 +998,17 @@ function EmployeeTripBooking() {
                             "See schedule"}
                         </p>
                         <p>
-                          <strong>Direction:</strong>{" "}
-                          {booking.direction === "FORWARD"
-                            ? "To Office"
-                            : booking.direction === "RETURN"
-                              ? "To Home"
-                              : booking.tripType || "One Way"}
-                        </p>
+                              <strong>Direction:</strong>{" "}
+                              {getDirectionLabel(booking)}
+                            </p>
                         <p>
                           <strong>Vehicle:</strong>{" "}
                           {booking.vehicleName ||
                             booking.vehicle?.vehicleName ||
                             booking.vehicle?.model ||
-                            "Company Vehicle"}
+                            (isSchoolPassenger
+                              ? "School Vehicle"
+                              : "Company Vehicle")}
                         </p>
                         <p>
                           <strong>Driver:</strong>{" "}
@@ -986,7 +1017,9 @@ function EmployeeTripBooking() {
                             ? booking.driverName
                             : booking.driverId?.fullName ||
                               booking.driverId?.name ||
-                              "Company Driver"}
+                              (isSchoolPassenger
+                                ? "School Driver"
+                                : "Company Driver")}
                         </p>
                         <p>
                           <strong>Pickup Point:</strong>{" "}

@@ -77,6 +77,11 @@ function B2C_Partner_Header() {
       CORPORATE_DRIVER: "Corporate Driver",
       B2B_PARTNER_DRIVER: "B2B Partner Driver",
       CORPORATE_EMPLOYEE: "Corporate Employee",
+      SCHOOL_CUSTOMER: "School Customer",
+      SCHOOL_PARTNER: "School Partner",
+      SCHOOL_PARTNER_DRIVER: "School Partner Driver",
+      SCHOOL_CUSTOMER_DRIVER: "School Customer Driver",
+      SCHOOL_STUDENT: "School Student",
       B2C_PARTNER_DRIVER: "B2C Partner Driver",
     };
     return roleMap[role] || role;

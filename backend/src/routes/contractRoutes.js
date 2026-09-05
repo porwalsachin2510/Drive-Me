@@ -16,6 +16,7 @@ import {
     getAssignedVehiclesForContract,
     assignRouteToVehicle,
     bulkCreateRoutesFromBrief,
+    importRoutesFromBrief,
     assignDriverOrFuelToVehicle,
     getContractRoutes,
     getVehicleRoutes,
@@ -122,6 +123,11 @@ router.post("/assign-route/:contractId/:assignedVehicleId", verifyToken, require
 
 // Bulk-create all pending brief route requests on one vehicle (managed service)
 router.post("/bulk-assign-routes/:contractId/:assignedVehicleId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, bulkCreateRoutesFromBrief)
+
+// Import many brief/document routes at once, each onto the vehicle chosen for it.
+// This is the multi-vehicle version of bulk-assign-routes and is what the
+// "Import Routes" screen calls. Available to the customer and to the partner.
+router.post("/import-routes/:contractId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, importRoutesFromBrief)
 
 // Update/Change driver assigned by Corporate
 router.put("/update-corporate-driver/:contractId/:assignedVehicleId", verifyToken, requireRole(["CORPORATE", "B2B_PARTNER"]), resolveCorporateContext, updateCorporateDriver)

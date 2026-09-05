@@ -145,6 +145,23 @@
   background: rgba(0, 0, 0, 0.02);
 }
 
+/* School tab - outlined style when not active */
+.drivemego-topbar-school-tab:not(.drivemego-topbar-active) {
+  border-color: var(--text-secondary, #5f6368);
+  background: transparent;
+}
+
+.drivemego-topbar-school-tab:not(.drivemego-topbar-active):hover {
+  border-color: var(--text-primary, #202124);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.drivemego-topbar-school-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .drivemego-topbar-building-icon {
   display: flex;
   align-items: center;

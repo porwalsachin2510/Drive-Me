@@ -359,7 +359,7 @@ export const getAvailableTrips = async (req, res) => {
 
         // Get employee details
         const employee = await User.findById(employeeId);
-        if (!employee || !["CORPORATE_DRIVER", "CORPORATE", "CORPORATE_EMPLOYEE"].includes(employee.role)) {
+        if (!employee || !["CORPORATE_DRIVER", "CORPORATE", "CORPORATE_EMPLOYEE", "SCHOOL_CUSTOMER", "SCHOOL_CUSTOMER_DRIVER", "SCHOOL_STUDENT"].includes(employee.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Unauthorized access"
@@ -428,7 +428,7 @@ export const bookTripSeat = async (req, res) => {
 
         // Get employee details
         const employee = await User.findById(employeeId);
-        if (!employee || !["CORPORATE_DRIVER", "CORPORATE", "CORPORATE_EMPLOYEE"].includes(employee.role)) {
+        if (!employee || !["CORPORATE_DRIVER", "CORPORATE", "CORPORATE_EMPLOYEE", "SCHOOL_CUSTOMER", "SCHOOL_CUSTOMER_DRIVER", "SCHOOL_STUDENT"].includes(employee.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Unauthorized access"
@@ -1299,7 +1299,7 @@ export const assignDriverToTrip = async (req, res) => {
         }
 
         // Validate driver role
-        const validRoles = ["B2C_PARTNER_DRIVER", "B2B_PARTNER_DRIVER", "CORPORATE_DRIVER"];
+        const validRoles = ["B2C_PARTNER_DRIVER", "B2B_PARTNER_DRIVER", "CORPORATE_DRIVER", "SCHOOL_PARTNER_DRIVER", "SCHOOL_CUSTOMER_DRIVER"];
         if (!validRoles.includes(driver.role)) {
             return res.status(400).json({
                 success: false,
@@ -1330,20 +1330,22 @@ export const assignDriverToTrip = async (req, res) => {
                     });
                 }
 
-                // Check with/without driver flag
-                if (vehicleAssignment.driverAssignedBy === "B2B_PARTNER" &&
-                    !["B2B_PARTNER_DRIVER", "B2C_PARTNER_DRIVER"].includes(driver.role)) {
+                // Check with/without driver flag. driverAssignedBy stores the
+                // assigner's role; partner families (B2B_PARTNER / SCHOOL_PARTNER)
+                // assign partner drivers, customer families assign corporate drivers.
+                if (["B2B_PARTNER", "SCHOOL_PARTNER"].includes(vehicleAssignment.driverAssignedBy) &&
+                    !["B2B_PARTNER_DRIVER", "B2C_PARTNER_DRIVER", "SCHOOL_PARTNER_DRIVER"].includes(driver.role)) {
                     return res.status(400).json({
                         success: false,
-                        message: "Driver must be from B2B Partner for this vehicle assignment"
+                        message: "Driver must be from the fleet partner for this vehicle assignment"
                     });
                 }
 
-                if (vehicleAssignment.driverAssignedBy === "CORPORATE" &&
-                    driver.role !== "CORPORATE_DRIVER") {
+                if (["CORPORATE", "SCHOOL_CUSTOMER"].includes(vehicleAssignment.driverAssignedBy) &&
+                    !["CORPORATE_DRIVER", "SCHOOL_CUSTOMER_DRIVER"].includes(driver.role)) {
                     return res.status(400).json({
                         success: false,
-                        message: "Driver must be a Corporate Driver for this vehicle assignment"
+                        message: "Driver must be a customer-provided driver for this vehicle assignment"
                     });
                 }
             }

@@ -9,6 +9,7 @@ import CorporateDriver from "../models/CorporateDriver.js";
 import CorporateRouteSchedule from "../models/CorporateRouteSchedule.js";
 import MonthlyPass from "../models/MonthlyPass.js";
 import { sendEmail } from "../Services/emailService.js";
+import { passengerRoleForOwner, CUSTOMER_ROLES } from "../utils/roleFamilies.js";
 
 // Register corporate employee
 export const registerCorporateEmployee = async (req, res) => {
@@ -27,10 +28,12 @@ export const registerCorporateEmployee = async (req, res) => {
             dropoffLocation
         } = req.body;
 
-        // Verify company email matches invitation
+        // Verify company email matches invitation. Accept BOTH customer segments
+        // (a CORPORATE company or a SCHOOL_CUSTOMER school) so a school's students
+        // can self-register the same way corporate employees do.
         const company = await User.findOne({
             email: companyEmail,
-            role: "CORPORATE"
+            role: { $in: CUSTOMER_ROLES }
         });
 
         if (!company) {
@@ -61,7 +64,9 @@ export const registerCorporateEmployee = async (req, res) => {
             fullName,
             email,
             password,
-            role: "CORPORATE_EMPLOYEE",
+            // Tag the passenger login with its segment role: a SCHOOL_CUSTOMER's
+            // registrant becomes a SCHOOL_STUDENT, a CORPORATE's a CORPORATE_EMPLOYEE.
+            role: passengerRoleForOwner(company.role),
             companyId: company._id,
             isActive: true
         });
@@ -288,6 +293,28 @@ export const getEmployeeDashboard = async (req, res) => {
                 dropoffStop = employee.transportDetails?.returnDropoffStop;
             }
 
+            // Classify the trip's ACTUAL destination as OFFICE/SCHOOL vs HOME so the
+            // passenger portal shows a truthful "To School / To Home" label instead
+            // of guessing from the FORWARD/RETURN enum (wrong for one-way
+            // "Campus -> Home" routes). Compare the resolved dropoff to the office
+            // anchor (outbound dropoff) and the home anchor (return dropoff / home).
+            const normLoc1 = (s) => String(s || "").trim().toLowerCase();
+            const officeAnchor1 = normLoc1(
+                employee.transportDetails?.outboundDropoffStop || trip.toLocation
+            );
+            const homeAnchor1 = normLoc1(
+                employee.transportDetails?.returnDropoffStop ||
+                employee.transportDetails?.outboundPickupStop ||
+                employee.homeAddress
+            );
+            const actualDropoff1 = normLoc1(dropoffStop || trip.toLocation);
+            let destinationKind1 = null;
+            if (actualDropoff1 && officeAnchor1 && actualDropoff1 === officeAnchor1) {
+                destinationKind1 = "OFFICE";
+            } else if (actualDropoff1 && homeAnchor1 && actualDropoff1 === homeAnchor1) {
+                destinationKind1 = "HOME";
+            }
+
             return {
                 _id: trip._id,
                 date: trip.tripDate?.toISOString().split('T')[0],
@@ -299,6 +326,7 @@ export const getEmployeeDashboard = async (req, res) => {
                 route: `${trip.fromLocation || 'Unknown'} -> ${trip.toLocation || 'Unknown'}`,
                 tripType: trip.tripType,
                 direction: trip.direction,
+                destinationKind: destinationKind1,
                 status: trip.status,
                 driverId: trip.driverId?._id,
                 vehicleName: trip.vehicleId?.vehicleName || trip.vehicleId?.model || vehicleInfo?.vehicleName || 'Not assigned',
@@ -1213,7 +1241,13 @@ const getUpcomingTripsFromTrips = async (userId, employee) => {
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const endDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000); // Show for 30 days
+        // Show every upcoming trip for the passenger's whole pass, not just the
+        // next 30 days. A monthly-pass student is booked for the full pass
+        // duration (1-3+ months), and capping the window at 30 days made their
+        // "My Scheduled Trips" count (e.g. 21) disagree with the total the school
+        // owner sees (e.g. 66). A generous 400-day horizon covers any pass length
+        // while still excluding stale/past trips (handled by tripDate >= today).
+        const endDate = new Date(today.getTime() + 400 * 24 * 60 * 60 * 1000);
 
         // Get trips where this employee is a passenger (or corporate-wide trips they're part of)
         // Don't populate driverId since it may reference CorporateDriver model, not User
@@ -1299,6 +1333,25 @@ const getUpcomingTripsFromTrips = async (userId, employee) => {
                 dropoffStop = employee.transportDetails?.returnDropoffStop;
             }
 
+            // Classify the trip's ACTUAL destination (see path above) so the label
+            // is truthful for one-way "Campus -> Home" routes too.
+            const normLoc2 = (s) => String(s || "").trim().toLowerCase();
+            const officeAnchor2 = normLoc2(
+                employee.transportDetails?.outboundDropoffStop || trip.toLocation
+            );
+            const homeAnchor2 = normLoc2(
+                employee.transportDetails?.returnDropoffStop ||
+                employee.transportDetails?.outboundPickupStop ||
+                employee.homeAddress
+            );
+            const actualDropoff2 = normLoc2(dropoffStop || trip.toLocation);
+            let destinationKind2 = null;
+            if (actualDropoff2 && officeAnchor2 && actualDropoff2 === officeAnchor2) {
+                destinationKind2 = "OFFICE";
+            } else if (actualDropoff2 && homeAnchor2 && actualDropoff2 === homeAnchor2) {
+                destinationKind2 = "HOME";
+            }
+
             return {
                 _id: trip._id,
                 date: trip.tripDate?.toISOString().split('T')[0],
@@ -1310,6 +1363,7 @@ const getUpcomingTripsFromTrips = async (userId, employee) => {
                 route: `${trip.fromLocation || 'Unknown'} -> ${trip.toLocation || 'Unknown'}`,
                 tripType: trip.tripType,
                 direction: trip.direction,
+                destinationKind: destinationKind2,
                 status: trip.status,
                 driverId: driverObjectId,
                 vehicleName: trip.vehicleId?.vehicleName || trip.vehicleId?.model || 'Not assigned',

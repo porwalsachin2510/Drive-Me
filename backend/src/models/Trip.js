@@ -6,10 +6,19 @@ const tripSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Contract",
         },
+        // Optional: recurring contract trips are generated from a Route, but
+        // ad-hoc EXTRA SERVICE DAY trips (picnics/events) have no route.
         routeId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Route",
-            required: true,
+        },
+        // Set when this trip was generated from an approved ExtraServiceRequest
+        // (a one-off extra day beyond the contract schedule).
+        extraServiceRequestId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "ExtraServiceRequest",
+            default: null,
+            index: true,
         },
         vehicleId: {
             type: mongoose.Schema.Types.ObjectId,

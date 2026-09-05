@@ -288,8 +288,10 @@ function getRoleKey(role) {
         case "B2C_PARTNER":
             return "b2cPartner"
         case "B2B_PARTNER":
+        case "SCHOOL_PARTNER":
             return "b2bPartner"
         case "CORPORATE":
+        case "SCHOOL_CUSTOMER":
             return "corporate"
         case "COMMUTER":
             return "commuter"
@@ -304,8 +306,10 @@ function getRoleSpecificTerms(role) {
         case "B2C_PARTNER":
             return terms.b2cPartner
         case "B2B_PARTNER":
+        case "SCHOOL_PARTNER":
             return terms.b2bPartner
         case "CORPORATE":
+        case "SCHOOL_CUSTOMER":
             return terms.corporate
         case "COMMUTER":
             return terms.commuter

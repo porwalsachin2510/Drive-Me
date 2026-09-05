@@ -10,13 +10,17 @@ import {
     updateVehicleStatus,
     getAvailableVehicles,
 } from "../controllers/vehicleController.js"
-import { verifyToken, checkFleetOwnerRole } from "../middleware/auth.js"
+import { verifyToken, checkFleetOwnerRole, optionalAuth } from "../middleware/auth.js"
 import { upload } from "../Config/multerConfig.js"
 
 const router = express.Router()
 
 // Public routes
-router.get("/search", searchVehicles)
+// optionalAuth populates req.userId / req.userRole when a token is present so
+// the discovery search can isolate segments: a SCHOOL_CUSTOMER only sees
+// SCHOOL_PARTNER vehicles, a CORPORATE only sees B2B_PARTNER vehicles. Without
+// this the route ran anonymously and always defaulted to B2B_PARTNER.
+router.get("/search", optionalAuth, searchVehicles)
 router.get("/fleet-owner/:fleetOwnerId", getFleetOwnerVehicles)
 router.get("/:id", getVehicleById)
 

@@ -16,6 +16,8 @@ import {
   Building2,
   Truck,
   Car,
+  GraduationCap,
+  Bus,
   Edit2,
   Eye,
   RefreshCw,
@@ -66,6 +68,8 @@ const AdminCommissionSettings = () => {
     { value: "CORPORATE", label: "Corporate", icon: Building2 },
     { value: "B2B_PARTNER", label: "B2B Partner", icon: Truck },
     { value: "B2C_PARTNER", label: "B2C Partner", icon: Car },
+    { value: "SCHOOL_CUSTOMER", label: "School Customer", icon: GraduationCap },
+    { value: "SCHOOL_PARTNER", label: "School Partner", icon: Bus },
   ];
 
   // All commission rate types with labels
@@ -81,11 +85,24 @@ const AdminCommissionSettings = () => {
   // This mirrors the backend: B2C Partner earns on bookings & monthly passes,
   // B2B Partner on contracts AND EMI payments (EMI commission is deducted from
   // the B2B Partner's per-installment payout), and Corporate on negotiations.
+  // School roles mirror their business-family counterparts exactly:
+  //   SCHOOL_CUSTOMER behaves like CORPORATE (demand side -> negotiation)
+  //   SCHOOL_PARTNER  behaves like B2B_PARTNER (supply side -> contract + EMI)
   const rateTypesByRole = {
     B2C_PARTNER: ["BOOKING", "MONTHLY_PASS"],
     B2B_PARTNER: ["CONTRACT", "EMI"],
     CORPORATE: ["NEGOTIATION"],
+    SCHOOL_PARTNER: ["CONTRACT", "EMI"],
+    SCHOOL_CUSTOMER: ["NEGOTIATION"],
   };
+
+  // Roles that are charged commission on contracts + EMI installments (supply side)
+  const isContractCommissionRole = (role) =>
+    role === "B2B_PARTNER" || role === "SCHOOL_PARTNER";
+
+  // Roles that are charged commission on Admin-negotiated savings (demand side)
+  const isNegotiationCommissionRole = (role) =>
+    role === "CORPORATE" || role === "SCHOOL_CUSTOMER";
 
   // Return the rate-type options that are valid for a given role
   const getRateTypesForRole = (role) => {
@@ -95,8 +112,8 @@ const AdminCommissionSettings = () => {
 
   // The "primary" commission type for a role (used to resolve the effective rate)
   const getPrimaryRateType = (role) => {
-    if (role === "B2B_PARTNER") return "CONTRACT";
-    if (role === "CORPORATE") return "NEGOTIATION";
+    if (isContractCommissionRole(role)) return "CONTRACT";
+    if (isNegotiationCommissionRole(role)) return "NEGOTIATION";
     return "BOOKING"; // B2C_PARTNER
   };
 
@@ -104,10 +121,9 @@ const AdminCommissionSettings = () => {
   // active custom rate rules (with their effective date ranges) into account.
   // Falls back to the role's default rate when no custom rule is currently active.
   const getEffectiveRate = (role, settings) => {
-    const baseRate =
-      role === "CORPORATE"
-        ? (settings?.negotiationCommissionRate ?? 25)
-        : (settings?.defaultCommissionRate ?? 20);
+    const baseRate = isNegotiationCommissionRole(role)
+      ? (settings?.negotiationCommissionRate ?? 25)
+      : (settings?.defaultCommissionRate ?? 20);
 
     const primaryType = getPrimaryRateType(role);
     const customRates = settings?.customRates || [];
@@ -321,6 +337,8 @@ const AdminCommissionSettings = () => {
       CORPORATE: Building2,
       B2B_PARTNER: Truck,
       B2C_PARTNER: Car,
+      SCHOOL_CUSTOMER: GraduationCap,
+      SCHOOL_PARTNER: Bus,
     };
     const IconComponent = icons[role] || Users;
     return <IconComponent size={18} />;
@@ -331,8 +349,22 @@ const AdminCommissionSettings = () => {
       CORPORATE: "role-corporate",
       B2B_PARTNER: "role-b2b",
       B2C_PARTNER: "role-b2c",
+      SCHOOL_CUSTOMER: "role-school-customer",
+      SCHOOL_PARTNER: "role-school-partner",
     };
     return classes[role] || "";
+  };
+
+  // Human-readable role label for badges (e.g. SCHOOL_CUSTOMER -> "School Customer")
+  const getRoleLabel = (role) => {
+    const labels = {
+      CORPORATE: "Corporate",
+      B2B_PARTNER: "B2B Partner",
+      B2C_PARTNER: "B2C Partner",
+      SCHOOL_CUSTOMER: "School Customer",
+      SCHOOL_PARTNER: "School Partner",
+    };
+    return labels[role] || role?.replace(/_/g, " ") || "";
   };
 
   return (
@@ -474,13 +506,15 @@ const AdminCommissionSettings = () => {
                       className={`role-badge ${getRoleBadgeClass(user.role)}`}
                     >
                       {getRoleIcon(user.role)}
-                      {user.role?.replace("_", " ")}
+                      {getRoleLabel(user.role)}
                     </span>
                   </td>
                   <td>
                     <span className="commission-type-label">
-                      {user.role === "B2B_PARTNER" && "Contract Commission"}
-                      {user.role === "CORPORATE" && "Negotiation Commission"}
+                      {isContractCommissionRole(user.role) &&
+                        "Contract Commission"}
+                      {isNegotiationCommissionRole(user.role) &&
+                        "Negotiation Commission"}
                       {user.role === "B2C_PARTNER" && "Booking Commission"}
                     </span>
                   </td>
@@ -558,7 +592,7 @@ const AdminCommissionSettings = () => {
                   className={`role-badge ${getRoleBadgeClass(selectedUser.role)}`}
                 >
                   {getRoleIcon(selectedUser.role)}
-                  {selectedUser.role?.replace("_", " ")}
+                  {getRoleLabel(selectedUser.role)}
                 </span>
               </div>
               <button className="close-btn" onClick={() => setShowModal(false)}>
@@ -593,28 +627,35 @@ const AdminCommissionSettings = () => {
                 <div className="form-section">
                   <h4>
                     <Percent size={18} />
-                    {selectedUser.role === "B2B_PARTNER" &&
+                    {isContractCommissionRole(selectedUser.role) &&
                       "Contract Commission Settings"}
-                    {selectedUser.role === "CORPORATE" &&
+                    {isNegotiationCommissionRole(selectedUser.role) &&
                       "Negotiation Commission Settings"}
                     {selectedUser.role === "B2C_PARTNER" &&
                       "Booking Commission Settings"}
                   </h4>
 
                   <div className="commission-type-info">
-                    {selectedUser.role === "B2B_PARTNER" && (
+                    {/* Supply side (B2B Partner / School Partner) */}
+                    {isContractCommissionRole(selectedUser.role) && (
                       <p className="info-text">
-                        This commission is taken from B2B Partner when Corporate
+                        This commission is taken from{" "}
+                        {getRoleLabel(selectedUser.role)} when the{" "}
+                        {selectedUser.role === "SCHOOL_PARTNER"
+                          ? "School Customer"
+                          : "Corporate"}{" "}
                         pays for a contract (Standard Payment or EMI). The
                         commission is calculated on the advance payment amount.
                       </p>
                     )}
-                    {selectedUser.role === "CORPORATE" && (
+                    {/* Demand side (Corporate / School Customer) */}
+                    {isNegotiationCommissionRole(selectedUser.role) && (
                       <p className="info-text">
-                        This commission is taken from Corporate when Admin
-                        negotiates a price reduction on their behalf. The
-                        commission is calculated as a percentage of the savings
-                        achieved through negotiation.
+                        This commission is taken from{" "}
+                        {getRoleLabel(selectedUser.role)} when Admin negotiates
+                        a price reduction on their behalf. The commission is
+                        calculated as a percentage of the savings achieved
+                        through negotiation.
                       </p>
                     )}
                     {selectedUser.role === "B2C_PARTNER" && (
@@ -627,8 +668,8 @@ const AdminCommissionSettings = () => {
                   </div>
 
                   <div className="form-row">
-                    {/* B2B Partner: Contract Commission */}
-                    {selectedUser.role === "B2B_PARTNER" && (
+                    {/* B2B Partner / School Partner: Contract Commission */}
+                    {isContractCommissionRole(selectedUser.role) && (
                       <div className="form-group">
                         <label>Contract Commission Rate (%)</label>
                         <input
@@ -652,8 +693,8 @@ const AdminCommissionSettings = () => {
                       </div>
                     )}
 
-                    {/* Corporate: Negotiation Commission */}
-                    {selectedUser.role === "CORPORATE" && (
+                    {/* Corporate / School Customer: Negotiation Commission */}
+                    {isNegotiationCommissionRole(selectedUser.role) && (
                       <div className="form-group">
                         <label>Negotiation Commission Rate (%)</label>
                         <input
@@ -815,18 +856,23 @@ const AdminCommissionSettings = () => {
                   )}
                 </div>
 
-                {/* EMI Commission Settings - Only for B2B_PARTNER users.
-                    EMI commission is deducted from the B2B Partner's payout on
-                    each installment when a Corporate pays a contract via EMI. */}
-                {selectedUser.role === "B2B_PARTNER" && (
+                {/* EMI Commission Settings - supply-side roles only
+                    (B2B Partner and School Partner). EMI commission is deducted
+                    from the partner's payout on each installment when the
+                    demand-side user pays a contract via EMI. */}
+                {isContractCommissionRole(selectedUser.role) && (
                   <div className="form-section emi-section">
                     <h4>
                       <DollarSign size={18} />
                       EMI Payment Settings
                     </h4>
                     <p className="section-description">
-                      Configure commission and penalties charged to this B2B
-                      Partner on each EMI installment paid by a Corporate
+                      Configure commission and penalties charged to this{" "}
+                      {getRoleLabel(selectedUser.role)} on each EMI installment
+                      paid by a{" "}
+                      {selectedUser.role === "SCHOOL_PARTNER"
+                        ? "School Customer"
+                        : "Corporate"}
                     </p>
 
                     <div className="form-row">

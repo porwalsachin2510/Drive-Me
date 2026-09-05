@@ -23,6 +23,11 @@ import B2B_FleetVehicleAssignmentSection from "../../../Components/B2B_Partner/B
 import B2B_VehicleAssignmentForm from "../../../Components/B2B_Partner/B2B_VehicleAssignmentForm/B2B_VehicleAssignmentForm";
 import "./B2B_PartnerContractDetails.css";
 import { notify } from "../../../utils/toast";
+import {
+  customerRoleLabel,
+  partnerRoleLabel,
+  contractStatusLabel,
+} from "../../../utils/roleFamilies";
 
 const B2B_PartnerContractDetails = () => {
   const { id } = useParams();
@@ -32,6 +37,20 @@ const B2B_PartnerContractDetails = () => {
   const { currentContract, loading, error } = useSelector(
     (state) => state.contract,
   );
+
+  // Derive the contract early (regardless of loading/error guards below) so the
+  // segment-aware customer/partner labels are available to socket handlers,
+  // toasts and the render tree alike. School contracts show "School Customer" /
+  // "School Partner"; corporate contracts show "Corporate Client" / "B2B Partner".
+  const derivedContract =
+    currentContract?.data?.contract ||
+    currentContract?.contract ||
+    currentContract;
+  const customerLabel = customerRoleLabel(
+    derivedContract?.corporateOwnerId?.role,
+  );
+  const partnerLabel = partnerRoleLabel(derivedContract?.fleetOwnerId?.role);
+
   // eslint-disable-next-line no-unused-vars
   const [statusMessage, setStatusMessage] = useState({ type: "", text: "" });
   const [uploadFile, setUploadFile] = useState(null);
@@ -86,14 +105,14 @@ const B2B_PartnerContractDetails = () => {
           type: "info",
           text:
             data.message ||
-            "Corporate has uploaded a signed contract document. Please review and verify.",
+            `${customerLabel} has uploaded a signed contract document. Please review and verify.`,
         });
       } else if (data.type === "CONTRACT_SIGNED") {
         setStatusMessage({
           type: "success",
           text:
             data.message ||
-            "Corporate has signed the contract. Please review and sign to finalize.",
+            `${customerLabel} has signed the contract. Please review and sign to finalize.`,
         });
       } else if (data.type === "PAYMENT_RECEIVED") {
         setStatusMessage({
@@ -414,7 +433,7 @@ const B2B_PartnerContractDetails = () => {
       notify(
         verificationAction === "APPROVE"
           ? "Signed document verified successfully! You can now sign the contract."
-          : "Signed document rejected. Corporate will be notified to re-upload.",
+          : `Signed document rejected. ${customerLabel} will be notified to re-upload.`,
       );
       setShowVerificationModal(false);
       setVerificationAction("");
@@ -516,12 +535,12 @@ const B2B_PartnerContractDetails = () => {
             <p>Manage contract document and approval process</p>
           </div>
           <span className={`b2b-contract-status-badge status-${statusClass}`}>
-            {status.replace("_", " ")}
+            {contractStatusLabel(status, corporateOwner.role, fleetOwner.role)}
           </span>
         </div>
         {/* Corporate Owner Info */}
         <div className="b2b-contract-section">
-          <h2>Corporate Client Information</h2>
+          <h2>{customerLabel} Information</h2>
           <div className="b2b-contract-card">
             <div className="b2b-contract-info-grid">
               <div className="b2b-contract-info-item">
@@ -712,7 +731,7 @@ const B2B_PartnerContractDetails = () => {
           <div className="b2b-contract-card">
             <div className="b2b-contract-info-grid">
               <div className="b2b-contract-info-item">
-                <span className="b2b-contract-label">Corporate Owner:</span>
+                <span className="b2b-contract-label">{customerLabel}:</span>
                 <span
                   className={`b2b-contract-signature-status ${
                     digitalSignatures.corporateOwner?.signed
@@ -731,7 +750,7 @@ const B2B_PartnerContractDetails = () => {
                 )}
               </div>
               <div className="b2b-contract-info-item">
-                <span className="b2b-contract-label">Fleet Owner:</span>
+                <span className="b2b-contract-label">{partnerLabel}:</span>
                 <span
                   className={`b2b-contract-signature-status ${
                     digitalSignatures.fleetOwner?.signed ? "signed" : "pending"
@@ -758,8 +777,8 @@ const B2B_PartnerContractDetails = () => {
               <div className="b2b-contract-upload-icon">📄</div>
               <h3>Upload Contract PDF</h3>
               <p>
-                Please upload the signed contract document for the corporate
-                client to review and sign digitally.
+                Please upload the signed contract document for the{" "}
+                {customerLabel.toLowerCase()} to review and sign digitally.
               </p>
 
               <input
@@ -814,15 +833,15 @@ const B2B_PartnerContractDetails = () => {
               <div className="b2b-contract-approval-icon">📄</div>
               <h3>Document Uploaded Successfully</h3>
               <p>
-                The contract document has been uploaded and sent to the
-                corporate client for review and digital signature.
+                The contract document has been uploaded and sent to the{" "}
+                {customerLabel.toLowerCase()} for review and digital signature.
               </p>
               <div
                 className="doc-b2b-contract-signature-info"
                 style={{ marginTop: "16px" }}
               >
                 <p>
-                  <strong>Status:</strong> Waiting for Corporate Client to
+                  <strong>Status:</strong> Waiting for {customerLabel} to
                   Download, Sign, and Upload
                 </p>
                 <p style={{ marginTop: "8px" }}>
@@ -860,11 +879,11 @@ const B2B_PartnerContractDetails = () => {
             <h2>Verify Signed Contract Document</h2>
             <div className="b2b-contract-verification-card">
               <div className="b2b-contract-approval-icon">📝</div>
-              <h3>Corporate Has Uploaded Signed Document</h3>
+              <h3>{customerLabel} Has Uploaded Signed Document</h3>
               <p>
-                The corporate client has signed the contract document and
-                uploaded it for your verification. Please review the signed
-                document to ensure all signatures are correct.
+                The {customerLabel.toLowerCase()} has signed the contract
+                document and uploaded it for your verification. Please review the
+                signed document to ensure all signatures are correct.
               </p>
 
               {/* Document Comparison Section */}
@@ -924,7 +943,7 @@ const B2B_PartnerContractDetails = () => {
                   style={{ marginTop: "20px" }}
                 >
                   <p>
-                    <strong>Corporate signed externally on:</strong>{" "}
+                    <strong>{customerLabel} signed externally on:</strong>{" "}
                     {formatDate(digitalSignatures.corporateOwner.signedAt)}
                   </p>
                 </div>
@@ -981,9 +1000,9 @@ const B2B_PartnerContractDetails = () => {
             <h2>Contract Approval</h2>
             <div className="b2b-contract-approval-card">
               <div className="b2b-contract-approval-icon">✍️</div>
-              <h3>Corporate Client Has Signed</h3>
+              <h3>{customerLabel} Has Signed</h3>
               <p>
-                The corporate client has digitally signed the contract. Please
+                The {customerLabel.toLowerCase()} has digitally signed the contract. Please
                 review and approve to proceed.
               </p>
 
@@ -1049,7 +1068,7 @@ const B2B_PartnerContractDetails = () => {
                       <span className="b2b-contract-value">
                         {corporateOwner.companyName ||
                           corporateOwner.fullName ||
-                          "Corporate Client"}
+                          customerLabel}
                       </span>
                     </div>
                     <div className="b2b-contract-info-item">
@@ -1153,9 +1172,9 @@ const B2B_PartnerContractDetails = () => {
                 <div className="b2b-contract-approval-icon">✍️</div>
                 <h3>Sign the Contract</h3>
                 <p>
-                  The corporate client has signed the contract. Please review
-                  the contract document and add your digital signature to
-                  proceed.
+                  The {customerLabel.toLowerCase()} has signed the contract.
+                  Please review the contract document and add your digital
+                  signature to proceed.
                 </p>
 
                 {documentUrl && (
@@ -1179,7 +1198,7 @@ const B2B_PartnerContractDetails = () => {
                   digitalSignatures.corporateOwner.signed && (
                     <div className="b2b-contract-signature-info">
                       <p>
-                        <strong>Corporate signed by:</strong>{" "}
+                        <strong>{customerLabel} signed by:</strong>{" "}
                         {corporateOwner.fullName || corporateOwner.companyName}
                       </p>
                       <p>
@@ -1427,9 +1446,10 @@ const B2B_PartnerContractDetails = () => {
               {verificationAction === "APPROVE" && (
                 <>
                   <p style={{ marginBottom: "16px" }}>
-                    By approving, you confirm that the corporate client has
-                    properly signed the contract document. The contract will
-                    then proceed to your digital signature.
+                    By approving, you confirm that the{" "}
+                    {customerLabel.toLowerCase()} has properly signed the
+                    contract document. The contract will then proceed to your
+                    digital signature.
                   </p>
                   <div className="b2b-contract-form-group">
                     <label>Verification Notes (Optional)</label>
@@ -1453,9 +1473,9 @@ const B2B_PartnerContractDetails = () => {
               {verificationAction === "REJECT" && (
                 <>
                   <p style={{ marginBottom: "16px", color: "#ef4444" }}>
-                    Rejecting will notify the corporate client to re-upload a
-                    properly signed document. Please provide a reason for
-                    rejection.
+                    Rejecting will notify the {customerLabel.toLowerCase()} to
+                    re-upload a properly signed document. Please provide a reason
+                    for rejection.
                   </p>
                   <div className="b2b-contract-form-group">
                     <label>Rejection Reason *</label>
@@ -1545,16 +1565,17 @@ const B2B_PartnerContractDetails = () => {
 
               {extensionResponse.action === "REJECTED" && (
                 <p style={{ marginBottom: "16px", color: "#ef4444" }}>
-                  The corporate client will be notified that their request has
-                  been rejected. The original due date will remain unchanged.
+                  The {customerLabel.toLowerCase()} will be notified that their
+                  request has been rejected. The original due date will remain
+                  unchanged.
                 </p>
               )}
 
               {extensionResponse.action === "COUNTER_OFFERED" && (
                 <>
                   <p style={{ marginBottom: "16px" }}>
-                    You can offer a different date than what the corporate
-                    client requested.
+                    You can offer a different date than what the{" "}
+                    {customerLabel.toLowerCase()} requested.
                   </p>
                   <div className="b2b-contract-form-group">
                     <label>Counter Offer Date *</label>
@@ -1596,7 +1617,7 @@ const B2B_PartnerContractDetails = () => {
                   }
                   placeholder={
                     extensionResponse.action === "APPROVED"
-                      ? "Add any notes for the corporate client..."
+                      ? `Add any notes for the ${customerLabel.toLowerCase()}...`
                       : extensionResponse.action === "REJECTED"
                         ? "Please explain why you're rejecting the request..."
                         : "Explain the counter offer..."

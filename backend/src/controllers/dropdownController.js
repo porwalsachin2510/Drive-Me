@@ -349,6 +349,82 @@ const defaultDropdownOptions = [
             { value: "SPLIT", label: "Split Shift", order: 6 },
         ],
     },
+    // ---------------------------------------------------------------------
+    // SCHOOL segment master data.
+    //
+    // A SCHOOL_CUSTOMER buys monthly passes for its students/teachers, not for
+    // "employees". The Student Management screens read these categories instead
+    // of DEPARTMENTS / DESIGNATIONS / WORK_LOCATIONS / SHIFT_TYPES, so a school
+    // is never asked to pick "Human Resources" as a child's department.
+    // ---------------------------------------------------------------------
+    {
+        category: "SCHOOL_GRADES",
+        name: "Grades / Classes",
+        description: "Grade or class options for school students",
+        isSystemDefault: true,
+        options: [
+            { value: "Pre-KG", label: "Pre-KG", order: 1 },
+            { value: "KG 1", label: "KG 1", order: 2 },
+            { value: "KG 2", label: "KG 2", order: 3 },
+            { value: "Grade 1", label: "Grade 1", order: 4 },
+            { value: "Grade 2", label: "Grade 2", order: 5 },
+            { value: "Grade 3", label: "Grade 3", order: 6 },
+            { value: "Grade 4", label: "Grade 4", order: 7 },
+            { value: "Grade 5", label: "Grade 5", order: 8 },
+            { value: "Grade 6", label: "Grade 6", order: 9 },
+            { value: "Grade 7", label: "Grade 7", order: 10 },
+            { value: "Grade 8", label: "Grade 8", order: 11 },
+            { value: "Grade 9", label: "Grade 9", order: 12 },
+            { value: "Grade 10", label: "Grade 10", order: 13 },
+            { value: "Grade 11", label: "Grade 11", order: 14 },
+            { value: "Grade 12", label: "Grade 12", order: 15 },
+            { value: "Not Applicable", label: "Not Applicable (Teacher / Staff)", order: 16 },
+            { value: "Other", label: "Other", order: 17 },
+        ],
+    },
+    {
+        category: "SCHOOL_MEMBER_TYPES",
+        name: "School Member Types",
+        description: "Who the monthly pass is for — student, teacher or school staff",
+        isSystemDefault: true,
+        options: [
+            { value: "Student", label: "Student", order: 1 },
+            { value: "Teacher", label: "Teacher", order: 2 },
+            { value: "Assistant Teacher", label: "Assistant Teacher", order: 3 },
+            { value: "Bus Attendant", label: "Bus Attendant / Nanny", order: 4 },
+            { value: "Administrative Staff", label: "Administrative Staff", order: 5 },
+            { value: "Support Staff", label: "Support Staff", order: 6 },
+            { value: "Other", label: "Other", order: 7 },
+        ],
+    },
+    {
+        category: "SCHOOL_CAMPUSES",
+        name: "School Campuses",
+        description: "Campus / building the student or teacher reports to",
+        isSystemDefault: true,
+        options: [
+            { value: "Main Campus", label: "Main Campus", order: 1 },
+            { value: "Primary Campus", label: "Primary Campus", order: 2 },
+            { value: "Secondary Campus", label: "Secondary Campus", order: 3 },
+            { value: "Kindergarten Block", label: "Kindergarten Block", order: 4 },
+            { value: "Boys Section", label: "Boys Section", order: 5 },
+            { value: "Girls Section", label: "Girls Section", order: 6 },
+            { value: "Annex Building", label: "Annex Building", order: 7 },
+            { value: "Other", label: "Other", order: 8 },
+        ],
+    },
+    {
+        category: "SCHOOL_SHIFT_TYPES",
+        name: "School Shifts",
+        description: "School session timing the monthly pass covers",
+        isSystemDefault: true,
+        options: [
+            { value: "FULL_DAY", label: "Full School Day", order: 1 },
+            { value: "MORNING", label: "Morning Session", order: 2 },
+            { value: "AFTERNOON", label: "Afternoon Session", order: 3 },
+            { value: "FLEXIBLE", label: "Flexible / Activity Timings", order: 4 },
+        ],
+    },
 ];
 
 // Seed default dropdown options

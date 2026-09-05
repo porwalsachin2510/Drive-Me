@@ -11,6 +11,7 @@ import {
   selectUserRole,
 } from "../../../Redux/selectors/authSelectors";
 import { storeNavigationState } from "../../../utils/loginRedirect";
+import { isCustomerRole } from "../../../utils/roleFamilies";
 import "./SearchResults.css";
 
 const FleetSearchResults = () => {
@@ -324,8 +325,10 @@ const FleetSearchResults = () => {
       return;
     }
 
-    // Check if user is authenticated and has CORPORATE role
-    if (userRole !== "CORPORATE") {
+    // Check the user belongs to the customer family. SCHOOL_CUSTOMER shares the
+    // managed-service pipeline with CORPORATE, so it must be able to View All
+    // vehicles of a partner (including a SCHOOL_PARTNER) exactly like CORPORATE.
+    if (!isCustomerRole(userRole)) {
       // Show role restriction modal
       setShowRoleRestrictionModal(true);
       return;

@@ -22,9 +22,11 @@ export const redirectToLogin = (navigate, returnPath = "/", returnState = null, 
  * @param {Array} allowedRoles - Array of allowed roles
  * @returns {Boolean} - True if user has access
  */
+import { expandRoleFamilies } from "./roleFamilies";
+
 export const checkRoleAccess = (currentRole, allowedRoles) => {
     if (!currentRole) return false;
-    return allowedRoles.includes(currentRole);
+    return expandRoleFamilies(allowedRoles)?.includes(currentRole) ?? false;
 };
 
 /**

@@ -40,7 +40,47 @@ const PaymentCallback = () => {
           ).unwrap();
 
           // Monthly pass renewal: pass was extended in place + trips generated.
-          if (result.paymentType === "renewal") {
+          if (result.paymentType === "extra_service") {
+            const esdRedirect =
+              result.data?.redirectUrl || "/corporate-profile?tab=contracts";
+
+            if (result.success) {
+              setVerificationStatus("success");
+              setMessage(
+                "Payment completed successfully! Your extra service day is now paid.",
+              );
+            } else {
+              setVerificationStatus("failed");
+              setMessage(
+                result.message ||
+                  "We could not confirm your extra service day payment. Please try again.",
+              );
+            }
+
+            setTimeout(() => {
+              navigate(esdRedirect);
+            }, 3000);
+          } else if (result.paymentType === "operational_invoice") {
+            const invRedirect =
+              result.data?.redirectUrl || "/corporate-profile?tab=contracts";
+
+            if (result.success) {
+              setVerificationStatus("success");
+              setMessage(
+                "Payment completed successfully! Your operational invoice is now paid.",
+              );
+            } else {
+              setVerificationStatus("failed");
+              setMessage(
+                result.message ||
+                  "We could not confirm your invoice payment. Please try again.",
+              );
+            }
+
+            setTimeout(() => {
+              navigate(invRedirect);
+            }, 3000);
+          } else if (result.paymentType === "renewal") {
             const renewalRedirect =
               result.data?.redirectUrl ||
               "/commuter-profile?tab=subscription-settings";

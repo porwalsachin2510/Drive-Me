@@ -25,6 +25,9 @@ function WalletIcon() {
     "COMMUTER",
     "B2C_PARTNER",
     "B2B_PARTNER",
+    // School Partner mirrors B2B Partner: they run the fleet on a contract and
+    // earn the partner payout, so they get the same navbar wallet.
+    "SCHOOL_PARTNER",
     "ADMIN",
   ];
 

@@ -54,6 +54,9 @@ const Login = () => {
     CORPORATE_DRIVER: "/",
     B2B_PARTNER_DRIVER: "/",
     B2C_PARTNER_DRIVER: "/",
+    SCHOOL_CUSTOMER: "/",
+    SCHOOL_PARTNER: "/",
+    SCHOOL_PARTNER_DRIVER: "/",
   };
 
   const handleChange = (e) => {

@@ -797,6 +797,11 @@ const SingleVehicleOwnerDetails = () => {
           fleetOwnerName={
             ownerData.companyName || ownerData.fullName || "the partner"
           }
+          audience={
+            String(user?.role || "").toLowerCase().includes("school")
+              ? "school-customer"
+              : "corporate"
+          }
           defaultServiceStartDate={corporateuserrequirements.startDate || ""}
           submitting={submittingRequest}
           onSubmit={handleBriefSubmit}

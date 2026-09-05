@@ -9,6 +9,7 @@ import {
   updateDriverAvailabilityInStore,
   updateVehicleAvailabilityInStore,
 } from "../Redux/slices/b2cPartnerSlice";
+import { customerRoleLabel, partnerRoleLabel } from "../utils/roleFamilies";
 
 const SocketContext = createContext();
 
@@ -19,6 +20,8 @@ export const SocketProvider = ({ children }) => {
   const [connected, setConnected] = useState(false);
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const currentCustomerLabel = customerRoleLabel(user?.role);
+  const currentPartnerLabel = partnerRoleLabel(user?.role);
 
   // Main socket connection effect
   useEffect(() => {
@@ -759,7 +762,7 @@ export const SocketProvider = ({ children }) => {
           type: "NEGOTIATION_REQUEST",
           title: data.title || "New Negotiation Request",
           message:
-            data.message || "A corporate user has requested price negotiation",
+            data.message || `A ${currentCustomerLabel.toLowerCase()} has requested price negotiation`,
           isRead: false,
           createdAt: new Date().toISOString(),
           metadata: data.metadata || data.data,
@@ -770,7 +773,7 @@ export const SocketProvider = ({ children }) => {
           new Notification(data.title || "New Negotiation Request", {
             body:
               data.message ||
-              "A corporate user has requested price negotiation",
+              `A ${currentCustomerLabel.toLowerCase()} has requested price negotiation`,
             icon: "/favicon.ico",
           });
         }
@@ -856,7 +859,7 @@ export const SocketProvider = ({ children }) => {
           type: "NEGOTIATION_ACCEPTED",
           title: data.title || "Offer Accepted",
           message:
-            data.message || "B2B Partner has accepted the negotiation offer",
+            data.message || `${currentPartnerLabel} has accepted the negotiation offer`,
           isRead: false,
           createdAt: new Date().toISOString(),
           metadata: data.metadata || data.data,
@@ -880,7 +883,7 @@ export const SocketProvider = ({ children }) => {
           type: "NEGOTIATION_REJECTED",
           title: data.title || "Offer Rejected",
           message:
-            data.message || "B2B Partner has rejected the negotiation offer",
+            data.message || `${currentPartnerLabel} has rejected the negotiation offer`,
           isRead: false,
           createdAt: new Date().toISOString(),
           metadata: data.metadata || data.data,
@@ -903,7 +906,7 @@ export const SocketProvider = ({ children }) => {
           userId: user._id,
           type: "NEGOTIATION_COUNTER_OFFER",
           title: data.title || "Counter Offer Received",
-          message: data.message || "B2B Partner has sent a counter offer",
+          message: data.message || `${currentPartnerLabel} has sent a counter offer`,
           isRead: false,
           createdAt: new Date().toISOString(),
           metadata: data.metadata || data.data,
@@ -912,7 +915,7 @@ export const SocketProvider = ({ children }) => {
         dispatch(getUnreadNotificationCount(user._id));
         if (Notification.permission === "granted") {
           new Notification(data.title || "Counter Offer Received", {
-            body: data.message || "B2B Partner has sent a counter offer",
+            body: data.message || `${currentPartnerLabel} has sent a counter offer`,
             icon: "/favicon.ico",
           });
         }
@@ -955,7 +958,7 @@ export const SocketProvider = ({ children }) => {
           title: data.title || "Signed Contract Uploaded",
           message:
             data.message ||
-            "Corporate has uploaded the signed contract. Please verify.",
+            `${currentCustomerLabel} has uploaded the signed contract. Please verify.`,
           isRead: false,
           createdAt: new Date().toISOString(),
           metadata: data.metadata || data.data,

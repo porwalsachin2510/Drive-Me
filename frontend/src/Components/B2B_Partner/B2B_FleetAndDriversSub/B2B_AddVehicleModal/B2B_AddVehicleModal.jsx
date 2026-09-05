@@ -15,11 +15,18 @@ import {
 } from "../../../../hooks/useDropdownOptions";
 import "./b2b_addvehiclemodal.css";
 import { notify } from "../../../../utils/toast";
+import { selectUserRole } from "../../../../Redux/selectors/authSelectors";
 
 const B2B_AddVehicleModal = ({ onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.vehicles);
+
+  // School partners operate only within the Managed Services model (school
+  // transportation contracts), so they must not list standalone Passenger or
+  // Goods Carrier rental vehicles. Corporate B2B partners keep all options.
+  const userRole = useSelector(selectUserRole);
+  const isSchoolPartner = userRole === "SCHOOL_PARTNER";
 
   // Fetch dynamic dropdown options
   const { options: dropdownOptions, loading: dropdownLoading } =
@@ -36,7 +43,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
     registrationNumber: "",
     manufacturingYear: new Date().getFullYear(),
     vehicleCategory: "SEDAN",
-    serviceType: "PASSENGER",
+    serviceType: isSchoolPartner ? "MANAGED_SERVICES" : "PASSENGER",
     capacity: {
       seatingCapacity: 0,
       cargoCapacity: 0,
@@ -417,47 +424,51 @@ const B2B_AddVehicleModal = ({ onClose }) => {
             <div className="b2b-operator-dashboard-add-vehicle-form-section">
               <h2>Service Type</h2>
               <div className="b2b-operator-dashboard-add-vehicle-service-type-grid">
-                <label
-                  className={`b2b-operator-dashboard-add-vehicle-service-type-card ${
-                    formData.serviceType === "PASSENGER"
-                      ? "b2b-operator-dashboard-add-vehicle-active"
-                      : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="serviceType"
-                    value="PASSENGER"
-                    checked={formData.serviceType === "PASSENGER"}
-                    onChange={handleInputChange}
-                  />
-                  <div className="b2b-operator-dashboard-add-vehicle-service-icon">
-                    🚗
-                  </div>
-                  <h3>Passenger Vehicle</h3>
-                  <p>Cars, SUVs, Vans, Buses</p>
-                </label>
+                {!isSchoolPartner && (
+                  <label
+                    className={`b2b-operator-dashboard-add-vehicle-service-type-card ${
+                      formData.serviceType === "PASSENGER"
+                        ? "b2b-operator-dashboard-add-vehicle-active"
+                        : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="serviceType"
+                      value="PASSENGER"
+                      checked={formData.serviceType === "PASSENGER"}
+                      onChange={handleInputChange}
+                    />
+                    <div className="b2b-operator-dashboard-add-vehicle-service-icon">
+                      🚗
+                    </div>
+                    <h3>Passenger Vehicle</h3>
+                    <p>Cars, SUVs, Vans, Buses</p>
+                  </label>
+                )}
 
-                <label
-                  className={`b2b-operator-dashboard-add-vehicle-service-type-card ${
-                    formData.serviceType === "GOODS_CARRIER"
-                      ? "b2b-operator-dashboard-add-vehicle-active"
-                      : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="serviceType"
-                    value="GOODS_CARRIER"
-                    checked={formData.serviceType === "GOODS_CARRIER"}
-                    onChange={handleInputChange}
-                  />
-                  <div className="b2b-operator-dashboard-add-vehicle-service-icon">
-                    🚚
-                  </div>
-                  <h3>Goods Carrier</h3>
-                  <p>Trucks, Pickups for cargo</p>
-                </label>
+                {!isSchoolPartner && (
+                  <label
+                    className={`b2b-operator-dashboard-add-vehicle-service-type-card ${
+                      formData.serviceType === "GOODS_CARRIER"
+                        ? "b2b-operator-dashboard-add-vehicle-active"
+                        : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="serviceType"
+                      value="GOODS_CARRIER"
+                      checked={formData.serviceType === "GOODS_CARRIER"}
+                      onChange={handleInputChange}
+                    />
+                    <div className="b2b-operator-dashboard-add-vehicle-service-icon">
+                      🚚
+                    </div>
+                    <h3>Goods Carrier</h3>
+                    <p>Trucks, Pickups for cargo</p>
+                  </label>
+                )}
 
                 <label
                   className={`b2b-operator-dashboard-add-vehicle-service-type-card ${
@@ -477,7 +488,11 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                     🏢
                   </div>
                   <h3>Managed Services</h3>
-                  <p>Full fleet management</p>
+                  <p>
+                    {isSchoolPartner
+                      ? "School transportation fleet"
+                      : "Full fleet management"}
+                  </p>
                 </label>
               </div>
             </div>

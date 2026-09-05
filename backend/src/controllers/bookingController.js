@@ -2131,6 +2131,12 @@ export const getPassengerBookings = async (req, res) => {
 
         let bookings = []
 
+        // Managed-service passengers belong to one of two segments: a CORPORATE's
+        // employees (CORPORATE_EMPLOYEE) and a SCHOOL_CUSTOMER's students /
+        // teachers (SCHOOL_STUDENT). Report the passenger's OWN role so the
+        // portal can use the right wording ("your school" vs "your company").
+        const managedUserType = user.role === "SCHOOL_STUDENT" ? "SCHOOL_STUDENT" : "CORPORATE_EMPLOYEE"
+
         if (user.companyId) {
             const query = { passengerId, corporateOwnerId: user.companyId }
             if (status) query.bookingStatus = status
@@ -2143,7 +2149,7 @@ export const getPassengerBookings = async (req, res) => {
             bookings = corporateBookings.map((b) => ({
                 ...b.toObject(),
                 type: "CORPORATE",
-                userType: "CORPORATE_EMPLOYEE",
+                userType: managedUserType,
             }))
         } else {
             const query = { passengerId }
@@ -2304,7 +2310,7 @@ export const getPassengerBookings = async (req, res) => {
             success: true,
             bookings,
             totalBookings: bookings.length,
-            userType: user.companyId ? "CORPORATE_EMPLOYEE" : "NORMAL_PASSENGER",
+            userType: user.companyId ? managedUserType : "NORMAL_PASSENGER",
         })
     } catch (error) {
         console.error("Error fetching passenger bookings:", error)
@@ -2452,7 +2458,11 @@ export const getCorporateOwnerBookings = async (req, res) => {
                     }).select("personalInfo employeeId transportDetails")
                 }
 
-                // Get trips for this booking
+                // Get trips for this booking. We intentionally DO NOT cap this at
+                // 50: the trip set is naturally bounded by the pass duration (a
+                // monthly round-trip pass is ~42 trips, a 3-month one-way ~66), and
+                // an artificial .limit(50) made the "View N Trips" button and the
+                // trips list disagree with the true Total Trips count (66 vs 50).
                 let bookingTrips = []
                 if (booking.monthlyTrips && booking.monthlyTrips.length > 0) {
                     bookingTrips = await Trip.find({
@@ -2460,8 +2470,7 @@ export const getCorporateOwnerBookings = async (req, res) => {
                     })
                         .populate("driverId", "name email phone")
                         .populate("vehicleId", "model vehicleName licensePlate registrationNumber")
-                        .sort({ tripDate: 1 })
-                        .limit(50) // Limit to prevent huge responses
+                        .sort({ tripDate: 1, direction: 1, startTime: 1 })
                 }
 
                 // Resolve driver info
@@ -2534,7 +2543,11 @@ export const getCorporateOwnerBookings = async (req, res) => {
                     passStartDate: booking.passStartDate,
                     passEndDate: booking.passEndDate,
                     createdTripsCount: booking.createdTripsCount || formattedTrips.length,
-                    totalTripsCount: booking.totalTripsCount || formattedTrips.length,
+                    // The number of trips actually returned is the source of truth
+                    // for the UI so the "Total Trips" figure, the "View N Trips"
+                    // button and the expanded list can never disagree. We fall back
+                    // to the stored counters only if the trips array is empty.
+                    totalTripsCount: formattedTrips.length || booking.totalTripsCount || 0,
                     // Route/Schedule Info
                     routeId: booking.routeId,
                     routeName: booking.routeId ? `${booking.routeId.fromLocation} to ${booking.routeId.toLocation}` : "",

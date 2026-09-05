@@ -21,6 +21,8 @@ const COMMUTER_TAB = {
     SETTINGS: "/commuter-profile?tab=settings",
 };
 
+import { isCustomerRole, isPartnerRole } from "./roleFamilies";
+
 // Type groupings shared across roles.
 const TRIP_TYPES = new Set([
     "TRIP_REMINDER",
@@ -164,18 +166,19 @@ function commuterRoute(type, text) {
 // Destination for non-commuter roles (B2B partner, corporate, B2C partner, admin).
 function otherRoleRoute(type, role) {
     if (QUOTATION_TYPES.has(type)) {
-        if (role === "CORPORATE") return "/corporate/quotations";
-        return "/b2b/quotations";
+        if (isCustomerRole(role)) return "/corporate/quotations";
+        if (isPartnerRole(role)) return "/b2b/quotations";
+        return "/notifications";
     }
     if (CONTRACT_TYPES.has(type)) {
-        if (role === "CORPORATE") return "/corporate/contracts";
-        if (role === "B2B_PARTNER") return "/b2b/contracts";
+        if (isCustomerRole(role)) return "/corporate/contracts";
+        if (isPartnerRole(role)) return "/b2b/contracts";
         return "/contracts";
     }
     if (NEGOTIATION_TYPES.has(type)) {
         if (role === "ADMIN") return "/admin/negotiations";
-        if (role === "B2B_PARTNER") return "/b2b/negotiations";
-        if (role === "CORPORATE") return "/corporate/quotations";
+        if (isPartnerRole(role)) return "/b2b/negotiations";
+        if (isCustomerRole(role)) return "/corporate/quotations";
         return "/notifications";
     }
     if (ROUTE_REQUEST_TYPES.has(type)) {

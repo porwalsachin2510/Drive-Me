@@ -2,18 +2,37 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { selectUserRole } from "../../../Redux/selectors/authSelectors";
 import "./ServiceSelection.css";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 
 const ServiceSelection = () => {
   const navigate = useNavigate();
-  const [selectedService, setSelectedService] = useState(null);
+  const userRole = useSelector(selectUserRole);
+  // Resolve the active business segment. A logged-in customer's role is the
+  // source of truth (CORPORATE vs SCHOOL_CUSTOMER); guests who entered via the
+  // navbar "School" tab are resolved from the persisted serviceSegment. School
+  // customers may ONLY take Managed Services from their school partner.
+  const isSchoolCustomer =
+    userRole === "SCHOOL_CUSTOMER" ||
+    (userRole !== "CORPORATE" &&
+      localStorage.getItem("serviceSegment") === "school");
+  const [selectedService, setSelectedService] = useState(
+    isSchoolCustomer ? "managed" : null
+  );
   const [activeTab, setActiveTab] = useState("corporate");
 
   useEffect(() => {
+    // Persist the resolved segment so the navbar highlights the correct tab and
+    // the downstream discovery step stays within the right segment.
+    localStorage.setItem(
+      "serviceSegment",
+      isSchoolCustomer ? "school" : "corporate"
+    );
     localStorage.setItem("activeTab", "corporate");
-  }, []);
+  }, [isSchoolCustomer]);
 
   const services = [
     {
@@ -32,22 +51,22 @@ const ServiceSelection = () => {
       useCases:
         "Perfect for corporate travel, employee shuttles, VIP transport",
     },
-    {
-      id: "goods",
-      title: "Goods Carrier",
-      description:
-        "Pickup trucks, cargo vans, mini trucks for delivery, logistics, or material transport",
-      icon: "🚚",
-      features: [
-        "Pickup trucks",
-        "Cargo vans",
-        "Small trucks (1-3 ton)",
-        "Refrigerated vehicles",
-        "Box trucks",
-      ],
-      useCases:
-        "Ideal for e-commerce, logistics, construction material delivery",
-    },
+    // {
+    //   id: "goods",
+    //   title: "Goods Carrier",
+    //   description:
+    //     "Pickup trucks, cargo vans, mini trucks for delivery, logistics, or material transport",
+    //   icon: "🚚",
+    //   features: [
+    //     "Pickup trucks",
+    //     "Cargo vans",
+    //     "Small trucks (1-3 ton)",
+    //     "Refrigerated vehicles",
+    //     "Box trucks",
+    //   ],
+    //   useCases:
+    //     "Ideal for e-commerce, logistics, construction material delivery",
+    // },
     {
       id: "managed",
       title: "Managed Services",
@@ -65,6 +84,11 @@ const ServiceSelection = () => {
         "Complete turnkey solution for businesses wanting zero fleet management hassle",
     },
   ];
+
+  // School customers only ever see the Managed Services option.
+  const visibleServices = isSchoolCustomer
+    ? services.filter((s) => s.id === "managed")
+    : services;
 
   const handleServiceSelect = (serviceId) => {
     setSelectedService(serviceId);
@@ -86,12 +110,14 @@ const ServiceSelection = () => {
           <div className="drivemego-service-header">
             <h1>Select Your Service Type</h1>
             <p>
-              Choose the type of vehicles or service you need for your business
+              {isSchoolCustomer
+                ? "Choose a managed transportation service from your school partner"
+                : "Choose the type of vehicles or service you need for your business"}
             </p>
           </div>
 
           <div className="drivemego-services-grid">
-            {services.map((service) => (
+            {visibleServices.map((service) => (
               <div
                 key={service.id}
                 className={`drivemego-service-card ${

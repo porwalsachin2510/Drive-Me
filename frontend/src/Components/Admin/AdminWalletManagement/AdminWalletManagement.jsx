@@ -325,6 +325,10 @@ function AdminWalletManagement() {
     const roleMap = {
       B2C_PARTNER: "b2c_partner",
       B2B_PARTNER: "b2b_partner",
+      // School partner mirrors the B2B partner and school customer mirrors the
+      // corporate customer, so they share the same badge styling.
+      SCHOOL_PARTNER: "b2b_partner",
+      SCHOOL_CUSTOMER: "corporate",
       CORPORATE: "corporate",
       COMMUTER: "commuter",
       ADMIN: "admin",
@@ -439,6 +443,9 @@ function AdminWalletManagement() {
           <option value="CORPORATE">Corporate</option>
           <option value="COMMUTER">Commuter</option>
           <option value="CORPORATE_EMPLOYEE">Corporate Employee</option>
+          <option value="SCHOOL_CUSTOMER">School Customer</option>
+          <option value="SCHOOL_PARTNER">School Partner</option>
+          <option value="SCHOOL_STUDENT">School Student</option>
         </select>
       </div>
 

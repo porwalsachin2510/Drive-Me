@@ -46,6 +46,16 @@ export const generateOperationalInvoice = (contractId, { month, year } = {}) =>
 export const listOperationalInvoices = (contractId) =>
     api.get(`${base(contractId)}/billing/invoices`)
 
+// Corporate: start payment for a generated operational invoice. CARD/WALLET
+// returns a gateway paymentSession to redirect to; CASH/BANK_TRANSFER records a
+// manual payment the partner must then confirm.
+export const payOperationalInvoice = (contractId, invoiceId, paymentMethod) =>
+    api.post(`${base(contractId)}/billing/invoices/${invoiceId}/pay`, { paymentMethod })
+
+// Partner: confirm a cash/bank-transfer payment was received, settling the invoice.
+export const confirmOperationalInvoicePayment = (contractId, invoiceId) =>
+    api.patch(`${base(contractId)}/billing/invoices/${invoiceId}/confirm-payment`)
+
 export default {
     getSlaConfig,
     updateSlaConfig,
@@ -58,4 +68,6 @@ export default {
     previewOperationalInvoice,
     generateOperationalInvoice,
     listOperationalInvoices,
+    payOperationalInvoice,
+    confirmOperationalInvoicePayment,
 }

@@ -6,6 +6,37 @@
   min-height: calc(100vh - 200px);
 }
 
+/* Reuse-existing-route selector in the Assign Route modal */
+.route-reuse-section {
+  background: #f0f6ff;
+  border: 1px solid #cfe0ff;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.route-reuse-hint {
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+.route-reuse-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #cfe0ff;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #ffffff;
+  color: #1a202c;
+  cursor: pointer;
+}
+
+.route-reuse-select:focus {
+  outline: none;
+  border-color: #0066ff;
+}
+
 .corporate-assigned-vehicles-back-btn {
   background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
   color: white;
@@ -22,6 +53,42 @@
 .corporate-assigned-vehicles-back-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 102, 255, 0.3);
+}
+
+/* ============ HEADER ACTIONS ============ */
+.corporate-assigned-vehicles-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ============ IMPORT FROM BRIEF BUTTON (secondary) ============ */
+.corporate-assigned-vehicles-import-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: #ffffff;
+  color: #0066ff;
+  border: 1.5px solid #0066ff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.corporate-assigned-vehicles-import-btn:hover {
+  background: #0066ff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.corporate-assigned-vehicles-import-btn:active {
+  transform: translateY(0);
 }
 
 /* ============ ADD BUTTON ============ */

@@ -115,10 +115,14 @@ export const createDriver = async (req, res) => {
 
         const driver = await Driver.create(driverData)
 
-        // Create User account for driver with B2B_PARTNER_DRIVER role
+        // Create User account for the driver. A SCHOOL_PARTNER creates
+        // SCHOOL_PARTNER_DRIVER accounts (mirrors how B2B_PARTNER creates
+        // B2B_PARTNER_DRIVER accounts) so the two segments stay isolated.
         const generatedPassword = generateRandomPassword()
+        const driverUserRole =
+            req.userRole === "SCHOOL_PARTNER" ? "SCHOOL_PARTNER_DRIVER" : "B2B_PARTNER_DRIVER"
         const userData = {
-            role: "B2B_PARTNER_DRIVER",
+            role: driverUserRole,
             fullName: req.body.name,
             email: normalizedEmail,
             whatsappNumber: req.body.phone,
@@ -427,10 +431,14 @@ export const createCorporateDriver = async (req, res) => {
 
         const corporateDriver = await CorporateDriver.create(driverData)
 
-        // Create User account for driver with CORPORATE_DRIVER role
+        // Create User account for the driver. A SCHOOL_CUSTOMER creates
+        // SCHOOL_CUSTOMER_DRIVER accounts (mirrors how CORPORATE creates
+        // CORPORATE_DRIVER accounts) so the two segments stay isolated.
         const generatedPassword = generateRandomPassword()
+        const driverUserRole =
+            req.userRole === "SCHOOL_CUSTOMER" ? "SCHOOL_CUSTOMER_DRIVER" : "CORPORATE_DRIVER"
         const userData = {
-            role: "CORPORATE_DRIVER",
+            role: driverUserRole,
             fullName: req.body.name,
             email: normalizedEmail,
             whatsappNumber: req.body.phone,

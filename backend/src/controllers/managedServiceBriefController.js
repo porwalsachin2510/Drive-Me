@@ -1,4 +1,6 @@
 import mongoose from "mongoose"
+import axios from "axios"
+import * as XLSX from "xlsx"
 import ManagedServiceBrief from "../models/ManagedServiceBrief.js"
 import Contract from "../models/Contract.js"
 import Quotation from "../models/Quotation.js"
@@ -6,6 +8,95 @@ import User from "../models/User.js"
 import { logManagedActivity } from "../utils/operationContext.js"
 import { createNotification } from "../Services/notificationService.js"
 import { broadcastManagedBriefUpdate } from "../Services/socketService.js"
+import { isCustomerRole, isPartnerRole } from "../utils/roleFamilies.js"
+import { uploadToCloudinary } from "../Config/Cloudinary.js"
+import CorporateEmployee from "../models/CorporateEmployee.js"
+import Route from "../models/Route.js"
+import { parseBriefDocuments } from "../utils/briefDocumentParser.js"
+
+/**
+ * Normalize an incoming array of brief-document descriptors to only the fields
+ * we persist. Used when the corporate re-saves the brief (e.g. adds a revised
+ * version) so we never trust arbitrary client fields.
+ */
+const sanitizeBriefDocuments = (documents = []) =>
+    (Array.isArray(documents) ? documents : [])
+        .filter((d) => d && String(d.url || "").trim())
+        .map((d) => ({
+            fileName: String(d.fileName || "").trim(),
+            url: String(d.url).trim(),
+            publicId: String(d.publicId || "").trim(),
+            fileType: String(d.fileType || "").trim(),
+            fileSize: Number(d.fileSize) || 0,
+            version: Number(d.version) > 0 ? Number(d.version) : 1,
+            uploadedById: d.uploadedById || null,
+            uploadedByName: String(d.uploadedByName || "").trim(),
+            uploadedAt: d.uploadedAt || new Date(),
+        }))
+
+/**
+ * POST /api/managed-service-brief/upload-documents
+ * Uploads one or more requirement documents (Excel, PDF, Word, CSV, images) to
+ * Cloudinary and returns their descriptors. The customer uploads BEFORE the
+ * quotation/brief exists, so the returned descriptors travel in the brief
+ * payload and get persisted onto the brief at submit time. Only customer roles
+ * (CORPORATE / SCHOOL_CUSTOMER) may upload.
+ */
+export const uploadBriefDocuments = async (req, res) => {
+    try {
+        if (!isCustomerRole(req.userRole)) {
+            return res.status(403).json({
+                success: false,
+                message: "Only customer accounts can upload requirement documents.",
+            })
+        }
+
+        const files = req.files || []
+        if (!files.length) {
+            return res.status(400).json({
+                success: false,
+                message: "No files received. Attach at least one document.",
+            })
+        }
+
+        const uploaderName = await (async () => {
+            try {
+                const user = await User.findById(req.userId).select("fullName companyName")
+                return user?.companyName || user?.fullName || "Customer"
+            } catch {
+                return "Customer"
+            }
+        })()
+
+        const uploaded = []
+        for (const file of files) {
+            const result = await uploadToCloudinary(file, "driveme/managed-service-briefs")
+            uploaded.push({
+                fileName: file.originalname,
+                url: result.secure_url,
+                publicId: result.public_id,
+                fileType: file.mimetype,
+                fileSize: file.size,
+                version: 1,
+                uploadedById: req.userId,
+                uploadedByName: uploaderName,
+                uploadedAt: new Date(),
+            })
+        }
+
+        res.json({
+            success: true,
+            message: `${uploaded.length} document(s) uploaded.`,
+            data: { documents: uploaded },
+        })
+    } catch (error) {
+        console.error("[managedServiceBrief] uploadBriefDocuments error:", error?.message)
+        res.status(500).json({
+            success: false,
+            message: error?.message || "Failed to upload documents.",
+        })
+    }
+}
 
 /**
  * Compute live SLA / progress metrics for a brief. Pure function over the brief
@@ -255,10 +346,12 @@ const resolveBriefAccess = async (req, res) => {
         return null
     }
 
+    // Normalise customer/partner families to canonical side labels so school
+    // users share this managed-service brief pipeline with corporate users.
     let role = null
-    if (req.userRole === "CORPORATE" && contract.corporateOwnerId.toString() === req.userId) {
+    if (isCustomerRole(req.userRole) && contract.corporateOwnerId.toString() === req.userId) {
         role = "CORPORATE"
-    } else if (req.userRole === "B2B_PARTNER" && contract.fleetOwnerId.toString() === req.userId) {
+    } else if (isPartnerRole(req.userRole) && contract.fleetOwnerId.toString() === req.userId) {
         role = "B2B_PARTNER"
     }
 
@@ -363,6 +456,8 @@ export const updateBrief = async (req, res) => {
 
         const {
             summary,
+            comments,
+            documents,
             serviceStartDate,
             pointOfContact,
             workLocations,
@@ -372,6 +467,8 @@ export const updateBrief = async (req, res) => {
         } = req.body
 
         if (summary !== undefined) brief.summary = summary
+        if (comments !== undefined) brief.comments = comments
+        if (Array.isArray(documents)) brief.documents = sanitizeBriefDocuments(documents)
         if (serviceStartDate !== undefined) brief.serviceStartDate = serviceStartDate || null
         if (pointOfContact !== undefined) brief.pointOfContact = pointOfContact
         if (sla !== undefined && sla) {
@@ -1029,11 +1126,12 @@ const resolveBriefAccessByQuotation = async (req, res) => {
         return null
     }
 
+    // Family-aware normalisation (school users included).
     let role = null
-    if (req.userRole === "CORPORATE" && quotation.corporateOwnerId.toString() === req.userId) {
+    if (isCustomerRole(req.userRole) && quotation.corporateOwnerId.toString() === req.userId) {
         role = "CORPORATE"
     } else if (
-        req.userRole === "B2B_PARTNER" &&
+        isPartnerRole(req.userRole) &&
         quotation.fleetOwnerId?.toString() === req.userId
     ) {
         role = "B2B_PARTNER"
@@ -1119,6 +1217,8 @@ export const updateBriefByQuotation = async (req, res) => {
 
         const {
             summary,
+            comments,
+            documents,
             serviceStartDate,
             pointOfContact,
             workLocations,
@@ -1128,6 +1228,8 @@ export const updateBriefByQuotation = async (req, res) => {
         } = req.body
 
         if (summary !== undefined) brief.summary = summary
+        if (comments !== undefined) brief.comments = comments
+        if (Array.isArray(documents)) brief.documents = sanitizeBriefDocuments(documents)
         if (serviceStartDate !== undefined) brief.serviceStartDate = serviceStartDate || null
         if (pointOfContact !== undefined) brief.pointOfContact = pointOfContact
         if (sla !== undefined && sla) {
@@ -1265,5 +1367,361 @@ export const postMessageByQuotation = async (req, res) => {
     } catch (error) {
         console.error("[managedServiceBrief] postMessageByQuotation error:", error)
         res.status(500).json({ success: false, message: "Failed to post message." })
+    }
+}
+
+/* ==========================================================================
+ * BRIEF -> OPERATIONS IMPORT
+ * ==========================================================================
+ * A managed-service brief is never a single route or a single employee. Both the
+ * customer (CORPORATE / SCHOOL_CUSTOMER) and the operating partner (B2B_PARTNER /
+ * SCHOOL_PARTNER) hold the SAME requirement document, so either side must be able
+ * to turn it into real operational records without retyping every row.
+ *
+ * These endpoints power the "Import Routes" / "Import Employees" screens. They
+ * only ever READ and normalize: nothing is created here. Creation happens through
+ * the existing operational endpoints (assign-route / bulk-upload employees) so
+ * duplicate detection, trip generation, activity logging and brief auto-fulfilment
+ * all behave exactly as they do for a manually added record.
+ * ========================================================================== */
+
+/** Collapse a string to a comparison key (lowercase, alphanumerics only). */
+const compareKey = (value) =>
+    String(value ?? "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "")
+
+/** Identity of a route for duplicate detection: its label, else from->to. */
+const routeIdentity = (route = {}) => {
+    const label = compareKey(route.label)
+    if (label) return label
+    return `${compareKey(route.fromArea)}>${compareKey(route.toWorkLocation)}`
+}
+
+/**
+ * Endpoint identity of a route: strictly its from->to (plus trip direction so a
+ * genuine outbound and its reverse return leg stay distinct). Used as a SECOND
+ * dedup key so a typed brief row and a document row for the same physical route
+ * collapse into one even when their labels differ. Returns "" when endpoints are
+ * unknown, so it never accidentally merges two unrelated label-only rows.
+ */
+const routeEndpointIdentity = (route = {}) => {
+    const from = compareKey(route.fromArea)
+    const to = compareKey(route.toWorkLocation)
+    if (!from && !to) return ""
+    return `${from}>${to}`
+}
+
+/** Identity of a person: email wins, else name + phone. */
+const personIdentity = (person = {}) => {
+    const email = compareKey(person.email)
+    if (email) return `e:${email}`
+    return `n:${compareKey(person.name)}:${compareKey(person.phone)}`
+}
+
+/** Shape a structured brief routeRequest sub-document as an import candidate. */
+const routeCandidateFromBriefItem = (item) => ({
+    // Structured items carry the brief sub-document id, which is what lets the
+    // created route auto-fulfil the brief item on the corporate's dashboard.
+    briefItemId: String(item._id),
+    sourceKey: `brief:${item._id}`,
+    source: "BRIEF",
+    documentName: "",
+    sourceRow: null,
+    label: item.label || "",
+    fromArea: item.fromArea || "",
+    toWorkLocation: item.toWorkLocation || "",
+    // Canonical trip-type fields (mirror the manual Assign Route form). A
+    // structured brief item may only carry the legacy direction/window fields,
+    // so derive the trip type when it isn't set explicitly.
+    tripType:
+        item.tripType ||
+        (String(item.direction || "").toUpperCase() === "BOTH" &&
+        (item.shiftLogoutTime || item.returnStartTime)
+            ? "ROUND_TRIP"
+            : "ONE_WAY"),
+    pickupStartTime: item.pickupStartTime || item.pickupWindowStart || "",
+    pickupEndTime: item.pickupEndTime || item.pickupWindowEnd || "",
+    returnStartTime: item.returnStartTime || item.shiftLogoutTime || "",
+    returnEndTime: item.returnEndTime || "",
+    outboundStops: item.outboundStops || item.stops || [],
+    returnStops: item.returnStops || [],
+    direction: item.direction || "BOTH",
+    shiftLoginTime: "",
+    shiftLogoutTime: item.shiftLogoutTime || item.returnStartTime || "",
+    pickupWindowStart: item.pickupWindowStart || item.pickupStartTime || "",
+    pickupWindowEnd: item.pickupWindowEnd || item.pickupEndTime || "",
+    numberOfTrips: 1,
+    headcount: Number(item.headcount) || 0,
+    preferredVehicleType: item.preferredVehicleType || "",
+    operatingDays:
+        item.operatingDays && item.operatingDays.length
+            ? item.operatingDays
+            : ["MON", "TUE", "WED", "THU", "FRI"],
+    stops: item.outboundStops || item.stops || [],
+    notes: item.notes || "",
+    fulfillmentStatus: item.fulfillment?.status || "PENDING",
+    alreadyFulfilled: item.fulfillment?.status === "FULFILLED",
+})
+
+/** Shape a structured brief roster sub-document as an import candidate. */
+const employeeCandidateFromBriefItem = (item) => ({
+    briefItemId: String(item._id),
+    sourceKey: `brief:${item._id}`,
+    source: "BRIEF",
+    documentName: "",
+    sourceRow: null,
+    name: item.name || "",
+    email: item.email || "",
+    phone: item.phone || "",
+    employeeCode: item.employeeCode || "",
+    department: item.department || "",
+    designation: item.designation || "",
+    homeAddress: item.homeAddress || "",
+    pickupArea: item.pickupArea || item.homeAddress || "",
+    workLocation: item.workLocation || "",
+    workLocationAddress: "",
+    city: "",
+    shiftLabel: item.shiftLabel || "",
+    preferredRouteLabel: item.preferredRouteLabel || "",
+    passMonths: Number(item.passMonths) > 0 ? Number(item.passMonths) : 1,
+    // Per-passenger pass start date if the customer supplied one; otherwise
+    // getImportCandidates falls back to the brief's service start date.
+    passStartDate: item.passStartDate || "",
+    notes: item.assignmentHint || "",
+    fulfillmentStatus: item.fulfillment?.status || "PENDING",
+    alreadyFulfilled: item.fulfillment?.status === "FULFILLED",
+})
+
+/**
+ * GET /api/managed-service-brief/:contractId/import-candidates
+ *
+ * Returns every route and every person that could be created from the brief,
+ * merged from TWO sources and de-duplicated against each other:
+ *
+ *   1. STRUCTURED brief items (brief.routeRequests / brief.employeeRoster) — the
+ *      rows the customer typed into the portal. These carry a briefItemId, so
+ *      importing them auto-fulfils the matching brief item.
+ *   2. PARSED rows from the requirement document(s) the customer attached. This
+ *      is the realistic path: the customer uploads the Excel they already have
+ *      (dozens/hundreds of rows) and never retypes it into the portal.
+ *
+ * When a document row matches a structured item (same route label / same person)
+ * the structured item wins, because only it can auto-fulfil the brief.
+ *
+ * Rows that already exist as real records (a route with the same from->to on this
+ * contract, or an employee with the same email) are flagged `alreadyExists` so the
+ * UI can pre-deselect them instead of creating duplicates.
+ *
+ * Available to BOTH the customer and the partner — they share the same document.
+ */
+export const getImportCandidates = async (req, res) => {
+    try {
+        const access = await resolveBriefAccess(req, res)
+        if (!access) return
+
+        const brief = await getOrCreateBrief(access.contract)
+
+        // --- 1. Structured brief items -------------------------------------
+        const routeCandidates = (brief.routeRequests || []).map(routeCandidateFromBriefItem)
+        const employeeCandidates = (brief.employeeRoster || []).map(
+            employeeCandidateFromBriefItem,
+        )
+
+        const seenRoutes = new Set(routeCandidates.map(routeIdentity))
+        // Endpoint identity (from->to) catches the common case where the customer
+        // TYPED a route into the portal and ALSO attached the same route in the
+        // requirement document with a different label. Label-only dedup misses
+        // those and the route ends up created twice (the "4 routes from 2" bug).
+        const seenRouteEndpoints = new Set(
+            routeCandidates.map(routeEndpointIdentity).filter(Boolean),
+        )
+        const seenPeople = new Set(employeeCandidates.map(personIdentity))
+
+        // --- 2. Rows parsed out of the attached requirement document(s) -----
+        // Never throws: unreadable/non-spreadsheet attachments come back as
+        // warnings so one bad file can't break the whole import screen.
+        const parsed = await parseBriefDocuments(brief.documents || [])
+
+        for (const row of parsed.routes) {
+            const identity = routeIdentity(row)
+            const endpointIdentity = routeEndpointIdentity(row)
+            // Skip the document row if either its label OR its from->to endpoints
+            // already appear among the structured/earlier candidates.
+            if (identity && seenRoutes.has(identity)) continue
+            if (endpointIdentity && seenRouteEndpoints.has(endpointIdentity)) continue
+            if (identity) seenRoutes.add(identity)
+            if (endpointIdentity) seenRouteEndpoints.add(endpointIdentity)
+            routeCandidates.push({
+                ...row,
+                briefItemId: null,
+                fulfillmentStatus: "PENDING",
+                alreadyFulfilled: false,
+            })
+        }
+
+        for (const row of parsed.employees) {
+            const identity = personIdentity(row)
+            if (identity && seenPeople.has(identity)) continue
+            if (identity) seenPeople.add(identity)
+            employeeCandidates.push({
+                ...row,
+                briefItemId: null,
+                fulfillmentStatus: "PENDING",
+                alreadyFulfilled: false,
+            })
+        }
+
+        // --- 3. Flag rows that already exist as real records ---------------
+        const existingRoutes = await Route.find({ contractId: access.contract._id })
+            .select("fromLocation toLocation")
+            .lean()
+        const existingRouteKeys = new Set(
+            existingRoutes.map((r) => `${compareKey(r.fromLocation)}>${compareKey(r.toLocation)}`),
+        )
+
+        const candidateEmails = employeeCandidates
+            .map((e) => String(e.email || "").trim().toLowerCase())
+            .filter(Boolean)
+        const existingEmails = new Set()
+        if (candidateEmails.length > 0) {
+            const existingEmployees = await CorporateEmployee.find({
+                companyId: access.contract.corporateOwnerId,
+                "personalInfo.email": { $in: candidateEmails },
+            })
+                .select("personalInfo.email")
+                .lean()
+            existingEmployees.forEach((e) => {
+                if (e.personalInfo?.email) existingEmails.add(e.personalInfo.email.toLowerCase())
+            })
+        }
+
+        const routes = routeCandidates.map((r) => ({
+            ...r,
+            alreadyExists:
+                r.alreadyFulfilled ||
+                existingRouteKeys.has(
+                    `${compareKey(r.fromArea || r.label)}>${compareKey(r.toWorkLocation)}`,
+                ),
+        }))
+
+        const employees = employeeCandidates.map((e) => ({
+            ...e,
+            // The pass should start on the contract's service start date recorded
+            // in the brief, so an imported passenger's monthly pass (and the trips
+            // generated at invitation time) begin on the same day a manually added
+            // passenger's would when the customer picks that date by hand.
+            passStartDate: e.passStartDate || brief.serviceStartDate || null,
+            alreadyExists:
+                e.alreadyFulfilled ||
+                existingEmails.has(String(e.email || "").trim().toLowerCase()),
+        }))
+
+        res.json({
+            success: true,
+            data: {
+                viewerRole: access.role,
+                contractNumber: access.contract.contractNumber,
+                briefStatus: brief.status,
+                serviceStartDate: brief.serviceStartDate,
+                routes,
+                employees,
+                documents: parsed.documents,
+                warnings: parsed.warnings,
+                counts: {
+                    routesFromBrief: routes.filter((r) => r.source === "BRIEF").length,
+                    routesFromDocuments: routes.filter((r) => r.source === "DOCUMENT").length,
+                    employeesFromBrief: employees.filter((e) => e.source === "BRIEF").length,
+                    employeesFromDocuments: employees.filter((e) => e.source === "DOCUMENT")
+                        .length,
+                },
+            },
+        })
+    } catch (error) {
+        console.error("[managedServiceBrief] getImportCandidates error:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to read the brief's importable routes and people.",
+        })
+    }
+}
+
+/**
+ * GET /api/managed-service-brief/importable-contracts
+ *
+ * The customer's Employee Management screen is company-wide, not per contract, so
+ * it has no contract id to import against. This lists every MANAGED contract the
+ * caller is a party to that actually has a brief worth importing, so the UI can
+ * ask "import from which contract?".
+ *
+ * Works for customers (they own the contract) and partners (they operate it).
+ */
+export const listImportableContracts = async (req, res) => {
+    try {
+        const isCustomer = isCustomerRole(req.userRole)
+        const isPartner = isPartnerRole(req.userRole)
+
+        if (!isCustomer && !isPartner) {
+            return res.status(403).json({
+                success: false,
+                message: "Only managed-service customers and partners can import from a brief.",
+            })
+        }
+
+        const contracts = await Contract.find({
+            serviceMode: "MANAGED",
+            ...(isCustomer ? { corporateOwnerId: req.userId } : { fleetOwnerId: req.userId }),
+        })
+            .select("contractNumber corporateOwnerId fleetOwnerId status createdAt")
+            .populate("corporateOwnerId", "companyName fullName")
+            .populate("fleetOwnerId", "companyName fullName")
+            .sort({ createdAt: -1 })
+            .lean()
+
+        if (contracts.length === 0) {
+            return res.json({ success: true, data: { contracts: [] } })
+        }
+
+        const briefs = await ManagedServiceBrief.find({
+            contractId: { $in: contracts.map((c) => c._id) },
+        })
+            .select("contractId status routeRequests employeeRoster documents")
+            .lean()
+
+        const briefByContract = new Map(briefs.map((b) => [String(b.contractId), b]))
+
+        const data = contracts
+            .map((c) => {
+                const brief = briefByContract.get(String(c._id))
+                if (!brief) return null
+                const routeCount = (brief.routeRequests || []).length
+                const rosterCount = (brief.employeeRoster || []).length
+                const documentCount = (brief.documents || []).length
+                // Nothing to import from an empty brief with no attachments.
+                if (routeCount === 0 && rosterCount === 0 && documentCount === 0) return null
+                return {
+                    contractId: String(c._id),
+                    contractNumber: c.contractNumber,
+                    status: c.status,
+                    briefStatus: brief.status,
+                    counterpartName: isCustomer
+                        ? c.fleetOwnerId?.companyName || c.fleetOwnerId?.fullName || "Partner"
+                        : c.corporateOwnerId?.companyName ||
+                          c.corporateOwnerId?.fullName ||
+                          "Customer",
+                    routeCount,
+                    rosterCount,
+                    documentCount,
+                }
+            })
+            .filter(Boolean)
+
+        res.json({ success: true, data: { contracts: data } })
+    } catch (error) {
+        console.error("[managedServiceBrief] listImportableContracts error:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to list contracts you can import a brief from.",
+        })
     }
 }

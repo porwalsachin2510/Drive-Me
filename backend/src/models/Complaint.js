@@ -43,7 +43,7 @@ const complaintSchema = new mongoose.Schema(
         raisedByName: String,
         raisedByRole: {
             type: String,
-            enum: ["CORPORATE", "CORPORATE_EMPLOYEE", "B2B_PARTNER"],
+            enum: ["CORPORATE", "CORPORATE_EMPLOYEE", "B2B_PARTNER", "SCHOOL_CUSTOMER", "SCHOOL_STUDENT", "SCHOOL_PARTNER"],
             default: "CORPORATE",
         },
 
@@ -105,7 +105,7 @@ const complaintSchema = new mongoose.Schema(
                 message: String,
                 byId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
                 byName: String,
-                byRole: { type: String, enum: ["CORPORATE", "CORPORATE_EMPLOYEE", "B2B_PARTNER"] },
+                byRole: { type: String, enum: ["CORPORATE", "CORPORATE_EMPLOYEE", "B2B_PARTNER", "SCHOOL_CUSTOMER", "SCHOOL_STUDENT", "SCHOOL_PARTNER"] },
                 createdAt: { type: Date, default: Date.now },
             },
         ],

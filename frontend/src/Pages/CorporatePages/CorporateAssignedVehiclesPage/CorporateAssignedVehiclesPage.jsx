@@ -10,6 +10,7 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import "./CorporateAssignedVehiclesPage.css";
 import AddDriverModal from "../../../Components/Corporate/AddDriverModal/AddDriverModal";
 import ImportExportControls from "../../../Components/Common/ImportExportControls/ImportExportControls";
+import BriefRouteImportModal from "../../../Components/Common/BriefImport/BriefRouteImportModal";
 import { notify } from "../../../utils/toast";
 
 const CorporateAssignedVehiclesPage = ({
@@ -49,6 +50,23 @@ const CorporateAssignedVehiclesPage = ({
   // route they are creating to a specific brief route request so it auto-fulfils.
   const [briefRouteItems, setBriefRouteItems] = useState([]);
 
+  // "Import routes from the brief" screen. A managed-service brief lists many
+  // routes (typed into the portal AND inside the requirement document the
+  // customer attached), so adding them one by one through "+ Add Route" is not
+  // viable. Both parties can import: the customer on its own contract and the
+  // partner operating on the customer's behalf. `importVehicleId` preselects the
+  // vehicle when the import was started from a specific vehicle card.
+  const [showRouteImport, setShowRouteImport] = useState(false);
+  const [importVehicleId, setImportVehicleId] = useState("");
+
+  // Importing from a brief only makes sense on a MANAGED-service contract.
+  const isManagedContract = contract?.serviceMode === "MANAGED";
+
+  const openRouteImport = (vehicle = null) => {
+    setImportVehicleId(vehicle?._id ? String(vehicle._id) : "");
+    setShowRouteImport(true);
+  };
+
   const [routeForm, setRouteForm] = useState({
     fromLocation: "",
     toLocation: "",
@@ -79,6 +97,11 @@ const CorporateAssignedVehiclesPage = ({
       },
     ],
   });
+
+  // When set, the Assign Route modal will attach this already-created route to
+  // the selected vehicle instead of creating a brand new one. Empty string means
+  // "create a new route manually" (the default).
+  const [reuseRouteId, setReuseRouteId] = useState("");
 
   const [newStopPoint, setNewStopPoint] = useState({
     location: "",
@@ -158,8 +181,10 @@ const CorporateAssignedVehiclesPage = ({
 
   useEffect(() => {
     if (assignedVehicles && assignedVehicles.length > 0) {
-      // Changed: Extract all routes from all vehicles (routeDetails is now an array)
-      const extractedRoutes = [];
+      // A route can be SHARED across several vehicles (one physical route that
+      // runs on multiple buses). The Routes tab must show it ONCE, listing every
+      // vehicle it runs on, instead of a duplicate card per vehicle.
+      const routeMap = new Map();
       assignedVehicles.forEach((vehicle) => {
         // Handle both array (new) and single object (legacy) formats
         const routeDetailsArray = Array.isArray(vehicle.routeDetails)
@@ -169,17 +194,43 @@ const CorporateAssignedVehiclesPage = ({
             : [];
 
         routeDetailsArray.forEach((routeDetail) => {
-          if (routeDetail && Object.keys(routeDetail).length > 0) {
-            extractedRoutes.push({
+          if (!routeDetail || Object.keys(routeDetail).length === 0) return;
+
+          const key = String(
+            routeDetail._id ||
+              `${routeDetail.fromLocation}>${routeDetail.toLocation}`,
+          );
+          const vehicleLabel = vehicle.vehicleDetails?.vehicleName;
+          const vehicleReg = vehicle.vehicleDetails?.registrationNumber;
+
+          if (routeMap.has(key)) {
+            const existing = routeMap.get(key);
+            existing.vehicles.push({
+              vehicleId: vehicle._id,
+              vehicleName: vehicleLabel,
+              registrationNumber: vehicleReg,
+            });
+          } else {
+            routeMap.set(key, {
               ...routeDetail,
+              // Keep the first vehicle for backward-compatible fields.
               assignedVehicleId: vehicle._id,
-              vehicleName: vehicle.vehicleDetails?.vehicleName,
-              registrationNumber: vehicle.vehicleDetails?.registrationNumber,
+              vehicleName: vehicleLabel,
+              registrationNumber: vehicleReg,
+              vehicles: [
+                {
+                  vehicleId: vehicle._id,
+                  vehicleName: vehicleLabel,
+                  registrationNumber: vehicleReg,
+                },
+              ],
             });
           }
         });
       });
-      setRoutes(extractedRoutes);
+      setRoutes(Array.from(routeMap.values()));
+    } else {
+      setRoutes([]);
     }
   }, [assignedVehicles]);
 
@@ -222,6 +273,27 @@ const CorporateAssignedVehiclesPage = ({
 
   const handleRouteSubmit = async (e) => {
     e.preventDefault();
+
+    // REUSE PATH: the user picked an already-created route to apply to this
+    // vehicle. Skip all manual-entry validation and just tell the backend to
+    // attach that same route id to this vehicle.
+    if (reuseRouteId) {
+      try {
+        const response = await api.post(
+          `/contracts/assign-route/${contractId}/${selectedVehicle._id}`,
+          { reuseRouteId },
+        );
+        if (response.data.success) {
+          notify("Route assigned to this vehicle successfully");
+          closeModal();
+          await fetchAssignedVehicles();
+        }
+      } catch (err) {
+        notify(err.response?.data?.message || "Failed to assign route");
+        console.error("Error reusing route:", err);
+      }
+      return;
+    }
 
     if (!routeForm.fromLocation || !routeForm.toLocation) {
       notify("Please fill in required route details");
@@ -373,6 +445,7 @@ const CorporateAssignedVehiclesPage = ({
       ],
     });
     setNewStopPoint({ location: "", time: "" });
+    setReuseRouteId(""); // default to creating a new route
     // Refresh the brief's outstanding route requests so the partner can link
     // this new route to one of them (only relevant in embedded/on-behalf mode).
     if (embedded) fetchBriefRouteItems();
@@ -684,12 +757,28 @@ const CorporateAssignedVehiclesPage = ({
               Contract: {contract?.contractNumber}
             </p>
           </div>
-          <button
-            className="corporate-assigned-vehicles-add-btn"
-            onClick={() => setShowAddCorporateDriverModal(true)}
-          >
-            + Add Driver
-          </button>
+          <div className="corporate-assigned-vehicles-header-actions">
+            {/* Import from the brief is a route action, so only surface it on the
+                Vehicles / Routes tabs (not while managing drivers). */}
+            {isManagedContract && activeTab !== "drivers" && (
+              <button
+                className="corporate-assigned-vehicles-import-btn"
+                onClick={() => openRouteImport()}
+                title="Create routes from the service brief and its attached requirement document"
+              >
+                Import Routes from Brief
+              </button>
+            )}
+            {/* Add Driver only belongs on the Drivers tab. */}
+            {activeTab === "drivers" && (
+              <button
+                className="corporate-assigned-vehicles-add-btn"
+                onClick={() => setShowAddCorporateDriverModal(true)}
+              >
+                + Add Driver
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="corporate-assigned-vehicles-tabs">
@@ -892,7 +981,10 @@ const CorporateAssignedVehiclesPage = ({
                           <p className="not-assigned">No routes assigned yet</p>
                         )}
 
-                        {/* Always show Add Route button to support multiple routes */}
+                        {/* Manual single-route addition. Importing from the brief
+                            is done once from the header button (it assigns the
+                            brief routes to every selected vehicle at once), so we
+                            no longer duplicate an import button on each vehicle. */}
                         <button
                           className="assign-btn add-route-btn"
                           onClick={() => openRouteModal(vehicle)}
@@ -934,8 +1026,27 @@ const CorporateAssignedVehiclesPage = ({
                     <div className="corporate-assigned-vehicles-route-card-body">
                       <div className="corporate-assigned-vehicles-route-info">
                         <p className="corporate-assigned-vehicles-route-detail">
-                          <strong>🚗 Vehicle:</strong> {route.vehicleName} (
-                          {route.registrationNumber})
+                          <strong>
+                            🚗 Vehicle
+                            {route.vehicles && route.vehicles.length > 1
+                              ? "s"
+                              : ""}
+                            :
+                          </strong>{" "}
+                          {(route.vehicles && route.vehicles.length
+                            ? route.vehicles
+                            : [
+                                {
+                                  vehicleName: route.vehicleName,
+                                  registrationNumber: route.registrationNumber,
+                                },
+                              ]
+                          )
+                            .map(
+                              (v) =>
+                                `${v.vehicleName} (${v.registrationNumber})`,
+                            )
+                            .join(", ")}
                         </p>
                         <p className="corporate-assigned-vehicles-route-detail">
                           <strong>📅 Start Date:</strong>{" "}
@@ -1347,6 +1458,49 @@ const CorporateAssignedVehiclesPage = ({
                 </button>
               </div>
               <form onSubmit={handleRouteSubmit} className="modal-form">
+                {/* Reuse an existing route created on another vehicle in this
+                    same contract, instead of re-typing it. Only routes NOT
+                    already on this vehicle are offered. */}
+                {(() => {
+                  const reusableRoutes = routes.filter(
+                    (r) =>
+                      r._id &&
+                      !(r.vehicles || []).some(
+                        (v) => String(v.vehicleId) === String(selectedVehicle._id),
+                      ),
+                  );
+                  if (reusableRoutes.length === 0) return null;
+                  return (
+                    <div className="route-section route-reuse-section">
+                      <h3 className="route-section-title">
+                        Use an Existing Route
+                      </h3>
+                      <p className="route-reuse-hint">
+                        Assign a route you already created on another vehicle to
+                        this vehicle, or leave it as &quot;Create a new
+                        route&quot; to enter one manually.
+                      </p>
+                      <div className="form-group">
+                        <select
+                          className="route-reuse-select"
+                          value={reuseRouteId}
+                          onChange={(e) => setReuseRouteId(e.target.value)}
+                        >
+                          <option value="">Create a new route</option>
+                          {reusableRoutes.map((r) => (
+                            <option key={r._id} value={r._id}>
+                              {r.fromLocation} → {r.toLocation}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Manual route entry — hidden when reusing an existing route. */}
+                {!reuseRouteId && (
+                  <>
                 {/* Basic Route Information */}
                 <div className="route-section">
                   <h3 className="route-section-title">
@@ -1813,6 +1967,8 @@ const CorporateAssignedVehiclesPage = ({
                     />
                   </div>
                 </div>
+                  </>
+                )}
 
                 <div className="modal-actions">
                   <button
@@ -1837,6 +1993,20 @@ const CorporateAssignedVehiclesPage = ({
             onSuccess={() => {
               setShowAddCorporateDriverModal(false);
               fetchCorporateDrivers();
+            }}
+          />
+        )}
+
+        {/* Import many routes from the managed-service brief at once, each onto
+            the vehicle chosen for it. */}
+        {showRouteImport && (
+          <BriefRouteImportModal
+            contractId={contractId}
+            defaultVehicleId={importVehicleId}
+            onClose={() => setShowRouteImport(false)}
+            onImported={async () => {
+              await fetchAssignedVehicles();
+              if (embedded) await fetchBriefRouteItems();
             }}
           />
         )}

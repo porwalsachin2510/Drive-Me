@@ -5,6 +5,7 @@ import { getActiveCurrency } from "../../../config/localeConfig";
 import ManagedServiceBrief from "../../Corporate/ManagedServiceBrief/ManagedServiceBrief";
 import "./QuotationResponseModal.css";
 import { notify } from "../../../utils/toast";
+import { requestedByLabel, customerRoleLabel } from "../../../utils/roleFamilies";
 
 // Common reasons a partner might reject a request. Presented as quick-pick
 // chips so the partner can reject in one tap (they can still edit the text).
@@ -31,7 +32,7 @@ const QuotationResponseModal = ({
   const [serviceCharge, setServiceCharge] = useState("");
 
   // Availability-aware quoting: the partner can offer fewer vehicles than the
-  // corporate requested and optionally promise more in the future.
+  // customer requested and optionally promise more in the future.
   const [hasFutureAvailability, setHasFutureAvailability] = useState(false);
   const [futureAvailabilityNote, setFutureAvailabilityNote] = useState("");
   const [futureAvailabilityDate, setFutureAvailabilityDate] = useState("");
@@ -48,8 +49,15 @@ const QuotationResponseModal = ({
   const isPartialOffer = totalRequested > 0 && totalOffered < totalRequested;
 
   // Managed-service quotations let the partner add a management/service charge
-  // (any amount, including 0) for running operations on the corporate's behalf.
+  // (any amount, including 0) for running operations on the customer's behalf.
   const isManaged = quotation.serviceMode === "MANAGED";
+  const customerRole =
+    quotation.corporateOwnerId?.role ||
+    quotation.corporateOwnerId?.userType ||
+    quotation.corporateId?.role ||
+    quotation.corporateId?.userType;
+  const customerLabel = customerRoleLabel(customerRole);
+  const customerNoun = customerRole === "SCHOOL_CUSTOMER" ? "School Customer" : "customer";
 
   const currency =
     quotation.currency ||
@@ -197,8 +205,9 @@ const QuotationResponseModal = ({
         perVehicleBreakdown: perVehicleBreakdown,
       };
 
-      // If offering fewer vehicles now, a future-availability note is required
-      // so the corporate understands whether more are coming.
+  // If offering fewer vehicles now, a future-availability note is required
+  // so the customer understands whether more are coming.
+
       if (
         isPartialOffer &&
         hasFutureAvailability &&
@@ -261,12 +270,12 @@ const QuotationResponseModal = ({
         </div>
 
         <div className="modal-body">
-          {/* Managed-service quotations arrive with an operations brief the
-              corporate authored: the routes, work locations & shifts and
-              employee roster you would be committing to. Read it BEFORE you
-              price so you can quote accurately (or reject if you can't cover
-              those routes). You can ask clarifying questions in the brief's
-              messaging thread without leaving this modal. */}
+  {/* Managed-service quotations arrive with an operations brief the
+                        customer authored: the routes, work locations & shifts and
+                        employee roster you would be committing to. Read it BEFORE you
+                        price so you can quote accurately (or reject if you can't cover
+                        those routes). You can ask clarifying questions in the brief's
+                        messaging thread without leaving this modal. */}
           {isManaged && (
             <div className="managed-brief-embed" style={{ marginBottom: 20 }}>
               <ManagedServiceBrief quotationId={quotation._id} mode="partner" />
@@ -300,7 +309,7 @@ const QuotationResponseModal = ({
                 <h3>Quotation Summary</h3>
                 <div className="summary-info">
                   <p>
-                    <strong>Customer:</strong>{" "}
+                    <strong>{customerLabel}:</strong>{" "}
                     {quotation.corporateOwnerId?.fullName}
                   </p>
                   <p>
@@ -357,10 +366,10 @@ const QuotationResponseModal = ({
                     <div className="availability-control">
                       <label>
                         Vehicles you can supply now
-                        <span className="availability-hint">
-                          Corporate requested{" "}
-                          {vehicle.requestedQuantity ?? vehicle.quantity}
-                        </span>
+                          <span className="availability-hint">
+                            {requestedByLabel(customerRole)}{" "}
+                            {vehicle.requestedQuantity ?? vehicle.quantity}
+                          </span>
                       </label>
                       <div className="availability-input-row">
                         <input
@@ -602,7 +611,7 @@ const QuotationResponseModal = ({
                       </strong>
                       <p>
                         You are quoting only for the vehicles you have available
-                        right now. That is perfectly fine &mdash; the corporate
+                        right now. That is perfectly fine &mdash; the {customerNoun}
                         can accept this partial offer or reject it. If you have
                         no vehicles available at all, use{" "}
                         <button
@@ -667,7 +676,7 @@ const QuotationResponseModal = ({
               {isManaged && (
                 <div className="managed-service-charge-section">
                   <div className="managed-service-charge-note">
-                    <strong>Managed Service request.</strong> This corporate
+                    <strong>Managed Service request.</strong> This {customerNoun}
                     wants you to run all operations (routes, schedules,
                     employees, trips and invitations) on their behalf. You may
                     add a management / service charge for this. Enter any
@@ -740,7 +749,7 @@ const QuotationResponseModal = ({
                 <div className="rejection-intro">
                   <strong>Rejecting this request?</strong>
                   <p>
-                    Pick a quick reason below or write your own. The corporate
+                    Pick a quick reason below or write your own. The {customerNoun}
                     will see this message so they understand why you
                     couldn&apos;t quote.
                   </p>

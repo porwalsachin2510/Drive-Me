@@ -67,11 +67,21 @@ const dropdownOptionsSchema = new mongoose.Schema({
             "NATIONALITIES",
             // Payment methods
             "PAYMENT_METHODS",
-            // Employee master data
+            // Employee master data (CORPORATE segment)
             "DEPARTMENTS",
             "DESIGNATIONS",
             "WORK_LOCATIONS",
             "SHIFT_TYPES",
+            // Student master data (SCHOOL segment). A school customer buys
+            // monthly passes for students/teachers, so the same three
+            // "who is this passenger" fields carry school meaning:
+            //   DEPARTMENTS   -> SCHOOL_GRADES        (Grade / Class)
+            //   DESIGNATIONS  -> SCHOOL_MEMBER_TYPES  (Student / Teacher / Staff)
+            //   WORK_LOCATIONS-> SCHOOL_CAMPUSES      (Campus / Building)
+            "SCHOOL_GRADES",
+            "SCHOOL_MEMBER_TYPES",
+            "SCHOOL_CAMPUSES",
+            "SCHOOL_SHIFT_TYPES",
         ],
         index: true,
     },

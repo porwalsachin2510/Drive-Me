@@ -68,9 +68,15 @@ const corporateRouteScheduleSchema = new mongoose.Schema({
                 type: String,
                 required: true
             },
+            // A stop is fundamentally a LOCATION; the time is optional metadata.
+            // Rows imported from a brief document (or a manually added stop the
+            // user hasn't timed yet) legitimately have no time, so requiring it
+            // here would reject perfectly valid routes. Default to "" so the
+            // field always exists without failing validation.
             time: {
                 type: String,
-                required: true
+                required: false,
+                default: ""
             },
             coordinates: {
                 lat: Number,
@@ -85,7 +91,8 @@ const corporateRouteScheduleSchema = new mongoose.Schema({
             },
             time: {
                 type: String,
-                required: true
+                required: false,
+                default: ""
             },
             coordinates: {
                 lat: Number,

@@ -6,6 +6,7 @@ import Vehicle from "../models/Vehicle.js";
 import Notification from "../models/Notification.js";
 import { sendRealTimeNotification, sendAdminNotification } from "../Services/notificationService.js";
 import { sendEmail } from "../Services/emailService.js";
+import { getBusinessSegment, isCustomerRole, isPartnerRole } from "../utils/roleFamilies.js";
 
 const createNotification = async (userId, type, title, message, relatedEntityId, relatedEntityType) => {
     try {
@@ -30,8 +31,15 @@ const createNotification = async (userId, type, title, message, relatedEntityId,
 export const createRequirement = async (req, res) => {
     try {
         const corporateId = req.userId;
+
+        // Business segment is derived from the creator's role so it can never be
+        // spoofed via the request body. SCHOOL_CUSTOMER => "SCHOOL", CORPORATE =>
+        // "CORPORATE". This gates which partners will see the requirement.
+        const businessSegment = getBusinessSegment(req.userRole) || "CORPORATE";
+
         const requirementData = {
             ...req.body,
+            businessSegment,
             corporateId,
             createdBy: corporateId,
             status: "PUBLISHED", // Requirements are automatically published when created
@@ -123,7 +131,19 @@ export const getOpenRequirements = async (req, res) => {
         const { page = 1, limit = 10, search, vehicleType, location } = req.query;
 
         const partnerId = req.userId;
-        
+
+        // Segment isolation: a partner only sees requirements from customers in
+        // its own business segment. A SCHOOL_PARTNER sees only "SCHOOL"
+        // requirements; a B2B_PARTNER sees only "CORPORATE" requirements. Legacy
+        // requirements without a segment are treated as CORPORATE.
+        const partnerSegment = getBusinessSegment(req.userRole) || "CORPORATE";
+        // For CORPORATE partners, `$ne: "SCHOOL"` also matches legacy docs where
+        // businessSegment is missing/null. School partners match "SCHOOL" only.
+        const segmentFilter =
+            partnerSegment === "CORPORATE"
+                ? { businessSegment: { $ne: "SCHOOL" } }
+                : { businessSegment: "SCHOOL" };
+
         // Build query for open requirements - PUBLIC (PUBLISHED, DRAFT, or IN_PROGRESS) + INVITE_ONLY where partner is invited
         let query = {
             status: { $in: ["PUBLISHED", "DRAFT", "IN_PROGRESS", "OPEN"] },
@@ -133,6 +153,7 @@ export const getOpenRequirements = async (req, res) => {
                 { visibility: null },
                 { visibility: "INVITE_ONLY", invitedPartners: partnerId }
             ],
+            ...segmentFilter,
             isDeleted: false
         };
         
@@ -218,18 +239,29 @@ export const getRequirementById = async (req, res) => {
         }
 
         // Check access permissions
-        if (userRole === "CORPORATE" && requirement.corporateId._id.toString() !== userId) {
+        if (isCustomerRole(userRole) && requirement.corporateId._id.toString() !== userId) {
             return res.status(403).json({
                 success: false,
                 message: "Access denied"
             });
         }
 
-        if (userRole === "B2B_PARTNER" && requirement.visibility !== "PUBLIC") {
-            return res.status(403).json({
-                success: false,
-                message: "This requirement is not publicly visible"
-            });
+        if (isPartnerRole(userRole)) {
+            // Partners can only view publicly visible requirements in their own segment
+            if (requirement.visibility !== "PUBLIC") {
+                return res.status(403).json({
+                    success: false,
+                    message: "This requirement is not publicly visible"
+                });
+            }
+            const partnerSegment = getBusinessSegment(userRole) || "CORPORATE";
+            const reqSegment = requirement.businessSegment || "CORPORATE";
+            if (partnerSegment !== reqSegment) {
+                return res.status(403).json({
+                    success: false,
+                    message: "This requirement is not available to your account type"
+                });
+            }
         }
 
         res.json({
@@ -493,6 +525,17 @@ export const submitQuotationForRequirement = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: "Requirement not found"
+            });
+        }
+
+        // Segment isolation: a partner may only quote requirements in its own
+        // business segment (school partners <-> school requirements, etc.).
+        const partnerSegment = getBusinessSegment(req.userRole) || "CORPORATE";
+        const reqSegment = requirement.businessSegment || "CORPORATE";
+        if (partnerSegment !== reqSegment) {
+            return res.status(403).json({
+                success: false,
+                message: "This requirement is not available to your account type"
             });
         }
 

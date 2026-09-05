@@ -3,6 +3,7 @@ import Route from "../models/Route.js";
 import Contract from "../models/Contract.js";
 import User from "../models/User.js";
 import { io } from "../index.js";
+import { isCustomerRole } from "../utils/roleFamilies.js";
 
 // @desc    Create monthly pass for employee
 // @route   POST /api/monthly-pass/create
@@ -24,7 +25,7 @@ export const createMonthlyPass = async (req, res) => {
 
         // Validate corporate admin
         const corporate = await User.findById(corporateId);
-        if (!corporate || corporate.role !== "CORPORATE") {
+        if (!corporate || !isCustomerRole(corporate.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Unauthorized access"
@@ -168,7 +169,7 @@ export const getEmployeeMonthlyPasses = async (req, res) => {
         const requestingUser = await User.findById(requestingUserId);
         
         // Check authorization
-        if (requestingUser.role === "CORPORATE") {
+        if (isCustomerRole(requestingUser.role)) {
             // Corporate admin can see all employee passes
             if (requestingUser._id.toString() !== requestingUserId) {
                 // Verify employee belongs to this corporate

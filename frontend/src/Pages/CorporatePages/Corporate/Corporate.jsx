@@ -26,7 +26,17 @@ const Corporate = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const serviceType = location.state?.serviceType || "passenger";
+  // Resolve the active business segment (role wins for logged-in customers;
+  // guests resolve from the persisted serviceSegment). School customers can
+  // ONLY request Managed Services from their school partner, so we pin the
+  // service type to "managed" regardless of any incoming navigation state.
+  const isSchoolMode =
+    user?.role === "SCHOOL_CUSTOMER" ||
+    (user?.role !== "CORPORATE" &&
+      localStorage.getItem("serviceSegment") === "school");
+  const serviceType = isSchoolMode
+    ? "managed"
+    : location.state?.serviceType || "passenger";
 
   const [activeTab, setActiveTab] = useState("corporate");
   const [validationErrors, setValidationErrors] = useState({});
@@ -113,8 +123,14 @@ const Corporate = () => {
     ]);
 
   useEffect(() => {
+    // Keep the persisted segment aligned so the navbar highlights the correct
+    // tab (Corporate vs School) while on this shared discovery route.
+    localStorage.setItem(
+      "serviceSegment",
+      isSchoolMode ? "school" : "corporate"
+    );
     localStorage.setItem("activeTab", "corporate");
-  }, []);
+  }, [isSchoolMode]);
 
   // Keep the Location field in sync with the resolved country. For a
   // COUNTRY-scope market (e.g. Kuwait) we auto-select the whole country so the

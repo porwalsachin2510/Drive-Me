@@ -7,6 +7,7 @@ import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js"
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js"
 import CorporateEmployee from "../models/CorporateEmployee.js"
 import User from "../models/User.js"
+import { isPartnerRole, isCustomerRole, passengerRoleForOwner } from "../utils/roleFamilies.js"
 import { getEffectiveCountry, getCountryCurrency } from "../Config/localizationConfig.js"
 import { sendDriverCredentials, sendEmail } from "../Services/emailService.js"
 import {
@@ -533,10 +534,15 @@ const registry = {
             { key: "homeAddress", label: "Home Address", required: false, type: "string", example: "Hawally, Block 3" },
         ],
         prepareContext: async (scopeId) => {
-            const owner = await User.findById(scopeId).select("companyId companyName")
+            const owner = await User.findById(scopeId).select("companyId companyName role")
             return {
                 companyId: owner?.companyId || scopeId,
                 companyName: owner?.companyName || "Your Company",
+                // The owning customer's segment decides the passenger login role:
+                // a SCHOOL_CUSTOMER imports SCHOOL_STUDENT rows, a CORPORATE
+                // imports CORPORATE_EMPLOYEE rows. Never mislabel a school's
+                // students as corporate employees.
+                ownerRole: owner?.role || null,
             }
         },
         dedupe: async (scopeId, data, ctx) => {
@@ -552,7 +558,7 @@ const registry = {
                 fullName: data.fullName,
                 email: data.email,
                 password,
-                role: "CORPORATE_EMPLOYEE",
+                role: passengerRoleForOwner(ctx.ownerRole),
                 companyId: ctx.companyId,
                 whatsappNumber: data.phoneNumber || "N/A",
                 status: "ACTIVE",
@@ -625,7 +631,15 @@ const resolveEntity = (req, res) => {
         res.status(404).json({ success: false, message: `Unknown import/export type: "${req.params.entity}"` })
         return null
     }
-    if (req.userRole !== entity.role) {
+    // Family-aware permission check. SCHOOL_PARTNER mirrors B2B_PARTNER and
+    // SCHOOL_CUSTOMER mirrors CORPORATE, so they reuse the same import/export
+    // registry entries (e.g. "b2b-vehicles", "corporate-employees").
+    const roleAllowed =
+        req.userRole === entity.role ||
+        (entity.role === "B2B_PARTNER" && isPartnerRole(req.userRole)) ||
+        (entity.role === "CORPORATE" && isCustomerRole(req.userRole))
+
+    if (!roleAllowed) {
         res.status(403).json({ success: false, message: "You do not have permission to perform this action." })
         return null
     }

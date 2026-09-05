@@ -21,6 +21,12 @@ export default function CorporateProfilePage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Segment-aware wording: a SCHOOL_CUSTOMER manages "Students", a corporate
+  // customer manages "Employees". Keep the stat card in sync with the segment.
+  const currentUserRole = useSelector((state) => state.auth.user?.role);
+  const passengerPluralLabel =
+    currentUserRole === "SCHOOL_CUSTOMER" ? "Students" : "Employees";
+
   // Get initial tab from URL query params on mount
   const getInitialTab = () => {
     const searchParams = new URLSearchParams(location.search);
@@ -145,7 +151,7 @@ export default function CorporateProfilePage() {
           </svg>
         </div>
         <div className="corporate-stat-content">
-          <div className="corporate-stat-label">Total Employees</div>
+          <div className="corporate-stat-label">Total {passengerPluralLabel}</div>
           <div className="corporate-stat-value">
             {corporateStats.totalEmployees}
           </div>

@@ -80,7 +80,10 @@ const B2B_PartnerAssignedVehicles = () => {
 
   useEffect(() => {
     if (assignedVehicles && assignedVehicles.length > 0) {
-      const extractedRoutes = [];
+      // A route can be SHARED across several vehicles. The Routes tab must show
+      // it ONCE (keyed by route id), listing every vehicle it runs on, instead
+      // of a duplicate card per vehicle.
+      const routeMap = new Map();
 
       assignedVehicles.forEach((vehicle) => {
         // routeDetails is an array of route objects (populated from Route model)
@@ -97,16 +100,32 @@ const B2B_PartnerAssignedVehicles = () => {
             return;
           }
 
-          extractedRoutes.push({
-            ...route,
+          const key = String(
+            route._id || `${route.fromLocation}>${route.toLocation}`,
+          );
+          const veh = {
             vehicleId: vehicle._id,
             vehicleName: vehicle.vehicleDetails?.vehicleName,
             registrationNumber: vehicle.vehicleDetails?.registrationNumber,
-          });
+          };
+
+          if (routeMap.has(key)) {
+            routeMap.get(key).vehicles.push(veh);
+          } else {
+            routeMap.set(key, {
+              ...route,
+              vehicleId: vehicle._id,
+              vehicleName: veh.vehicleName,
+              registrationNumber: veh.registrationNumber,
+              vehicles: [veh],
+            });
+          }
         });
       });
 
-      setRoutes(extractedRoutes);
+      setRoutes(Array.from(routeMap.values()));
+    } else {
+      setRoutes([]);
     }
   }, [assignedVehicles]);
 
@@ -394,10 +413,27 @@ const B2B_PartnerAssignedVehicles = () => {
                     <div className="drivemego-b2b-partnerassignedvehiclespage-route-card-body">
                       <div className="drivemego-b2b-partnerassignedvehiclespage-route-info-row">
                         <span className="drivemego-b2b-partnerassignedvehiclespage-label">
-                          Vehicle:
+                          Vehicle
+                          {route.vehicles && route.vehicles.length > 1
+                            ? "s"
+                            : ""}
+                          :
                         </span>
                         <span className="drivemego-b2b-partnerassignedvehiclespage-value">
-                          {route.vehicleName} ({route.registrationNumber})
+                          {(route.vehicles && route.vehicles.length
+                            ? route.vehicles
+                            : [
+                                {
+                                  vehicleName: route.vehicleName,
+                                  registrationNumber: route.registrationNumber,
+                                },
+                              ]
+                          )
+                            .map(
+                              (v) =>
+                                `${v.vehicleName} (${v.registrationNumber})`,
+                            )
+                            .join(", ")}
                         </span>
                       </div>
                       <div className="drivemego-b2b-partnerassignedvehiclespage-route-info-row">

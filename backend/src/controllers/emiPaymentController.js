@@ -1,7 +1,7 @@
 import EMIPayment from "../models/EMIPayment.js"
 import Contract from "../models/Contract.js"
 import Wallet from "../models/Wallet.js"
-import { getOrCreateWallet } from "../Services/walletService.js"
+import { getOrCreateWallet, resolvePlatformAdminId, resolveUserWalletRole } from "../Services/walletService.js"
 import Transaction from "../models/Transaction.js"
 import CommissionSettings from "../models/CommissionSettings.js"
 import User from "../models/User.js"
@@ -929,11 +929,16 @@ export const verifyEMIPayment = async (req, res) => {
                 "AED"
             console.log("[v0] EMI settlement currency resolved:", emiCurrency)
 
-            // Credit B2B Partner wallet (only the fleet owner's portion of contract amount)
+            // Credit partner wallet (only the fleet owner's portion of contract amount).
+            // Use the partner's REAL role so a School Partner isn't mislabelled B2B.
+            const fleetOwnerWalletRole = await resolveUserWalletRole(emiPayment.fleetOwnerId._id)
             const fleetOwnerWallet = await getOrCreateWallet(emiPayment.fleetOwnerId._id, {
                 currency: emiCurrency,
-                role: "B2B_PARTNER",
+                role: fleetOwnerWalletRole,
             })
+            if (fleetOwnerWallet && !fleetOwnerWallet.isNew && fleetOwnerWallet.role !== fleetOwnerWalletRole) {
+                fleetOwnerWallet.role = fleetOwnerWalletRole
+            }
             if (fleetOwnerWallet) {
                 fleetOwnerWallet.balance += installment.fleetOwnerAmount
                 fleetOwnerWallet.totalEarnings += installment.fleetOwnerAmount
@@ -950,10 +955,14 @@ export const verifyEMIPayment = async (req, res) => {
             }
 
             // Credit Admin wallet - TWO parts: Contract Commission + Negotiation Commission
-            const adminWallet = await getOrCreateWallet(process.env.ADMIN_USER_ID, {
-                currency: emiCurrency,
-                role: "ADMIN",
-            })
+            // Resolve the real platform admin (avoids the ghost "Unknown" wallet).
+            const emiAdminUserId1 = await resolvePlatformAdminId()
+            const adminWallet = emiAdminUserId1
+                ? await getOrCreateWallet(emiAdminUserId1, {
+                      currency: emiCurrency,
+                      role: "ADMIN",
+                  })
+                : null
             if (adminWallet) {
                 // 1. Credit contract commission (from B2B partner's share)
                 if (installment.adminCommission.amount > 0) {
@@ -2135,10 +2144,14 @@ export const verifyEMIOnlinePayment = async (req, res) => {
                 emiPayment.contractId?.currency ||
                 "AED"
             if (!installment.fleetOwnerCredited) {
+                const fleetOwnerWalletRole = await resolveUserWalletRole(emiPayment.fleetOwnerId._id)
                 const fleetOwnerWallet = await getOrCreateWallet(emiPayment.fleetOwnerId._id, {
                     currency: emiCurrency,
-                    role: "B2B_PARTNER",
+                    role: fleetOwnerWalletRole,
                 })
+                if (fleetOwnerWallet && !fleetOwnerWallet.isNew && fleetOwnerWallet.role !== fleetOwnerWalletRole) {
+                    fleetOwnerWallet.role = fleetOwnerWalletRole
+                }
                 if (fleetOwnerWallet) {
                     fleetOwnerWallet.balance += installment.fleetOwnerAmount
                     fleetOwnerWallet.totalEarnings += installment.fleetOwnerAmount
@@ -2162,10 +2175,13 @@ export const verifyEMIOnlinePayment = async (req, res) => {
             // Credit Admin wallet - Contract Commission + Negotiation Commission
             // ONLY if not already credited
             if (installment.adminCommission?.status !== "CREDITED") {
-                const adminWallet = await getOrCreateWallet(process.env.ADMIN_USER_ID, {
-                    currency: emiCurrency,
-                    role: "ADMIN",
-                })
+                const emiAdminUserId2 = await resolvePlatformAdminId()
+                const adminWallet = emiAdminUserId2
+                    ? await getOrCreateWallet(emiAdminUserId2, {
+                          currency: emiCurrency,
+                          role: "ADMIN",
+                      })
+                    : null
                 if (adminWallet) {
                     // Contract commission
                     if (installment.adminCommission.amount > 0) {
@@ -2813,10 +2829,14 @@ export const handleEMIStripeWebhook = async (req, res) => {
 
             // Credit fleet owner wallet - ONLY if not already credited
             if (!updatedInstallment.fleetOwnerCredited) {
+                const fleetOwnerWalletRole = await resolveUserWalletRole(emiPayment.fleetOwnerId._id)
                 const fleetOwnerWallet = await getOrCreateWallet(emiPayment.fleetOwnerId._id, {
                     currency: emiCurrency,
-                    role: "B2B_PARTNER",
+                    role: fleetOwnerWalletRole,
                 })
+                if (fleetOwnerWallet && !fleetOwnerWallet.isNew && fleetOwnerWallet.role !== fleetOwnerWalletRole) {
+                    fleetOwnerWallet.role = fleetOwnerWalletRole
+                }
                 if (fleetOwnerWallet && updatedInstallment.fleetOwnerAmount > 0) {
                     fleetOwnerWallet.balance += updatedInstallment.fleetOwnerAmount
                     fleetOwnerWallet.totalEarnings += updatedInstallment.fleetOwnerAmount
@@ -2837,10 +2857,13 @@ export const handleEMIStripeWebhook = async (req, res) => {
 
             // Credit admin wallet - ONLY if not already credited
             if (updatedInstallment.adminCommission?.status !== "CREDITED") {
-                const adminWallet = await getOrCreateWallet(process.env.ADMIN_USER_ID, {
-                    currency: emiCurrency,
-                    role: "ADMIN",
-                })
+                const emiAdminUserId3 = await resolvePlatformAdminId()
+                const adminWallet = emiAdminUserId3
+                    ? await getOrCreateWallet(emiAdminUserId3, {
+                          currency: emiCurrency,
+                          role: "ADMIN",
+                      })
+                    : null
                 if (adminWallet) {
                     // Contract commission
                     if (updatedInstallment.adminCommission.amount > 0) {

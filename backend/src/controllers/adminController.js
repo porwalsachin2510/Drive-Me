@@ -10143,17 +10143,21 @@ export const getAllWallets = async (req, res) => {
         if (minBalance !== undefined) query.balance = { ...query.balance, $gte: Number(minBalance) };
         if (maxBalance !== undefined) query.balance = { ...query.balance, $lte: Number(maxBalance) };
 
-        const wallets = await Wallet.find(query)
-            .populate("userId", "fullName email whatsappNumber role companyName status profileImage adminPermissions")
-            .sort({ [sortBy]: sortOrder === "desc" ? -1 : 1 })
-            .limit(Number.parseInt(limit))
-            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+        // A user holds ONE wallet PER currency by design (see walletService), so a
+        // single admin/partner legitimately owns e.g. a KWD wallet AND an AED
+        // wallet. Listing raw wallets therefore renders the same person on
+        // multiple rows (the "duplicate admin" the dashboard showed). We fetch all
+        // matching wallets, convert each to the display currency, then GROUP BY
+        // user so every person appears exactly once with their balances summed in
+        // one currency. Pagination/sorting is applied to the grouped rows.
+        const rawWallets = await Wallet.find(query)
+            .populate("userId", "fullName email whatsappNumber role companyName status profileImage adminPermissions");
 
         // Filter by search if provided
-        let filteredWallets = wallets;
+        let filteredWallets = rawWallets;
         if (search) {
             const searchLower = search.toLowerCase();
-            filteredWallets = wallets.filter(wallet =>
+            filteredWallets = rawWallets.filter(wallet =>
                 wallet.userId?.fullName?.toLowerCase().includes(searchLower) ||
                 wallet.userId?.email?.toLowerCase().includes(searchLower) ||
                 wallet.userId?.companyName?.toLowerCase().includes(searchLower) ||
@@ -10161,25 +10165,81 @@ export const getAllWallets = async (req, res) => {
             );
         }
 
-        const total = await Wallet.countDocuments(query);
-
-        // Attach converted display fields per wallet (native amounts preserved).
-        const walletsWithDisplay = filteredWallets.map((w) => {
+        // Group per user, merging their per-currency wallets into one row.
+        const groups = new Map();
+        for (const w of filteredWallets) {
             const obj = w.toObject ? w.toObject() : w;
             const native = obj.currency || "AED";
-            // Super admins are stored as role "ADMIN" with adminPermissions.isSuperAdmin = true.
+            const userKey = String(obj.userId?._id || obj.userId || obj._id);
             const isSuperAdmin =
                 obj.userId?.role === "ADMIN" &&
                 obj.userId?.adminPermissions?.isSuperAdmin === true;
-            return {
-                ...obj,
-                isSuperAdmin,
-                displayCurrency,
-                displayBalance: convertForDisplay(obj.balance, native, displayCurrency),
-                displayTotalEarnings: convertForDisplay(obj.totalEarnings, native, displayCurrency),
-                displayTotalWithdrawals: convertForDisplay(obj.totalWithdrawals, native, displayCurrency),
-            };
+            const dispBalance = convertForDisplay(obj.balance, native, displayCurrency);
+            const dispEarnings = convertForDisplay(obj.totalEarnings, native, displayCurrency);
+            const dispWithdrawals = convertForDisplay(obj.totalWithdrawals, native, displayCurrency);
+
+            const existing = groups.get(userKey);
+            if (!existing) {
+                groups.set(userKey, {
+                    ...obj,
+                    // The user's account role is the source of truth. A wallet may
+                    // carry a stale/mislabelled role (e.g. minted as COMMUTER before
+                    // SCHOOL_PARTNER was a valid wallet role), so display the real
+                    // role when the user is populated.
+                    role: obj.userId?.role || obj.role,
+                    isSuperAdmin,
+                    // Display everything already converted into ONE currency, so the
+                    // merged balances are additive and consistent.
+                    currency: displayCurrency,
+                    displayCurrency,
+                    balance: dispBalance,
+                    totalEarnings: dispEarnings,
+                    totalWithdrawals: dispWithdrawals,
+                    displayBalance: dispBalance,
+                    displayTotalEarnings: dispEarnings,
+                    displayTotalWithdrawals: dispWithdrawals,
+                    // The View action opens a single wallet; remember the wallet
+                    // that currently carries the balance so it opens the funded one.
+                    _id: obj._id,
+                    _primaryDisplayBalance: dispBalance,
+                    walletCount: 1,
+                });
+            } else {
+                existing.balance += dispBalance;
+                existing.totalEarnings += dispEarnings;
+                existing.totalWithdrawals += dispWithdrawals;
+                existing.displayBalance = existing.balance;
+                existing.displayTotalEarnings = existing.totalEarnings;
+                existing.displayTotalWithdrawals = existing.totalWithdrawals;
+                existing.walletCount += 1;
+                existing.isActive = existing.isActive || obj.isActive;
+                // Keep the id of the wallet holding the most funds for the View action.
+                if (dispBalance > (existing._primaryDisplayBalance || 0)) {
+                    existing._primaryDisplayBalance = dispBalance;
+                    existing._id = obj._id;
+                }
+                // Keep the earliest createdAt so sorting by age is stable.
+                if (obj.createdAt && existing.createdAt && new Date(obj.createdAt) < new Date(existing.createdAt)) {
+                    existing.createdAt = obj.createdAt;
+                }
+            }
+        }
+
+        let mergedWallets = Array.from(groups.values());
+
+        // Sort the grouped rows.
+        const dir = sortOrder === "desc" ? -1 : 1;
+        mergedWallets.sort((a, b) => {
+            const av = a[sortBy];
+            const bv = b[sortBy];
+            if (sortBy === "createdAt") return (new Date(av) - new Date(bv)) * dir;
+            if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+            return String(av ?? "").localeCompare(String(bv ?? "")) * dir;
         });
+
+        const total = mergedWallets.length;
+        const start = (Number.parseInt(page) - 1) * Number.parseInt(limit);
+        const walletsWithDisplay = mergedWallets.slice(start, start + Number.parseInt(limit));
 
         res.status(200).json({
             success: true,
@@ -10542,6 +10602,11 @@ export const getLowBalanceWallets = async (req, res) => {
                 obj.userId?.adminPermissions?.isSuperAdmin === true;
             return {
                 ...obj,
+                // The user's account role is the source of truth. A wallet may
+                // carry a stale/mislabelled role (e.g. minted as COMMUTER before
+                // SCHOOL_PARTNER was a valid wallet role), so display the real
+                // role when the user is populated.
+                role: obj.userId?.role || obj.role,
                 isSuperAdmin,
                 displayCurrency,
                 displayBalance: convertForDisplay(obj.balance, native, displayCurrency),

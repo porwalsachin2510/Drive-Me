@@ -1,92 +1,57 @@
 "use client";
 
 import { useRef, useState } from "react";
-import {
-  downloadBriefTemplate,
-  parseBriefWorkbook,
-  summarizeParsedBrief,
-} from "./briefExcel";
+import api from "../../../utils/api";
+import { downloadBriefTemplate } from "./briefExcel";
 import "./ManagedServiceBrief.css";
 import "./ManagedServiceBriefModal.css";
 
 /**
  * ManagedServiceBriefModal
  * ------------------------
- * Captured at "Request Quotation for Selected" time for MANAGED-service
- * requests. The corporate spells out exactly what the partner must operate —
- * work locations & shifts, the routes to cover, and (optionally) the employee
- * roster with pass durations — BEFORE the quotation ever reaches the partner.
+ * Captured at "Request Quotation" time for MANAGED-service requests.
  *
- * This is intentionally a self-contained local form: the quotation does not
- * exist yet, so there is no id to save against. On submit it hands the cleaned
- * brief back to the caller, which sends it together with the quotation request
- * in a single atomic backend call. The backend then stores it as a SUBMITTED
- * brief so the partner sees the requirements the first time they open the quote.
+ * Every customer prepares its transportation requirement in a different way, so
+ * the portal does NOT enforce a fixed template. Instead of forcing the customer
+ * to type work locations, shifts, routes and employee rows inline, we ask only
+ * for the essentials and let the real detail live inside the uploaded
+ * document(s):
  *
- * At least one work location and at least one route request are required — the
- * whole point is that the partner can decide whether it can serve those routes
- * before it prices anything.
+ *   - One or more requirement documents (Excel, PDF, Word, CSV, image, ...).
+ *     The uploaded file stays attached to the request for future reference.
+ *     Revised versions can be uploaded and are tracked with a version number.
+ *   - Basic request details (a short summary + point of contact).
+ *   - The desired service start date.
+ *   - Free-form comments / special requirements.
+ *
+ * Documents are uploaded to Cloudinary immediately (before the quotation
+ * exists) via /managed-service-brief/upload-documents, which returns descriptors
+ * that travel back in the brief payload and are persisted on submit.
+ *
+ * Typical information contained in the uploaded documents may include: pickup &
+ * drop-off locations, number of routes / trips, trip timings, passenger count
+ * per trip, vehicle requirements, working days, shift timings and special
+ * instructions. An optional Excel template (Routes + Employees) is offered as a
+ * convenience for customers who don't already have their own format.
  */
 
-const DAYS_HINT = "e.g. MON, TUE, WED, THU, FRI";
-
-const toArr = (str) =>
-  (str || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-const emptyLocation = () => ({
-  name: "",
-  address: "",
-  city: "",
-  shifts: [],
-});
-
-const emptyShift = () => ({
-  label: "",
-  loginTime: "",
-  logoutTime: "",
-  workingDays: [],
-});
-
-const emptyRoute = () => ({
-  label: "",
-  fromArea: "",
-  toWorkLocation: "",
-  direction: "BOTH",
-  stops: [],
-  operatingDays: [],
-  pickupWindowStart: "",
-  pickupWindowEnd: "",
-  headcount: 0,
-  preferredVehicleType: "",
-  notes: "",
-});
-
-const emptyEmployee = () => ({
-  name: "",
-  email: "",
-  phone: "",
-  employeeCode: "",
-  department: "",
-  homeAddress: "",
-  pickupArea: "",
-  workLocation: "",
-  shiftLabel: "",
-  passMonths: 1,
-  preferredRouteLabel: "",
-  assignmentHint: "",
-});
+const humanFileSize = (bytes) => {
+  const n = Number(bytes) || 0;
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const ManagedServiceBriefModal = ({
   fleetOwnerName = "the partner",
+  audience = "corporate",
   defaultServiceStartDate = "",
   submitting = false,
   onSubmit,
   onClose,
 }) => {
   const [summary, setSummary] = useState("");
+  const [comments, setComments] = useState("");
   const [serviceStartDate, setServiceStartDate] = useState(
     defaultServiceStartDate || "",
   );
@@ -95,162 +60,126 @@ const ManagedServiceBriefModal = ({
     phone: "",
     email: "",
   });
-  const [sla, setSla] = useState({
-    targetCompletionDate: "",
-    fulfillmentSlaHours: 72,
-  });
-  const [workLocations, setWorkLocations] = useState([emptyLocation()]);
-  const [routeRequests, setRouteRequests] = useState([emptyRoute()]);
-  const [employeeRoster, setEmployeeRoster] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [error, setError] = useState("");
-  const [importNotice, setImportNotice] = useState("");
-  const [importing, setImporting] = useState(false);
-  const importFileRef = useRef(null);
+  const [notice, setNotice] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const addFileRef = useRef(null);
+  // Per-document "upload a revised version" hidden input is keyed by index.
+  const reviseFileRef = useRef(null);
+  const [revisingIndex, setRevisingIndex] = useState(null);
 
-  /* --------------------------- Excel template / import --------------------- */
+  const busy = submitting || uploading;
+
+  /* ---------------------- Cloudinary document upload ---------------------- */
+  const uploadFiles = async (files) => {
+    const formData = new FormData();
+    for (const file of files) formData.append("documents", file);
+    const res = await api.post(
+      "/managed-service-brief/upload-documents",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    if (!res.data?.success) {
+      throw new Error(res.data?.message || "Upload failed.");
+    }
+    return res.data.data.documents || [];
+  };
+
+  // Add one or more brand-new documents (each starts at version 1).
+  const handleAddDocuments = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    try {
+      setError("");
+      setNotice("");
+      setUploading(true);
+      const uploaded = await uploadFiles(files);
+      setDocuments((prev) => [...prev, ...uploaded]);
+      setNotice(
+        `${uploaded.length} document(s) attached. They will stay attached to this request for future reference.`,
+      );
+    } catch (err) {
+      console.log("[v0] Brief document upload error:", err?.message);
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not upload the document. Allowed: Excel, CSV, Word, PDF, images (max 15MB each).",
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Replace an existing document with a revised version (bumps the version).
+  const handleReviseDocument = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    const index = revisingIndex;
+    setRevisingIndex(null);
+    if (!file || index == null) return;
+    try {
+      setError("");
+      setNotice("");
+      setUploading(true);
+      const [uploaded] = await uploadFiles([file]);
+      if (!uploaded) return;
+      setDocuments((prev) => {
+        const next = [...prev];
+        const prevVersion = Number(next[index]?.version) || 1;
+        next[index] = { ...uploaded, version: prevVersion + 1 };
+        return next;
+      });
+      setNotice("Revised version uploaded. The previous version was replaced.");
+    } catch (err) {
+      console.log("[v0] Brief revision upload error:", err?.message);
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not upload the revised version.",
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeDocument = (index) =>
+    setDocuments((prev) => prev.filter((_, i) => i !== index));
+
+  const openRevisePicker = (index) => {
+    setRevisingIndex(index);
+    reviseFileRef.current?.click();
+  };
+
   const handleDownloadTemplate = async () => {
     try {
       setError("");
-      await downloadBriefTemplate();
+      await downloadBriefTemplate({ audience });
     } catch (err) {
       console.log("[v0] Brief template download error:", err?.message);
       setError("Could not generate the Excel template. Please try again.");
     }
   };
 
-  const handleImportFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      setError("");
-      setImportNotice("");
-      setImporting(true);
-      const parsed = await parseBriefWorkbook(file);
-      const counts = summarizeParsedBrief(parsed);
-
-      if (
-        counts.locations === 0 &&
-        counts.routes === 0 &&
-        counts.employees === 0
-      ) {
-        setError(
-          "No rows found in the workbook. Download the template, fill in the sheets, and try again.",
-        );
-        return;
-      }
-
-      // Overwrite scalar fields only when the sheet actually provided a value,
-      // so importing never wipes something the user already typed.
-      if (parsed.summary) setSummary(parsed.summary);
-      if (parsed.serviceStartDate) setServiceStartDate(parsed.serviceStartDate);
-      setPointOfContact((prev) => ({
-        name: parsed.pointOfContact.name || prev.name,
-        phone: parsed.pointOfContact.phone || prev.phone,
-        email: parsed.pointOfContact.email || prev.email,
-      }));
-      setSla((prev) => ({
-        targetCompletionDate:
-          parsed.sla.targetCompletionDate || prev.targetCompletionDate,
-        fulfillmentSlaHours:
-          parsed.sla.fulfillmentSlaHours || prev.fulfillmentSlaHours,
-      }));
-
-      // Lists are replaced wholesale when the workbook has rows for them.
-      if (parsed.workLocations.length > 0)
-        setWorkLocations(parsed.workLocations);
-      if (parsed.routeRequests.length > 0)
-        setRouteRequests(parsed.routeRequests);
-      if (parsed.employeeRoster.length > 0)
-        setEmployeeRoster(parsed.employeeRoster);
-
-      setImportNotice(
-        `Imported from ${file.name}: ${counts.locations} location(s), ${counts.shifts} shift(s), ${counts.routes} route(s), ${counts.employees} employee(s). Review below, then send the request.`,
-      );
-    } catch (err) {
-      console.log("[v0] Brief import error:", err?.message);
-      setError(
-        "Could not read the file. Please upload a valid .xlsx or .csv built from the template.",
-      );
-    } finally {
-      setImporting(false);
-      e.target.value = "";
-    }
-  };
-
-  /* ------------------------------ list helpers ----------------------------- */
-  const updateItem = (setter, index, patch) =>
-    setter((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], ...patch };
-      return next;
-    });
-
-  const removeItem = (setter, index) =>
-    setter((prev) => prev.filter((_, i) => i !== index));
-
-  const updateShift = (locIndex, shiftIndex, patch) =>
-    setWorkLocations((prev) => {
-      const next = [...prev];
-      const shifts = [...(next[locIndex].shifts || [])];
-      shifts[shiftIndex] = { ...shifts[shiftIndex], ...patch };
-      next[locIndex] = { ...next[locIndex], shifts };
-      return next;
-    });
-
-  const addShift = (locIndex) =>
-    setWorkLocations((prev) => {
-      const next = [...prev];
-      next[locIndex] = {
-        ...next[locIndex],
-        shifts: [...(next[locIndex].shifts || []), emptyShift()],
-      };
-      return next;
-    });
-
-  const removeShift = (locIndex, shiftIndex) =>
-    setWorkLocations((prev) => {
-      const next = [...prev];
-      next[locIndex] = {
-        ...next[locIndex],
-        shifts: next[locIndex].shifts.filter((_, i) => i !== shiftIndex),
-      };
-      return next;
-    });
-
   /* -------------------------------- submit --------------------------------- */
   const handleSubmit = () => {
     setError("");
 
-    const cleanedLocations = workLocations.filter((l) => l.name.trim());
-    if (cleanedLocations.length === 0) {
+    if (documents.length === 0 && !summary.trim()) {
       setError(
-        "Add at least one work location (with a name) so the partner knows where employees work.",
+        "Attach at least one requirement document (Excel, PDF, Word, CSV, image) or enter a short summary so the partner knows what you need.",
       );
       return;
     }
 
-    const cleanedRoutes = routeRequests.filter((r) => r.label.trim());
-    if (cleanedRoutes.length === 0) {
-      setError(
-        "Add at least one route (with a label) so the partner can confirm it can operate that route before quoting.",
-      );
-      return;
-    }
-
-    const brief = {
+    onSubmit({
       summary: summary.trim(),
+      comments: comments.trim(),
       serviceStartDate: serviceStartDate || null,
-      sla: {
-        targetCompletionDate: sla.targetCompletionDate || null,
-        fulfillmentSlaHours: Number(sla.fulfillmentSlaHours) || 72,
-      },
       pointOfContact,
-      workLocations: cleanedLocations,
-      routeRequests: cleanedRoutes,
-      employeeRoster: employeeRoster.filter((e) => e.name.trim()),
-    };
-
-    onSubmit(brief);
+      documents,
+    });
   };
 
   return (
@@ -261,12 +190,12 @@ const ManagedServiceBriefModal = ({
       <div className="msb-modal" onClick={(e) => e.stopPropagation()}>
         <div className="msb-modal-header">
           <div>
-            <h2>Managed Service Brief</h2>
+            <h2>Send Requirement to {fleetOwnerName}</h2>
             <p className="msb-subtitle" style={{ margin: "6px 0 0" }}>
-              Tell {fleetOwnerName} exactly what to operate — your work
-              locations &amp; shifts and the routes you need covered — so they
-              can confirm they can serve those routes and price accurately{" "}
-              <strong>before</strong> they quote.
+              Upload your transportation requirement in whatever format you
+              already have &mdash; there is <strong>no fixed template</strong>.
+              Add a few basic details and any special comments, and the partner
+              will review it before quoting.
             </p>
           </div>
           <button
@@ -281,52 +210,115 @@ const ManagedServiceBriefModal = ({
 
         <div className="msb-modal-body">
           {error && <p className="msb-error">{error}</p>}
+          {notice && <p className="msb-import-notice">{notice}</p>}
 
-          {/* Excel bulk-import toolbar. Corporates with many routes / employees
-              fill the template offline and import it instead of typing rows. */}
-          <div className="msb-import-bar">
-            <div className="msb-import-bar-text">
-              <strong>Have a lot of routes, locations or employees?</strong>
-              <span>
-                Download the Excel template, fill every sheet, and import it to
-                populate this whole form at once.
-              </span>
-            </div>
-            <div className="msb-import-bar-actions">
-              <button
-                type="button"
-                className="msb-btn secondary small"
-                onClick={handleDownloadTemplate}
-                disabled={submitting || importing}
-              >
-                Download Excel template
-              </button>
+          {/* Requirement documents (primary input) */}
+          <div className="msb-section">
+            <div className="msb-section-head">
+              <h3>Requirement Document(s)</h3>
               <button
                 type="button"
                 className="msb-btn primary small"
-                onClick={() => importFileRef.current?.click()}
-                disabled={submitting || importing}
+                onClick={() => addFileRef.current?.click()}
+                disabled={busy}
               >
-                {importing ? "Importing…" : "Import from Excel"}
+                {uploading ? "Uploading…" : "+ Upload document"}
               </button>
-              <input
-                ref={importFileRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                style={{ display: "none" }}
-                onChange={handleImportFile}
-              />
+            </div>
+            <p className="msb-section-hint">
+              Upload one or more files (Excel, PDF, Word, CSV, images). These may
+              contain pickup &amp; drop-off locations, number of routes/trips,
+              trip timings, passenger counts, vehicle requirements, working days,
+              shift timings and special instructions. Uploaded files stay
+              attached to this request for future reference.
+            </p>
+            <input
+              ref={addFileRef}
+              type="file"
+              multiple
+              accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp"
+              style={{ display: "none" }}
+              onChange={handleAddDocuments}
+            />
+            <input
+              ref={reviseFileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp"
+              style={{ display: "none" }}
+              onChange={handleReviseDocument}
+            />
+
+            {documents.length === 0 ? (
+              <p className="msb-empty">No documents attached yet.</p>
+            ) : (
+              <ul className="msb-doc-list">
+                {documents.map((doc, i) => (
+                  <li className="msb-doc-row" key={`${doc.publicId || doc.url}-${i}`}>
+                    <div className="msb-doc-info">
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="msb-doc-name"
+                      >
+                        {doc.fileName || "Document"}
+                      </a>
+                      <span className="msb-doc-meta">
+                        {humanFileSize(doc.fileSize)}
+                        {doc.version > 1 ? ` · v${doc.version}` : ""}
+                      </span>
+                    </div>
+                    <div className="msb-doc-actions">
+                      <button
+                        type="button"
+                        className="msb-btn secondary small"
+                        onClick={() => openRevisePicker(i)}
+                        disabled={busy}
+                      >
+                        Upload new version
+                      </button>
+                      <button
+                        type="button"
+                        className="msb-btn danger small"
+                        onClick={() => removeDocument(i)}
+                        disabled={busy}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="msb-import-bar" style={{ marginTop: 14 }}>
+              <div className="msb-import-bar-text">
+                <strong>Don&apos;t have a document ready?</strong>
+                <span>
+                  Download our optional school transport Excel template (Routes &amp; Students),
+                  fill it in offline, and upload it above.
+                </span>
+              </div>
+              <div className="msb-import-bar-actions">
+                <button
+                  type="button"
+                  className="msb-btn secondary small"
+                  onClick={handleDownloadTemplate}
+                  disabled={busy}
+                >
+                  Download Excel template
+                </button>
+              </div>
             </div>
           </div>
-          {importNotice && <p className="msb-import-notice">{importNotice}</p>}
 
-          {/* Overview */}
+          {/* Basic request details */}
           <div className="msb-section">
             <div className="msb-section-head">
-              <h3>Overview</h3>
+              <h3>Basic Details</h3>
             </div>
             <div className="msb-field">
-              <label>Objectives / summary</label>
+              <label>Summary / objectives</label>
               <textarea
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
@@ -378,464 +370,22 @@ const ManagedServiceBriefModal = ({
                   }
                 />
               </div>
-              <div className="msb-field">
-                <label>Target go-live date (SLA)</label>
-                <input
-                  type="date"
-                  value={sla.targetCompletionDate}
-                  onChange={(e) =>
-                    setSla({ ...sla, targetCompletionDate: e.target.value })
-                  }
-                />
-              </div>
-              <div className="msb-field">
-                <label>Per-item SLA (hours)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={sla.fulfillmentSlaHours}
-                  onChange={(e) =>
-                    setSla({
-                      ...sla,
-                      fulfillmentSlaHours: Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
             </div>
           </div>
 
-          {/* Work locations & shifts */}
+          {/* Comments / special requirements */}
           <div className="msb-section">
             <div className="msb-section-head">
-              <h3>Work Locations &amp; Shifts</h3>
-              <button
-                type="button"
-                className="msb-btn secondary small"
-                onClick={() =>
-                  setWorkLocations((prev) => [...prev, emptyLocation()])
-                }
-              >
-                + Add location
-              </button>
+              <h3>Comments &amp; Special Requirements</h3>
             </div>
-            <p className="msb-section-hint">
-              Where employees work and the shift timings the transport must
-              cover. (At least one required.)
-            </p>
-            {workLocations.map((loc, i) => (
-              <div className="msb-item" key={i}>
-                <div className="msb-item-head">
-                  <span className="msb-item-title">
-                    {loc.name || `Location ${i + 1}`}
-                  </span>
-                  {workLocations.length > 1 && (
-                    <button
-                      type="button"
-                      className="msb-btn danger small"
-                      onClick={() => removeItem(setWorkLocations, i)}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-                <div className="msb-grid">
-                  <div className="msb-field">
-                    <label>Location name *</label>
-                    <input
-                      value={loc.name}
-                      onChange={(e) =>
-                        updateItem(setWorkLocations, i, {
-                          name: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>City</label>
-                    <input
-                      value={loc.city}
-                      onChange={(e) =>
-                        updateItem(setWorkLocations, i, {
-                          city: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="msb-field">
-                  <label>Address</label>
-                  <input
-                    value={loc.address}
-                    onChange={(e) =>
-                      updateItem(setWorkLocations, i, {
-                        address: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="msb-section-head">
-                  <span className="msb-spec-label">Shifts</span>
-                  <button
-                    type="button"
-                    className="msb-btn secondary small"
-                    onClick={() => addShift(i)}
-                  >
-                    + Add shift
-                  </button>
-                </div>
-                {(loc.shifts || []).map((sh, si) => (
-                  <div
-                    className="msb-grid"
-                    key={si}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <div className="msb-field">
-                      <label>Shift label</label>
-                      <input
-                        value={sh.label}
-                        onChange={(e) =>
-                          updateShift(i, si, { label: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="msb-field">
-                      <label>Login</label>
-                      <input
-                        type="time"
-                        value={sh.loginTime}
-                        onChange={(e) =>
-                          updateShift(i, si, { loginTime: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="msb-field">
-                      <label>Logout</label>
-                      <input
-                        type="time"
-                        value={sh.logoutTime}
-                        onChange={(e) =>
-                          updateShift(i, si, { logoutTime: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="msb-field">
-                      <label>Working days ({DAYS_HINT})</label>
-                      <input
-                        value={(sh.workingDays || []).join(", ")}
-                        onChange={(e) =>
-                          updateShift(i, si, {
-                            workingDays: toArr(e.target.value),
-                          })
-                        }
-                      />
-                    </div>
-                    <div
-                      className="msb-field"
-                      style={{ justifyContent: "end" }}
-                    >
-                      <button
-                        type="button"
-                        className="msb-btn danger small"
-                        onClick={() => removeShift(i, si)}
-                      >
-                        Remove shift
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          {/* Route / coverage requests */}
-          <div className="msb-section">
-            <div className="msb-section-head">
-              <h3>Route / Coverage Requests</h3>
-              <button
-                type="button"
-                className="msb-btn secondary small"
-                onClick={() =>
-                  setRouteRequests((prev) => [...prev, emptyRoute()])
-                }
-              >
-                + Add route
-              </button>
+            <div className="msb-field">
+              <label>Anything else the partner should know?</label>
+              <textarea
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                placeholder="e.g. Female drivers preferred on the night shift, wheelchair access required, security passes needed for the site."
+              />
             </div>
-            <p className="msb-section-hint">
-              The routes you need the partner to operate — from a residential
-              area to a work location, with stops, timing windows and expected
-              headcount. (At least one required.)
-            </p>
-            {routeRequests.map((r, i) => (
-              <div className="msb-item" key={i}>
-                <div className="msb-item-head">
-                  <span className="msb-item-title">
-                    {r.label || `Route ${i + 1}`}
-                  </span>
-                  {routeRequests.length > 1 && (
-                    <button
-                      type="button"
-                      className="msb-btn danger small"
-                      onClick={() => removeItem(setRouteRequests, i)}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-                <div className="msb-grid">
-                  <div className="msb-field">
-                    <label>Route label *</label>
-                    <input
-                      value={r.label}
-                      onChange={(e) =>
-                        updateItem(setRouteRequests, i, {
-                          label: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. Whitefield → HQ Morning"
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>From area</label>
-                    <input
-                      value={r.fromArea}
-                      onChange={(e) =>
-                        updateItem(setRouteRequests, i, {
-                          fromArea: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>To work location</label>
-                    <input
-                      value={r.toWorkLocation}
-                      onChange={(e) =>
-                        updateItem(setRouteRequests, i, {
-                          toWorkLocation: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Direction</label>
-                    <select
-                      value={r.direction}
-                      onChange={(e) =>
-                        updateItem(setRouteRequests, i, {
-                          direction: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="PICKUP">Pickup only</option>
-                      <option value="DROP">Drop only</option>
-                      <option value="BOTH">Both</option>
-                    </select>
-                  </div>
-                  <div className="msb-field">
-                    <label>Pickup window start</label>
-                    <input
-                      type="time"
-                      value={r.pickupWindowStart}
-                      onChange={(e) =>
-                        updateItem(setRouteRequests, i, {
-                          pickupWindowStart: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Pickup window end</label>
-                    <input
-                      type="time"
-                      value={r.pickupWindowEnd}
-                      onChange={(e) =>
-                        updateItem(setRouteRequests, i, {
-                          pickupWindowEnd: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Expected headcount</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={r.headcount}
-                      onChange={(e) =>
-                        updateItem(setRouteRequests, i, {
-                          headcount: Number(e.target.value),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Preferred vehicle type</label>
-                    <input
-                      value={r.preferredVehicleType}
-                      onChange={(e) =>
-                        updateItem(setRouteRequests, i, {
-                          preferredVehicleType: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="msb-field">
-                  <label>Stops (comma separated)</label>
-                  <input
-                    value={(r.stops || []).join(", ")}
-                    onChange={(e) =>
-                      updateItem(setRouteRequests, i, {
-                        stops: toArr(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="msb-field">
-                  <label>Operating days ({DAYS_HINT})</label>
-                  <input
-                    value={(r.operatingDays || []).join(", ")}
-                    onChange={(e) =>
-                      updateItem(setRouteRequests, i, {
-                        operatingDays: toArr(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="msb-field">
-                  <label>Notes</label>
-                  <textarea
-                    value={r.notes}
-                    onChange={(e) =>
-                      updateItem(setRouteRequests, i, { notes: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Employee roster (optional) */}
-          <div className="msb-section">
-            <div className="msb-section-head">
-              <h3>Employee Roster &amp; Passes</h3>
-              <button
-                type="button"
-                className="msb-btn secondary small"
-                onClick={() =>
-                  setEmployeeRoster((prev) => [...prev, emptyEmployee()])
-                }
-              >
-                + Add employee
-              </button>
-            </div>
-            <p className="msb-section-hint">
-              Optional now — who to onboard, their pickup address, which route
-              they should ride, and how many months of pass to issue. You can
-              also add these later.
-            </p>
-            {employeeRoster.length === 0 && (
-              <p className="msb-empty">No employees added yet.</p>
-            )}
-            {employeeRoster.map((emp, i) => (
-              <div className="msb-item" key={i}>
-                <div className="msb-item-head">
-                  <span className="msb-item-title">
-                    {emp.name || `Employee ${i + 1}`}
-                  </span>
-                  <button
-                    type="button"
-                    className="msb-btn danger small"
-                    onClick={() => removeItem(setEmployeeRoster, i)}
-                  >
-                    Remove
-                  </button>
-                </div>
-                <div className="msb-grid">
-                  <div className="msb-field">
-                    <label>Name</label>
-                    <input
-                      value={emp.name}
-                      onChange={(e) =>
-                        updateItem(setEmployeeRoster, i, {
-                          name: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Email</label>
-                    <input
-                      value={emp.email}
-                      onChange={(e) =>
-                        updateItem(setEmployeeRoster, i, {
-                          email: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Phone</label>
-                    <input
-                      value={emp.phone}
-                      onChange={(e) =>
-                        updateItem(setEmployeeRoster, i, {
-                          phone: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Pickup area</label>
-                    <input
-                      value={emp.pickupArea}
-                      onChange={(e) =>
-                        updateItem(setEmployeeRoster, i, {
-                          pickupArea: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Work location</label>
-                    <input
-                      value={emp.workLocation}
-                      onChange={(e) =>
-                        updateItem(setEmployeeRoster, i, {
-                          workLocation: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Pass duration (months)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={emp.passMonths}
-                      onChange={(e) =>
-                        updateItem(setEmployeeRoster, i, {
-                          passMonths: Number(e.target.value),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Preferred route</label>
-                    <input
-                      value={emp.preferredRouteLabel}
-                      onChange={(e) =>
-                        updateItem(setEmployeeRoster, i, {
-                          preferredRouteLabel: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
@@ -852,9 +402,9 @@ const ManagedServiceBriefModal = ({
             type="button"
             className="msb-btn primary"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={busy}
           >
-            {submitting ? "Sending…" : "Send request with brief"}
+            {submitting ? "Sending…" : "Send request with requirement"}
           </button>
         </div>
       </div>

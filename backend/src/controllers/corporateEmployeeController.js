@@ -10,8 +10,59 @@ import { sendEmail } from "../Services/emailService.js";
 import { logRequestActivity } from "../utils/operationContext.js";
 import { autoFulfillBriefItem } from "./managedServiceBriefController.js";
 import { getEffectiveCountry, getCountryCurrency } from "../Config/localizationConfig.js";
+import { passengerRoleForOwner, isSchoolRole } from "../utils/roleFamilies.js";
 import csv from "csv-parser";
 import fs from "fs";
+
+/**
+ * Resolve the public app origin for links in invitation emails.
+ *
+ * FRONTEND_URL may be unset, or a comma-separated list of allowed origins.
+ * Reading it as `process.env.FRONTEND_URL.split(",")[0]` throws a TypeError when
+ * the var is missing, and that throw was being swallowed by the per-recipient
+ * try/catch — so invitation emails silently landed in "failed" and never sent.
+ * This helper never throws and always returns a usable origin.
+ */
+const getAppOrigin = () => {
+    const raw =
+        process.env.FRONTEND_URL ||
+        process.env.CLIENT_URL ||
+        process.env.APP_URL ||
+        "";
+    const first = String(raw).split(",")[0].trim();
+    return first || "http://localhost:5173";
+};
+
+/**
+ * Segment-aware wording for passenger invitation emails. A SCHOOL_CUSTOMER /
+ * SCHOOL_PARTNER owner invites students, so the copy must say "school" and
+ * "student" instead of the corporate "employee" wording.
+ */
+const invitationBranding = (ownerRole) => {
+    // Accept either an owner role (SCHOOL_CUSTOMER/CORPORATE) or a passenger
+    // role (SCHOOL_STUDENT/CORPORATE_EMPLOYEE) — both signal the segment.
+    const school =
+        isSchoolRole(ownerRole) || ownerRole === "SCHOOL_STUDENT";
+    const passenger = school ? "student" : "employee";
+    const Passenger = passenger.charAt(0).toUpperCase() + passenger.slice(1);
+    return {
+        school,
+        passenger,
+        Passenger,
+        serviceName: school ? "School Transport" : "Corporate Transport",
+        productLine: school
+            ? "DriveMe School Transport"
+            : "DriveMe Corporate Transport",
+        subject: school
+            ? "You're invited to your school transport portal - DriveMe"
+            : "You are invited to join Corporate Transport - DriveMe",
+        // School segment uses a warmer green; corporate keeps the navy.
+        headerGradient: school
+            ? "linear-gradient(135deg, #0f766e 0%, #047857 100%)"
+            : "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
+        accent: school ? "#0f766e" : "#1a237e",
+    };
+};
 
 // Helper function to calculate pass dates based on duration type
 const calculatePassDates = (passDuration) => {
@@ -440,36 +491,103 @@ const generateEmployeeId = async (companyId) => {
     return `EMP-${companyId.slice(-4)}-${String(count + 1).padStart(4, '0')}`;
 };
 
-// Bulk upload employees
-export const bulkUploadEmployees = async (req, res) => {
-    try {
-        const { employees, skipInvitation } = req.body;
-        const managerId = req.userId;
-        const companyId = await resolveCompanyId(req.userId);
+// Valid enum values on CorporateEmployee.transportDetails.
+const VALID_SHIFT_TYPES = ["MORNING", "EVENING", "NIGHT", "FULL_DAY"];
+const VALID_TRIP_TYPES = ["One Way", "Round Trip"];
 
-        if (!employees || !Array.isArray(employees)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid employee data format"
-            });
-        }
+/**
+ * Coerce any shift value into a valid `transportDetails.shiftType` enum.
+ *
+ * The manual "Add Employee" form sends a canonical enum ("FULL_DAY", "MORNING",
+ * ...), but the managed-service brief importer feeds free-text shift labels the
+ * customer typed into their spreadsheet ("General (09:00-18:00)", "Night Shift",
+ * "Morning batch", ...). Those free-text labels are NOT enum members, so writing
+ * them straight to the model made every imported row fail validation and created
+ * zero employees. We normalize here so both entry points behave identically.
+ */
+const normalizeShiftType = (value) => {
+    const text = String(value ?? "").trim();
+    if (!text) return "FULL_DAY";
 
-        const results = {
-            success: [],
-            errors: [],
-            duplicates: []
-        };
+    const upper = text.toUpperCase().replace(/[^A-Z]/g, "");
+    // Exact enum match first (covers the manual form's canonical values).
+    const exact = VALID_SHIFT_TYPES.find((s) => s.replace(/[^A-Z]/g, "") === upper);
+    if (exact) return exact;
 
-        for (const employeeData of employees) {
-            try {
-                // Check if employee already exists
-                const existingEmployee = await CorporateEmployee.findOne({
-                    $or: [
-                        { "personalInfo.email": employeeData.email },
-                        { employeeId: employeeData.employeeId },
-                        { "personalInfo.phoneNumber": employeeData.contactNumber || employeeData.whatsappNumber }
-                    ]
-                });
+    // Keyword match for free-text labels coming from a brief spreadsheet.
+    if (upper.includes("MORNING") || upper.includes("AM")) return "MORNING";
+    if (upper.includes("EVENING")) return "EVENING";
+    if (upper.includes("NIGHT")) return "NIGHT";
+    // Everything else (General / Regular / Day / blank / unknown) maps to a full day.
+    return "FULL_DAY";
+};
+
+/** Coerce any trip-type value into a valid `assignedTripType` enum. */
+const normalizeTripType = (value) => {
+    const text = String(value ?? "").trim().toLowerCase().replace(/[^a-z]/g, "");
+    if (!text) return "One Way";
+    if (text.includes("round") || text.includes("both") || text.includes("return")) {
+        return "Round Trip";
+    }
+    return "One Way";
+};
+
+/**
+ * Create many CorporateEmployee records (plus their User logins, monthly passes
+ * and trips) from plain rows.
+ *
+ * Extracted from bulkUploadEmployees so the managed-service brief importer can
+ * reuse the exact same creation path — duplicate detection, trip generation and
+ * brief auto-fulfilment all behave identically no matter which screen the rows
+ * came from.
+ *
+ * `briefContractId` is the contract whose brief should be auto-fulfilled. For a
+ * B2B/school partner acting on behalf of a customer this is req.onBehalfContractId;
+ * for a customer importing their own brief it is passed explicitly (there is no
+ * on-behalf context in that case, but the brief items still need to be marked).
+ */
+export const createEmployeesFromRows = async ({
+    rows,
+    companyId,
+    skipInvitation = false,
+    briefContractId = null,
+    actorId = null,
+    actorRole = "B2B_PARTNER",
+}) => {
+    const results = {
+        success: [],
+        errors: [],
+        duplicates: []
+    };
+
+    // The passenger login must carry the segment's role: a SCHOOL_CUSTOMER's
+    // passengers are SCHOOL_STUDENT, a CORPORATE's are CORPORATE_EMPLOYEE. Resolve
+    // the owning company's role ONCE (the company IS the customer account) so we
+    // never mislabel a school's students as corporate employees in the database.
+    const owner = await User.findById(companyId).select("role");
+    const passengerRole = passengerRoleForOwner(owner?.role);
+
+    for (const employeeData of rows) {
+        // Track the login we create for this row so we can roll it back if any
+        // later step (employee document, etc.) fails — otherwise a failed row
+        // leaves an orphan User whose unique email then blocks every retry.
+        let createdUser = null;
+        try {
+                // Build the duplicate query from ONLY the identifying fields that
+                // are actually present. Including an `undefined` value here made
+                // Mongoose match rows whose phoneNumber/employeeId was empty,
+                // producing false "duplicate" skips.
+                const phoneValue = employeeData.contactNumber || employeeData.whatsappNumber;
+                const duplicateOr = [];
+                if (employeeData.email) duplicateOr.push({ "personalInfo.email": employeeData.email });
+                if (employeeData.employeeId) duplicateOr.push({ employeeId: employeeData.employeeId });
+                if (phoneValue) duplicateOr.push({ "personalInfo.phoneNumber": phoneValue });
+
+                // Check if a REAL employee record already exists (a login alone is
+                // not a duplicate — see orphan reclaim below).
+                const existingEmployee = duplicateOr.length
+                    ? await CorporateEmployee.findOne({ $or: duplicateOr })
+                    : null;
 
                 if (existingEmployee) {
                     results.duplicates.push({
@@ -484,18 +602,53 @@ export const bulkUploadEmployees = async (req, res) => {
                 // Using a consistent password that will be sent in the email
                 const tempPassword = "tempPassword123";
 
-                const user = new User({
-                    fullName: employeeData.fullName,
-                    email: employeeData.email,
-                    password: tempPassword, // Random temp password - employee will set their own via invitation
-                    role: "CORPORATE_EMPLOYEE",
-                    companyId: companyId,
-                    whatsappNumber: employeeData.contactNumber || employeeData.whatsappNumber || "N/A",
-                    status: "ACTIVE",
-                    isPasswordSet: false // Mark that password needs to be set
-                });
+                // A login for this email may already exist WITHOUT a corporate
+                // employee record — an "orphan" left behind by an earlier import
+                // that failed after creating the User but before the employee doc
+                // (e.g. the old shift-enum validation crash). Reusing that orphan
+                // makes re-import idempotent instead of crashing on the unique
+                // email index and permanently blocking the row.
+                let user = employeeData.email
+                    ? await User.findOne({ email: employeeData.email })
+                    : null;
 
-                await user.save();
+                if (user) {
+                    const linkedEmployee = await CorporateEmployee.findOne({ userId: user._id }).select("_id");
+                    if (linkedEmployee) {
+                        // A genuine employee already owns this login -> real duplicate.
+                        results.duplicates.push({
+                            employee: employeeData,
+                            reason: "Employee already exists",
+                            existingId: linkedEmployee._id
+                        });
+                        continue;
+                    }
+                    // Reclaim the orphan login: refresh its basic fields and reuse it.
+                    user.fullName = employeeData.fullName || user.fullName;
+                    user.role = passengerRole;
+                    user.companyId = companyId;
+                    user.whatsappNumber = phoneValue || user.whatsappNumber || "N/A";
+                    user.status = "ACTIVE";
+                    if (user.isPasswordSet === undefined) user.isPasswordSet = false;
+                    await user.save();
+                } else {
+                    user = new User({
+                        fullName: employeeData.fullName,
+                        email: employeeData.email,
+                        password: tempPassword, // Random temp password - employee will set their own via invitation
+                        role: passengerRole,
+                        companyId: companyId,
+                        whatsappNumber: phoneValue || "N/A",
+                        status: "ACTIVE",
+                        isPasswordSet: false // Mark that password needs to be set
+                    });
+                    await user.save();
+                }
+
+                // Track the login (new OR reclaimed orphan) so a later failure in
+                // this row rolls it back — a User with no employee doc is useless
+                // and would otherwise block the next retry.
+                createdUser = user;
 
                 // Parse full name into first/last
                 const nameParts = (employeeData.fullName || "").trim().split(/\s+/);
@@ -530,10 +683,25 @@ export const bulkUploadEmployees = async (req, res) => {
                         returnPickupStop: employeeData.returnPickupStop || "",
                         returnDropoffStop: employeeData.returnDropoffStop || "",
                         assignedTripNumber: employeeData.assignedTripNumber || 1,
-                        assignedTripType: employeeData.assignedTripType || employeeData.transportDetails?.assignedTripType || "One Way",
-                        shiftType: employeeData.workShift || employeeData.transportDetails?.shiftType || "FULL_DAY",
+                        assignedTripType: normalizeTripType(
+                            employeeData.assignedTripType || employeeData.transportDetails?.assignedTripType,
+                        ),
+                        shiftType: normalizeShiftType(
+                            employeeData.workShift || employeeData.transportDetails?.shiftType,
+                        ),
                         transportStatus: "ACTIVE"
                     },
+                    // Persist the pass duration + start date on the employee so that
+                    // when an invitation is later sent, the invitation-time trip
+                    // generation honours the brief's duration/start date instead of
+                    // silently defaulting to a 1-month pass starting today. This
+                    // mirrors the single "Add Employee" path exactly, so importing
+                    // from a brief behaves identically to adding manually.
+                    passDuration: employeeData.passDuration ? {
+                        durationType: employeeData.passDuration.durationType || "1_MONTH",
+                        startDate: employeeData.passDuration.startDate ? new Date(employeeData.passDuration.startDate) : undefined,
+                        customEndDate: employeeData.passDuration.customEndDate ? new Date(employeeData.passDuration.customEndDate) : undefined
+                    } : { durationType: "1_MONTH" },
                     accessControl: {
                         isActive: true,
                         accessLevel: "EMPLOYEE"
@@ -549,8 +717,9 @@ export const bulkUploadEmployees = async (req, res) => {
                 let tripGenerationResult = null;
                 if (corporateEmployee.transportDetails?.assignedRoute) {
                     try {
-                        // Calculate pass duration
-                        const passDuration = employeeData.passDuration || { durationType: '1_MONTH' };
+                        // Use the SAME pass duration we just persisted so import-time
+                        // trip generation matches what a later invitation would produce.
+                        const passDuration = corporateEmployee.passDuration || employeeData.passDuration || { durationType: '1_MONTH' };
                         tripGenerationResult = await generateTripsForEmployee(corporateEmployee, companyId, passDuration);
                         console.log(`[v0] Auto-generated trips for new employee ${corporateEmployee._id}:`, tripGenerationResult);
                     } catch (tripError) {
@@ -566,43 +735,104 @@ export const bulkUploadEmployees = async (req, res) => {
                     await sendEmployeeInvitation(user, employeeData);
                 }
 
-                // Managed-service auto-link: when a B2B partner adds this employee
-                // on behalf of the corporate to fulfil a specific brief roster item,
-                // the frontend passes that brief item's id on the employee row.
-                let briefAutoFulfilled = false;
-                if (employeeData.briefItemId && req.onBehalfContractId) {
-                    briefAutoFulfilled = await autoFulfillBriefItem({
-                        contractId: req.onBehalfContractId,
-                        section: "employeeRoster",
-                        briefItemId: employeeData.briefItemId,
-                        entityId: corporateEmployee._id,
-                        entityType: "EMPLOYEE",
-                        actorId: req.actorId || req.userId,
-                        actorRole: req.actingRole || "B2B_PARTNER",
-                    });
-                }
-
-                results.success.push({
-                    employeeId: employeeData.employeeId,
-                    fullName: employeeData.fullName,
-                    email: employeeData.email,
-                    userId: user._id,
-                    corporateEmployeeId: corporateEmployee._id,
-                    tripsGenerated: tripGenerationResult?.generated || 0,
-                    monthlyPassId: tripGenerationResult?.monthlyPass || null,
-                    briefAutoFulfilled
-                });
-
-            } catch (error) {
-                results.errors.push({
-                    employee: employeeData,
-                    error: error.message
+            // Managed-service auto-link: when this employee was added to fulfil a
+            // specific brief roster item, mark that item FULFILLED and link it.
+            // Works for a partner acting on behalf of the customer AND for the
+            // customer importing its own brief (briefContractId is supplied).
+            let briefAutoFulfilled = false;
+            if (employeeData.briefItemId && briefContractId) {
+                briefAutoFulfilled = await autoFulfillBriefItem({
+                    contractId: briefContractId,
+                    section: "employeeRoster",
+                    briefItemId: employeeData.briefItemId,
+                    entityId: corporateEmployee._id,
+                    entityType: "EMPLOYEE",
+                    actorId,
+                    actorRole,
                 });
             }
+
+            results.success.push({
+                employeeId: corporateEmployee.employeeId,
+                fullName: employeeData.fullName,
+                email: employeeData.email,
+                userId: user._id,
+                corporateEmployeeId: corporateEmployee._id,
+                tripsGenerated: tripGenerationResult?.generated || 0,
+                monthlyPassId: tripGenerationResult?.monthlyPass || null,
+                briefItemId: employeeData.briefItemId || null,
+                sourceKey: employeeData.sourceKey || null,
+                briefAutoFulfilled
+            });
+
+        } catch (error) {
+            // Roll back the login we created for this row so a partial failure
+            // never leaves an orphan User (whose unique email would otherwise
+            // block re-importing the same person).
+            if (createdUser?._id) {
+                try {
+                    await User.deleteOne({ _id: createdUser._id });
+                } catch (cleanupError) {
+                    console.error(
+                        `[v0] Failed to roll back orphan user ${createdUser._id}:`,
+                        cleanupError.message,
+                    );
+                }
+            }
+
+            results.errors.push({
+                employee: employeeData,
+                sourceKey: employeeData.sourceKey || null,
+                briefItemId: employeeData.briefItemId || null,
+                error: error.message
+            });
         }
+    }
+
+    return results;
+};
+
+// Bulk upload employees
+export const bulkUploadEmployees = async (req, res) => {
+    try {
+        const { employees, skipInvitation } = req.body;
+        const companyId = await resolveCompanyId(req.userId);
+
+        if (!employees || !Array.isArray(employees)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid employee data format"
+            });
+        }
+
+        // Only a partner request carries an on-behalf contract. A customer
+        // importing its OWN brief passes briefContractId in the body — which is
+        // client-supplied, so it must be verified to belong to this customer
+        // before it is allowed to drive brief auto-fulfilment.
+        let briefContractId = req.onBehalfContractId || null;
+        if (!briefContractId && req.body.briefContractId) {
+            const ownContract = await Contract.findOne({
+                _id: req.body.briefContractId,
+                corporateOwnerId: req.userId,
+                serviceMode: "MANAGED",
+            }).select("_id");
+            briefContractId = ownContract ? String(ownContract._id) : null;
+        }
+
+        const results = await createEmployeesFromRows({
+            rows: employees,
+            companyId,
+            skipInvitation,
+            briefContractId,
+            actorId: req.actorId || req.userId,
+            actorRole: req.actingRole || "CORPORATE",
+        });
 
         if (results.success.length > 0) {
             await logRequestActivity(req, {
+                // So a customer importing its own brief is logged on the managed
+                // contract too, not just a partner acting on behalf.
+                contractId: briefContractId || undefined,
                 action: "EMPLOYEE_ADDED",
                 entityType: "EMPLOYEE",
                 description: `Added ${results.success.length} employee(s)`,
@@ -668,7 +898,12 @@ export const uploadEmployeesFromCSV = async (req, res) => {
 
         parser.on('end', async () => {
             try {
-                const results = await processEmployeeUpload(employees, managerId, companyId);
+                const results = await createEmployeesFromRows({
+                    rows: employees,
+                    companyId,
+                    actorId: req.actorId || req.userId,
+                    actorRole: req.actingRole || "CORPORATE",
+                });
                 res.status(201).json({
                     success: true,
                     message: "CSV upload completed",
@@ -801,15 +1036,16 @@ export const updateEmployee = async (req, res) => {
         }
         await employee.save();
 
-        // Update user account if needed
-        if (updates.personalInfo?.email || updates.personalInfo?.firstName) {
-            const userUpdate = {};
-            if (updates.personalInfo?.email) userUpdate.email = updates.personalInfo.email;
-            if (updates.personalInfo?.firstName) {
-                userUpdate.fullName = `${updates.personalInfo.firstName} ${updates.personalInfo.lastName || employee.personalInfo.lastName || ''}`.trim();
-            }
-            await User.findByIdAndUpdate(employee.userId, userUpdate);
+        // Keep the linked login aligned with the owning customer's segment.
+        // This also repairs legacy school records that were incorrectly created
+        // as CORPORATE_EMPLOYEE when they are edited from the roster.
+        const owner = await User.findById(companyId).select("role");
+        const userUpdate = { role: passengerRoleForOwner(owner?.role), companyId };
+        if (updates.personalInfo?.email) userUpdate.email = updates.personalInfo.email;
+        if (updates.personalInfo?.firstName) {
+            userUpdate.fullName = `${updates.personalInfo.firstName} ${updates.personalInfo.lastName || employee.personalInfo.lastName || ''}`.trim();
         }
+        await User.findByIdAndUpdate(employee.userId, userUpdate);
 
         res.status(200).json({
             success: true,
@@ -1056,7 +1292,10 @@ export const sendInvitationEmails = async (req, res) => {
             });
         }
 
-        const manager = await User.findById(managerId).select("companyName fullName");
+        const manager = await User.findById(managerId).select("companyName fullName role");
+        // School owners invite students; brand the email for that segment.
+        const brand = invitationBranding(manager?.role);
+        const appOrigin = getAppOrigin();
         const results = { sent: [], failed: [] };
 
         // Import crypto for token generation
@@ -1089,35 +1328,37 @@ export const sendInvitationEmails = async (req, res) => {
                 userAccount.passwordSetupTokenExpiry = tokenExpiry;
                 await userAccount.save();
 
-                const setPasswordUrl = `${process.env.FRONTEND_URL.split(",")[0]}/set-password?token=${passwordSetupToken}`;
+                const setPasswordUrl = `${appOrigin}/set-password?token=${passwordSetupToken}`;
 
                 console.log("Sending invitation email to:", employee.userId.email);
 
                 const emailResult = await sendEmail(
                     employee.userId.email,
-                    "You are invited to join Corporate Transport - DriveMe",
+                    brand.subject,
                     `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <div style="background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-                                <h1 style="margin: 0; font-size: 24px;">Welcome to DriveMe Corporate Transport</h1>
+                            <div style="background: ${brand.headerGradient}; color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+                                <h1 style="margin: 0; font-size: 24px;">Welcome to ${brand.productLine}</h1>
                             </div>
                             <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
-                                <p>Hello <strong>${employee.personalInfo?.firstName || employee.fullName || 'Employee'} ${employee.personalInfo?.lastName || ''}</strong>,</p>
-                                <p>You have been invited by <strong>${manager?.companyName || manager?.fullName || 'your company'}</strong> to use the DriveMe corporate transport service.</p>
-                                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #1a237e; margin: 20px 0;">
-                                    <h3 style="color: #1a237e; margin-top: 0;">Your Account Details</h3>
+                                <p>Hello <strong>${employee.personalInfo?.firstName || employee.fullName || brand.Passenger} ${employee.personalInfo?.lastName || ''}</strong>,</p>
+                                <p>You have been invited by <strong>${manager?.companyName || manager?.fullName || (brand.school ? 'your school' : 'your company')}</strong> to use the DriveMe ${brand.school ? 'school' : 'corporate'} transport service.</p>
+                                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid ${brand.accent}; margin: 20px 0;">
+                                    <h3 style="color: ${brand.accent}; margin-top: 0;">Your Account Details</h3>
                                     <p><strong>Email:</strong> ${employee.userId.email}</p>
-                                    <p><strong>Employee ID:</strong> ${employee.employeeId}</p>
-                                    <p><strong>Department:</strong> ${employee.personalInfo?.department || 'N/A'}</p>
+                                    <p><strong>${brand.school ? 'Student ID' : 'Employee ID'}:</strong> ${employee.employeeId}</p>
+                                    ${brand.school
+                                        ? `<p><strong>Grade / Class:</strong> ${employee.personalInfo?.department || 'N/A'}</p>`
+                                        : `<p><strong>Department:</strong> ${employee.personalInfo?.department || 'N/A'}</p>`}
                                 </div>
                                 <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 20px 0;">
-                                    <p style="margin: 0; color: #856404; font-weight: 500;">Please click the button below to set up your password and activate your account.</p>
+                                    <p style="margin: 0; color: #856404; font-weight: 500;">Please click the button below to set up your password and activate your account. Once activated you can track your ${brand.school ? 'school bus' : 'ride'} and view your scheduled trips.</p>
                                 </div>
                                 <div style="text-align: center; margin: 25px 0;">
-                                    <a href="${setPasswordUrl}" style="background: #1a237e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Set Your Password</a>
+                                    <a href="${setPasswordUrl}" style="background: ${brand.accent}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Set Your Password</a>
                                 </div>
-                                <p style="color: #666; font-size: 13px; text-align: center;">This link will expire in 7 days. If you have any questions, contact your transport coordinator.</p>
-                                <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">If the button doesn't work, copy and paste this link in your browser:<br><a href="${setPasswordUrl}" style="color: #1a237e; word-break: break-all;">${setPasswordUrl}</a></p>
+                                <p style="color: #666; font-size: 13px; text-align: center;">This link will expire in 7 days. If you have any questions, contact your ${brand.school ? 'school transport coordinator' : 'transport coordinator'}.</p>
+                                <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">If the button doesn't work, copy and paste this link in your browser:<br><a href="${setPasswordUrl}" style="color: ${brand.accent}; word-break: break-all;">${setPasswordUrl}</a></p>
                             </div>
                         </div>
                     `
@@ -1350,6 +1591,11 @@ const processEmployeeUpload = async (employees, managerId, companyId) => {
         duplicates: []
     };
 
+    // Tag each passenger login with the segment's role (SCHOOL_STUDENT for a
+    // school customer, CORPORATE_EMPLOYEE otherwise) — see createEmployeesFromRows.
+    const owner = await User.findById(companyId).select("role");
+    const passengerRole = passengerRoleForOwner(owner?.role);
+
     for (const employeeData of employees) {
         try {
             // Check if employee already exists
@@ -1373,7 +1619,7 @@ const processEmployeeUpload = async (employees, managerId, companyId) => {
                 fullName: employeeData.fullName,
                 email: employeeData.email,
                 password: "tempPassword123",
-                role: "CORPORATE_EMPLOYEE",
+                role: passengerRole,
                 companyId: companyId,
                 isActive: false // Inactive until approved
             });
@@ -1463,6 +1709,31 @@ const sendEmployeeInvitation = async (user, employeeData) => {
         }
         console.log(`Sending invitation email to: ${recipientEmail}`);
 
+        // Brand by segment (student vs employee) from the login's role, and
+        // resolve links safely so a missing FRONTEND_URL never blocks sending.
+        const brand = invitationBranding(user?.role);
+        const appOrigin = getAppOrigin();
+
+        // Generate a real password-setup token so the invitee actually sets
+        // their own password — the old flow advertised a fake "tempPassword123"
+        // that never worked, so students could not log in.
+        let setPasswordUrl = `${appOrigin}/login`;
+        try {
+            if (user?._id) {
+                const crypto = await import('crypto');
+                const passwordSetupToken = crypto.default.randomBytes(32).toString('hex');
+                const tokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                await User.findByIdAndUpdate(user._id, {
+                    passwordSetupToken,
+                    passwordSetupTokenExpiry: tokenExpiry,
+                    isPasswordSet: false,
+                });
+                setPasswordUrl = `${appOrigin}/set-password?token=${passwordSetupToken}`;
+            }
+        } catch (tokenErr) {
+            console.error("[v0] Failed to create password setup token:", tokenErr.message);
+        }
+
         // Get route info if assigned
         let routeInfo = '';
         if (employeeData.assignedRoute || employeeData.transportDetails?.assignedRoute) {
@@ -1491,19 +1762,20 @@ const sendEmployeeInvitation = async (user, employeeData) => {
 
         await sendEmail(
             recipientEmail,
-            "Welcome to Corporate Transport System - DriveMe",
+            brand.subject,
             `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2>Welcome to DriveMe Corporate Transport</h2>
-                    <p>Hello <strong>${employeeData.fullName || 'Employee'}</strong>,</p>
-                    <p>You have been added to the corporate transport system. Your trips have been automatically scheduled based on your assigned route.</p>
+                    <h2 style="color: ${brand.accent};">Welcome to ${brand.productLine}</h2>
+                    <p>Hello <strong>${employeeData.fullName || brand.Passenger}</strong>,</p>
+                    <p>You have been added to the ${brand.school ? 'school' : 'corporate'} transport system.${employeeData.assignedRoute || employeeData.transportDetails?.assignedRoute ? ' Your trips have been scheduled based on your assigned route.' : ''}</p>
                     <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 15px 0;">
                         <p><strong>Login Email:</strong> ${recipientEmail}</p>
-                        <p><strong>Temporary Password:</strong> tempPassword123</p>
+                        <p style="margin: 0;">Set your own password using the button below to activate your account.</p>
                     </div>
                     ${routeInfo}
-                    <p>Please login to view your scheduled trips and track your driver.</p>
-                    <a href="${process.env.FRONTEND_URL.split(",")[0] || 'http://localhost:5173'}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
+                    <p>Once activated, log in to view your scheduled trips and track your ${brand.school ? 'school bus' : 'driver'}.</p>
+                    <a href="${setPasswordUrl}" style="background: ${brand.accent}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Set Your Password</a>
+                    <p style="color: #999; font-size: 12px; margin-top: 18px;">If the button doesn't work, copy and paste this link in your browser:<br><a href="${setPasswordUrl}" style="color: ${brand.accent}; word-break: break-all;">${setPasswordUrl}</a></p>
                 </div>
             `
         );
@@ -1525,7 +1797,7 @@ const sendEmployeeApproval = async (employee) => {
                         <p>Hello <strong>${employee.fullName || user.fullName}</strong>,</p>
                         <p>Your registration for the corporate transport system has been approved.</p>
                         <p>You can now login and start using the service.</p>
-                        <a href="${process.env.FRONTEND_URL.split(",")[0] || 'http://localhost:5173'}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
+                        <a href="${getAppOrigin()}/login" style="background: #1a237e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">Login Now</a>
                     </div>
                 `
             );

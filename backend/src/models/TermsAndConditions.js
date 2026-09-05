@@ -144,12 +144,16 @@ termsAndConditionsSchema.statics.getForRole = async function (role) {
     const terms = await this.getLatest()
     if (!terms) return null
 
-    // Map role to the correct database key
+    // Map role to the correct database key. School roles reuse the terms of
+    // their corporate counterparts (SCHOOL_CUSTOMER -> corporate,
+    // SCHOOL_PARTNER -> b2bPartner).
     const roleKeyMap = {
         B2C_PARTNER: "b2cPartner",
         B2B_PARTNER: "b2bPartner",
         CORPORATE: "corporate",
-        COMMUTER: "commuter"
+        COMMUTER: "commuter",
+        SCHOOL_CUSTOMER: "corporate",
+        SCHOOL_PARTNER: "b2bPartner"
     }
 
     const roleKey = roleKeyMap[role] || "b2cPartner"

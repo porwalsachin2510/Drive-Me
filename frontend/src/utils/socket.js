@@ -89,9 +89,11 @@ export const setupSocketListeners = (userRole, userId, dispatch) => {
       setupB2CPartnerListeners(dispatch);
       break;
     case 'B2B_PARTNER':
+    case 'SCHOOL_PARTNER':
       setupB2BPartnerListeners(dispatch);
       break;
     case 'CORPORATE':
+    case 'SCHOOL_CUSTOMER':
       setupCorporateListeners(dispatch);
       break;
     case 'DRIVER':

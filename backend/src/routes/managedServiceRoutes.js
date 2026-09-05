@@ -12,6 +12,8 @@ import {
     previewMonthlyBill,
     generateMonthlyInvoice,
     listOperationalInvoices,
+    payOperationalInvoice,
+    confirmOperationalInvoicePayment,
 } from "../controllers/managedServiceController.js"
 
 const router = express.Router()
@@ -36,5 +38,11 @@ router.put("/:contractId/billing/config", verifyToken, updateBillingConfig) // p
 router.get("/:contractId/billing/preview", verifyToken, previewMonthlyBill)
 router.post("/:contractId/billing/generate", verifyToken, generateMonthlyInvoice) // partner only
 router.get("/:contractId/billing/invoices", verifyToken, listOperationalInvoices)
+router.post("/:contractId/billing/invoices/:invoiceId/pay", verifyToken, payOperationalInvoice) // corporate only
+router.patch(
+    "/:contractId/billing/invoices/:invoiceId/confirm-payment",
+    verifyToken,
+    confirmOperationalInvoicePayment,
+) // partner only
 
 export default router

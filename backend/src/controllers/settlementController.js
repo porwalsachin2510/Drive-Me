@@ -11,7 +11,8 @@ import { createNotification } from "../Services/notificationService.js";
 import { sendEmail } from "../Services/emailService.js";
 import { resolveDisplayCurrency, convertForDisplay } from "../Services/displayCurrency.js";
 import { getCountryCurrency, getEffectiveCountry } from "../Config/localizationConfig.js";
-import { getOrCreateWallet } from "../Services/walletService.js";
+import { getOrCreateWallet, resolvePlatformAdminId } from "../Services/walletService.js";
+import { isCustomerRole, isPartnerRole } from "../utils/roleFamilies.js";
 
 /**
  * SETTLEMENT = MONTHLY RECONCILIATION STATEMENT (NOT A PAYOUT TOOL)
@@ -350,7 +351,7 @@ export const calculateSettlementsForPeriod = async (
 
         // Read each partner type from its own real revenue source.
         const stats =
-            partner.role === "B2B_PARTNER"
+            isPartnerRole(partner.role)
                 ? await getPeriodContractStats(
                     partner._id,
                     periodStart,
@@ -521,7 +522,8 @@ export const processMonthlySettlement = async (req, res) => {
  * and write the canonical ledger entry.
  */
 const creditAdminCommission = async (amount, currency, note, partnerId) => {
-    const adminUserId = process.env.ADMIN_USER_ID;
+    // Resolve the real platform admin (never the ghost "Unknown" wallet).
+    const adminUserId = await resolvePlatformAdminId();
     if (!adminUserId || !amount || amount <= 0) return;
 
     const adminWallet = await getOrCreateWallet(adminUserId, {
@@ -716,7 +718,7 @@ export const collectCommissionDebt = async (req, res) => {
             const corporate = await User.findById(corporateId).select(
                 "fullName companyName email role country countryCode adminPermissions"
             );
-            if (!corporate || corporate.role !== "CORPORATE") continue;
+            if (!corporate || !isCustomerRole(corporate.role)) continue;
 
             const currency = getCountryCurrency(getEffectiveCountry(corporate));
             const stats = await getCorporateNegotiationStats(
@@ -983,14 +985,14 @@ export const getPartnerSettlement = async (req, res) => {
         //   CORPORATE   -> negotiation-commission receivable
         //   B2C_PARTNER -> passenger bookings (default)
         let stats;
-        if (partner?.role === "B2B_PARTNER") {
+        if (isPartnerRole(partner?.role)) {
             stats = await getPeriodContractStats(
                 partnerId,
                 periodStart,
                 periodEnd,
                 accountCurrency
             );
-        } else if (partner?.role === "CORPORATE") {
+        } else if (isCustomerRole(partner?.role)) {
             stats = await getCorporateNegotiationStats(
                 partnerId,
                 periodStart,
@@ -1010,7 +1012,7 @@ export const getPartnerSettlement = async (req, res) => {
         // A Corporate owes commission (no wallet debt); everyone else's debt is
         // their live negative wallet balance.
         const outstandingDebt =
-            partner?.role === "CORPORATE" ? stats.commissionDebt || 0 : debt;
+            isCustomerRole(partner?.role) ? stats.commissionDebt || 0 : debt;
 
         // Wallet transactions (account currency) within the period, for the
         // statement detail list.
@@ -1037,7 +1039,7 @@ export const getPartnerSettlement = async (req, res) => {
                 currency: accountCurrency,
                 role: partner?.role,
                 statementType:
-                    partner?.role === "CORPORATE"
+                    isCustomerRole(partner?.role)
                         ? "CORPORATE_RECEIVABLE"
                         : "PARTNER_PAYOUT",
                 grossEarnings: stats.grossEarnings,

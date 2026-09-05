@@ -51,7 +51,11 @@ const contractSchema = new mongoose.Schema(
                     performedByName: String,
                     performedByRole: {
                         type: String,
-                        enum: ["B2B_PARTNER", "CORPORATE"],
+                        // School segment mirrors the corporate/B2B segment. These
+                        // roles ARE written by school flows, so the enum must
+                        // accept them or every contract.save() on a school
+                        // contract throws a validation error.
+                        enum: ["B2B_PARTNER", "SCHOOL_PARTNER", "CORPORATE", "SCHOOL_CUSTOMER"],
                     },
                     meta: {
                         type: mongoose.Schema.Types.Mixed,
@@ -104,14 +108,16 @@ const contractSchema = new mongoose.Schema(
                             enum: ["ACTIVE", "MAINTENANCE", "INACTIVE"],
                             default: "ACTIVE",
                         },
+                        // Keep the original actor role for auditability. School
+                        // partners must not be coerced into the B2B segment.
                         driverAssignedBy: {
                             type: String,
-                            enum: ["B2B_PARTNER", "CORPORATE"],
+                            enum: ["B2B_PARTNER", "SCHOOL_PARTNER", "CORPORATE", "SCHOOL_CUSTOMER"],
                             default: "B2B_PARTNER",
                         },
                         fuelAssignedBy: {
                             type: String,
-                            enum: ["B2B_PARTNER", "CORPORATE"],
+                            enum: ["B2B_PARTNER", "SCHOOL_PARTNER", "CORPORATE", "SCHOOL_CUSTOMER"],
                             default: "B2B_PARTNER",
                         },
                         fuelType: {
@@ -410,7 +416,8 @@ const contractSchema = new mongoose.Schema(
                 {
                     from: {
                         type: String,
-                        enum: ["B2B_PARTNER", "CORPORATE"],
+                        // School segment mirrors the corporate/B2B segment.
+                        enum: ["B2B_PARTNER", "SCHOOL_PARTNER", "CORPORATE", "SCHOOL_CUSTOMER"],
                     },
                     amount: Number,
                     paidAt: Date,

@@ -68,6 +68,9 @@ importers:
       stripe:
         specifier: ^20.1.0
         version: 20.4.1(@types/node@25.9.3)
+      xlsx:
+        specifier: https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+        version: https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
     devDependencies:
       nodemon:
         specifier: ^2.0.22
@@ -1273,6 +1276,12 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
+
+  xlsx@https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz:
+    resolution: {integrity: sha512-oLDq3jw7AcLqKWH2AhCpVTZl8mf6X2YReP+Neh0SJUzV/BdZYjth94tG5toiMB1PPrYtxOCfaoUCkvtuH+3AJA==, tarball: https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz}
+    version: 0.20.3
+    engines: {node: '>=0.8'}
+    hasBin: true
 
   y18n@4.0.3:
     resolution: {integrity: sha512-JKhqTOwSrqNA1NY5lSztJ1GrBiUodLMmIZuLiDaMRJ+itFd+ABVE8XBjOvIWL+rSqNDC74LCSFmlb/U4UZ4hJQ==}
@@ -2519,6 +2528,8 @@ snapshots:
       strip-ansi: 6.0.1
 
   ws@8.21.0: {}
+
+  xlsx@https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz: {}
 
   y18n@4.0.3: {}
 

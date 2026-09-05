@@ -32,22 +32,36 @@ export default function HomePage() {
     localStorage.setItem("activeTab", activeTab);
   }, [activeTab]);
 
-  // Redirect CORPORATE users to corporate page
+  // Redirect CORPORATE + SCHOOL_CUSTOMER users to the service selection page.
+  // School customers reuse the same corporate managed-service flow.
   useEffect(() => {
-    if (isAuthenticated && userRole === "CORPORATE") {
+    if (
+      isAuthenticated &&
+      (userRole === "CORPORATE" || userRole === "SCHOOL_CUSTOMER")
+    ) {
       navigate("/service-selection");
     }
   }, [isAuthenticated, userRole, navigate]);
 
   // Render based on user role - logged in users see their dashboards
   const renderContent = () => {
-    // For logged in users with specific roles, show their dashboards
-    if (userRole === "B2B_PARTNER") return <B2B_PartnerProfilePage />;
+    // For logged in users with specific roles, show their dashboards.
+    // SCHOOL_PARTNER reuses the B2B partner dashboard (shared managed pipeline).
+    if (userRole === "B2B_PARTNER" || userRole === "SCHOOL_PARTNER")
+      return <B2B_PartnerProfilePage />;
     if (userRole === "B2C_PARTNER") return <B2C_PartnerProfilePage />;
-    if (userRole === "CORPORATE_DRIVER") return <CorporateDriverDashboard />;
-    if (userRole === "B2B_PARTNER_DRIVER") return <B2BPartnerDriverDashboard />;
+    // School drivers reuse the mirrored dashboards: SCHOOL_CUSTOMER_DRIVER ->
+    // corporate driver dashboard, SCHOOL_PARTNER_DRIVER -> B2B partner driver
+    // dashboard (same managed-service pipeline, isolated by segment).
+    if (userRole === "CORPORATE_DRIVER" || userRole === "SCHOOL_CUSTOMER_DRIVER")
+      return <CorporateDriverDashboard />;
+    if (userRole === "B2B_PARTNER_DRIVER" || userRole === "SCHOOL_PARTNER_DRIVER")
+      return <B2BPartnerDriverDashboard />;
     if (userRole === "B2C_PARTNER_DRIVER") return <B2CPartnerDriverDashboard />;
-    if (userRole === "CORPORATE_EMPLOYEE") return <EmployeeTripBooking />;
+    // Managed-service passengers: a CORPORATE's employees and a
+    // SCHOOL_CUSTOMER's students/teachers ride the same passenger portal.
+    if (userRole === "CORPORATE_EMPLOYEE" || userRole === "SCHOOL_STUDENT")
+      return <EmployeeTripBooking />;
     if (userRole === "ADMIN") return <AdminDashboardPage />;
 
     // For COMMUTER or guests - show CommuterHomePage

@@ -1165,9 +1165,11 @@ const CommuterMyBookingsPage = () => {
         <div className="cmbp-bookings-header">
           <h1>My Bookings</h1>
           <p>
-            {userType === "CORPORATE_EMPLOYEE"
-              ? "Your company-sponsored ride bookings"
-              : "View and manage your ride bookings"}
+            {userType === "SCHOOL_STUDENT"
+              ? "Your school-sponsored ride bookings"
+              : userType === "CORPORATE_EMPLOYEE"
+                ? "Your company-sponsored ride bookings"
+                : "View and manage your ride bookings"}
           </p>
         </div>
 
@@ -1206,9 +1208,11 @@ const CommuterMyBookingsPage = () => {
           <div className="cmbp-empty-state">
             <p>No bookings found</p>
             <p className="cmbp-empty-subtitle">
-              {userType === "CORPORATE_EMPLOYEE"
-                ? "Your company has not assigned any rides yet"
-                : "Start booking a ride to see them here"}
+              {userType === "SCHOOL_STUDENT"
+                ? "Your school has not assigned any rides yet"
+                : userType === "CORPORATE_EMPLOYEE"
+                  ? "Your company has not assigned any rides yet"
+                  : "Start booking a ride to see them here"}
             </p>
           </div>
         ) : (

@@ -314,6 +314,77 @@
   color: #4b5563;
 }
 
+/* Invoice table with an Action column (7 cols). */
+.mbill-inv-table.has-action .mbill-inv-row {
+  grid-template-columns: 1.3fr 1.1fr 0.6fr 0.9fr 0.9fr 1.1fr 1.2fr;
+}
+
+.mbill-inv-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mbill-inv-paid {
+  font-size: 11px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.mbill-inv-pending {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+/* Payment modal breakdown (shared look with the contract payment summary). */
+.mbill-pay-breakdown {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  background: #f9fafb;
+}
+
+.mbill-pay-breakdown-head {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.mbill-pay-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: #4b5563;
+  padding: 4px 0;
+}
+
+.mbill-pay-strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+.mbill-pay-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #d1d5db;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+@media (max-width: 768px) {
+  .mbill-inv-table.has-action .mbill-inv-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 /* modal */
 .mbill-modal-overlay {
   position: fixed;

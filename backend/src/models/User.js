@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema(
     {
         role: {
             type: String,
-            enum: ["COMMUTER", "CORPORATE", "B2C_PARTNER", "B2B_PARTNER", "B2B_PARTNER_DRIVER", "CORPORATE_DRIVER", "CORPORATE_EMPLOYEE", "B2C_PARTNER_DRIVER", "ADMIN"],
+            enum: ["COMMUTER", "CORPORATE", "B2C_PARTNER", "B2B_PARTNER", "B2B_PARTNER_DRIVER", "CORPORATE_DRIVER", "CORPORATE_EMPLOYEE", "B2C_PARTNER_DRIVER", "ADMIN", "SCHOOL_CUSTOMER", "SCHOOL_PARTNER", "SCHOOL_PARTNER_DRIVER", "SCHOOL_CUSTOMER_DRIVER", "SCHOOL_STUDENT"],
             required: true,
         },
         fullName: {
@@ -356,7 +356,9 @@ const userSchema = new mongoose.Schema(
                 return [
                     "B2B_PARTNER_DRIVER",
                     "CORPORATE_DRIVER",
-                    "B2C_PARTNER_DRIVER"
+                    "B2C_PARTNER_DRIVER",
+                    "SCHOOL_PARTNER_DRIVER",
+                    "SCHOOL_CUSTOMER_DRIVER"
                 ].includes(this.role);
             },
         },

@@ -128,6 +128,7 @@ const rosterEmployeeSchema = new mongoose.Schema(
         phone: { type: String, default: "" },
         employeeCode: { type: String, default: "" },
         department: { type: String, default: "" },
+        designation: { type: String, default: "" },
         homeAddress: { type: String, default: "" },
         pickupArea: { type: String, default: "" },
         // Map-pinned home pickup point for this employee (origin for route
@@ -138,6 +139,10 @@ const rosterEmployeeSchema = new mongoose.Schema(
         shiftLabel: { type: String, default: "" },
         // Requested monthly pass duration in months
         passMonths: { type: Number, default: 1, min: 0 },
+        // Optional day the pass (and its generated trips) should start on. When
+        // absent, the brief's serviceStartDate is used at import time. Mirrors the
+        // manual "Add Employee" form's Pass Start Date.
+        passStartDate: { type: Date, default: null },
         // Corporate's hint about which route/trip this employee should ride
         preferredRouteLabel: { type: String, default: "" },
         assignmentHint: { type: String, default: "" }, // free-form trip/assignment note
@@ -153,6 +158,32 @@ const messageSchema = new mongoose.Schema(
         senderRole: { type: String, enum: ["CORPORATE", "B2B_PARTNER"] },
         message: { type: String, required: true },
         createdAt: { type: Date, default: Date.now },
+    },
+    { _id: true },
+)
+
+// An uploaded requirement document the customer attaches to the brief. Since
+// every customer prepares its transportation requirement differently, we do NOT
+// enforce a template: the customer uploads whatever they have (Excel, PDF, Word,
+// CSV, image, etc.) and it stays attached to the request for future reference.
+// Revised versions are appended (version increments) so the full history is kept.
+const briefDocumentSchema = new mongoose.Schema(
+    {
+        fileName: { type: String, default: "" },
+        url: { type: String, required: true }, // Cloudinary secure URL
+        publicId: { type: String, default: "" }, // Cloudinary public_id (for deletion)
+        fileType: { type: String, default: "" }, // MIME type
+        fileSize: { type: Number, default: 0 }, // bytes
+        // Revision tracking: the first upload of a document is version 1; a
+        // re-uploaded/updated file bumps the version so history is preserved.
+        version: { type: Number, default: 1 },
+        uploadedById: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+        uploadedByName: { type: String, default: "" },
+        uploadedAt: { type: Date, default: Date.now },
     },
     { _id: true },
 )
@@ -224,6 +255,14 @@ const managedServiceBriefSchema = new mongoose.Schema(
         },
         // High level summary / objectives the corporate wants
         summary: { type: String, default: "" },
+        // Free-form comments / special requirements the customer wants to add.
+        // The detailed requirement itself lives in the uploaded documents; this
+        // is just extra context that doesn't belong in a file.
+        comments: { type: String, default: "" },
+        // Uploaded requirement documents (Excel, PDF, Word, CSV, images, etc.).
+        // These stay attached to the request for future reference; revised
+        // versions are appended so history is preserved.
+        documents: [briefDocumentSchema],
         serviceStartDate: { type: Date, default: null },
         // SLA / service-level expectations the partner commits to. Used to compute
         // on-time %, overdue items, and completion health on the dashboard.
@@ -248,11 +287,30 @@ const managedServiceBriefSchema = new mongoose.Schema(
     { timestamps: true },
 )
 
-// One brief per quotation and one brief per contract. Sparse so the many
-// documents that legitimately have a null contractId (still at quote stage)
-// don't collide on the unique index.
-managedServiceBriefSchema.index({ quotationId: 1 }, { unique: true, sparse: true })
-managedServiceBriefSchema.index({ contractId: 1 }, { unique: true, sparse: true })
+// One brief per quotation and one brief per contract.
+//
+// IMPORTANT: we use PARTIAL (not sparse) unique indexes. Both ids default to
+// `null` at quote-request stage, and a sparse index only ignores documents
+// where the field is ABSENT — not where it is explicitly `null`. That made the
+// first null-contract brief insert fine while every subsequent one collided
+// with `E11000 dup key { contractId: null }`. A partial index that only covers
+// documents whose id is a real ObjectId lets unlimited quote-stage briefs
+// (id === null) coexist while still enforcing one brief per real quotation /
+// contract.
+managedServiceBriefSchema.index(
+    { quotationId: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { quotationId: { $type: "objectId" } },
+    },
+)
+managedServiceBriefSchema.index(
+    { contractId: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { contractId: { $type: "objectId" } },
+    },
+)
 managedServiceBriefSchema.index({ corporateOwnerId: 1 })
 managedServiceBriefSchema.index({ b2bPartnerId: 1 })
 

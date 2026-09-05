@@ -2,17 +2,33 @@ import CommissionSettings from "../models/CommissionSettings.js"
 import User from "../models/User.js"
 import Contract from "../models/Contract.js"
 import AdminNegotiation from "../models/AdminNegotiation.js"
-import { DEFAULT_COMMISSION_PERCENTAGE } from "../Services/HelperUtilities.js"
+import {
+    DEFAULT_COMMISSION_PERCENTAGE,
+    DEFAULT_NEGOTIATION_COMMISSION_RATE,
+} from "../Services/HelperUtilities.js"
 
 // Which custom-rate types are valid for each role. Mirrors the calculation logic:
 // B2C Partner earns on bookings & monthly passes, B2B Partner on contracts AND
 // EMI payments (EMI commission is deducted from the B2B Partner's installment
 // payout), and Corporate on negotiations.
+//
+// School roles mirror their business-family counterparts exactly:
+//   SCHOOL_CUSTOMER behaves like CORPORATE (demand side -> negotiation commission)
+//   SCHOOL_PARTNER  behaves like B2B_PARTNER (supply side -> contract + EMI commission)
 const RATE_TYPES_BY_ROLE = {
     B2C_PARTNER: ["BOOKING", "MONTHLY_PASS"],
     B2B_PARTNER: ["CONTRACT", "EMI"],
     CORPORATE: ["NEGOTIATION"],
+    SCHOOL_PARTNER: ["CONTRACT", "EMI"],
+    SCHOOL_CUSTOMER: ["NEGOTIATION"],
 }
+
+// Every role that participates in the commission system. Used for the Admin
+// Commission Management listing so School users appear alongside the others.
+const COMMISSION_ROLES = ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER", "SCHOOL_CUSTOMER", "SCHOOL_PARTNER"]
+
+// Roles that are charged an EMI commission on each installment payout.
+const EMI_COMMISSION_ROLES = ["B2B_PARTNER", "SCHOOL_PARTNER"]
 
 /**
  * Validate that every custom rate type provided is applicable to the given role.
@@ -40,10 +56,15 @@ export const getUsersWithSettings = async (req, res) => {
     try {
         const { role, search, page = 1, limit = 50 } = req.query
 
-        // Build user query
+        // Build user query.
+        // NOTE: `status` defaults to "PENDING" on registration, so restricting this
+        // to ACTIVE hid every freshly-registered user (this is why School Customer /
+        // School Partner accounts never showed up in Commission Management). Admin
+        // must be able to configure commission for pending accounts too, so we only
+        // exclude SUSPENDED users.
         const userQuery = {
-            role: { $in: ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"] },
-            status: "ACTIVE",
+            role: { $in: COMMISSION_ROLES },
+            status: { $ne: "SUSPENDED" },
         }
 
         if (role && role !== "ALL") {
@@ -79,10 +100,14 @@ export const getUsersWithSettings = async (req, res) => {
             const setting = settingsMap[user._id.toString()]
             return {
                 ...user.toObject(),
+                // `hasCustomSettings` lets the UI distinguish "Admin has configured
+                // this user" from "falling back to platform defaults".
+                hasCustomSettings: Boolean(setting),
                 commissionSettings: setting || {
                     defaultCommissionRate: DEFAULT_COMMISSION_PERCENTAGE,
                     customRates: [],
-                    negotiationCommissionRate: 25,
+                    negotiationCommissionRate: DEFAULT_NEGOTIATION_COMMISSION_RATE,
+                    isDefault: true,
                 },
             }
         })
@@ -147,7 +172,7 @@ export const getAllCommissionSettings = async (req, res) => {
         // Get users without commission settings (to show defaults)
         const usersWithSettings = settings.map((s) => s.userId?._id?.toString())
         const usersWithoutSettings = await User.find({
-            role: { $in: ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"] },
+            role: { $in: COMMISSION_ROLES },
             _id: { $nin: usersWithSettings },
         })
             .select("fullName email companyName role status")
@@ -230,6 +255,37 @@ const COMMISSION_META_BY_ROLE = {
             },
         },
     },
+    // School Partner mirrors B2B Partner (supply side): contract + EMI commission.
+    SCHOOL_PARTNER: {
+        primaryLabel: "Contract Commission",
+        primaryRateField: "defaultCommissionRate",
+        primaryDescription:
+            "Charged by Admin when a School Customer pays for a contract (Standard Payment or EMI). Calculated on the advance/contract payment amount.",
+        types: {
+            CONTRACT: {
+                label: "Contract Commission",
+                description: "Commission on contract payments made by a School Customer.",
+            },
+            EMI: {
+                label: "EMI Commission",
+                description:
+                    "Commission deducted from your payout on each EMI installment a School Customer pays.",
+            },
+        },
+    },
+    // School Customer mirrors Corporate (demand side): negotiation commission.
+    SCHOOL_CUSTOMER: {
+        primaryLabel: "Negotiation Commission",
+        primaryRateField: "negotiationCommissionRate",
+        primaryDescription:
+            "Charged by Admin when Admin negotiates a price reduction on your behalf. Calculated as a percentage of the savings achieved through negotiation.",
+        types: {
+            NEGOTIATION: {
+                label: "Negotiation Commission",
+                description: "Commission on the savings achieved through Admin negotiation.",
+            },
+        },
+    },
 }
 
 /**
@@ -261,7 +317,9 @@ export const getMyCommission = async (req, res) => {
         // Resolve the primary/default commission rate for this role.
         const primaryRate =
             settings?.[meta.primaryRateField] ??
-            (meta.primaryRateField === "negotiationCommissionRate" ? 25 : DEFAULT_COMMISSION_PERCENTAGE)
+            (meta.primaryRateField === "negotiationCommissionRate"
+                ? DEFAULT_NEGOTIATION_COMMISSION_RATE
+                : DEFAULT_COMMISSION_PERCENTAGE)
 
         // Build the list of custom (time-bound) rules that apply to this role,
         // enriched with status (active / scheduled / expired) for the period.
@@ -286,9 +344,9 @@ export const getMyCommission = async (req, res) => {
             })
             .sort((a, b) => new Date(b.effectiveFrom || 0) - new Date(a.effectiveFrom || 0))
 
-        // EMI settings only relevant to B2B partners.
+        // EMI settings only relevant to supply-side partners (B2B / School Partner).
         const emiSettings =
-            user.role === "B2B_PARTNER" && settings?.emiCommissionSettings
+            EMI_COMMISSION_ROLES.includes(user.role) && settings?.emiCommissionSettings
                 ? settings.emiCommissionSettings
                 : null
 
@@ -351,7 +409,7 @@ export const getCommissionSettingsByUser = async (req, res) => {
                 role: user.role,
                 defaultCommissionRate: DEFAULT_COMMISSION_PERCENTAGE,
                 customRates: [],
-                negotiationCommissionRate: 25,
+                negotiationCommissionRate: DEFAULT_NEGOTIATION_COMMISSION_RATE,
                 isDefault: true,
                 rateHistory: [],
             }
@@ -419,7 +477,7 @@ export const createCommissionSettings = async (req, res) => {
             role: user.role,
             defaultCommissionRate: defaultCommissionRate ?? DEFAULT_COMMISSION_PERCENTAGE,
             customRates: customRates || [],
-            negotiationCommissionRate: negotiationCommissionRate ?? 25,
+            negotiationCommissionRate: negotiationCommissionRate ?? DEFAULT_NEGOTIATION_COMMISSION_RATE,
             setBy: req.userId,
             notes,
             rateHistory: [
@@ -507,7 +565,7 @@ export const updateCommissionSettings = async (req, res) => {
                 role: user.role,
                 defaultCommissionRate: defaultCommissionRate ?? DEFAULT_COMMISSION_PERCENTAGE,
                 customRates: customRates || [],
-                negotiationCommissionRate: negotiationCommissionRate ?? 25,
+                negotiationCommissionRate: negotiationCommissionRate ?? DEFAULT_NEGOTIATION_COMMISSION_RATE,
                 setBy: req.userId,
                 notes,
                 rateHistory: [

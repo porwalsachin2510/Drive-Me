@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken"
 import User from "../models/User.js"
 import Contract from "../models/Contract.js"
+import { isCustomerRole, isPartnerRole } from "../utils/roleFamilies.js"
 
 export const verifyToken = (req, res, next) => {
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1]
@@ -78,7 +79,9 @@ export const checkCommuterRole = async (req, res, next) => {
 // END: NEW MIDDLEWARE TO CHECK COMMUTER ROLE
 
 export const checkFleetOwnerRole = (req, res, next) => {
-    if (req.userRole !== "B2B_PARTNER") {
+    // Accepts the whole partner family (B2B_PARTNER + SCHOOL_PARTNER) so school
+    // partners reuse the same managed-service pipeline as corporate B2B partners.
+    if (!isPartnerRole(req.userRole)) {
         return res.status(403).json({
             success: false,
             message: "Access denied. Only fleet owners can access this resource.",
@@ -98,7 +101,8 @@ export const checkB2CPartnerRole = (req, res, next) => {
 }
 
 export const checkB2BPartnerRole = (req, res, next) => {
-    if (req.userRole !== "B2B_PARTNER") {
+    // Accepts B2B_PARTNER + SCHOOL_PARTNER (same partner family).
+    if (!isPartnerRole(req.userRole)) {
         return res.status(403).json({
             success: false,
             message: "Access denied. Only B2B partners can access this resource.",
@@ -108,7 +112,9 @@ export const checkB2BPartnerRole = (req, res, next) => {
 }
 
 export const checkCorporateOwnerRole = (req, res, next) => {
-    if (req.userRole !== "CORPORATE") {
+    // Accepts CORPORATE + SCHOOL_CUSTOMER (same customer family). School
+    // customers reuse the corporate managed-service pipeline end-to-end.
+    if (!isCustomerRole(req.userRole)) {
         return res.status(403).json({
             success: false,
             message: "Access denied. Only corporate owners can access this resource.",
@@ -128,7 +134,7 @@ export const checkAdminRole = (req, res, next) => {
 }
 
 export const checkDriverRole = (req, res, next) => {
-    const driverRoles = ["B2C_PARTNER_DRIVER", "B2B_PARTNER_DRIVER", "CORPORATE_DRIVER", "B2C_PARTNER"];
+    const driverRoles = ["B2C_PARTNER_DRIVER", "B2B_PARTNER_DRIVER", "CORPORATE_DRIVER", "B2C_PARTNER", "SCHOOL_PARTNER_DRIVER", "SCHOOL_CUSTOMER_DRIVER"];
     if (!driverRoles.includes(req.userRole)) {
         return res.status(403).json({
             success: false,
@@ -139,10 +145,13 @@ export const checkDriverRole = (req, res, next) => {
 }
 
 export const checkCorporateEmployeeRole = (req, res, next) => {
-    if (req.userRole !== "CORPORATE_EMPLOYEE") {
+    // Passengers of BOTH customer segments ride the same managed-service
+    // pipeline: a CORPORATE's employees (CORPORATE_EMPLOYEE) and a
+    // SCHOOL_CUSTOMER's students (SCHOOL_STUDENT). Admit both.
+    if (!["CORPORATE_EMPLOYEE", "SCHOOL_STUDENT"].includes(req.userRole)) {
         return res.status(403).json({
             success: false,
-            message: "Access denied. Only corporate employees can access this resource.",
+            message: "Access denied. Only managed-service passengers can access this resource.",
         })
     }
     next()
@@ -193,8 +202,19 @@ export const checkFinanceRole = (req, res, next) => {
 }
 
 export const requireRole = (roles) => {
+    // Expand corporate/partner families so any route that allows "CORPORATE"
+    // also allows "SCHOOL_CUSTOMER", and any route that allows "B2B_PARTNER"
+    // also allows "SCHOOL_PARTNER". School users share the managed-service
+    // pipeline, so route-level allowlists stay in sync without per-line edits.
+    const expanded = new Set(roles)
+    if (expanded.has("CORPORATE")) expanded.add("SCHOOL_CUSTOMER")
+    if (expanded.has("B2B_PARTNER")) expanded.add("SCHOOL_PARTNER")
+    // Driver families mirror their owners.
+    if (expanded.has("B2B_PARTNER_DRIVER")) expanded.add("SCHOOL_PARTNER_DRIVER")
+    if (expanded.has("CORPORATE_DRIVER")) expanded.add("SCHOOL_CUSTOMER_DRIVER")
+
     return (req, res, next) => {
-        if (!roles.includes(req.userRole)) {
+        if (!expanded.has(req.userRole)) {
             return res.status(403).json({
                 success: false,
                 message: "Unauthorized access",
@@ -222,7 +242,7 @@ export const requireRole = (roles) => {
  */
 export const resolveCorporateContext = async (req, res, next) => {
     try {
-        if (req.userRole === "B2B_PARTNER") {
+        if (isPartnerRole(req.userRole)) {
             const contractId =
                 req.body?.onBehalfContractId ||
                 req.query?.onBehalfContractId ||
@@ -260,7 +280,7 @@ export const resolveCorporateContext = async (req, res, next) => {
 
             // Impersonate the corporate's scope for downstream controllers
             req.actorId = req.userId
-            req.actingRole = "B2B_PARTNER"
+            req.actingRole = req.userRole
             req.userId = contract.corporateOwnerId.toString()
             req.onBehalfContractId = contractId
             req.onBehalfCorporateId = contract.corporateOwnerId.toString()

@@ -47,6 +47,7 @@ import settlementRoutes from "./routes/settlementRoutes.js"
 import corporateOperationsRoutes from "./routes/corporateOperationsRoutes.js"
 import managedServiceBriefRoutes from "./routes/managedServiceBriefRoutes.js"
 import managedServiceRoutes from "./routes/managedServiceRoutes.js"
+import extraServiceRequestRoutes from "./routes/extraServiceRequestRoutes.js"
 import geocodeRoutes from "./routes/geocodeRoutes.js"
 import driverLocationRoutes from "./routes/driverLocationRoutes.js"
 import corporateRoutes from "./routes/corporateRoutes.js"
@@ -844,6 +845,7 @@ app.use("/api/settlement", settlementRoutes)
 app.use("/api/corporate-operations", corporateOperationsRoutes)
 app.use("/api/managed-service-brief", managedServiceBriefRoutes)
 app.use("/api/managed-service", managedServiceRoutes)
+app.use("/api/extra-service-requests", extraServiceRequestRoutes)
 app.use("/api/geocode", geocodeRoutes)
 app.use("/api/corporate", corporateRoutes)
 app.use("/api/driver", driverLocationRoutes)

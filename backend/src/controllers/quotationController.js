@@ -5,6 +5,7 @@ import { createNotification as createNotificationService, sendAdminNotification,
 import User from "../models/User.js"
 import ManagedServiceBrief from "../models/ManagedServiceBrief.js"
 import { deriveServiceMode } from "../utils/operationContext.js"
+import { segmentTag, sameSegment, isCustomerRole, isPartnerRole } from "../utils/roleFamilies.js"
 
 /**
  * Sanitize an incoming Managed Service Brief payload so we only persist the
@@ -74,8 +75,28 @@ const sanitizeManagedBrief = (raw = {}) => {
             }))
         : []
 
+    // Uploaded requirement documents. These are already stored on Cloudinary by
+    // the upload endpoint before submit; here we just persist their descriptors
+    // (url/publicId/name/type) onto the brief. This is the primary way a customer
+    // now communicates its transportation requirement — there is no fixed form.
+    const documents = Array.isArray(raw.documents)
+        ? raw.documents
+            .filter((d) => d && String(d.url || "").trim())
+            .map((d) => ({
+                fileName: String(d.fileName || "").trim(),
+                url: String(d.url).trim(),
+                publicId: String(d.publicId || "").trim(),
+                fileType: String(d.fileType || "").trim(),
+                fileSize: Number(d.fileSize) || 0,
+                version: Number(d.version) > 0 ? Number(d.version) : 1,
+                uploadedByName: String(d.uploadedByName || "").trim(),
+            }))
+        : []
+
     return {
         summary: String(raw.summary || "").trim(),
+        comments: String(raw.comments || "").trim(),
+        documents,
         serviceStartDate: raw.serviceStartDate || null,
         sla: {
             targetCompletionDate: raw.sla?.targetCompletionDate || null,
@@ -119,6 +140,17 @@ const getUserName = async (userId) => {
     }
 }
 
+// Resolve a user's role so admin-facing notification copy can be tagged with
+// the correct business segment (CORPORATE vs SCHOOL_CUSTOMER / SCHOOL_PARTNER).
+const getUserRole = async (userId) => {
+    try {
+        const user = await User.findById(userId).select('role');
+        return user?.role || null;
+    } catch {
+        return null;
+    }
+}
+
 /**
  * Typed error for quotation-request validation problems so callers can map it
  * to the correct HTTP status instead of a generic 500.
@@ -157,6 +189,22 @@ const buildAndCreateQuotation = async ({
         throw new QuotationRequestError("Fleet owner and at least one vehicle are required")
     }
 
+    // Resolve persisted users before creating the quotation so every flow keeps
+    // the real customer/partner identities and cannot cross business segments.
+    const [customer, partner] = await Promise.all([
+        User.findById(corporateOwnerId).select("role fullName companyName email whatsappNumber phone"),
+        User.findById(fleetOwnerId).select("role fullName companyName businessName email whatsappNumber phone"),
+    ])
+    if (!customer || !isCustomerRole(customer.role)) {
+        throw new QuotationRequestError("Quotation requester is not a valid customer account")
+    }
+    if (!partner || !isPartnerRole(partner.role)) {
+        throw new QuotationRequestError("Quotation recipient is not a valid partner account")
+    }
+    if (!sameSegment(customer.role, partner.role)) {
+        throw new QuotationRequestError("Customer and partner must belong to the same business segment")
+    }
+
     if (!rentalPeriod || !rentalPeriod.startDate || !rentalPeriod.endDate || !rentalPeriod.durationType) {
         throw new QuotationRequestError("Complete rental period information is required")
     }
@@ -171,21 +219,20 @@ const buildAndCreateQuotation = async ({
             ? requestedMode
             : await deriveServiceMode(vehicles)
 
-    // For MANAGED-service requests the corporate MUST hand the partner an
-    // operations brief (work locations & shifts + the routes to operate)
-    // BEFORE the partner prices anything.
+    // For MANAGED-service requests the corporate hands the partner a service
+    // brief BEFORE the partner prices anything. Every customer prepares its
+    // transportation requirement differently, so we do NOT enforce a fixed
+    // template: the customer attaches its requirement document(s) and/or a short
+    // summary and comments. We only require that SOMETHING was provided — at
+    // least one uploaded document or a written summary — so the partner has a
+    // requirement to price against.
     let cleanBrief = null
     if (serviceMode === "MANAGED") {
         cleanBrief = sanitizeManagedBrief(managedServiceBrief || {})
 
-        if (cleanBrief.workLocations.length === 0) {
+        if (cleanBrief.documents.length === 0 && !cleanBrief.summary) {
             throw new QuotationRequestError(
-                "Add at least one work location & shift to the service brief before requesting a managed-service quotation.",
-            )
-        }
-        if (cleanBrief.routeRequests.length === 0) {
-            throw new QuotationRequestError(
-                "Add at least one route / coverage request to the service brief so the partner knows which routes to operate before quoting.",
+                "Add your transportation requirement before requesting a managed-service quotation — upload at least one requirement document or write a short summary of what you need.",
             )
         }
     }
@@ -225,6 +272,8 @@ const buildAndCreateQuotation = async ({
             status: "SUBMITTED",
             submittedAt: new Date(),
             summary: cleanBrief.summary,
+            comments: cleanBrief.comments,
+            documents: cleanBrief.documents,
             serviceStartDate: cleanBrief.serviceStartDate,
             sla: cleanBrief.sla,
             pointOfContact: cleanBrief.pointOfContact,
@@ -236,7 +285,7 @@ const buildAndCreateQuotation = async ({
 
     if (notify) {
         const briefSummaryText = createdBrief
-            ? ` It includes an operations brief: ${createdBrief.routeRequests.length} route request(s), ${createdBrief.workLocations.length} work location(s) and ${createdBrief.employeeRoster.length} employee(s). Review it before you quote.`
+            ? ` It includes a service brief${createdBrief.documents?.length ? ` with ${createdBrief.documents.length} attached requirement document(s)` : ""}. Review it before you quote.`
             : ""
 
         // Create notification for fleet owner (B2B_PARTNER)
@@ -272,9 +321,11 @@ const buildAndCreateQuotation = async ({
 
         // Send notification to ADMIN
         const fleetName = await getUserName(fleetOwnerId)
+        const customerRole = await getUserRole(corporateOwnerId)
+        const partnerRole = await getUserRole(fleetOwnerId)
         await sendAdminNotification(
             "New Quotation Request",
-            `${corporateName} (CORPORATE) requested quotation for ${totalQty} vehicle(s) from ${fleetName} (B2B_PARTNER)`,
+            `${corporateName} (${segmentTag(customerRole)}) requested quotation for ${totalQty} vehicle(s) from ${fleetName} (${segmentTag(partnerRole)})`,
             "QUOTATION_REQUEST",
             { quotationId: quotation._id, corporateId: corporateOwnerId, fleetOwnerId, vehicleCount: totalQty },
         )
@@ -300,8 +351,8 @@ export const requestQuotation = async (req, res) => {
 
         // Populate the quotation with related data
         const populatedQuotation = await Quotation.findById(quotation._id)
-            .populate("corporateOwnerId", "fullName companyName email whatsappNumber")
-            .populate("fleetOwnerId", "fullName businessName email whatsappNumber")
+            .populate("corporateOwnerId", "fullName companyName email whatsappNumber role userType")
+            .populate("fleetOwnerId", "fullName businessName email whatsappNumber role userType")
             .populate("vehicles.vehicleId", "vehicleName vehicleCategory serviceType location capacity pricing photos")
 
         res.status(201).json({
@@ -419,7 +470,7 @@ export const createGroupedQuotations = async (req, res) => {
         await group.save()
 
         const populatedQuotations = await Quotation.find({ requestGroupId: group._id })
-            .populate("fleetOwnerId", "fullName businessName email whatsappNumber")
+            .populate("fleetOwnerId", "fullName businessName email whatsappNumber role userType")
             .populate("vehicles.vehicleId", "vehicleName vehicleCategory serviceType location capacity pricing photos")
 
         return res.status(201).json({
@@ -468,7 +519,7 @@ export const getCorporateRequestGroups = async (req, res) => {
 
         const groupIds = groups.map((g) => g._id)
         const childQuotations = await Quotation.find({ requestGroupId: { $in: groupIds } })
-            .populate("fleetOwnerId", "fullName businessName email whatsappNumber")
+            .populate("fleetOwnerId", "fullName businessName email whatsappNumber role userType")
             .populate("vehicles.vehicleId", "vehicleName vehicleCategory serviceType location capacity pricing photos")
             .lean()
 
@@ -530,7 +581,7 @@ export const getCorporateOwnerQuotations = async (req, res) => {
         const quotations = await Quotation.find(filter)
             .populate({
                 path: "fleetOwnerId",
-                select: "fullName email phone companyName",
+                select: "fullName email phone companyName role userType",
             })
             .populate({
                 path: "vehicles.vehicleId",
@@ -743,7 +794,7 @@ export const getCorporateOwnerQuotationById = async (req, res) => {
         })
             .populate({
                 path: "fleetOwnerId",
-                select: "fullName email companyName whatsappNumber acceptedPaymentMethods",
+                select: "fullName email companyName businessName whatsappNumber acceptedPaymentMethods role userType phone companyAddress nationality",
             })
             .populate({
                 path: "vehicles.vehicleId",
@@ -848,8 +899,10 @@ export const corporateDecisionOnQuotation = async (req, res) => {
         // Get names for notifications
         const corporateName = await getUserName(corporateOwnerId);
         const fleetName = quotation.fleetOwnerId?.fullName || quotation.fleetOwnerId?.companyName || 'Fleet Owner';
+        const customerRole = req.userRole || (await getUserRole(corporateOwnerId));
+        const partnerRole = quotation.fleetOwnerId?.role || (await getUserRole(quotation.fleetOwnerId?._id));
 
-        // Notify B2B_PARTNER about corporate's decision
+        // Notify partner (B2B_PARTNER / SCHOOL_PARTNER) about customer's decision
         if (decision === "accept") {
             await createNotification(
                 quotation.fleetOwnerId._id,
@@ -881,7 +934,7 @@ export const corporateDecisionOnQuotation = async (req, res) => {
             // Notify ADMIN
             await sendAdminNotification(
                 "Quotation Accepted",
-                `${corporateName} (CORPORATE) accepted quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'} from ${fleetName} (B2B_PARTNER)`,
+                `${corporateName} (${segmentTag(customerRole)}) accepted quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'} from ${fleetName} (${segmentTag(partnerRole)})`,
                 "QUOTATION_ACCEPTED",
                 { quotationId: quotation._id, corporateId: corporateOwnerId, fleetOwnerId: quotation.fleetOwnerId._id }
             );
@@ -914,8 +967,8 @@ export const corporateDecisionOnQuotation = async (req, res) => {
 
             // Notify ADMIN
             await sendAdminNotification(
-                "Quotation Rejected by Corporate",
-                `${corporateName} (CORPORATE) rejected quotation from ${fleetName} (B2B_PARTNER). Reason: ${message || 'No reason provided'}`,
+                customerRole === "SCHOOL_CUSTOMER" ? "Quotation Rejected by School Customer" : "Quotation Rejected by Corporate",
+                `${corporateName} (${segmentTag(customerRole)}) rejected quotation from ${fleetName} (${segmentTag(partnerRole)}). Reason: ${message || 'No reason provided'}`,
                 "QUOTATION_REJECTED",
                 { quotationId: quotation._id, corporateId: corporateOwnerId, fleetOwnerId: quotation.fleetOwnerId._id }
             );
@@ -949,7 +1002,7 @@ export const fetchFleetQuotations = async (req, res) => {
         const quotations = await Quotation.find({ fleetOwnerId })
             .populate({
                 path: "corporateOwnerId",
-                select: "fullName email companyName whatsappNumber nationality companyAddress",
+                select: "fullName email companyName whatsappNumber nationality companyAddress role userType",
             })
             .populate({
                 path: "vehicles.vehicleId",
@@ -1033,7 +1086,7 @@ export const respondToQuotation = async (req, res) => {
             })
             .populate({
                 path: "corporateOwnerId",
-                select: "fullName email companyName whatsappNumber",
+                select: "fullName email companyName whatsappNumber role userType",
             })
 
         if (!quotation) {
@@ -1217,7 +1270,7 @@ export const respondToQuotation = async (req, res) => {
         await quotation.populate([
             {
                 path: "corporateOwnerId",
-                select: "fullName email companyName whatsappNumber",
+                select: "fullName email companyName whatsappNumber role userType",
             },
             {
                 path: "vehicles.vehicleId",
@@ -1225,9 +1278,13 @@ export const respondToQuotation = async (req, res) => {
             },
         ])
 
-        // Send notification to CORPORATE user about quotation response
+        // Send notification to the customer about the quotation response
         const fleetName = await getUserName(fleetOwnerId);
         const corporateName = quotation.corporateOwnerId?.companyName || quotation.corporateOwnerId?.fullName || 'Corporate';
+        const customerRole = quotation.corporateOwnerId?.role;
+        const partnerRole = req.userRole || (await getUserRole(fleetOwnerId));
+        // Segment-aware noun for "request from another <partner>" copy.
+        const otherPartnerNoun = partnerRole === "SCHOOL_PARTNER" ? "school partner" : "fleet owner";
 
         const isPartialOffer = quotation.fulfillment?.type === "PARTIAL"
         const partialNote = isPartialOffer
@@ -1265,7 +1322,7 @@ export const respondToQuotation = async (req, res) => {
             // Send to ADMIN
             await sendAdminNotification(
                 "Quotation Sent",
-                `${fleetName} (B2B_PARTNER) sent quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'} to ${corporateName} (CORPORATE)`,
+                `${fleetName} (${segmentTag(partnerRole)}) sent quotation of ${quotation.quotedPrice?.totalAmount || 'N/A'} ${quotation.quotedPrice?.currency || 'AED'} to ${corporateName} (${segmentTag(customerRole)})`,
                 "QUOTATION_RESPONSE",
                 { quotationId: quotation._id, fleetOwnerId, corporateId: quotation.corporateOwnerId._id, amount: quotation.quotedPrice?.totalAmount }
             );
@@ -1284,7 +1341,7 @@ export const respondToQuotation = async (req, res) => {
                 userId: quotation.corporateOwnerId._id,
                 type: "QUOTATION_REJECTED",
                 title: "Quotation Request Rejected",
-                message: `${fleetName} has declined your quotation request. Reason: ${message}. You can request from another fleet owner.`,
+                message: `${fleetName} has declined your quotation request. Reason: ${message}. You can request from another ${otherPartnerNoun}.`,
                 metadata: {
                     quotationId: quotation._id,
                     quotationNumber: quotation.quotationNumber,
@@ -1297,8 +1354,8 @@ export const respondToQuotation = async (req, res) => {
 
             // Send to ADMIN
             await sendAdminNotification(
-                "Quotation Rejected by Fleet Owner",
-                `${fleetName} (B2B_PARTNER) rejected quotation request from ${corporateName} (CORPORATE). Reason: ${message}`,
+                partnerRole === "SCHOOL_PARTNER" ? "Quotation Rejected by School Partner" : "Quotation Rejected by Fleet Owner",
+                `${fleetName} (${segmentTag(partnerRole)}) rejected quotation request from ${corporateName} (${segmentTag(customerRole)}). Reason: ${message}`,
                 "QUOTATION_REJECTED",
                 { quotationId: quotation._id, fleetOwnerId, corporateId: quotation.corporateOwnerId._id }
             );
@@ -1385,12 +1442,17 @@ export const negotiateQuotation = async (req, res) => {
 
         await quotation.save()
 
-        // Create notification for fleet owner (B2B_PARTNER)
+        // Resolve segments so copy matches the school vs corporate flow.
+        const customerRole = req.userRole || (await getUserRole(corporateOwnerId));
+        const partnerRole = await getUserRole(quotation.fleetOwnerId);
+        const customerLabel = customerRole === "SCHOOL_CUSTOMER" ? "School customer" : "Corporate owner";
+
+        // Create notification for the partner (B2B_PARTNER / SCHOOL_PARTNER)
         await createNotification(
             quotation.fleetOwnerId,
             "QUOTATION_NEGOTIATION",
             "Quotation Counter Offer",
-            `Corporate owner has submitted a counter offer of ${counterOffer.totalAmount} for quotation ${quotation.quotationNumber}`,
+            `${customerLabel} has submitted a counter offer of ${counterOffer.totalAmount} for quotation ${quotation.quotationNumber}`,
             quotation._id,
             "QUOTATION",
         )
@@ -1402,14 +1464,14 @@ export const negotiateQuotation = async (req, res) => {
         // Notify ADMIN about negotiation
         await sendAdminNotification(
             "Quotation Counter Offer",
-            `${corporateName} (CORPORATE) submitted counter offer of ${counterOffer.totalAmount} to ${fleetName} (B2B_PARTNER) for quotation ${quotation.quotationNumber}`,
+            `${corporateName} (${segmentTag(customerRole)}) submitted counter offer of ${counterOffer.totalAmount} to ${fleetName} (${segmentTag(partnerRole)}) for quotation ${quotation.quotationNumber}`,
             "QUOTATION_NEGOTIATION",
             { quotationId: quotation._id, corporateId: corporateOwnerId, fleetOwnerId: quotation.fleetOwnerId, counterOffer: counterOffer.totalAmount }
         );
 
         const populatedQuotation = await Quotation.findById(quotation._id)
-            .populate("corporateOwnerId", "fullName companyName email whatsappNumber")
-            .populate("fleetOwnerId", "fullName email whatsappNumber")
+.populate("corporateOwnerId", "fullName companyName email whatsappNumber role userType phone companyAddress nationality")
+  .populate("fleetOwnerId", "fullName companyName businessName email whatsappNumber role userType phone companyAddress nationality")
             .populate("vehicles.vehicleId", "vehicleName vehicleCategory pricing")
 
         res.status(200).json({
@@ -1443,7 +1505,7 @@ export const getFleetQuotationById = async (req, res) => {
         })
             .populate({
                 path: "corporateOwnerId",
-                select: "fullName email companyName whatsappNumber nationality companyAddress tradeLicense",
+                select: "fullName email companyName whatsappNumber nationality companyAddress tradeLicense role userType phone businessName",
             })
             .populate({
                 path: "vehicles.vehicleId",

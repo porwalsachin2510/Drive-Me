@@ -35,6 +35,8 @@ const DAYS_HINT = "e.g. MON, TUE, WED, THU, FRI";
 const emptyBrief = {
   status: "DRAFT",
   summary: "",
+  comments: "",
+  documents: [],
   serviceStartDate: "",
   sla: { targetCompletionDate: "", fulfillmentSlaHours: 72 },
   pointOfContact: { name: "", phone: "", email: "" },
@@ -110,6 +112,14 @@ const toArr = (str) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
+const humanFileSize = (bytes) => {
+  const n = Number(bytes) || 0;
+  if (n <= 0) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 // Format an amount in the contract's own currency. Kuwait uses KWD (3 decimal
 // places, the local convention), UAE uses AED, etc. We rely on Intl so the
 // right symbol/formatting is shown for whichever GCC market the contract is in.
@@ -157,6 +167,11 @@ const ManagedServiceBrief = ({
   const [notice, setNotice] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const rosterFileRef = useRef(null);
+  // Requirement-document upload (corporate side, contract-stage board).
+  const docFileRef = useRef(null);
+  const reviseDocRef = useRef(null);
+  const [docUploading, setDocUploading] = useState(false);
+  const [revisingDocIndex, setRevisingDocIndex] = useState(null);
   // Map picker state: { kind: "work" | "pickup", index }. null = closed.
   const [picker, setPicker] = useState(null);
   // Partner bulk-create state (contract stage only).
@@ -187,6 +202,8 @@ const ManagedServiceBrief = ({
           },
           pointOfContact: b.pointOfContact || emptyBrief.pointOfContact,
           partnerResponse: b.partnerResponse || emptyBrief.partnerResponse,
+          comments: b.comments || "",
+          documents: b.documents || [],
           workLocations: b.workLocations || [],
           routeRequests: b.routeRequests || [],
           employeeRoster: b.employeeRoster || [],
@@ -332,6 +349,8 @@ const ManagedServiceBrief = ({
       setNotice("");
       const payload = {
         summary: brief.summary,
+        comments: brief.comments,
+        documents: brief.documents,
         serviceStartDate: brief.serviceStartDate || null,
         sla: {
           targetCompletionDate: brief.sla?.targetCompletionDate || null,
@@ -410,6 +429,87 @@ const ManagedServiceBrief = ({
       setSaving(false);
     }
   };
+
+  /* -------------------- Requirement document upload ------------------- */
+  // Upload requirement files to Cloudinary via the brief upload endpoint, then
+  // append/replace them on the brief in local state. The corporate must click
+  // "Save draft" afterwards to persist (same pattern as the map pins).
+  const uploadBriefDocs = async (files) => {
+    const formData = new FormData();
+    for (const file of files) formData.append("documents", file);
+    const res = await api.post(
+      "/managed-service-brief/upload-documents",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    if (!res.data?.success) {
+      throw new Error(res.data?.message || "Upload failed.");
+    }
+    return res.data.data.documents || [];
+  };
+
+  const handleAddBriefDocuments = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    try {
+      setError(null);
+      setDocUploading(true);
+      const uploaded = await uploadBriefDocs(files);
+      setBrief((prev) => ({
+        ...prev,
+        documents: [...(prev.documents || []), ...uploaded],
+      }));
+      setNotice(
+        `${uploaded.length} document(s) attached. Click "Save draft" to persist.`,
+      );
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not upload the document.",
+      );
+    } finally {
+      setDocUploading(false);
+    }
+  };
+
+  const handleReviseBriefDocument = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    const index = revisingDocIndex;
+    setRevisingDocIndex(null);
+    if (!file || index == null) return;
+    try {
+      setError(null);
+      setDocUploading(true);
+      const [uploaded] = await uploadBriefDocs([file]);
+      if (!uploaded) return;
+      setBrief((prev) => {
+        const next = [...(prev.documents || [])];
+        const prevVersion = Number(next[index]?.version) || 1;
+        next[index] = { ...uploaded, version: prevVersion + 1 };
+        return { ...prev, documents: next };
+      });
+      setNotice(
+        'Revised version uploaded. Click "Save draft" to persist the change.',
+      );
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not upload the revised version.",
+      );
+    } finally {
+      setDocUploading(false);
+    }
+  };
+
+  const removeBriefDocument = (index) =>
+    setBrief((prev) => ({
+      ...prev,
+      documents: (prev.documents || []).filter((_, i) => i !== index),
+    }));
 
   /* ---------------------- Roster Excel / CSV bulk import ------------------- */
   const handleRosterImport = async (e) => {
@@ -1104,786 +1204,110 @@ const ManagedServiceBrief = ({
         )}
       </div>
 
-      {/* Work locations & shifts */}
+      {/* Requirement documents & comments (customer-supplied requirement) */}
       <div className="msb-section">
         <div className="msb-section-head">
-          <h3>Work Locations &amp; Shifts</h3>
+          <h3>Requirement Document(s)</h3>
           {canEdit && (
-            <button
-              className="msb-btn secondary small"
-              onClick={() =>
-                addListItem("workLocations", {
-                  name: "",
-                  address: "",
-                  city: "",
-                  shifts: [],
-                })
-              }
-            >
-              + Add location
-            </button>
-          )}
-        </div>
-        <p className="msb-section-hint">
-          Where employees work and the shift timings the transport must cover.
-        </p>
-        {brief.workLocations.length === 0 && (
-          <p className="msb-empty">No work locations added yet.</p>
-        )}
-        {brief.workLocations.map((loc, i) => (
-          <div className="msb-item" key={loc._id || i}>
-            <div className="msb-item-head">
-              <span className="msb-item-title">
-                {loc.name || `Location ${i + 1}`}
-              </span>
-              {canEdit && (
-                <button
-                  className="msb-btn danger small"
-                  onClick={() => removeListItem("workLocations", i)}
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-            {canEdit ? (
-              <>
-                <div className="msb-grid">
-                  <div className="msb-field">
-                    <label>Location name</label>
-                    <input
-                      value={loc.name}
-                      onChange={(e) =>
-                        updateList("workLocations", i, { name: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>City</label>
-                    <input
-                      value={loc.city}
-                      onChange={(e) =>
-                        updateList("workLocations", i, { city: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="msb-field">
-                  <label>Address</label>
-                  <input
-                    value={loc.address}
-                    onChange={(e) =>
-                      updateList("workLocations", i, {
-                        address: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="msb-map-row">
-                  <button
-                    type="button"
-                    className="msb-btn secondary small"
-                    onClick={() => setPicker({ kind: "work", index: i })}
-                  >
-                    {loc.location?.lat != null
-                      ? "Edit office pin"
-                      : "Pin office on map"}
-                  </button>
-                  {loc.location?.lat != null && (
-                    <span className="msb-pin-status ok">
-                      Pinned · {loc.location.lat.toFixed(4)},{" "}
-                      {loc.location.lng.toFixed(4)}
-                    </span>
-                  )}
-                </div>
-                <div className="msb-section-head">
-                  <span className="msb-spec-label">Shifts</span>
-                  <button
-                    className="msb-btn secondary small"
-                    onClick={() =>
-                      updateList("workLocations", i, {
-                        shifts: [
-                          ...(loc.shifts || []),
-                          {
-                            label: "",
-                            loginTime: "",
-                            logoutTime: "",
-                            workingDays: [],
-                          },
-                        ],
-                      })
-                    }
-                  >
-                    + Add shift
-                  </button>
-                </div>
-                {(loc.shifts || []).map((sh, si) => (
-                  <div
-                    className="msb-grid"
-                    key={si}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <div className="msb-field">
-                      <label>Shift label</label>
-                      <input
-                        value={sh.label}
-                        onChange={(e) => {
-                          const shifts = [...loc.shifts];
-                          shifts[si] = { ...sh, label: e.target.value };
-                          updateList("workLocations", i, { shifts });
-                        }}
-                      />
-                    </div>
-                    <div className="msb-field">
-                      <label>Login</label>
-                      <input
-                        type="time"
-                        value={sh.loginTime}
-                        onChange={(e) => {
-                          const shifts = [...loc.shifts];
-                          shifts[si] = { ...sh, loginTime: e.target.value };
-                          updateList("workLocations", i, { shifts });
-                        }}
-                      />
-                    </div>
-                    <div className="msb-field">
-                      <label>Logout</label>
-                      <input
-                        type="time"
-                        value={sh.logoutTime}
-                        onChange={(e) => {
-                          const shifts = [...loc.shifts];
-                          shifts[si] = { ...sh, logoutTime: e.target.value };
-                          updateList("workLocations", i, { shifts });
-                        }}
-                      />
-                    </div>
-                    <div className="msb-field">
-                      <label>Working days ({DAYS_HINT})</label>
-                      <input
-                        value={(sh.workingDays || []).join(", ")}
-                        onChange={(e) => {
-                          const shifts = [...loc.shifts];
-                          shifts[si] = {
-                            ...sh,
-                            workingDays: toArr(e.target.value),
-                          };
-                          updateList("workLocations", i, { shifts });
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </>
-            ) : (
-              <>
-                <div className="msb-spec-row">
-                  <span className="msb-spec-label">Address</span>
-                  <span className="msb-spec-value">
-                    {[loc.address, loc.city].filter(Boolean).join(", ") || "—"}
-                  </span>
-                </div>
-                {loc.location?.lat != null && (
-                  <div className="msb-spec-row">
-                    <span className="msb-spec-label">Map pin</span>
-                    <span className="msb-spec-value">
-                      {loc.location.lat.toFixed(5)},{" "}
-                      {loc.location.lng.toFixed(5)}{" "}
-                      <a
-                        className="msb-map-link"
-                        href={`https://www.openstreetmap.org/?mlat=${loc.location.lat}&mlon=${loc.location.lng}#map=17/${loc.location.lat}/${loc.location.lng}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        View on map
-                      </a>
-                    </span>
-                  </div>
-                )}
-                {(loc.shifts || []).map((sh, si) => (
-                  <div className="msb-spec-row" key={si}>
-                    <span className="msb-spec-label">
-                      {sh.label || `Shift ${si + 1}`}
-                    </span>
-                    <span className="msb-spec-value">
-                      {sh.loginTime || "?"} – {sh.logoutTime || "?"}
-                      {sh.workingDays?.length
-                        ? ` · ${sh.workingDays.join(", ")}`
-                        : ""}
-                    </span>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Route requests */}
-      <div className="msb-section">
-        <div className="msb-section-head">
-          <h3>Route / Coverage Requests</h3>
-          {partnerCanOperate && pendingRouteCount > 0 && (
-            <button
-              className="msb-btn primary small"
-              onClick={openVehiclePicker}
-              disabled={bulkBusy}
-              title="Create all pending brief routes on one vehicle in one action"
-            >
-              {bulkBusy
-                ? "Working…"
-                : `Create all ${pendingRouteCount} route(s)`}
-            </button>
-          )}
-          {canEdit && (
-            <button
-              className="msb-btn secondary small"
-              onClick={() =>
-                addListItem("routeRequests", {
-                  label: "",
-                  fromArea: "",
-                  toWorkLocation: "",
-                  direction: "BOTH",
-                  stops: [],
-                  operatingDays: [],
-                  pickupWindowStart: "",
-                  pickupWindowEnd: "",
-                  headcount: 0,
-                  preferredVehicleType: "",
-                  notes: "",
-                  fulfillment: { status: "PENDING" },
-                })
-              }
-            >
-              + Add route
-            </button>
-          )}
-        </div>
-        <p className="msb-section-hint">
-          The routes you need the partner to operate — from a residential area
-          to a work location, with stops, timing windows and expected headcount.
-        </p>
-        {brief.routeRequests.length === 0 && (
-          <p className="msb-empty">No route requests added yet.</p>
-        )}
-        {brief.routeRequests.map((r, i) => (
-          <div className="msb-item" key={r._id || i}>
-            <div className="msb-item-head">
-              <span className="msb-item-title">
-                {r.label || `Route ${i + 1}`}
-              </span>
-              <span
-                className={`msb-fbadge ${r.fulfillment?.status?.toLowerCase() || "pending"}`}
-              >
-                {(r.fulfillment?.status || "PENDING").replace("_", " ")}
-              </span>
-            </div>
-
-            {canEdit ? (
-              <>
-                <div className="msb-grid">
-                  <div className="msb-field">
-                    <label>Route label</label>
-                    <input
-                      value={r.label}
-                      onChange={(e) =>
-                        updateList("routeRequests", i, {
-                          label: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>From area</label>
-                    <input
-                      value={r.fromArea}
-                      onChange={(e) =>
-                        updateList("routeRequests", i, {
-                          fromArea: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>To work location</label>
-                    <input
-                      value={r.toWorkLocation}
-                      onChange={(e) =>
-                        updateList("routeRequests", i, {
-                          toWorkLocation: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Direction</label>
-                    <select
-                      value={r.direction}
-                      onChange={(e) =>
-                        updateList("routeRequests", i, {
-                          direction: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="PICKUP">Pickup only</option>
-                      <option value="DROP">Drop only</option>
-                      <option value="BOTH">Both</option>
-                    </select>
-                  </div>
-                  <div className="msb-field">
-                    <label>Pickup window start</label>
-                    <input
-                      type="time"
-                      value={r.pickupWindowStart}
-                      onChange={(e) =>
-                        updateList("routeRequests", i, {
-                          pickupWindowStart: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Pickup window end</label>
-                    <input
-                      type="time"
-                      value={r.pickupWindowEnd}
-                      onChange={(e) =>
-                        updateList("routeRequests", i, {
-                          pickupWindowEnd: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Expected headcount</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={r.headcount}
-                      onChange={(e) =>
-                        updateList("routeRequests", i, {
-                          headcount: Number(e.target.value),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Preferred vehicle type</label>
-                    <input
-                      value={r.preferredVehicleType}
-                      onChange={(e) =>
-                        updateList("routeRequests", i, {
-                          preferredVehicleType: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="msb-field">
-                  <label>Stops (comma separated)</label>
-                  <input
-                    value={(r.stops || []).join(", ")}
-                    onChange={(e) =>
-                      updateList("routeRequests", i, {
-                        stops: toArr(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="msb-field">
-                  <label>Operating days ({DAYS_HINT})</label>
-                  <input
-                    value={(r.operatingDays || []).join(", ")}
-                    onChange={(e) =>
-                      updateList("routeRequests", i, {
-                        operatingDays: toArr(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="msb-field">
-                  <label>Notes</label>
-                  <textarea
-                    value={r.notes}
-                    onChange={(e) =>
-                      updateList("routeRequests", i, { notes: e.target.value })
-                    }
-                  />
-                </div>
-                <button
-                  className="msb-btn danger small"
-                  onClick={() => removeListItem("routeRequests", i)}
-                >
-                  Remove route
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="msb-spec-row">
-                  <span className="msb-spec-label">Coverage</span>
-                  <span className="msb-spec-value">
-                    {r.fromArea || "?"} → {r.toWorkLocation || "?"} (
-                    {r.direction})
-                  </span>
-                </div>
-                <div className="msb-spec-row">
-                  <span className="msb-spec-label">Timing</span>
-                  <span className="msb-spec-value">
-                    {r.pickupWindowStart || "?"} – {r.pickupWindowEnd || "?"}
-                    {r.operatingDays?.length
-                      ? ` · ${r.operatingDays.join(", ")}`
-                      : ""}
-                  </span>
-                </div>
-                <div className="msb-spec-row">
-                  <span className="msb-spec-label">Headcount</span>
-                  <span className="msb-spec-value">
-                    {r.headcount || 0}
-                    {r.preferredVehicleType
-                      ? ` · ${r.preferredVehicleType}`
-                      : ""}
-                  </span>
-                </div>
-                {r.stops?.length > 0 && (
-                  <div className="msb-spec-row">
-                    <span className="msb-spec-label">Stops</span>
-                    <span className="msb-chips">
-                      {r.stops.map((s, si) => (
-                        <span className="msb-chip" key={si}>
-                          {s}
-                        </span>
-                      ))}
-                    </span>
-                  </div>
-                )}
-                {r.notes && (
-                  <div className="msb-spec-row">
-                    <span className="msb-spec-label">Notes</span>
-                    <span className="msb-spec-value">{r.notes}</span>
-                  </div>
-                )}
-                {renderFulfillmentFooter("routeRequests", r)}
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Employee roster */}
-      <div className="msb-section">
-        <div className="msb-section-head">
-          <h3>Employee Roster &amp; Passes</h3>
-          {partnerCanOperate && pendingEmployeeCount > 0 && (
-            <button
-              className="msb-btn primary small"
-              onClick={handleBulkCreateEmployees}
-              disabled={bulkBusy}
-              title="Create all pending roster employees (invitations sent later)"
-            >
-              {bulkBusy
-                ? "Working…"
-                : `Create all ${pendingEmployeeCount} employee(s)`}
-            </button>
-          )}
-          {canEdit && (
-            <div className="msb-roster-actions">
+            <>
               <button
-                type="button"
-                className="msb-btn ghost small"
-                onClick={handleRosterTemplate}
+                className="msb-btn primary small"
+                onClick={() => docFileRef.current?.click()}
+                disabled={docUploading || saving}
               >
-                Download template
-              </button>
-              <button
-                type="button"
-                className="msb-btn secondary small"
-                onClick={() => rosterFileRef.current?.click()}
-              >
-                Import Excel/CSV
+                {docUploading ? "Uploading…" : "+ Upload document"}
               </button>
               <input
-                ref={rosterFileRef}
+                ref={docFileRef}
                 type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleRosterImport}
+                multiple
+                accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp"
                 style={{ display: "none" }}
+                onChange={handleAddBriefDocuments}
               />
-              <button
-                className="msb-btn secondary small"
-                onClick={() =>
-                  addListItem("employeeRoster", {
-                    name: "",
-                    email: "",
-                    phone: "",
-                    employeeCode: "",
-                    department: "",
-                    homeAddress: "",
-                    pickupArea: "",
-                    workLocation: "",
-                    shiftLabel: "",
-                    passMonths: 1,
-                    preferredRouteLabel: "",
-                    assignmentHint: "",
-                    fulfillment: { status: "PENDING" },
-                  })
-                }
-              >
-                + Add employee
-              </button>
-            </div>
+              <input
+                ref={reviseDocRef}
+                type="file"
+                accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp"
+                style={{ display: "none" }}
+                onChange={handleReviseBriefDocument}
+              />
+            </>
           )}
         </div>
         <p className="msb-section-hint">
-          Who to onboard, their pickup address, which route they should ride,
-          and how many months of pass to issue each of them. For large teams,
-          download the template, fill it in, and use Import Excel/CSV — then
-          save the draft.
+          The customer&apos;s transportation requirement, uploaded in its own
+          format. These files stay attached to the request for future reference.
         </p>
-        {brief.employeeRoster.length === 0 && (
-          <p className="msb-empty">No employees added yet.</p>
-        )}
-        {brief.employeeRoster.map((emp, i) => (
-          <div className="msb-item" key={emp._id || i}>
-            <div className="msb-item-head">
-              <span className="msb-item-title">
-                {emp.name || `Employee ${i + 1}`}
-              </span>
-              <span
-                className={`msb-fbadge ${emp.fulfillment?.status?.toLowerCase() || "pending"}`}
+        {(brief.documents || []).length === 0 ? (
+          <p className="msb-empty">No requirement documents attached.</p>
+        ) : (
+          <ul className="msb-doc-list">
+            {brief.documents.map((doc, i) => (
+              <li
+                className="msb-doc-row"
+                key={doc._id || doc.publicId || doc.url || i}
               >
-                {(emp.fulfillment?.status || "PENDING").replace("_", " ")}
-              </span>
-            </div>
-
-            {canEdit ? (
-              <>
-                <div className="msb-grid">
-                  <div className="msb-field">
-                    <label>Name</label>
-                    <input
-                      value={emp.name}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          name: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Email</label>
-                    <input
-                      value={emp.email}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          email: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Phone</label>
-                    <input
-                      value={emp.phone}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          phone: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Employee code</label>
-                    <input
-                      value={emp.employeeCode}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          employeeCode: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Department</label>
-                    <input
-                      value={emp.department}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          department: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Pickup area</label>
-                    <input
-                      value={emp.pickupArea}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          pickupArea: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Work location</label>
-                    <input
-                      value={emp.workLocation}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          workLocation: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Shift</label>
-                    <input
-                      value={emp.shiftLabel}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          shiftLabel: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Pass duration (months)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={emp.passMonths}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          passMonths: Number(e.target.value),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="msb-field">
-                    <label>Preferred route</label>
-                    <input
-                      value={emp.preferredRouteLabel}
-                      onChange={(e) =>
-                        updateList("employeeRoster", i, {
-                          preferredRouteLabel: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="msb-field">
-                  <label>Home address</label>
-                  <input
-                    value={emp.homeAddress}
-                    onChange={(e) =>
-                      updateList("employeeRoster", i, {
-                        homeAddress: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="msb-map-row">
-                  <button
-                    type="button"
-                    className="msb-btn secondary small"
-                    onClick={() => setPicker({ kind: "pickup", index: i })}
+                <div className="msb-doc-info">
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="msb-doc-name"
                   >
-                    {emp.pickupPoint?.lat != null
-                      ? "Edit pickup pin"
-                      : "Pin pickup point on map"}
-                  </button>
-                  {emp.pickupPoint?.lat != null ? (
-                    <span className="msb-pin-status ok">
-                      Pinned · {emp.pickupPoint.lat.toFixed(4)},{" "}
-                      {emp.pickupPoint.lng.toFixed(4)}
-                    </span>
-                  ) : (
-                    <span className="msb-pin-status">
-                      No exact pickup point set
-                    </span>
-                  )}
-                </div>
-                <div className="msb-field">
-                  <label>Assignment hint (trip / seat note)</label>
-                  <input
-                    value={emp.assignmentHint}
-                    onChange={(e) =>
-                      updateList("employeeRoster", i, {
-                        assignmentHint: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <button
-                  className="msb-btn danger small"
-                  onClick={() => removeListItem("employeeRoster", i)}
-                >
-                  Remove employee
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="msb-spec-row">
-                  <span className="msb-spec-label">Contact</span>
-                  <span className="msb-spec-value">
-                    {emp.email || "—"}
-                    {emp.phone ? ` · ${emp.phone}` : ""}
-                    {emp.employeeCode ? ` · #${emp.employeeCode}` : ""}
+                    {doc.fileName || "Document"}
+                  </a>
+                  <span className="msb-doc-meta">
+                    {humanFileSize(doc.fileSize)}
+                    {doc.version > 1 ? ` · v${doc.version}` : ""}
+                    {doc.uploadedByName ? ` · ${doc.uploadedByName}` : ""}
                   </span>
                 </div>
-                <div className="msb-spec-row">
-                  <span className="msb-spec-label">Pickup</span>
-                  <span className="msb-spec-value">
-                    {emp.pickupArea || emp.homeAddress || "—"}
-                    {emp.workLocation ? ` → ${emp.workLocation}` : ""}
-                    {emp.shiftLabel ? ` · ${emp.shiftLabel}` : ""}
-                  </span>
-                </div>
-                {emp.pickupPoint?.lat != null && (
-                  <div className="msb-spec-row">
-                    <span className="msb-spec-label">Pickup pin</span>
-                    <span className="msb-spec-value">
-                      {emp.pickupPoint.lat.toFixed(5)},{" "}
-                      {emp.pickupPoint.lng.toFixed(5)}{" "}
-                      <a
-                        className="msb-map-link"
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${emp.pickupPoint.lat},${emp.pickupPoint.lng}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Navigate
-                      </a>
-                      <a
-                        className="msb-map-link"
-                        href={`https://www.openstreetmap.org/?mlat=${emp.pickupPoint.lat}&mlon=${emp.pickupPoint.lng}#map=17/${emp.pickupPoint.lat}/${emp.pickupPoint.lng}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        View on map
-                      </a>
-                    </span>
+                {canEdit && (
+                  <div className="msb-doc-actions">
+                    <button
+                      className="msb-btn secondary small"
+                      onClick={() => {
+                        setRevisingDocIndex(i);
+                        reviseDocRef.current?.click();
+                      }}
+                      disabled={docUploading || saving}
+                    >
+                      Upload new version
+                    </button>
+                    <button
+                      className="msb-btn danger small"
+                      onClick={() => removeBriefDocument(i)}
+                      disabled={docUploading || saving}
+                    >
+                      Remove
+                    </button>
                   </div>
                 )}
-                <div className="msb-spec-row">
-                  <span className="msb-spec-label">Pass / Route</span>
-                  <span className="msb-spec-value">
-                    {emp.passMonths || 0} month(s)
-                    {emp.preferredRouteLabel
-                      ? ` · route: ${emp.preferredRouteLabel}`
-                      : ""}
-                  </span>
-                </div>
-                {emp.assignmentHint && (
-                  <div className="msb-spec-row">
-                    <span className="msb-spec-label">Assignment</span>
-                    <span className="msb-spec-value">{emp.assignmentHint}</span>
-                  </div>
-                )}
-                {renderFulfillmentFooter("employeeRoster", emp)}
-              </>
-            )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="msb-section-head" style={{ marginTop: 16 }}>
+          <span className="msb-spec-label">Comments &amp; special requirements</span>
+        </div>
+        {canEdit ? (
+          <div className="msb-field">
+            <textarea
+              value={brief.comments || ""}
+              onChange={(e) => setField({ comments: e.target.value })}
+              placeholder="e.g. Female drivers preferred on the night shift, wheelchair access required, security passes needed for the site."
+            />
           </div>
-        ))}
+        ) : (
+          <div className="msb-spec-row">
+            <span className="msb-spec-value">{brief.comments || "—"}</span>
+          </div>
+        )}
       </div>
+
+      <p className="msb-section-hint msb-document-source-note">Detailed operational information is maintained in the attached requirement document(s), including routes, locations, shifts, passengers, and vehicle requirements.</p>
 
       {/* Corporate action buttons */}
       {isCorporate && (

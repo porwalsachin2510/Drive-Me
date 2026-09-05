@@ -12,7 +12,8 @@ import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
 import ManagedActivityLog from "../../../Components/Corporate/ManagedActivityLog/ManagedActivityLog";
 import ManagedServiceBrief from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBrief";
-import RosterChangeRequests from "../../../Components/Corporate/RosterChangeRequests/RosterChangeRequests";
+  import RosterChangeRequests from "../../../Components/Corporate/RosterChangeRequests/RosterChangeRequests";
+  import ExtraServiceDays from "../../../Components/Corporate/ExtraServiceDays/ExtraServiceDays";
 import SOSAlertsPanel from "../../../Components/Corporate/SOSAlertsPanel/SOSAlertsPanel";
 import ManagedSLADashboard from "../../../Components/Corporate/ManagedSLADashboard/ManagedSLADashboard";
 import ManagedBilling from "../../../Components/Corporate/ManagedBilling/ManagedBilling";
@@ -143,6 +144,12 @@ const B2BManagedOperations = () => {
             Roster Changes
           </button>
           <button
+            className={activeTab === "extra-days" ? "active" : ""}
+            onClick={() => setActiveTab("extra-days")}
+          >
+            Extra Service Days
+          </button>
+          <button
             className={activeTab === "sos" ? "active" : ""}
             onClick={() => setActiveTab("sos")}
           >
@@ -179,10 +186,13 @@ const B2BManagedOperations = () => {
             />
           )}
           {activeTab === "employees" && (
-            <CorporateEmployeeManagement embedded />
+            <CorporateEmployeeManagement embedded embeddedContractId={contractId} />
           )}
           {activeTab === "roster" && (
             <RosterChangeRequests contractId={contractId} mode="partner" />
+          )}
+          {activeTab === "extra-days" && (
+            <ExtraServiceDays contractId={contractId} mode="partner" />
           )}
           {activeTab === "sos" && <SOSAlertsPanel contractId={contractId} />}
           {activeTab === "sla" && (

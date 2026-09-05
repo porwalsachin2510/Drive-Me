@@ -8,6 +8,7 @@ import {
   getUnreadNotificationCount,
 } from "../../../Redux/slices/notificationSlice";
 import { useNavigate } from "react-router-dom"
+import { isCustomerRole, isPartnerRole } from "../../../utils/roleFamilies"
 import "./Notifications.css"
 
 function UniversalNotifications({ isOpen, onClose }) {
@@ -52,8 +53,12 @@ function UniversalNotifications({ isOpen, onClose }) {
   const handleNotificationNavigation = useCallback((notification) => {
     const { type, bookingId } = notification
     const userRole = user?.role
+    const managedRouteRole = isCustomerRole(userRole)
+      ? "corporate"
+      : isPartnerRole(userRole)
+        ? "b2b_partner"
+        : userRole?.toLowerCase()
 
-    
     if (!userRole) return
     
     switch (type) {
@@ -62,8 +67,8 @@ function UniversalNotifications({ isOpen, onClose }) {
       case "BOOKING_REJECTED":
         if (bookingId) {
           // Navigate based on user role
-          if (userRole === "CORPORATE" || userRole === "B2B_PARTNER") {
-            navigate(`/${userRole.toLowerCase()}/bookings/${bookingId}`)
+          if (isCustomerRole(userRole) || isPartnerRole(userRole)) {
+            navigate(`/${managedRouteRole}/bookings/${bookingId}`)
           } else if (userRole === "B2C_PARTNER") {
             navigate(`/partner/bookings/${bookingId}`)
           } else if (userRole === "COMMUTER") {
@@ -77,8 +82,8 @@ function UniversalNotifications({ isOpen, onClose }) {
       case "TRIP_STARTED":
       case "TRIP_COMPLETED":
         if (bookingId) {
-          if (userRole === "CORPORATE" || userRole === "B2B_PARTNER") {
-            navigate(`/${userRole.toLowerCase()}/trips/${bookingId}`)
+          if (isCustomerRole(userRole) || isPartnerRole(userRole)) {
+            navigate(`/${managedRouteRole}/trips/${bookingId}`)
           } else if (userRole === "B2C_PARTNER") {
             navigate(`/partner/trips/${bookingId}`)
           } else if (userRole === "COMMUTER") {
@@ -96,8 +101,8 @@ function UniversalNotifications({ isOpen, onClose }) {
         break
         
       case "NEW_CORPORATE_BOOKING":
-        if (userRole === "CORPORATE" || userRole === "B2B_PARTNER") {
-          navigate(`/${userRole.toLowerCase()}/bookings`)
+        if (isCustomerRole(userRole) || isPartnerRole(userRole)) {
+          navigate(`/${managedRouteRole}/bookings`)
         }
         break
         
@@ -156,7 +161,7 @@ function UniversalNotifications({ isOpen, onClose }) {
       if (userRole === "ADMIN") return true
       
       // Corporate users see corporate-related notifications
-      if (userRole === "CORPORATE") {
+      if (isCustomerRole(userRole)) {
         return [
           "NEW_CORPORATE_BOOKING",
           "BOOKING_ACCEPTED", 
@@ -192,7 +197,7 @@ function UniversalNotifications({ isOpen, onClose }) {
       }
       
       // B2B Partners see corporate booking notifications
-      if (userRole === "B2B_PARTNER") {
+      if (isPartnerRole(userRole)) {
         return [
           "NEW_CORPORATE_BOOKING",
           "BOOKING_ACCEPTED",

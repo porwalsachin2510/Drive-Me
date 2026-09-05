@@ -4,7 +4,13 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import "./corporateemployeemanagement.css";
 import api, { getOnBehalfContract } from "../../../utils/api";
+import BriefEmployeeImportModal from "../../../Components/Common/BriefImport/BriefEmployeeImportModal";
 import { notify } from "../../../utils/toast";
+import {
+  passengerNounSingular,
+  passengerNounPlural,
+  passengerFieldLabels,
+} from "../../../utils/roleFamilies";
 
 const emptyAddEmpForm = {
   fullName: "",
@@ -22,6 +28,16 @@ export default function CorporateEmployeeManagementPage({
 } = {}) {
   const token = useSelector((state) => state.auth.token);
   const userId = useSelector((state) => state.auth.userId);
+  // Segment-aware wording. A SCHOOL_CUSTOMER buys monthly passes for Students
+  // (contract with a School Partner); a CORPORATE buys them for Employees
+  // (contract with a B2B Partner). Storage columns are shared, only the labels
+  // and the master-data catalogues differ.
+  const currentUserRole = useSelector((state) => state.auth.user?.role);
+  const passengerNoun = passengerNounSingular(currentUserRole);
+  const passengerNounPluralLabel = passengerNounPlural(currentUserRole);
+  const passengerNounLower = passengerNoun.toLowerCase();
+  const passengerNounPluralLower = passengerNounPluralLabel.toLowerCase();
+  const fieldLabels = passengerFieldLabels(currentUserRole);
 
   const [activeTab, setActiveTab] = useState("corporate");
   const [employees, setEmployees] = useState([]);
@@ -51,6 +67,8 @@ export default function CorporateEmployeeManagementPage({
   const [addingEmployee, setAddingEmployee] = useState(false);
   const [briefRosterItems, setBriefRosterItems] = useState([]);
   const [addEmpForm, setAddEmpForm] = useState(emptyAddEmpForm);
+  // Bulk "import from the managed-service brief / requirement document" flow.
+  const [showBriefEmployeeImport, setShowBriefEmployeeImport] = useState(false);
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -125,7 +143,9 @@ export default function CorporateEmployeeManagementPage({
   const handleAddEmployeeFromBrief = async (e) => {
     e.preventDefault();
     if (!addEmpForm.fullName || !addEmpForm.email) {
-      notify("Please provide at least the employee's name and email.");
+      notify(
+        `Please provide at least the ${passengerNounLower}'s name and email.`,
+      );
       return;
     }
     try {
@@ -150,22 +170,22 @@ export default function CorporateEmployeeManagementPage({
       if (summary?.successful > 0) {
         notify(
           linked
-            ? "Employee added and linked to the brief. It's now awaiting the corporate's approval."
-            : "Employee added successfully.",
+            ? `${passengerNoun} added and linked to the brief. It's now awaiting the ${fieldLabels.isSchool ? "school's" : "corporate's"} approval.`
+            : `${passengerNoun} added successfully.`,
         );
         setShowAddEmployeeModal(false);
         setAddEmpForm(emptyAddEmpForm);
         fetchEmployees();
         if (embedded) fetchBriefRosterItems();
       } else if (summary?.duplicates > 0) {
-        notify("That employee already exists.");
+        notify(`That ${passengerNounLower} already exists.`);
       } else {
         const err = res.data?.data?.results?.errors?.[0]?.error;
-        notify(err || "Failed to add employee.");
+        notify(err || `Failed to add ${passengerNounLower}.`);
       }
     } catch (error) {
       notify(
-        `Failed to add employee: ${error.response?.data?.message || error.message}`,
+        `Failed to add ${passengerNounLower}: ${error.response?.data?.message || error.message}`,
       );
     } finally {
       setAddingEmployee(false);
@@ -219,7 +239,7 @@ export default function CorporateEmployeeManagementPage({
       );
 
       notify(
-        `Upload successful! Added ${response.data.data.summary.successful} employees`,
+        `Upload successful! Added ${response.data.data.summary.successful} ${passengerNounPluralLower}`,
       );
       setShowUploadModal(false);
       setUploadFile(null);
@@ -235,7 +255,7 @@ export default function CorporateEmployeeManagementPage({
   const handleAssignRoute = async (e) => {
     e.preventDefault();
     if (!selectedEmployee || !assignmentData.routeId) {
-      notify("Please select employee and route");
+      notify(`Please select ${passengerNounLower} and route`);
       return;
     }
 
@@ -267,10 +287,14 @@ export default function CorporateEmployeeManagementPage({
   };
 
   const handleDeleteEmployee = async (employeeId) => {
-    if (window.confirm("Are you sure you want to delete this employee?")) {
+    if (
+      window.confirm(
+        `Are you sure you want to delete this ${passengerNounLower}?`,
+      )
+    ) {
       try {
         await api.delete(`/corporate-employees/${employeeId}`);
-        notify("Employee deleted successfully!");
+        notify(`${passengerNoun} deleted successfully!`);
         fetchEmployees();
       } catch (error) {
         notify(
@@ -283,7 +307,7 @@ export default function CorporateEmployeeManagementPage({
   const handleDeactivateEmployee = async (employeeId) => {
     try {
       await api.put(`/corporate-employees/${employeeId}/deactivate`, {});
-      notify("Employee deactivated successfully!");
+      notify(`${passengerNoun} deactivated successfully!`);
       fetchEmployees();
     } catch (error) {
       notify(
@@ -294,7 +318,9 @@ export default function CorporateEmployeeManagementPage({
 
   const handleSendInvitations = async () => {
     if (selectedEmployeeIds.length === 0) {
-      notify("Please select at least one employee to send invitations.");
+      notify(
+        `Please select at least one ${passengerNounLower} to send invitations.`,
+      );
       return;
     }
 
@@ -362,8 +388,8 @@ export default function CorporateEmployeeManagementPage({
       <div className="employee-management-container">
         <div className="management-header">
           <div>
-            <h1>Employee Management</h1>
-            <p>Manage and assign routes to your employees</p>
+            <h1>{passengerNounPluralLabel} Management</h1>
+            <p>Manage and assign routes to your {passengerNounPluralLower}</p>
           </div>
           <div
             className="header-actions"
@@ -401,9 +427,16 @@ export default function CorporateEmployeeManagementPage({
                   setShowAddEmployeeModal(true);
                 }}
               >
-                Add Employee
+                Add {passengerNoun}
               </button>
             )}
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowBriefEmployeeImport(true)}
+              title={`Create ${passengerNounPluralLower} from the managed-service requirement brief / document`}
+            >
+              Import from Brief
+            </button>
             <button
               className="btn btn-primary"
               onClick={() => setShowUploadModal(true)}
@@ -429,7 +462,7 @@ export default function CorporateEmployeeManagementPage({
               onChange={(e) => setFilterDepartment(e.target.value)}
               className="filter-select"
             >
-              <option value="">All Departments</option>
+              <option value="">All {fieldLabels.department.label}s</option>
               {departments.map((dept) => (
                 <option key={dept} value={dept}>
                   {dept}
@@ -442,17 +475,21 @@ export default function CorporateEmployeeManagementPage({
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <p>Loading employees...</p>
+            <p>Loading {passengerNounPluralLower}...</p>
           </div>
         ) : (
           <>
             <div className="employees-summary">
               <div className="summary-card">
-                <span className="summary-label">Total Employees</span>
+                <span className="summary-label">
+                  Total {passengerNounPluralLabel}
+                </span>
                 <span className="summary-value">{employees.length}</span>
               </div>
               <div className="summary-card">
-                <span className="summary-label">Active Employees</span>
+                <span className="summary-label">
+                  Active {passengerNounPluralLabel}
+                </span>
                 <span className="summary-value">
                   {employees.filter((emp) => emp.isActive).length}
                 </span>
@@ -481,11 +518,11 @@ export default function CorporateEmployeeManagementPage({
                         title="Select all"
                       />
                     </th>
-                    <th>Employee ID</th>
+                    <th>{passengerNoun} ID</th>
                     <th>Name</th>
                     <th>Email</th>
-                    <th>Department</th>
-                    <th>Designation</th>
+                    <th>{fieldLabels.department.label}</th>
+                    <th>{fieldLabels.designation.label}</th>
                     <th>Assigned Route</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -564,7 +601,7 @@ export default function CorporateEmployeeManagementPage({
                   ) : (
                     <tr>
                       <td colSpan="9" className="no-data">
-                        No employees found
+                        No {passengerNounPluralLower} found
                       </td>
                     </tr>
                   )}
@@ -597,7 +634,7 @@ export default function CorporateEmployeeManagementPage({
         >
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Upload Employees from CSV</h2>
+              <h2>Upload {passengerNounPluralLabel} from CSV</h2>
               <button
                 className="close-btn"
                 onClick={() => setShowUploadModal(false)}
@@ -617,9 +654,7 @@ export default function CorporateEmployeeManagementPage({
                   required
                 />
                 <p className="helper-text">
-                  CSV should have columns: Employee ID, Full Name, Email,
-                  Contact Number, Department, Designation, Work Shift, Pickup
-                  Location, Dropoff Location
+                  {`CSV should have columns: ${passengerNoun} ID, Full Name, Email, Contact Number, ${fieldLabels.department.label}, ${fieldLabels.designation.label}, ${fieldLabels.shiftType.label}, Pickup Location, Dropoff Location`}
                 </p>
               </div>
 
@@ -752,7 +787,7 @@ export default function CorporateEmployeeManagementPage({
         >
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Add Employee</h2>
+              <h2>Add {passengerNoun}</h2>
               <button
                 className="close-btn"
                 onClick={() => setShowAddEmployeeModal(false)}
@@ -782,7 +817,7 @@ export default function CorporateEmployeeManagementPage({
                         r.fulfillment?.approvalStatus === "APPROVED";
                       return (
                         <option key={r._id} value={r._id} disabled={done}>
-                          {(r.name || "Employee") +
+                          {(r.name || passengerNoun) +
                             (r.email ? ` (${r.email})` : "") +
                             (done ? " — already approved" : "")}
                         </option>
@@ -790,8 +825,7 @@ export default function CorporateEmployeeManagementPage({
                     })}
                   </select>
                   <p className="helper-text">
-                    Selecting one pre-fills the details and auto-marks that
-                    brief item fulfilled for the corporate to approve.
+                    {`Selecting one pre-fills the details and auto-marks that brief item fulfilled for the ${fieldLabels.isSchool ? "school" : "corporate"} to approve.`}
                   </p>
                 </div>
               )}
@@ -838,7 +872,7 @@ export default function CorporateEmployeeManagementPage({
               </div>
 
               <div className="form-group">
-                <label>Department</label>
+                <label>{fieldLabels.department.label}</label>
                 <input
                   type="text"
                   value={addEmpForm.department}
@@ -850,7 +884,7 @@ export default function CorporateEmployeeManagementPage({
               </div>
 
               <div className="form-group">
-                <label>Work Location</label>
+                <label>{fieldLabels.workLocation.label}</label>
                 <input
                   type="text"
                   value={addEmpForm.workLocation}
@@ -885,7 +919,7 @@ export default function CorporateEmployeeManagementPage({
                   className="btn btn-primary"
                   disabled={addingEmployee}
                 >
-                  {addingEmployee ? "Adding..." : "Add Employee"}
+                  {addingEmployee ? "Adding..." : `Add ${passengerNoun}`}
                 </button>
                 <button
                   type="button"
@@ -898,6 +932,17 @@ export default function CorporateEmployeeManagementPage({
             </form>
           </div>
         </div>
+      )}
+
+      {showBriefEmployeeImport && (
+        <BriefEmployeeImportModal
+          contractId={embedded ? getOnBehalfContract() : null}
+          onClose={() => setShowBriefEmployeeImport(false)}
+          onImported={() => {
+            setShowBriefEmployeeImport(false);
+            fetchEmployees();
+          }}
+        />
       )}
 
       {!embedded && <Footer />}

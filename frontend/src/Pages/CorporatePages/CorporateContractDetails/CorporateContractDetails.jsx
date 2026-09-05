@@ -27,13 +27,19 @@ import Footer from "../../../Components/Footer/Footer";
 import Navbar from "../../../Components/Navbar/Navbar";
 import ManagedActivityLog from "../../../Components/Corporate/ManagedActivityLog/ManagedActivityLog";
 import ManagedServiceBrief from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBrief";
-import RosterChangeRequests from "../../../Components/Corporate/RosterChangeRequests/RosterChangeRequests";
+  import RosterChangeRequests from "../../../Components/Corporate/RosterChangeRequests/RosterChangeRequests";
+  import ExtraServiceDays from "../../../Components/Corporate/ExtraServiceDays/ExtraServiceDays";
 import SOSAlertsPanel from "../../../Components/Corporate/SOSAlertsPanel/SOSAlertsPanel";
 import ManagedSLADashboard from "../../../Components/Corporate/ManagedSLADashboard/ManagedSLADashboard";
 import ManagedBilling from "../../../Components/Corporate/ManagedBilling/ManagedBilling";
 import { syncNegotiationCommission } from "../../../services/corporateOperationsAPI";
 import "./CorporateContractDetails.css";
 import { notify } from "../../../utils/toast";
+import {
+  customerRoleLabel,
+  partnerRoleLabel,
+  contractStatusLabel,
+} from "../../../utils/roleFamilies";
 
 // Normalize payment method strings between DB format and code format
 // DB stores: "Cash", "Credit Card", "Bank Transfer", "Mobile Wallet"
@@ -85,6 +91,8 @@ const CorporateContractDetails = () => {
   } = useSelector((state) => state.payment);
 
   const contract = currentContract?.data?.contract;
+  const customerLabel = customerRoleLabel(contract?.corporateOwnerId?.role);
+  const partnerLabel = partnerRoleLabel(contract?.fleetOwnerId?.role);
 
   useEffect(() => {
     if (id && id !== "undefined" && id !== null) {
@@ -157,7 +165,7 @@ const CorporateContractDetails = () => {
           type: "success",
           text:
             data.message ||
-            "Your signed document has been approved! Waiting for B2B Partner signature.",
+            `Your signed document has been approved! Waiting for ${partnerLabel} signature.`,
         });
       } else if (data.type === "SIGNED_DOCUMENT_REJECTED") {
         setStatusMessage({
@@ -330,7 +338,7 @@ const CorporateContractDetails = () => {
       ).unwrap();
 
       notify(
-        "Signed contract document uploaded successfully! Waiting for B2B Partner verification.",
+        `Signed contract document uploaded successfully! Waiting for ${partnerLabel} verification.`,
       );
       setShowUploadSignedDocModal(false);
       setSignedDocumentFile(null);
@@ -524,6 +532,7 @@ const CorporateContractDetails = () => {
       ? [
           { key: "brief", label: "Service Brief", icon: "📝" },
           { key: "roster", label: "Roster & Routes", icon: "🔁" },
+          { key: "extra-days", label: "Extra Service Days", icon: "📅" },
           { key: "safety", label: "Safety & SOS", icon: "🆘" },
           { key: "activity", label: "Operations Activity", icon: "📈" },
           { key: "sla", label: "SLA & Performance", icon: "🎯" },
@@ -570,7 +579,11 @@ const CorporateContractDetails = () => {
             className="drivemego-corporate-contract-status"
             style={{ backgroundColor: getStatusColor(contract.status) }}
           >
-            {contract.status.replace(/_/g, " ")}
+            {contractStatusLabel(
+              contract.status,
+              contract.corporateOwnerId?.role,
+              contract.fleetOwnerId?.role,
+            )}
           </span>
         </div>
 
@@ -612,7 +625,7 @@ const CorporateContractDetails = () => {
             <>
               {/* Fleet Owner Information */}
               <div className="drivemego-corporate-contract-section">
-                <h2>Fleet Owner Information</h2>
+                <h2>{partnerLabel} Information</h2>
                 <div className="drivemego-corporate-contract-info-grid">
                   <div className="drivemego-corporate-contract-info-item">
                     <span className="drivemego-label">Company Name:</span>
@@ -692,6 +705,16 @@ const CorporateContractDetails = () => {
                 contractId={contract._id}
                 mode="corporate"
               />
+            </div>
+          )}
+
+          {/* ===== EXTRA SERVICE DAYS TAB =====
+              Ad-hoc extra-day requests beyond the recurring schedule (e.g. a
+              school picnic or event). The client requests; the partner approves
+              with a charge and billing choice. */}
+          {isManaged && activeSection === "extra-days" && (
+            <div className="drivemego-corporate-contract-section">
+              <ExtraServiceDays contractId={contract._id} mode="corporate" />
             </div>
           )}
 
@@ -794,12 +817,12 @@ const CorporateContractDetails = () => {
                             {contract.signedDocumentVerification
                               ?.isVerified && (
                               <span className="drivemego-verification-badge drivemego-verified">
-                                Verified by B2B Partner
+                                Verified by {partnerLabel}
                               </span>
                             )}
                             {contract.status === "PENDING_B2B_VERIFICATION" && (
                               <span className="drivemego-verification-badge drivemego-pending">
-                                Pending B2B Verification
+                                Pending {partnerLabel} Verification
                               </span>
                             )}
                             {contract.signedDocumentVerification
@@ -869,8 +892,8 @@ const CorporateContractDetails = () => {
                           <div className="drivemego-step-content">
                             <strong>Upload Signed Document</strong>
                             <p>
-                              Upload the signed contract document for B2B
-                              Partner verification.
+                              Upload the signed contract document for{" "}
+                              {partnerLabel} verification.
                             </p>
                           </div>
                         </div>
@@ -890,10 +913,10 @@ const CorporateContractDetails = () => {
                 <div className="drivemego-corporate-contract-section drivemego-waiting-verification-section">
                   <div className="drivemego-waiting-verification-card">
                     <div className="drivemego-waiting-icon-large">⏳</div>
-                    <h3>Waiting for B2B Partner Verification</h3>
+                    <h3>Waiting for {partnerLabel} Verification</h3>
                     <p>
                       Your signed contract document has been uploaded and is
-                      pending verification from the B2B Partner. They will
+                      pending verification from the {partnerLabel}. They will
                       review your signature and approve the document.
                     </p>
                     <div className="drivemego-verification-timeline">
@@ -907,11 +930,11 @@ const CorporateContractDetails = () => {
                       </div>
                       <div className="drivemego-timeline-item drivemego-active">
                         <span className="drivemego-timeline-icon">3</span>
-                        <span>B2B Partner Verification</span>
+                        <span>{partnerLabel} Verification</span>
                       </div>
                       <div className="drivemego-timeline-item drivemego-pending">
                         <span className="drivemego-timeline-icon">4</span>
-                        <span>B2B Partner Signature</span>
+                        <span>{partnerLabel} Signature</span>
                       </div>
                       <div className="drivemego-timeline-item drivemego-pending">
                         <span className="drivemego-timeline-icon">5</span>
@@ -1203,7 +1226,7 @@ const CorporateContractDetails = () => {
                 <h2>Digital Signatures</h2>
                 <div className="drivemego-corporate-contract-signatures">
                   <div className="drivemego-signature-status">
-                    <span className="drivemego-label">Corporate Owner:</span>
+                    <span className="drivemego-label">{customerLabel}:</span>
                     <span
                       className={`drivemego-status ${
                         contract.digitalSignatures?.corporateOwner?.signed
@@ -1217,7 +1240,7 @@ const CorporateContractDetails = () => {
                     </span>
                   </div>
                   <div className="drivemego-signature-status">
-                    <span className="label">Fleet Owner:</span>
+                    <span className="label">{partnerLabel}:</span>
                     <span
                       className={`drivemego-status ${
                         contract.digitalSignatures?.fleetOwner?.signed
@@ -1538,7 +1561,7 @@ const CorporateContractDetails = () => {
                 <ul>
                   <li>Ensure your signature is clear and complete</li>
                   <li>All pages of the contract should be included</li>
-                  <li>The document will be verified by the B2B Partner</li>
+                  <li>The document will be verified by the {partnerLabel}</li>
                 </ul>
               </div>
 

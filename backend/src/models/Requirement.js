@@ -8,6 +8,17 @@ const requirementSchema = new mongoose.Schema(
             ref: "User",
             required: true,
         },
+
+        // Business segment isolation. "CORPORATE" requirements are only visible to
+        // B2B_PARTNER partners; "SCHOOL" requirements are only visible to
+        // SCHOOL_PARTNER partners. Defaults to CORPORATE so all existing/legacy
+        // requirements keep their current corporate behaviour.
+        businessSegment: {
+            type: String,
+            enum: ["CORPORATE", "SCHOOL"],
+            default: "CORPORATE",
+            index: true,
+        },
         
         // Requirement details
         title: {

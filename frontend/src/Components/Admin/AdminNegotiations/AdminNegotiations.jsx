@@ -35,6 +35,7 @@ import {
   cancelNegotiation,
 } from "../../../services/adminAPI";
 import "./AdminNegotiations.css";
+import { customerRoleLabel, partnerRoleLabel, requestedByLabel } from "../../../utils/roleFamilies";
 
 const AdminNegotiations = () => {
   const { socket } = useContext(SocketContext) || {};
@@ -71,6 +72,12 @@ const AdminNegotiations = () => {
   const [corporateCommissionRate, setCorporateCommissionRate] = useState(25);
   // Source of the prefilled commission rate (custom_rule | configured | default | stored)
   const [commissionRateSource, setCommissionRateSource] = useState("default");
+
+  const customerRole = selectedNegotiation?.corporateId?.role || selectedNegotiation?.corporateId?.userType;
+  const partnerRole = selectedNegotiation?.b2bPartnerId?.role || selectedNegotiation?.b2bPartnerId?.userType;
+  const customerLabel = customerRoleLabel(customerRole);
+  const partnerLabel = partnerRoleLabel(partnerRole);
+  const requestedBy = requestedByLabel(customerRole);
 
   const statusOptions = [
     { value: "ALL", label: "All Status" },
@@ -267,9 +274,9 @@ const AdminNegotiations = () => {
     return negotiation?.originalPrice || 0;
   };
 
-  // The negotiation can only be COMPLETED once the B2B Partner has ACCEPTED the
+  // The negotiation can only be COMPLETED once the partner has ACCEPTED the
   // admin's latest offer. Rule (kept identical to the backend guard):
-  //   - the B2B Partner's most recent response must be "ACCEPTED"
+  //   - the partner's most recent response must be "ACCEPTED"
   //   - AND the admin must not have sent a new price offer after that acceptance.
   const isB2BAccepted = (negotiation) => {
     const responses = Array.isArray(negotiation?.b2bPartnerResponses)
@@ -511,7 +518,7 @@ const AdminNegotiations = () => {
         <div className="drivemego-negotiation-header-content">
           <h1>Negotiation Management</h1>
           <p>
-            Manage price negotiations between Corporate users and B2B Partners
+            Manage price negotiations between customer organizations and service partners
           </p>
         </div>
         <button
@@ -681,7 +688,10 @@ const AdminNegotiations = () => {
                   <Building2 size={18} />
                   <div className="drivemego-negotiation-party-info">
                     <span className="drivemego-negotiation-party-label">
-                      Corporate
+                      {customerRoleLabel(
+                        negotiation.corporateId?.role ||
+                          negotiation.corporateId?.userType,
+                      )}
                     </span>
                     <span className="drivemego-negotiation-party-name">
                       {negotiation.corporateId?.fullName || "N/A"}
@@ -698,7 +708,10 @@ const AdminNegotiations = () => {
                   <Truck size={18} />
                   <div className="drivemego-negotiation-party-info">
                     <span className="drivemego-negotiation-party-label">
-                      B2B Partner
+                      {partnerRoleLabel(
+                        negotiation.b2bPartnerId?.role ||
+                          negotiation.b2bPartnerId?.userType,
+                      )}
                     </span>
                     <span className="drivemego-negotiation-party-name">
                       {negotiation.b2bPartnerId?.fullName || "N/A"}
@@ -806,7 +819,7 @@ const AdminNegotiations = () => {
                     </div>
                     <div className="drivemego-negotiation-party-details">
                       <span className="drivemego-negotiation-party-type">
-                        Corporate User
+                        {customerLabel}
                       </span>
                       <span className="drivemego-negotiation-party-name">
                         {selectedNegotiation.corporateId?.fullName}
@@ -825,7 +838,7 @@ const AdminNegotiations = () => {
                     </div>
                     <div className="drivemego-negotiation-party-details">
                       <span className="drivemego-negotiation-party-type">
-                        B2B Partner
+                        {partnerLabel}
                       </span>
                       <span className="drivemego-negotiation-party-name">
                         {selectedNegotiation.b2bPartnerId?.fullName}
@@ -898,10 +911,10 @@ const AdminNegotiations = () => {
                 </div>
               </div>
 
-              {/* Corporate Request */}
+              {/* Customer Request */}
               {selectedNegotiation.corporateRequest?.message && (
                 <div className="drivemego-negotiation-modal-section">
-                  <h3>Corporate Request</h3>
+                  <h3>{requestedBy} Request</h3>
                   <div className="drivemego-negotiation-request-message">
                     <p>{selectedNegotiation.corporateRequest.message}</p>
                     <span className="drivemego-negotiation-request-date">
@@ -966,7 +979,7 @@ const AdminNegotiations = () => {
                             <div className="drivemego-negotiation-timeline-marker"></div>
                             <div className="drivemego-negotiation-timeline-content">
                               <span className="drivemego-negotiation-timeline-action">
-                                B2B Partner: {response.response}
+                                {partnerLabel}: {response.response}
                               </span>
                               {response.message && (
                                 <p className="drivemego-negotiation-timeline-message">
@@ -1009,7 +1022,7 @@ const AdminNegotiations = () => {
                         >
                           <option value="SENT_MESSAGE">Send Message</option>
                           <option value="SENT_OFFER">
-                            Send Price Offer to B2B
+                            Send Price Offer to {partnerLabel}
                           </option>
                           <option value="STARTED">Start Negotiation</option>
                         </select>
@@ -1033,7 +1046,7 @@ const AdminNegotiations = () => {
                       <textarea
                         value={actionMessage}
                         onChange={(e) => setActionMessage(e.target.value)}
-                        placeholder="Enter message for B2B Partner..."
+                        placeholder={`Enter message for ${partnerLabel}...`}
                         rows={3}
                       />
                     </div>
@@ -1058,16 +1071,16 @@ const AdminNegotiations = () => {
                   <div className="drivemego-negotiation-complete-section">
                     <h4>Complete Negotiation</h4>
                     <p>
-                      When B2B Partner agrees, complete the negotiation to
-                      update the quotation price.
+When {partnerLabel} agrees, complete the negotiation to
+                        update the quotation price.
                     </p>
-                    {/* Gate: only enabled once the B2B Partner has ACCEPTED the
+                    {/* Gate: only enabled once the service partner has ACCEPTED the
                         latest offer. Until then, show a clear waiting notice. */}
                     {isB2BAccepted(selectedNegotiation) ? (
                       <div className="drivemego-negotiation-complete-ready">
                         <CheckCircle size={16} />
                         <span>
-                          B2B Partner has accepted your offer. You can now
+                          {partnerLabel} has accepted your offer. You can now
                           complete &amp; update the quotation.
                         </span>
                       </div>
@@ -1075,7 +1088,7 @@ const AdminNegotiations = () => {
                       <div className="drivemego-negotiation-complete-waiting">
                         <Clock size={16} />
                         <span>
-                          Waiting for the B2B Partner to accept your offer.
+                          Waiting for the {partnerLabel} to accept your offer.
                           &ldquo;Complete &amp; Update Quotation&rdquo; unlocks
                           once they accept.
                         </span>
@@ -1094,7 +1107,7 @@ const AdminNegotiations = () => {
                         />
                       </div>
                       <div className="drivemego-negotiation-form-group">
-                        <label>Commission from Corporate (%)</label>
+                        <label>Commission from {customerLabel} (%)</label>
                         <input
                           type="number"
                           min="0"
@@ -1151,7 +1164,7 @@ const AdminNegotiations = () => {
                         }
                         title={
                           !isB2BAccepted(selectedNegotiation)
-                            ? "The B2B Partner must accept your offer before you can complete the negotiation."
+                            ? `The ${partnerLabel} must accept your offer before you can complete the negotiation.`
                             : undefined
                         }
                       >

@@ -140,7 +140,7 @@ function App() {
             path="/wallet"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER", "SCHOOL_PARTNER"]}
               >
                 <WalletPage />
               </ProtectedRoleBasedRoute>
@@ -150,7 +150,7 @@ function App() {
             path="/wallet/add-funds"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER", "SCHOOL_PARTNER"]}
               >
                 <WalletPage />
               </ProtectedRoleBasedRoute>
@@ -160,7 +160,7 @@ function App() {
             path="/wallet/withdraw"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER", "SCHOOL_PARTNER"]}
               >
                 <WalletPage />
               </ProtectedRoleBasedRoute>
@@ -170,7 +170,7 @@ function App() {
             path="/wallet/transactions"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER", "SCHOOL_PARTNER"]}
               >
                 <WalletPage />
               </ProtectedRoleBasedRoute>
@@ -180,7 +180,7 @@ function App() {
             path="/wallet/payment/verify"
             element={
               <ProtectedRoleBasedRoute
-                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER"]}
+                allowedRoles={["COMMUTER", "B2C_PARTNER", "B2B_PARTNER", "SCHOOL_PARTNER"]}
               >
                 <WalletPaymentCallback />
               </ProtectedRoleBasedRoute>
@@ -198,9 +198,14 @@ function App() {
                   "B2B_PARTNER",
                   "CORPORATE",
                   "CORPORATE_EMPLOYEE",
+                  "SCHOOL_CUSTOMER",
+                  "SCHOOL_PARTNER",
+                  "SCHOOL_STUDENT",
                   "B2C_PARTNER_DRIVER",
                   "B2B_PARTNER_DRIVER",
                   "CORPORATE_DRIVER",
+                  "SCHOOL_PARTNER_DRIVER",
+                  "SCHOOL_CUSTOMER_DRIVER",
                   "ADMIN",
                 ]}
               >
@@ -212,7 +217,9 @@ function App() {
           <Route
             path="/employee-dashboard"
             element={
-              <ProtectedRoleBasedRoute allowedRoles={["CORPORATE_EMPLOYEE"]}>
+              <ProtectedRoleBasedRoute
+                allowedRoles={["CORPORATE_EMPLOYEE", "SCHOOL_STUDENT"]}
+              >
                 <EmployeeDashboard />
               </ProtectedRoleBasedRoute>
             }
@@ -221,7 +228,9 @@ function App() {
           <Route
             path="/employee/dashboard-old"
             element={
-              <ProtectedRoleBasedRoute allowedRoles={["CORPORATE_EMPLOYEE"]}>
+              <ProtectedRoleBasedRoute
+                allowedRoles={["CORPORATE_EMPLOYEE", "SCHOOL_STUDENT"]}
+              >
                 <CorporateEmployeeDashboard />
               </ProtectedRoleBasedRoute>
             }
@@ -366,9 +375,9 @@ function App() {
           <Route
             path="/corporate-profile"
             element={
-              <ProtectedRoute allowedRoles={["CORPORATE"]}>
+              <ProtectedRoleBasedRoute allowedRoles={["CORPORATE"]}>
                 <CorporateProfilePage />
-              </ProtectedRoute>
+              </ProtectedRoleBasedRoute>
             }
           />
           <Route
@@ -499,7 +508,7 @@ function App() {
           <Route
             path="/driver/b2b-dashboard"
             element={
-              <ProtectedRoleBasedRoute allowedRoles={["B2B_PARTNER_DRIVER"]}>
+              <ProtectedRoleBasedRoute allowedRoles={["B2B_PARTNER_DRIVER", "SCHOOL_PARTNER_DRIVER"]}>
                 <B2BPartnerDriverDashboard />
               </ProtectedRoleBasedRoute>
             }
@@ -519,6 +528,7 @@ function App() {
                 allowedRoles={[
                   "B2C_PARTNER_DRIVER",
                   "B2B_PARTNER_DRIVER",
+                  "SCHOOL_PARTNER_DRIVER",
                   "CORPORATE_DRIVER",
                 ]}
               >

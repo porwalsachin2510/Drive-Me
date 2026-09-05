@@ -7,7 +7,10 @@ import {
   previewOperationalInvoice,
   generateOperationalInvoice,
   listOperationalInvoices,
+  payOperationalInvoice,
+  confirmOperationalInvoicePayment,
 } from "../../../services/managedServiceAPI";
+import OperationalInvoicePaymentModal from "./OperationalInvoicePaymentModal";
 import "./managedbilling.css";
 
 const MONTHS = [
@@ -52,6 +55,11 @@ export default function ManagedBilling({ contractId, mode = "corporate" }) {
   const [cfgForm, setCfgForm] = useState(null);
   const [savingCfg, setSavingCfg] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Invoice payment (corporate) + confirmation (partner)
+  const [payInvoice, setPayInvoice] = useState(null);
+  const [payingInvoice, setPayingInvoice] = useState(false);
+  const [confirmingId, setConfirmingId] = useState(null);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -161,6 +169,59 @@ export default function ManagedBilling({ contractId, mode = "corporate" }) {
       );
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // Corporate: start payment for a generated invoice with the chosen method.
+  // CARD/WALLET redirect to the gateway; CASH/BANK_TRANSFER record a manual
+  // submission that the partner then confirms.
+  const submitInvoicePayment = async (method) => {
+    if (!payInvoice) return;
+    try {
+      setPayingInvoice(true);
+      const res = await payOperationalInvoice(contractId, payInvoice._id, method);
+      if (res.data.success) {
+        const url = res.data.data?.paymentSession?.paymentUrl;
+        if (url) {
+          window.location.href = url;
+          return;
+        }
+        setPayInvoice(null);
+        showToast(res.data.message || "Payment submitted.");
+        load();
+      }
+    } catch (err) {
+      showToast(
+        err.response?.data?.message || "Failed to start payment",
+        "error",
+      );
+    } finally {
+      setPayingInvoice(false);
+    }
+  };
+
+  // Partner: confirm a cash/bank-transfer payment was received.
+  const confirmInvoicePayment = async (inv) => {
+    if (
+      !window.confirm(
+        `Confirm you received payment for invoice ${inv.invoiceNumber}? This marks it paid and credits your wallet.`,
+      )
+    )
+      return;
+    try {
+      setConfirmingId(inv._id);
+      const res = await confirmOperationalInvoicePayment(contractId, inv._id);
+      if (res.data.success) {
+        showToast("Payment confirmed — invoice marked paid.");
+        load();
+      }
+    } catch (err) {
+      showToast(
+        err.response?.data?.message || "Failed to confirm payment",
+        "error",
+      );
+    } finally {
+      setConfirmingId(null);
     }
   };
 
@@ -357,7 +418,7 @@ export default function ManagedBilling({ contractId, mode = "corporate" }) {
                 No operational invoices generated yet.
               </div>
             ) : (
-              <div className="mbill-inv-table">
+              <div className="mbill-inv-table has-action">
                 <div className="mbill-inv-row head">
                   <span>Invoice</span>
                   <span>Period</span>
@@ -365,29 +426,74 @@ export default function ManagedBilling({ contractId, mode = "corporate" }) {
                   <span>Penalty</span>
                   <span>Total</span>
                   <span>Status</span>
+                  <span>Action</span>
                 </div>
-                {invoices.map((inv) => (
-                  <div key={inv._id} className="mbill-inv-row">
-                    <span className="mbill-inv-num">{inv.invoiceNumber}</span>
-                    <span>{inv.periodLabel || "—"}</span>
-                    <span>{inv.usage?.trips ?? "—"}</span>
-                    <span
-                      className={inv.usage?.slaPenalty > 0 ? "mbill-pen" : ""}
-                    >
-                      {inv.usage?.slaPenalty > 0
-                        ? `-${money(inv.usage.slaPenalty, currency)}`
-                        : "—"}
-                    </span>
-                    <span className="mbill-inv-total">
-                      {money(inv.amount, currency)}
-                    </span>
-                    <span
-                      className={`mbill-status s-${(inv.status || "").toLowerCase()}`}
-                    >
-                      {inv.status}
-                    </span>
-                  </div>
-                ))}
+                {invoices.map((inv) => {
+                  const isPaid = inv.status === "PAID";
+                  const manualPending =
+                    inv.manualPaymentPending &&
+                    ["CASH", "BANK_TRANSFER"].includes(inv.paymentMethod);
+                  return (
+                    <div key={inv._id} className="mbill-inv-row">
+                      <span className="mbill-inv-num">{inv.invoiceNumber}</span>
+                      <span>{inv.periodLabel || "—"}</span>
+                      <span>{inv.usage?.trips ?? "—"}</span>
+                      <span
+                        className={inv.usage?.slaPenalty > 0 ? "mbill-pen" : ""}
+                      >
+                        {inv.usage?.slaPenalty > 0
+                          ? `-${money(inv.usage.slaPenalty, currency)}`
+                          : "—"}
+                      </span>
+                      <span className="mbill-inv-total">
+                        {money(inv.amount, currency)}
+                      </span>
+                      <span
+                        className={`mbill-status s-${(inv.status || "").toLowerCase()}`}
+                      >
+                        {isPaid
+                          ? "PAID"
+                          : manualPending
+                            ? "AWAITING CONFIRMATION"
+                            : inv.status}
+                      </span>
+                      <span className="mbill-inv-action">
+                        {isPaid ? (
+                          <span className="mbill-inv-paid">
+                            {inv.paymentMethod
+                              ? `Paid · ${inv.paymentMethod}`
+                              : "Paid"}
+                          </span>
+                        ) : isCorporate ? (
+                          manualPending ? (
+                            <span className="mbill-inv-pending">
+                              Awaiting partner
+                            </span>
+                          ) : (
+                            <button
+                              className="mbill-btn primary sm"
+                              onClick={() => setPayInvoice(inv)}
+                            >
+                              Pay now
+                            </button>
+                          )
+                        ) : manualPending ? (
+                          <button
+                            className="mbill-btn primary sm"
+                            disabled={confirmingId === inv._id}
+                            onClick={() => confirmInvoicePayment(inv)}
+                          >
+                            {confirmingId === inv._id
+                              ? "Confirming…"
+                              : "Confirm received"}
+                          </button>
+                        ) : (
+                          <span className="mbill-inv-pending">Unpaid</span>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -544,6 +650,16 @@ export default function ManagedBilling({ contractId, mode = "corporate" }) {
             </div>
           </div>
         </div>
+      )}
+
+      {payInvoice && (
+        <OperationalInvoicePaymentModal
+          invoice={payInvoice}
+          currency={currency}
+          submitting={payingInvoice}
+          onClose={() => (payingInvoice ? null : setPayInvoice(null))}
+          onSubmit={submitInvoicePayment}
+        />
       )}
 
       {toast && <div className={`mbill-toast ${toast.type}`}>{toast.msg}</div>}

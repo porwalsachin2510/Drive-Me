@@ -117,17 +117,19 @@ const RequestReview = () => {
 
     if (partnerEntries.length === 0) return;
 
-    // For managed-service requests every partner needs an operations brief.
+    // For managed-service requests every partner needs a requirement brief.
+    // The customer no longer types structured fields — a brief is valid once it
+    // carries at least one uploaded document (or, as a fallback, a summary).
     if (isManaged) {
       const missing = partnerEntries.find(
         ([, p]) =>
           !p.managedServiceBrief ||
-          !p.managedServiceBrief.workLocations?.length ||
-          !p.managedServiceBrief.routeRequests?.length,
+          (!p.managedServiceBrief.documents?.length &&
+            !p.managedServiceBrief.summary?.trim()),
       );
       if (missing) {
         setSubmitError(
-          "Every partner in a managed-service request needs an operations brief (work locations & routes) before you can submit.",
+          "Every partner in a managed-service request needs a requirement brief. Upload at least one requirement document (or add a summary) before submitting.",
         );
         return;
       }
@@ -280,17 +282,14 @@ const RequestReview = () => {
                       <div className="request-review-brief-row">
                         {partner.managedServiceBrief ? (
                           <span className="request-review-brief-ok">
-                            Operations brief attached ·{" "}
-                            {partner.managedServiceBrief.routeRequests
-                              ?.length || 0}{" "}
-                            route(s),{" "}
-                            {partner.managedServiceBrief.workLocations
-                              ?.length || 0}{" "}
-                            location(s)
+                            Requirement attached ·{" "}
+                            {partner.managedServiceBrief.documents?.length ||
+                              0}{" "}
+                            document(s)
                           </span>
                         ) : (
                           <span className="request-review-brief-missing">
-                            Operations brief required before submitting.
+                            Requirement brief required before submitting.
                           </span>
                         )}
                         <button
@@ -298,8 +297,8 @@ const RequestReview = () => {
                           onClick={() => setBriefPartnerId(fleetOwnerId)}
                         >
                           {partner.managedServiceBrief
-                            ? "Edit brief"
-                            : "Add operations brief"}
+                            ? "Edit requirement"
+                            : "Add requirement"}
                         </button>
                       </div>
                     )}

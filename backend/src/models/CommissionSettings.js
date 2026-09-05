@@ -9,7 +9,7 @@ const commissionSettingsSchema = new mongoose.Schema(
         },
         role: {
             type: String,
-            enum: ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER"],
+            enum: ["CORPORATE", "B2B_PARTNER", "B2C_PARTNER", "SCHOOL_CUSTOMER", "SCHOOL_PARTNER"],
             required: true,
         },
         // Default commission rate for this user (0-100%)

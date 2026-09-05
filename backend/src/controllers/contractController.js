@@ -11,6 +11,7 @@ import User from "../models/User.js"
 import ManagedServiceBrief from "../models/ManagedServiceBrief.js"
 import { logRequestActivity } from "../utils/operationContext.js"
 import { autoFulfillBriefItem } from "./managedServiceBriefController.js"
+import { isCustomerRole, isPartnerRole, sameSegment, segmentTag, partnerRoleLabel, customerRoleLabel, partnerNoun, customerNoun } from "../utils/roleFamilies.js"
 
 // Helper to get user name
 const getUserName = async (userId) => {
@@ -42,13 +43,22 @@ export const createContractFromQuotation = async (req, res) => {
             corporateOwnerId,
             status: "ACCEPTED",
         })
-            .populate("fleetOwnerId")
+            .populate("fleetOwnerId", "fullName email companyName role userType phone whatsappNumber companyAddress nationality")
             .populate("vehicles.vehicleId")
 
         if (!quotation) {
             return res.status(404).json({
                 success: false,
                 message: "Accepted quotation not found",
+            })
+        }
+
+        const customer = await User.findById(quotation.corporateOwnerId).select("role")
+        const partner = await User.findById(quotation.fleetOwnerId?._id || quotation.fleetOwnerId).select("role")
+        if (!customer || !isCustomerRole(customer.role) || !partner || !isPartnerRole(partner.role) || !sameSegment(customer.role, partner.role)) {
+            return res.status(422).json({
+                success: false,
+                message: "The quotation participants do not belong to a valid matching business segment",
             })
         }
 
@@ -209,11 +219,11 @@ export const createContractFromQuotation = async (req, res) => {
         await contract.populate([
             {
                 path: "corporateOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType",
             },
             {
                 path: "fleetOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType",
             },
             {
                 path: "vehicles.vehicleId",
@@ -225,7 +235,11 @@ export const createContractFromQuotation = async (req, res) => {
         const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
         const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
 
-        // Notify B2B_PARTNER about new contract
+        // Segment-aware wording so school users don't see corporate/B2B copy.
+        const customerRole = contract.corporateOwnerId?.role
+        const partnerRole = contract.fleetOwnerId?.role
+
+        // Notify partner (B2B_PARTNER / SCHOOL_PARTNER) about new contract
         await createNotification({
             userId: contract.fleetOwnerId._id,
             type: "CONTRACT_CREATED",
@@ -237,7 +251,7 @@ export const createContractFromQuotation = async (req, res) => {
         // Notify ADMIN
         await sendAdminNotification(
             "New Contract Created",
-            `${corporateName} (CORPORATE) created contract with ${fleetName} (B2B_PARTNER). Total: ${totalAmount} ${contractCurrency}`,
+            `${corporateName} (${segmentTag(customerRole)}) created contract with ${fleetName} (${segmentTag(partnerRole)}). Total: ${totalAmount} ${contractCurrency}`,
             "CONTRACT_CREATED",
             { contractId: contract._id, corporateId: corporateOwnerId, fleetOwnerId: quotation.fleetOwnerId, totalAmount }
         );
@@ -271,7 +285,7 @@ export const getCorporateContracts = async (req, res) => {
             })
             .populate({
                 path: "fleetOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType",
             })
             .populate({
                 path: "vehicles.vehicleId",
@@ -316,11 +330,11 @@ export const getContractByQuotation = async (req, res) => {
             })
             .populate({
                 path: "corporateOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType",
             })
             .populate({
                 path: "fleetOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType",
             })
 
         if (!contract) {
@@ -375,11 +389,11 @@ export const getContractById = async (req, res) => {
             })
             .populate({
                 path: "corporateOwnerId",
-                select: "fullName email companyName whatsappNumber",
+                select: "fullName email companyName whatsappNumber role userType",
             })
             .populate({
                 path: "fleetOwnerId",
-                select: "fullName email companyName whatsappNumber acceptedPaymentMethods",
+                select: "fullName email companyName whatsappNumber acceptedPaymentMethods role userType",
             })
             .populate({
                 path: "vehicles.vehicleId",
@@ -479,19 +493,21 @@ export const uploadContractDocument = async (req, res) => {
         await contract.populate([
             {
                 path: "corporateOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType",
             },
             {
                 path: "fleetOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType",
             },
         ])
 
         // Get names for notifications
         const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
         const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
+        const customerRole = contract.corporateOwnerId?.role
+        const partnerRole = contract.fleetOwnerId?.role
 
-        // Notify CORPORATE about document upload
+        // Notify customer (CORPORATE / SCHOOL_CUSTOMER) about document upload
         await createNotification({
             userId: contract.corporateOwnerId._id,
             type: "CONTRACT_DOCUMENT_UPLOADED",
@@ -503,7 +519,7 @@ export const uploadContractDocument = async (req, res) => {
         // Notify ADMIN
         await sendAdminNotification(
             "Contract Document Uploaded",
-            `${fleetName} (B2B_PARTNER) uploaded contract document for ${corporateName} (CORPORATE). Contract #${contract._id}`,
+            `${fleetName} (${segmentTag(partnerRole)}) uploaded contract document for ${corporateName} (${segmentTag(customerRole)}). Contract #${contract._id}`,
             "CONTRACT_DOCUMENT_UPLOADED",
             { contractId: contract._id, fleetOwnerId, corporateId: contract.corporateOwnerId._id }
         );
@@ -640,8 +656,8 @@ export const signContract = async (req, res) => {
 
         const contract = await Contract.findById(contractId)
             .populate("quotationId", "quotationNumber requirements quotedPrice")
-            .populate("corporateOwnerId", "fullName email companyName whatsappNumber")
-            .populate("fleetOwnerId", "fullName email companyName whatsappNumber")
+            .populate("corporateOwnerId", "fullName email companyName whatsappNumber role userType")
+            .populate("fleetOwnerId", "fullName email companyName whatsappNumber role userType")
             .populate("vehicles.vehicleId", "vehicleName vehicleCategory registrationNumber photos")
 
         if (!contract) {
@@ -661,7 +677,7 @@ export const signContract = async (req, res) => {
 
         /* ================= CORPORATE SIGN ================= */
         if (
-            userRole === "CORPORATE" &&
+            isCustomerRole(userRole) &&
             contract.corporateOwnerId._id.toString() === userId
         ) {
             if (contract.digitalSignatures.corporateOwner?.signed) {
@@ -689,13 +705,13 @@ export const signContract = async (req, res) => {
 
         /* ================= FLEET SIGN ================= */
         else if (
-            userRole === "B2B_PARTNER" &&
+            isPartnerRole(userRole) &&
             contract.fleetOwnerId._id.toString() === userId
         ) {
             if (!contract.digitalSignatures.corporateOwner?.signed) {
                 return res.status(400).json({
                     success: false,
-                    message: "Corporate owner must sign first",
+                    message: `${customerRoleLabel(contract.corporateOwnerId?.role)} must sign first`,
                 })
             }
 
@@ -738,26 +754,32 @@ export const signContract = async (req, res) => {
         const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
         const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
 
+        // Segment-aware wording so school users don't see corporate/B2B copy.
+        const customerRole = contract.corporateOwnerId?.role
+        const partnerRole = contract.fleetOwnerId?.role
+        const customerLabel = customerRoleLabel(customerRole)
+        const partnerLabel = partnerRoleLabel(partnerRole)
+
         // Send notifications based on who signed
-        if (userRole === "CORPORATE") {
-            // Notify B2B_PARTNER that corporate signed
+        if (isCustomerRole(userRole)) {
+            // Notify partner (B2B_PARTNER / SCHOOL_PARTNER) that customer signed
             await createNotification({
                 userId: contract.fleetOwnerId._id,
                 type: "CONTRACT_SIGNED",
-                title: "Contract Signed by Corporate",
+                title: `Contract Signed by ${customerLabel}`,
                 message: `${corporateName} has signed the contract. Please review and sign to finalize.`,
                 data: { contractId: contract._id }
             });
 
             // Notify ADMIN
             await sendAdminNotification(
-                "Contract Signed by Corporate",
-                `${corporateName} (CORPORATE) signed contract with ${fleetName} (B2B_PARTNER). Awaiting fleet owner signature.`,
+                `Contract Signed by ${customerLabel}`,
+                `${corporateName} (${segmentTag(customerRole)}) signed contract with ${fleetName} (${segmentTag(partnerRole)}). Awaiting ${partnerLabel} signature.`,
                 "CONTRACT_SIGNED",
-                { contractId: contract._id, signedBy: "CORPORATE", corporateId: contract.corporateOwnerId._id, fleetOwnerId: contract.fleetOwnerId._id }
+                { contractId: contract._id, signedBy: customerRole, corporateId: contract.corporateOwnerId._id, fleetOwnerId: contract.fleetOwnerId._id }
             );
-        } else if (userRole === "B2B_PARTNER") {
-            // Notify CORPORATE that fleet owner signed - contract is now ready for payment
+        } else if (isPartnerRole(userRole)) {
+            // Notify customer (CORPORATE / SCHOOL_CUSTOMER) that partner signed - contract is now ready for payment
             await createNotification({
                 userId: contract.corporateOwnerId._id,
                 type: "CONTRACT_FULLY_SIGNED",
@@ -769,9 +791,9 @@ export const signContract = async (req, res) => {
             // Notify ADMIN
             await sendAdminNotification(
                 "Contract Fully Signed",
-                `${fleetName} (B2B_PARTNER) signed contract. Contract between ${corporateName} and ${fleetName} is now fully signed. Awaiting payment.`,
+                `${fleetName} (${segmentTag(partnerRole)}) signed contract. Contract between ${corporateName} and ${fleetName} is now fully signed. Awaiting payment.`,
                 "CONTRACT_FULLY_SIGNED",
-                { contractId: contract._id, signedBy: "B2B_PARTNER", corporateId: contract.corporateOwnerId._id, fleetOwnerId: contract.fleetOwnerId._id }
+                { contractId: contract._id, signedBy: partnerRole, corporateId: contract.corporateOwnerId._id, fleetOwnerId: contract.fleetOwnerId._id }
             );
         }
 
@@ -920,7 +942,7 @@ export const getFleetOwnerContracts = async (req, res) => {
             })
             .populate({
                 path: "corporateOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality",
             })
             .populate({
                 path: "vehicles.vehicleId",
@@ -1002,11 +1024,11 @@ export const approveContract = async (req, res) => {
         await contract.populate([
             {
                 path: "corporateOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality",
             },
             {
                 path: "fleetOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality",
             },
             {
                 path: "vehicles.vehicleId",
@@ -1123,8 +1145,8 @@ export const corporateAcceptContract = async (req, res) => {
         await contract.save()
 
         await contract.populate([
-            { path: "corporateOwnerId", select: "fullName email companyName" },
-            { path: "fleetOwnerId", select: "fullName email companyName" },
+            { path: "corporateOwnerId", select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality" },
+            { path: "fleetOwnerId", select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality" },
             { path: "vehicles.vehicleId", select: "vehicleName vehicleCategory registrationNumber" },
         ])
 
@@ -1238,9 +1260,9 @@ export const assignVehicles = async (req, res) => {
         }
 
         const query = { _id: contractId }
-        if (userRole === "B2B_PARTNER") {
+        if (isPartnerRole(userRole)) {
             query.fleetOwnerId = userId
-        } else if (userRole === "CORPORATE") {
+        } else if (isCustomerRole(userRole)) {
             query.corporateOwnerId = userId
         }
 
@@ -1388,15 +1410,18 @@ export const assignVehicles = async (req, res) => {
 
             if (assignment.driverId) {
                 vehicleAssignment.driverId = assignment.driverId
-                vehicleAssignment.driverAssignedBy = userRole // Auto-set from authenticated user role
+                // Store the authenticated actor role exactly. The Contract
+                // schema explicitly supports school and corporate segments.
+                vehicleAssignment.driverAssignedBy = userRole
 
                 vehicleAssignment.driverModel =
-                    userRole === "CORPORATE" ? "CorporateDriver" : "Driver"
+                    isCustomerRole(userRole) ? "CorporateDriver" : "Driver"
             }
 
             if (assignment.fuelCardNumber) {
                 vehicleAssignment.fuelCardNumber = assignment.fuelCardNumber
-                vehicleAssignment.fuelAssignedBy = userRole // Auto-set from authenticated user role
+                // Keep fuel assignment audit data consistent with driver data.
+                vehicleAssignment.fuelAssignedBy = userRole
             }
 
             if (assignment.settings?.fuelType) {
@@ -1413,7 +1438,7 @@ export const assignVehicles = async (req, res) => {
             status: "ACTIVE",
             changedBy: userId,
             changedByRole: userRole,
-            reason: `Vehicles assigned to contract by ${userRole === "B2B_PARTNER" ? "B2B Partner" : "Corporate"}`,
+            reason: `Vehicles assigned to contract by ${isPartnerRole(userRole) ? partnerRoleLabel(userRole) : customerRoleLabel(userRole)}`,
         })
 
         await contract.save()
@@ -1565,8 +1590,6 @@ export const assignDriverOrFuelToVehicle = async (req, res) => {
         const actingRole = req.actingRole || "CORPORATE"
         const actorId = req.actorId || req.userId
         const { driverId, fuelCardNumber } = req.body
-
-        console.log("first my driverId", driverId)
 
 
         const contract = await Contract.findOne({
@@ -1749,9 +1772,16 @@ export const assignRouteToVehicle = async (req, res) => {
             // behalf of the corporate to fulfil a specific brief route request,
             // the frontend passes that brief item's id here.
             briefItemId,
+            // Route reuse: when the user picks an already-created route to apply to
+            // ANOTHER vehicle (instead of re-typing it), the frontend sends the id
+            // of that existing route here. We then attach the SAME route to the
+            // target vehicle rather than creating a duplicate Route document.
+            reuseRouteId,
         } = req.body
 
-        if (!availableDays || !availableDays.length) {
+        // availableDays is only required when creating a brand new route. When
+        // reusing an existing route we already have its schedule, so skip it.
+        if (!reuseRouteId && (!availableDays || !availableDays.length)) {
             return res.status(400).json({
                 success: false,
                 message: "Available days are required",
@@ -1793,6 +1823,82 @@ export const assignRouteToVehicle = async (req, res) => {
                 message: "Assigned vehicle not found in contract",
             })
         }
+
+        // ---- REUSE PATH ----------------------------------------------------
+        // Attach an existing route (already created on another vehicle in this
+        // same contract) to this vehicle. We share the SAME Route document so
+        // the two vehicles run an identical route — exactly the behaviour the
+        // shared-route model already uses for brief imports.
+        if (reuseRouteId) {
+            const existingRoute = await Route.findOne({ _id: reuseRouteId, contractId })
+            if (!existingRoute) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Selected route was not found on this contract",
+                })
+            }
+
+            let reuseUpdated = false
+            for (const vehicleGroup of contract.vehicles) {
+                const assignedVehicle = vehicleGroup.assignedVehicles.find(
+                    (v) => v._id.toString() === assignedVehicleId,
+                )
+                if (assignedVehicle) {
+                    if (!Array.isArray(assignedVehicle.routeDetails)) {
+                        assignedVehicle.routeDetails = []
+                    }
+                    // Guard against attaching the same route twice.
+                    const already = assignedVehicle.routeDetails.some(
+                        (rid) => String(rid) === String(existingRoute._id),
+                    )
+                    if (already) {
+                        return res.status(400).json({
+                            success: false,
+                            message: "This route is already assigned to this vehicle",
+                        })
+                    }
+                    assignedVehicle.routeDetails.push(existingRoute._id)
+                    reuseUpdated = true
+                    break
+                }
+            }
+
+            if (!reuseUpdated) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Assigned vehicle not found",
+                })
+            }
+
+            contract.markModified("vehicles")
+            await contract.save()
+
+            await logRequestActivity(req, {
+                contractId,
+                action: "ROUTE_CREATED",
+                entityType: "ROUTE",
+                entityId: existingRoute._id,
+                description: `Reused route ${existingRoute.fromLocation} → ${existingRoute.toLocation} on another vehicle`,
+                meta: { reuseRouteId: String(existingRoute._id), assignedVehicleId },
+            })
+
+            await contract.populate([
+                { path: "vehicles.vehicleId", select: "vehicleName vehicleCategory registrationNumber photos" },
+                { path: "vehicles.assignedVehicles.driverId", select: "name licenseNumber" },
+                {
+                    path: "vehicles.assignedVehicles.routeDetails",
+                    select:
+                        "fromLocation toLocation routeStartDate startTime endTime stopPoints totalDistance estimatedDuration routeNotes totalSeats availableSeats status tripTimes availableDays",
+                },
+            ])
+
+            return res.status(200).json({
+                success: true,
+                message: "Route assigned to vehicle successfully",
+                data: { route: existingRoute, contract },
+            })
+        }
+        // ---- END REUSE PATH ------------------------------------------------
 
         const seatingCapacity = vehicleDetails?.capacity?.seatingCapacity || 0
 
@@ -1970,19 +2076,22 @@ export const assignRouteToVehicle = async (req, res) => {
             },
         })
 
-        // Managed-service auto-link: if the partner indicated which brief route
+        // Managed-service auto-link: if the creator indicated which brief route
         // request this route satisfies, mark that brief item FULFILLED and link
         // it to the created route (defensive — never breaks route creation).
+        // Applies to the partner acting on behalf AND to the customer working its
+        // own brief, otherwise a customer-created route would leave the brief item
+        // showing as outstanding forever.
         let briefAutoFulfilled = false
-        if (briefItemId && req.onBehalfContractId) {
+        if (briefItemId) {
             briefAutoFulfilled = await autoFulfillBriefItem({
-                contractId: req.onBehalfContractId,
+                contractId: req.onBehalfContractId || contractId,
                 section: "routeRequests",
                 briefItemId,
                 entityId: route._id,
                 entityType: "ROUTE",
                 actorId: req.actorId || req.userId,
-                actorRole: req.actingRole || "B2B_PARTNER",
+                actorRole: req.actingRole || "CORPORATE",
             })
         }
 
@@ -2104,9 +2213,15 @@ export const bulkCreateRoutesFromBrief = async (req, res) => {
                     : ["MON", "TUE", "WED", "THU", "FRI"]
 
                 // Map brief stops -> route stop points (objects with location/time).
+                // Accept both plain stop names (older briefs) and {location,time}
+                // objects (the current parser, which carries per-stop times).
                 const stopPoints = (rr.stops || [])
-                    .filter(Boolean)
-                    .map((s) => ({ location: String(s).trim(), time: "" }))
+                    .map((s) =>
+                        typeof s === "string"
+                            ? { location: s.trim(), time: "" }
+                            : { location: String(s?.location || "").trim(), time: s?.time || "" },
+                    )
+                    .filter((s) => s.location)
 
                 // A single one-way trip covering the brief's pickup window.
                 const tripTimes = [
@@ -2193,19 +2308,17 @@ export const bulkCreateRoutesFromBrief = async (req, res) => {
                 }
                 assignedVehicleData.routeDetails.push(route._id)
 
-                // Auto-fulfil the corresponding brief route item.
-                let briefAutoFulfilled = false
-                if (req.onBehalfContractId) {
-                    briefAutoFulfilled = await autoFulfillBriefItem({
-                        contractId: req.onBehalfContractId,
-                        section: "routeRequests",
-                        briefItemId: rr._id,
-                        entityId: route._id,
-                        entityType: "ROUTE",
-                        actorId: req.actorId || req.userId,
-                        actorRole: req.actingRole || "B2B_PARTNER",
-                    })
-                }
+                // Auto-fulfil the corresponding brief route item. Works for the
+                // partner on-behalf context and for the customer's own contract.
+                const briefAutoFulfilled = await autoFulfillBriefItem({
+                    contractId: req.onBehalfContractId || contractId,
+                    section: "routeRequests",
+                    briefItemId: rr._id,
+                    entityId: route._id,
+                    entityType: "ROUTE",
+                    actorId: req.actorId || req.userId,
+                    actorRole: req.actingRole || "CORPORATE",
+                })
 
                 createdCount += 1
                 results.push({
@@ -2252,6 +2365,463 @@ export const bulkCreateRoutesFromBrief = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to bulk-create routes from brief",
+            error: error.message,
+        })
+    }
+}
+
+// Hard cap on a single import batch. A brief can legitimately list hundreds of
+// routes, but an unbounded batch would hold a request open indefinitely.
+const MAX_ROUTE_IMPORT_BATCH = 300
+
+// @desc    Import many routes from a managed-service brief in ONE action, with a
+//          DIFFERENT assigned vehicle chosen per route.
+//
+//          This is the realistic managed-service path. A brief is never a single
+//          route: the customer hands over a document listing many routes, and each
+//          route has to run on a specific vehicle. The old
+//          /bulk-assign-routes/:contractId/:assignedVehicleId endpoint could only
+//          dump every route onto one vehicle, which is not how a fleet operates.
+//
+//          Rows may come from the structured brief (they carry a briefItemId, so
+//          the created route auto-fulfils the brief item for the customer to
+//          review) or straight out of the parsed requirement document (no
+//          briefItemId — the route is still created, just not linked).
+//
+//          Both parties can call it: the customer runs it on its own contract, and
+//          the partner runs it on behalf of the customer through
+//          resolveCorporateContext. They hold the same document.
+// @route   POST /api/contracts/import-routes/:contractId
+// @access  Private (customer self-serve, or partner on-behalf via context)
+export const importRoutesFromBrief = async (req, res) => {
+    try {
+        const { contractId } = req.params
+        // After resolveCorporateContext this is ALWAYS the customer's id — either
+        // the caller itself, or the customer the partner is acting for.
+        const corporateOwnerId = req.userId
+        const { items } = req.body || {}
+
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Select at least one route to import.",
+            })
+        }
+
+        if (items.length > MAX_ROUTE_IMPORT_BATCH) {
+            return res.status(400).json({
+                success: false,
+                message: `You can import at most ${MAX_ROUTE_IMPORT_BATCH} routes at a time. Please import them in smaller batches.`,
+            })
+        }
+
+        const contract = await Contract.findOne({
+            _id: contractId,
+            corporateOwnerId,
+        }).populate({
+            path: "vehicles.vehicleId",
+            select: "capacity vehicleName registrationNumber",
+        })
+
+        if (!contract) {
+            return res.status(404).json({ success: false, message: "Contract not found" })
+        }
+
+        // Index every assigned vehicle on the contract so each row can be routed
+        // to the vehicle the user picked for it, in a single pass.
+        const vehicleIndex = new Map()
+        for (const vehicleGroup of contract.vehicles) {
+            for (const av of vehicleGroup.assignedVehicles || []) {
+                vehicleIndex.set(av._id.toString(), {
+                    assignedVehicle: av,
+                    vehicleDetails: vehicleGroup.vehicleId,
+                })
+            }
+        }
+
+        if (vehicleIndex.size === 0) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "No vehicles are assigned to this contract yet. Assign a vehicle before importing routes.",
+            })
+        }
+
+        // The brief supplies the default service start date and is what the
+        // created routes get linked back to. A missing brief is not fatal —
+        // document-sourced rows can still be imported.
+        const brief = await ManagedServiceBrief.findOne({ contractId })
+        const defaultStartDate = brief?.serviceStartDate
+            ? new Date(brief.serviceStartDate)
+            : new Date()
+
+        // Auto-fulfilment always targets THIS contract's brief, whether the caller
+        // is the partner (on-behalf context) or the customer itself. The customer
+        // importing its own brief must mark the items too, otherwise its dashboard
+        // would still show every row as outstanding.
+        const briefContractId = req.onBehalfContractId || contractId
+
+        // Guard against creating a route that already exists ANYWHERE on this
+        // contract (e.g. the user imports the same brief twice, or opens
+        // "Import Routes from Brief" from each vehicle card). A brief route is a
+        // single physical route and must exist only ONCE per contract — it runs
+        // on one bus, not replicated across every bus. Keyed by contract +
+        // from>to, mirroring the "alreadyExists" flag the import screen shows.
+        const existingRouteDocs = await Route.find({ contractId })
+            .select("fromLocation toLocation assignedVehicleId")
+            .lean()
+        const normKey = (v) =>
+            String(v ?? "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, "")
+        const existingRouteKeys = new Set(
+            existingRouteDocs.map(
+                (r) => `${normKey(r.fromLocation)}>${normKey(r.toLocation)}`,
+            ),
+        )
+
+        const results = []
+        let createdCount = 0
+        let skippedCount = 0
+        let touchedVehicles = false
+
+        // Accept both plain stop names (from a document) and {location,time}
+        // objects (from a richer editor / the structured brief).
+        const normalizeStops = (list) =>
+            (Array.isArray(list) ? list : [])
+                .filter(Boolean)
+                .map((s) =>
+                    typeof s === "string"
+                        ? { location: s.trim(), time: "" }
+                        : { location: String(s.location || "").trim(), time: s.time || "" },
+                )
+                .filter((s) => s.location)
+
+        for (const item of items) {
+            const label = item?.label || item?.fromArea || "route"
+
+            // A route can now run on MULTIPLE vehicles. Support the new
+            // assignedVehicleIds[] (multi-select) and the legacy single
+            // assignedVehicleId, de-duplicated.
+            const rawVehicleIds =
+                Array.isArray(item?.assignedVehicleIds) && item.assignedVehicleIds.length
+                    ? item.assignedVehicleIds
+                    : item?.assignedVehicleId
+                      ? [item.assignedVehicleId]
+                      : []
+            const targetIds = [
+                ...new Set(rawVehicleIds.map((id) => String(id || "")).filter(Boolean)),
+            ]
+            const targets = targetIds
+                .map((id) => vehicleIndex.get(id))
+                .filter(Boolean)
+
+            if (targets.length === 0) {
+                results.push({
+                    sourceKey: item?.sourceKey || null,
+                    briefItemId: item?.briefItemId || null,
+                    label,
+                    error: "Pick at least one vehicle for this route before importing it.",
+                })
+                continue
+            }
+
+            // ---- Build the route shape ONCE; every selected vehicle gets it. ----
+            const fromLocation = String(item.fromArea || item.label || "Pickup").trim()
+            const toLocation = String(item.toWorkLocation || "Work location").trim()
+
+            const availableDays =
+                Array.isArray(item.operatingDays) && item.operatingDays.length
+                    ? item.operatingDays
+                    : ["MON", "TUE", "WED", "THU", "FRI"]
+
+            const outboundStopPoints = normalizeStops(
+                Array.isArray(item.outboundStops) && item.outboundStops.length
+                    ? item.outboundStops
+                    : item.stops,
+            )
+            const explicitReturnStops = normalizeStops(item.returnStops)
+
+            // Prefer the explicit Trip Type (mirrors the manual Assign Route
+            // form). Fall back to inferring a round trip from the legacy
+            // direction + return time when no trip type was supplied.
+            const explicitType = String(item.tripType || "").toUpperCase()
+            const pickupStart = item.pickupStartTime || item.pickupWindowStart || ""
+            const pickupEnd =
+                item.pickupEndTime || item.pickupWindowEnd || item.shiftLoginTime || ""
+            const returnStart = item.returnStartTime || item.shiftLogoutTime || ""
+            const returnEnd = item.returnEndTime || ""
+
+            let isRoundTrip
+            if (explicitType === "ROUND_TRIP") isRoundTrip = true
+            else if (explicitType === "ONE_WAY") isRoundTrip = false
+            else {
+                const direction = String(item.direction || "BOTH").toUpperCase()
+                isRoundTrip = direction === "BOTH" && Boolean(pickupStart && returnStart)
+            }
+
+            // A round trip retraces the outbound stops on the way back when no
+            // explicit return stops were given.
+            const returnStopPoints = isRoundTrip
+                ? explicitReturnStops.length
+                    ? explicitReturnStops
+                    : [...outboundStopPoints].reverse()
+                : []
+
+            const directionForOneWay = String(item.direction || "").toUpperCase()
+            const tripTimes = [
+                isRoundTrip
+                    ? {
+                          tripNumber: 1,
+                          tripType: "Round Trip",
+                          departureTime: pickupStart,
+                          pickupStartTime: pickupStart,
+                          pickupEndTime: pickupEnd || null,
+                          returnStartTime: returnStart,
+                          returnEndTime: returnEnd || null,
+                          outboundStopPoints,
+                          returnStopPoints,
+                      }
+                    : {
+                          tripNumber: 1,
+                          tripType: "One Way",
+                          // A DROP route leaves at the return/logout time.
+                          departureTime:
+                              directionForOneWay === "DROP"
+                                  ? returnStart || pickupStart
+                                  : pickupStart,
+                          pickupStartTime: null,
+                          pickupEndTime: null,
+                          returnStartTime: null,
+                          returnEndTime: null,
+                          outboundStopPoints,
+                          returnStopPoints: [],
+                      },
+            ]
+
+            // Auto-fulfil the structured brief item only once per row, even when
+            // the route runs on several vehicles.
+            let briefAutoFulfilled = false
+
+            // A brief route is ONE physical route. We create a single Route doc
+            // (anchored to the first selected vehicle) and then share it across
+            // EVERY selected vehicle's routeDetails, so the Routes tab shows one
+            // card and every assigned vehicle card shows the same route. On a
+            // re-import we reuse the existing route and just attach it to any
+            // newly-selected vehicles.
+            const dupKey = `${normKey(fromLocation)}>${normKey(toLocation)}`
+            let sharedRouteId = null
+
+            try {
+                if (existingRouteKeys.has(dupKey)) {
+                    // Route already exists on the contract — resolve its id so we
+                    // can attach it to any newly-selected vehicles without making
+                    // a duplicate.
+                    const existingDoc =
+                        existingRouteDocs.find(
+                            (r) =>
+                                `${normKey(r.fromLocation)}>${normKey(r.toLocation)}` === dupKey,
+                        ) ||
+                        (await Route.findOne({ contractId })
+                            .where("fromLocation")
+                            .equals(fromLocation)
+                            .where("toLocation")
+                            .equals(toLocation)
+                            .select("_id")
+                            .lean())
+                    sharedRouteId = existingDoc?._id || null
+                    skippedCount += 1
+                    results.push({
+                        sourceKey: item.sourceKey || null,
+                        briefItemId: item.briefItemId || null,
+                        label,
+                        routeId: sharedRouteId,
+                        skipped: true,
+                        reason: "This route already exists on the contract.",
+                    })
+                } else {
+                    // Create ONE route + schedule, anchored to the first selected
+                    // vehicle (its canonical vehicle for trip generation).
+                    const primary = targets[0]
+                    const seatingCapacity =
+                        primary.vehicleDetails?.capacity?.seatingCapacity || 0
+
+                    const route = new Route({
+                        contractId,
+                        assignedVehicleId: primary.assignedVehicle._id,
+                        vehicleId: primary.vehicleDetails?._id || null,
+                        fromLocation,
+                        toLocation,
+                        routeStartDate: item.routeStartDate
+                            ? new Date(item.routeStartDate)
+                            : defaultStartDate,
+                        startTime: tripTimes[0].departureTime || "",
+                        endTime: pickupEnd || "",
+                        stopPoints: outboundStopPoints,
+                        totalDistance: Number(item.totalDistance) || 0,
+                        estimatedDuration: item.estimatedDuration || "",
+                        availableDays,
+                        routeNotes: item.notes || "",
+                        tripTimes,
+                        assignedBy: corporateOwnerId,
+                        totalSeats: seatingCapacity,
+                        availableSeats: seatingCapacity,
+                        routeType: "CORPORATE",
+                        corporateId: corporateOwnerId,
+                    })
+
+                    await route.save()
+
+                    // Every corporate route needs a schedule for trip generation,
+                    // so create it here exactly as the manual "+ Add Route" flow.
+                    const routeSchedule = new CorporateRouteSchedule({
+                        corporateId: corporateOwnerId,
+                        routeId: route._id,
+                        contractId: contractId,
+                        scheduleName: `${fromLocation} to ${toLocation} Schedule`,
+                        tripTimes: tripTimes.map((t) => ({
+                            tripNumber: t.tripNumber,
+                            departureTime: t.departureTime,
+                            arrivalTime: t.pickupEndTime || pickupEnd || null,
+                            pickupStartTime: t.pickupStartTime,
+                            pickupEndTime: t.pickupEndTime,
+                            returnStartTime: t.returnStartTime,
+                            returnEndTime: t.returnEndTime,
+                            returnDepartureTime: t.returnStartTime,
+                            returnArrivalTime: t.returnEndTime,
+                            tripType: t.tripType,
+                            outboundStopPoints: t.outboundStopPoints,
+                            returnStopPoints: t.returnStopPoints,
+                        })),
+                        availableDays,
+                        assignedVehicleId: primary.assignedVehicle._id,
+                        assignedVehicle: primary.vehicleDetails?._id || null,
+                        assignedDriver: primary.assignedVehicle.driverId || null,
+                        startDate: item.routeStartDate
+                            ? new Date(item.routeStartDate)
+                            : defaultStartDate,
+                        endDate: item.routeEndDate ? new Date(item.routeEndDate) : null,
+                        totalSeats: seatingCapacity,
+                        isActive: true,
+                        status: "Active",
+                    })
+                    await routeSchedule.save()
+
+                    sharedRouteId = route._id
+                    existingRouteKeys.add(dupKey)
+                    // Keep the in-memory dedup cache consistent for later items.
+                    existingRouteDocs.push({
+                        _id: route._id,
+                        fromLocation,
+                        toLocation,
+                    })
+
+                    // Only structured brief rows can be auto-linked — a document
+                    // row has no brief sub-document to fulfil. Fulfil once.
+                    if (item.briefItemId && !briefAutoFulfilled) {
+                        briefAutoFulfilled = await autoFulfillBriefItem({
+                            contractId: briefContractId,
+                            section: "routeRequests",
+                            briefItemId: item.briefItemId,
+                            entityId: route._id,
+                            entityType: "ROUTE",
+                            actorId: req.actorId || req.userId,
+                            actorRole: req.actingRole || "CORPORATE",
+                        })
+                    }
+
+                    createdCount += 1
+                    results.push({
+                        sourceKey: item.sourceKey || null,
+                        briefItemId: item.briefItemId || null,
+                        label,
+                        routeId: route._id,
+                        scheduleId: routeSchedule._id,
+                        assignedVehicleId: String(primary.assignedVehicle._id),
+                        briefAutoFulfilled,
+                    })
+                }
+
+                // Share the single route across EVERY selected vehicle so each
+                // assigned vehicle card displays it (no duplicate route docs).
+                if (sharedRouteId) {
+                    for (const target of targets) {
+                        const av = target.assignedVehicle
+                        if (!Array.isArray(av.routeDetails)) av.routeDetails = []
+                        const already = av.routeDetails.some(
+                            (id) => String(id) === String(sharedRouteId),
+                        )
+                        if (!already) {
+                            av.routeDetails.push(sharedRouteId)
+                            touchedVehicles = true
+                        }
+                    }
+                }
+            } catch (rowError) {
+                // One bad row must never abort the rest of the batch.
+                console.error("[v0] Route import row failed:", rowError.message)
+                results.push({
+                    sourceKey: item?.sourceKey || null,
+                    briefItemId: item?.briefItemId || null,
+                    label,
+                    error: rowError.message,
+                })
+            }
+        }
+
+        if (touchedVehicles) {
+            contract.markModified("vehicles")
+            await contract.save()
+        }
+
+        if (createdCount > 0) {
+            await logRequestActivity(req, {
+                contractId: briefContractId,
+                action: "ROUTE_CREATED",
+                entityType: "ROUTE",
+                description: `Imported ${createdCount} route(s) from the service brief`,
+                meta: {
+                    count: createdCount,
+                    failed: results.filter((r) => r.error).length,
+                    vehicles: [
+                        ...new Set(results.filter((r) => r.assignedVehicleId).map((r) => r.assignedVehicleId)),
+                    ].length,
+                },
+            })
+        }
+
+        const failedCount = results.filter((r) => r.error).length
+        // Success when we created something OR when nothing was created only
+        // because every selected route already existed (skipped, not failed).
+        const ok = createdCount > 0 || (failedCount === 0 && skippedCount > 0)
+        let message
+        if (createdCount > 0) {
+            message = `Imported ${createdCount} route(s) from the brief.${
+                skippedCount > 0 ? ` ${skippedCount} already existed and were skipped.` : ""
+            }`
+        } else if (skippedCount > 0 && failedCount === 0) {
+            message = touchedVehicles
+                ? `Those route(s) already existed and are now shown on the selected vehicle(s).`
+                : `All ${skippedCount} selected route(s) already exist on the contract. Nothing new to import.`
+        } else {
+            message = "No routes could be imported. Please review the errors."
+        }
+
+        res.status(ok ? 201 : 400).json({
+            success: ok,
+            message,
+            data: {
+                created: createdCount,
+                skipped: skippedCount,
+                failed: failedCount,
+                results,
+            },
+        })
+    } catch (error) {
+        console.error("[v0] Error importing routes from brief:", error)
+        res.status(500).json({
+            success: false,
+            message: "Failed to import routes from the brief",
             error: error.message,
         })
     }
@@ -2361,11 +2931,13 @@ export const deleteVehicleRoute = async (req, res) => {
             })
         }
 
-        // Find and verify the route exists
+        // Find and verify the route exists on THIS contract. We intentionally do
+        // NOT scope by assignedVehicleId: a route can be shared across several
+        // vehicles and its canonical assignedVehicleId is only the first bus, so
+        // scoping by it would 404 when deleting from any other vehicle's card.
         const route = await Route.findOne({
             _id: routeId,
             contractId,
-            assignedVehicleId,
         })
 
         if (!route) {
@@ -2375,20 +2947,18 @@ export const deleteVehicleRoute = async (req, res) => {
             })
         }
 
-        // Remove route reference from the contract's assigned vehicle
+        // A shared route is one physical route. Deleting it removes it from
+        // EVERY vehicle it runs on (not just the card it was clicked from), then
+        // the Route doc + schedules are deleted, so no dangling references remain.
         let updated = false
         for (const vehicleGroup of contract.vehicles) {
-            const assignedVehicle = vehicleGroup.assignedVehicles.find(
-                (v) => v._id.toString() === assignedVehicleId
-            )
-
-            if (assignedVehicle && assignedVehicle.routeDetails) {
-                // Remove the route from the array
+            for (const assignedVehicle of vehicleGroup.assignedVehicles || []) {
+                if (!Array.isArray(assignedVehicle.routeDetails)) continue
+                const before = assignedVehicle.routeDetails.length
                 assignedVehicle.routeDetails = assignedVehicle.routeDetails.filter(
                     (r) => r.toString() !== routeId
                 )
-                updated = true
-                break
+                if (assignedVehicle.routeDetails.length !== before) updated = true
             }
         }
 
@@ -2653,8 +3223,8 @@ export const requestDueDateExtension = async (req, res) => {
         await contract.save()
 
         await contract.populate([
-            { path: "corporateOwnerId", select: "fullName email companyName" },
-            { path: "fleetOwnerId", select: "fullName email companyName" },
+            { path: "corporateOwnerId", select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality" },
+            { path: "fleetOwnerId", select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality" },
         ])
 
         res.status(200).json({
@@ -2773,8 +3343,8 @@ export const respondToDueDateExtension = async (req, res) => {
         await contract.save()
 
         await contract.populate([
-            { path: "corporateOwnerId", select: "fullName email companyName" },
-            { path: "fleetOwnerId", select: "fullName email companyName" },
+            { path: "corporateOwnerId", select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality" },
+            { path: "fleetOwnerId", select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality" },
         ])
 
         res.status(200).json({
@@ -3050,8 +3620,8 @@ export const syncNegotiationCommission = async (req, res) => {
 
         // Re-populate the contract
         await contract.populate([
-            { path: "corporateOwnerId", select: "fullName email companyName" },
-            { path: "fleetOwnerId", select: "fullName email companyName" },
+            { path: "corporateOwnerId", select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality" },
+            { path: "fleetOwnerId", select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality" },
             { path: "quotationId" },
         ])
 
@@ -3123,7 +3693,7 @@ export const uploadSignedContractDocument = async (req, res) => {
         if (!contract.contractDocument?.url) {
             return res.status(400).json({
                 success: false,
-                message: "Original contract document not found. B2B Partner must upload contract first.",
+                message: "Original contract document not found. The partner must upload the contract first.",
             })
         }
 
@@ -3153,7 +3723,7 @@ export const uploadSignedContractDocument = async (req, res) => {
         contract.statusHistory.push({
             status: "PENDING_B2B_VERIFICATION",
             changedBy: corporateOwnerId,
-            reason: "Corporate uploaded signed contract document for B2B verification",
+            reason: "Customer uploaded signed contract document for partner verification",
         })
 
         await contract.save()
@@ -3161,11 +3731,11 @@ export const uploadSignedContractDocument = async (req, res) => {
         await contract.populate([
             {
                 path: "corporateOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality",
             },
             {
                 path: "fleetOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality",
             },
         ])
 
@@ -3173,7 +3743,12 @@ export const uploadSignedContractDocument = async (req, res) => {
         const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
         const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
 
-        // Notify B2B_PARTNER about signed document upload
+        // Segment-aware wording so school users don't see corporate/B2B copy.
+        const customerRole = contract.corporateOwnerId?.role
+        const partnerRole = contract.fleetOwnerId?.role
+        const partnerLabel = partnerRoleLabel(partnerRole)
+
+        // Notify partner (B2B_PARTNER / SCHOOL_PARTNER) about signed document upload
         await createNotification({
             userId: contract.fleetOwnerId._id,
             type: "SIGNED_DOCUMENT_UPLOADED",
@@ -3185,14 +3760,14 @@ export const uploadSignedContractDocument = async (req, res) => {
         // Notify ADMIN
         await sendAdminNotification(
             "Signed Contract Document Uploaded",
-            `${corporateName} (CORPORATE) uploaded signed contract document for ${fleetName} (B2B_PARTNER). Pending verification.`,
+            `${corporateName} (${segmentTag(customerRole)}) uploaded signed contract document for ${fleetName} (${segmentTag(partnerRole)}). Pending verification.`,
             "SIGNED_DOCUMENT_UPLOADED",
             { contractId: contract._id, corporateId: corporateOwnerId, fleetOwnerId: contract.fleetOwnerId._id }
         );
 
         res.status(200).json({
             success: true,
-            message: "Signed contract document uploaded successfully. Waiting for B2B Partner verification.",
+            message: `Signed contract document uploaded successfully. Waiting for ${partnerLabel} verification.`,
             data: { contract },
         })
     } catch (error) {
@@ -3244,7 +3819,7 @@ export const verifySignedContractDocument = async (req, res) => {
         if (contract.status !== "PENDING_B2B_VERIFICATION") {
             return res.status(400).json({
                 success: false,
-                message: `Cannot verify signed document in current status: ${contract.status}. Contract must be pending B2B verification.`,
+                message: `Cannot verify signed document in current status: ${contract.status}. Contract must be pending partner verification.`,
             })
         }
 
@@ -3252,23 +3827,28 @@ export const verifySignedContractDocument = async (req, res) => {
         if (!contract.signedContractDocument?.url) {
             return res.status(400).json({
                 success: false,
-                message: "Signed contract document not found. Corporate must upload signed document first.",
+                message: "Signed contract document not found. The customer must upload the signed document first.",
             })
         }
 
         await contract.populate([
             {
                 path: "corporateOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality",
             },
             {
                 path: "fleetOwnerId",
-                select: "fullName email companyName",
+                select: "fullName email companyName role userType phone whatsappNumber companyAddress nationality",
             },
         ])
 
         const corporateName = contract.corporateOwnerId?.companyName || contract.corporateOwnerId?.fullName || 'Corporate';
         const fleetName = contract.fleetOwnerId?.companyName || contract.fleetOwnerId?.fullName || 'Fleet Owner';
+
+        // Segment-aware wording so school users don't see corporate/B2B copy.
+        const customerRole = contract.corporateOwnerId?.role
+        const partnerRole = contract.fleetOwnerId?.role
+        const partnerLabel = partnerRoleLabel(partnerRole)
 
         if (action === "APPROVE") {
             contract.signedDocumentVerification = {
@@ -3282,7 +3862,7 @@ export const verifySignedContractDocument = async (req, res) => {
             contract.statusHistory.push({
                 status: "PENDING_FLEET_SIGNATURE",
                 changedBy: fleetOwnerId,
-                reason: verificationNotes || "B2B Partner verified signed contract document. Ready for B2B signature.",
+                reason: verificationNotes || `${partnerLabel} verified signed contract document. Ready for ${partnerLabel} signature.`,
             })
 
             // Notify CORPORATE that document is verified
@@ -3297,7 +3877,7 @@ export const verifySignedContractDocument = async (req, res) => {
             // Notify ADMIN
             await sendAdminNotification(
                 "Signed Document Verified",
-                `${fleetName} (B2B_PARTNER) verified signed contract from ${corporateName} (CORPORATE). Ready for B2B signature.`,
+                `${fleetName} (${segmentTag(partnerRole)}) verified signed contract from ${corporateName} (${segmentTag(customerRole)}). Ready for ${partnerLabel} signature.`,
                 "SIGNED_DOCUMENT_VERIFIED",
                 { contractId: contract._id, fleetOwnerId, corporateId: contract.corporateOwnerId._id }
             );
@@ -3338,7 +3918,7 @@ export const verifySignedContractDocument = async (req, res) => {
             // Notify ADMIN
             await sendAdminNotification(
                 "Signed Document Rejected",
-                `${fleetName} (B2B_PARTNER) rejected signed contract from ${corporateName} (CORPORATE). Reason: ${rejectionReason}`,
+                `${fleetName} (${segmentTag(partnerRole)}) rejected signed contract from ${corporateName} (${segmentTag(customerRole)}). Reason: ${rejectionReason}`,
                 "SIGNED_DOCUMENT_REJECTED",
                 { contractId: contract._id, fleetOwnerId, corporateId: contract.corporateOwnerId._id, rejectionReason }
             );

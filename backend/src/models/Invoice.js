@@ -111,6 +111,34 @@ const invoiceSchema = new mongoose.Schema(
         paymentMethod: String,
         transactionId: String,
 
+        // ---- Payment method + gateway tracking (set when a payment starts) ----
+        // STRIPE | TAP for online payments, MANUAL for cash/bank transfer.
+        paymentProvider: {
+            type: String,
+            enum: ["STRIPE", "TAP", "MANUAL", null],
+            default: null,
+        },
+        // In-flight gateway checkout session/charge id, so the payment callback +
+        // gateway webhooks can resolve this invoice back from the gateway event.
+        gatewaySessionId: {
+            type: String,
+            default: null,
+            index: true,
+        },
+        // Human-readable reference for cash/bank submissions and receipts.
+        paymentReference: {
+            type: String,
+            default: null,
+        },
+        // True while a cash/bank-transfer payment is submitted by the client and
+        // awaiting the fleet partner's confirmation that they received it.
+        manualPaymentPending: {
+            type: Boolean,
+            default: false,
+        },
+        // When the client initiated the (still unsettled) payment.
+        paymentSubmittedAt: Date,
+
         notes: String,
 
         // History of reminders sent to the corporate client

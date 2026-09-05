@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getCorporateOwnerBookings } from "../../../Redux/slices/bookingSlice";
+import { isCustomerRole } from "../../../utils/roleFamilies";
 import "./corporateemployeebookingspage.css";
 
 const CorporateEmployeeBookingsPage = () => {
@@ -16,7 +17,7 @@ const CorporateEmployeeBookingsPage = () => {
   const [expandedBookings, setExpandedBookings] = useState({});
 
   useEffect(() => {
-    if (auth.user?.role === "CORPORATE") {
+    if (isCustomerRole(auth.user?.role)) {
       dispatch(
         getCorporateOwnerBookings({
           status: filterStatus !== "all" ? filterStatus : undefined,
@@ -386,7 +387,7 @@ const CorporateEmployeeBookingsPage = () => {
                                 <button className="drivemego-cebp-toggle-btn">
                                   {isExpanded
                                     ? "Hide Trips"
-                                    : `View ${booking.trips.length} Trips`}
+                                    : `View ${booking.totalTripsCount || booking.trips.length} Trips`}
                                   <span
                                     className={`drivemego-cebp-toggle-arrow ${isExpanded ? "drivemego-cebp-up" : "drivemego-cebp-down"}`}
                                   >

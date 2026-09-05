@@ -101,6 +101,11 @@ const corporateEmployeeSchema = new mongoose.Schema(
                 enum: ["1_MONTH", "2_MONTHS", "3_MONTHS", "6_MONTHS", "1_YEAR", "CUSTOM"],
                 default: "1_MONTH"
             },
+            // The day the pass (and its generated trips) begins. calculatePassDates()
+            // reads `startDate`, so it MUST be a real schema field — otherwise
+            // Mongoose strips it on save and every pass silently starts "today",
+            // losing the date chosen manually or carried in from the brief.
+            startDate: Date,
             customStartDate: Date,
             customEndDate: Date,
             validFrom: Date,
