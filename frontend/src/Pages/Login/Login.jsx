@@ -17,6 +17,7 @@ import api from "../../utils/api";
 import { showSuccess, showError } from "../../utils/toast";
 import Navbar from "../../Components/Navbar/Navbar";
 import SuspendedAccountModal from "../../Components/SuspendedAccountModal/SuspendedAccountModal";
+import Logo from "../../assets/Logo.png";
 import "./login.css";
 import Footer from "../../Components/Footer/Footer";
 
@@ -148,11 +149,51 @@ const Login = () => {
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <div className="login-container">
-        <div className="login-card">
+        <div className="login-shell">
+          {/* Brand panel */}
+          <aside className="login-brand-panel">
+            <div className="login-brand-inner">
+              <span className="login-brand-logo-chip">
+                <img src={Logo} alt="drivemego" />
+              </span>
+              <h2 className="login-brand-title">
+                Welcome back to smarter commuting.
+              </h2>
+              <p className="login-brand-text">
+                Sign in to manage your rides, track live journeys and stay on
+                schedule across Kuwait &amp; the UAE.
+              </p>
+              <ul className="login-brand-features">
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  Verified drivers &amp; safe rides
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  Fixed daily schedules
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  Live route tracking
+                </li>
+              </ul>
+            </div>
+          </aside>
+
+          {/* Form card */}
+          <div className="login-card">
           <div className="login-header">
-            <div className="login-icon">🚗</div>
+            <span className="login-eyebrow">Account login</span>
             <h1 className="login-title">Welcome Back</h1>
-            <p className="login-subtitle">Sign in to your account</p>
+            <p className="login-subtitle">Sign in to continue your journey</p>
           </div>
 
           {loginMessage && (
@@ -256,6 +297,7 @@ const Login = () => {
 
           <div className="login-signup-link">
             Don&apos;t have an account? <Link to="/register">Sign up</Link>
+          </div>
           </div>
         </div>
       </div>

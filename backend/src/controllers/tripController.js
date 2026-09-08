@@ -995,6 +995,17 @@ export const startTrip = async (req, res) => {
             }
         }
 
+        // If this is an extra-service-day trip, roll its live status up onto the
+        // parent request so the school customer/partner see it move to IN_PROGRESS.
+        if (trip.extraServiceRequestId) {
+            try {
+                const { syncExtraServiceFulfillment } = await import("./extraServiceRequestController.js");
+                await syncExtraServiceFulfillment(trip.extraServiceRequestId);
+            } catch (syncErr) {
+                console.error("Error syncing extra-service fulfillment on start:", syncErr.message);
+            }
+        }
+
         res.json({
             success: true,
             message: "Trip started successfully",
@@ -1085,6 +1096,17 @@ export const completeTrip = async (req, res) => {
                 } catch (notifErr) {
                     console.error("Error creating trip complete notification:", notifErr);
                 }
+            }
+        }
+
+        // Roll the completed status up onto the parent extra-service request; if
+        // every assigned trip is done, the request itself is marked COMPLETED.
+        if (trip.extraServiceRequestId) {
+            try {
+                const { syncExtraServiceFulfillment } = await import("./extraServiceRequestController.js");
+                await syncExtraServiceFulfillment(trip.extraServiceRequestId);
+            } catch (syncErr) {
+                console.error("Error syncing extra-service fulfillment on complete:", syncErr.message);
             }
         }
 

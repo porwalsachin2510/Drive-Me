@@ -269,25 +269,60 @@ export default function CommuterHomePage() {
           ) : (
             <>
               <div className="commuterhomepage-page-title">
-                <h1>We Are Drive Me Go.</h1>
+                <span className="commuterhomepage-hero-eyebrow">
+                  <span className="commuterhomepage-hero-eyebrow-dot" />
+                  Smart mobility, made for the GCC
+                </span>
+                <h1>
+                  We Are <span className="highlight">drivemego</span>.
+                </h1>
                 <p>
                   We have the power to move the future not simply by getting
-                  from one place to another, but by opening
-                  <br />
-                  new possibilities Drive Me Go gives you the freedom to go
-                  anywhere.
+                  from one place to another, but by opening new possibilities.
+                  drivemego gives you the freedom to go anywhere.
                 </p>
+
+                <div className="commuterhomepage-hero-trust">
+                  <span className="commuterhomepage-hero-trust-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    Verified &amp; safe rides
+                  </span>
+                  <span className="commuterhomepage-hero-trust-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    Fixed daily schedules
+                  </span>
+                  <span className="commuterhomepage-hero-trust-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    For everyone
+                  </span>
+                </div>
+
                 {serviceAvailable && (
                   <p className="commuterhomepage-location-indicator commuterhomepage-available">
-                    📍 Showing routes for:{" "}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    Showing routes for{" "}
                     <strong>{getDisplayCountry(userNationality)}</strong>
                   </p>
                 )}
 
                 {userNationality === null && (
                   <p className="commuterhomepage-location-indicator commuterhomepage-available">
-                    📍
-                    <strong>Location Not Found</strong>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <strong>Detecting your location…</strong>
                   </p>
                 )}
               </div>

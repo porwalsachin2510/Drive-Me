@@ -978,3 +978,95 @@ export const confirmExtraServiceRequestPayment = async (req, res) => {
         return res.status(500).json({ success: false, message: "Failed to confirm the payment." })
     }
 }
+
+// ---------------------------------------------------------------------------
+// syncExtraServiceFulfillment (helper — called from the Trip lifecycle)
+// ---------------------------------------------------------------------------
+// Keeps an extra-service request's fulfillmentStatus in step with the real
+// Trips assigned to it, so the request reflects what actually happened on the
+// road instead of getting stuck at ASSIGNED forever:
+//   - any assigned trip started/completed  -> IN_PROGRESS
+//   - every non-cancelled assigned trip done -> COMPLETED
+// Called after a driver starts or completes an extra-day trip. Idempotent and
+// fully guarded — it never throws into the trip flow (a failure here must not
+// block the driver's start/complete action), and only ever moves the status
+// forward for a request that was already ASSIGNED or beyond.
+export const syncExtraServiceFulfillment = async (extraServiceRequestId) => {
+    try {
+        if (!extraServiceRequestId || !mongoose.Types.ObjectId.isValid(extraServiceRequestId)) return null
+
+        const request = await ExtraServiceRequest.findById(extraServiceRequestId)
+        if (!request) return null
+
+        // Only meaningful once a fleet has been assigned. Untouched / rejected /
+        // cancelled requests have no trips to reconcile.
+        if (!["ASSIGNED", "IN_PROGRESS", "COMPLETED"].includes(request.fulfillmentStatus)) return request
+        if (request.fulfillmentStatus === "COMPLETED") return request
+
+        const trips = await Trip.find({ extraServiceRequestId: request._id }).select("status")
+        if (!trips.length) return request
+
+        const norm = (s) => String(s || "").toUpperCase()
+        // Map each trip's live status onto the request's per-date assignment, so
+        // the customer/partner see progress date-by-date, not just an overall flag.
+        const tripStatusById = new Map(trips.map((t) => [t._id.toString(), norm(t.status)]))
+        request.assignments.forEach((a) => {
+            const s = a.tripId ? tripStatusById.get(a.tripId.toString()) : null
+            if (s && ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].includes(s)) {
+                a.status = s
+            }
+        })
+
+        const active = trips.filter((t) => norm(t.status) !== "CANCELLED")
+        // If every trip was cancelled there is nothing left to run — leave it as-is.
+        if (!active.length) {
+            await request.save()
+            return request
+        }
+
+        const allDone = active.every((t) => norm(t.status) === "COMPLETED")
+        const anyMoving = active.some((t) => ["IN_PROGRESS", "COMPLETED"].includes(norm(t.status)))
+
+        let next = request.fulfillmentStatus
+        if (allDone) next = "COMPLETED"
+        else if (anyMoving) next = "IN_PROGRESS"
+
+        const changed = next !== request.fulfillmentStatus
+        request.fulfillmentStatus = next
+        if (next === "COMPLETED" && !request.completedAt) request.completedAt = new Date()
+        await request.save()
+
+        if (!changed) return request
+
+        // Notify both sides when the whole extra service day is done.
+        if (next === "COMPLETED") {
+            await Promise.all([
+                createNotification({
+                    userId: request.customerId,
+                    type: "EXTRA_SERVICE_REQUEST",
+                    title: "Extra service day completed",
+                    message: `Your extra service day "${request.purpose}" has been completed.`,
+                    data: {
+                        contractId: request.contractId.toString(),
+                        extraServiceRequestId: request._id.toString(),
+                    },
+                }).catch(() => { }),
+                createNotification({
+                    userId: request.partnerId,
+                    type: "EXTRA_SERVICE_REQUEST",
+                    title: "Extra service day completed",
+                    message: `The extra service day "${request.purpose}" for ${request.customerName} is now complete.`,
+                    data: {
+                        contractId: request.contractId.toString(),
+                        extraServiceRequestId: request._id.toString(),
+                    },
+                }).catch(() => { }),
+            ])
+        }
+
+        return request
+    } catch (error) {
+        console.error("[extraService] syncExtraServiceFulfillment error:", error.message)
+        return null
+    }
+}

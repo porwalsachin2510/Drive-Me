@@ -1,14 +1,15 @@
-/* DriveMe Premium Footer - Brand Colors */
+/* drivemego Premium Footer — Brand (deep navy + cyan) */
 .my-footer {
-  background-color: #1E293B;
-  color: #94A3B8;
+  background-color: #0B2238;
+  background-image: radial-gradient(1200px 400px at 80% -10%, rgba(23, 169, 201, 0.12), transparent 60%);
+  color: #9FB3C4;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Simplified top border - DriveMe Coral */
+/* Cyan brand accent bar */
 .my-footer-top-border {
   height: 3px;
-  background: linear-gradient(90deg, #E85D5D 0%, #E85D5D 100%);
+  background: linear-gradient(90deg, #0F2E4D 0%, #17A9C9 50%, #0F2E4D 100%);
   width: 100%;
 }
 
@@ -31,14 +32,16 @@
 }
 
 .footer-logo {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .footer-logo-image {
-  height: 40px;
+  height: 32px;
   width: auto;
   object-fit: contain;
-  border-radius: 8px;
+  display: block;
+  /* Logo art is navy on transparent; render it white for the dark footer */
+  filter: brightness(0) invert(1);
 }
 
 .footer-logo-box {
@@ -54,20 +57,20 @@
 }
 
 .footer-tagline {
-  font-style: italic;
-  color: #E85D5D;
-  font-size: 13px;
-  margin: 12px 0 16px;
+  color: #4FC5DE;
+  font-size: 14px;
+  margin: 14px 0 14px;
   line-height: 1.5;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .footer-description {
   font-size: 13px;
-  line-height: 1.6;
-  color: #94A3B8;
+  line-height: 1.7;
+  color: #9FB3C4;
   margin: 0 0 20px;
-  max-width: 260px;
+  max-width: 280px;
 }
 
 .footer-social-icons {
@@ -80,19 +83,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid #475569;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(159, 179, 196, 0.28);
   border-radius: 50%;
-  color: #94A3B8;
+  color: #9FB3C4;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
 .social-icon:hover {
-  background-color: #E85D5D;
-  border-color: #E85D5D;
+  background-color: #17A9C9;
+  border-color: #17A9C9;
   color: #fff;
+  transform: translateY(-2px);
 }
 
 .social-icon svg {
@@ -114,8 +118,9 @@
 }
 
 .footer-column-title {
-  color: #E85D5D;
-  font-size: 14px;
+  color: #ffffff;
+  font-family: var(--font-display, 'Poppins', sans-serif);
+  font-size: 15px;
   font-weight: 600;
   margin: 0 0 16px;
   text-transform: none;
@@ -167,7 +172,7 @@
 }
 
 .contact-icon {
-  color: #E85D5D;
+  color: #4FC5DE;
   font-size: 14px;
   flex-shrink: 0;
   width: 18px;
@@ -200,7 +205,7 @@
 /* Divider */
 .footer-divider {
   height: 1px;
-  background-color: #334155;
+  background-color: rgba(159, 179, 196, 0.16);
   margin: 0 auto;
   width: calc(100% - 48px);
   max-width: 1352px;

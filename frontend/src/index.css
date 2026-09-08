@@ -4,23 +4,23 @@
      DRIVEME BRAND COLORS (Logo Based)
      ============================================ */
   
-  /* Primary Brand - Coral/Pink (Logo Color) */
-  --primary-color: #E85D5D;
-  --primary-hover: #D94545;
-  --primary-dark: #C93A3A;
-  --primary-light: rgba(232, 93, 93, 0.08);
-  --primary-lighter: rgba(232, 93, 93, 0.05);
-  
-  /* Secondary Brand - Teal/Green (Action Color) */
-  --secondary-color: #2DD4BF;
-  --secondary-hover: #26B8A5;
-  --secondary-dark: #14B8A6;
-  --secondary-light: rgba(45, 212, 191, 0.08);
-  
-  /* Accent Teal - For Links and Active States */
-  --accent-color: #2DD4BF;
-  --accent-hover: #26B8A5;
-  --accent-light: rgba(45, 212, 191, 0.1);
+  /* Primary Brand - Deep Navy (drivemego wordmark) */
+  --primary-color: #0F2E4D;
+  --primary-hover: #123A61;
+  --primary-dark: #0A2138;
+  --primary-light: rgba(15, 46, 77, 0.08);
+  --primary-lighter: rgba(15, 46, 77, 0.05);
+
+  /* Secondary Brand - Cyan/Teal (logo arrow & "go") */
+  --secondary-color: #17A9C9;
+  --secondary-hover: #1391AD;
+  --secondary-dark: #0F7B93;
+  --secondary-light: rgba(23, 169, 201, 0.1);
+
+  /* Accent - For Links and Active States (brand cyan) */
+  --accent-color: #17A9C9;
+  --accent-hover: #1391AD;
+  --accent-light: rgba(23, 169, 201, 0.12);
   
   /* ============================================
      STATUS COLORS
@@ -97,9 +97,9 @@
   --box-shadow: var(--shadow-md);
   
   /* Colored Shadows */
-  --shadow-primary: 0 4px 14px rgba(232, 93, 93, 0.25);
+  --shadow-primary: 0 10px 24px rgba(15, 46, 77, 0.22);
   --shadow-success: 0 4px 14px rgba(34, 197, 94, 0.25);
-  --shadow-teal: 0 4px 14px rgba(45, 212, 191, 0.25);
+  --shadow-teal: 0 10px 24px rgba(23, 169, 201, 0.28);
   
   /* ============================================
      TRANSITIONS
@@ -112,6 +112,7 @@
      TYPOGRAPHY - Inter (Premium Google-like Font)
      ============================================ */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -175,11 +176,15 @@ body,
 
 /* Premium Typography */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-family);
+  font-family: var(--font-display);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
   letter-spacing: -0.02em;
-  line-height: 1.25;
+  line-height: 1.2;
+}
+
+.font-display {
+  font-family: var(--font-display);
 }
 
 h1 { font-size: var(--font-size-4xl); font-weight: var(--font-bold); }
@@ -528,11 +533,11 @@ textarea::placeholder {
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-/* Primary Badge - Coral */
+/* Primary Badge - Navy */
 .badge-primary {
   background-color: var(--primary-light);
   color: var(--primary-color);
-  border: 1px solid rgba(232, 93, 93, 0.2);
+  border: 1px solid rgba(15, 46, 77, 0.2);
 }
 
 /* Teal Badge */
@@ -540,7 +545,7 @@ textarea::placeholder {
 .badge-available {
   background-color: var(--secondary-light);
   color: var(--secondary-color);
-  border: 1px solid rgba(45, 212, 191, 0.2);
+  border: 1px solid rgba(23, 169, 201, 0.2);
 }
 
 /* B2B/B2C Type Badges */
@@ -556,7 +561,7 @@ textarea::placeholder {
 .badge-b2c {
   background-color: var(--secondary-light);
   color: var(--secondary-color);
-  border: 1px solid rgba(45, 212, 191, 0.3);
+  border: 1px solid rgba(23, 169, 201, 0.3);
   font-size: 10px;
   font-weight: var(--font-semibold);
   padding: 2px 8px;

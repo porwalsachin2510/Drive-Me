@@ -756,7 +756,7 @@ const Register = () => {
         <div className="register-container">
           <div className="register-card">
             <div className="register-header">
-              <h1 className="register-title">Join DriveMe</h1>
+              <h1 className="register-title">Join drivemego</h1>
               <p className="register-subtitle">
                 Create your account and start moving
               </p>

@@ -1,11 +1,23 @@
-/* Premium Commute Search - Inter Font */
+/* Premium Commute Search — brand floating card */
 .commute-search-form-container {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 24px 60px rgba(15, 46, 77, 0.14);
   padding: 32px;
-  margin-bottom: 60px;
+  margin: -56px auto 60px;
+  max-width: 960px;
+  position: relative;
+  z-index: 5;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@media (max-width: 768px) {
+  .commute-search-form-container {
+    margin-top: -36px;
+    padding: 22px;
+    border-radius: 16px;
+  }
 }
 
 .drivemego-commute-search-form {
@@ -80,7 +92,7 @@
 }
 
 .commute-search-form-label-icon.commute-search-form-teal {
-  color: #14b8a6;
+  color: #17A9C9;
 }
 
 .commute-search-form-label-icon.commute-search-form-red {
@@ -117,8 +129,8 @@
 
 .commute-search-form-form-input:focus {
   outline: none;
-  border-color: #E85D5D;
-  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
+  border-color: #17A9C9;
+  box-shadow: 0 0 0 3px rgba(23, 169, 201, 0.15);
 }
 
 .commute-search-form-form-input.commute-search-form-input-error {
@@ -167,8 +179,8 @@
 
 .commute-search-form-form-select:focus {
   outline: none;
-  border-color: #E85D5D;
-  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
+  border-color: #17A9C9;
+  box-shadow: 0 0 0 3px rgba(23, 169, 201, 0.15);
 }
 
 /* Input Hint */
@@ -259,16 +271,16 @@
 }
 
 .commute-search-form-day-button:hover {
-  border-color: #E85D5D;
-  color: #E85D5D;
-  background: #fef2f2;
+  border-color: #17A9C9;
+  color: #0F7B93;
+  background: rgba(23, 169, 201, 0.08);
 }
 
 .commute-search-form-day-button.commute-search-form-selected {
-  background: #E85D5D;
-  border-color: #E85D5D;
+  background: #17A9C9;
+  border-color: #17A9C9;
   color: white;
-  box-shadow: 0 2px 8px rgba(232, 93, 93, 0.3);
+  box-shadow: 0 4px 12px rgba(23, 169, 201, 0.35);
 }
 
 /* Button Section */
@@ -288,22 +300,24 @@
 .commute-search-form-search-button {
   flex: 1;
   padding: 16px 24px;
-  background: #E85D5D;
+  background: #0F2E4D;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .commute-search-form-search-button:hover {
-  background: #D94545;
+  background: #17A9C9;
+  box-shadow: 0 10px 22px rgba(23, 169, 201, 0.35);
+  transform: translateY(-1px);
 }
 
 .commute-search-form-search-button:active {

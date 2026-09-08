@@ -140,14 +140,7 @@ const AvailableSection = ({
   };
 
   const getBorderColor = (index) => {
-    const colors = [
-      "#FDB913",
-      "#FDB913",
-      "#17A2B8",
-      "#17A2B8",
-      "#17A2B8",
-      "#FDB913",
-    ];
+    const colors = ["#17A9C9", "#0F2E4D"];
     return colors[index % colors.length];
   };
 
@@ -473,7 +466,10 @@ const AvailableSection = ({
                       {route.company || route.operator}
                       {route.rating && (
                         <span className="drivemego-availablesection-star-icon">
-                          ⭐
+                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77 5.82 21l1.18-6.88-5-4.87 7.1-1.01L12 2z" />
+                          </svg>
+                          {route.rating}
                         </span>
                       )}
                     </h3>
@@ -526,7 +522,10 @@ const AvailableSection = ({
                       </label>
                       <p className="drivemego-availablesection-detail-value">
                         <span className="drivemego-availablesection-detail-icon">
-                          📍
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z" />
+                            <circle cx="12" cy="10" r="3" />
+                          </svg>
                         </span>
                         {typeof route.fromLocation === "string"
                           ? route.fromLocation
@@ -540,7 +539,10 @@ const AvailableSection = ({
                       </label>
                       <p className="drivemego-availablesection-detail-value">
                         <span className="drivemego-availablesection-detail-icon">
-                          📍
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z" />
+                            <circle cx="12" cy="10" r="3" />
+                          </svg>
                         </span>
                         {typeof route.toLocation === "string"
                           ? route.toLocation
@@ -554,7 +556,10 @@ const AvailableSection = ({
                       </label>
                       <p className="drivemego-availablesection-detail-value">
                         <span className="drivemego-availablesection-detail-icon">
-                          📅
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="18" rx="2" />
+                            <path d="M16 2v4M8 2v4M3 10h18" />
+                          </svg>
                         </span>
                         {formatDate(route.startDate)}
                       </p>
@@ -572,7 +577,16 @@ const AvailableSection = ({
                     }
                   >
                     <span className="drivemego-availablesection-book-icon">
-                      {isAvailable ? "📌" : "🔒"}
+                      {isAvailable ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="3" y="11" width="18" height="11" rx="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                      )}
                     </span>
                     {isAvailable ? "Book This Route" : "Not Available"}
                   </button>

@@ -124,6 +124,8 @@ const extraServiceRequestSchema = new mongoose.Schema(
             default: "NOT_REQUIRED",
             index: true,
         },
+        // When the whole extra service day (all assigned trips) finished.
+        completedAt: Date,
         assignments: [
             {
                 serviceDate: { type: Date, required: true },
