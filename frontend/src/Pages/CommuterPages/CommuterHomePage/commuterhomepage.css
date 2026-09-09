@@ -1,3 +1,42 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* =====================================================================
+   DriveMeGo — Commuter Home Page
+   Modern, IndiGo-inspired redesign built on the brand's logo palette:
+   deep navy + bright teal/cyan. Primary CTAs use the brand teal (the
+   logo has no red), rendered as a subtle gradient for depth.
+   ===================================================================== */
+
+:root {
+  --dmg-navy: #0a2a43;
+  --dmg-navy-700: #123a58;
+  --dmg-navy-600: #1c4d70;
+  --dmg-teal: #12b0c4;
+  --dmg-teal-600: #0e97a8;
+  --dmg-teal-050: #e6f7fa;
+  /* Primary action color = brand teal (kept under the legacy token names
+     so every existing CTA reference picks it up). The logo has no red. */
+  --dmg-coral: #12b0c4;
+  --dmg-coral-600: #0e97a8;
+  --dmg-coral-050: #e6f7fa;
+  --dmg-cta: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  --dmg-cta-hover: linear-gradient(135deg, #12b0c4 0%, #0c8695 100%);
+  --dmg-cta-shadow: 0 12px 26px rgba(18, 176, 196, 0.30);
+  --dmg-cta-shadow-lg: 0 16px 34px rgba(18, 176, 196, 0.38);
+  --dmg-amber: #f6a723;
+  --dmg-bg: #eef3f8;
+  --dmg-card: #ffffff;
+  --dmg-ink: #0f2233;
+  --dmg-muted: #5b6b7b;
+  --dmg-muted-2: #8598a8;
+  --dmg-line: #e4ecf3;
+  --dmg-shadow: 0 10px 30px rgba(10, 42, 67, 0.08);
+  --dmg-shadow-lg: 0 24px 60px rgba(10, 42, 67, 0.16);
+  --dmg-radius: 20px;
+  --dmg-radius-sm: 12px;
+  --dmg-font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,9 +44,24 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: var(--bg-secondary, #f8f9fa);
-  color: var(--text-primary, #202124);
+  font-family: var(--dmg-font);
+  background-color: var(--dmg-bg);
+  color: var(--dmg-ink);
+}
+
+.commuterhomepage-homepage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--dmg-bg);
+}
+
+.commuterhomepage-commuters-container {
+  flex: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px 64px;
+  width: 100%;
 }
 
 .commuterhomepage-already-requested {
@@ -16,187 +70,127 @@ body {
   margin: 24px auto;
 }
 
-/* Only paint the card chrome when the section actually has content, so an
-   empty demand board doesn't leave a hollow bordered box on the page. */
 .commuterhomepage-already-requested:has(.arr) {
   padding: 20px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: var(--dmg-radius-sm);
 }
 
-.commuterhomepage-homepage {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ============ HERO (brand navy gradient) ============ */
-.commuterhomepage-page-title {
+/* ============ HERO ============ */
+.commuterhomepage-hero {
   position: relative;
-  text-align: center;
-  margin: 0 -20px 44px;
-  padding: 72px 24px 64px;
-  background: linear-gradient(160deg, #0F2E4D 0%, #123A61 55%, #0B2238 100%);
-  background-image:
-    radial-gradient(900px 320px at 15% 0%, rgba(23, 169, 201, 0.28), transparent 60%),
-    radial-gradient(700px 300px at 90% 20%, rgba(23, 169, 201, 0.16), transparent 55%),
-    linear-gradient(160deg, #0F2E4D 0%, #123A61 55%, #0B2238 100%);
-  border-radius: 0 0 32px 32px;
+  margin: 20px 0 0;
+  border-radius: 28px;
+  padding: 56px 32px 120px;
   overflow: hidden;
+  background:
+    radial-gradient(1100px 380px at 82% -12%, rgba(18, 176, 196, 0.35), transparent 60%),
+    radial-gradient(760px 360px at 8% 120%, rgba(18, 176, 196, 0.16), transparent 60%),
+    linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 55%, #0e3350 100%);
+  isolation: isolate;
+}
+
+/* subtle "road" arc echoing the logo mark */
+.commuterhomepage-hero::after {
+  content: "";
+  position: absolute;
+  right: -120px;
+  top: -140px;
+  width: 460px;
+  height: 460px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(18, 176, 196, 0.35);
+  z-index: -1;
+}
+
+.commuterhomepage-hero-inner {
+  max-width: 720px;
+  text-align: center;
+  margin: 0 auto;
 }
 
 .commuterhomepage-hero-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #bff0f6;
+  background: rgba(18, 176, 196, 0.14);
+  border: 1px solid rgba(18, 176, 196, 0.35);
+  padding: 7px 14px;
   border-radius: 100px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(79, 197, 222, 0.35);
-  color: #9FD9E8;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  margin-bottom: 22px;
-  backdrop-filter: blur(4px);
+  margin-bottom: 20px;
 }
 
-.commuterhomepage-hero-eyebrow-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #17A9C9;
-  box-shadow: 0 0 0 4px rgba(23, 169, 201, 0.25);
+.commuterhomepage-hero-eyebrow svg {
+  width: 15px;
+  height: 15px;
 }
 
 .commuterhomepage-page-title h1 {
-  font-family: var(--font-display, 'Poppins', sans-serif);
-  font-size: clamp(32px, 5vw, 52px);
-  font-weight: 700;
+  font-size: clamp(30px, 5vw, 46px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
   color: #ffffff;
   margin-bottom: 16px;
-  letter-spacing: -0.03em;
-  line-height: 1.08;
 }
 
-.commuterhomepage-page-title h1 .highlight {
-  color: #4FC5DE;
+.commuterhomepage-page-title h1 .highlight,
+.commuterhomepage-hero-accent {
+  color: var(--dmg-teal);
 }
 
 .commuterhomepage-page-title p {
-  font-size: 17px;
-  color: rgba(230, 240, 246, 0.82);
+  font-size: 16px;
   line-height: 1.65;
-  max-width: 640px;
+  color: rgba(226, 238, 246, 0.82);
+  max-width: 600px;
   margin: 0 auto;
-}
-
-.commuterhomepage-hero-trust {
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 10px 22px;
-  margin-top: 30px;
-  padding: 12px 26px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 100px;
-  backdrop-filter: blur(6px);
-}
-
-.commuterhomepage-hero-trust-item {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(230, 240, 246, 0.92);
-}
-
-.commuterhomepage-hero-trust-item:not(:first-child)::before {
-  content: "";
-  position: absolute;
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1px;
-  height: 16px;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.commuterhomepage-hero-trust-item svg {
-  width: 18px;
-  height: 18px;
-  color: #4FC5DE;
 }
 
 .commuterhomepage-location-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   margin-top: 22px;
-  padding: 8px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #eaf6f8;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 8px 16px;
   border-radius: 100px;
-  background: rgba(23, 169, 201, 0.14);
-  border: 1px solid rgba(79, 197, 222, 0.3);
-  color: #ffffff !important;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.commuterhomepage-location-indicator svg {
-  width: 16px;
-  height: 16px;
-  color: #4FC5DE;
+  backdrop-filter: blur(6px);
 }
 
 .commuterhomepage-location-indicator strong {
-  color: #4FC5DE;
+  color: var(--dmg-teal);
 }
 
-@media (max-width: 768px) {
-  .commuterhomepage-page-title {
-    padding: 52px 18px 46px;
-    margin-bottom: 32px;
-    border-radius: 0 0 24px 24px;
-  }
-  .commuterhomepage-hero-trust {
-    gap: 10px 18px;
-  }
+.commuterhomepage-location-indicator svg {
+  width: 15px;
+  height: 15px;
+  color: var(--dmg-coral);
 }
 
-/* ============ HERO BANNER ============ */
-.hero-banner {
-  width: 100%;
-  height: 300px;
-  overflow: hidden;
-  margin-bottom: 40px;
+/* pull the search card up so it floats over the hero (IndiGo style) */
+.commuterhomepage-commuters-container .commute-search-form-container {
+  margin-top: -84px;
+  position: relative;
+  z-index: 5;
 }
 
-.hero-banner img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* ============ CONTAINERS ============ */
-.commuterhomepage-commuters-container,
-.corporate-container {
-  flex: 1;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px 40px;
-  width: 100%;
-}
-
-/* Available Section Wrapper with Sidebar Support */
+/* ============ AVAILABLE SECTION WRAPPER ============ */
 .commuterhomepage-available-section-wrapper {
   display: flex;
   gap: 24px;
   align-items: flex-start;
+  margin-top: 12px;
 }
 
 .commuterhomepage-available-section-wrapper > .campaign-banner-container.sidebar {
@@ -205,604 +199,262 @@ body {
 
 .commuterhomepage-available-section-wrapper > *:not(.campaign-banner-container.sidebar) {
   flex: 1;
+  min-width: 0;
 }
 
 @media (max-width: 1024px) {
   .commuterhomepage-available-section-wrapper {
     flex-direction: column;
   }
-  
+
   .commuterhomepage-available-section-wrapper > .campaign-banner-container.sidebar {
     width: 100%;
     order: -1;
   }
 }
 
-/* ============ SERVICE SELECTION ============ */
-.service-selection {
-  background: white;
-  padding: 40px 30px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 40px;
+@media (max-width: 768px) {
+  .commuterhomepage-commuters-container {
+    padding: 0 14px 40px;
+  }
+
+  .commuterhomepage-hero {
+    padding: 40px 20px 116px;
+    border-radius: 22px;
+  }
+
+  .commuterhomepage-commuters-container .commute-search-form-container {
+    margin-top: -92px;
+  }
 }
 
-.service-selection h2 {
-  font-size: 28px;
-  color: #0F2E4D;
-  margin-bottom: 8px;
-}
-
-.service-selection > p {
-  font-size: 14px;
-  color: #17A9C9;
-  margin-bottom: 30px;
-}
-
-.services-grid {
+/* ============ HIGHLIGHTS STRIP (Why Drive Me Go) ============ */
+.commuterhomepage-highlights {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 2px 0 44px;
 }
 
-.service-card {
-  background: white;
-  border: 2px solid #e8e8e8;
-  border-radius: 12px;
-  padding: 30px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.service-card:hover {
-  border-color: #17A9C9;
-  box-shadow: 0 8px 24px rgba(0, 166, 153, 0.15);
-  transform: translateY(-4px);
-}
-
-.service-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.service-card h3 {
-  font-size: 20px;
-  color: #0F2E4D;
-  margin-bottom: 12px;
-}
-
-.service-card p {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.5;
-}
-
-/* ============ FORM STYLES ============ */
-.search-form {
-  background: white;
-  padding: 40px 30px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 40px;
-}
-
-.form-header {
+.commuterhomepage-highlight-card {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid #f0f0f0;
+  gap: 13px;
+  padding: 18px;
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(10, 42, 67, 0.05);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
-.form-header h2 {
-  font-size: 28px;
-  color: #0F2E4D;
-  margin: 0;
+.commuterhomepage-highlight-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(18, 176, 196, 0.4);
+  box-shadow: var(--dmg-shadow);
 }
 
-.form-header p {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
-}
-
-.form-header-right {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
-
-.progress-dots {
-  display: flex;
-  gap: 8px;
-}
-
-.progress-dots .dot {
-  width: 56px;
-  height: 10px;
-  border-radius: 30px;
-  background-color: #e8e8e8;
-  transition: background-color 0.3s ease;
-}
-
-.progress-dots .dot.active {
-  background-color: #17A9C9;
-}
-
-/* ============ FORM GRIDS ============ */
-.form-grid-3col {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.form-grid-2col {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0F2E4D;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.form-group input[type="text"],
-.form-group input[type="date"],
-.form-group select {
-  padding: 12px 14px;
-  border: 1px solid #d0d0d0;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: all 0.3s ease;
-  background-color: white;
-}
-
-.form-group input[type="text"]::placeholder,
-.form-group input[type="date"]::placeholder {
-  color: #999;
-}
-
-.form-group input[type="text"]:focus,
-.form-group input[type="date"]:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #17A9C9;
-  box-shadow: 0 0 0 3px rgba(0, 166, 153, 0.1);
-}
-
-.form-group input.input-error,
-.form-group select.input-error {
-  border-color: #e74c3c;
-}
-
-.form-group input.input-error:focus,
-.form-group select.input-error:focus {
-  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
-}
-
-.error-message {
-  font-size: 12px;
-  color: #e74c3c;
-  margin-top: 6px;
-}
-
-/* ============ RADIO GROUPS ============ */
-.radio-group-horizontal {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
-}
-
-.radio-option {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 12px 16px;
-  border: 2px solid #e8e8e8;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  font-size: 14px;
-  color: #666;
-}
-
-.radio-option input[type="radio"] {
-  width: 18px;
-  height: 18px;
-  margin-right: 10px;
-  cursor: pointer;
-  accent-color: #17A9C9;
-}
-
-.radio-option:hover {
-  border-color: #17A9C9;
-  background-color: rgba(0, 166, 153, 0.05);
-}
-
-.radio-option input[type="radio"]:checked + .radio-label {
-  font-weight: 600;
-  color: #0F2E4D;
-}
-
-.radio-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* ============ CHECKBOX GROUPS ============ */
-.checkbox-group-horizontal {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
-}
-
-.checkbox-option {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 12px 16px;
-  border: 2px solid #e8e8e8;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  font-size: 14px;
-  color: #666;
-}
-
-.checkbox-option input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  margin-right: 10px;
-  cursor: pointer;
-  accent-color: #17A9C9;
-}
-
-.checkbox-option:hover {
-  border-color: #17A9C9;
-  background-color: rgba(0, 166, 153, 0.05);
-}
-
-.checkbox-option input[type="checkbox"]:checked + .checkbox-label {
-  font-weight: 600;
-  color: #0F2E4D;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* ============ FORM ACTIONS ============ */
-.form-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-top: 40px;
-  padding-top: 24px;
-  border-top: 2px solid #f0f0f0;
-}
-
-.btn-back,
-.btn-search {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: inherit;
-}
-
-.btn-back {
-  background-color: white;
-  color: #0F2E4D;
-  border: 2px solid #d0d0d0;
-}
-
-.btn-back:hover {
-  background-color: #f5f5f5;
-  border-color: #0F2E4D;
-}
-
-.btn-search {
-  background-color: #17A9C9;
-  color: white;
-  padding: 12px 32px;
-  margin-left: auto;
-}
-
-.btn-search:hover {
-  background-color: #1391AD;
-  box-shadow: 0 4px 12px rgba(0, 166, 153, 0.3);
-  transform: translateY(-2px);
-}
-
-/* ============ NOTIFY / REQUEST ROUTE BUTTON ============ */
-.commuterhomepage-notify-btn {
+.commuterhomepage-highlight-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #17A9C9 0%, #1391AD 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: inherit;
+  border-radius: 13px;
+  color: var(--dmg-teal-600);
+  background: var(--dmg-teal-050);
 }
 
-.commuterhomepage-notify-btn:hover {
-  background: linear-gradient(135deg, #1391AD 0%, #0F7B93 100%);
-  box-shadow: 0 4px 12px rgba(0, 166, 153, 0.3);
-  transform: translateY(-2px);
+.commuterhomepage-highlight-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
-.commuterhomepage-notify-btn:active {
-  transform: translateY(0);
+.commuterhomepage-highlight-text h3 {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--dmg-navy);
+  margin: 2px 0 4px;
+  letter-spacing: -0.01em;
 }
 
-.commuterhomepage-notify-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+.commuterhomepage-highlight-text p {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--dmg-muted);
+  margin: 0;
 }
 
-/* ============ FOOTER ============ */
-.footer {
-  background-color: #0F2E4D;
-  color: white;
-  padding: 40px 20px 20px;
-  margin-top: auto;
-}
-
-.footer-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 30px;
-  max-width: 1200px;
-  margin: 0 auto 30px;
-}
-
-.footer-col h4 {
-  font-size: 16px;
-  margin-bottom: 12px;
-  color: #17A9C9;
-}
-
-.footer-col p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #ccc;
-}
-
-.footer-col ul {
-  list-style: none;
-}
-
-.footer-col ul li {
-  font-size: 14px;
-  margin-bottom: 8px;
-  color: #ccc;
-}
-
-.footer-col ul li a {
-  color: #ccc;
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-.footer-col ul li a:hover {
-  color: #17A9C9;
-}
-
-.footer-bottom {
+/* ============ STATS / TRUST BAND ============ */
+.commuterhomepage-stats {
+  margin: 8px 0 24px;
+  border-radius: 28px;
+  padding: 44px 32px;
+  color: #fff;
+  overflow: hidden;
+  background:
+    radial-gradient(760px 320px at 88% -22%, rgba(18, 176, 196, 0.34), transparent 60%),
+    radial-gradient(560px 300px at 6% 130%, rgba(18, 176, 196, 0.14), transparent 60%),
+    linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 58%, #0e3350 100%);
   text-align: center;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.commuterhomepage-stats-head h2 {
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+
+.commuterhomepage-stats-head p {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: rgba(226, 238, 246, 0.82);
+  margin: 0 auto 32px;
+  max-width: 580px;
+}
+
+.commuterhomepage-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.commuterhomepage-stat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+}
+
+.commuterhomepage-stat + .commuterhomepage-stat::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.commuterhomepage-stat-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--dmg-teal);
+  letter-spacing: -0.02em;
+}
+
+.commuterhomepage-stat-star {
+  width: 22px;
+  height: 22px;
+  color: var(--dmg-amber);
+}
+
+.commuterhomepage-stat-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(226, 238, 246, 0.85);
+}
+
+/* ============ REQUEST-A-ROUTE CTA BAND ============ */
+.commuterhomepage-cta-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 24px 0 8px;
+  padding: 28px 32px;
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(18, 176, 196, 0.08), rgba(18, 176, 196, 0)) ,
+    var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  box-shadow: var(--dmg-shadow);
+}
+
+.commuterhomepage-cta-text h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--dmg-navy);
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.commuterhomepage-cta-text p {
   font-size: 14px;
-  color: #999;
+  color: var(--dmg-muted);
+  margin: 0;
 }
 
-/* ============ RESPONSIVE DESIGN ============ */
-@media (max-width: 1024px) {
-  .form-grid-3col {
+.commuterhomepage-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 26px;
+  border: none;
+  border-radius: 14px;
+  background: var(--dmg-cta);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--dmg-cta-shadow);
+  transition: all 0.2s ease;
+}
+
+.commuterhomepage-cta-btn:hover {
+  background: var(--dmg-cta-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--dmg-cta-shadow-lg);
+}
+
+.commuterhomepage-cta-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 900px) {
+  .commuterhomepage-highlights {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .page-title h1 {
-    font-size: 28px;
+  .commuterhomepage-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px 16px;
   }
 
-  .form-header {
+  .commuterhomepage-stat::before {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .commuterhomepage-highlights {
+    grid-template-columns: 1fr;
+  }
+
+  .commuterhomepage-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .commuterhomepage-cta-band {
     flex-direction: column;
-    gap: 16px;
+    align-items: flex-start;
   }
 
-  .form-header-right {
+  .commuterhomepage-cta-btn {
     width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  .commuters-container,
-  .corporate-container {
-    padding: 0 16px 24px;
-  }
-
-  .page-title h1 {
-    font-size: 24px;
-  }
-
-  .page-title p {
-    font-size: 14px;
-  }
-
-  .hero-banner {
-    height: 200px;
-    margin-bottom: 30px;
-  }
-
-  .service-selection {
-    padding: 24px 20px;
-    margin-bottom: 24px;
-  }
-
-  .service-selection h2 {
-    font-size: 22px;
-  }
-
-  .services-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .search-form {
-    padding: 24px 20px;
-    margin-bottom: 24px;
-  }
-
-  .form-grid-3col,
-  .form-grid-2col {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  .radio-group-horizontal,
-  .checkbox-group-horizontal {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .radio-option,
-  .checkbox-option {
-    padding: 10px 12px;
-  }
-
-  .form-actions {
-    flex-direction: column-reverse;
-  }
-
-  .btn-search {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .btn-back {
-    width: 100%;
-  }
-
-  .footer-content {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 24px;
-  }
-}
-
-@media (max-width: 480px) {
-  .page-title h1 {
-    font-size: 20px;
-  }
-
-  .page-title p {
-    font-size: 13px;
-  }
-
-  .hero-banner {
-    height: 150px;
-    margin-bottom: 20px;
-  }
-
-  .service-selection h2 {
-    font-size: 18px;
-  }
-
-  .service-selection p {
-    font-size: 12px;
-  }
-
-  .service-card {
-    padding: 20px 16px;
-  }
-
-  .service-card h3 {
-    font-size: 16px;
-  }
-
-  .service-card p {
-    font-size: 12px;
-  }
-
-  .service-icon {
-    font-size: 36px;
-  }
-
-  .search-form {
-    padding: 16px;
-  }
-
-  .form-header h2 {
-    font-size: 20px;
-  }
-
-  .form-header p {
-    font-size: 12px;
-  }
-
-  .form-group label {
-    font-size: 13px;
-  }
-
-  .form-group input[type="text"],
-  .form-group input[type="date"],
-  .form-group select {
-    padding: 10px 12px;
-    font-size: 13px;
-  }
-
-  .radio-option,
-  .checkbox-option {
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-
-  .btn-back,
-  .btn-search {
-    padding: 10px 16px;
-    font-size: 13px;
-  }
-
-  .footer-content {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .footer-col h4 {
-    font-size: 14px;
-  }
-
-  .footer-col p,
-  .footer-col ul li {
-    font-size: 12px;
+    justify-content: center;
   }
 }

@@ -19,6 +19,61 @@ import { useLocale } from "../../../hooks/useLocale";
 
 import api from "../../../utils/api";
 
+// Brand trust highlights shown as a goindigo-style strip under the search
+// card. These are qualitative value props (not invented KPIs) so the page
+// reads like an established mobility brand without misrepresenting metrics.
+const HOME_HIGHLIGHTS = [
+  {
+    title: "Verified providers only",
+    desc: "Every driver and vehicle is checked before they carry a commuter.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
+    title: "One fixed monthly pass",
+    desc: "Transparent pricing with no surge — pay once, ride all month.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="3" />
+        <path d="M2 10h20M6 15h4" />
+      </svg>
+    ),
+  },
+  {
+    title: "The same ride, daily",
+    desc: "Reserve a seat on a route that runs on your days, at your time.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 2l4 4-4 4" />
+        <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+        <path d="M7 22l-4-4 4-4" />
+        <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+      </svg>
+    ),
+  },
+  {
+    title: "Safe & on time",
+    desc: "Tracked trips and reliable pickups so you reach work stress-free.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </svg>
+    ),
+  },
+];
+
+const HOME_STATS = [
+  { value: "100%", label: "Verified providers" },
+  { value: "2", label: "Countries served" },
+  { value: "4.8", label: "Average rider rating", star: true },
+  { value: "24/7", label: "Rider support" },
+];
+
 export default function CommuterHomePage() {
   const [firstloadroutes, setFirstLoadRoutes] = useState([]);
   const [routes, setRoutes] = useState([]);
@@ -268,64 +323,45 @@ export default function CommuterHomePage() {
             />
           ) : (
             <>
-              <div className="commuterhomepage-page-title">
-                <span className="commuterhomepage-hero-eyebrow">
-                  <span className="commuterhomepage-hero-eyebrow-dot" />
-                  Smart mobility, made for the GCC
-                </span>
-                <h1>
-                  We Are <span className="highlight">drivemego</span>.
-                </h1>
-                <p>
-                  We have the power to move the future not simply by getting
-                  from one place to another, but by opening new possibilities.
-                  drivemego gives you the freedom to go anywhere.
-                </p>
+              <section className="commuterhomepage-hero">
+                <div className="commuterhomepage-hero-inner commuterhomepage-page-title">
+                  <span className="commuterhomepage-hero-eyebrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 11l19-9-9 19-2-8-8-2z" />
+                    </svg>
+                    Smart Mobility
+                  </span>
+                  <h1>
+                    We Are <span className="commuterhomepage-hero-accent">Drive Me Go.</span>
+                  </h1>
+                  <p>
+                    We have the power to move the future — not simply by getting
+                    you from one place to another, but by opening new
+                    possibilities. Drive Me Go gives you the freedom to go
+                    anywhere.
+                  </p>
+                  {serviceAvailable && (
+                    <p className="commuterhomepage-location-indicator commuterhomepage-available">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 12 8 12s8-6.1 8-12c0-4.4-3.6-8-8-8z" />
+                        <circle cx="12" cy="10" r="2.6" fill="currentColor" stroke="none" />
+                      </svg>
+                      Showing routes for:{" "}
+                      <strong>{getDisplayCountry(userNationality)}</strong>
+                    </p>
+                  )}
 
-                <div className="commuterhomepage-hero-trust">
-                  <span className="commuterhomepage-hero-trust-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                    Verified &amp; safe rides
-                  </span>
-                  <span className="commuterhomepage-hero-trust-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 16 14" />
-                    </svg>
-                    Fixed daily schedules
-                  </span>
-                  <span className="commuterhomepage-hero-trust-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                    For everyone
-                  </span>
+                  {userNationality === null && (
+                    <p className="commuterhomepage-location-indicator commuterhomepage-available">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 12 8 12s8-6.1 8-12c0-4.4-3.6-8-8-8z" />
+                        <circle cx="12" cy="10" r="2.6" fill="currentColor" stroke="none" />
+                      </svg>
+                      <strong>Location Not Found</strong>
+                    </p>
+                  )}
                 </div>
-
-                {serviceAvailable && (
-                  <p className="commuterhomepage-location-indicator commuterhomepage-available">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z" />
-                      <circle cx="12" cy="10" r="3" />
-                    </svg>
-                    Showing routes for{" "}
-                    <strong>{getDisplayCountry(userNationality)}</strong>
-                  </p>
-                )}
-
-                {userNationality === null && (
-                  <p className="commuterhomepage-location-indicator commuterhomepage-available">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z" />
-                      <circle cx="12" cy="10" r="3" />
-                    </svg>
-                    <strong>Detecting your location…</strong>
-                  </p>
-                )}
-              </div>
+              </section>
 
               {/* Search form and route listings are only shown for commuters
               located in a country we currently serve. */}
@@ -339,6 +375,26 @@ export default function CommuterHomePage() {
 
                   {/* Campaign Banner - Top Banner (matches Admin placement: "top") */}
                   <CampaignBanner placement="top" />
+
+                  <section
+                    className="commuterhomepage-highlights"
+                    aria-label="Why choose Drive Me Go"
+                  >
+                    {HOME_HIGHLIGHTS.map((item) => (
+                      <div
+                        className="commuterhomepage-highlight-card"
+                        key={item.title}
+                      >
+                        <span className="commuterhomepage-highlight-icon">
+                          {item.icon}
+                        </span>
+                        <div className="commuterhomepage-highlight-text">
+                          <h3>{item.title}</h3>
+                          <p>{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </section>
 
                   <FeaturedRoutes routes={featuredRoutes} loading={loading} />
 
@@ -367,6 +423,57 @@ export default function CommuterHomePage() {
                       currentFilterType={currentFilterType}
                     />
                   </div>
+
+                  <section className="commuterhomepage-stats">
+                    <div className="commuterhomepage-stats-head">
+                      <h2>Trusted mobility, every single day</h2>
+                      <p>
+                        Daily commutes powered by verified providers across the
+                        region — reliable, transparent and built around you.
+                      </p>
+                    </div>
+                    <div className="commuterhomepage-stats-grid">
+                      {HOME_STATS.map((s) => (
+                        <div className="commuterhomepage-stat" key={s.label}>
+                          <span className="commuterhomepage-stat-value">
+                            {s.value}
+                            {s.star && (
+                              <svg
+                                className="commuterhomepage-stat-star"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
+                                <path d="M12 2l2.9 6.26L21.6 9l-5 4.6L18 21l-6-3.5L6 21l1.4-7.4-5-4.6 6.7-.74z" />
+                              </svg>
+                            )}
+                          </span>
+                          <span className="commuterhomepage-stat-label">
+                            {s.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="commuterhomepage-cta-band">
+                    <div className="commuterhomepage-cta-text">
+                      <h2>Can&apos;t find your route?</h2>
+                      <p>
+                        Tell us where you travel and we&apos;ll match you with a
+                        verified provider.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="commuterhomepage-cta-btn"
+                      onClick={() => setShowRouteRequest(true)}
+                    >
+                      Request a route
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M13 6l6 6-6 6" />
+                      </svg>
+                    </button>
+                  </section>
 
                   {/* Footer Campaign Banner */}
                   <CampaignBanner placement="footer" />

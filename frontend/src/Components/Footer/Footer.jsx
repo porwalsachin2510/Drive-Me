@@ -39,9 +39,9 @@ const Footer = () => {
         {/* Left Section - Logo and Description */}
         <div className="my-footer-left">
           <div className="footer-logo">
-            <img src={Logo} alt="drivemego" className="footer-logo-image" />
+            <img src={Logo} alt="DriveMe" className="footer-logo-image" />
           </div>
-          <p className="footer-tagline">Mobility, simplified.</p>
+          <p className="footer-tagline">We Are Drive Me Go.</p>
           <p className="footer-description">
             We have the power to move the future not simply by getting from one
             place to another, but by opening

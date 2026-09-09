@@ -1,237 +1,293 @@
-/* ============================================================
-   drivemego — Featured Routes (brand navy #0F2E4D + cyan #17A9C9)
-   ============================================================ */
+/* =====================================================================
+   DriveMeGo — Featured Routes & Trips (compact premium cards)
+   ===================================================================== */
 .drivemego-featuredroutes-featured-section {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 56px 24px 24px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--dmg-font, "Plus Jakarta Sans", sans-serif);
+  margin-bottom: 44px;
 }
 
-/* ---------- Header ---------- */
+/* ---- Header ---- */
 .drivemego-featuredroutes-featured-header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
+  justify-content: space-between;
   gap: 20px;
-}
-
-.drivemego-featuredroutes-header-content {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
 }
 
 .drivemego-featuredroutes-featured-title {
-  font-family: var(--font-display, 'Poppins', sans-serif);
-  font-size: 28px;
-  font-weight: 700;
-  color: #0F2E4D;
-  margin: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: 800;
   letter-spacing: -0.02em;
+  color: var(--dmg-navy, #0a2a43);
+  margin: 0 0 4px;
 }
 
 .drivemego-featuredroutes-star-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #FDB913, #F59E0B);
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fbbf24, var(--dmg-amber, #f6a723));
   color: #fff;
-  box-shadow: 0 6px 14px rgba(245, 158, 11, 0.35);
+  box-shadow: 0 8px 18px rgba(246, 167, 35, 0.35);
 }
 
 .drivemego-featuredroutes-star-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .drivemego-featuredroutes-featured-subtitle {
   font-size: 14px;
-  color: #64748b;
+  color: var(--dmg-muted, #5b6b7b);
   margin: 0;
+  padding-left: 50px;
 }
 
-/* ---------- Filter bar ---------- */
+.drivemego-featuredroutes-header-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Filter bar */
 .drivemego-featuredroutes-filter-bar {
   display: flex;
   align-items: flex-end;
+}
+
+.drivemego-featuredroutes-filter-btn {
+  display: flex;
+  align-items: flex-end;
   gap: 12px;
-  padding: 14px 16px;
-  background: #ffffff;
-  border: 1px solid #eef2f6;
+  background: #fff;
+  border: 1px solid var(--dmg-line, #e4ecf3);
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(15, 46, 77, 0.06);
-  flex-wrap: wrap;
+  padding: 12px 14px;
+  box-shadow: var(--dmg-shadow, 0 10px 30px rgba(10, 42, 67, 0.08));
 }
 
 .drivemego-featuredroutes-filter-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .drivemego-featuredroutes-filter-label {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 10.5px;
   font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: var(--dmg-muted-2, #8598a8);
 }
 
-/* legacy layout helpers no longer used for spacing */
-.drivemego-featuredroutes-filter-text,
-.drivemego-featuredroutes-filter-btn { display: contents; }
-.drivemego-featuredroutes-mar { margin-right: 0; }
+.drivemego-featuredroutes-filter-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
 
-.drivemego-featuredroutes-filter-input-wrapper { position: relative; }
+.drivemego-featuredroutes-filter-input-wrapper svg {
+  position: absolute;
+  left: 11px;
+  width: 15px;
+  height: 15px;
+  color: var(--dmg-muted-2, #8598a8);
+  pointer-events: none;
+}
 
 .drivemego-featuredroutes-filter-input {
-  padding: 10px 14px;
-  border: 1px solid #e2e8f0;
+  width: 170px;
+  padding: 9px 12px 9px 32px;
+  border: 1.5px solid var(--dmg-line, #e4ecf3);
   border-radius: 10px;
-  font-size: 14px;
-  width: 190px;
-  background-color: #f8fafc;
-  color: #0f172a;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--dmg-ink, #0f2233);
+  background: #f8fbfd;
   transition: all 0.2s ease;
 }
 
-.drivemego-featuredroutes-filter-input::placeholder { color: #a8b3c2; }
+.drivemego-featuredroutes-filter-input::placeholder {
+  color: var(--dmg-muted-2, #8598a8);
+}
 
 .drivemego-featuredroutes-filter-input:focus {
   outline: none;
-  border-color: #17A9C9;
-  background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(23, 169, 201, 0.15);
+  background: #fff;
+  border-color: var(--dmg-teal, #12b0c4);
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.14);
 }
 
 .drivemego-featuredroutes-filter-select {
-  padding: 10px 14px;
-  border: 1px solid #e2e8f0;
+  padding: 9px 12px;
+  border: 1.5px solid var(--dmg-line, #e4ecf3);
   border-radius: 10px;
-  font-size: 14px;
-  background-color: #f8fafc;
-  color: #0f172a;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--dmg-ink, #0f2233);
+  background: #f8fbfd;
   cursor: pointer;
-  min-width: 130px;
   transition: all 0.2s ease;
 }
 
 .drivemego-featuredroutes-filter-select:focus {
   outline: none;
-  border-color: #17A9C9;
-  box-shadow: 0 0 0 3px rgba(23, 169, 201, 0.15);
+  background: #fff;
+  border-color: var(--dmg-teal, #12b0c4);
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.14);
 }
 
 .drivemego-featuredroutes-reset-button {
-  padding: 10px 18px;
-  border: 1px solid #0F2E4D;
-  background-color: #fff;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0F2E4D;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1.5px solid var(--dmg-line, #e4ecf3);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--dmg-navy, #0a2a43);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
   transition: all 0.2s ease;
-  height: 42px;
+}
+
+.drivemego-featuredroutes-reset-button svg {
+  width: 15px;
+  height: 15px;
 }
 
 .drivemego-featuredroutes-reset-button:hover {
-  background-color: #0F2E4D;
+  background: var(--dmg-navy, #0a2a43);
+  border-color: var(--dmg-navy, #0a2a43);
   color: #fff;
 }
 
-.drivemego-featuredroutes-filter-icon { display: inline-flex; }
-.drivemego-featuredroutes-filter-icon svg { width: 15px; height: 15px; }
-
-/* ---------- Grid ---------- */
+/* ---- Grid ---- */
 .drivemego-featuredroutes-routes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
 }
 
-/* ---------- Card ---------- */
+@media (max-width: 980px) {
+  .drivemego-featuredroutes-routes-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .drivemego-featuredroutes-routes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Card ---- */
+@keyframes drivemego-featuredroutes-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .drivemego-featuredroutes-route-card {
-  background-color: #fff;
-  border: 1px solid #eef2f6;
-  border-radius: 20px;
+  background: var(--dmg-card, #fff);
+  border: 1px solid var(--dmg-line, #e4ecf3);
+  border-radius: var(--dmg-radius, 20px);
   overflow: hidden;
-  box-shadow: 0 12px 30px rgba(15, 46, 77, 0.07);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 2px 8px rgba(10, 42, 67, 0.04), 0 12px 28px rgba(10, 42, 67, 0.05);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+  animation: drivemego-featuredroutes-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.drivemego-featuredroutes-routes-grid > .drivemego-featuredroutes-route-card:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.drivemego-featuredroutes-routes-grid > .drivemego-featuredroutes-route-card:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drivemego-featuredroutes-route-card {
+    animation: none;
+  }
 }
 
 .drivemego-featuredroutes-route-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 22px 44px rgba(15, 46, 77, 0.16);
+  border-color: rgba(18, 176, 196, 0.4);
+  box-shadow: var(--dmg-shadow-lg, 0 24px 60px rgba(10, 42, 67, 0.16));
 }
 
-/* Branded route header (no dependency on provider image quality) */
-.drivemego-featuredroutes-card-header {
+/* Image */
+.drivemego-featuredroutes-card-image {
   position: relative;
-  padding: 16px 18px 16px;
-  background: linear-gradient(135deg, #0F2E4D 0%, #123A61 55%, #0F7B93 100%);
-  color: #fff;
+  height: 116px;
   overflow: hidden;
+  background: linear-gradient(135deg, var(--dmg-navy, #0a2a43), var(--dmg-navy-700, #123a58));
 }
 
-.drivemego-featuredroutes-card-header::after {
+.drivemego-featuredroutes-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.drivemego-featuredroutes-route-card:hover .drivemego-featuredroutes-card-image img {
+  transform: scale(1.06);
+}
+
+.drivemego-featuredroutes-card-image::after {
   content: "";
   position: absolute;
-  right: -46px;
-  top: -46px;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(23, 169, 201, 0.4), transparent 70%);
-  pointer-events: none;
-}
-
-.drivemego-featuredroutes-card-header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-  z-index: 1;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 42, 67, 0.05) 40%, rgba(10, 42, 67, 0.55) 100%);
 }
 
 .drivemego-featuredroutes-badge-featured,
 .drivemego-featuredroutes-my-badge-verified {
-  padding: 5px 10px;
-  border-radius: 100px;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
+  position: absolute;
+  top: 12px;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  padding: 5px 10px;
+  border-radius: 100px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(4px);
 }
 
 .drivemego-featuredroutes-badge-featured {
-  background: linear-gradient(135deg, #FDB913, #F59E0B);
-  color: #3d2b00;
-  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.35);
+  left: 12px;
+  background: linear-gradient(135deg, #fbbf24, var(--dmg-amber, #f6a723));
+  color: #3a2a00;
+  box-shadow: 0 4px 12px rgba(246, 167, 35, 0.4);
 }
 
 .drivemego-featuredroutes-my-badge-verified {
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.32);
+  right: 12px;
+  background: rgba(18, 176, 196, 0.95);
   color: #fff;
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.4);
 }
 
 .drivemego-featuredroutes-badge-featured svg,
@@ -240,448 +296,371 @@
   height: 12px;
 }
 
-/* Journey: from -> to */
-.drivemego-featuredroutes-journey {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 18px 0 16px;
-  position: relative;
-  z-index: 1;
-}
-
-.drivemego-featuredroutes-journey-point {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-  flex: 1;
-}
-
-.drivemego-featuredroutes-journey-to {
-  text-align: right;
-  align-items: flex-end;
-}
-
-.drivemego-featuredroutes-journey-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.drivemego-featuredroutes-journey-place {
-  font-family: var(--font-display, 'Poppins', sans-serif);
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.drivemego-featuredroutes-journey-arrow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: rgba(23, 169, 201, 0.95);
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-}
-
-.drivemego-featuredroutes-journey-arrow svg {
-  width: 16px;
-  height: 16px;
-  color: #fff;
-}
-
-.drivemego-featuredroutes-card-header-bottom {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  position: relative;
-  z-index: 1;
+.drivemego-featuredroutes-image-overlay {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2;
 }
 
 .drivemego-featuredroutes-seats-badge {
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  padding: 5px 10px;
-  border-radius: 100px;
-  font-size: 11px;
-  font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  color: #fff;
-}
-
-.drivemego-featuredroutes-seats-icon {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #34d399;
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.3);
-  font-size: 0;
-  flex-shrink: 0;
-}
-
-.drivemego-featuredroutes-vehicle-chip {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 5px 10px;
+  gap: 7px;
+  padding: 6px 12px;
   border-radius: 100px;
-  font-size: 11px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 55%;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--dmg-navy, #0a2a43);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(10, 42, 67, 0.2);
 }
 
-/* Card content */
+.drivemego-featuredroutes-seats-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+}
+
+/* Content */
 .drivemego-featuredroutes-card-content {
-  padding: 18px;
-  flex: 1;
+  padding: 15px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  flex: 1;
 }
 
-/* Company */
-.drivemego-featuredroutes-company-section { display: flex; }
+.drivemego-featuredroutes-company-section {
+  width: 100%;
+}
 
 .drivemego-featuredroutes-company-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
+  gap: 11px;
 }
 
 .drivemego-featuredroutes-company-logo {
-  width: 46px !important;
-  height: 46px !important;
-  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   object-fit: cover;
-  border: 2px solid #eef2f6;
+  border: 1px solid var(--dmg-line, #e4ecf3);
   flex-shrink: 0;
 }
 
-.drivemego-featuredroutes-company-info { flex: 1; min-width: 0; }
-
-.drivemego-featuredroutes-company-name {
-  font-size: 14px;
-  font-weight: 700;
-  margin: 0;
-  color: #0F2E4D;
-  line-height: 1.3;
+.drivemego-featuredroutes-company-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.drivemego-featuredroutes-company-type {
-  font-size: 11px;
-  color: #94a3b8;
-  margin: 2px 0 0 0;
+.drivemego-featuredroutes-company-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--dmg-navy, #0a2a43);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drivemego-featuredroutes-company-meta {
+  font-size: 12px;
+  color: var(--dmg-muted-2, #8598a8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .drivemego-featuredroutes-rating-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #B45309;
-  background: #FEF3C7;
-  padding: 4px 9px;
-  border-radius: 100px;
-  white-space: nowrap;
+  padding: 5px 9px;
+  border-radius: 9px;
+  background: #fff7e6;
+  color: #b26a00;
+  font-size: 12.5px;
+  font-weight: 800;
   flex-shrink: 0;
 }
 
-.drivemego-featuredroutes-star { font-size: 12px; color: #F59E0B; }
-
-/* Available days */
-.drivemego-featuredroutes-available-featured-detail-group {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 0;
-  border-top: 1px solid #f1f5f9;
-  border-bottom: 1px solid #f1f5f9;
+.drivemego-featuredroutes-rating-badge svg {
+  width: 13px;
+  height: 13px;
+  color: var(--dmg-amber, #f6a723);
 }
 
-.drivemego-featuredroutes-detail-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.drivemego-featuredroutes-available-days {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.drivemego-featuredroutes-day-pill {
-  min-width: 30px;
-  height: 24px;
-  padding: 0 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  background: #eef4f8;
-  border: 1px solid #dbe6ee;
-  font-size: 9px;
-  font-weight: 700;
-  color: #0F2E4D;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.drivemego-featuredroutes-day-pill.drivemego-featuredroutes-weekend {
-  background: rgba(23, 169, 201, 0.12);
-  border-color: rgba(23, 169, 201, 0.4);
-  color: #0F7B93;
-}
-
-/* Route (from -> to) as a timeline */
+/* Route from -> to with a connecting line */
 .drivemego-featuredroutes-locations-section {
+  position: relative;
+  padding: 11px 14px;
+  background: #f5f9fc;
+  border: 1px solid #eef3f8;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  position: relative;
-  padding-left: 4px;
+  gap: 10px;
 }
 
 .drivemego-featuredroutes-location-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 14px;
+  gap: 10px;
   position: relative;
-  padding: 3px 0;
-}
-
-.drivemego-featuredroutes-location-item:first-child::before {
-  content: "";
-  position: absolute;
-  left: 4px;
-  top: 20px;
-  bottom: -6px;
-  width: 2px;
-  background: repeating-linear-gradient(to bottom, #cbd5e1 0 4px, transparent 4px 8px);
 }
 
 .drivemego-featuredroutes-location-dot {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   flex-shrink: 0;
-  font-size: 0;
   z-index: 1;
 }
 
-.drivemego-featuredroutes-location-item:first-child .drivemego-featuredroutes-location-dot {
-  background: #17A9C9;
-  box-shadow: 0 0 0 3px rgba(23, 169, 201, 0.2);
+.drivemego-featuredroutes-dot-from {
+  background: var(--dmg-teal, #12b0c4);
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.18);
 }
 
-.drivemego-featuredroutes-location-item:last-child .drivemego-featuredroutes-location-dot {
-  background: #0F2E4D;
-  box-shadow: 0 0 0 3px rgba(15, 46, 77, 0.15);
+.drivemego-featuredroutes-dot-to {
+  background: var(--dmg-navy, #0a2a43);
+  box-shadow: 0 0 0 3px rgba(10, 42, 67, 0.16);
+}
+
+/* dashed connector between the two dots */
+.drivemego-featuredroutes-location-item:first-child::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 15px;
+  height: 16px;
+  border-left: 2px dashed #c7d6e2;
 }
 
 .drivemego-featuredroutes-location-name {
-  color: #1e293b;
+  font-size: 13.5px;
   font-weight: 600;
+  color: var(--dmg-ink, #0f2233);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Frequency */
-.drivemego-featuredroutes-frequency-section {
+/* Detail groups */
+.drivemego-featuredroutes-available-featured-detail-group,
+.drivemego-featuredroutes-featured-detail-group {
+  display: block;
+}
+
+.drivemego-featuredroutes-detail-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #475569;
-  font-weight: 500;
+  gap: 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dmg-muted, #5b6b7b);
+  margin-bottom: 7px;
 }
 
-.drivemego-featuredroutes-calendar-icon {
-  display: inline-flex;
-  color: #17A9C9;
-}
-.drivemego-featuredroutes-calendar-icon svg { width: 16px; height: 16px; }
-
-/* Trip times */
-.drivemego-featuredroutes-featured-detail-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.drivemego-featuredroutes-detail-label svg {
+  width: 14px;
+  height: 14px;
+  color: var(--dmg-teal-600, #0e97a8);
 }
 
+.drivemego-featuredroutes-freq {
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dmg-teal-600, #0e97a8);
+  background: var(--dmg-teal-050, #e6f7fa);
+  padding: 2px 9px;
+  border-radius: 100px;
+}
+
+.drivemego-featuredroutes-available-days,
 .drivemego-featuredroutes-trip-times {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  align-items: center;
+}
+
+.drivemego-featuredroutes-day-pill {
+  min-width: 34px;
+  text-align: center;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #eef3f8;
+  color: var(--dmg-navy-600, #1c4d70);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.drivemego-featuredroutes-day-pill.drivemego-featuredroutes-weekend {
+  background: #fff4de;
+  color: #b26a00;
 }
 
 .drivemego-featuredroutes-trip-time-badge {
   display: inline-flex;
   align-items: center;
   padding: 5px 11px;
-  background: rgba(23, 169, 201, 0.1);
-  border: 1px solid rgba(23, 169, 201, 0.28);
-  border-radius: 100px;
+  border-radius: 8px;
+  background: #eafaf1;
+  color: #0f7a44;
   font-size: 12px;
-  font-weight: 600;
-  color: #0F7B93;
+  font-weight: 700;
+  border: 1px solid rgba(16, 185, 129, 0.18);
 }
 
 .drivemego-featuredroutes-more-times {
-  font-size: 11px;
-  color: #0F2E4D;
-  font-weight: 600;
-  padding: 5px 9px;
-  background: #eef4f8;
-  border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: #eef3f8;
+  color: var(--dmg-muted, #5b6b7b);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .drivemego-featuredroutes-no-time {
-  font-size: 12px;
-  color: #94a3b8;
+  font-size: 12.5px;
+  color: var(--dmg-muted-2, #8598a8);
   font-style: italic;
 }
 
-/* Pricing */
+/* Footer: price + book */
+.drivemego-featuredroutes-card-footer {
+  margin-top: auto;
+  padding-top: 13px;
+  border-top: 1px solid var(--dmg-line, #e4ecf3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .drivemego-featuredroutes-pricing-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 14px;
-  background: #f8fafc;
-  border-radius: 12px;
+  gap: 1px;
 }
 
 .drivemego-featuredroutes-pricing-label {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
-  color: #94a3b8;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.drivemego-featuredroutes-pricing-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.drivemego-featuredroutes-pricing-title {
-  font-size: 13px;
-  color: #475569;
-  font-weight: 600;
+  color: var(--dmg-muted-2, #8598a8);
 }
 
 .drivemego-featuredroutes-pricing-value {
-  font-size: 20px;
-  color: #0F2E4D;
+  font-size: 19px;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  color: var(--dmg-navy, #0a2a43);
 }
 
-/* Book button */
 .drivemego-featuredroutes-book-button {
-  padding: 14px 16px;
-  margin-top: 2px;
-  background-color: #0F2E4D;
-  color: #fff;
+  padding: 12px 18px;
   border: none;
   border-radius: 12px;
-  font-size: 14px;
+  background: var(--dmg-cta, linear-gradient(135deg, #16bccf, #0e97a8));
+  color: #fff;
+  font-size: 13.5px;
   font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.25s ease;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 18px rgba(18, 176, 196, 0.28);
 }
 
-.drivemego-featuredroutes-book-button:hover {
-  background-color: #17A9C9;
+.drivemego-featuredroutes-book-button:hover:not(:disabled) {
+  background: var(--dmg-cta-hover, linear-gradient(135deg, #12b0c4, #0c8695));
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(23, 169, 201, 0.35);
+  box-shadow: 0 12px 24px rgba(18, 176, 196, 0.34);
 }
-
-.drivemego-featuredroutes-book-button:active { transform: translateY(0); }
 
 .drivemego-featuredroutes-book-button:disabled {
-  background-color: #e2e8f0;
-  color: #94a3b8;
+  background: #cdd8e2;
+  color: #fff;
   cursor: not-allowed;
   box-shadow: none;
-  transform: none;
 }
 
 /* Empty state */
 .drivemego-featuredroutes-empty {
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   text-align: center;
   padding: 56px 24px;
-  margin-top: 8px;
   background: #fff;
-  border: 1px dashed #d9e2ec;
-  border-radius: 18px;
+  border: 1px dashed var(--dmg-line, #e4ecf3);
+  border-radius: var(--dmg-radius, 20px);
 }
 
 .drivemego-featuredroutes-empty-icon {
-  font-size: 30px;
-  color: #F59E0B;
-  line-height: 1;
-  margin-bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: #fff7e6;
+  color: var(--dmg-amber, #f6a723);
+  margin-bottom: 14px;
+}
+
+.drivemego-featuredroutes-empty-icon svg {
+  width: 26px;
+  height: 26px;
 }
 
 .drivemego-featuredroutes-empty-title {
   font-size: 18px;
-  font-weight: 700;
-  color: #0F2E4D;
-  margin: 0 0 8px 0;
+  font-weight: 800;
+  color: var(--dmg-navy, #0a2a43);
+  margin: 0 0 8px;
 }
 
 .drivemego-featuredroutes-empty-text {
   font-size: 14px;
-  color: #64748b;
-  max-width: 480px;
-  margin: 0;
+  color: var(--dmg-muted, #5b6b7b);
+  max-width: 440px;
+  margin: 0 auto;
   line-height: 1.6;
 }
 
-/* Responsive */
-@media (max-width: 900px) {
-  .drivemego-featuredroutes-featured-header { align-items: stretch; }
-  .drivemego-featuredroutes-filter-bar { width: 100%; }
-  .drivemego-featuredroutes-filter-group { flex: 1; }
-  .drivemego-featuredroutes-filter-input,
-  .drivemego-featuredroutes-filter-select { width: 100%; min-width: 0; }
-}
-
 @media (max-width: 768px) {
-  .drivemego-featuredroutes-featured-section { padding: 36px 16px 16px; }
-  .drivemego-featuredroutes-featured-title { font-size: 23px; }
-  .drivemego-featuredroutes-routes-grid { grid-template-columns: 1fr; gap: 18px; }
-}
+  .drivemego-featuredroutes-featured-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-@media (max-width: 480px) {
-  .drivemego-featuredroutes-filter-bar { flex-direction: column; align-items: stretch; }
-  .drivemego-featuredroutes-reset-button { justify-content: center; }
+  .drivemego-featuredroutes-filter-btn {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .drivemego-featuredroutes-filter-input {
+    width: 100%;
+  }
+
+  .drivemego-featuredroutes-filter-group:first-child {
+    flex: 1;
+  }
 }

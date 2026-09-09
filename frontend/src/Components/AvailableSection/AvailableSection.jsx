@@ -140,7 +140,9 @@ const AvailableSection = ({
   };
 
   const getBorderColor = (index) => {
-    const colors = ["#17A9C9", "#0F2E4D"];
+    // Brand-cohesive left accent rotation (teal → coral → navy) so the list
+    // reads as one designed system rather than random highlight colors.
+    const colors = ["#12b0c4", "#e85d5d", "#0a2a43"];
     return colors[index % colors.length];
   };
 
@@ -334,14 +336,19 @@ const AvailableSection = ({
 
   return (
     <div className="drivemego-availablesection-available-section">
-      <div className="drivemego-availablesection-section-header">
-        <p className="drivemego-availablesection-all-listings-label">
-          ALL LISTINGS
-        </p>
-      </div>
-
       <div className="drivemego-availablesection-title-section">
         <div className="drivemego-availablesection-title-and-count">
+          <p className="drivemego-availablesection-all-listings-label">
+            <span className="drivemego-availablesection-listings-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 6h13M8 12h13M8 18h13" />
+                <circle cx="3.5" cy="6" r="1.4" fill="currentColor" stroke="none" />
+                <circle cx="3.5" cy="12" r="1.4" fill="currentColor" stroke="none" />
+                <circle cx="3.5" cy="18" r="1.4" fill="currentColor" stroke="none" />
+              </svg>
+            </span>
+            All Listings
+          </p>
           <h2 className="drivemego-availablesection-section-title">
             Available B2C Routes
           </h2>
@@ -463,11 +470,13 @@ const AvailableSection = ({
                           e.target.src = "/default-avatar.png";
                         }}
                       />
-                      {route.company || route.operator}
+                      <span className="drivemego-availablesection-provider-name">
+                        {route.company || route.operator}
+                      </span>
                       {route.rating && (
                         <span className="drivemego-availablesection-star-icon">
-                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77 5.82 21l1.18-6.88-5-4.87 7.1-1.01L12 2z" />
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2l2.9 6.26L21.6 9l-5 4.6L18 21l-6-3.5L6 21l1.4-7.4-5-4.6 6.7-.74z" />
                           </svg>
                           {route.rating}
                         </span>
@@ -521,10 +530,10 @@ const AvailableSection = ({
                         FROM
                       </label>
                       <p className="drivemego-availablesection-detail-value">
-                        <span className="drivemego-availablesection-detail-icon">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z" />
-                            <circle cx="12" cy="10" r="3" />
+                        <span className="drivemego-availablesection-detail-icon drivemego-availablesection-icon-from">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 12 8 12s8-6.1 8-12c0-4.4-3.6-8-8-8z" />
+                            <circle cx="12" cy="10" r="2.6" fill="currentColor" stroke="none" />
                           </svg>
                         </span>
                         {typeof route.fromLocation === "string"
@@ -538,10 +547,10 @@ const AvailableSection = ({
                         TO
                       </label>
                       <p className="drivemego-availablesection-detail-value">
-                        <span className="drivemego-availablesection-detail-icon">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z" />
-                            <circle cx="12" cy="10" r="3" />
+                        <span className="drivemego-availablesection-detail-icon drivemego-availablesection-icon-to">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 12 8 12s8-6.1 8-12c0-4.4-3.6-8-8-8z" />
+                            <circle cx="12" cy="10" r="2.6" fill="currentColor" stroke="none" />
                           </svg>
                         </span>
                         {typeof route.toLocation === "string"
@@ -555,10 +564,10 @@ const AvailableSection = ({
                         START DATE
                       </label>
                       <p className="drivemego-availablesection-detail-value">
-                        <span className="drivemego-availablesection-detail-icon">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <span className="drivemego-availablesection-detail-icon drivemego-availablesection-icon-date">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="3" y="4" width="18" height="18" rx="2" />
-                            <path d="M16 2v4M8 2v4M3 10h18" />
+                            <path d="M3 10h18M8 2v4M16 2v4" />
                           </svg>
                         </span>
                         {formatDate(route.startDate)}
@@ -578,13 +587,13 @@ const AvailableSection = ({
                   >
                     <span className="drivemego-availablesection-book-icon">
                       {isAvailable ? (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M20 6L9 17l-5-5" />
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12h14M13 6l6 6-6 6" />
                         </svg>
                       ) : (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <rect x="3" y="11" width="18" height="11" rx="2" />
-                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="4" y="11" width="16" height="10" rx="2" />
+                          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
                         </svg>
                       )}
                     </span>
@@ -669,7 +678,13 @@ const AvailableSection = ({
                   route.stopPoints?.length > 0) && (
                   <div className="availablesection-stops-group">
                     <label className="availablesection-detail-label">
-                      <span className="stops-icon">🚏</span> ROUTE STOPS
+                      <span className="stops-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="10" r="3" />
+                          <path d="M12 2a8 8 0 0 0-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 0 0-8-8z" />
+                        </svg>
+                      </span>
+                      ROUTE STOPS
                     </label>
                     <div className="route-stops-container">
                       {/* Start Point */}

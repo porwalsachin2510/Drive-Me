@@ -36,8 +36,8 @@
 }
 
 .day-button.selected {
-  background: #0F2E4D;
-  border-color: #0F2E4D;
+  background: #E85D5D;
+  border-color: #E85D5D;
   color: white;
 }
 
@@ -46,33 +46,19 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 56px 20px;
-  background:
-    radial-gradient(900px 500px at 12% 0%, rgba(23, 169, 201, 0.06), transparent 60%),
-    #f4f7fa;
+  padding: 50px 0px;
+  background: linear-gradient(135deg, #F8FAFC 0%, #ffffff 100%);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .register-card {
   background: white;
-  border-radius: 24px;
-  box-shadow: 0 30px 80px rgba(15, 46, 77, 0.14);
-  padding: 44px;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  padding: 40px;
   width: 100%;
   max-width: 900px;
-  border: 1px solid #eef2f6;
-  position: relative;
-  overflow: hidden;
-}
-
-.register-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, #0F2E4D 0%, #17A9C9 50%, #0F2E4D 100%);
+  border-top: 4px solid #E85D5D;
 }
 
 .register-header {
@@ -81,12 +67,10 @@
 }
 
 .register-title {
-  font-family: var(--font-display, 'Poppins', sans-serif);
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 700;
-  color: #0F2E4D;
+  color: #E85D5D;
   margin: 0 0 8px 0;
-  letter-spacing: -0.02em;
 }
 
 .register-subtitle {
@@ -108,35 +92,26 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 18px 20px;
-  border: 1.5px solid #e5eaf0;
-  border-radius: 14px;
-  background: #f8fafc;
-  color: #4b5563;
+  padding: 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  background: white;
   cursor: pointer;
-  transition: all 0.25s ease;
-  min-width: 104px;
+  transition: all 0.3s ease;
+  min-width: 100px;
   gap: 8px;
   font-family: inherit;
 }
 
 .register-role-button:hover {
-  border-color: #17A9C9;
-  background: #fff;
-  color: #0F2E4D;
-  box-shadow: 0 8px 18px rgba(23, 169, 201, 0.14);
-  transform: translateY(-2px);
+  border-color: #E85D5D;
+  box-shadow: 0 2px 8px rgba(232, 93, 93, 0.15);
 }
 
 .register-role-button.register-active {
-  background: linear-gradient(135deg, #0F2E4D, #123A61);
+  background-color: #E85D5D;
   color: white;
-  border-color: #0F2E4D;
-  box-shadow: 0 10px 22px rgba(15, 46, 77, 0.28);
-}
-
-.register-role-button.register-active .register-role-button-icon {
-  filter: drop-shadow(0 0 6px rgba(79, 197, 222, 0.5));
+  border-color: #E85D5D;
 }
 
 .register-role-button-icon {
@@ -192,7 +167,7 @@
 }
 
 .register-required {
-  color: #0F2E4D;
+  color: #E85D5D;
   margin-left: 2px;
 }
 
@@ -211,9 +186,9 @@
 .register-form-input:focus,
 .register-form-input textarea:focus {
   outline: none;
-  border-color: #0F2E4D;
+  border-color: #E85D5D;
   background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(23, 169, 201, 0.15);
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 .register-form-input::placeholder {
@@ -265,9 +240,9 @@
 
 .register-country-code-wrapper:hover .register-country-code-display,
 .register-country-code-select:focus + .register-country-code-display {
-  border-color: #0F2E4D;
+  border-color: #E85D5D;
   background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(23, 169, 201, 0.15);
+  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
 /* Locked (auto-detected) dial code — no dropdown affordance, not editable. */
@@ -331,7 +306,7 @@ textarea.register-form-input {
 
 .register-password-toggle:focus {
   outline: none;
-  color: #0F2E4D;
+  color: #E85D5D;
 }
 
 .register-corp-section-header {
@@ -383,7 +358,7 @@ textarea.register-form-input {
 }
 
 .register-add-route-btn {
-  background: #0F2E4D;
+  background: #E85D5D;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -412,7 +387,7 @@ textarea.register-form-input {
 .register-section-header .register-add-route-btn {
   margin-left: auto;
   padding: 8px 16px;
-  background-color: #0F2E4D;
+  background-color: #E85D5D;
   color: white;
   border: none;
   border-radius: 6px;
@@ -424,8 +399,8 @@ textarea.register-form-input {
 }
 
 .register-section-header .register-add-route-btn:hover {
-  background-color: #17A9C9;
-  box-shadow: 0 8px 18px rgba(23, 169, 201, 0.3);
+  background-color: #D94545;
+  box-shadow: 0 4px 14px rgba(232, 93, 93, 0.25);
 }
 
 .register-section-icon {
@@ -475,7 +450,7 @@ textarea.register-form-input {
 }
 
 .register-file-input-label:hover {
-  border-color: #0F2E4D;
+  border-color: #E85D5D;
 }
 
 /* New image gallery styles with centered + icon */
@@ -505,8 +480,8 @@ textarea.register-form-input {
 }
 
 .register-image-upload-box:hover {
-  border-color: #0F2E4D;
-  background-color: rgba(23, 169, 201, 0.06);
+  border-color: #E85D5D;
+  background-color: rgba(232, 93, 93, 0.05);
 }
 
 .register-image-upload-box.register-first {
@@ -530,7 +505,7 @@ textarea.register-form-input {
 
 .register-plus-icon {
   font-size: 32px;
-  color: #0F2E4D;
+  color: #E85D5D;
   font-weight: 300;
   line-height: 1;
 }
@@ -541,7 +516,7 @@ textarea.register-form-input {
   height: 90px;
   border-radius: 8px;
   overflow: hidden;
-  background-color: #eef2f6;
+  background-color: #c30e0e;
   border: 1px solid #e0e0e0;
 }
 
@@ -558,7 +533,7 @@ textarea.register-form-input {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background-color: #17A9C9;
+  background-color: #e63c6d;
   color: white;
   border: none;
   cursor: pointer;
@@ -570,7 +545,7 @@ textarea.register-form-input {
 }
 
 .register-remove-image-btn:hover {
-  background-color: #1391AD;
+  background-color: #d4365f;
   transform: scale(1.1);
 }
 
@@ -601,7 +576,7 @@ textarea.register-form-input {
 .register-route-number {
   font-weight: 600;
   color: white;
-  background-color: #0F2E4D;
+  background-color: #E85D5D;
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -636,7 +611,7 @@ textarea.register-form-input {
 }
 
 .register-delete-route-btn:hover {
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: rgba(230, 60, 109, 0.1);
 }
 
 .register-collapse-route-btn:hover {
@@ -661,8 +636,8 @@ textarea.register-form-input {
 
 .register-vehicle-number {
   font-weight: 600;
-  color: #0F2E4D;
-  background-color: rgba(15, 46, 77, 0.1);
+  color: #E85D5D;
+  background-color: rgba(232, 93, 93, 0.1);
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -689,8 +664,8 @@ textarea.register-form-input {
   width: 100%;
   padding: 12px;
   background-color: white;
-  color: #0F2E4D;
-  border: 2px dashed #0F2E4D;
+  color: #E85D5D;
+  border: 2px dashed #E85D5D;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
@@ -700,7 +675,7 @@ textarea.register-form-input {
 }
 
 .register-add-vehicle-btn:hover {
-  background-color: rgba(23, 169, 201, 0.08);
+  background-color: rgba(232, 93, 93, 0.08);
 }
 
 .register-payment-methods {
@@ -723,20 +698,20 @@ textarea.register-form-input {
 }
 
 .register-payment-option:hover {
-  border-color: #0F2E4D;
-  color: #0F2E4D;
+  border-color: #E85D5D;
+  color: #E85D5D;
 }
 
 .register-payment-option.register-selected {
-  background-color: #0F2E4D;
+  background-color: #E85D5D;
   color: white;
-  border-color: #0F2E4D;
+  border-color: #E85D5D;
 }
 
 .register-submit-btn {
   width: 100%;
   padding: 14px;
-  background-color: #0F2E4D;
+  background-color: #E85D5D;
   color: white;
   border: none;
   border-radius: 8px;
@@ -749,8 +724,8 @@ textarea.register-form-input {
 }
 
 .register-submit-btn:hover:not(:disabled) {
-  background-color: #17A9C9;
-  box-shadow: 0 12px 26px rgba(23, 169, 201, 0.35);
+  background-color: #D94545;
+  box-shadow: 0 4px 14px rgba(232, 93, 93, 0.3);
 }
 
 .register-submit-btn:disabled {
@@ -767,7 +742,7 @@ textarea.register-form-input {
 }
 
 .register-signin-link a {
-  color: #0F2E4D;
+  color: #E85D5D;
   font-weight: 600;
   cursor: pointer;
   transition: color 0.3s ease;
@@ -775,7 +750,7 @@ textarea.register-form-input {
 }
 
 .register-signin-link a:hover {
-  color: #17A9C9;
+  color: #D94545;
 }
 
 /* Profile Image Upload Styles */
@@ -801,11 +776,11 @@ textarea.register-form-input {
   height: 100px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #0F2E4D;
+  border: 3px solid #E85D5D;
 }
 
 .register-profile-remove-btn {
-  background: #0F2E4D;
+  background: #E85D5D;
   color: white;
   border: none;
   padding: 6px 16px;
@@ -816,7 +791,7 @@ textarea.register-form-input {
 }
 
 .register-profile-remove-btn:hover {
-  background: #17A9C9;
+  background: #D94545;
 }
 
 .register-profile-file-wrapper {
@@ -906,7 +881,7 @@ textarea.register-form-input {
 }
 
 .register-add-stop-btn {
-  background: #17A9C9;
+  background: #e63950;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -922,7 +897,7 @@ textarea.register-form-input {
 }
 
 .register-add-stop-btn:hover {
-  background-color: #1391AD;
+  background-color: #d4365f;
 }
 
 .register-stop-points-list {
@@ -944,13 +919,13 @@ textarea.register-form-input {
 
 .register-stop-point-item:hover {
   background-color: #fff;
-  border-color: #17A9C9;
+  border-color: #e63c6d;
 }
 
 .register-stop-point-number {
   font-weight: 600;
   color: white;
-  background-color: #17A9C9;
+  background-color: #e63c6d;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -970,7 +945,7 @@ textarea.register-form-input {
 .register-remove-stop-btn {
   background: none;
   border: none;
-  color: #17A9C9;
+  color: #e63c6d;
   font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
@@ -981,7 +956,7 @@ textarea.register-form-input {
 }
 
 .register-remove-stop-btn:hover {
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: rgba(230, 60, 109, 0.1);
   transform: scale(1.1);
 }
 
@@ -1102,7 +1077,7 @@ textarea.register-form-input {
   .register-card {
     padding: 20px;
     border-radius: 16px;
-    border-top: 3px solid #17A9C9;
+    border-top: 3px solid #e63c6d;
   }
 
   .register-title {

@@ -224,8 +224,8 @@ const FeaturedRoutes = ({ routes, loading }) => {
         <div className="drivemego-featuredroutes-header-content">
           <h2 className="drivemego-featuredroutes-featured-title">
             <span className="drivemego-featuredroutes-star-icon">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77 5.82 21l1.18-6.88-5-4.87 7.1-1.01L12 2z" />
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l2.9 6.26L21.6 9l-5 4.6L18 21l-6-3.5L6 21l1.4-7.4-5-4.6 6.7-.74z" />
               </svg>
             </span>
             Featured Routes &amp; Trips
@@ -237,47 +237,54 @@ const FeaturedRoutes = ({ routes, loading }) => {
 
         {/* Filter Bar */}
         <div className="drivemego-featuredroutes-filter-bar">
-          <div className="drivemego-featuredroutes-filter-group">
-            <label className="drivemego-featuredroutes-filter-label">
-              Location
-            </label>
-            <input
-              type="text"
-              placeholder="Filter by area..."
-              value={filters.location}
-              onChange={handleLocationChange}
-              className="drivemego-featuredroutes-filter-input"
-            />
-          </div>
+          <div className="drivemego-featuredroutes-filter-btn">
+            <div className="drivemego-featuredroutes-filter-group">
+              <label className="drivemego-featuredroutes-filter-label">
+                Location
+              </label>
+              <div className="drivemego-featuredroutes-filter-input-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Filter by area..."
+                  value={filters.location}
+                  onChange={handleLocationChange}
+                  className="drivemego-featuredroutes-filter-input"
+                />
+              </div>
+            </div>
 
-          <div className="drivemego-featuredroutes-filter-group">
-            <label className="drivemego-featuredroutes-filter-label">
-              Min Rating
-            </label>
-            <select
-              value={filters.rating}
-              onChange={handleRatingChange}
-              className="drivemego-featuredroutes-filter-select"
+            <div className="drivemego-featuredroutes-filter-group">
+              <label className="drivemego-featuredroutes-filter-label">
+                Min Rating
+              </label>
+              <select
+                value={filters.rating}
+                onChange={handleRatingChange}
+                className="drivemego-featuredroutes-filter-select"
+              >
+                <option>Any Rating</option>
+                <option>4.0+</option>
+                <option>4.5+</option>
+                <option>4.8+</option>
+              </select>
+            </div>
+
+            <button
+              className="drivemego-featuredroutes-reset-button"
+              onClick={handleReset}
+              title="Reset filters"
             >
-              <option>Any Rating</option>
-              <option>4.0+</option>
-              <option>4.5+</option>
-              <option>4.8+</option>
-            </select>
-          </div>
-
-          <button
-            className="drivemego-featuredroutes-reset-button"
-            onClick={handleReset}
-          >
-            <span className="drivemego-featuredroutes-filter-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
                 <path d="M3 3v5h5" />
               </svg>
-            </span>
-            Reset
-          </button>
+              Reset
+            </button>
+          </div>
         </div>
       </div>
 
@@ -291,60 +298,43 @@ const FeaturedRoutes = ({ routes, loading }) => {
                 key={route.routeId}
                 className="drivemego-featuredroutes-route-card"
               >
-                {/* Branded route header */}
-                <div className="drivemego-featuredroutes-card-header">
-                  <div className="drivemego-featuredroutes-card-header-top">
-                    <span className="drivemego-featuredroutes-badge-featured">
-                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77 5.82 21l1.18-6.88-5-4.87 7.1-1.01L12 2z" />
-                      </svg>
-                      FEATURED
-                    </span>
-                    <span className="drivemego-featuredroutes-my-badge-verified">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M20 6L9 17l-5-5" />
-                      </svg>
-                      VERIFIED
-                    </span>
+                {/* Card Image */}
+                <div className="drivemego-featuredroutes-card-image">
+                  <img
+                    src={
+                      route.images?.[0]?.url ||
+                      route.images?.[0] ||
+                      route.driverImage ||
+                      route.companyLogo ||
+                      "/placeholder-banner.svg"
+                    }
+                    alt={`${route.fromLocation} to ${route.toLocation}`}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/placeholder-bannner.svg";
+                    }}
+                  />
+
+                  {/* Badges */}
+                  <div className="drivemego-featuredroutes-badge-featured">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2l2.9 6.26L21.6 9l-5 4.6L18 21l-6-3.5L6 21l1.4-7.4-5-4.6 6.7-.74z" />
+                    </svg>
+                    FEATURED
+                  </div>
+                  <div className="drivemego-featuredroutes-my-badge-verified">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    VERIFIED
                   </div>
 
-                  <div className="drivemego-featuredroutes-journey">
-                    <div className="drivemego-featuredroutes-journey-point">
-                      <span className="drivemego-featuredroutes-journey-label">
-                        FROM
-                      </span>
-                      <span className="drivemego-featuredroutes-journey-place">
-                        {route.fromLocation}
-                      </span>
+                  {/* Seats pill on image */}
+                  <div className="drivemego-featuredroutes-image-overlay">
+                    <div className="drivemego-featuredroutes-seats-badge">
+                      <span className="drivemego-featuredroutes-seats-dot" />
+                      {route.availableSeats}/{route.totalSeats} seats left
                     </div>
-                    <span className="drivemego-featuredroutes-journey-arrow">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M5 12h14M13 6l6 6-6 6" />
-                      </svg>
-                    </span>
-                    <div className="drivemego-featuredroutes-journey-point drivemego-featuredroutes-journey-to">
-                      <span className="drivemego-featuredroutes-journey-label">
-                        TO
-                      </span>
-                      <span className="drivemego-featuredroutes-journey-place">
-                        {route.toLocation}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="drivemego-featuredroutes-card-header-bottom">
-                    <span className="drivemego-featuredroutes-seats-badge">
-                      <span
-                        className="drivemego-featuredroutes-seats-icon"
-                        aria-hidden="true"
-                      />
-                      {route.availableSeats}/{route.totalSeats} Seats Left
-                    </span>
-                    {route.vehicleModel && (
-                      <span className="drivemego-featuredroutes-vehicle-chip">
-                        {route.vehicleModel}
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -363,12 +353,6 @@ const FeaturedRoutes = ({ routes, loading }) => {
                         }
                         alt={route.operator || "Provider"}
                         className="drivemego-featuredroutes-company-logo"
-                        style={{
-                          borderRadius: "50%",
-                          width: "50px",
-                          height: "50px",
-                          objectFit: "cover",
-                        }}
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = "/placeholder-bannner.svg";
@@ -380,19 +364,48 @@ const FeaturedRoutes = ({ routes, loading }) => {
                             route.driverName ||
                             "Unknown Provider"}
                         </h4>
+                        <span className="drivemego-featuredroutes-company-meta">
+                          {route.vehicleModel || "Verified provider"}
+                        </span>
                       </div>
 
                       <div className="drivemego-featuredroutes-rating-badge">
-                        <span className="drivemego-featuredroutes-star">★</span>{" "}
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2l2.9 6.26L21.6 9l-5 4.6L18 21l-6-3.5L6 21l1.4-7.4-5-4.6 6.7-.74z" />
+                        </svg>
                         {route.rating || "4.5"}
                       </div>
                     </div>
                   </div>
 
-                  {/* Available Days */}
+                  {/* Route (from -> to) */}
+                  <div className="drivemego-featuredroutes-locations-section">
+                    <div className="drivemego-featuredroutes-location-item">
+                      <span className="drivemego-featuredroutes-location-dot drivemego-featuredroutes-dot-from" />
+                      <span className="drivemego-featuredroutes-location-name">
+                        {route.fromLocation}
+                      </span>
+                    </div>
+
+                    <div className="drivemego-featuredroutes-location-item">
+                      <span className="drivemego-featuredroutes-location-dot drivemego-featuredroutes-dot-to" />
+                      <span className="drivemego-featuredroutes-location-name">
+                        {route.toLocation}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Available Days + frequency */}
                   <div className="drivemego-featuredroutes-available-featured-detail-group">
                     <label className="drivemego-featuredroutes-detail-label">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <path d="M3 10h18M8 2v4M16 2v4" />
+                      </svg>
                       Available Days
+                      <span className="drivemego-featuredroutes-freq">
+                        {getDaysFrequency(route.daysOfWeek || route.availableDays)}
+                      </span>
                     </label>
                     <div className="drivemego-featuredroutes-available-days">
                       {route.availableDays?.map((day) => (
@@ -410,20 +423,13 @@ const FeaturedRoutes = ({ routes, loading }) => {
                     </div>
                   </div>
 
-                  {/* Frequency */}
-                  <div className="drivemego-featuredroutes-frequency-section">
-                    <span className="drivemego-featuredroutes-calendar-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <rect x="3" y="4" width="18" height="18" rx="2" />
-                        <path d="M16 2v4M8 2v4M3 10h18" />
-                      </svg>
-                    </span>{" "}
-                    {getDaysFrequency(route.daysOfWeek || route.availableDays)}
-                  </div>
-
                   {/* Trip Times - Show available departure times */}
                   <div className="drivemego-featuredroutes-featured-detail-group">
                     <label className="drivemego-featuredroutes-detail-label">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                      </svg>
                       Trip Times
                     </label>
                     <div className="drivemego-featuredroutes-trip-times">
@@ -464,34 +470,30 @@ const FeaturedRoutes = ({ routes, loading }) => {
                     </div>
                   </div>
 
-                  {/* Pricing */}
-                  <div className="drivemego-featuredroutes-pricing-section">
-                    <label className="drivemego-featuredroutes-pricing-label">
-                      PRICING BREAKDOWN
-                    </label>
-                    <div className="drivemego-featuredroutes-pricing-row">
-                      <span className="drivemego-featuredroutes-pricing-title">
+                  {/* Pricing + Book */}
+                  <div className="drivemego-featuredroutes-card-footer">
+                    <div className="drivemego-featuredroutes-pricing-section">
+                      <label className="drivemego-featuredroutes-pricing-label">
                         Monthly Pass
-                      </span>
+                      </label>
                       <span className="drivemego-featuredroutes-pricing-value">
                         {calculateMonthlyPrice(route)}
                       </span>
                     </div>
-                  </div>
 
-                  {/* Book Button */}
-                  <button
-                    className="drivemego-featuredroutes-book-button"
-                    disabled={!isAvailable}
-                    onClick={() => handleBookRoute(route)}
-                    title={
-                      !isAvailable
-                        ? "This route is fully booked or no longer available."
-                        : "Click to book this route in advance"
-                    }
-                  >
-                    {isAvailable ? "Book This Route" : "Not Available"}
-                  </button>
+                    <button
+                      className="drivemego-featuredroutes-book-button"
+                      disabled={!isAvailable}
+                      onClick={() => handleBookRoute(route)}
+                      title={
+                        !isAvailable
+                          ? "This route is fully booked or no longer available."
+                          : "Click to book this route in advance"
+                      }
+                    >
+                      {isAvailable ? "Book This Route" : "Not Available"}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -502,7 +504,11 @@ const FeaturedRoutes = ({ routes, loading }) => {
       {/* Empty state when no routes have been featured by an admin yet */}
       {!loading && filteredRoutes.length === 0 && (
         <div className="drivemego-featuredroutes-empty">
-          <span className="drivemego-featuredroutes-empty-icon">★</span>
+          <span className="drivemego-featuredroutes-empty-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.9 6.26L21.6 9l-5 4.6L18 21l-6-3.5L6 21l1.4-7.4-5-4.6 6.7-.74z" />
+            </svg>
+          </span>
           <h3 className="drivemego-featuredroutes-empty-title">
             No featured routes yet
           </h3>

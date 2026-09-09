@@ -51,22 +51,22 @@ const ServiceSelection = () => {
       useCases:
         "Perfect for corporate travel, employee shuttles, VIP transport",
     },
-    // {
-    //   id: "goods",
-    //   title: "Goods Carrier",
-    //   description:
-    //     "Pickup trucks, cargo vans, mini trucks for delivery, logistics, or material transport",
-    //   icon: "🚚",
-    //   features: [
-    //     "Pickup trucks",
-    //     "Cargo vans",
-    //     "Small trucks (1-3 ton)",
-    //     "Refrigerated vehicles",
-    //     "Box trucks",
-    //   ],
-    //   useCases:
-    //     "Ideal for e-commerce, logistics, construction material delivery",
-    // },
+    {
+      id: "goods",
+      title: "Goods Carrier",
+      description:
+        "Pickup trucks, cargo vans, mini trucks for delivery, logistics, or material transport",
+      icon: "🚚",
+      features: [
+        "Pickup trucks",
+        "Cargo vans",
+        "Small trucks (1-3 ton)",
+        "Refrigerated vehicles",
+        "Box trucks",
+      ],
+      useCases:
+        "Ideal for e-commerce, logistics, construction material delivery",
+    },
     {
       id: "managed",
       title: "Managed Services",
