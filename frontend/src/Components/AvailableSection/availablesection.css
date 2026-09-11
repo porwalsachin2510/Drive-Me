@@ -174,17 +174,41 @@
 .drivemego-availablesection-route-item,
 .drivemego-availablesection-available-section-route-item,
 .available-section-route-item {
+  position: relative;
   background: var(--dmg-card, #fff);
   border: 1px solid var(--dmg-line, #e4ecf3);
-  border-left: 4px solid var(--dmg-teal, #12b0c4);
-  border-radius: 18px;
-  padding: 20px 24px;
+  border-radius: 20px;
+  padding: 22px 26px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 1px 3px rgba(10, 42, 67, 0.04);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(10, 42, 67, 0.04), 0 14px 34px rgba(10, 42, 67, 0.06);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease;
   animation: drivemego-availablesection-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Premium sheen — a soft teal highlight in the top-right corner that
+   deepens on hover, replacing the old flat colored left border. */
+.drivemego-availablesection-route-item::before,
+.drivemego-availablesection-available-section-route-item::before,
+.available-section-route-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 220px;
+  height: 100%;
+  background: radial-gradient(200px 140px at 100% 0%, rgba(18, 176, 196, 0.07), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  pointer-events: none;
+}
+
+.drivemego-availablesection-route-item:hover::before,
+.drivemego-availablesection-available-section-route-item:hover::before,
+.available-section-route-item:hover::before {
+  opacity: 1;
 }
 
 .drivemego-availablesection-routes-list > .drivemego-availablesection-available-section-route-item:nth-child(2) {

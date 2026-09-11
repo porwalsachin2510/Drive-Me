@@ -1,292 +1,43 @@
-// import { useState } from "react";
-// import "./commute-search-form.css";
-
-// export default function CommuteSearchForm({ onSearch, onRequestRoute }) {
-//   const [formData, setFormData] = useState({
-//     pickupLocation: "",
-//     dropoffLocation: "",
-//   });
-
-//   const [selectedDays, setSelectedDays] = useState([]);
-//   const [errors, setErrors] = useState({});
-
-//   const handleInputChange = (e) => {
-//     const { name, value } = e.target;
-//     setFormData((prev) => ({
-//       ...prev,
-//       [name]: value,
-//     }));
-//     if (errors[name]) {
-//       setErrors((prev) => ({
-//         ...prev,
-//         [name]: undefined,
-//       }));
-//     }
-//   };
-
-//   const toggleDay = (day) => {
-//     setSelectedDays((prev) =>
-//       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
-//     );
-//     if (errors.selectedDays) {
-//       setErrors((prev) => ({
-//         ...prev,
-//         selectedDays: undefined,
-//       }));
-//     }
-//   };
-
-//   const selectAllWeekdays = () => {
-//     setSelectedDays(["MON", "TUE", "WED", "THU", "FRI"]);
-//     if (errors.selectedDays) {
-//       setErrors((prev) => ({
-//         ...prev,
-//         selectedDays: undefined,
-//       }));
-//     }
-//   };
-
-//   const selectAllDays = () => {
-//     setSelectedDays(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
-//     if (errors.selectedDays) {
-//       setErrors((prev) => ({
-//         ...prev,
-//         selectedDays: undefined,
-//       }));
-//     }
-//   };
-
-//   const clearDays = () => {
-//     setSelectedDays([]);
-//   };
-
-//   const validateForm = () => {
-//     const newErrors = {};
-
-//     if (!formData.pickupLocation.trim()) {
-//       newErrors.pickupLocation = "Pickup location is required";
-//     }
-//     if (!formData.dropoffLocation.trim()) {
-//       newErrors.dropoffLocation = "Drop-off location is required";
-//     }
-//     if (selectedDays.length === 0) {
-//       newErrors.selectedDays = "Please select at least one day";
-//     }
-
-//     setErrors(newErrors);
-//     return Object.keys(newErrors).length === 0;
-//   };
-
-//   const handleSearchCommute = (e) => {
-//     e.preventDefault();
-//     if (validateForm()) {
-//       if (onSearch) {
-//         onSearch({
-//           ...formData,
-//           selectedDays,
-//           filterType: "matched",
-//         });
-//       }
-//     }
-//   };
-
-//   return (
-//     <div className="commute-search-form-container">
-//       <form
-//         className="drivemego-commute-search-form"
-//         onSubmit={handleSearchCommute}
-//       >
-//         {/* Location Fields */}
-//         <div className="commute-search-form-location-grid">
-//           <div className="commute-search-form-form-group">
-//             <label className="commute-search-form-form-label commute-search-form-location-label">
-//               <svg
-//                 className="commute-search-form-label-icon commute-search-form-teal"
-//                 viewBox="0 0 24 24"
-//                 fill="none"
-//                 stroke="currentColor"
-//               >
-//                 <path
-//                   d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z"
-//                   strokeWidth="2"
-//                 />
-//                 <circle cx="12" cy="10" r="3" strokeWidth="2" fill="none" />
-//               </svg>
-//               PICKUP LOCATION
-//             </label>
-//             <div className="commute-search-form-input-wrapper">
-//               <input
-//                 type="text"
-//                 name="pickupLocation"
-//                 placeholder="Enter area, stop point, or landmark"
-//                 value={formData.pickupLocation}
-//                 onChange={handleInputChange}
-//                 className={`commute-search-form-form-input ${
-//                   errors.pickupLocation ? "commute-search-form-input-error" : ""
-//                 }`}
-//               />
-//             </div>
-//             <span className="input-hint">
-//               E.g., Salmiya, Habibganj ISBT, Electronic City
-//             </span>
-//             {errors.pickupLocation && (
-//               <span className="commute-search-form-error-message">
-//                 {errors.pickupLocation}
-//               </span>
-//             )}
-//           </div>
-
-//           <div className="commute-search-form-form-group">
-//             <label className="commute-search-form-form-label commute-search-form-location-label">
-//               <svg
-//                 className="commute-search-form-label-icon commute-search-form-red"
-//                 viewBox="0 0 24 24"
-//                 fill="none"
-//                 stroke="currentColor"
-//               >
-//                 <path
-//                   d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z"
-//                   strokeWidth="2"
-//                 />
-//                 <circle
-//                   cx="12"
-//                   cy="10"
-//                   r="3"
-//                   strokeWidth="2"
-//                   fill="currentColor"
-//                 />
-//               </svg>
-//               DROP-OFF LOCATION
-//             </label>
-//             <div className="commute-search-form-input-wrapper">
-//               <input
-//                 type="text"
-//                 name="dropoffLocation"
-//                 placeholder="Enter area, stop point, or landmark"
-//                 value={formData.dropoffLocation}
-//                 onChange={handleInputChange}
-//                 className={`commute-search-form-form-input ${
-//                   errors.dropoffLocation
-//                     ? "commute-search-form-input-error"
-//                     : ""
-//                 }`}
-//               />
-//             </div>
-//             <span className="input-hint">
-//               E.g., Reggae, New Market Bus Stop, Wilson Garden
-//             </span>
-//             {errors.dropoffLocation && (
-//               <span className="commute-search-form-error-message">
-//                 {errors.dropoffLocation}
-//               </span>
-//             )}
-//           </div>
-//         </div>
-
-//         {/* Days Needed */}
-//         <div className="commute-search-form-form-group commute-search-form-days-section">
-//           <div className="commute-search-form-days-header">
-//             <label className="commute-search-form-form-label">
-//               <svg
-//                 className="commute-search-form-label-icon commute-search-form-blue"
-//                 viewBox="0 0 24 24"
-//                 fill="none"
-//                 stroke="currentColor"
-//               >
-//                 <rect
-//                   x="3"
-//                   y="4"
-//                   width="18"
-//                   height="18"
-//                   rx="2"
-//                   strokeWidth="2"
-//                 />
-//                 <line x1="3" y1="10" x2="21" y2="10" strokeWidth="2" />
-//                 <line x1="8" y1="2" x2="8" y2="6" strokeWidth="2" />
-//                 <line x1="16" y1="2" x2="16" y2="6" strokeWidth="2" />
-//               </svg>
-//               Select Your Commute Days
-//             </label>
-//             <div className="commute-search-form-days-quick-actions">
-//               <button
-//                 type="button"
-//                 className="commute-search-form-quick-btn"
-//                 onClick={selectAllWeekdays}
-//               >
-//                 Weekdays
-//               </button>
-//               <button
-//                 type="button"
-//                 className="commute-search-form-quick-btn"
-//                 onClick={selectAllDays}
-//               >
-//                 All Days
-//               </button>
-//               {selectedDays.length > 0 && (
-//                 <button
-//                   type="button"
-//                   className="commute-search-form-quick-btn commute-search-form-clear-btn"
-//                   onClick={clearDays}
-//                 >
-//                   Clear
-//                 </button>
-//               )}
-//             </div>
-//           </div>
-//           <div className="commute-search-form-days-container">
-//             {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
-//               <button
-//                 key={day}
-//                 type="button"
-//                 className={`commute-search-form-day-button ${
-//                   selectedDays.includes(day)
-//                     ? "commute-search-form-selected"
-//                     : ""
-//                 }`}
-//                 onClick={() => toggleDay(day)}
-//               >
-//                 {day}
-//               </button>
-//             ))}
-//           </div>
-//           {errors.selectedDays && (
-//             <span className="commute-search-form-error-message">
-//               {errors.selectedDays}
-//             </span>
-//           )}
-//         </div>
-
-//         {/* Button Section */}
-//         <div className="commute-search-form-button-section">
-//           <button type="submit" className="commute-search-form-search-button">
-//             <svg
-//               className="commute-search-form-search-icon-svg"
-//               viewBox="0 0 24 24"
-//               fill="none"
-//               stroke="currentColor"
-//               strokeWidth="2"
-//             >
-//               <circle cx="11" cy="11" r="8" />
-//               <path d="M21 21l-4.35-4.35" />
-//             </svg>
-//             Search Commutes
-//           </button>
-//           <button
-//             type="button"
-//             className="commute-search-form-request-button"
-//             onClick={onRequestRoute}
-//           >
-//             {"Can't find a route? Request one"}
-//           </button>
-//         </div>
-//       </form>
-//     </div>
-//   );
-// }
-
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import {
+  MapPin,
+  Navigation,
+  ArrowLeftRight,
+  CalendarDays,
+  Search,
+  ChevronDown,
+  ShieldCheck,
+  BadgeCheck,
+  Repeat2,
+  Sparkles,
+} from "lucide-react";
 import GooglePlacesAutocomplete from "../GooglePlacesAutocomplete/GooglePlacesAutocomplete";
 import "./commute-search-form.css";
+
+const ALL_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
+const DAY_LABEL = {
+  MON: "Mon",
+  TUE: "Tue",
+  WED: "Wed",
+  THU: "Thu",
+  FRI: "Fri",
+  SAT: "Sat",
+  SUN: "Sun",
+};
+
+// Human summary of the selected days for the collapsed "Commute days" cell.
+function summariseDays(days) {
+  if (!days.length) return "Select days";
+  if (days.length === 7) return "All days";
+  const isWeekdays =
+    days.length === 5 && WEEKDAYS.every((d) => days.includes(d));
+  if (isWeekdays) return "Mon – Fri";
+  // Keep the chips in canonical week order regardless of click order.
+  return ALL_DAYS.filter((d) => days.includes(d))
+    .map((d) => DAY_LABEL[d])
+    .join(", ");
+}
 
 export default function CommuteSearchForm({
   onSearch,
@@ -300,24 +51,34 @@ export default function CommuteSearchForm({
     dropoffCoordinates: null,
   });
 
-  const [selectedDays, setSelectedDays] = useState([]);
+  // Preselect the most common commute pattern (Mon–Fri) so the form is usable
+  // in one tap, mirroring how flight widgets default to a sensible trip type.
+  const [selectedDays, setSelectedDays] = useState(WEEKDAYS);
+  const [dayPreset, setDayPreset] = useState("weekdays");
   const [errors, setErrors] = useState({});
+  const [showDayPicker, setShowDayPicker] = useState(false);
 
-  // Handle location change from autocomplete
+  const dayCellRef = useRef(null);
+
+  // Close the day popover when clicking anywhere outside of it.
+  useEffect(() => {
+    if (!showDayPicker) return undefined;
+    const handleClickOutside = (event) => {
+      if (dayCellRef.current && !dayCellRef.current.contains(event.target)) {
+        setShowDayPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showDayPicker]);
+
   const handleLocationChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: undefined,
-      }));
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
-  // Handle place selection with coordinates
   const handlePlaceSelect = (field, place) => {
     const coordField =
       field === "pickupLocation" ? "pickupCoordinates" : "dropoffCoordinates";
@@ -328,44 +89,37 @@ export default function CommuteSearchForm({
     }));
   };
 
+  const clearDayError = () => {
+    if (errors.selectedDays) {
+      setErrors((prev) => ({ ...prev, selectedDays: undefined }));
+    }
+  };
+
   const toggleDay = (day) => {
+    setDayPreset("custom");
     setSelectedDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
     );
-    if (errors.selectedDays) {
-      setErrors((prev) => ({
-        ...prev,
-        selectedDays: undefined,
-      }));
+    clearDayError();
+  };
+
+  const applyPreset = (preset) => {
+    setDayPreset(preset);
+    clearDayError();
+    if (preset === "weekdays") {
+      setSelectedDays(WEEKDAYS);
+      setShowDayPicker(false);
+    } else if (preset === "all") {
+      setSelectedDays(ALL_DAYS);
+      setShowDayPicker(false);
+    } else {
+      // Custom — open the picker so the commuter can choose.
+      setShowDayPicker(true);
     }
   };
 
-  const selectAllWeekdays = () => {
-    setSelectedDays(["MON", "TUE", "WED", "THU", "FRI"]);
-    if (errors.selectedDays) {
-      setErrors((prev) => ({
-        ...prev,
-        selectedDays: undefined,
-      }));
-    }
-  };
-
-  const selectAllDays = () => {
-    setSelectedDays(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
-    if (errors.selectedDays) {
-      setErrors((prev) => ({
-        ...prev,
-        selectedDays: undefined,
-      }));
-    }
-  };
-
-  const clearDays = () => {
-    setSelectedDays([]);
-  };
-
-  // Swap pickup <-> drop-off (both the text and the resolved coordinates), the
-  // way flight/ride apps let you flip origin and destination in one tap.
+  // Swap pickup <-> drop-off (text + resolved coordinates), the way ride/flight
+  // apps flip origin and destination in a single tap.
   const swapLocations = () => {
     setFormData((prev) => ({
       ...prev,
@@ -378,7 +132,6 @@ export default function CommuteSearchForm({
 
   const validateForm = () => {
     const newErrors = {};
-
     if (!formData.pickupLocation.trim()) {
       newErrors.pickupLocation = "Pickup location is required";
     }
@@ -388,124 +141,119 @@ export default function CommuteSearchForm({
     if (selectedDays.length === 0) {
       newErrors.selectedDays = "Please select at least one day";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSearchCommute = (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      if (onSearch) {
-        onSearch({
-          pickupLocation: formData.pickupLocation,
-          dropoffLocation: formData.dropoffLocation,
-          pickupCoordinates: formData.pickupCoordinates,
-          dropoffCoordinates: formData.dropoffCoordinates,
-          selectedDays,
-          filterType: "matched",
-        });
-      }
+    if (validateForm() && onSearch) {
+      onSearch({
+        pickupLocation: formData.pickupLocation,
+        dropoffLocation: formData.dropoffLocation,
+        pickupCoordinates: formData.pickupCoordinates,
+        dropoffCoordinates: formData.dropoffCoordinates,
+        selectedDays,
+        filterType: "matched",
+      });
     }
   };
 
   return (
-    <div className="commute-search-form-container">
-      <div className="commute-search-form-card-head">
-        <div className="commute-search-form-card-head-text">
-          <h2 className="commute-search-form-card-title">
-            Find your daily commute
-          </h2>
-          <p className="commute-search-form-card-sub">
-            Set your route and days — we&apos;ll match you with verified
-            everyday rides.
+    <div className="cmf-widget">
+      {/* Widget header — this is the commuter homepage, so a clear title beats
+          product tabs. */}
+      <div className="cmf-head">
+        <div className="cmf-head-text">
+          <h2 className="cmf-head-title">Find your daily commute</h2>
+          <p className="cmf-head-sub">
+            Set your route and days — we&apos;ll match you with verified everyday
+            rides.
           </p>
         </div>
-        <span className="commute-search-form-card-tag">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
+        <span className="cmf-head-badge">
+          <ShieldCheck size={15} strokeWidth={2.4} />
           Verified providers
         </span>
       </div>
 
-      <form
-        className="drivemego-commute-search-form"
-        onSubmit={handleSearchCommute}
-      >
-        {/* Location Fields */}
-        <div className="commute-search-form-location-grid">
-          <div className="commute-search-form-form-group">
-            <label className="commute-search-form-form-label commute-search-form-location-label">
-              <span className="commute-search-form-label-icon commute-search-form-teal">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path
-                    d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z"
-                    strokeWidth="2"
-                  />
-                  <circle cx="12" cy="10" r="3" strokeWidth="2" fill="none" />
-                </svg>
-              </span>
-              PICKUP LOCATION
-            </label>
+      <form className="cmf-body" onSubmit={handleSearchCommute}>
+        {/* Trip-preference row: day presets on the left, country on the right */}
+        <div className="cmf-prefs">
+          <div className="cmf-radios" role="radiogroup" aria-label="Commute days">
+            {[
+              { id: "weekdays", label: "Weekdays" },
+              { id: "all", label: "All Days" },
+              { id: "custom", label: "Custom Days" },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={dayPreset === opt.id}
+                className={`cmf-radio ${dayPreset === opt.id ? "cmf-radio-on" : ""}`}
+                onClick={() => applyPreset(opt.id)}
+              >
+                <span className="cmf-radio-dot" />
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {userCountry && (
+            <span className="cmf-country-pill">
+              <MapPin size={14} strokeWidth={2.4} />
+              {userCountry}
+            </span>
+          )}
+        </div>
+
+        {/* Segmented search bar */}
+        <div className="cmf-bar">
+          {/* PICKUP */}
+          <div
+            className={`cmf-cell cmf-cell-pickup ${errors.pickupLocation ? "cmf-cell-error" : ""}`}
+          >
+            <span className="cmf-cell-label">
+              <MapPin size={13} strokeWidth={2.4} className="cmf-ic-teal" />
+              Pickup
+            </span>
             <GooglePlacesAutocomplete
               name="pickupLocation"
               value={formData.pickupLocation}
-              onChange={(value) =>
-                handleLocationChange("pickupLocation", value)
-              }
+              onChange={(value) => handleLocationChange("pickupLocation", value)}
               onPlaceSelect={(place) =>
                 handlePlaceSelect("pickupLocation", place)
               }
-              placeholder="Enter area, stop point, or landmark"
+              placeholder="Where do you board?"
               country={userCountry}
               error={!!errors.pickupLocation}
-              inputClassName={`commute-search-form-form-input ${
-                errors.pickupLocation ? "commute-search-form-input-error" : ""
-              }`}
+              inputClassName="cmf-seg-input"
             />
-            <span className="input-hint">
-              E.g., Salmiya, Habibganj ISBT, Electronic City
+            <span className="cmf-cell-hint">
+              E.g. Salmiya, Habibganj ISBT, Electronic City
             </span>
-            {errors.pickupLocation && (
-              <span className="commute-search-form-error-message">
-                {errors.pickupLocation}
-              </span>
-            )}
           </div>
 
+          {/* SWAP */}
           <button
             type="button"
-            className="commute-search-form-swap-btn"
+            className="cmf-swap"
             onClick={swapLocations}
-            aria-label="Swap pickup and drop-off locations"
+            aria-label="Swap pickup and drop-off"
             title="Swap locations"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 16V4M7 4L3 8M7 4l4 4" />
-              <path d="M17 8v12M17 20l4-4M17 20l-4-4" />
-            </svg>
+            <ArrowLeftRight size={17} strokeWidth={2.2} />
           </button>
 
-          <div className="commute-search-form-form-group">
-            <label className="commute-search-form-form-label commute-search-form-location-label">
-              <span className="commute-search-form-label-icon commute-search-form-red">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path
-                    d="M12 2C7.6 2 4 5.6 4 10c0 5.9 8 13 8 13s8-7.1 8-13c0-4.4-3.6-8-8-8z"
-                    strokeWidth="2"
-                  />
-                  <circle
-                    cx="12"
-                    cy="10"
-                    r="3"
-                    strokeWidth="2"
-                    fill="currentColor"
-                  />
-                </svg>
-              </span>
-              DROP-OFF LOCATION
-            </label>
+          {/* DROP-OFF */}
+          <div
+            className={`cmf-cell cmf-cell-drop ${errors.dropoffLocation ? "cmf-cell-error" : ""}`}
+          >
+            <span className="cmf-cell-label">
+              <Navigation size={13} strokeWidth={2.4} className="cmf-ic-navy" />
+              Drop-off
+            </span>
             <GooglePlacesAutocomplete
               name="dropoffLocation"
               value={formData.dropoffLocation}
@@ -515,121 +263,146 @@ export default function CommuteSearchForm({
               onPlaceSelect={(place) =>
                 handlePlaceSelect("dropoffLocation", place)
               }
-              placeholder="Enter area, stop point, or landmark"
+              placeholder="Where are you headed?"
               country={userCountry}
               error={!!errors.dropoffLocation}
-              inputClassName={`commute-search-form-form-input ${
-                errors.dropoffLocation ? "commute-search-form-input-error" : ""
-              }`}
+              inputClassName="cmf-seg-input"
             />
-            <span className="input-hint">
-              E.g., Reggae, New Market Bus Stop, Wilson Garden
+            <span className="cmf-cell-hint">
+              E.g. Kuwait City, New Market Bus Stop, Wilson Garden
             </span>
-            {errors.dropoffLocation && (
-              <span className="commute-search-form-error-message">
-                {errors.dropoffLocation}
+          </div>
+
+          {/* COMMUTE DAYS */}
+          <div
+            ref={dayCellRef}
+            className={`cmf-cell cmf-cell-days ${errors.selectedDays ? "cmf-cell-error" : ""}`}
+          >
+            <span className="cmf-cell-label">
+              <CalendarDays size={13} strokeWidth={2.4} className="cmf-ic-navy" />
+              Commute days
+            </span>
+            <button
+              type="button"
+              className="cmf-days-trigger"
+              onClick={() => setShowDayPicker((s) => !s)}
+              aria-haspopup="true"
+              aria-expanded={showDayPicker}
+            >
+              <span className="cmf-days-value">
+                {summariseDays(selectedDays)}
               </span>
+              <ChevronDown
+                size={16}
+                strokeWidth={2.2}
+                className={`cmf-days-caret ${showDayPicker ? "cmf-days-caret-open" : ""}`}
+              />
+            </button>
+            <span className="cmf-cell-hint">
+              {selectedDays.length
+                ? `${selectedDays.length} day${selectedDays.length > 1 ? "s" : ""} a week`
+                : "Pick the days you travel"}
+            </span>
+
+            {showDayPicker && (
+              <div className="cmf-day-pop" role="dialog" aria-label="Choose commute days">
+                <div className="cmf-day-pop-head">
+                  <strong>Select commute days</strong>
+                  <button
+                    type="button"
+                    className="cmf-day-pop-clear"
+                    onClick={() => {
+                      setSelectedDays([]);
+                      setDayPreset("custom");
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="cmf-day-grid">
+                  {ALL_DAYS.map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      className={`cmf-day-pill ${selectedDays.includes(day) ? "cmf-day-pill-on" : ""}`}
+                      onClick={() => toggleDay(day)}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+                <div className="cmf-day-pop-foot">
+                  <button
+                    type="button"
+                    className="cmf-day-quick"
+                    onClick={() => applyPreset("weekdays")}
+                  >
+                    Weekdays
+                  </button>
+                  <button
+                    type="button"
+                    className="cmf-day-quick"
+                    onClick={() => applyPreset("all")}
+                  >
+                    All days
+                  </button>
+                  <button
+                    type="button"
+                    className="cmf-day-done"
+                    onClick={() => setShowDayPicker(false)}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Days Needed */}
-        <div className="commute-search-form-form-group commute-search-form-days-section">
-          <div className="commute-search-form-days-header">
-            <label className="commute-search-form-form-label">
-              <span className="commute-search-form-label-icon commute-search-form-blue">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <rect
-                    x="3"
-                    y="4"
-                    width="18"
-                    height="18"
-                    rx="2"
-                    strokeWidth="2"
-                  />
-                  <line x1="3" y1="10" x2="21" y2="10" strokeWidth="2" />
-                  <line x1="8" y1="2" x2="8" y2="6" strokeWidth="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" strokeWidth="2" />
-                </svg>
-              </span>
-              Select Your Commute Days
-            </label>
-            <div className="commute-search-form-days-quick-actions">
-              <button
-                type="button"
-                className="commute-search-form-quick-btn"
-                onClick={selectAllWeekdays}
-              >
-                Weekdays
-              </button>
-              <button
-                type="button"
-                className="commute-search-form-quick-btn"
-                onClick={selectAllDays}
-              >
-                All Days
-              </button>
-              {selectedDays.length > 0 && (
-                <button
-                  type="button"
-                  className="commute-search-form-quick-btn commute-search-form-clear-btn"
-                  onClick={clearDays}
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+        {/* Inline validation messages */}
+        {(errors.pickupLocation ||
+          errors.dropoffLocation ||
+          errors.selectedDays) && (
+          <div className="cmf-errors">
+            {errors.pickupLocation && <span>{errors.pickupLocation}</span>}
+            {errors.dropoffLocation && <span>{errors.dropoffLocation}</span>}
+            {errors.selectedDays && <span>{errors.selectedDays}</span>}
           </div>
-          <div className="commute-search-form-days-container">
-            {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
-              <button
-                key={day}
-                type="button"
-                className={`commute-search-form-day-button ${
-                  selectedDays.includes(day)
-                    ? "commute-search-form-selected"
-                    : ""
-                }`}
-                onClick={() => toggleDay(day)}
-              >
-                {day}
-              </button>
-            ))}
-          </div>
-          {errors.selectedDays && (
-            <span className="commute-search-form-error-message">
-              {errors.selectedDays}
-            </span>
-          )}
-        </div>
+        )}
 
-        {/* Button Section */}
-        <div className="commute-search-form-button-section">
-          <button type="submit" className="commute-search-form-search-button">
-            <svg
-              className="commute-search-form-search-icon-svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+        {/* Action bar */}
+        <div className="cmf-actions">
+          <div className="cmf-trust">
+            <span className="cmf-trust-chip">
+              <ShieldCheck size={15} strokeWidth={2.2} />
+              Verified providers
+            </span>
+            <span className="cmf-trust-chip">
+              <BadgeCheck size={15} strokeWidth={2.2} />
+              Fixed monthly pass
+            </span>
+            <span className="cmf-trust-chip cmf-trust-hide-sm">
+              <Repeat2 size={15} strokeWidth={2.2} />
+              Same ride, daily
+            </span>
+          </div>
+
+          <div className="cmf-action-btns">
+            <button
+              type="button"
+              className="cmf-request"
+              onClick={onRequestRoute}
             >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-            Search Commutes
-          </button>
-          <button
-            type="button"
-            className="commute-search-form-request-button"
-            onClick={onRequestRoute}
-          >
-            {"Can't find a route? Request one"}
-          </button>
+              <Sparkles size={15} strokeWidth={2.2} />
+              Request a route
+            </button>
+            <button type="submit" className="cmf-search">
+              <Search size={19} strokeWidth={2.4} />
+              Search Commutes
+            </button>
+          </div>
         </div>
       </form>
     </div>
   );
 }
-
-
-

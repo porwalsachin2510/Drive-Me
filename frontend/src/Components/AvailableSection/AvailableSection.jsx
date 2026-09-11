@@ -139,13 +139,6 @@ const AvailableSection = ({
     }
   };
 
-  const getBorderColor = (index) => {
-    // Brand-cohesive left accent rotation (teal → coral → navy) so the list
-    // reads as one designed system rather than random highlight colors.
-    const colors = ["#12b0c4", "#e85d5d", "#0a2a43"];
-    return colors[index % colors.length];
-  };
-
   const formatDate = (date) => {
     if (!date) return "TBD";
     const d = new Date(date);
@@ -452,7 +445,6 @@ const AvailableSection = ({
               <div
                 key={route.routeId || idx}
                 className="drivemego-availablesection-available-section-route-item"
-                style={{ borderLeftColor: getBorderColor(idx) }}
               >
                 <div className="drivemego-availablesection-route-row-1">
                   <div className="drivemego-availablesection-available-section-route-info">

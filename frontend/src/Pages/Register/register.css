@@ -1,3 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* =====================================================================
+   DriveMeGo — Register
+   Rebuilt on the CommuterHomePage palette: deep navy (#0a2a43) +
+   bright teal (#12b0c4), Plus Jakarta Sans. No red — teal is the action.
+   ===================================================================== */
+
 * {
   box-sizing: border-box;
 }
@@ -36,8 +44,8 @@
 }
 
 .day-button.selected {
-  background: #E85D5D;
-  border-color: #E85D5D;
+  background: #12b0c4;
+  border-color: #12b0c4;
   color: white;
 }
 
@@ -45,44 +53,95 @@
 .register-container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 50px 0px;
-  background: linear-gradient(135deg, #F8FAFC 0%, #ffffff 100%);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  align-items: flex-start;
+  padding: 48px 20px;
+  min-height: calc(100vh - 80px);
+  background: #eef3f8;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .register-card {
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-  padding: 40px;
+  border-radius: 26px;
+  box-shadow: 0 30px 80px rgba(10, 42, 67, 0.16);
+  border: 1px solid #e4ecf3;
+  padding: 0;
   width: 100%;
-  max-width: 900px;
-  border-top: 4px solid #E85D5D;
+  max-width: 920px;
+  overflow: hidden;
 }
 
+/* Navy branded header banner (mirrors the homepage hero) */
 .register-header {
+  position: relative;
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 0;
+  padding: 44px 40px 40px;
+  color: #fff;
+  overflow: hidden;
+  background:
+    radial-gradient(760px 300px at 85% -30%, rgba(18, 176, 196, 0.42), transparent 60%),
+    radial-gradient(560px 260px at 6% 130%, rgba(18, 176, 196, 0.16), transparent 60%),
+    linear-gradient(135deg, #0a2a43 0%, #123a58 58%, #0e3350 100%);
+}
+
+.register-header::after {
+  content: "";
+  position: absolute;
+  right: -90px;
+  top: -110px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(18, 176, 196, 0.35);
+}
+
+.register-brand-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #bff0f6;
+  background: rgba(18, 176, 196, 0.14);
+  border: 1px solid rgba(18, 176, 196, 0.35);
+  padding: 6px 14px;
+  border-radius: 100px;
+  margin-bottom: 16px;
 }
 
 .register-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #E85D5D;
+  font-size: clamp(26px, 3.4vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
   margin: 0 0 8px 0;
 }
 
 .register-subtitle {
-  font-size: 16px;
-  color: #666;
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(226, 238, 246, 0.82);
   margin: 0;
+}
+
+/* Body padding wrapper — everything below the header */
+.register-card > .register-error-message,
+.register-card > .register-success-message,
+.register-card > .register-role-selector,
+.register-card > .register-form-divider,
+.register-card > form {
+  margin-left: 40px;
+  margin-right: 40px;
 }
 
 .register-role-selector {
   display: flex;
-  gap: 15px;
-  margin-bottom: 30px;
+  gap: 12px;
+  margin-top: 32px;
+  margin-bottom: 28px;
   justify-content: center;
   flex-wrap: wrap;
 }
@@ -92,43 +151,69 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  background: white;
+  padding: 18px 16px;
+  border: 1.5px solid #e4ecf3;
+  border-radius: 16px;
+  background: #f6fafc;
   cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 100px;
-  gap: 8px;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease,
+    box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  min-width: 108px;
+  gap: 10px;
+  color: #5b6b7b;
   font-family: inherit;
 }
 
 .register-role-button:hover {
-  border-color: #E85D5D;
-  box-shadow: 0 2px 8px rgba(232, 93, 93, 0.15);
+  border-color: #12b0c4;
+  color: #0a2a43;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 26px rgba(18, 176, 196, 0.16);
 }
 
 .register-role-button.register-active {
-  background-color: #E85D5D;
-  color: white;
-  border-color: #E85D5D;
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
+  color: #fff;
+  border-color: #0a2a43;
+  box-shadow: 0 14px 30px rgba(10, 42, 67, 0.28);
 }
 
 .register-role-button-icon {
-  font-size: 28px;
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: #e6f7fa;
+  color: #0e97a8;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.register-role-button-icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.register-role-button:hover .register-role-button-icon {
+  background: #d3f0f4;
+}
+
+.register-role-button.register-active .register-role-button-icon {
+  background: rgba(18, 176, 196, 0.22);
+  color: #7fe6f2;
 }
 
 .register-role-button-text {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
 }
 
 .register-form-divider {
   height: 1px;
-  background-color: #e0e0e0;
+  background-color: #e4ecf3;
   margin: 30px 0;
 }
 
@@ -160,39 +245,42 @@
 }
 
 .register-form-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0a2a43;
+  letter-spacing: -0.01em;
   margin-bottom: 8px;
 }
 
 .register-required {
-  color: #E85D5D;
+  color: #12b0c4;
   margin-left: 2px;
 }
 
 .register-form-input,
 .register-form-input textarea {
-  padding: 12px 15px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 14px;
-  background-color: #F8FAFC;
-  transition: all 0.3s ease;
+  padding: 13px 16px;
+  border: 1.5px solid #e4ecf3;
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-weight: 500;
+  background-color: #f6fafc;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   font-family: inherit;
-  color: #1F2937;
+  color: #0a2a43;
 }
 
 .register-form-input:focus,
 .register-form-input textarea:focus {
   outline: none;
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.14);
 }
 
 .register-form-input::placeholder {
-  color: #999;
+  color: #9fb1c0;
+  font-weight: 500;
 }
 
 /* Phone Input with Country Code */
@@ -240,9 +328,9 @@
 
 .register-country-code-wrapper:hover .register-country-code-display,
 .register-country-code-select:focus + .register-country-code-display {
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 /* Locked (auto-detected) dial code — no dropdown affordance, not editable. */
@@ -306,7 +394,7 @@ textarea.register-form-input {
 
 .register-password-toggle:focus {
   outline: none;
-  color: #E85D5D;
+  color: #12b0c4;
 }
 
 .register-corp-section-header {
@@ -358,7 +446,7 @@ textarea.register-form-input {
 }
 
 .register-add-route-btn {
-  background: #E85D5D;
+  background: #12b0c4;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -387,7 +475,7 @@ textarea.register-form-input {
 .register-section-header .register-add-route-btn {
   margin-left: auto;
   padding: 8px 16px;
-  background-color: #E85D5D;
+  background-color: #12b0c4;
   color: white;
   border: none;
   border-radius: 6px;
@@ -399,8 +487,8 @@ textarea.register-form-input {
 }
 
 .register-section-header .register-add-route-btn:hover {
-  background-color: #D94545;
-  box-shadow: 0 4px 14px rgba(232, 93, 93, 0.25);
+  background-color: #0e97a8;
+  box-shadow: 0 4px 14px rgba(18, 176, 196, 0.25);
 }
 
 .register-section-icon {
@@ -450,7 +538,7 @@ textarea.register-form-input {
 }
 
 .register-file-input-label:hover {
-  border-color: #E85D5D;
+  border-color: #12b0c4;
 }
 
 /* New image gallery styles with centered + icon */
@@ -480,8 +568,8 @@ textarea.register-form-input {
 }
 
 .register-image-upload-box:hover {
-  border-color: #E85D5D;
-  background-color: rgba(232, 93, 93, 0.05);
+  border-color: #12b0c4;
+  background-color: rgba(18, 176, 196, 0.05);
 }
 
 .register-image-upload-box.register-first {
@@ -505,7 +593,7 @@ textarea.register-form-input {
 
 .register-plus-icon {
   font-size: 32px;
-  color: #E85D5D;
+  color: #12b0c4;
   font-weight: 300;
   line-height: 1;
 }
@@ -516,7 +604,7 @@ textarea.register-form-input {
   height: 90px;
   border-radius: 8px;
   overflow: hidden;
-  background-color: #c30e0e;
+  background-color: #eef3f8;
   border: 1px solid #e0e0e0;
 }
 
@@ -533,7 +621,7 @@ textarea.register-form-input {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background-color: #e63c6d;
+  background-color: #12b0c4;
   color: white;
   border: none;
   cursor: pointer;
@@ -545,7 +633,7 @@ textarea.register-form-input {
 }
 
 .register-remove-image-btn:hover {
-  background-color: #d4365f;
+  background-color: #0e97a8;
   transform: scale(1.1);
 }
 
@@ -576,7 +664,7 @@ textarea.register-form-input {
 .register-route-number {
   font-weight: 600;
   color: white;
-  background-color: #E85D5D;
+  background-color: #12b0c4;
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -611,7 +699,7 @@ textarea.register-form-input {
 }
 
 .register-delete-route-btn:hover {
-  background-color: rgba(230, 60, 109, 0.1);
+  background-color: rgba(18, 176, 196, 0.1);
 }
 
 .register-collapse-route-btn:hover {
@@ -636,8 +724,8 @@ textarea.register-form-input {
 
 .register-vehicle-number {
   font-weight: 600;
-  color: #E85D5D;
-  background-color: rgba(232, 93, 93, 0.1);
+  color: #12b0c4;
+  background-color: rgba(18, 176, 196, 0.1);
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -664,8 +752,8 @@ textarea.register-form-input {
   width: 100%;
   padding: 12px;
   background-color: white;
-  color: #E85D5D;
-  border: 2px dashed #E85D5D;
+  color: #12b0c4;
+  border: 2px dashed #12b0c4;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
@@ -675,7 +763,7 @@ textarea.register-form-input {
 }
 
 .register-add-vehicle-btn:hover {
-  background-color: rgba(232, 93, 93, 0.08);
+  background-color: rgba(18, 176, 196, 0.08);
 }
 
 .register-payment-methods {
@@ -698,59 +786,84 @@ textarea.register-form-input {
 }
 
 .register-payment-option:hover {
-  border-color: #E85D5D;
-  color: #E85D5D;
+  border-color: #12b0c4;
+  color: #12b0c4;
 }
 
 .register-payment-option.register-selected {
-  background-color: #E85D5D;
+  background-color: #12b0c4;
   color: white;
-  border-color: #E85D5D;
+  border-color: #12b0c4;
 }
 
 .register-submit-btn {
   width: 100%;
-  padding: 14px;
-  background-color: #E85D5D;
+  padding: 15px;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 14px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: all 0.3s ease;
-  margin-top: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  margin-top: 24px;
   font-family: inherit;
+  box-shadow: 0 12px 26px rgba(18, 176, 196, 0.3);
 }
 
 .register-submit-btn:hover:not(:disabled) {
-  background-color: #D94545;
-  box-shadow: 0 4px 14px rgba(232, 93, 93, 0.3);
+  background: linear-gradient(135deg, #12b0c4 0%, #0c8695 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(18, 176, 196, 0.38);
 }
 
 .register-submit-btn:disabled {
-  background-color: #999;
+  background: #cdd8e2;
+  color: #fff;
   cursor: not-allowed;
-  opacity: 0.7;
+  box-shadow: none;
+}
+
+.register-secure-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #8598a8;
+}
+
+.register-secure-note svg {
+  width: 15px;
+  height: 15px;
+  color: #0e97a8;
 }
 
 .register-signin-link {
   text-align: center;
-  margin-top: 20px;
-  font-size: 14px;
-  color: #666;
+  margin: 26px 40px 0;
+  padding: 24px 0 36px;
+  border-top: 1px solid #e4ecf3;
+  font-size: 14.5px;
+  color: #5b6b7b;
+  font-weight: 500;
 }
 
 .register-signin-link a {
-  color: #E85D5D;
-  font-weight: 600;
+  color: #0e97a8;
+  font-weight: 700;
   cursor: pointer;
-  transition: color 0.3s ease;
+  margin-left: 4px;
+  transition: color 0.2s ease;
   text-decoration: none;
 }
 
 .register-signin-link a:hover {
-  color: #D94545;
+  color: #0a2a43;
 }
 
 /* Profile Image Upload Styles */
@@ -776,11 +889,11 @@ textarea.register-form-input {
   height: 100px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #E85D5D;
+  border: 3px solid #12b0c4;
 }
 
 .register-profile-remove-btn {
-  background: #E85D5D;
+  background: #12b0c4;
   color: white;
   border: none;
   padding: 6px 16px;
@@ -791,7 +904,7 @@ textarea.register-form-input {
 }
 
 .register-profile-remove-btn:hover {
-  background: #D94545;
+  background: #0e97a8;
 }
 
 .register-profile-file-wrapper {
@@ -833,23 +946,27 @@ textarea.register-form-input {
 }
 
 .register-error-message {
-  background-color: #ffebee;
-  color: #c62828;
-  padding: 12px 15px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-size: 13px;
-  border-left: 4px solid #c62828;
+  background-color: #fdecec;
+  color: #c0392b;
+  padding: 13px 16px;
+  border-radius: 12px;
+  margin-top: 24px;
+  margin-bottom: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1px solid #f7c9c9;
 }
 
 .register-success-message {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-  padding: 12px 15px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-size: 13px;
-  border-left: 4px solid #2e7d32;
+  background-color: #e7f7ee;
+  color: #1e8a54;
+  padding: 13px 16px;
+  border-radius: 12px;
+  margin-top: 24px;
+  margin-bottom: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1px solid #b8e6cd;
 }
 
 .register-my-route-item {
@@ -881,7 +998,7 @@ textarea.register-form-input {
 }
 
 .register-add-stop-btn {
-  background: #e63950;
+  background: #12b0c4;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -897,7 +1014,7 @@ textarea.register-form-input {
 }
 
 .register-add-stop-btn:hover {
-  background-color: #d4365f;
+  background-color: #0e97a8;
 }
 
 .register-stop-points-list {
@@ -919,13 +1036,13 @@ textarea.register-form-input {
 
 .register-stop-point-item:hover {
   background-color: #fff;
-  border-color: #e63c6d;
+  border-color: #12b0c4;
 }
 
 .register-stop-point-number {
   font-weight: 600;
   color: white;
-  background-color: #e63c6d;
+  background-color: #12b0c4;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -945,7 +1062,7 @@ textarea.register-form-input {
 .register-remove-stop-btn {
   background: none;
   border: none;
-  color: #e63c6d;
+  color: #12b0c4;
   font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
@@ -956,7 +1073,7 @@ textarea.register-form-input {
 }
 
 .register-remove-stop-btn:hover {
-  background-color: rgba(230, 60, 109, 0.1);
+  background-color: rgba(18, 176, 196, 0.1);
   transform: scale(1.1);
 }
 
@@ -1077,7 +1194,7 @@ textarea.register-form-input {
   .register-card {
     padding: 20px;
     border-radius: 16px;
-    border-top: 3px solid #e63c6d;
+    border-top: 3px solid #12b0c4;
   }
 
   .register-title {

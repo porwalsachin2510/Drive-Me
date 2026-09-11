@@ -78,14 +78,83 @@ const Register = () => {
     return localStorage.getItem("activeTab") || "commuters";
   });
 
+  const svgProps = {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.9,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  };
   const roles = [
-    { id: "COMMUTER", label: "COMMUTER", icon: "👤" },
-    { id: "CORPORATE", label: "CORPORATE", icon: "🏢" },
-    { id: "B2C_PARTNER", label: "B2C PARTNER", icon: "🚗" },
-    { id: "B2B_PARTNER", label: "B2B PARTNER", icon: "🏭" },
-    { id: "SCHOOL_CUSTOMER", label: "SCHOOL CUSTOMER", icon: "🏫" },
-    { id: "SCHOOL_PARTNER", label: "SCHOOL PARTNER", icon: "🚌" },
-    // { id: "CORPORATE_EMPLOYEE", label: "CORPORATE EMPLOYEE", icon: "👔" },
+    {
+      id: "COMMUTER",
+      label: "COMMUTER",
+      icon: (
+        <svg {...svgProps}>
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+        </svg>
+      ),
+    },
+    {
+      id: "CORPORATE",
+      label: "CORPORATE",
+      icon: (
+        <svg {...svgProps}>
+          <path d="M3 21h18" />
+          <path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16" />
+          <path d="M15 9h2a2 2 0 0 1 2 2v10" />
+          <path d="M9 7h2M9 11h2M9 15h2" />
+        </svg>
+      ),
+    },
+    {
+      id: "B2C_PARTNER",
+      label: "B2C PARTNER",
+      icon: (
+        <svg {...svgProps}>
+          <path d="M14 16H9m10 0h1.5a1.5 1.5 0 0 0 1.5-1.5v-3.2a2 2 0 0 0-.6-1.4L18 5.6A2 2 0 0 0 16.6 5H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1" />
+          <circle cx="6.5" cy="16.5" r="2.5" />
+          <circle cx="16.5" cy="16.5" r="2.5" />
+        </svg>
+      ),
+    },
+    {
+      id: "B2B_PARTNER",
+      label: "B2B PARTNER",
+      icon: (
+        <svg {...svgProps}>
+          <path d="M2 20h20" />
+          <path d="M4 20V8l6-4 6 4v12" />
+          <path d="M16 20V11l4 2v7" />
+          <path d="M8 10h2M8 14h2" />
+        </svg>
+      ),
+    },
+    {
+      id: "SCHOOL_CUSTOMER",
+      label: "SCHOOL CUSTOMER",
+      icon: (
+        <svg {...svgProps}>
+          <path d="M22 10 12 5 2 10l10 5 10-5z" />
+          <path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5" />
+        </svg>
+      ),
+    },
+    {
+      id: "SCHOOL_PARTNER",
+      label: "SCHOOL PARTNER",
+      icon: (
+        <svg {...svgProps}>
+          <path d="M4 17h16V8a2 2 0 0 0-2-2H4v11z" />
+          <path d="M4 11h16" />
+          <path d="M8 6V4h8v2" />
+          <circle cx="8" cy="19" r="1.6" />
+          <circle cx="16" cy="19" r="1.6" />
+        </svg>
+      ),
+    },
   ];
 
   // School roles reuse the corporate/partner registration form and behaviour.
@@ -755,12 +824,27 @@ const Register = () => {
       ) : (
         <div className="register-container">
           <div className="register-card">
-            <div className="register-header">
-              <h1 className="register-title">Join DriveMe</h1>
-              <p className="register-subtitle">
-                Create your account and start moving
-              </p>
-            </div>
+          <div className="register-header">
+            <span className="register-brand-eyebrow">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                width="13"
+                height="13"
+              >
+                <path d="M3 11l19-9-9 19-2-8-8-2z" />
+              </svg>
+              Drive Me Go
+            </span>
+            <h1 className="register-title">Create your account</h1>
+            <p className="register-subtitle">
+              Join thousands of commuters riding verified daily routes.
+            </p>
+          </div>
 
             {error && <div className="register-error-message">{error}</div>}
             {success && (
@@ -972,7 +1056,19 @@ const Register = () => {
                   <div className="register-form-divider"></div>
                   <div className="register-corp-section-header">
                     <span className="register-section-icon">
-                      {selectedRole === "SCHOOL_CUSTOMER" ? "🏫" : "🏢"}
+                      {selectedRole === "SCHOOL_CUSTOMER" ? (
+                        <svg {...svgProps}>
+                          <path d="M22 10 12 5 2 10l10 5 10-5z" />
+                          <path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5" />
+                        </svg>
+                      ) : (
+                        <svg {...svgProps}>
+                          <path d="M3 21h18" />
+                          <path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16" />
+                          <path d="M15 9h2a2 2 0 0 1 2 2v10" />
+                          <path d="M9 7h2M9 11h2M9 15h2" />
+                        </svg>
+                      )}
                     </span>
                     <span>
                       {selectedRole === "SCHOOL_CUSTOMER"
@@ -1082,7 +1178,13 @@ const Register = () => {
                 <>
                   <div className="register-form-divider"></div>
                   <div className="register-corp-section-header">
-                    <span className="register-section-icon">🚗</span>
+                    <span className="register-section-icon">
+                      <svg {...svgProps}>
+                        <path d="M14 16H9m10 0h1.5a1.5 1.5 0 0 0 1.5-1.5v-3.2a2 2 0 0 0-.6-1.4L18 5.6A2 2 0 0 0 16.6 5H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1" />
+                        <circle cx="6.5" cy="16.5" r="2.5" />
+                        <circle cx="16.5" cy="16.5" r="2.5" />
+                      </svg>
+                    </span>
                     <span>Service Provider Information</span>
                   </div>
 
@@ -1321,6 +1423,14 @@ const Register = () => {
               >
                 {loading ? "Creating Account..." : "Create Account"}
               </button>
+
+              <p className="register-secure-note">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Your details are encrypted and never shared.
+              </p>
             </form>
 
             <div className="register-signin-link">

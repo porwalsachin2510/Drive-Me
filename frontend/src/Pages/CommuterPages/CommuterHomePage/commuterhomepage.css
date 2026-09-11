@@ -179,8 +179,9 @@ body {
 }
 
 /* pull the search card up so it floats over the hero (IndiGo style) */
-.commuterhomepage-commuters-container .commute-search-form-container {
-  margin-top: -84px;
+.commuterhomepage-commuters-container .cmf-widget {
+  margin-top: -90px;
+  margin-bottom: 52px;
   position: relative;
   z-index: 5;
 }
@@ -223,8 +224,8 @@ body {
     border-radius: 22px;
   }
 
-  .commuterhomepage-commuters-container .commute-search-form-container {
-    margin-top: -92px;
+  .commuterhomepage-commuters-container .cmf-widget {
+    margin-top: -96px;
   }
 }
 
