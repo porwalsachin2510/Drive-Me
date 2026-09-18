@@ -1,17 +1,17 @@
 /* =====================================================================
    DriveMeGo — Commute search widget
    goindigo-style segmented booking bar, rebuilt on the brand palette
-   (deep navy #0a2a43 + bright teal #12b0c4). No red — teal is the action.
+   (deep navy var(--dmg-navy) + bright teal var(--dmg-teal)). No red — teal is the action.
    ===================================================================== */
 
 .cmf-widget {
-  --cmf-navy: var(--dmg-navy, #0a2a43);
+  --cmf-navy: var(--dmg-navy, var(--dmg-navy));
   --cmf-navy-600: var(--dmg-navy-600, #1c4d70);
-  --cmf-teal: var(--dmg-teal, #12b0c4);
-  --cmf-teal-600: var(--dmg-teal-600, #0e97a8);
-  --cmf-teal-050: var(--dmg-teal-050, #e6f7fa);
-  --cmf-line: var(--dmg-line, #e4ecf3);
-  --cmf-muted: var(--dmg-muted, #5b6b7b);
+  --cmf-teal: var(--dmg-teal, var(--dmg-teal));
+  --cmf-teal-600: var(--dmg-teal-600, var(--dmg-teal-600));
+  --cmf-teal-050: var(--dmg-teal-050, var(--dmg-teal-050));
+  --cmf-line: var(--dmg-line, var(--dmg-line));
+  --cmf-muted: var(--dmg-muted, var(--dmg-ink));
   --cmf-muted-2: var(--dmg-muted-2, #8598a8);
 
   position: relative;
@@ -140,7 +140,7 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--cmf-navy);
-  background: #f6fafc;
+  background: var(--dmg-bg);
 }
 
 .cmf-country-pill svg {
@@ -414,7 +414,7 @@
   padding: 9px 18px;
   border: none;
   border-radius: 100px;
-  background: var(--dmg-cta, linear-gradient(135deg, #16bccf, #0e97a8));
+  background: var(--dmg-cta, linear-gradient(135deg, var(--dmg-teal), var(--dmg-teal-600)));
   color: #fff;
   font-family: inherit;
   font-size: 12px;
@@ -510,7 +510,7 @@
   padding: 14px 34px;
   border: none;
   border-radius: 14px;
-  background: var(--dmg-cta, linear-gradient(135deg, #16bccf, #0e97a8));
+  background: var(--dmg-cta, linear-gradient(135deg, var(--dmg-teal), var(--dmg-teal-600)));
   color: #fff;
   font-family: inherit;
   font-size: 15.5px;
@@ -525,7 +525,7 @@
 .cmf-search:hover {
   transform: translateY(-1px);
   box-shadow: var(--dmg-cta-shadow-lg, 0 16px 34px rgba(18, 176, 196, 0.38));
-  background: var(--dmg-cta-hover, linear-gradient(135deg, #12b0c4, #0c8695));
+  background: var(--dmg-cta-hover, linear-gradient(135deg, var(--dmg-teal), var(--dmg-teal-700)));
 }
 
 .cmf-search:active {

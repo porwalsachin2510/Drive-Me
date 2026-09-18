@@ -6,7 +6,7 @@
   padding: 24px 40px;
   background-color: #ffffff;
   border-bottom: 1px solid #e8e8e8;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--dmg-font);
 }
 
 .b2b-header-left {
@@ -23,8 +23,9 @@
 
 .b2b-header-title {
   font-size: 32px;
-  font-weight: 700;
-  color: #000000;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--dmg-navy);
   margin: 0;
 }
 
@@ -34,11 +35,11 @@
   gap: 6px;
   width: fit-content;
   padding: 4px 12px;
-  background-color: #e8f4fd;
+  background-color: var(--dmg-teal-050);
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
-  color: #1677b8;
+  color: var(--dmg-teal-700);
 }
 
 .b2b-header-subtitle {
@@ -60,13 +61,18 @@
 
 .drivemego-b2b-partner-b2b-logout-btn {
   padding: 8px 16px;
-  background: #dc3545;
+  background: var(--danger-color);
   border: none;
+  border-radius: 10px;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: background 0.2s;
+}
+
+.drivemego-b2b-partner-b2b-logout-btn:hover {
+  background: var(--danger-hover);
 }
 
 .b2b-logout-btn:hover {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { Car, Truck, ShieldCheck, Check, ArrowRight } from "lucide-react";
 import { selectUserRole } from "../../../Redux/selectors/authSelectors";
 import "./ServiceSelection.css";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -40,7 +41,7 @@ const ServiceSelection = () => {
       title: "Passenger Vehicles",
       description:
         "Sedans, SUVs, Vans for employee transportation, executive travel, or client meetings",
-      icon: "🚗",
+      Icon: Car,
       features: [
         "Executive sedans",
         "Family SUVs",
@@ -51,28 +52,28 @@ const ServiceSelection = () => {
       useCases:
         "Perfect for corporate travel, employee shuttles, VIP transport",
     },
-    {
-      id: "goods",
-      title: "Goods Carrier",
-      description:
-        "Pickup trucks, cargo vans, mini trucks for delivery, logistics, or material transport",
-      icon: "🚚",
-      features: [
-        "Pickup trucks",
-        "Cargo vans",
-        "Small trucks (1-3 ton)",
-        "Refrigerated vehicles",
-        "Box trucks",
-      ],
-      useCases:
-        "Ideal for e-commerce, logistics, construction material delivery",
-    },
+    // {
+    //   id: "goods",
+    //   title: "Goods Carrier",
+    //   description:
+    //     "Pickup trucks, cargo vans, mini trucks for delivery, logistics, or material transport",
+    //   Icon: Truck,
+    //   features: [
+    //     "Pickup trucks",
+    //     "Cargo vans",
+    //     "Small trucks (1-3 ton)",
+    //     "Refrigerated vehicles",
+    //     "Box trucks",
+    //   ],
+    //   useCases:
+    //     "Ideal for e-commerce, logistics, construction material delivery",
+    // },
     {
       id: "managed",
       title: "Managed Services",
       description:
         "Full fleet management with drivers, maintenance, fuel, insurance - hassle-free solution",
-      icon: "🎯",
+      Icon: ShieldCheck,
       features: [
         "Professional drivers included",
         "Complete maintenance",
@@ -107,7 +108,28 @@ const ServiceSelection = () => {
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="drivemego-service-selection-container">
         <div className="drivemego-service-selection-content">
+          {/* Stepper */}
+          <div className="drivemego-service-steps" aria-hidden="true">
+            <div className="drivemego-service-step drivemego-step-active">
+              <span className="drivemego-step-dot">1</span>
+              <span className="drivemego-step-label">Service</span>
+            </div>
+            <span className="drivemego-step-line" />
+            <div className="drivemego-service-step">
+              <span className="drivemego-step-dot">2</span>
+              <span className="drivemego-step-label">Requirements</span>
+            </div>
+            <span className="drivemego-step-line" />
+            <div className="drivemego-service-step">
+              <span className="drivemego-step-dot">3</span>
+              <span className="drivemego-step-label">Quotation</span>
+            </div>
+          </div>
+
           <div className="drivemego-service-header">
+            <span className="drivemego-service-eyebrow">
+              Corporate & Business Mobility
+            </span>
             <h1>Select Your Service Type</h1>
             <p>
               {isSchoolCustomer
@@ -116,41 +138,64 @@ const ServiceSelection = () => {
             </p>
           </div>
 
-          <div className="drivemego-services-grid">
-            {visibleServices.map((service) => (
-              <div
-                key={service.id}
-                className={`drivemego-service-card ${
-                  selectedService === service.id ? "drivemego-selected" : ""
-                }`}
-                onClick={() => handleServiceSelect(service.id)}
-              >
-                <div className="drivemego-service-icon">{service.icon}</div>
-                <h3>{service.title}</h3>
-                <p className="drivemego-service-description">
-                  {service.description}
-                </p>
+          <div
+            className={`drivemego-services-grid${
+              visibleServices.length === 1 ? " drivemego-single" : ""
+            }`}
+          >
+            {visibleServices.map((service) => {
+              const ServiceIcon = service.Icon;
+              const isSelected = selectedService === service.id;
+              return (
+                <div
+                  key={service.id}
+                  className={`drivemego-service-card ${
+                    isSelected ? "drivemego-selected" : ""
+                  }`}
+                  onClick={() => handleServiceSelect(service.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleServiceSelect(service.id);
+                    }
+                  }}
+                >
+                  {isSelected && (
+                    <div className="drivemego-selected-indicator">
+                      <Check size={14} strokeWidth={3} /> Selected
+                    </div>
+                  )}
 
-                <div className="drivemego-service-features">
-                  <h4>Features:</h4>
-                  <ul>
-                    {service.features.map((feature, index) => (
-                      <li key={index}>{feature}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="drivemego-service-use-case">
-                  <p>
-                    <strong>Best For:</strong> {service.useCases}
+                  <div className="drivemego-service-icon">
+                    <ServiceIcon size={26} strokeWidth={1.8} />
+                  </div>
+                  <h3>{service.title}</h3>
+                  <p className="drivemego-service-description">
+                    {service.description}
                   </p>
-                </div>
 
-                {selectedService === service.id && (
-                  <div className="drivemego-selected-indicator">✓ Selected</div>
-                )}
-              </div>
-            ))}
+                  <div className="drivemego-service-features">
+                    <h4>What&apos;s included</h4>
+                    <ul>
+                      {service.features.map((feature, index) => (
+                        <li key={index}>
+                          <Check size={15} strokeWidth={2.5} />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="drivemego-service-use-case">
+                    <p>
+                      <strong>Best for</strong> {service.useCases}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="drivemego-service-actions">
@@ -160,6 +205,7 @@ const ServiceSelection = () => {
               disabled={!selectedService}
             >
               Continue to Customize Requirements
+              <ArrowRight size={18} />
             </button>
           </div>
         </div>

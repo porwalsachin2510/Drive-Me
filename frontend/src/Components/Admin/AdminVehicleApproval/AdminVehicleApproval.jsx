@@ -1,5 +1,13 @@
 import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect, useCallback } from "react";
+import {
+  ShieldCheck,
+  Check,
+  X,
+  FileText,
+  ImageIcon,
+  AlertTriangle,
+} from "lucide-react";
 import api from "../../../utils/api";
 import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./adminvehicleapproval.css";
@@ -134,7 +142,18 @@ function AdminVehicleApproval() {
   return (
     <div className="drivemego-adminvehicleapproval-admin-vehicle-approval">
       <div className="drivemego-adminvehicleapproval-approval-header">
-        <h2>Vehicle Approvals</h2>
+        <div className="drivemego-adminvehicleapproval-header-title">
+          <div className="drivemego-adminvehicleapproval-header-icon">
+            <ShieldCheck size={26} strokeWidth={2.2} />
+          </div>
+          <div>
+            <h2>Vehicle Approvals</h2>
+            <p className="drivemego-adminvehicleapproval-header-sub">
+              Review documents, photos and pricing before approving fleet
+              vehicles for service.
+            </p>
+          </div>
+        </div>
         <p className="drivemego-adminvehicleapproval-pending-count">
           {pagination.total} pending vehicle{pagination.total !== 1 ? "s" : ""}
         </p>
@@ -455,7 +474,7 @@ function AdminVehicleApproval() {
                           className={`drivemego-adminvehicleapproval-facility-item ${value ? "active" : ""}`}
                         >
                           <span className="facility-icon">
-                            {value ? "check" : "close"}
+                            {value ? <Check size={15} /> : <X size={15} />}
                           </span>
                           <span className="facility-name">
                             {key.replace(/([A-Z])/g, " $1").trim()}
@@ -481,7 +500,11 @@ function AdminVehicleApproval() {
                         className="drivemego-adminvehicleapproval-document-card"
                       >
                         <div className="drivemego-adminvehicleapproval-document-icon">
-                          {isImageFile(doc.documentUrl) ? "image" : "pdf"}
+                          {isImageFile(doc.documentUrl) ? (
+                            <ImageIcon size={22} strokeWidth={2.2} />
+                          ) : (
+                            <FileText size={22} strokeWidth={2.2} />
+                          )}
                         </div>
                         <div className="drivemego-adminvehicleapproval-document-info">
                           <span className="doc-type">
@@ -504,7 +527,9 @@ function AdminVehicleApproval() {
                   </div>
                 ) : (
                   <div className="drivemego-adminvehicleapproval-no-documents">
-                    <span>warning</span>
+                    <span>
+                      <AlertTriangle size={30} strokeWidth={2} />
+                    </span>
                     <p>No documents uploaded for this vehicle</p>
                   </div>
                 )}

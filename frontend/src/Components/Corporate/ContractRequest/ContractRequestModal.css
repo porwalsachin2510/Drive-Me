@@ -61,7 +61,7 @@
 }
 
 .contract-request-quotation-summary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 55%, #0e3350 100%);
   padding: 20px;
   border-radius: 12px;
   color: white;
@@ -126,7 +126,7 @@
 .contract-request-form-group select:focus,
 .contract-request-form-group textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #12b0c4;
 }
 
 .contract-request-form-group textarea {
@@ -162,13 +162,13 @@
 }
 
 .contract-request-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 55%, #0e3350 100%);
   color: white;
 }
 
 .contract-request-btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10px 20px rgba(10, 42, 67, 0.35);
 }
 
 .contract-request-btn-primary:disabled,

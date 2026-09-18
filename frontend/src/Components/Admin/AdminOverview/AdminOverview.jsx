@@ -205,9 +205,16 @@ function AdminOverview() {
   return (
     <div className="drivemego-aot-admin-overview">
       <div className="overview-header">
-        <h2>Dashboard Overview</h2>
+        <div className="overview-header-text">
+          <span className="overview-eyebrow">Platform Control Center</span>
+          <h2>Dashboard Overview</h2>
+          <p className="overview-subtitle">
+            A live snapshot of users, revenue and operations across DriveMeGo.
+          </p>
+        </div>
         <div className="last-updated">
-          Last updated: {new Date().toLocaleString()}
+          <span className="last-updated-dot" aria-hidden="true"></span>
+          Updated {new Date().toLocaleString()}
         </div>
       </div>
 
@@ -234,7 +241,15 @@ function AdminOverview() {
         <div className="activity-section">
           <div className="pay-control-section">
             <div className="pay-control-header">
-              <h3>💳 Payment Control</h3>
+              <h3>
+                <span className="pay-control-title-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                  </svg>
+                </span>
+                Payment Control
+              </h3>
               <div
                 className={`pay-control-status-badge ${onlinePaymentStatus.enabled ? "enabled" : "disabled"}`}
               >
@@ -310,27 +325,69 @@ function AdminOverview() {
   );
 }
 
+const ACTIVITY_ICONS = {
+  user: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  payment: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  ),
+  contract: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="9" y1="13" x2="15" y2="13" />
+      <line x1="9" y1="17" x2="13" y2="17" />
+    </svg>
+  ),
+  trip: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 6v6M15 6v6M2 12h19.6M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3" />
+      <circle cx="7" cy="18" r="2" />
+      <circle cx="16" cy="18" r="2" />
+    </svg>
+  ),
+  support: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
+      <line x1="13" y1="7" x2="13" y2="17" strokeDasharray="1 3" />
+    </svg>
+  ),
+  default: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  ),
+};
+
 const getActivityIcon = (type) => {
   switch (type) {
     case "user":
     case "user_registered":
-      return "👤";
+      return ACTIVITY_ICONS.user;
     case "payment":
     case "payment_received":
-      return "💰";
+      return ACTIVITY_ICONS.payment;
     case "contract":
     case "contract_signed":
-      return "📋";
+      return ACTIVITY_ICONS.contract;
     case "trip":
     case "trip_completed":
-      return "🚌";
+      return ACTIVITY_ICONS.trip;
     case "support":
     case "support_ticket":
-      return "🎫";
     case "booking":
-      return "🎫";
+      return ACTIVITY_ICONS.support;
     default:
-      return "📊";
+      return ACTIVITY_ICONS.default;
   }
 };
 

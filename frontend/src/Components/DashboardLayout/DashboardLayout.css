@@ -1,11 +1,34 @@
 /* DriveMe Dashboard Layout - Premium Navigation System */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
+/* =====================================================================
+   Brand tokens scoped to the dashboard shell. Defining --primary-color
+   here (rather than :root) retints every `var(--primary-color, #12b0c4)`
+   usage below to the DriveMeGo logo teal without leaking globally.
+   Deep navy + logo teal, matching the CommuterHomePage / Login system.
+   ===================================================================== */
 .dm-dashboard-layout {
+  --dmg-navy: #0a2a43;
+  --dmg-navy-600: #1c4d70;
+  --dmg-teal: #12b0c4;
+  --dmg-teal-600: #0e97a8;
+  --dmg-teal-050: #e6f7fa;
+  --primary-color: #12b0c4;
+  --primary-light: rgba(18, 176, 196, 0.1);
+  --bg-secondary: #eef3f8;
+  --border-color: #e4ecf3;
+  --text-primary: #0f2233;
+  --text-secondary: #5b6b7b;
+  --text-muted: #8598a8;
+  --success-color: #22c55e;
+  --danger-color: #ef4444;
+  --danger-light: rgba(239, 68, 68, 0.1);
+
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background-color: var(--bg-secondary, #f8f9fa);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* ============================================
@@ -77,7 +100,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--primary-color, #E85D5D);
+  background: linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-600) 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -168,7 +191,7 @@
 
 .dm-layout-option.dm-active {
   background: var(--primary-light, rgba(232, 93, 93, 0.08));
-  color: var(--primary-color, #E85D5D);
+  color: var(--primary-color, #12b0c4);
 }
 
 .dm-layout-option svg {
@@ -248,8 +271,9 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: var(--primary-color, #E85D5D);
+  background: linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-600) 100%);
   color: #ffffff;
+  box-shadow: 0 8px 20px rgba(10, 42, 67, 0.22);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -303,7 +327,7 @@
 
 .dm-profile-role {
   font-size: 13px;
-  color: var(--primary-color, #E85D5D);
+  color: var(--primary-color, #12b0c4);
   font-weight: 500;
   margin: 0;
 }
@@ -352,12 +376,14 @@
 }
 
 .dm-nav-item.dm-active {
-  background: var(--primary-light, rgba(232, 93, 93, 0.08));
-  color: var(--primary-color, #E85D5D);
+  background: linear-gradient(135deg, rgba(18, 176, 196, 0.14), rgba(18, 176, 196, 0.06));
+  color: var(--dmg-teal-600);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--dmg-teal);
 }
 
 .dm-nav-item.dm-active .dm-nav-icon {
-  color: var(--primary-color, #E85D5D);
+  color: var(--primary-color, #12b0c4);
 }
 
 .dm-nav-icon {
@@ -503,7 +529,7 @@
 
 .dm-top-nav-item.dm-active {
   background: var(--primary-light, rgba(232, 93, 93, 0.08));
-  color: var(--primary-color, #E85D5D);
+  color: var(--primary-color, #12b0c4);
 }
 
 .dm-top-nav-icon {
@@ -593,9 +619,9 @@
 }
 
 .ad-dash-nav-item-active {
-  color: #2DD4BF;
-  border-bottom-color: #2DD4BF;
-  background-color: rgba(45, 212, 191, 0.1);
+  color: #12b0c4;
+  border-bottom-color: #12b0c4;
+  background-color: rgba(18, 176, 196, 0.1);
 }
 
 .ad-dash-nav-icon {

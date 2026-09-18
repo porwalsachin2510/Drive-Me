@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { Bell, LogOut, Clock, ShieldCheck } from "lucide-react";
 import { logout } from "../../../Redux/slices/authSlice";
 import Notifications from "./Notifications/Notifications"
 import api from "../../../utils/api";
+import Logo from "../../../assets/Logo.png";
 import "./AdminHeader.css"
 
 function AdminHeader() {
@@ -119,61 +121,61 @@ const getRoleDisplayName = (role) => {
 
    const userName = auth.user?.fullName || "User";
    const userRole = auth.user?.role || "ADMIN";
+   const initials = (getRoleDisplayName(userRole) || "A")
+     .split(" ")
+     .map((w) => w[0])
+     .join("")
+     .slice(0, 2)
+     .toUpperCase();
 
   return (
     <header className="ad-dash-header">
       <div className="ad-dash-header-content">
         <div className="ad-dash-header-left">
           <div className="ad-dash-logo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="7" height="7" fill="#00A699" />
-              <rect x="13" y="3" width="7" height="7" fill="#00A699" />
-              <rect x="3" y="13" width="7" height="7" fill="#00A699" />
-              <rect x="13" y="13" width="7" height="7" fill="#00A699" />
-            </svg>
-            <h1>Admin Control Center</h1>
+            <img src={Logo || "/placeholder.svg"} alt="DriveMeGo" className="ad-dash-logo-img" />
+            <span className="ad-dash-logo-badge">
+              <ShieldCheck size={13} />
+              Admin Control Center
+            </span>
           </div>
         </div>
         <div className="ad-dash-header-right">
+          <div className="notification-wrapper">
+            <button
+              className="ad-dash-notification-btn"
+              onClick={() => setShowNotifications(!showNotifications)}
+              aria-label="Notifications"
+            >
+              <Bell size={19} />
+              <span className="ad-dash-notification-dot" />
+            </button>
+            <Notifications
+              isOpen={showNotifications}
+              onClose={() => setShowNotifications(false)}
+            />
+          </div>
+
           <div className="ad-dash-user-info">
+            <div className="ad-dash-user-avatar">{initials}</div>
             <div className="ad-dash-user-details">
               <span className="ad-dash-user-name">
                 {getRoleDisplayName(userRole)}
               </span>
               <span className="ad-dash-user-login">
-                Last login: {formattedLastLogin || "Never"}
+                <Clock size={11} />
+                {formattedLastLogin || "Never"}
               </span>
             </div>
-            <div className="notification-wrapper">
-              <button
-                className="ad-dash-notification-btn"
-                onClick={() => setShowNotifications(!showNotifications)}
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path
-                    d="M10 2C6.68629 2 4 4.68629 4 8V11.5858L2.70711 12.8787C2.07714 13.5087 2.52331 14.6 3.41421 14.6H16.5858C17.4767 14.6 17.9229 13.5087 17.2929 12.8787L16 11.5858V8C16 4.68629 13.3137 2 10 2Z"
-                    fill="currentColor"
-                  />
-                  <path
-                    d="M10 18C11.1046 18 12 17.1046 12 16H8C8 17.1046 8.89543 18 10 18Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-              <Notifications
-                isOpen={showNotifications}
-                onClose={() => setShowNotifications(false)}
-              />
-            </div>
           </div>
-          <div className="drivemego-admin-ad-dash-logout-btn-header-right">
-            <button
-              className="drivemego-admin-ad-dash-logout-btn"
-              onClick={handleLogout}
-            >
-              Log Out
-            </button>
-          </div>
+
+          <button
+            className="drivemego-admin-ad-dash-logout-btn"
+            onClick={handleLogout}
+          >
+            <LogOut size={16} />
+            <span>Log Out</span>
+          </button>
         </div>
       </div>
     </header>

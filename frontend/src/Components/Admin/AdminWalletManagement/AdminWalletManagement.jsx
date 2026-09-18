@@ -4,6 +4,7 @@
 import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
+import { Wallet } from "lucide-react";
 import "./AdminWalletManagement.css";
 import api from "../../../utils/api";
 
@@ -377,63 +378,67 @@ function AdminWalletManagement() {
   const dominantCurrency = getDominantCurrency();
 
   const renderStats = () => (
-    <div className="wallet-stats-grid">
-      <div className="wallet-stat-card">
+    <div className="drivemego-wallet-stats-grid">
+      <div className="drivemego-wallet-stat-card">
         <h4>Total Wallets</h4>
-        <span className="wallet-stat-value">{stats.totalWallets}</span>
+        <span className="drivemego-wallet-stat-value">
+          {stats.totalWallets}
+        </span>
       </div>
-      <div className="wallet-stat-card">
+      <div className="drivemego-wallet-stat-card">
         <h4>Total Balance</h4>
-        <span className="wallet-stat-value highlight">
+        <span className="drivemego-wallet-stat-value drivemego-highlight">
           {formatCurrency(
             stats.totalBalance,
             stats.currency || dominantCurrency,
           )}
         </span>
       </div>
-      <div className="wallet-stat-card">
+      <div className="drivemego-wallet-stat-card">
         <h4>Total Deposits</h4>
-        <span className="wallet-stat-value">
+        <span className="drivemego-wallet-stat-value">
           {formatCurrency(
             stats.totalDeposits,
             stats.currency || dominantCurrency,
           )}
         </span>
       </div>
-      <div className="wallet-stat-card">
+      <div className="drivemego-wallet-stat-card">
         <h4>Total Withdrawals</h4>
-        <span className="wallet-stat-value">
+        <span className="drivemego-wallet-stat-value">
           {formatCurrency(
             stats.totalWithdrawals,
             stats.currency || dominantCurrency,
           )}
         </span>
       </div>
-      <div className="wallet-stat-card">
+      <div className="drivemego-wallet-stat-card">
         <h4>Low Balance Wallets</h4>
-        <span className="wallet-stat-value warning">
+        <span className="drivemego-wallet-stat-value warning">
           {stats.lowBalanceWallets}
         </span>
       </div>
-      <div className="wallet-stat-card">
+      <div className="drivemego-wallet-stat-card">
         <h4>Active Wallets</h4>
-        <span className="wallet-stat-value">{stats.activeWallets}</span>
+        <span className="drivemego-wallet-stat-value">
+          {stats.activeWallets}
+        </span>
       </div>
     </div>
   );
 
   const renderAllWallets = () => (
-    <div className="wallets-section">
-      <div className="wallet-filters">
+    <div className="drivemego-wallets-section">
+      <div className="drivemego-wallet-filters">
         <input
           type="text"
-          className="wallet-search"
+          className="drivemego-wallet-search"
           placeholder="Search by name, email, or phone..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
         <select
-          className="wallet-filter-select"
+          className="drivemego-wallet-filter-select"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
         >
@@ -450,17 +455,17 @@ function AdminWalletManagement() {
       </div>
 
       {selectedUsers.length > 0 && (
-        <div className="selected-users-bar">
+        <div className="drivemego-selected-users-bar">
           <span>{selectedUsers.length} user(s) selected</span>
-          <div className="bulk-actions">
+          <div className="drivemego-bulk-actions">
             <button
-              className="action-btn primary"
+              className="drivemego-action-btn primary"
               onClick={() => setShowNotificationModal(true)}
             >
               Send Notification
             </button>
             <button
-              className="action-btn secondary"
+              className="drivemego-action-btn drivemego-secondary"
               onClick={() => setSelectedUsers([])}
             >
               Clear Selection
@@ -469,8 +474,8 @@ function AdminWalletManagement() {
         </div>
       )}
 
-      <div className="wallet-table-container">
-        <table className="wallet-table">
+      <div className="drivemego-wallet-table-container">
+        <table className="drivemego-wallet-table">
           <thead>
             <tr>
               <th>
@@ -507,8 +512,8 @@ function AdminWalletManagement() {
                   />
                 </td>
                 <td>
-                  <div className="user-info">
-                    <div className="user-avatar">
+                  <div className="drivemego-user-info">
+                    <div className="drivemego-user-avatar">
                       {wallet.userId?.profileImage ? (
                         <img
                           src={wallet.userId.profileImage}
@@ -518,22 +523,26 @@ function AdminWalletManagement() {
                         getInitials(wallet.userId?.fullName)
                       )}
                     </div>
-                    <div className="user-details">
-                      <span className="user-name">
+                    <div className="drivemego-user-details">
+                      <span className="drivemego-user-name">
                         {wallet.userId?.fullName || "Unknown"}
                       </span>
-                      <span className="user-email">{wallet.userId?.email}</span>
+                      <span className="drivemego-user-email">
+                        {wallet.userId?.email}
+                      </span>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <span className={`role-badge ${getRoleClass(wallet.role)}`}>
+                  <span
+                    className={`drivemego-role-badge ${getRoleClass(wallet.role)}`}
+                  >
                     {getRoleLabel(wallet)}
                   </span>
                 </td>
                 <td>
                   <span
-                    className={`balance-cell ${getBalanceClass(wallet.balance)}`}
+                    className={`drivemego-balance-cell ${getBalanceClass(wallet.balance)}`}
                   >
                     {formatCurrency(
                       wallet.displayBalance ?? wallet.balance,
@@ -555,21 +564,21 @@ function AdminWalletManagement() {
                 </td>
                 <td>
                   <span
-                    className={`status-badge ${wallet.userId?.status?.toLowerCase()}`}
+                    className={`drivemego-status-badge ${wallet.userId?.status?.toLowerCase()}`}
                   >
                     {wallet.userId?.status || "Unknown"}
                   </span>
                 </td>
                 <td>
-                  <div className="action-buttons">
+                  <div className="drivemego-action-buttons">
                     <button
-                      className="action-btn secondary"
+                      className="drivemego-action-btn drivemego-secondary"
                       onClick={() => fetchWalletDetails(wallet._id)}
                     >
                       View
                     </button>
                     <button
-                      className="action-btn primary"
+                      className="drivemego-action-btn primary"
                       onClick={() => {
                         setSelectedUsers([wallet]);
                         setShowNotificationModal(true);
@@ -586,27 +595,27 @@ function AdminWalletManagement() {
       </div>
 
       {wallets.length === 0 && !loading && (
-        <div className="empty-state">
-          <div className="empty-state-icon">No wallets found</div>
+        <div className="drivemego-empty-state">
+          <div className="drivemego-empty-state-icon">No wallets found</div>
           <h4>No Wallets Found</h4>
           <p>Try adjusting your search or filter criteria</p>
         </div>
       )}
 
       {pagination.pages > 1 && (
-        <div className="pagination">
+        <div className="drivemego-pagination">
           <button
-            className="pagination-btn"
+            className="drivemego-pagination-btn"
             disabled={pagination.page <= 1}
             onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
           >
             Previous
           </button>
-          <span className="pagination-info">
+          <span className="drivemego-pagination-info">
             Page {pagination.page} of {pagination.pages}
           </span>
           <button
-            className="pagination-btn"
+            className="drivemego-pagination-btn"
             disabled={pagination.page >= pagination.pages}
             onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
           >
@@ -618,14 +627,14 @@ function AdminWalletManagement() {
   );
 
   const renderLowBalanceWallets = () => (
-    <div className="wallets-section">
-      <div className="wallet-filters">
+    <div className="drivemego-wallets-section">
+      <div className="drivemego-wallet-filters">
         <p style={{ margin: 0, color: "#64748b", fontSize: "14px" }}>
           Showing wallets with balance less than 100{" "}
           {wallets[0]?.currency || getActiveCurrency()}
         </p>
         <button
-          className="action-btn primary"
+          className="drivemego-action-btn drivemego-primary"
           disabled={lowBalanceWallets.length === 0}
           onClick={() => {
             setSelectedUsers(lowBalanceWallets);
@@ -644,8 +653,8 @@ function AdminWalletManagement() {
         </button>
       </div>
 
-      <div className="wallet-table-container">
-        <table className="wallet-table">
+      <div className="drivemego-wallet-table-container">
+        <table className="drivemego-wallet-table">
           <thead>
             <tr>
               <th>User</th>
@@ -659,25 +668,29 @@ function AdminWalletManagement() {
             {lowBalanceWallets.map((wallet) => (
               <tr key={wallet._id}>
                 <td>
-                  <div className="user-info">
-                    <div className="user-avatar">
+                  <div className="drivemego-user-info">
+                    <div className="drivemego-user-avatar">
                       {getInitials(wallet.userId?.fullName)}
                     </div>
-                    <div className="user-details">
-                      <span className="user-name">
+                    <div className="drivemego-user-details">
+                      <span className="drivemego-user-name">
                         {wallet.userId?.fullName || "Unknown"}
                       </span>
-                      <span className="user-email">{wallet.userId?.email}</span>
+                      <span className="drivemego-user-email">
+                        {wallet.userId?.email}
+                      </span>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <span className={`role-badge ${getRoleClass(wallet.role)}`}>
+                  <span
+                    className={`drivemego-role-badge ${getRoleClass(wallet.role)}`}
+                  >
                     {getRoleLabel(wallet)}
                   </span>
                 </td>
                 <td>
-                  <span className="balance-cell low-balance">
+                  <span className="drivemego-balance-cell drivemego-low-balance">
                     {formatCurrency(
                       wallet.displayBalance ?? wallet.balance,
                       wallet.displayCurrency || wallet.currency,
@@ -693,9 +706,9 @@ function AdminWalletManagement() {
                     : "No activity"}
                 </td>
                 <td>
-                  <div className="action-buttons">
+                  <div className="drivemego-action-buttons">
                     <button
-                      className="action-btn primary"
+                      className="drivemego-action-btn drivemego-primary"
                       onClick={() => {
                         setSelectedUsers([wallet]);
                         setShowNotificationModal(true);
@@ -720,7 +733,7 @@ function AdminWalletManagement() {
       </div>
 
       {lowBalanceWallets.length === 0 && !loading && (
-        <div className="empty-state">
+        <div className="drivemego-empty-state">
           <h4>No Low Balance Wallets</h4>
           <p>All users have sufficient balance</p>
         </div>
@@ -729,43 +742,46 @@ function AdminWalletManagement() {
   );
 
   const renderActivityFeed = () => (
-    <div className="activity-feed">
-      <div className="activity-feed-header">
+    <div className="drivemego-activity-feed">
+      <div className="drivemego-activity-feed-header">
         <h3>
-          <span className="live-indicator"></span>
+          <span className="drivemego-live-indicator"></span>
           Real-Time Activity Feed
         </h3>
-        <button className="action-btn secondary" onClick={fetchActivityFeed}>
+        <button
+          className="drivemego-action-btn secondary"
+          onClick={fetchActivityFeed}
+        >
           Refresh
         </button>
       </div>
-      <div className="activity-list">
+      <div className="drivemego-activity-list">
         {activityFeed.map((activity, index) => (
           <div
             key={activity._id || index}
-            className={`activity-item ${activity.isNew ? "new" : ""}`}
+            className={`drivemego-activity-item ${activity.isNew ? "drivemego-new" : ""}`}
           >
             <div
-              className={`activity-icon ${activity.transactionType?.toLowerCase()}`}
+              className={`drivemego-activity-icon ${activity.transactionType?.toLowerCase()}`}
             >
               {activity.transactionType === "DEPOSIT" && "+"}
               {activity.transactionType === "WITHDRAWAL" && "-"}
               {activity.transactionType === "TRANSFER" && "~"}
             </div>
-            <div className="activity-content">
-              <div className="activity-title">
+            <div className="drivemego-activity-content">
+              <div className="drivemego-activity-title">
                 {activity.userName || "User"} - {activity.transactionType}
               </div>
-              <div className="activity-description">
+              <div className="drivemego-activity-description">
                 {activity.description ||
                   `${activity.transactionType} of ${formatCurrency(Math.abs(activity.displayAmount ?? activity.amount), activity.displayCurrency || activity.currency)}`}
               </div>
-              <div className="activity-meta">
-                <span className="activity-time">
+              <div className="drivemego-activity-meta">
+                <span className="drivemego-activity-time">
                   {formatDate(activity.createdAt)}
                 </span>
                 <span
-                  className={`activity-amount ${activity.amount > 0 ? "positive" : "negative"}`}
+                  className={`drivemego-activity-amount ${activity.amount > 0 ? "drivemego-positive" : "drivemego-negative"}`}
                 >
                   {activity.amount > 0 ? "+" : ""}
                   {formatCurrency(
@@ -778,7 +794,7 @@ function AdminWalletManagement() {
           </div>
         ))}
         {activityFeed.length === 0 && (
-          <div className="empty-state">
+          <div className="drivemego-empty-state">
             <h4>No Activity Yet</h4>
             <p>Wallet activities will appear here in real-time</p>
           </div>
@@ -788,15 +804,15 @@ function AdminWalletManagement() {
   );
 
   const renderPendingNotifications = () => (
-    <div className="wallets-section">
-      <div className="wallet-filters">
+    <div className="drivemego-wallets-section">
+      <div className="drivemego-wallet-filters">
         <p style={{ margin: 0, color: "#64748b", fontSize: "14px" }}>
           Notifications sent to users that are awaiting response
         </p>
       </div>
 
-      <div className="wallet-table-container">
-        <table className="wallet-table">
+      <div className="drivemego-wallet-table-container">
+        <table className="drivemego-wallet-table">
           <thead>
             <tr>
               <th>User</th>
@@ -811,15 +827,15 @@ function AdminWalletManagement() {
             {pendingNotifications.map((notification) => (
               <tr key={notification._id}>
                 <td>
-                  <div className="user-info">
-                    <div className="user-avatar">
+                  <div className="drivemego-user-info">
+                    <div className="drivemego-user-avatar">
                       {getInitials(notification.userId?.fullName)}
                     </div>
-                    <div className="user-details">
-                      <span className="user-name">
+                    <div className="drivemego-user-details">
+                      <span className="drivemego-user-name">
                         {notification.userId?.fullName || "Unknown"}
                       </span>
-                      <span className="user-email">
+                      <span className="drivemego-user-email">
                         {notification.userId?.email}
                       </span>
                     </div>
@@ -836,7 +852,7 @@ function AdminWalletManagement() {
                 </td>
                 <td>
                   <span
-                    className={`status-badge ${notification.actionRequired === "ADD_FUNDS" ? "pending" : "active"}`}
+                    className={`drivemego-status-badge ${notification.actionRequired === "ADD_FUNDS" ? "drivemego-pending" : "drivemego-active"}`}
                   >
                     {notification.actionRequired?.replace(/_/g, " ")}
                   </span>
@@ -844,15 +860,15 @@ function AdminWalletManagement() {
                 <td>{formatDate(notification.createdAt)}</td>
                 <td>
                   <span
-                    className={`status-badge ${notification.userResponseStatus?.toLowerCase()}`}
+                    className={`drivemego-status-badge ${notification.userResponseStatus?.toLowerCase()}`}
                   >
                     {notification.userResponseStatus}
                   </span>
                 </td>
                 <td>
-                  <div className="action-buttons">
+                  <div className="drivemego-action-buttons">
                     <button
-                      className="action-btn primary"
+                      className="drivemego-action-btn drivemego-primary"
                       onClick={() => {
                         setSelectedUsers([{ userId: notification.userId }]);
                         setShowNotificationModal(true);
@@ -869,7 +885,7 @@ function AdminWalletManagement() {
       </div>
 
       {pendingNotifications.length === 0 && !loading && (
-        <div className="empty-state">
+        <div className="drivemego-empty-state">
           <h4>No Pending Notifications</h4>
           <p>All sent notifications have been responded to</p>
         </div>
@@ -881,21 +897,24 @@ function AdminWalletManagement() {
     if (!showWalletDetails || !selectedWallet) return null;
 
     return (
-      <div className="notification-modal-overlay">
-        <div className="notification-modal" style={{ maxWidth: "700px" }}>
-          <div className="notification-modal-header">
+      <div className="drivemego-notification-modal-overlay">
+        <div
+          className="drivemego-notification-modal"
+          style={{ maxWidth: "700px" }}
+        >
+          <div className="drivemego-notification-modal-header">
             <h3>Wallet Details</h3>
             <button
-              className="close-modal-btn"
+              className="drivemego-close-modal-btn"
               onClick={() => setShowWalletDetails(false)}
             >
               x
             </button>
           </div>
 
-          <div className="wallet-details-header">
-            <div className="wallet-user-info">
-              <div className="wallet-user-avatar">
+          <div className="drivemego-wallet-details-header">
+            <div className="drivemego-wallet-user-info">
+              <div className="drivemego-wallet-user-avatar">
                 {selectedWallet.userId?.profileImage ? (
                   <img
                     src={selectedWallet.userId.profileImage}
@@ -905,15 +924,15 @@ function AdminWalletManagement() {
                   getInitials(selectedWallet.userId?.fullName)
                 )}
               </div>
-              <div className="wallet-user-details">
+              <div className="drivemego-wallet-user-details">
                 <h4>{selectedWallet.userId?.fullName}</h4>
                 <p>{selectedWallet.userId?.email}</p>
                 <p>{selectedWallet.userId?.whatsappNumber}</p>
               </div>
             </div>
-            <div className="wallet-balance-display">
-              <span className="balance-label">Current Balance</span>
-              <span className="balance-amount">
+            <div className="drivemego-wallet-balance-display">
+              <span className="drivemego-balance-label">Current Balance</span>
+              <span className="drivemego-balance-amount">
                 {formatCurrency(
                   selectedWallet.balance,
                   selectedWallet.currency,
@@ -922,57 +941,59 @@ function AdminWalletManagement() {
             </div>
           </div>
 
-          <div className="wallet-details-body">
-            <div className="wallet-info-grid">
-              <div className="wallet-info-item">
-                <span className="info-label">Role</span>
-                <span className="info-value">
+          <div className="drivemego-wallet-details-body">
+            <div className="drivemego-wallet-info-grid">
+              <div className="drivemego-wallet-info-item">
+                <span className="drivemego-info-label">Role</span>
+                <span className="drivemego-info-value">
                   {getRoleLabel(selectedWallet)}
                 </span>
               </div>
-              <div className="wallet-info-item">
-                <span className="info-label">Currency</span>
-                <span className="info-value">{selectedWallet.currency}</span>
+              <div className="drivemego-wallet-info-item">
+                <span className="drivemego-info-label">Currency</span>
+                <span className="drivemego-info-value">
+                  {selectedWallet.currency}
+                </span>
               </div>
-              <div className="wallet-info-item">
-                <span className="info-label">Total Earnings</span>
-                <span className="info-value">
+              <div className="drivemego-wallet-info-item">
+                <span className="drivemego-info-label">Total Earnings</span>
+                <span className="drivemego-info-value">
                   {formatCurrency(
                     selectedWallet.totalEarnings,
                     selectedWallet.currency,
                   )}
                 </span>
               </div>
-              <div className="wallet-info-item">
-                <span className="info-label">Total Withdrawals</span>
-                <span className="info-value">
+              <div className="drivemego-wallet-info-item">
+                <span className="drivemego-info-label">Total Withdrawals</span>
+                <span className="drivemego-info-value">
                   {formatCurrency(
                     selectedWallet.totalWithdrawals,
                     selectedWallet.currency,
                   )}
                 </span>
               </div>
-              <div className="wallet-info-item">
-                <span className="info-label">Security Deposit</span>
-                <span className="info-value">
+              <div className="drivemego-wallet-info-item">
+                <span className="drivemego-info-label">Security Deposit</span>
+                <span className="drivemego-info-value">
                   {formatCurrency(
                     selectedWallet.securityDepositHeld,
                     selectedWallet.currency,
                   )}
                 </span>
               </div>
-              <div className="wallet-info-item">
-                <span className="info-label">Status</span>
-                <span className="info-value">
+              <div className="drivemego-wallet-info-item">
+                <span className="drivemego-info-label">Status</span>
+                <span className="drivemego-info-value">
                   {selectedWallet.isActive ? "Active" : "Inactive"}
                 </span>
               </div>
             </div>
 
-            <div className="transactions-section">
+            <div className="drivemego-transactions-section">
               <h4>Recent Transactions</h4>
-              <div className="wallet-table-container">
-                <table className="wallet-table">
+              <div className="drivemego-wallet-table-container">
+                <table className="drivemego-wallet-table">
                   <thead>
                     <tr>
                       <th>Type</th>
@@ -990,7 +1011,11 @@ function AdminWalletManagement() {
                         <tr key={idx}>
                           <td>{tx.type}</td>
                           <td
-                            className={tx.amount > 0 ? "positive" : "negative"}
+                            className={
+                              tx.amount > 0
+                                ? "drivemego-positive"
+                                : "drivemego-negative"
+                            }
                           >
                             {tx.amount > 0 ? "+" : ""}
                             {formatCurrency(tx.amount, selectedWallet.currency)}
@@ -998,7 +1023,7 @@ function AdminWalletManagement() {
                           <td>{tx.description}</td>
                           <td>
                             <span
-                              className={`status-badge ${tx.status?.toLowerCase()}`}
+                              className={`drivemego-status-badge ${tx.status?.toLowerCase()}`}
                             >
                               {tx.status}
                             </span>
@@ -1012,9 +1037,9 @@ function AdminWalletManagement() {
             </div>
           </div>
 
-          <div className="notification-modal-footer">
+          <div className="drivemego-notification-modal-footer">
             <button
-              className="modal-btn cancel"
+              className="drivemego-modal-btn drivemego-cancel"
               onClick={() => {
                 setShowAdjustmentModal(true);
               }}
@@ -1022,7 +1047,7 @@ function AdminWalletManagement() {
               Adjust Balance
             </button>
             <button
-              className="modal-btn send"
+              className="drivemego-modal-btn drivemego-send"
               onClick={() => {
                 setSelectedUsers([selectedWallet]);
                 setShowNotificationModal(true);
@@ -1041,45 +1066,45 @@ function AdminWalletManagement() {
     if (!showNotificationModal) return null;
 
     return (
-      <div className="notification-modal-overlay">
-        <div className="notification-modal">
-          <div className="notification-modal-header">
+      <div className="drivemego-notification-modal-overlay">
+        <div className="drivemego-notification-modal">
+          <div className="drivemego-notification-modal-header">
             <h3>
               Send Notification
               {selectedUsers.length > 1 && ` to ${selectedUsers.length} Users`}
             </h3>
             <button
-              className="close-modal-btn"
+              className="drivemego-lose-modal-btn"
               onClick={() => setShowNotificationModal(false)}
             >
               x
             </button>
           </div>
 
-          <div className="notification-modal-body">
+          <div className="drivemego-notification-modal-body">
             {selectedUsers.length === 1 && (
-              <div className="form-group">
+              <div className="drivemego-form-group">
                 <label>Recipient</label>
                 <div
-                  className="user-info"
+                  className="drivemego-user-info"
                   style={{
                     padding: "12px",
                     background: "#f8fafc",
                     borderRadius: "8px",
                   }}
                 >
-                  <div className="user-avatar">
+                  <div className="drivemego-user-avatar">
                     {getInitials(
                       selectedUsers[0].userId?.fullName ||
                         selectedUsers[0]?.userId?.fullName,
                     )}
                   </div>
-                  <div className="user-details">
-                    <span className="user-name">
+                  <div className="drivemego-user-details">
+                    <span className="drivemego-user-name">
                       {selectedUsers[0].userId?.fullName ||
                         selectedUsers[0]?.userId?.fullName}
                     </span>
-                    <span className="user-email">
+                    <span className="drivemego-user-email">
                       {selectedUsers[0].userId?.email ||
                         selectedUsers[0]?.userId?.email}
                     </span>
@@ -1088,7 +1113,7 @@ function AdminWalletManagement() {
               </div>
             )}
 
-            <div className="form-group">
+            <div className="drivemego-form-group">
               <label>Notification Title *</label>
               <input
                 type="text"
@@ -1103,7 +1128,7 @@ function AdminWalletManagement() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-form-group">
               <label>Message *</label>
               <textarea
                 value={notificationForm.message}
@@ -1117,7 +1142,7 @@ function AdminWalletManagement() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-form-group">
               <label>Reason</label>
               <select
                 value={notificationForm.reason}
@@ -1138,7 +1163,7 @@ function AdminWalletManagement() {
               </select>
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-form-group">
               <label>Action Required</label>
               <select
                 value={notificationForm.actionRequired}
@@ -1156,8 +1181,8 @@ function AdminWalletManagement() {
               </select>
             </div>
 
-            <div className="form-group">
-              <div className="checkbox-group">
+            <div className="drivemego-form-group">
+              <div className="drivemego-checkbox-group">
                 <input
                   type="checkbox"
                   id="sendEmail"
@@ -1174,15 +1199,15 @@ function AdminWalletManagement() {
             </div>
           </div>
 
-          <div className="notification-modal-footer">
+          <div className="drivemego-notification-modal-footer">
             <button
-              className="modal-btn cancel"
+              className="drivemego-modal-btn cancel"
               onClick={() => setShowNotificationModal(false)}
             >
               Cancel
             </button>
             <button
-              className="modal-btn send"
+              className="drivemego-modal-btn drivemego-send"
               onClick={handleSendNotification}
               disabled={
                 !notificationForm.title ||
@@ -1204,20 +1229,20 @@ function AdminWalletManagement() {
     if (!showAdjustmentModal || !selectedWallet) return null;
 
     return (
-      <div className="notification-modal-overlay">
-        <div className="notification-modal">
-          <div className="notification-modal-header">
+      <div className="drivemego-notification-modal-overlay">
+        <div className="drivemego-notification-modal">
+          <div className="drivemego-notification-modal-header">
             <h3>Adjust Wallet Balance</h3>
             <button
-              className="close-modal-btn"
+              className="drivemego-close-modal-btn"
               onClick={() => setShowAdjustmentModal(false)}
             >
               x
             </button>
           </div>
 
-          <div className="notification-modal-body">
-            <div className="form-group">
+          <div className="drivemego-notification-modal-body">
+            <div className="drivemego-form-group">
               <label>Current Balance</label>
               <div
                 style={{
@@ -1234,7 +1259,7 @@ function AdminWalletManagement() {
               </div>
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-form-group">
               <label>Adjustment Type *</label>
               <select
                 value={adjustmentForm.type}
@@ -1247,7 +1272,7 @@ function AdminWalletManagement() {
               </select>
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-form-group">
               <label>Amount *</label>
               <input
                 type="number"
@@ -1264,7 +1289,7 @@ function AdminWalletManagement() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="drivemego-form-group">
               <label>Reason *</label>
               <textarea
                 value={adjustmentForm.reason}
@@ -1279,15 +1304,15 @@ function AdminWalletManagement() {
             </div>
           </div>
 
-          <div className="notification-modal-footer">
+          <div className="drivemego-notification-modal-footer">
             <button
-              className="modal-btn cancel"
+              className="drivemego-modal-btn drivemego-cancel"
               onClick={() => setShowAdjustmentModal(false)}
             >
               Cancel
             </button>
             <button
-              className="modal-btn send"
+              className="drivemego-modal-btn drivemego-send"
               onClick={handleAdjustBalance}
               disabled={!adjustmentForm.amount || !adjustmentForm.reason}
             >
@@ -1316,30 +1341,42 @@ function AdminWalletManagement() {
 
   if (loading && wallets.length === 0) {
     return (
-      <div className="admin-wallet-management">
-        <div className="loading">Loading wallet data...</div>
+      <div className="drivemego-admin-wallet-management">
+        <div className="drivemego-loading">Loading wallet data...</div>
       </div>
     );
   }
 
   return (
-    <div className="admin-wallet-management">
-      <div className="wallet-header">
-        <h2>Wallet Management</h2>
-        <div className="wallet-overview">
-          <div className="overview-item">
-            <span className="overview-label">Total Balance</span>
-            <span className="overview-value">
+    <div className="drivemego-admin-wallet-management">
+      <div className="drivemego-wallet-header">
+        <div className="drivemego-wallet-header-titles">
+          <div className="drivemego-wallet-header-icon">
+            <Wallet size={26} strokeWidth={2.2} />
+          </div>
+          <div>
+            <h2>Wallet Management</h2>
+            <p className="drivemego-wallet-header-subtitle">
+              Monitor balances, activity and pending wallet requests
+            </p>
+          </div>
+        </div>
+        <div className="drivemego-wallet-overview">
+          <div className="drivemego-overview-item">
+            <span className="drivemego-overview-label">Total Balance</span>
+            <span className="drivemego-overview-value">
               {formatCurrency(stats.totalBalance)}
             </span>
           </div>
-          <div className="overview-item">
-            <span className="overview-label">Total Wallets</span>
-            <span className="overview-value">{stats.totalWallets}</span>
+          <div className="drivemego-overview-item">
+            <span className="drivemego-overview-label">Total Wallets</span>
+            <span className="drivemego-overview-value">
+              {stats.totalWallets}
+            </span>
           </div>
-          <div className="overview-item">
-            <span className="overview-label">Low Balance</span>
-            <span className="overview-value warning">
+          <div className="drivemego-overview-item">
+            <span className="drivemego-overview-label">Low Balance</span>
+            <span className="drivemego-overview-value drivemego-warning">
               {stats.lowBalanceWallets}
             </span>
           </div>
@@ -1348,40 +1385,42 @@ function AdminWalletManagement() {
 
       {renderStats()}
 
-      <div className="wallet-tabs">
+      <div className="drivemego-wallet-tabs">
         <button
-          className={`wallet-tab ${activeTab === "all-wallets" ? "active" : ""}`}
+          className={`drivemego-wallet-tab ${activeTab === "all-wallets" ? "drivemego-active" : ""}`}
           onClick={() => setActiveTab("all-wallets")}
         >
           All Wallets
         </button>
         <button
-          className={`wallet-tab ${activeTab === "low-balance" ? "active" : ""}`}
+          className={`drivemego-wallet-tab ${activeTab === "low-balance" ? "drivemego-active" : ""}`}
           onClick={() => setActiveTab("low-balance")}
         >
           Low Balance
           {stats.lowBalanceWallets > 0 && (
-            <span className="badge">{stats.lowBalanceWallets}</span>
+            <span className="drivemego-badge">{stats.lowBalanceWallets}</span>
           )}
         </button>
         <button
-          className={`wallet-tab ${activeTab === "activity" ? "active" : ""}`}
+          className={`drivemego-wallet-tab ${activeTab === "activity" ? "drivemego-active" : ""}`}
           onClick={() => setActiveTab("activity")}
         >
           Activity Feed
         </button>
         <button
-          className={`wallet-tab ${activeTab === "pending" ? "active" : ""}`}
+          className={`drivemego-wallet-tab ${activeTab === "pending" ? "drivemego-active" : ""}`}
           onClick={() => setActiveTab("pending")}
         >
           Pending Responses
           {pendingNotifications.length > 0 && (
-            <span className="badge">{pendingNotifications.length}</span>
+            <span className="drivemego-badge">
+              {pendingNotifications.length}
+            </span>
           )}
         </button>
       </div>
 
-      <div className="wallet-content">{renderContent()}</div>
+      <div className="drivemego-wallet-content">{renderContent()}</div>
 
       {renderNotificationModal()}
       {renderWalletDetailsModal()}

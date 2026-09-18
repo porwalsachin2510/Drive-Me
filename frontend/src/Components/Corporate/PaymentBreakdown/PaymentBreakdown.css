@@ -1,19 +1,21 @@
 .payment-breakdown {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  border: 2px solid #e0e7ff;
-  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e4ecf3;
+  border-radius: 16px;
   padding: 24px;
   margin: 20px 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(10, 42, 67, 0.07);
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .breakdown-title {
   font-size: 18px;
-  font-weight: 700;
-  color: #1f2937;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #0a2a43;
   margin: 0 0 20px 0;
   padding-bottom: 12px;
-  border-bottom: 3px solid #4f46e5;
+  border-bottom: 3px solid #12b0c4;
 }
 
 .breakdown-section {
@@ -72,11 +74,11 @@
 }
 
 .breakdown-amount.fleet-owner {
-  color: #10b981;
+  color: #0e97a8;
 }
 
 .breakdown-amount.negotiation-commission {
-  color: #7c3aed;
+  color: #0a2a43;
   font-weight: 700;
 }
 
@@ -85,18 +87,18 @@
 }
 
 .breakdown-item.negotiation-fee {
-  background: #f3e8ff;
+  background: #e6f7fa;
   padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #c4b5fd;
+  border-radius: 10px;
+  border: 1px solid #bfe9ef;
   flex-direction: column;
   align-items: flex-start;
   margin: 8px 0;
 }
 
 .breakdown-item.negotiation-fee .breakdown-label {
-  color: #7c3aed;
-  font-weight: 600;
+  color: #0a2a43;
+  font-weight: 700;
 }
 
 .breakdown-item.negotiation-fee.paid {
@@ -120,11 +122,11 @@
 }
 
 .breakdown-info {
-  background: #f3f4f6;
+  background: #f6f9fc;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   margin-top: 8px;
-  border-left: 4px solid #4f46e5;
+  border-left: 4px solid #12b0c4;
 }
 
 .breakdown-info p {
@@ -142,24 +144,24 @@
 
 * EMI Breakdown Specific Styles */
 .payment-breakdown.emi-breakdown {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border-color: #0ea5e9;
+  background: #f4fbfc;
+  border-color: #bfe9ef;
 }
 
 .payment-breakdown.emi-breakdown .breakdown-title {
-  border-bottom-color: #0ea5e9;
+  border-bottom-color: #12b0c4;
 }
 
 .breakdown-item.highlight-admin {
-  background: #dbeafe;
+  background: #e6f7fa;
   padding: 14px 12px;
-  border-radius: 8px;
-  border: 2px solid #3b82f6;
+  border-radius: 10px;
+  border: 2px solid #12b0c4;
   margin-top: 12px;
 }
 
 .breakdown-amount.total-admin {
-  color: #1d4ed8;
+  color: #0a2a43;
   font-size: 17px;
 }
 
@@ -187,12 +189,12 @@
 }
 
 .summary-row.admin-row {
-  background: #eff6ff;
-  border-color: #93c5fd;
+  background: #e6f7fa;
+  border-color: #bfe9ef;
 }
 
 .summary-row.admin-row .summary-value {
-  color: #1d4ed8;
+  color: #0a2a43;
 }
 
 .summary-row.fleet-row {

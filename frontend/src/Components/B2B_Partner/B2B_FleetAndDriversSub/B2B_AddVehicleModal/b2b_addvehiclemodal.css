@@ -82,7 +82,7 @@
 
 .b2b-operator-dashboard-add-vehicle-add-vehicle-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   padding: 80px 20px 40px;
 }
 
@@ -129,7 +129,7 @@
   color: #2d3748;
   margin-bottom: 20px;
   padding-bottom: 10px;
-  border-bottom: 2px solid #667eea;
+  border-bottom: 2px solid #0a2a43;
 }
 
 .b2b-operator-dashboard-add-vehicle-service-type-grid {
@@ -155,14 +155,14 @@
 }
 
 .b2b-operator-dashboard-add-vehicle-service-type-card:hover {
-  border-color: #667eea;
+  border-color: #0a2a43;
   transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 10px 30px rgba(10, 42, 67, 0.2);
 }
 
 .b2b-operator-dashboard-add-vehicle-service-type-card.b2b-operator-dashboard-add-vehicle-active {
-  border-color: #667eea;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  border-color: #0a2a43;
+  background: linear-gradient(135deg, rgba(10, 42, 67, 0.08), rgba(18, 176, 196, 0.12));
 }
 
 .b2b-operator-dashboard-add-vehicle-service-icon {
@@ -214,8 +214,8 @@
 .b2b-operator-dashboard-add-vehicle-form-group select:focus,
 .b2b-operator-dashboard-add-vehicle-form-group textarea:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #0a2a43;
+  box-shadow: 0 0 0 3px rgba(10, 42, 67, 0.1);
 }
 
 .b2b-operator-dashboard-add-vehicle-form-group textarea {
@@ -254,8 +254,8 @@
 }
 
 .b2b-operator-dashboard-add-vehicle-feature-checkbox:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #0a2a43;
+  background: rgba(10, 42, 67, 0.05);
 }
 
 .b2b-operator-dashboard-add-vehicle-feature-checkbox input[type="checkbox"] {
@@ -263,7 +263,7 @@
 }
 
 .b2b-operator-dashboard-add-vehicle-feature-checkbox input[type="checkbox"]:checked + span {
-  color: #667eea;
+  color: #0a2a43;
   font-weight: 600;
 }
 
@@ -279,7 +279,7 @@
   justify-content: center;
   gap: 10px;
   padding: 15px 30px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   border-radius: 8px;
   cursor: pointer;
@@ -290,7 +290,7 @@
 
 .b2b-operator-dashboard-add-vehicle-upload-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 30px rgba(10, 42, 67, 0.3);
 }
 
 .b2b-operator-dashboard-add-vehicle-image-previews {
@@ -345,7 +345,7 @@
 .b2b-operator-dashboard-add-vehicle-file-name {
   display: block;
   margin-top: 5px;
-  color: #667eea;
+  color: #0a2a43;
   font-size: 0.85rem;
 }
 
@@ -368,13 +368,13 @@
 }
 
 .b2b-operator-dashboard-add-vehicle-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
 }
 
 .b2b-operator-dashboard-add-vehicle-btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 30px rgba(10, 42, 67, 0.3);
 }
 
 .b2b-operator-dashboard-add-vehicle-btn-primary:disabled {
@@ -384,12 +384,12 @@
 
 .b2b-operator-dashboard-add-vehicle-btn-secondary {
   background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
+  color: #0a2a43;
+  border: 2px solid #0a2a43;
 }
 
 .b2b-operator-dashboard-add-vehicle-btn-secondary:hover {
-  background: #667eea;
+  background: #0a2a43;
   color: white;
 }
 

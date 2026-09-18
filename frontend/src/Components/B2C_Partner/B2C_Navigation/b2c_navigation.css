@@ -32,7 +32,7 @@
 }
 
 .nav-item.active {
-  color: #2DD4BF;
+  color: #12b0c4;
 }
 
 .nav-item.active::after {
@@ -42,7 +42,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background-color: #2DD4BF;
+  background-color: #12b0c4;
 }
 
 .nav-icon {

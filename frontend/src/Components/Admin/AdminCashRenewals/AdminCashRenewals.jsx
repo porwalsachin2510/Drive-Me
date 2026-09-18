@@ -3,6 +3,7 @@
 import { getActiveCurrency } from "../../../config/localeConfig";
 import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
+import { Banknote, RefreshCw } from "lucide-react";
 import api from "../../../utils/api";
 import { useAutoRefresh } from "../../../hooks/useAutoRefresh";
 import "./AdminCashRenewals.css";
@@ -105,18 +106,24 @@ function AdminCashRenewals() {
   return (
     <div className="acr-container">
       <div className="acr-header">
-        <div>
-          <h2 className="acr-title">Cash Renewal Requests</h2>
-          <p className="acr-subtitle">
-            Commuters who chose to pay cash for their monthly pass renewal.
-            Confirm once you have collected the cash to activate their pass.
-          </p>
+        <div className="acr-header-titles">
+          <div className="acr-header-icon">
+            <Banknote size={26} strokeWidth={2.2} />
+          </div>
+          <div>
+            <h2 className="acr-title">Cash Renewal Requests</h2>
+            <p className="acr-subtitle">
+              Commuters who chose to pay cash for their monthly pass renewal.
+              Confirm once you have collected the cash to activate their pass.
+            </p>
+          </div>
         </div>
         <button
           className="acr-refresh-btn"
           onClick={fetchPendingCashRenewals}
           disabled={loading}
         >
+          <RefreshCw size={15} strokeWidth={2.4} />
           Refresh
         </button>
       </div>

@@ -14,12 +14,14 @@
 }
 
 .drivemego-btobarm-b2b-add-route-modal {
-  background: #ffffff;
-  border-radius: 12px;
+  background: var(--dmg-card);
+  border-radius: var(--dmg-radius);
   width: 100%;
   max-width: 700px;
   max-height: 90vh;
   overflow-y: auto;
+  font-family: var(--dmg-font);
+  box-shadow: var(--dmg-shadow-lg);
 }
 
 .drivemego-btobarm-b2b-modal-header {
@@ -36,8 +38,9 @@
 
 .drivemego-btobarm-b2b-modal-header h2 {
   font-size: 20px;
-  font-weight: 600;
-  color: #1f2937;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--dmg-navy);
   margin: 0;
 }
 
@@ -102,7 +105,7 @@
 .drivemego-btobarm-b2b-form-group select:focus,
 .drivemego-btobarm-b2b-form-group textarea:focus {
   outline: none;
-  border-color: #16a085;
+  border-color: #12b0c4;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
 
@@ -137,13 +140,13 @@
 }
 
 .drivemego-btobarm-b2b-days-selector .drivemego-btobarm-b2b-day-btn:hover {
-  border-color: #16a085;
-  color: #16a085;
+  border-color: #12b0c4;
+  color: #12b0c4;
 }
 
 .drivemego-btobarm-b2b-days-selector .drivemego-btobarm-b2b-day-btn.drivemego-btobarm-selected {
-  background: #16a085;
-  border-color: #16a085;
+  background: #12b0c4;
+  border-color: #12b0c4;
   color: #ffffff;
 }
 
@@ -191,18 +194,19 @@
 .drivemego-btobarm-b2b-add-trip-btn {
   width: 100%;
   padding: 12px;
-  background: #dbeafe;
-  border: 2px dashed #3b82f6;
-  border-radius: 8px;
-  color: #1d4ed8;
+  background: var(--dmg-teal-050);
+  border: 2px dashed var(--dmg-teal);
+  border-radius: 10px;
+  color: var(--dmg-teal-700);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
+  font-family: inherit;
   transition: all 0.2s;
 }
 
 .drivemego-btobarm-b2b-add-trip-btn:hover {
-  background: #bfdbfe;
+  background: var(--dmg-teal-100);
 }
 
 /* Stop Points */
@@ -242,20 +246,20 @@
 }
 
 .drivemego-btobarm-b2b-stop-title.drivemego-btobarm-return {
-  color: #16a085;
+  color: #12b0c4;
 }
 
 .drivemego-btobarm-b2b-stop-title.drivemego-btobarm-return::before {
   content: "";
   width: 8px;
   height: 8px;
-  background: #16a085;
+  background: #12b0c4;
   border-radius: 50%;
 }
 
 .drivemego-btobarm-b2b-add-stop-btn {
   padding: 6px 12px;
-  background: #16a085;
+  background: #12b0c4;
   border: none;
   border-radius: 6px;
   color: #ffffff;
@@ -265,11 +269,11 @@
 }
 
 .drivemego-btobarm-b2b-add-stop-btn:hover {
-  background: #138d7b;
+  background: var(--dmg-teal-600);
 }
 
 .drivemego-btobarm-b2b-add-stop-btn.return {
-  background: #16a085;
+  background: #12b0c4;
 }
 
 .drivemego-btobarm-b2b-stop-points-list {
@@ -374,16 +378,20 @@
   flex: 1;
   padding: 12px 24px;
   border: none;
-  background: #16a085;
-  border-radius: 8px;
+  background: var(--dmg-cta);
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   color: #ffffff;
   cursor: pointer;
+  font-family: inherit;
+  box-shadow: var(--dmg-cta-shadow);
+  transition: all 0.2s;
 }
 
 .drivemego-btobarm-b2b-submit-btn:hover {
-  background: #138d7b;
+  background: var(--dmg-cta-hover);
+  transform: translateY(-1px);
 }
 
 .drivemego-btobarm-b2b-submit-btn:disabled {

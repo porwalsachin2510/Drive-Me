@@ -401,16 +401,8 @@ export default function CorporateEmployeeManagementPage({
                 onClick={handleSendInvitations}
                 disabled={sendingInvitations}
                 style={{
-                  background: sendingInvitations
-                    ? "#9e9e9e"
-                    : "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
-                  color: "#fff",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: "6px",
+                  opacity: sendingInvitations ? 0.6 : 1,
                   cursor: sendingInvitations ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                  fontWeight: "600",
                 }}
               >
                 {sendingInvitations

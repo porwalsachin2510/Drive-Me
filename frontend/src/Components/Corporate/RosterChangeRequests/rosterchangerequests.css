@@ -1,6 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* DriveMeGo — Roster Change Requests (brand navy + teal) */
 .rcr {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1a1a2e;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #0a2a43;
   position: relative;
 }
 
@@ -45,14 +48,14 @@
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   background: #fff;
-  color: #1a1a2e;
+  color: #0a2a43;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .rcr-btn:hover:not(:disabled) {
-  border-color: #1a1a2e;
+  border-color: #0a2a43;
 }
 
 .rcr-btn:disabled {
@@ -61,14 +64,15 @@
 }
 
 .rcr-btn.primary {
-  background: #dc3545;
-  border-color: #dc3545;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 8px 18px rgba(18, 176, 196, 0.28);
 }
 
 .rcr-btn.primary:hover:not(:disabled) {
-  background: #c02c3b;
-  border-color: #c02c3b;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(18, 176, 196, 0.36);
 }
 
 .rcr-btn.danger {
@@ -145,14 +149,15 @@
 }
 
 .rcr-chip:hover {
-  border-color: #1a1a2e;
-  color: #1a1a2e;
+  border-color: #0a2a43;
+  color: #0a2a43;
 }
 
 .rcr-chip.active {
-  background: #1a1a2e;
-  border-color: #1a1a2e;
+  background: #0a2a43;
+  border-color: #0a2a43;
   color: #fff;
+  box-shadow: 0 6px 14px rgba(10, 42, 67, 0.2);
 }
 
 /* List + cards */
@@ -319,8 +324,8 @@
 }
 
 .rcr-expand:hover {
-  border-color: #1a1a2e;
-  color: #1a1a2e;
+  border-color: #0a2a43;
+  color: #0a2a43;
 }
 
 /* Card body / details */
@@ -460,12 +465,12 @@
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #fff;
-  color: #1a1a2e;
+  color: #0a2a43;
 }
 
 .rcr-comment input:focus {
   outline: none;
-  border-color: #1a1a2e;
+  border-color: #0a2a43;
 }
 
 /* Card actions */
@@ -542,7 +547,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #fff;
-  color: #1a1a2e;
+  color: #0a2a43;
   width: 100%;
 }
 
@@ -550,7 +555,7 @@
 .rcr-modal input:focus,
 .rcr-modal textarea:focus {
   outline: none;
-  border-color: #1a1a2e;
+  border-color: #0a2a43;
 }
 
 .rcr-modal textarea {

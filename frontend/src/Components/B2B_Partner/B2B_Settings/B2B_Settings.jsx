@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Building2, Bell } from "lucide-react";
 import "./b2b_settings.css";
 import api from "../../../utils/api";
 import { notify } from "../../../utils/toast";
@@ -107,7 +108,9 @@ function B2B_Settings() {
       <div className="b2b-operator-dashboard-b2b-settings-grid">
         <div className="b2b-operator-dashboard-b2b-settings-section">
           <div className="b2b-operator-dashboard-b2b-section-header">
-            <div className="b2b-operator-dashboard-b2b-section-icon">🏢</div>
+            <div className="b2b-operator-dashboard-b2b-section-icon">
+              <Building2 size={22} />
+            </div>
             <h2>Company Profile</h2>
           </div>
           <div className="b2b-operator-dashboard-b2b-form-group">

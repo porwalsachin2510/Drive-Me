@@ -1,6 +1,6 @@
 /* .b2b-quotation-request-fleet-quotations-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #D94545 100%);
   padding: 80px 20px 40px;
 }
 
@@ -56,7 +56,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #D94545 100%);
   flex-shrink: 0;
 }
 
@@ -79,7 +79,7 @@
 }
 
 .b2b-quotation-request-stat-card.b2b-quotation-request-total {
-  border-left: 4px solid #E85D5D;
+  border-left: 4px solid #12b0c4;
 }
 
 .b2b-quotation-request-stat-card.b2b-quotation-request-pending {
@@ -119,13 +119,13 @@
 }
 
 .b2b-quotation-request-filter-tabs button:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #0a2a43;
+  color: #0a2a43;
+  background: rgba(10, 42, 67, 0.05);
 }
 
 .b2b-quotation-request-filter-tabs button.b2b-quotation-request-active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   border-color: transparent;
 }
@@ -227,7 +227,7 @@
 
 .b2b-quotation-request-status-badge.b2b-quotation-request-accepted {
   background: #dbeafe;
-  color: #3b82f6;
+  color: #12b0c4;
 }
 
 .b2b-quotation-request-quotation-date {
@@ -305,7 +305,7 @@
 }
 
 .b2b-quotation-request-info-item .b2b-quotation-request-value.b2b-quotation-request-highlight {
-  color: #667eea;
+  color: #0a2a43;
   font-size: 1.1rem;
 }
 
@@ -386,13 +386,13 @@
 }
 
 .b2b-quotation-request-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
 }
 
 .b2b-quotation-request-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(10, 42, 67, 0.4);
 }
 
 .b2b-quotation-request-btn-success {
@@ -491,7 +491,8 @@
 
 .drivermego-b2b-quotation-fleet-quotations-page {
   min-height: 100vh;
-  padding: 20px;
+  padding: 4px;
+  font-family: var(--dmg-font);
 }
 
 .drivermego-b2b-quotation-fleet-quotations-container {
@@ -500,18 +501,19 @@
 }
 
 .drivermego-b2b-quotation-page-header {
-  margin-bottom: 30px;
+  margin-bottom: 28px;
 }
 
 .drivermego-b2b-quotation-page-header h1 {
-  font-size: 2rem;
-  color: #111827;
+  font-size: 1.9rem;
+  color: var(--dmg-navy);
   margin-bottom: 8px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .drivermego-b2b-quotation-page-subtitle {
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-size: 1rem;
 }
 
@@ -524,30 +526,33 @@
 }
 
 .drivermego-b2b-quotation-stat-card {
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
+  background: var(--dmg-card);
+  padding: 22px;
+  border-radius: var(--dmg-radius);
   display: flex;
   align-items: center;
-  gap: 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  gap: 18px;
+  border: 1px solid var(--dmg-line);
+  box-shadow: var(--dmg-shadow);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  cursor: pointer;
 }
 
 .drivermego-b2b-quotation-stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  box-shadow: var(--dmg-shadow-lg);
+  border-color: rgba(18, 176, 196, 0.35);
 }
 
 .drivermego-b2b-quotation-stat-icon {
-  font-size: 2.5rem;
-  width: 60px;
-  height: 60px;
+  width: 54px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
+  border-radius: 14px;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-600);
   flex-shrink: 0;
 }
 
@@ -556,41 +561,55 @@
 }
 
 .drivermego-b2b-quotation-stat-content h3 {
-  font-size: 0.95rem;
-  color: #718096;
-  margin-bottom: 8px;
-  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--dmg-muted);
+  margin-bottom: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .drivermego-b2b-quotation-stat-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #2d3748;
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: var(--dmg-navy);
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .drivermego-b2b-quotation-stat-card.drivermego-b2b-quotation-total {
-  border-left: 4px solid #E85D5D;
+  border-left: 4px solid var(--dmg-teal);
 }
 
 .drivermego-b2b-quotation-stat-card.drivermego-b2b-quotation-pending {
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid var(--warning-color);
+}
+
+.drivermego-b2b-quotation-stat-card.drivermego-b2b-quotation-pending .drivermego-b2b-quotation-stat-icon {
+  background: var(--warning-light);
+  color: var(--warning-hover);
 }
 
 .drivermego-b2b-quotation-stat-card.drivermego-b2b-quotation-quoted {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid var(--success-color);
+}
+
+.drivermego-b2b-quotation-stat-card.drivermego-b2b-quotation-quoted .drivermego-b2b-quotation-stat-icon {
+  background: var(--success-light);
+  color: var(--success-color);
 }
 
 .drivermego-b2b-quotation-stat-card.drivermego-b2b-quotation-rejected {
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid var(--danger-color);
+}
+
+.drivermego-b2b-quotation-stat-card.drivermego-b2b-quotation-rejected .drivermego-b2b-quotation-stat-icon {
+  background: var(--danger-light);
+  color: var(--danger-color);
 }
 
 .drivermego-b2b-quotation-stat-card.drivermego-b2b-quotation-accepted {
-  border-left: 4px solid #3b82f6;
-}
-
-.drivermego-b2b-quotation-stat-card {
-  cursor: pointer;
+  border-left: 4px solid var(--dmg-teal);
 }
 
 /* Advanced Filters Section */
@@ -635,8 +654,8 @@
 
 .drivermego-b2b-quotation-search-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #0a2a43;
+  box-shadow: 0 0 0 3px rgba(10, 42, 67, 0.1);
 }
 
 .drivermego-b2b-quotation-search-input::placeholder {
@@ -691,7 +710,7 @@
 
 .drivermego-b2b-quotation-filter-group select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #0a2a43;
 }
 
 /* Results Info */
@@ -735,13 +754,13 @@
 }
 
 .drivermego-b2b-quotation-filter-tabs button:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #0a2a43;
+  color: #0a2a43;
+  background: rgba(10, 42, 67, 0.05);
 }
 
 .drivermego-b2b-quotation-filter-tabs button.drivermego-b2b-quotation-active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   border-color: transparent;
 }
@@ -826,7 +845,7 @@
 /* Table Cell Styles */
 .drivermego-b2b-quotation-quotation-id-cell .drivermego-b2b-quotation-quotation-id {
   font-weight: 700;
-  color: #667eea;
+  color: #0a2a43;
   font-size: 0.95rem;
 }
 
@@ -876,7 +895,7 @@
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   padding: 8px 14px;
   border-radius: 8px;
@@ -964,7 +983,7 @@
 
 .drivermego-b2b-quotation-status-badge.drivermego-b2b-quotation-accepted {
   background: #dbeafe;
-  color: #2563eb;
+  color: #0e97a8;
 }
 
 .drivermego-b2b-quotation-status-badge.drivermego-b2b-quotation-negotiating {
@@ -1015,13 +1034,13 @@
 }
 
 .drivermego-b2b-quotation-actions-cell .drivermego-b2b-quotation-view-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
 }
 
 .drivermego-b2b-quotation-actions-cell .drivermego-b2b-quotation-view-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(10, 42, 67, 0.4);
 }
 
 .drivermego-b2b-quotation-actions-cell .drivermego-b2b-quotation-quote-btn {
@@ -1076,8 +1095,8 @@
 }
 
 .drivermego-b2b-quotation-pagination-btn:hover:not(:disabled) {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #0a2a43;
+  color: #0a2a43;
   background: #f0f4ff;
 }
 
@@ -1087,7 +1106,7 @@
 }
 
 .drivermego-b2b-quotation-pagination-btn.drivermego-b2b-quotation-page-number.drivermego-b2b-quotation-active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   border-color: transparent;
 }
@@ -1150,13 +1169,13 @@
 }
 
 .drivermego-b2b-quotation-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
 }
 
 .drivermego-b2b-quotation-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(10, 42, 67, 0.4);
 }
 
 .drivermego-b2b-quotation-btn-success {

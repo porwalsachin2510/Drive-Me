@@ -6,6 +6,7 @@ import Trip from "../models/Trip.js"
 import Vehicle from "../models/Vehicle.js"
 import Wallet from "../models/Wallet.js"
 import User from "../models/User.js"
+import CorporateEmployee from "../models/CorporateEmployee.js"
 import { createNotification, sendAdminNotification } from "../Services/notificationService.js"
 import { isCustomerRole, isPartnerRole } from "../utils/roleFamilies.js"
 import paymentGatewayService, {
@@ -28,6 +29,74 @@ const ESD_METHOD_MAP = {
     CASH: "CASH",
 }
 const normalizeEsdMethod = (m) => ESD_METHOD_MAP[String(m || "").trim().toUpperCase()] || null
+
+// Resolve the driver's *User account* id from a contract driver-model id.
+// The operational Trip stores the User id in `driverId` (the driver lifecycle —
+// start / share-location / complete — authenticates against the logged-in User),
+// so an extra-day trip is only actionable by its driver when we store the User id.
+// Returns null when the driver has no linked login (e.g. an unclaimed corporate
+// driver record); the caller then falls back to the driver-model id for display.
+const resolveDriverUserId = async (driverModelId, driverModel) => {
+    if (!driverModelId) return null
+    try {
+        const query = { driverId: driverModelId }
+        if (driverModel) query.driverModel = driverModel
+        const user = await User.findOne(query).select("_id")
+        return user?._id || null
+    } catch (e) {
+        console.error("[extraService] resolveDriverUserId error:", e.message)
+        return null
+    }
+}
+
+// Build the passenger manifest for an extra-day trip from the customer company's
+// ACTIVE employees/students, so they are invited onto the trip exactly like a
+// regular managed trip. This is what makes the extra day show up on each
+// passenger's "My trips" / "Track my ride" screen (the employee queries match
+// `passengers.passengerId` or `passengers.employeeId`), lets the driver see who
+// to pick up, and lets each passenger track the shared driver location.
+// Capped to the trip's seat count so we never over-book the assigned vehicle.
+const buildExtraServiceManifest = async (request, seats) => {
+    const passengers = []
+    const employeeUserIds = []
+    if (!request.customerId) return { passengers, employeeUserIds }
+
+    const cap = Number(seats) > 0 ? Number(seats) : 0
+    const query = CorporateEmployee.find({
+        companyId: request.customerId,
+        "accessControl.isActive": true,
+        // Only invite people currently active for transport — mirrors how
+        // transport eligibility is determined elsewhere in the app. Older
+        // records without the field are treated as active.
+        "transportDetails.transportStatus": { $ne: "TERMINATED", $nin: ["INACTIVE", "SUSPENDED"] },
+    })
+        .select("userId personalInfo transportDetails")
+        .sort({ createdAt: 1 })
+    if (cap > 0) query.limit(cap)
+
+    const employees = await query
+    for (const emp of employees) {
+        const name =
+            [emp.personalInfo?.firstName, emp.personalInfo?.lastName].filter(Boolean).join(" ").trim() ||
+            "Passenger"
+        const pickup = request.pickupLocation || emp.transportDetails?.pickupPoint || ""
+        const dropoff = request.dropoffLocation || emp.transportDetails?.dropOffPoint || ""
+        passengers.push({
+            passengerId: emp.userId || undefined,
+            employeeId: emp._id,
+            name,
+            pickupStop: pickup,
+            dropoffStop: dropoff,
+            pickupPoint: pickup,
+            pickupTime: request.departureTime || "",
+            status: "CONFIRMED",
+            bookingStatus: "CONFIRMED",
+            bookedAt: new Date(),
+        })
+        if (emp.userId) employeeUserIds.push(emp.userId.toString())
+    }
+    return { passengers, employeeUserIds }
+}
 const ONLINE_ESD_METHODS = ["CARD", "WALLET"]
 const MANUAL_ESD_METHODS = ["BANK_TRANSFER", "CASH"]
 
@@ -636,6 +705,7 @@ export const assignExtraServiceResources = async (req, res) => {
 
         const newAssignments = []
         const driverNotifyIds = new Set()
+        const passengerNotifyIds = new Set()
 
         for (const a of assignments) {
             if (!a?.serviceDate || !a?.vehicleId) continue
@@ -686,13 +756,24 @@ export const assignExtraServiceResources = async (req, res) => {
             const driverName = driverDoc?.name || driverDoc?.fullName || null
             const driverPhone = driverDoc?.phone || null
 
+            // Resolve the driver's login account so the driver can actually
+            // operate the trip (start / share location / complete). Fall back to
+            // the driver-model id for display when there is no linked account.
+            const driverUserId = driverId ? await resolveDriverUserId(driverId, driverModel) : null
+
+            // Invite the company's active employees/students onto this extra day
+            // so they can see it, be picked up, and track the driver live.
+            const { passengers, employeeUserIds } = await buildExtraServiceManifest(request, seats)
+            const bookedSeats = passengers.length
+            employeeUserIds.forEach((id) => passengerNotifyIds.add(id))
+
             // Create the operational trip for this extra day.
             const trip = await Trip.create({
                 contractId: contract._id,
                 extraServiceRequestId: request._id,
                 routeId: undefined,
                 vehicleId: a.vehicleId,
-                driverId: driverId || undefined,
+                driverId: driverUserId || driverId || undefined,
                 corporateId: request.customerId,
                 b2bPartnerId: request.partnerId,
                 tripDate: new Date(a.serviceDate),
@@ -702,7 +783,9 @@ export const assignExtraServiceResources = async (req, res) => {
                 fromLocation: request.pickupLocation || "School",
                 toLocation: request.dropoffLocation || request.purpose,
                 totalSeats: seats,
-                availableSeats: seats,
+                availableSeats: Math.max(0, seats - bookedSeats),
+                bookedSeats,
+                passengers,
                 currency: request.currency || "AED",
                 status: "SCHEDULED",
                 createdBy: req.userId,
@@ -763,6 +846,21 @@ export const assignExtraServiceResources = async (req, res) => {
             message: `Your partner assigned ${newAssignments.length} vehicle(s)/driver(s) for "${request.purpose}". You're all set for the trip.`,
             data: { contractId: contract._id.toString(), extraServiceRequestId: request._id.toString() },
         })
+
+        // Notify each invited passenger so the extra day shows up on their trips.
+        for (const passengerUserId of passengerNotifyIds) {
+            try {
+                await createNotification({
+                    userId: passengerUserId,
+                    type: "TRIP_ASSIGNED",
+                    title: "You're booked on an extra service trip",
+                    message: `An extra service trip has been scheduled: ${request.purpose}. Check "My trips" on the service date to track your ride.`,
+                    data: { extraServiceRequestId: request._id.toString(), contractId: contract._id.toString() },
+                })
+            } catch (e) {
+                console.error("[extraService] passenger notify failed:", e.message)
+            }
+        }
 
         return res.json({ success: true, data: request })
     } catch (error) {

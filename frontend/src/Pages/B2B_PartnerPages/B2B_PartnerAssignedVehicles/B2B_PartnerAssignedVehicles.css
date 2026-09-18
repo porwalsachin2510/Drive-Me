@@ -62,8 +62,8 @@
 }
 
 .drivemego-b2b-partnerassignedvehiclespage-tab-button.drivemego-b2b-partnerassignedvehiclespage-active {
-  color: #16a085;
-  border-bottom-color: #16a085;
+  color: #12b0c4;
+  border-bottom-color: #12b0c4;
 }
 
 .b2b-assigned-vehicles-content,
@@ -195,7 +195,7 @@
 
 .drivemego-b2b-partnerassignedvehiclespage-update-btn {
   padding: 8px 16px;
-  background: #16a085;
+  background: #12b0c4;
   border: none;
   border-radius: 6px;
   color: #ffffff;
@@ -378,7 +378,7 @@
 
 .drivemego-b2b-partnerassignedvehiclespage-b2b-assigned-vehicles-error button {
   padding: 12px 24px;
-  background: #16a085;
+  background: #12b0c4;
   border: none;
   border-radius: 8px;
   color: #ffffff;
@@ -484,7 +484,7 @@
 
 .drivemego-b2b-partnerassignedvehiclespage-form-group select:focus {
   outline: none;
-  border-color: #16a085;
+  border-color: #12b0c4;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
 
@@ -515,7 +515,7 @@
   flex: 1;
   padding: 12px;
   border: none;
-  background: #16a085;
+  background: #12b0c4;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;

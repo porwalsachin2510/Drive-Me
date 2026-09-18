@@ -20,7 +20,7 @@
 }
 
 .header-title svg {
-  color: #667eea;
+  color: #12b0c4;
   flex-shrink: 0;
   margin-top: 4px;
 }
@@ -29,7 +29,7 @@
   margin: 0 0 4px 0;
   font-size: 28px;
   font-weight: 700;
-  color: #111827;
+  color: #0a2a43;
 }
 
 .header-title p {
@@ -44,16 +44,16 @@
   gap: 8px;
   padding: 10px 20px;
   background: white;
-  border: 2px solid #667eea;
+  border: 2px solid #12b0c4;
   border-radius: 8px;
-  color: #667eea;
+  color: #12b0c4;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .refresh-btn:hover:not(:disabled) {
-  background: #667eea;
+  background: #12b0c4;
   color: white;
 }
 
@@ -105,8 +105,8 @@
 }
 
 .stat-icon.total {
-  background: #dbeafe;
-  color: #2563eb;
+  background: #e6f7fa;
+  color: #0e97a8;
 }
 
 .stat-icon.overdue {
@@ -132,7 +132,7 @@
 .stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: #111827;
+  color: #0a2a43;
 }
 
 .stat-label {
@@ -162,7 +162,7 @@
 }
 
 .search-box:focus-within {
-  border-color: #667eea;
+  border-color: #12b0c4;
 }
 
 .search-box svg {
@@ -287,7 +287,7 @@
 .corporate-info strong {
   display: block;
   font-size: 14px;
-  color: #111827;
+  color: #0a2a43;
 }
 
 .corporate-email {
@@ -311,7 +311,7 @@
 
 .plan-info strong {
   font-size: 14px;
-  color: #111827;
+  color: #0a2a43;
 }
 
 .plan-info span {
@@ -469,7 +469,7 @@
 .summary-item .value {
   font-size: 15px;
   font-weight: 600;
-  color: #111827;
+  color: #0a2a43;
 }
 
 .summary-item .value.paid {
@@ -517,7 +517,7 @@
 
 .inst-amount {
   font-weight: 600;
-  color: #111827;
+  color: #0a2a43;
 }
 
 .inst-late-fee {
@@ -674,7 +674,7 @@
 
 .modal-body .form-group textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #12b0c4;
 }
 
 .modal-actions {
@@ -787,4 +787,9 @@
   .action-buttons {
     flex-direction: column;
   }
+}
+
+/* DriveMeGo brand font */
+.admin-emi-management, .emi-status-badge {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }

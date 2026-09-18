@@ -8,6 +8,7 @@ import {
   getCurrencyDecimals,
 } from "../../config/localeConfig";
 import "./WalletRechargeModal.css";
+import { Wallet as WalletIcon, ShieldCheck, Info } from "lucide-react";
 import { notify } from "../../utils/toast";
 
 const WalletRechargeModal = ({
@@ -149,7 +150,10 @@ const WalletRechargeModal = ({
     <div className="wallet-recharge-modal-overlay">
       <div className="wallet-recharge-modal">
         <div className="modal-header">
-          <h3>💰 Add Funds to Wallet</h3>
+          <h3>
+            <WalletIcon size={20} style={{ verticalAlign: "-4px", marginRight: 8 }} />
+            Add Funds to Wallet
+          </h3>
           <button className="close-btn" onClick={onClose}>
             ×
           </button>
@@ -198,7 +202,9 @@ const WalletRechargeModal = ({
               </div>
             ) : !onlinePaymentsEnabled ? (
               <div className="online-payments-disabled-notice">
-                <div className="notice-icon">ℹ️</div>
+                <div className="notice-icon">
+                  <Info size={20} />
+                </div>
                 <div className="notice-content">
                   <strong>Online Payments Unavailable</strong>
                   <p>
@@ -283,7 +289,9 @@ const WalletRechargeModal = ({
 
         {/* Security Notice */}
         <div className="security-notice">
-          <div className="security-icon">🔒</div>
+          <div className="security-icon">
+            <ShieldCheck size={20} />
+          </div>
           <div className="security-text">
             <strong>Secure Payment</strong>
             <p>

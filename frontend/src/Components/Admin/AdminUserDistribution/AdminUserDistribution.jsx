@@ -24,11 +24,11 @@ function AdminUserDistribution() {
       if (response.data.success && response.data.stats) {
         const stats = response.data.stats
         const distributionData = [
-          { name: "Commuters", value: stats.commuters || 0, color: "#00A699" },
-          { name: "Corporates", value: stats.corporates || 0, color: "#1e293b" },
+          { name: "Commuters", value: stats.commuters || 0, color: "#12b0c4" },
+          { name: "Corporates", value: stats.corporates || 0, color: "#0a2a43" },
           { name: "B2C Partners", value: stats.b2cPartners || 0, color: "#3b82f6" },
-          { name: "B2B Partners", value: stats.b2bPartners || 0, color: "#8b5cf6" },
-          { name: "Drivers", value: stats.drivers || 0, color: "#d4a574" },
+          { name: "B2B Partners", value: stats.b2bPartners || 0, color: "#6d4bd1" },
+          { name: "Drivers", value: stats.drivers || 0, color: "#f6a723" },
         ].filter(item => item.value > 0) // Only show non-zero values
         
         // Calculate total users from real data

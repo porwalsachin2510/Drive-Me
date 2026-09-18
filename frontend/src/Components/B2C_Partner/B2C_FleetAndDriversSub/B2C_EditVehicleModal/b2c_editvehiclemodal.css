@@ -88,8 +88,8 @@
 .b2c-edit-vehicle-form-group input:focus,
 .b2c-edit-vehicle-form-group select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .b2c-edit-vehicle-form-group input.error {
@@ -168,7 +168,7 @@
 }
 
 .b2c-edit-vehicle-file-input-label:hover {
-  border-color: #3b82f6;
+  border-color: #12b0c4;
   background-color: #eff6ff;
 }
 
@@ -364,7 +364,7 @@
 .b2c-edit-vehicle-submit-btn {
   padding: 10px 20px;
   border: none;
-  background-color: #3b82f6;
+  background-color: #12b0c4;
   color: white;
   border-radius: 8px;
   cursor: pointer;
@@ -374,7 +374,7 @@
 }
 
 .b2c-edit-vehicle-submit-btn:hover:not(:disabled) {
-  background-color: #2563eb;
+  background-color: #0e97a8;
 }
 
 .b2c-edit-vehicle-submit-btn:disabled {

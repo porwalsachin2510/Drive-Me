@@ -27,14 +27,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 24px 24px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .drivemego-wppm-payment-modal-header h2 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dmg-navy);
 }
 
 .drivemego-wppm-close-btn {
@@ -42,7 +42,7 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--dmg-muted);
   width: 32px;
   height: 32px;
   display: flex;
@@ -53,13 +53,13 @@
 }
 
 .drivemego-wppm-close-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--dmg-bg);
+  color: var(--dmg-ink);
 }
 
 .drivemego-wppm-payment-amount-display {
   padding: 20px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 100%);
   text-align: center;
 }
 
@@ -89,7 +89,7 @@
   margin: 0 0 16px 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dmg-navy);
 }
 
 .drivemego-wppm-payment-methods-grid {
@@ -103,7 +103,7 @@
   flex-direction: column;
   align-items: center;
   padding: 16px 12px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--dmg-line);
   border-radius: 12px;
   background: white;
   cursor: pointer;
@@ -113,16 +113,16 @@
 }
 
 .drivemego-wppm-payment-method-card:hover {
-  border-color: #6366f1;
+  border-color: var(--dmg-teal);
   background: #f8faff;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.15);
 }
 
 .drivemego-wppm-payment-method-card.drivemego-wppm-selected {
-  border-color: #6366f1;
+  border-color: var(--dmg-teal);
   background: linear-gradient(135deg, #f8faff 0%, #eef2ff 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.25);
 }
 
 .drivemego-wppm-method-icon {
@@ -133,7 +133,7 @@
 .drivemego-wppm-method-name {
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--dmg-ink);
   text-align: center;
 }
 
@@ -145,7 +145,7 @@
   margin: 0 0 20px 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dmg-navy);
 }
 
 .drivemego-wppm-form-fields {
@@ -161,13 +161,13 @@
 .drivemego-wppm-form-group label {
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--dmg-ink);
   margin-bottom: 6px;
 }
 
 .drivemego-wppm-form-group input {
   padding: 12px 16px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--dmg-line);
   border-radius: 8px;
   font-size: 16px;
   transition: all 0.3s ease;
@@ -176,12 +176,12 @@
 
 .drivemego-wppm-form-group input:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--dmg-teal);
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .drivemego-wppm-form-group input::placeholder {
-  color: #9ca3af;
+  color: var(--dmg-muted-2);
 }
 
 .drivemego-wppm-payment-actions {
@@ -193,9 +193,9 @@
 .drivemego-wppm-btn-cancel {
   flex: 1;
   padding: 14px 24px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--dmg-line);
   background: white;
-  color: #6b7280;
+  color: var(--dmg-muted);
   border-radius: 8px;
   font-size: 16px;
   font-weight: 500;
@@ -204,16 +204,16 @@
 }
 
 .drivemego-wppm-btn-cancel:hover {
-  border-color: #d1d5db;
-  background: #f9fafb;
-  color: #4b5563;
+  border-color: var(--dmg-line);
+  background: var(--dmg-bg);
+  color: var(--dmg-muted);
 }
 
 .drivemego-wppm-btn-pay {
   flex: 2;
   padding: 14px 24px;
   border: none;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--dmg-teal) 0%, var(--dmg-teal-600) 100%);
   color: white;
   border-radius: 8px;
   font-size: 16px;
@@ -227,9 +227,9 @@
 }
 
 .drivemego-wppm-btn-pay:hover:not(:disabled) {
-  background: linear-gradient(135deg, #5558e3 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #5558e3 0%, var(--dmg-navy) 100%);
   transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 8px 16px rgba(18, 176, 196, 0.25);
 }
 
 .drivemego-wppm-btn-pay:disabled {
@@ -255,8 +255,8 @@
 
 .drivemego-wppm-security-info {
   padding: 20px 24px;
-  background: #f8fafc;
-  border-top: 1px solid #e5e7eb;
+  background: var(--dmg-bg);
+  border-top: 1px solid var(--dmg-line);
   text-align: center;
 }
 
@@ -275,7 +275,7 @@
 
 .drivemego-wppm-security-text {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   line-height: 1.4;
 }
 
@@ -286,7 +286,7 @@
   gap: 12px;
   padding: 16px;
   margin-top: 20px;
-  background: #eff6ff;
+  background: var(--dmg-teal-050);
   border: 1px solid #bfdbfe;
   border-radius: 12px;
 }
@@ -299,7 +299,7 @@
 
 .drivemego-wppm-redirect-text {
   font-size: 13px;
-  color: #1e40af;
+  color: var(--dmg-teal-700);
   line-height: 1.5;
 }
 
@@ -337,7 +337,7 @@
   align-items: center;
   justify-content: center;
   padding: 30px 20px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-size: 14px;
 }
 

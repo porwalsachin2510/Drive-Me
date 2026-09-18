@@ -1,73 +1,176 @@
-/* Premium Admin Reports - Inter Font */
+/* Premium Admin Reports - DriveMeGo brand */
 .admin-reports {
   width: 100%;
   padding: 24px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* ===== Hero header ===== */
 .reports-header {
-  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 22px;
+  padding: 28px 32px;
+  border-radius: 22px;
+  color: #fff;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(18, 176, 196, 0.28) 0%, rgba(18, 176, 196, 0) 55%),
+    linear-gradient(135deg, #0a2a43 0%, #123a58 60%, #0e2f49 100%);
+  box-shadow: 0 18px 40px rgba(10, 42, 67, 0.26);
+}
+
+.reports-header::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  bottom: -90px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(18, 176, 196, 0.3) 0%, rgba(18, 176, 196, 0) 70%);
+  pointer-events: none;
+}
+
+.reports-header-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.reports-header-icon {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 15px;
+  background: rgba(18, 176, 196, 0.22);
+  color: #7fe3ef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .reports-header h2 {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 16px 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.reports-header-sub {
+  color: rgba(226, 240, 248, 0.82);
+  font-size: 14px;
+  margin: 0;
+  max-width: 620px;
+  line-height: 1.5;
 }
 
 .reports-overview {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
 }
 
 .overview-item {
   display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 14px 18px;
+  backdrop-filter: blur(6px);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.overview-item:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.overview-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(18, 176, 196, 0.28);
+  color: #a6ecf5;
+}
+
+.overview-icon.flagged {
+  background: rgba(246, 167, 35, 0.24);
+  color: #ffd07a;
+}
+
+.overview-icon.errors {
+  background: rgba(239, 68, 68, 0.24);
+  color: #fca5a5;
+}
+
+.overview-text {
+  display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .overview-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(226, 240, 248, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .overview-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #0891b2;
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
 }
 
+/* ===== Pill tabs ===== */
 .reports-tabs {
   display: flex;
-  gap: 0;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #e2e8f0;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .reports-tab {
-  padding: 12px 24px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: #fff;
+  border: 1px solid #e4ecf3;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
-  color: #64748b;
+  font-weight: 600;
+  font-family: inherit;
+  color: #5b6b7b;
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: -2px;
   white-space: nowrap;
 }
 
 .reports-tab:hover {
-  color: #334155;
+  color: #0a2a43;
+  border-color: #12b0c4;
+  transform: translateY(-1px);
 }
 
 .reports-tab.active {
-  color: #0891b2;
-  border-bottom-color: #0891b2;
+  color: #fff;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  border-color: transparent;
+  box-shadow: 0 10px 22px rgba(18, 176, 196, 0.3);
 }
 
 .reports-section .section-header {
@@ -107,7 +210,7 @@
 .reports-section .stat-card .stat-number {
   font-size: 24px;
   font-weight: 700;
-  color: #0891b2;
+  color: #0e97a8;
 }
 
 .reports-section .stat-card .stat-label {
@@ -244,12 +347,12 @@
 }
 
 .unflag-btn {
-  background: #0891b2;
+  background: #0e97a8;
   color: #fff;
 }
 
 .unflag-btn:hover {
-  background: #0e7490;
+  background: #0c8695;
 }
 
 /* System Logs */
@@ -278,7 +381,7 @@
 }
 
 .log-entry.info {
-  border-left-color: #0891b2;
+  border-left-color: #0e97a8;
   background: #ecfeff;
 }
 
@@ -316,7 +419,7 @@
 }
 
 .log-level.info {
-  background: #0891b2;
+  background: #0e97a8;
   color: #fff;
 }
 
@@ -424,23 +527,23 @@
 }
 
 .download-btn {
-  background: #0891b2;
+  background: #0e97a8;
   color: #fff;
 }
 
 .download-btn:hover {
-  background: #0e7490;
+  background: #0c8695;
 }
 
 .generate-report-btn {
-  background: #0891b2;
+  background: #0e97a8;
   color: #fff;
   padding: 8px 18px;
   font-size: 13px;
 }
 
 .generate-report-btn:hover {
-  background: #0e7490;
+  background: #0c8695;
 }
 
 .loading {
@@ -622,7 +725,7 @@
 
 .report-form-group select:focus,
 .report-form-group input:focus {
-  border-color: #0891b2;
+  border-color: #0e97a8;
 }
 
 .report-form-row {
@@ -681,7 +784,7 @@
 }
 
 .view-btn {
-  background: #0891b2;
+  background: #0e97a8;
   color: #fff;
   padding: 6px 14px;
   border: none;
@@ -693,7 +796,7 @@
 }
 
 .view-btn:hover {
-  background: #0e7490;
+  background: #0c8695;
 }
 
 @media (max-width: 768px) {
@@ -754,8 +857,8 @@
 
 .revenue-search-input:focus {
   outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: #0e97a8;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.15);
 }
 
 .date-filters {
@@ -780,8 +883,8 @@
 
 .date-input:focus {
   outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: #0e97a8;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.15);
 }
 
 /* Revenue Sub-tabs */
@@ -807,12 +910,12 @@
 }
 
 .revenue-tab:hover {
-  color: #4f46e5;
+  color: #0e97a8;
 }
 
 .revenue-tab.active {
-  color: #4f46e5;
-  border-bottom-color: #4f46e5;
+  color: #0e97a8;
+  border-bottom-color: #0e97a8;
   font-weight: 600;
 }
 
@@ -861,8 +964,8 @@
 }
 
 .summary-card.admin-commission {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #bfdbfe;
+  background: linear-gradient(135deg, #e6f7fa 0%, #d0eff3 100%);
+  border-color: #a7e3ea;
 }
 
 .summary-card.wallet-balance {
@@ -880,7 +983,7 @@
   font-size: 20px;
   font-weight: 700;
   color: #fff;
-  background: #4f46e5;
+  background: #0e97a8;
 }
 
 .summary-card.total-revenue .summary-icon {
@@ -888,7 +991,7 @@
 }
 
 .summary-card.admin-commission .summary-icon {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
 }
 
 .summary-card.wallet-balance .summary-icon {
@@ -1008,7 +1111,7 @@
 .count-value {
   font-size: 24px;
   font-weight: 700;
-  color: #4f46e5;
+  color: #0e97a8;
 }
 
 /* Revenue Table Styles */

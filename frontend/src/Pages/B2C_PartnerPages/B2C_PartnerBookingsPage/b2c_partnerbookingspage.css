@@ -374,7 +374,7 @@
 }
 
 .B2C_Partner-bookings-page-complete-btn {
-  background: #667eea;
+  background: #0a2a43;
   color: white;
   border: none;
   padding: 8px 20px;
@@ -386,8 +386,8 @@
 }
 
 .B2C_Partner-bookings-page-complete-btn:hover {
-  background: #5a67d8;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  background: #123a58;
+  box-shadow: 0 2px 8px rgba(10, 42, 67, 0.3);
 }
 
 /* No Bookings */

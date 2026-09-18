@@ -84,13 +84,13 @@ function AdminBookingTrends() {
       return (
         <div className="ad-dash-custom-tooltip">
           <p className="ad-dash-tooltip-month">{payload[0].payload.month}</p>
-          <p style={{ color: "#d4a574", fontWeight: "600" }}>
+          <p style={{ color: "#0e97a8", fontWeight: "700" }}>
             Total Bookings: {payload[0].value}
           </p>
-          <p style={{ color: "#4f86c6" }}>
+          <p style={{ color: "#6d4bd1" }}>
             B2C: {payload[0].payload.b2cBookings ?? 0}
           </p>
-          <p style={{ color: "#374151" }}>
+          <p style={{ color: "#0a2a43" }}>
             Corporate: {payload[0].payload.corporateBookings ?? 0}
           </p>
         </div>
@@ -179,11 +179,17 @@ function AdminBookingTrends() {
           />
           <Tooltip
             content={<CustomTooltip />}
-            cursor={{ fill: "rgba(212, 165, 116, 0.1)" }}
+            cursor={{ fill: "rgba(18, 176, 196, 0.1)" }}
           />
+          <defs>
+            <linearGradient id="adBookingBar" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#12b0c4" />
+              <stop offset="100%" stopColor="#0e97a8" />
+            </linearGradient>
+          </defs>
           <Bar
             dataKey="bookings"
-            fill="#d4a574"
+            fill="url(#adBookingBar)"
             radius={[8, 8, 0, 0]}
             animationDuration={1000}
             animationBegin={0}

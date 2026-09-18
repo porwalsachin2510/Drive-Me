@@ -1,8 +1,17 @@
+/* B2C Partner — Account (DriveMeGo brand) */
 .drivemego-btoc-at-account {
   display: grid;
   grid-template-columns: 1fr 360px;
   gap: 24px;
   width: 100%;
+  font-family: var(--dmg-font);
+  color: var(--dmg-ink);
+}
+
+.drivemego-btoc-at-loading {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--dmg-muted);
 }
 
 .drivemego-btoc-at-account-content {
@@ -12,85 +21,98 @@
 }
 
 .drivemego-btoc-at-account-section {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 20px;
+  background-color: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: var(--dmg-radius-md);
+  box-shadow: var(--dmg-shadow-sm);
+  padding: 24px;
 }
 
 .drivemego-btoc-at-section-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .drivemego-btoc-at-header-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  color: #1f2937;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: var(--dmg-navy);
   flex-shrink: 0;
 }
 
 .drivemego-btoc-at-driver-icon {
-  background-color: #dbeafe;
-  color: #0ea5e9;
+  background-color: var(--dmg-teal-050);
+  color: var(--dmg-teal-600);
 }
 
 .drivemego-btoc-at-docs-icon {
-  background-color: #d1fae5;
-  color: #059669;
+  background-color: var(--dmg-green-050);
+  color: var(--dmg-green);
 }
 
+.drivemego-btoc-at-notification-icon,
 .drivemego-btoc-at-prefs-icon {
-  background-color: #fce7f3;
-  color: #db2777;
+  background-color: rgba(10, 42, 67, 0.08);
+  color: var(--dmg-navy);
 }
 
 .drivemego-btoc-at-security-icon {
-  background-color: #f3e8ff;
-  color: #7c3aed;
+  background-color: var(--dmg-blue-050);
+  color: var(--dmg-blue);
 }
 
 .drivemego-btoc-at-section-title {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--dmg-navy);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .drivemego-btoc-at-profile-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 18px;
 }
 
 .drivemego-btoc-at-profile-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .drivemego-btoc-at-field-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dmg-muted);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .drivemego-btoc-at-field-input {
-  padding: 10px 12px;
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  font-size: 13px;
-  color: #1f2937;
+  padding: 12px 14px;
+  background-color: var(--dmg-bg);
+  border: 1px solid var(--dmg-line);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--dmg-ink);
+  font-family: var(--dmg-font);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.drivemego-btoc-at-field-input:focus {
+  outline: none;
+  background-color: #fff;
+  border-color: var(--dmg-teal);
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.14);
 }
 
 .drivemego-btoc-at-field-input:read-only {
@@ -108,9 +130,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  background-color: #f9fafb;
-  border-radius: 6px;
+  padding: 14px;
+  background-color: var(--dmg-bg);
+  border: 1px solid var(--dmg-line);
+  border-radius: 12px;
   justify-content: space-between;
 }
 
@@ -123,59 +146,67 @@
 
 .drivemego-btoc-at-doc-name {
   flex: 1;
-  font-size: 13px;
-  color: #1f2937;
-  font-weight: 500;
+  font-size: 14px;
+  color: var(--dmg-ink);
+  font-weight: 600;
 }
 
 .drivemego-btoc-at-doc-action {
-  padding: 6px 12px;
-  background-color: #ffffff;
-  color: #16a34a;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
+  padding: 8px 14px;
+  background-color: #fff;
+  color: var(--dmg-teal-600);
+  border: 1px solid var(--dmg-line);
+  border-radius: 10px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
   white-space: nowrap;
 }
 
 .drivemego-btoc-at-doc-action:hover {
-  background-color: #f0fdf4;
-  border-color: #16a34a;
+  background-color: var(--dmg-teal-050);
+  border-color: var(--dmg-teal);
 }
 
 .drivemego-btoc-at-preferences-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
 }
 
 .drivemego-btoc-at-preference-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--dmg-line-2);
 }
 
 .drivemego-btoc-at-preference-item:last-child {
   border-bottom: none;
 }
 
+.drivemego-btoc-at-preference-info p {
+  font-size: 13px;
+  color: var(--dmg-muted);
+  margin: 4px 0 0;
+}
+
 .drivemego-btoc-at-pref-label {
-  font-size: 16px;
-  color: #1f2937;
-  font-weight: 500;
+  font-size: 15px;
+  color: var(--dmg-navy);
+  font-weight: 600;
+  margin: 0;
 }
 
 .drivemego-btoc-at-toggle-switch {
   position: relative;
   display: inline-flex;
-  width: 44px;
-  height: 24px;
+  width: 46px;
+  height: 26px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .drivemego-btoc-at-toggle-switch input {
@@ -190,25 +221,26 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #d1d5db;
-  border-radius: 12px;
+  background-color: #cbd6e0;
+  border-radius: 100px;
   transition: all 0.3s ease;
 }
 
 .drivemego-btoc-at-slider::before {
   content: "";
   position: absolute;
-  height: 18px;
-  width: 18px;
+  height: 20px;
+  width: 20px;
   left: 3px;
   bottom: 3px;
   background-color: #ffffff;
   border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(10, 42, 67, 0.25);
   transition: transform 0.3s ease;
 }
 
 .drivemego-btoc-at-toggle-switch input:checked + .drivemego-btoc-at-slider {
-  background-color: #ef4444;
+  background: var(--dmg-cta);
 }
 
 .drivemego-btoc-at-toggle-switch input:checked + .drivemego-btoc-at-slider::before {
@@ -225,53 +257,64 @@
 .drivemego-btoc-at-security-btn {
   padding: 12px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
+  font-family: var(--dmg-font);
 }
 
 .drivemego-btoc-at-security-btn.drivemego-btoc-at-primary {
-  background-color: #ffffff;
-  color: #1f2937;
-  border: 1px solid #d1d5db;
+  background-color: #fff;
+  color: var(--dmg-navy);
+  border: 1px solid var(--dmg-line);
 }
 
 .drivemego-btoc-at-security-btn.drivemego-btoc-at-primary:hover {
-  background-color: #f9fafb;
-  border-color: #9ca3af;
+  background-color: var(--dmg-teal-050);
+  border-color: var(--dmg-teal);
 }
 
 .drivemego-btoc-at-security-btn.drivemego-btoc-at-danger {
-  background-color: #fee2e2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background-color: var(--dmg-red-050);
+  color: var(--dmg-red-600);
+  border: 1px solid #f7c9c9;
 }
 
 .drivemego-btoc-at-security-btn.drivemego-btoc-at-danger:hover {
-  background-color: #fecaca;
-  border-color: #dc2626;
+  background-color: #f9d4d4;
+  border-color: var(--dmg-red);
 }
 
 .drivemego-btoc-at-save-changes-btn {
-  padding: 14px 20px;
-  background-color: #16a34a;
+  padding: 15px 20px;
+  background: var(--dmg-cta);
   color: #ffffff;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
   width: 100%;
+  box-shadow: var(--dmg-cta-shadow);
+  font-family: var(--dmg-font);
 }
 
 .drivemego-btoc-at-save-changes-btn:hover {
-  background-color: #15803d;
+  background: var(--dmg-cta-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--dmg-cta-shadow-lg);
 }
 
-/* Laptop (1200px and above) */
+.drivemego-btoc-at-save-changes-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 @media (max-width: 1200px) {
   .drivemego-btoc-at-account {
     grid-template-columns: 1fr;
@@ -288,7 +331,6 @@
   }
 }
 
-/* Tablet (768px and below) */
 @media (max-width: 768px) {
   .drivemego-btoc-at-account {
     grid-template-columns: 1fr;
@@ -296,12 +338,12 @@
   }
 
   .drivemego-btoc-at-account-section {
-    padding: 16px;
+    padding: 18px;
   }
 
   .drivemego-btoc-at-profile-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 14px;
   }
 
   .drivemego-btoc-at-account-sidebar {
@@ -319,10 +361,8 @@
     flex: 1;
     min-width: 100px;
   }
-  
 }
 
-/* Mobile (480px and below) */
 @media (max-width: 480px) {
   .drivemego-btoc-at-account {
     grid-template-columns: 1fr;
@@ -330,43 +370,39 @@
   }
 
   .drivemego-btoc-at-account-section {
-    padding: 12px;
+    padding: 16px;
     margin-bottom: 12px;
   }
 
   .drivemego-btoc-at-section-header {
-    margin-bottom: 12px;
-    padding-bottom: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
   }
 
   .drivemego-btoc-at-section-title {
-    font-size: 13px;
+    font-size: 15px;
   }
 
   .drivemego-btoc-at-profile-grid {
     grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .drivemego-btoc-at-field-label {
-    font-size: 11px;
+    gap: 12px;
   }
 
   .drivemego-btoc-at-field-input {
-    padding: 8px 10px;
-    font-size: 12px;
+    padding: 10px 12px;
+    font-size: 13px;
   }
 
   .drivemego-btoc-at-document-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
-    padding: 10px;
+    padding: 12px;
   }
 
   .drivemego-btoc-at-doc-name {
     width: 100%;
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .drivemego-btoc-at-doc-action {
@@ -374,25 +410,17 @@
     text-align: center;
   }
 
-  .drivemego-btoc-at-preference-item {
-    padding: 10px 0;
-  }
-
   .drivemego-btoc-at-pref-label {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .drivemego-btoc-at-security-btn {
-    padding: 10px 14px;
+    padding: 11px 14px;
     font-size: 12px;
   }
 
   .drivemego-btoc-at-save-changes-btn {
-    padding: 12px 16px;
-    font-size: 13px;
-  }
-
-  .drivemego-btoc-at-account-sidebar {
-    gap: 12px;
+    padding: 13px 16px;
+    font-size: 14px;
   }
 }

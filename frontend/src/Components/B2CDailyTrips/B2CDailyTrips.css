@@ -19,7 +19,7 @@
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #111827;
+  color: var(--dmg-navy);
 }
 
 .drivemego-b2c-daily-trips-tab-navigation {
@@ -29,7 +29,7 @@
 
 .drivemego-b2c-daily-trips-tab-btn {
   padding: 8px 16px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--dmg-line);
   background: white;
   border-radius: 6px;
   font-size: 14px;
@@ -39,13 +39,13 @@
 }
 
 .drivemego-b2c-daily-trips-tab-btn:hover {
-  background-color: #f3f4f6;
+  background-color: var(--dmg-bg);
 }
 
 .drivemego-b2c-daily-trips-tab-btn.active {
-  background-color: #3b82f6;
+  background-color: var(--dmg-teal);
   color: white;
-  border-color: #3b82f6;
+  border-color: var(--dmg-teal);
 }
 
 .drivemego-b2c-daily-trips-tab-error-message {
@@ -80,7 +80,7 @@
 }
 
 .drivemego-b2c-daily-trips-tab-loading p {
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-size: 14px;
   margin: 0;
 }
@@ -88,8 +88,8 @@
 .drivemego-b2c-daily-trips-tab-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #3b82f6;
+  border: 3px solid var(--dmg-line);
+  border-top-color: var(--dmg-teal);
   border-radius: 50%;
   animation: drivemego-b2c-daily-trips-tab-spin 0.8s linear infinite;
 }
@@ -102,7 +102,7 @@
 
 .drivemego-b2c-daily-trips-tab-refresh-btn {
   padding: 10px 20px;
-  background-color: #3b82f6;
+  background-color: var(--dmg-teal);
   color: white;
   border: none;
   border-radius: 6px;
@@ -114,7 +114,7 @@
 }
 
 .drivemego-b2c-daily-trips-tab-refresh-btn:hover {
-  background-color: #2563eb;
+  background-color: var(--dmg-teal-600);
 }
 
 .drivemego-b2c-daily-trips-tab-action-btn:disabled {
@@ -137,12 +137,12 @@
 .drivemego-b2c-daily-trips-tab-no-trips {
   text-align: center;
   padding: 40px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-size: 16px;
 }
 
 .drivemego-b2c-daily-trips-tab-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--dmg-line);
   border-radius: 8px;
   padding: 20px;
   transition: all 0.2s;
@@ -164,12 +164,12 @@
   margin: 0 0 8px 0;
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--dmg-navy);
 }
 
 .drivemego-b2c-daily-trips-tab-route-info p {
   margin: 0;
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-size: 14px;
 }
 
@@ -198,18 +198,18 @@
 .drivemego-b2c-daily-trips-tab-detail-item label {
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--dmg-muted);
   text-transform: uppercase;
 }
 
 .drivemego-b2c-daily-trips-tab-detail-item span {
   font-size: 14px;
-  color: #111827;
+  color: var(--dmg-navy);
   font-weight: 500;
 }
 
 .drivemego-b2c-daily-trips-tab-seat-info {
-  background-color: #f9fafb;
+  background-color: var(--dmg-bg);
   padding: 16px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -231,14 +231,14 @@
 
 .drivemego-b2c-daily-trips-tab-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   text-transform: uppercase;
 }
 
 .drivemego-b2c-daily-trips-tab-value {
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--dmg-navy);
 }
 
 .drivemego-b2c-daily-trips-tab-booked {
@@ -252,7 +252,7 @@
 .drivemego-b2c-daily-trips-tab-utilization-bar {
   width: 100%;
   height: 8px;
-  background-color: #e5e7eb;
+  background-color: var(--dmg-line);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -265,7 +265,7 @@
 
 .drivemego-b2c-daily-trips-tab-utilization-text {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-weight: 500;
 }
 
@@ -286,12 +286,12 @@
 }
 
 .drivemego-b2c-daily-trips-tab-update-seats {
-  background-color: #6366f1;
+  background-color: var(--dmg-teal);
   color: white;
 }
 
 .drivemego-b2c-daily-trips-tab-update-seats:hover {
-  background-color: #4f46e5;
+  background-color: var(--dmg-teal-700);
 }
 
 .drivemego-b2c-daily-trips-tab-start-trip {
@@ -304,12 +304,12 @@
 }
 
 .drivemego-b2c-daily-trips-tab-complete-trip {
-  background-color: #3b82f6;
+  background-color: var(--dmg-teal);
   color: white;
 }
 
 .drivemego-b2c-daily-trips-tab-complete-trip:hover {
-  background-color: #2563eb;
+  background-color: var(--dmg-teal-600);
 }
 
 .drivemego-b2c-daily-trips-tab-cancel-trip {
@@ -349,14 +349,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .drivemego-b2c-daily-trips-tab-modal-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--dmg-navy);
 }
 
 .drivemego-b2c-daily-trips-tab-close-btn {
@@ -364,15 +364,15 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--dmg-muted);
   padding: 4px;
   border-radius: 4px;
   transition: all 0.2s;
 }
 
 .drivemego-b2c-daily-trips-tab-close-btn:hover {
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: var(--dmg-bg);
+  color: var(--dmg-navy);
 }
 
 .drivemego-b2c-daily-trips-tab-form {
@@ -380,7 +380,7 @@
 }
 
 .drivemego-b2c-daily-trips-tab-trip-summary {
-  background-color: #f9fafb;
+  background-color: var(--dmg-bg);
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 20px;
@@ -389,7 +389,7 @@
 .drivemego-b2c-daily-trips-tab-trip-summary p {
   margin: 4px 0;
   font-size: 14px;
-  color: #374151;
+  color: var(--dmg-ink);
 }
 
 .drivemego-b2c-daily-trips-tab-form-row {
@@ -407,14 +407,14 @@
 
 .drivemego-b2c-daily-trips-tab-form-group label {
   font-weight: 500;
-  color: #374151;
+  color: var(--dmg-ink);
   font-size: 14px;
 }
 
 .drivemego-b2c-daily-trips-tab-form-group input,
 .drivemego-b2c-daily-trips-tab-form-group textarea {
   padding: 10px 14px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--dmg-line);
   border-radius: 6px;
   font-size: 14px;
   transition: all 0.2s;
@@ -424,8 +424,8 @@
 .drivemego-b2c-daily-trips-tab-form-group input:focus,
 .drivemego-b2c-daily-trips-tab-form-group textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--dmg-teal);
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .drivemego-b2c-daily-trips-tab-form-group textarea {
@@ -452,21 +452,21 @@
 }
 
 .drivemego-b2c-daily-trips-tab-cancel-btn {
-  background-color: #f3f4f6;
-  color: #374151;
+  background-color: var(--dmg-bg);
+  color: var(--dmg-ink);
 }
 
 .drivemego-b2c-daily-trips-tab-cancel-btn:hover {
-  background-color: #e5e7eb;
+  background-color: var(--dmg-line);
 }
 
 .drivemego-b2c-daily-trips-tab-submit-btn {
-  background-color: #3b82f6;
+  background-color: var(--dmg-teal);
   color: white;
 }
 
 .drivemego-b2c-daily-trips-tab-submit-btn:hover {
-  background-color: #2563eb;
+  background-color: var(--dmg-teal-600);
 }
 
 @media (max-width: 768px) {

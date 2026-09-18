@@ -73,7 +73,7 @@
 }
 
 .stat-icon.total {
-  background: #3B82F6;
+  background: #12b0c4;
 }
 
 .stat-icon.pending {
@@ -85,7 +85,7 @@
 }
 
 .stat-icon.savings {
-  background: #8B5CF6;
+  background: #0e97a8;
 }
 
 .stat-content {
@@ -280,7 +280,7 @@
 }
 
 .party svg {
-  color: #3B82F6;
+  color: #12b0c4;
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -336,7 +336,7 @@
 }
 
 .price-item p.proposed {
-  color: #3B82F6;
+  color: #12b0c4;
 }
 
 .price-item p.savings {
@@ -348,12 +348,12 @@
   gap: 8px;
   padding: 12px;
   background: #F0F9FF;
-  border-left: 3px solid #3B82F6;
+  border-left: 3px solid #12b0c4;
   border-radius: 4px;
 }
 
 .negotiation-message svg {
-  color: #3B82F6;
+  color: #12b0c4;
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -557,8 +557,8 @@
 .drivemego-negotiations-form-group input:focus,
 .drivemego-negotiations-form-group textarea:focus {
   outline: none;
-  border-color: #3B82F6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .drivemego-negotiations-modal-footer {
@@ -592,12 +592,12 @@
 }
 
 .drivemego-negotiations-btn-submit {
-  background: #3B82F6;
+  background: #12b0c4;
   color: white;
 }
 
 .drivemego-negotiations-btn-submit:hover:not(:disabled) {
-  background: #2563EB;
+  background: #0e97a8;
 }
 
 .drivemego-negotiations-btn-submit:disabled {
@@ -638,11 +638,11 @@
   padding: 12px;
   background: white;
   border-radius: 8px;
-  border-left: 3px solid #3B82F6;
+  border-left: 3px solid #12b0c4;
 }
 
 .drivemego-negotiations-timeline-item.drivemego-negotiations-admin-action {
-  border-left-color: #3B82F6;
+  border-left-color: #12b0c4;
 }
 
 .drivemego-negotiations-timeline-item.drivemego-negotiations-b2b-response {
@@ -719,7 +719,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid #E5E7EB;
-  border-top: 4px solid #3B82F6;
+  border-top: 4px solid #12b0c4;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

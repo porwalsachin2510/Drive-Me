@@ -13,6 +13,7 @@ import B2CRouteRequests from "../../../Components/B2C_Partner/B2CRouteRequests/B
 import DriverRatings from "../../../Components/DriverRatings/DriverRatings";
 import MyCommission from "../../../Components/MyCommission/MyCommission";
 import MySettlements from "../../../Components/MySettlements/MySettlements";
+import "../../../Components/B2C_Partner/b2c-brand.css";
 import "./b2c_partnerprofilepage.css";
 
 function B2C_PartnerProfilePage() {

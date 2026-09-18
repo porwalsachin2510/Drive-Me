@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
 import "./alerts.css";
+import "../../../styles/commuter-banner.css";
+import { Bell, CheckCheck } from "lucide-react";
 import api from "../../../utils/api";
 
 export default function Alerts() {
@@ -132,7 +134,20 @@ export default function Alerts() {
   if (loading) {
     return (
       <div className="al-alerts-section">
-        <h2>Notifications</h2>
+        <header className="dmg-banner">
+          <div className="dmg-banner-main">
+            <span className="dmg-banner-icon">
+              <Bell />
+            </span>
+            <div className="dmg-banner-text">
+              <span className="dmg-banner-eyebrow">Stay in the loop</span>
+              <h2 className="dmg-banner-title">Notifications</h2>
+              <p className="dmg-banner-sub">
+                Trip updates, payments and offers in one place.
+              </p>
+            </div>
+          </div>
+        </header>
         <div className="al-loading">Loading notifications...</div>
       </div>
     );
@@ -140,22 +155,32 @@ export default function Alerts() {
 
   return (
     <div className="al-alerts-section">
-      <div className="al-alerts-header">
-        <h2>Notifications</h2>
-        <div className="al-alerts-controls">
-          <div className="al-unread-badge">
-            {unreadCount} Unread
+      <header className="dmg-banner">
+        <div className="dmg-banner-main">
+          <span className="dmg-banner-icon">
+            <Bell />
+          </span>
+          <div className="dmg-banner-text">
+            <span className="dmg-banner-eyebrow">Stay in the loop</span>
+            <h2 className="dmg-banner-title">Notifications</h2>
+            <p className="dmg-banner-sub">
+              Trip updates, payments and offers — all in one place.
+            </p>
+          </div>
+        </div>
+        <div className="dmg-banner-aside">
+          <div className="dmg-banner-chip">
+            <span className="dmg-banner-chip-value">{unreadCount}</span>
+            <span className="dmg-banner-chip-label">Unread</span>
           </div>
           {unreadCount > 0 && (
-            <button
-              className="al-mark-all-read-btn"
-              onClick={markAllAsRead}
-            >
-              Mark All as Read
+            <button className="dmg-banner-btn ghost" onClick={markAllAsRead}>
+              <CheckCheck />
+              Mark all read
             </button>
           )}
         </div>
-      </div>
+      </header>
 
       <div className="al-filter-options">
         <select

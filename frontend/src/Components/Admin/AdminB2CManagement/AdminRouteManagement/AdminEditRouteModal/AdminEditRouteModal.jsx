@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { X, Route as RouteIcon, Clock, Tag, Star } from "lucide-react"
 import "./AdminEditRouteModal.css"
 
 function AdminEditRouteModal({ route: _route, onClose }) {
@@ -9,12 +10,12 @@ function AdminEditRouteModal({ route: _route, onClose }) {
   const [isActive, setIsActive] = useState(true)
 
   const tags = [
-    { id: "budget", label: "Budget Friendly", color: "green" },
-    { id: "ac", label: "AC Vehicle", color: "blue" },
-    { id: "wifi", label: "WiFi Available", color: "purple" },
-    { id: "premium", label: "Premium", color: "yellow" },
-    { id: "ladies", label: "Ladies Only", color: "pink" },
-    { id: "express", label: "Express", color: "red" },
+    { id: "budget", label: "Budget Friendly" },
+    { id: "ac", label: "AC Vehicle" },
+    { id: "wifi", label: "WiFi Available" },
+    { id: "premium", label: "Premium" },
+    { id: "ladies", label: "Ladies Only" },
+    { id: "express", label: "Express" },
   ]
 
   const toggleTag = (tagId) => {
@@ -26,95 +27,105 @@ function AdminEditRouteModal({ route: _route, onClose }) {
   }
 
   return (
-    <div className="ad-dash-modal-overlay" onClick={onClose}>
-      <div className="ad-dash-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="ad-dash-modal-header">
+    <div className="route-management-modal-overlay" onClick={onClose}>
+      <div className="route-management-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="route-management-modal-header">
           <div>
-            <h3 className="ad-dash-modal-title">Edit Route</h3>
-            <p className="ad-dash-modal-subtitle">Configure route details, tags, pricing, and schedule.</p>
+            <h3 className="route-management-modal-title">Edit Route</h3>
+            <p className="route-management-modal-subtitle">
+              Configure route details, tags, pricing, and schedule.
+            </p>
           </div>
-          <button className="ad-dash-modal-close" onClick={onClose}>
-            ✕
+          <button className="route-management-modal-close" onClick={onClose} aria-label="Close">
+            <X size={20} />
           </button>
         </div>
 
-        <div className="ad-dash-modal-body">
-          <div className="ad-dash-form-row">
-            <div className="ad-dash-form-group">
-              <label className="ad-dash-form-label">Route Name</label>
-              <input type="text" className="ad-dash-form-input" defaultValue="Route 5001: Hawally Loop" />
+        <div className="route-management-modal-form">
+          <div className="route-management-form-section">
+            <h4 className="route-management-section-title">
+              <RouteIcon size={16} /> Basic Information
+            </h4>
+
+            <div className="route-management-form-row">
+              <div className="route-management-form-group">
+                <label className="route-management-form-label">Route Name</label>
+                <input type="text" className="route-management-form-input" defaultValue="Route 5001: Hawally Loop" />
+              </div>
+              <div className="route-management-form-group">
+                <label className="route-management-form-label">Provider</label>
+                <input type="text" className="route-management-form-input" defaultValue="KGL Transport" />
+              </div>
             </div>
-            <div className="ad-dash-form-group">
-              <label className="ad-dash-form-label">Provider</label>
-              <input type="text" className="ad-dash-form-input" defaultValue="KGL Transport" />
+
+            <div className="route-management-form-row">
+              <div className="route-management-form-group">
+                <label className="route-management-form-label">From (Origin)</label>
+                <input type="text" className="route-management-form-input" defaultValue="Jahra" />
+              </div>
+              <div className="route-management-form-group">
+                <label className="route-management-form-label">To (Destination)</label>
+                <input type="text" className="route-management-form-input" defaultValue="Jahra" />
+              </div>
             </div>
           </div>
 
-          <div className="ad-dash-form-row">
-            <div className="ad-dash-form-group">
-              <label className="ad-dash-form-label">From (Origin)</label>
-              <input type="text" className="ad-dash-form-input" defaultValue="Jahra" />
-            </div>
-            <div className="ad-dash-form-group">
-              <label className="ad-dash-form-label">To (Destination)</label>
-              <input type="text" className="ad-dash-form-input" defaultValue="Jahra" />
-            </div>
-          </div>
-
-          <div className="ad-dash-form-row">
-            <div className="ad-dash-form-group">
-              <label className="ad-dash-form-label">Time</label>
-              <input type="text" className="ad-dash-form-input" defaultValue="8:00 AM" />
-            </div>
-            <div className="ad-dash-form-group">
-              <label className="ad-dash-form-label">Price (KWD)</label>
-              <input type="text" className="ad-dash-form-input" defaultValue="1.323" />
-            </div>
-            <div className="ad-dash-form-group">
-              <label className="ad-dash-form-label">Total Seats</label>
-              <input type="text" className="ad-dash-form-input" defaultValue="44" />
+          <div className="route-management-form-section">
+            <h4 className="route-management-section-title">
+              <Clock size={16} /> Schedule &amp; Pricing
+            </h4>
+            <div className="route-management-form-row">
+              <div className="route-management-form-group">
+                <label className="route-management-form-label">Time</label>
+                <input type="text" className="route-management-form-input" defaultValue="8:00 AM" />
+              </div>
+              <div className="route-management-form-group">
+                <label className="route-management-form-label">Price (KWD)</label>
+                <input type="text" className="route-management-form-input" defaultValue="1.323" />
+              </div>
+              <div className="route-management-form-group">
+                <label className="route-management-form-label">Total Seats</label>
+                <input type="text" className="route-management-form-input" defaultValue="44" />
+              </div>
             </div>
           </div>
 
-          <div className="ad-dash-form-group-full">
-            <label className="ad-dash-form-label">Assign Tags</label>
-            <div className="ad-dash-tags-grid">
+          <div className="route-management-form-section">
+            <h4 className="route-management-section-title">
+              <Tag size={16} /> Assign Tags
+            </h4>
+            <div className="route-management-days-grid">
               {tags.map((tag) => (
-                <label key={tag.id} className="ad-dash-tag-checkbox">
+                <label key={tag.id} className="route-management-day-checkbox">
                   <input type="checkbox" checked={selectedTags.includes(tag.id)} onChange={() => toggleTag(tag.id)} />
-                  <span className={`ad-dash-tag-label ad-dash-tag-${tag.color}`}>{tag.label}</span>
+                  <span className="route-management-day-label">{tag.label}</span>
                 </label>
               ))}
             </div>
           </div>
 
-          <div className="ad-dash-form-toggles">
-            <label className="ad-dash-toggle-item">
-              <input
-                type="checkbox"
-                checked={isFeatured}
-                onChange={(e) => setIsFeatured(e.target.checked)}
-                className="ad-dash-toggle-checkbox"
-              />
-              <span className="ad-dash-toggle-label">Mark as Featured</span>
-            </label>
-            <label className="ad-dash-toggle-item">
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="ad-dash-toggle-checkbox"
-              />
-              <span className="ad-dash-toggle-label">Route Active</span>
-            </label>
+          <div className="route-management-form-section">
+            <h4 className="route-management-section-title">
+              <Star size={16} /> Visibility
+            </h4>
+            <div className="route-management-days-grid">
+              <label className="route-management-day-checkbox">
+                <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} />
+                <span className="route-management-day-label">Mark as Featured</span>
+              </label>
+              <label className="route-management-day-checkbox">
+                <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+                <span className="route-management-day-label">Route Active</span>
+              </label>
+            </div>
           </div>
         </div>
 
-        <div className="ad-dash-modal-footer">
-          <button className="ad-dash-btn-secondary" onClick={onClose}>
+        <div className="route-management-modal-footer">
+          <button className="route-management-btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button className="ad-dash-btn-primary">Save Changes</button>
+          <button className="route-management-btn-primary">Save Changes</button>
         </div>
       </div>
     </div>

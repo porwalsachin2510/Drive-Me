@@ -1,33 +1,21 @@
-drivemego-b2b_contractcard-managed-btn {
-  background: #2c47e0 !important;
-  color: #fff !important;
-  border: none !important;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.drivemego-b2b_contractcard-managed-tag {
-  font-size: 0.78rem;
-  color: #2c47e0;
-  background: #eef1ff;
-  border: 1px solid #d7ddff;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-weight: 600;
-}
-
 .drivemego-b2b_contractcard-contract-card {
-  padding: 20px;
-  margin-bottom: 10px;
-  background-color: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
-  border-bottom: 3px solid #16a085;
+  position: relative;
+  padding: 22px;
+  background-color: var(--dmg-card);
+  border-radius: var(--dmg-radius);
+  border: 1px solid var(--dmg-line);
+  box-shadow: var(--dmg-shadow);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  font-family: var(--dmg-font);
+}
+
+.drivemego-b2b_contractcard-contract-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--dmg-shadow-lg);
+  border-color: rgba(18, 176, 196, 0.35);
 }
 
 .drivemego-b2b_contractcard-contract-top {
@@ -38,64 +26,78 @@ drivemego-b2b_contractcard-managed-btn {
 }
 
 .drivemego-b2b_contractcard-contract-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #000000;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--dmg-navy);
   margin: 0;
 }
 
 .drivemego-b2b_contractcard-contract-org {
-  font-size: 12px;
-  color: #999999;
-  margin: 4px 0 0 0;
+  font-size: 12.5px;
+  color: var(--dmg-muted);
+  font-weight: 500;
+  margin: 5px 0 0 0;
 }
 
 .drivemego-b2b_contractcard-status {
-  padding: 4px 12px;
-  border-radius: 4px;
+  padding: 5px 12px;
+  border-radius: 999px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: capitalize;
   white-space: nowrap;
+  border: 1px solid transparent;
 }
 
 .drivemego-b2b_contractcard-status.drivemego-b2b_contractcard-active {
-  background-color: #e8f5e9;
-  color: #4caf50;
+  background-color: var(--success-bg);
+  color: var(--success-color);
+  border-color: rgba(34, 197, 94, 0.22);
+}
+
+.drivemego-b2b_contractcard-status.drivemego-b2b_contractcard-pending {
+  background-color: var(--warning-bg);
+  color: var(--warning-hover);
+  border-color: rgba(245, 158, 11, 0.22);
 }
 
 .drivemego-b2b_contractcard-status.drivemego-b2b_contractcard-completed {
-  background-color: #f0f0f0;
-  color: #666666;
+  background-color: rgba(18, 176, 196, 0.1);
+  color: var(--dmg-teal-700);
+  border-color: rgba(18, 176, 196, 0.22);
 }
 
 .drivemego-b2b_contractcard-status.drivemego-b2b_contractcard-cancelled {
-  background-color: #ffebee;
-  color: #e74c3c;
+  background-color: var(--danger-bg);
+  color: var(--danger-color);
+  border-color: rgba(239, 68, 68, 0.22);
 }
 
 .drivemego-b2b_contractcard-contract-details {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  border-top: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
-  padding: 12px 0;
+  gap: 18px;
+  border-top: 1px solid var(--dmg-line);
+  border-bottom: 1px solid var(--dmg-line);
+  padding: 16px 0;
 }
 
 .drivemego-b2b_contractcard-detail-label {
   display: block;
   font-size: 10px;
-  color: #999999;
-  font-weight: 600;
+  color: var(--dmg-muted-2);
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .drivemego-b2b_contractcard-detail-text {
   display: block;
-  font-size: 13px;
-  color: #000000;
-  font-weight: 600;
+  font-size: 14px;
+  color: var(--dmg-navy);
+  font-weight: 700;
 }
 
 .drivemego-b2b_contractcard-contract-bottom {
@@ -108,45 +110,76 @@ drivemego-b2b_contractcard-managed-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: #333333;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dmg-muted);
 }
 
 .drivemego-b2b_contractcard-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background-color: #ff9800;
+  background-color: var(--warning-color);
   display: inline-block;
+  box-shadow: 0 0 0 3px var(--warning-light);
 }
 
 .drivemego-b2b_contractcard-dot.drivemego-b2b_contractcard-paid {
-  background-color: #4caf50;
+  background-color: var(--success-color);
+  box-shadow: 0 0 0 3px var(--success-light);
 }
 
 .drivemego-b2b_contractcard-manage-link {
-  padding: 6px 12px;
-  background-color: transparent;
-  border: none;
-  color: #333333;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 9px 18px;
+  background: var(--dmg-teal-050);
+  border: 1px solid rgba(18, 176, 196, 0.25);
+  border-radius: 11px;
+  color: var(--dmg-teal-700);
+  font-size: 12.5px;
+  font-weight: 700;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.2s ease;
+  font-family: inherit;
 }
 
 .drivemego-b2b_contractcard-manage-link:hover {
-  color: #16a085;
+  background: var(--dmg-teal);
+  border-color: var(--dmg-teal);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.drivemego-b2b_contractcard-managed-btn {
+  background: var(--dmg-cta);
+  color: #fff;
+  border: none;
+  box-shadow: var(--dmg-cta-shadow);
+}
+
+.drivemego-b2b_contractcard-managed-btn:hover {
+  background: var(--dmg-cta-hover);
+  color: #fff;
+}
+
+.drivemego-b2b_contractcard-managed-tag {
+  font-size: 0.78rem;
+  color: var(--dmg-teal-700);
+  background: var(--dmg-teal-050);
+  border: 1px solid rgba(18, 176, 196, 0.22);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {
   .drivemego-b2b_contractcard-contract-card {
-    gap: 12px;
-    padding: 16px;
+    gap: 14px;
+    padding: 18px;
   }
 
   .drivemego-b2b_contractcard-contract-details {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
   }
 
   .drivemego-b2b_contractcard-contract-bottom {
@@ -157,20 +190,16 @@ drivemego-b2b_contractcard-managed-btn {
 
   .drivemego-b2b_contractcard-manage-link {
     width: 100%;
-    text-align: left;
+    text-align: center;
   }
 }
 
 @media (max-width: 480px) {
+  .drivemego-b2b_contractcard-contract-details {
+    grid-template-columns: 1fr;
+  }
+
   .drivemego-b2b_contractcard-contract-title {
-    font-size: 13px;
-  }
-
-  .drivemego-b2b_contractcard-detail-text {
-    font-size: 12px;
-  }
-
-  .drivemego-b2b_contractcard-payment {
-    font-size: 11px;
+    font-size: 15px;
   }
 }

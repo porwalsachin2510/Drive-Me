@@ -23,11 +23,12 @@
 }
 
 .b2b-operator-dashboard-add-driver-modal-content {
-  background-color: #ffffff;
-  border-radius: 12px;
+  background-color: var(--dmg-card);
+  border-radius: var(--dmg-radius);
   width: 100%;
   max-width: 700px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  font-family: var(--dmg-font);
+  box-shadow: var(--dmg-shadow-lg);
   animation: slideUp 0.3s ease-out;
   margin: 20px;
   max-height: 90vh;
@@ -57,8 +58,9 @@
 
 .b2b-operator-dashboard-add-driver-modal-header h2 {
   font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--dmg-navy);
   margin: 0;
 }
 
@@ -147,14 +149,14 @@
 }
 
 .b2b-operator-dashboard-add-driver-section-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #333;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--dmg-teal-700);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   margin-top: 8px;
   margin-bottom: 4px;
-  border-bottom: 2px solid #16a085;
+  border-bottom: 2px solid var(--dmg-teal-100);
   padding-bottom: 8px;
 }
 
@@ -199,7 +201,7 @@
 .b2b-operator-dashboard-add-driver-form-group select:focus,
 .b2b-operator-dashboard-add-driver-form-group textarea:focus {
   outline: none;
-  border-color: #16a085;
+  border-color: #12b0c4;
   background-color: #ffffff;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
@@ -260,8 +262,8 @@
 
 .b2b-operator-dashboard-add-driver-file-button:hover:not(:disabled) {
   background-color: #e8e8e8;
-  border-color: #16a085;
-  color: #16a085;
+  border-color: #12b0c4;
+  color: #12b0c4;
 }
 
 .b2b-operator-dashboard-add-driver-file-button:disabled {
@@ -311,15 +313,16 @@
 }
 
 .b2b-operator-dashboard-add-driver-btn-register {
-  background-color: #16a085;
+  background: var(--dmg-cta);
   color: #ffffff;
-  border: 2px solid #16a085;
+  border: 2px solid transparent;
+  box-shadow: var(--dmg-cta-shadow);
 }
 
 .b2b-operator-dashboard-add-driver-btn-register:hover:not(:disabled) {
-  background-color: #138d7b;
-  border-color: #0d7063;
-  box-shadow: 0 4px 12px rgba(22, 160, 133, 0.3);
+  background: var(--dmg-cta-hover);
+  box-shadow: var(--dmg-cta-shadow-lg);
+  transform: translateY(-1px);
 }
 
 .b2b-operator-dashboard-add-driver-btn-register:disabled {

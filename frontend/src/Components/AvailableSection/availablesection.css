@@ -540,7 +540,7 @@
 .drivemego-availablesection-my-day-pill.drivemego-availablesection-weekend,
 .drivemego-availablesection-day-pill.drivemego-availablesection-weekend {
   background: var(--dmg-coral-050, #fdeeee);
-  color: var(--dmg-coral, #e85d5d);
+  color: var(--dmg-coral, #12b0c4);
 }
 
 /* Trip Times Section */
@@ -745,7 +745,7 @@
 }
 
 .drivemego-availablesection-clear-tags-btn:hover {
-  background: var(--dmg-coral, #e85d5d);
+  background: var(--dmg-coral, #12b0c4);
   color: #fff;
 }
 

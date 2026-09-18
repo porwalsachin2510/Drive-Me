@@ -72,8 +72,9 @@
 }
 
 .earnings-card.total {
-  background: linear-gradient(135deg, #E85D5D 0%, #D94545 100%);
-  color: #ffffff;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(10, 42, 67, 0.08);
 }
 
 .earnings-card.week {
@@ -98,7 +99,7 @@
 }
 
 .earnings-card.total .card-label {
-  color: rgba(255, 255, 255, 0.9);
+  color: #6b7280;
 }
 
 .earnings-card.week .card-label,
@@ -115,7 +116,7 @@
 
 .earnings-card.total .card-amount,
 .earnings-card.total .card-value {
-  color: #ffffff;
+  color: #0a2a43;
 }
 
 .earnings-card.week .card-amount,
@@ -136,7 +137,7 @@
 }
 
 .earnings-card.total .card-breakdown {
-  border-top-color: rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(0, 0, 0, 0.08);
 }
 
 .breakdown-row {
@@ -161,11 +162,11 @@
 }
 
 .earnings-card.total .breakdown-label {
-  color: rgba(255, 255, 255, 0.85);
+  color: #6b7280;
 }
 
 .earnings-card.total .breakdown-value {
-  color: #ffffff;
+  color: #1f2937;
 }
 
 .earnings-card.total .breakdown-value.deduction {
@@ -192,7 +193,7 @@
 
 .request-payout {
   padding: 10px 16px;
-  background-color: #2DD4BF;
+  background-color: #12b0c4;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -205,7 +206,7 @@
 }
 
 .request-payout:hover {
-  background-color: #14B8A6;
+  background-color: #0e97a8;
   box-shadow: 0 4px 14px rgba(45, 212, 191, 0.3);
 }
 

@@ -1,6 +1,8 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
 .mbill {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1a1a2e;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #0f2233;
   position: relative;
 }
 
@@ -51,7 +53,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #fff;
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .mbill-btn {
@@ -60,26 +62,29 @@
   font-weight: 600;
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e4ecf3;
   background: #fff;
-  color: #1a1a2e;
+  color: #0f2233;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .mbill-btn:hover:not(:disabled) {
-  border-color: #1a1a2e;
+  border-color: #12b0c4;
+  color: #0e97a8;
 }
 
 .mbill-btn.primary {
-  background: #dc3545;
-  border-color: #dc3545;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 8px 20px rgba(18, 176, 196, 0.28);
 }
 
 .mbill-btn.primary:hover:not(:disabled) {
-  background: #c82333;
-  border-color: #c82333;
+  background: linear-gradient(135deg, #12b0c4 0%, #0c8695 100%);
+  border-color: transparent;
+  color: #fff;
 }
 
 .mbill-btn.sm {
@@ -225,7 +230,7 @@
 .mbill-line.total {
   font-weight: 700;
   font-size: 16px;
-  background: #1a1a2e;
+  background: #0a2a43;
   color: #fff;
 }
 
@@ -389,7 +394,7 @@
 .mbill-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(26, 26, 46, 0.5);
+  background: rgba(10, 42, 67, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;

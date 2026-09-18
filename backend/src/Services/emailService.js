@@ -1985,25 +1985,264 @@ export const sendUserAppealEmail = async ({ userEmail, userName, userMessage, ad
     }
 };
 
-// Generic email sending function
+// Shared layout wrapper so every templated email looks consistent.
+const wrapEmailLayout = (title, innerHtml, accent = '#1a73e8') => `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f4f6f8; margin: 0; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+            <div style="background: ${accent}; padding: 24px 30px;">
+                <h1 style="color: #fff; margin: 0; font-size: 22px;">${title}</h1>
+            </div>
+            <div style="padding: 28px 30px;">
+                ${innerHtml}
+                <div style="text-align: center; margin-top: 28px; color: #888; font-size: 13px;">
+                    <p style="margin: 4px 0;">Thank you for choosing DriveMe!</p>
+                    <p style="margin: 4px 0;">For support, contact us at <a href="mailto:support@driveme.com" style="color:${accent};">support@driveme.com</a></p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+`;
+
+// Render a small detail table from a data object (skips empty values).
+const renderDetailRows = (rows) =>
+    rows
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .map(
+            ([label, value]) => `
+                <tr>
+                    <td style="padding: 8px 0; color: #666; font-weight: bold; border-bottom: 1px solid #eee;">${label}</td>
+                    <td style="padding: 8px 0; color: #333; text-align: right; border-bottom: 1px solid #eee;">${value}</td>
+                </tr>`
+        )
+        .join('');
+
+// Render the HTML body for a named template + data payload. Falls back to a
+// generic layout so an email is NEVER sent without a body.
+const renderEmailTemplate = (template, data = {}) => {
+    switch (template) {
+        case 'tripStatusUpdate': {
+            const greeting = `<p>Dear ${data.passengerName || 'Valued Customer'},</p>`;
+            const body = `
+                <p>Your trip status has been updated to <strong>${data.newStatus || 'Updated'}</strong>.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Route', data.route],
+                        ['Date', data.tripDate],
+                        ['Time', data.tripTime],
+                        ['Status', data.newStatus],
+                        ['Note', data.reason],
+                    ])}
+                </table>`;
+            return wrapEmailLayout('Trip Status Update', greeting + body);
+        }
+        case 'routeRequestNotification': {
+            const body = `
+                <p>Dear ${data.providerName || 'Partner'},</p>
+                <p>A new route request has been raised in your service area.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Pickup', data.pickupLocation],
+                        ['Dropoff', data.dropoffLocation],
+                        ['Commuters interested', data.demandCount],
+                        ['Request ID', data.requestId],
+                    ])}
+                </table>
+                <p>Log in to your dashboard to review and respond to this request.</p>`;
+            return wrapEmailLayout('New Route Request', body, '#0f766e');
+        }
+        case 'routeRequestResponse': {
+            const body = `
+                <p>Dear ${data.passengerName || 'Valued Customer'},</p>
+                <p>There is an update on your route request (status: <strong>${data.status || 'Updated'}</strong>).</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Pickup', data.pickupLocation],
+                        ['Dropoff', data.dropoffLocation],
+                        ['Provider response', data.providerResponse],
+                        ['Estimated price', data.estimatedPrice],
+                        ['Status', data.status],
+                    ])}
+                </table>`;
+            return wrapEmailLayout('Route Request Update', body);
+        }
+        case 'noShowNotification': {
+            const body = `
+                <p>Dear ${data.providerName || 'Partner'},</p>
+                <p>A passenger has been reported as a no-show for the following trip.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Route', data.route],
+                        ['Date', data.tripDate],
+                        ['Time', data.tripTime],
+                        ['Reason', data.passengerReason],
+                        ['Seat released', data.seatReleased ? 'Yes' : 'No'],
+                        ['Available seats', data.availableSeats],
+                    ])}
+                </table>`;
+            return wrapEmailLayout('Passenger No-Show', body, '#b45309');
+        }
+        case 'noShowUpdate': {
+            const body = `
+                <p>Dear ${data.passengerName || 'Valued Customer'},</p>
+                <p>Your no-show request has been updated to <strong>${data.status || 'Updated'}</strong>.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Status', data.status],
+                        ['Provider response', data.providerResponse],
+                        ['Refund processed', data.refundProcessed ? 'Yes' : 'No'],
+                        ['Refund amount', data.refundAmount],
+                    ])}
+                </table>`;
+            return wrapEmailLayout('No-Show Request Update', body);
+        }
+        case 'operationsStarted': {
+            const body = `
+                <p>Dear ${data.clientName || 'Valued Client'},</p>
+                <p>Transport services for <strong>${data.companyName || 'your company'}</strong> have started.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Company', data.companyName],
+                        ['Contract number', data.contractNumber],
+                        ['Start date', data.startDate],
+                    ])}
+                </table>`;
+            return wrapEmailLayout('Transport Services Started', body, '#0f766e');
+        }
+        case 'employeeTransfer': {
+            const body = `
+                <p>Dear ${data.employeeName || 'Team Member'},</p>
+                <p>You have a temporary transfer notification.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Reason', data.transferReason],
+                        ['Until', data.duration],
+                        ['New vehicle', data.newVehicleInfo],
+                    ])}
+                </table>`;
+            return wrapEmailLayout('Temporary Transfer', body);
+        }
+        case 'newInquiry': {
+            const body = `
+                <p>Dear ${data.salesPersonName || 'Team'},</p>
+                <p>A new client inquiry has been received.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Company', data.companyName],
+                        ['Contact person', data.contactPerson],
+                        ['Email', data.email],
+                        ['Phone', data.phone],
+                        ['Requirements', data.transportRequirements],
+                        ['Inquiry ID', data.inquiryId],
+                    ])}
+                </table>`;
+            return wrapEmailLayout('New Client Inquiry', body, '#0f766e');
+        }
+        case 'proposalSent': {
+            const body = `
+                <p>Dear ${data.clientName || 'Valued Client'},</p>
+                <p>Please find your transportation proposal below.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Company', data.companyName],
+                        ['Proposal', data.proposalTitle],
+                        ['Validity', data.validityPeriod],
+                    ])}
+                </table>
+                ${data.proposalLink ? `<p style="text-align:center;"><a href="${data.proposalLink}" style="background:#1a73e8;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">View Proposal</a></p>` : ''}`;
+            return wrapEmailLayout('Transportation Proposal', body);
+        }
+        case 'contractConfirmation': {
+            const body = `
+                <p>Dear ${data.clientName || 'Valued Client'},</p>
+                <p>Your transport services contract has been confirmed.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows([
+                        ['Company', data.companyName],
+                        ['Contract number', data.contractNumber],
+                        ['Start date', data.startDate],
+                        ['End date', data.endDate],
+                        ['Billing cycle', data.billingCycle],
+                        ['Total value', data.totalValue],
+                    ])}
+                </table>`;
+            return wrapEmailLayout('Contract Confirmation', body, '#0f766e');
+        }
+        default: {
+            // Generic fallback: render whatever data was provided.
+            const rows = Object.entries(data).map(([key, value]) => [
+                key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()),
+                typeof value === 'object' ? JSON.stringify(value) : value,
+            ]);
+            const body = `
+                <p>Hello,</p>
+                <p>You have a new update from DriveMe.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    ${renderDetailRows(rows)}
+                </table>`;
+            return wrapEmailLayout('DriveMe Notification', body);
+        }
+    }
+};
+
+// Generic email sending function.
+// Supports BOTH calling conventions used across the codebase:
+//   1. Positional: sendEmail(recipientEmail, subject, body, options)
+//   2. Object:     sendEmail({ to, subject, html | body | text, template, data, cc, bcc, attachments, from, replyTo })
 export const sendEmail = async (recipientEmail, subject, body, options = {}) => {
     try {
+        // Normalize arguments into a single config object.
+        let config;
+        if (recipientEmail && typeof recipientEmail === 'object' && !Array.isArray(recipientEmail)) {
+            config = { ...recipientEmail };
+        } else {
+            config = { to: recipientEmail, subject, html: body, ...options };
+        }
+
+        const to = config.to || config.recipientEmail || config.email;
+        const finalSubject = config.subject || '';
+
+        // Resolve the HTML body: explicit html/body, then rendered template,
+        // then a plain-text wrapper, then a generic fallback.
+        let html = config.html || config.body;
+        if (!html && config.template) {
+            html = renderEmailTemplate(config.template, config.data || {});
+        }
+        if (!html && config.text) {
+            html = `<p>${String(config.text).replace(/\n/g, '<br>')}</p>`;
+        }
+        if (!html) {
+            html = renderEmailTemplate('default', config.data || {});
+        }
+
+        // Guard: never hand nodemailer an empty recipient (root cause of the
+        // "No recipients defined" EENVELOPE errors).
+        if (!to) {
+            console.warn(
+                `[v0] sendEmail skipped: no recipient provided (subject: "${finalSubject}", template: "${config.template || 'n/a'}")`
+            );
+            return { success: false, message: 'No recipient email provided' };
+        }
+
         const transporter = createTransporter();
 
         const mailOptions = {
-            from: options.from || process.env.EMAIL_FROM || '"DriveMe" <noreply@driveme.com>',
-            to: recipientEmail,
-            subject: subject,
-            html: body,
-            // Additional options
-            ...(options.cc && { cc: options.cc }),
-            ...(options.bcc && { bcc: options.bcc }),
-            ...(options.attachments && { attachments: options.attachments }),
-            ...(options.replyTo && { replyTo: options.replyTo })
+            from: config.from || process.env.EMAIL_FROM || process.env.EMAIL_USER || '"DriveMe" <noreply@driveme.com>',
+            to,
+            subject: finalSubject,
+            html,
+            ...(config.text && { text: config.text }),
+            ...(config.cc && { cc: config.cc }),
+            ...(config.bcc && { bcc: config.bcc }),
+            ...(config.attachments && { attachments: config.attachments }),
+            ...(config.replyTo && { replyTo: config.replyTo }),
         };
 
         const result = await transporter.sendMail(mailOptions);
-        console.log(`[v0] Email sent to: ${recipientEmail}, Message ID: ${result.messageId}`);
+        console.log(`[v0] Email sent to: ${to}, Message ID: ${result.messageId}`);
 
         return {
             success: true,

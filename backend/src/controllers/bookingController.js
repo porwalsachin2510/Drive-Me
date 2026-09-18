@@ -2965,6 +2965,18 @@ export const startB2B_PartnerDriverTrip = async (req, res) => {
             })
             await trip.save()
 
+            // Extra service day trips: roll the live status up onto the parent
+            // request so the school customer/partner see it move to IN_PROGRESS.
+            // Non-blocking — a sync failure must never fail the driver action.
+            if (trip.extraServiceRequestId) {
+                try {
+                    const { syncExtraServiceFulfillment } = await import("./extraServiceRequestController.js")
+                    await syncExtraServiceFulfillment(trip.extraServiceRequestId)
+                } catch (syncErr) {
+                    console.error("[v0] Error syncing extra-service fulfillment on start:", syncErr.message)
+                }
+            }
+
             // Notify all passengers
             for (const passenger of trip.passengers) {
                 if (passenger.bookingStatus === "CONFIRMED") {
@@ -3102,6 +3114,18 @@ export const completeB2B_PartnerDriverBooking = async (req, res) => {
                 description: "Trip completed by driver",
             })
             await trip.save()
+
+            // Extra service day trips: roll the live status up onto the parent
+            // request so it moves to COMPLETED once every assigned trip is done.
+            // Non-blocking — a sync failure must never fail the driver action.
+            if (trip.extraServiceRequestId) {
+                try {
+                    const { syncExtraServiceFulfillment } = await import("./extraServiceRequestController.js")
+                    await syncExtraServiceFulfillment(trip.extraServiceRequestId)
+                } catch (syncErr) {
+                    console.error("[v0] Error syncing extra-service fulfillment on complete:", syncErr.message)
+                }
+            }
 
             // Notify all passengers
             for (const passenger of trip.passengers) {
@@ -3367,6 +3391,18 @@ export const startCorporateTrip = async (req, res) => {
             }
             await trip.save()
 
+            // Extra service day trips: roll the live status up onto the parent
+            // request so the school customer/partner see it move to IN_PROGRESS.
+            // Non-blocking — a sync failure must never fail the driver action.
+            if (trip.extraServiceRequestId) {
+                try {
+                    const { syncExtraServiceFulfillment } = await import("./extraServiceRequestController.js")
+                    await syncExtraServiceFulfillment(trip.extraServiceRequestId)
+                } catch (syncErr) {
+                    console.error("[v0] Error syncing extra-service fulfillment on start:", syncErr.message)
+                }
+            }
+
             // Notify all passengers
             for (const passenger of trip.passengers) {
                 if (passenger.bookingStatus === "CONFIRMED" || passenger.status === "Confirmed") {
@@ -3503,6 +3539,18 @@ export const completeCorporateBooking = async (req, res) => {
                 description: "Trip completed by driver",
             })
             await trip.save()
+
+            // Extra service day trips: roll the live status up onto the parent
+            // request so it moves to COMPLETED once every assigned trip is done.
+            // Non-blocking — a sync failure must never fail the driver action.
+            if (trip.extraServiceRequestId) {
+                try {
+                    const { syncExtraServiceFulfillment } = await import("./extraServiceRequestController.js")
+                    await syncExtraServiceFulfillment(trip.extraServiceRequestId)
+                } catch (syncErr) {
+                    console.error("[v0] Error syncing extra-service fulfillment on complete:", syncErr.message)
+                }
+            }
 
             // Notify all passengers
             for (const passenger of trip.passengers) {

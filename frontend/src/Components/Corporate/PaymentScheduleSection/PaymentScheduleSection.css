@@ -1,11 +1,12 @@
 /* Premium Payment Schedule - Inter Font */
 .payment-schedule-section {
   background: #ffffff;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(10, 42, 67, 0.07);
+  border: 1px solid #e4ecf3;
   margin-bottom: 24px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .payment-schedule-header {
@@ -14,8 +15,9 @@
 
 .payment-schedule-header h3 {
   font-size: 20px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #0a2a43;
   margin-bottom: 16px;
 }
 
@@ -144,7 +146,7 @@
 }
 
 .item-amount svg {
-  color: #10b981;
+  color: #0e97a8;
 }
 
 .schedule-item-body {
@@ -204,20 +206,21 @@
 
 .pay-installment-btn {
   padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
   align-self: flex-start;
+  box-shadow: 0 10px 22px rgba(18, 176, 196, 0.3);
 }
 
 .pay-installment-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 14px 30px rgba(18, 176, 196, 0.42);
 }
 
 .pay-installment-btn:disabled {
@@ -258,7 +261,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid #e5e7eb;
-  border-top-color: #667eea;
+  border-top-color: #12b0c4;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

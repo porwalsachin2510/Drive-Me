@@ -101,7 +101,7 @@
 }
 
 .drivemego-modal-tab.drivemego-active {
-  background: #0891b2;
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
 }
 
@@ -155,7 +155,7 @@
 }
 
 .drivemego-detail-row.drivemego-highlight {
-  background: #ecfeff;
+  background: #e6f7fa;
   margin: 0 -8px;
   padding: 8px;
   border-radius: 6px;
@@ -248,8 +248,8 @@
 
 .drivemego-self-badge {
   display: inline-block;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #e6f7fa;
+  color: #0e97a8;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 11px;
@@ -329,14 +329,14 @@
 }
 
 .drivemego-action-btn.drivemego-reassign {
-  background: #0891b2;
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
   width: 100%;
   margin-top: 12px;
 }
 
 .drivemego-action-btn.reassign:hover:not(:disabled) {
-  background: #0e7490;
+  background: #0e97a8;
 }
 
 .drivemego-ad-dash-reassign-modal-description {
@@ -352,7 +352,7 @@
 }
 
 .drivemego-ad-dash-reassign-modal-description em {
-  color: #0891b2;
+  color: #0e97a8;
   font-style: normal;
 }
 
@@ -387,7 +387,8 @@
 
 .drivemego-ad-dash-reassign-modal-select:focus,
 .drivemego-ad-dash-reassign-modal-textarea:focus {
-  border-color: #0891b2;
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 4px #e6f7fa;
 }
 
 .drivemego-ad-dash-reassign-modal-textarea {
@@ -427,12 +428,12 @@
 }
 
 .drivemego-ad-dash-reassign-modal-confirm {
-  background: #0891b2;
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
 }
 
 .drivemego-ad-dash-reassign-modal-confirm:hover:not(:disabled) {
-  background: #0e7490;
+  background: #0e97a8;
 }
 
 .drivemego-ad-dash-reassign-modal-confirm:disabled {

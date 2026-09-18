@@ -119,12 +119,12 @@ function AdminRevenueChart() {
         >
           <defs>
             <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#00A699" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#00A699" stopOpacity={0} />
+              <stop offset="5%" stopColor="#12b0c4" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="#12b0c4" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="colorCorporate" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#374151" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#374151" stopOpacity={0} />
+              <stop offset="5%" stopColor="#0a2a43" stopOpacity={0.28} />
+              <stop offset="95%" stopColor="#0a2a43" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -159,8 +159,8 @@ function AdminRevenueChart() {
           <Area
             type="monotone"
             dataKey="total"
-            stroke="#00A699"
-            strokeWidth={2}
+            stroke="#12b0c4"
+            strokeWidth={2.5}
             fillOpacity={1}
             fill="url(#colorTotal)"
             name="Total Revenue"
@@ -170,8 +170,8 @@ function AdminRevenueChart() {
           <Area
             type="monotone"
             dataKey="corporate"
-            stroke="#374151"
-            strokeWidth={2}
+            stroke="#0a2a43"
+            strokeWidth={2.5}
             fillOpacity={1}
             fill="url(#colorCorporate)"
             name="Corporate Revenue"

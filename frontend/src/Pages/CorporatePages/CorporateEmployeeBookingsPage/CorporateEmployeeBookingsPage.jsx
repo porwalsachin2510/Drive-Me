@@ -6,6 +6,60 @@ import { getCorporateOwnerBookings } from "../../../Redux/slices/bookingSlice";
 import { isCustomerRole } from "../../../utils/roleFamilies";
 import "./corporateemployeebookingspage.css";
 
+// Line-style brand icons (replacing emoji) so the booking cards read like an
+// established mobility product. All inherit `currentColor` from the CSS.
+const svgProps = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+};
+
+const ICON = {
+  calendar: (
+    <svg {...svgProps}>
+      <rect x="3" y="4" width="18" height="18" rx="3" />
+      <path d="M3 9h18M8 2v4M16 2v4" />
+    </svg>
+  ),
+  seat: (
+    <svg {...svgProps}>
+      <path d="M6 4h8a2 2 0 0 1 2 2v7H6z" />
+      <path d="M6 13a3 3 0 0 0 3 3h7M4 20v-9M20 20v-4" />
+    </svg>
+  ),
+  driver: (
+    <svg {...svgProps}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  ),
+  bus: (
+    <svg {...svgProps}>
+      <rect x="3" y="4" width="18" height="13" rx="2" />
+      <path d="M3 11h18M7 4v7M17 4v7" />
+      <circle cx="7.5" cy="20" r="1.6" />
+      <circle cx="16.5" cy="20" r="1.6" />
+    </svg>
+  ),
+  repeat: (
+    <svg {...svgProps}>
+      <path d="M17 2l4 4-4 4" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <path d="M7 22l-4-4 4-4" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </svg>
+  ),
+  clipboard: (
+    <svg {...svgProps}>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1H9zM9 11h6M9 15h4" />
+    </svg>
+  ),
+};
+
 const CorporateEmployeeBookingsPage = () => {
   const dispatch = useDispatch();
   const { corporateOwnerBookings, loading, error } = useSelector(
@@ -167,7 +221,7 @@ const CorporateEmployeeBookingsPage = () => {
           </div>
         ) : corporateOwnerBookings.length === 0 ? (
           <div className="drivemego-cebp-empty-state">
-            <div className="drivemego-cebp-empty-icon">📋</div>
+            <div className="drivemego-cebp-empty-icon">{ICON.clipboard}</div>
             <p>No employee bookings found</p>
             <p className="drivemego-cebp-empty-subtitle">
               Employee bookings will appear here when they book rides
@@ -291,7 +345,7 @@ const CorporateEmployeeBookingsPage = () => {
                             <div className="drivemego-cebp-booking-details-grid">
                               <div className="drivemego-cebp-detail-item">
                                 <span className="drivemego-cebp-detail-icon">
-                                  📅
+                                  {ICON.calendar}
                                 </span>
                                 <div className="drivemego-cebp-detail-content">
                                   <span className="drivemego-cebp-detail-label">
@@ -304,7 +358,7 @@ const CorporateEmployeeBookingsPage = () => {
                               </div>
                               <div className="drivemego-cebp-detail-item">
                                 <span className="drivemego-cebp-detail-icon">
-                                  💺
+                                  {ICON.seat}
                                 </span>
                                 <div className="drivemego-cebp-detail-content">
                                   <span className="drivemego-cebp-detail-label">
@@ -319,7 +373,7 @@ const CorporateEmployeeBookingsPage = () => {
                                 booking.driverName !== "Not Assigned" && (
                                   <div className="drivemego-cebp-detail-item">
                                     <span className="drivemego-cebp-detail-icon">
-                                      🚗
+                                      {ICON.driver}
                                     </span>
                                     <div className="drivemego-cebp-detail-content">
                                       <span className="drivemego-cebp-detail-label">
@@ -334,7 +388,7 @@ const CorporateEmployeeBookingsPage = () => {
                               {booking.vehiclePlate && (
                                 <div className="drivemego-cebp-detail-item">
                                   <span className="drivemego-cebp-detail-icon">
-                                    🚌
+                                    {ICON.bus}
                                   </span>
                                   <div className="drivemego-cebp-detail-content">
                                     <span className="drivemego-cebp-detail-label">
@@ -352,7 +406,7 @@ const CorporateEmployeeBookingsPage = () => {
                               {booking.isMonthlyPass && (
                                 <div className="drivemego-cebp-detail-item">
                                   <span className="drivemego-cebp-detail-icon">
-                                    📆
+                                    {ICON.calendar}
                                   </span>
                                   <div className="drivemego-cebp-detail-content">
                                     <span className="drivemego-cebp-detail-label">
@@ -368,7 +422,7 @@ const CorporateEmployeeBookingsPage = () => {
                               {booking.totalTripsCount > 0 && (
                                 <div className="drivemego-cebp-detail-item">
                                   <span className="drivemego-cebp-detail-icon">
-                                    🔄
+                                    {ICON.repeat}
                                   </span>
                                   <div className="drivemego-cebp-detail-content">
                                     <span className="drivemego-cebp-detail-label">

@@ -1,170 +1,487 @@
-.admin-login-container {
-  min-height: 100vh;
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* =====================================================================
+   DriveMeGo — Admin Portal Login
+   Premium split-screen secure auth, built on the CommuterHomePage /
+   Login palette: deep navy (#0a2a43) + bright teal (#12b0c4).
+   Teal is the action colour — no red.
+   ===================================================================== */
+
+.adm-login-page {
+  --al-navy: #0a2a43;
+  --al-navy-700: #123a58;
+  --al-navy-600: #1c4d70;
+  --al-teal: #12b0c4;
+  --al-teal-600: #0e97a8;
+  --al-teal-050: #e6f7fa;
+  --al-line: #e4ecf3;
+  --al-muted: #5b6b7b;
+  --al-muted-2: #8598a8;
+  --al-bg: #eef3f8;
+  --al-cta: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  --al-cta-hover: linear-gradient(135deg, #12b0c4 0%, #0c8695 100%);
+  --al-font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  font-family: var(--al-font);
+  background: var(--al-bg);
+}
+
+.adm-login-container {
+  min-height: calc(100vh - 80px);
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
-  padding: 20px;
+  padding: 48px 20px;
+  font-family: var(--al-font);
 }
 
-.admin-login-card {
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  padding: 48px 40px;
+/* Two-column shell */
+.adm-login-shell {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
   width: 100%;
-  max-width: 460px;
-  text-align: center;
+  max-width: 1040px;
+  background: #fff;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(10, 42, 67, 0.18);
+  border: 1px solid var(--al-line);
 }
 
-.admin-icon-wrapper {
+/* ---------- Brand panel ---------- */
+.adm-login-brand {
+  position: relative;
   display: flex;
-  justify-content: center;
-  margin-bottom: 24px;
+  flex-direction: column;
+  gap: 34px;
+  padding: 48px 44px;
+  color: #fff;
+  overflow: hidden;
+  background:
+    radial-gradient(760px 320px at 88% -18%, rgba(18, 176, 196, 0.4), transparent 60%),
+    radial-gradient(600px 300px at 4% 120%, rgba(18, 176, 196, 0.18), transparent 60%),
+    linear-gradient(135deg, var(--al-navy) 0%, var(--al-navy-700) 55%, #0e3350 100%);
+  isolation: isolate;
 }
 
-.admin-icon-circle {
-  width: 80px;
-  height: 80px;
-  background: #1e293b;
+.adm-login-brand-glow {
+  position: absolute;
+  right: -110px;
+  top: -130px;
+  width: 400px;
+  height: 400px;
   border-radius: 50%;
+  border: 1.5px dashed rgba(18, 176, 196, 0.35);
+  z-index: -1;
+}
+
+.adm-login-brand-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.adm-login-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: rgba(18, 176, 196, 0.16);
+  border: 1px solid rgba(18, 176, 196, 0.4);
+  color: var(--al-teal);
+}
+
+.adm-login-brand-mark svg {
+  width: 21px;
+  height: 21px;
+}
+
+.adm-login-brand-name {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.adm-login-brand-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #bff0f6;
+  margin-bottom: 14px;
+}
+
+.adm-login-brand-title {
+  font-size: clamp(24px, 3vw, 31px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+  color: #ffffff;
+}
+
+.adm-login-brand-title-accent {
+  color: var(--al-teal);
+}
+
+.adm-login-brand-sub {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: rgba(226, 238, 246, 0.82);
+  margin: 0;
+  max-width: 42ch;
+}
+
+.adm-login-brand-points {
+  list-style: none;
+  margin: auto 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.adm-login-brand-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.adm-login-brand-check {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(18, 176, 196, 0.16);
+  color: var(--al-teal);
+}
+
+.adm-login-brand-check svg {
+  width: 15px;
+  height: 15px;
+}
+
+.adm-login-brand-point-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.adm-login-brand-point-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.adm-login-brand-point-text span {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(226, 238, 246, 0.72);
+}
+
+/* ---------- Security bar ---------- */
+.adm-login-brand-secure {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(191, 240, 246, 0.16);
+}
+
+.adm-login-brand-secure-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(18, 176, 196, 0.16);
+  color: var(--al-teal);
+}
+
+.adm-login-brand-secure-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.adm-login-brand-secure-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.adm-login-brand-secure-text strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.adm-login-brand-secure-text span {
+  font-size: 11.5px;
+  color: rgba(226, 238, 246, 0.6);
+  font-weight: 500;
+}
+
+/* ---------- Form panel ---------- */
+.adm-login-panel {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 48px 44px;
 }
 
-.admin-shield-icon {
-  width: 40px;
-  height: 40px;
-  color: #14b8a6;
-}
-
-.admin-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 8px 0;
-  letter-spacing: -0.5px;
-}
-
-.admin-subtitle {
-  font-size: 16px;
-  color: #64748b;
-  margin: 0 0 40px 0;
-  font-weight: 400;
-}
-
-.admin-login-form {
-  text-align: left;
-}
-
-.admin-form-group {
-  margin-bottom: 24px;
-}
-
-.admin-label {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #1e293b;
-  margin-bottom: 8px;
-}
-
-.admin-input {
+.adm-login-card {
   width: 100%;
-  padding: 14px 16px;
-  font-size: 15px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #1e293b;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-  font-family: inherit;
+  max-width: 380px;
 }
 
-.admin-input:focus {
-  outline: none;
-  border-color: #14b8a6;
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+.adm-login-header {
+  text-align: left;
+  margin-bottom: 28px;
 }
 
-.admin-input::placeholder {
-  color: #94a3b8;
+.adm-login-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--al-navy);
+  border-radius: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 0 18px;
+  color: var(--al-teal);
+  box-shadow: 0 10px 24px rgba(10, 42, 67, 0.28);
 }
 
-.admin-password-wrapper {
+.adm-login-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.adm-login-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--al-teal-050);
+  color: var(--al-teal-600);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.adm-login-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.adm-login-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--al-navy);
+  margin: 0 0 6px;
+}
+
+.adm-login-subtitle {
+  font-size: 14.5px;
+  color: var(--al-muted);
+  font-weight: 500;
+  margin: 0;
+}
+
+.adm-login-form-group {
+  margin-bottom: 18px;
+}
+
+.adm-login-form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--al-navy);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.adm-login-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.admin-lock-icon {
+.adm-login-input-icon {
   position: absolute;
-  left: 16px;
+  left: 14px;
   width: 18px;
   height: 18px;
-  color: #94a3b8;
+  color: var(--al-muted-2);
   pointer-events: none;
 }
 
-.admin-password-input {
-  padding-left: 44px;
-}
-
-.admin-submit-btn {
+.adm-login-form-input {
   width: 100%;
-  padding: 16px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #ffffff;
-  background: #14b8a6;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 16px;
+  padding: 13px 16px 13px 42px;
+  border: 1.5px solid var(--al-line);
+  border-radius: 12px;
+  font-size: 14.5px;
   font-family: inherit;
+  font-weight: 500;
+  color: var(--al-navy);
+  background-color: #f6fafc;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.admin-submit-btn:hover {
-  background: #0f9e8e;
+.adm-login-form-input:focus {
+  outline: none;
+  border-color: var(--al-teal);
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.14);
+}
+
+.adm-login-form-input::placeholder {
+  color: #9fb1c0;
+  font-weight: 500;
+}
+
+.adm-login-password-input {
+  padding-right: 48px;
+}
+
+.adm-login-password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--al-muted-2);
+  transition: color 0.2s ease;
+}
+
+.adm-login-password-toggle:hover {
+  color: var(--al-navy);
+}
+
+.adm-login-password-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.adm-login-submit-btn {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--al-cta);
+  color: #fff;
+  border-radius: 14px;
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 12px 26px rgba(18, 176, 196, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  margin-top: 6px;
+}
+
+.adm-login-submit-btn:hover:not(:disabled) {
+  background: var(--al-cta-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+  box-shadow: 0 16px 34px rgba(18, 176, 196, 0.38);
 }
 
-.admin-submit-btn:active {
-  transform: translateY(0);
+.adm-login-submit-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
 }
 
-.admin-submit-btn:disabled {
-  background: #94a3b8;
+.adm-login-submit-btn:disabled {
+  opacity: 0.65;
   cursor: not-allowed;
-  transform: none;
+  box-shadow: none;
 }
 
-.admin-error-message {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
+.adm-login-secure-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   margin-top: 16px;
-  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--al-muted-2);
 }
 
-/* Responsive Design */
-@media (max-width: 480px) {
-  .admin-login-card {
-    padding: 40px 24px;
+.adm-login-secure-note svg {
+  width: 14px;
+  height: 14px;
+  color: var(--al-teal-600);
+}
+
+.adm-login-error-message {
+  background-color: #fdecec;
+  color: #c0392b;
+  padding: 12px 15px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #f7c9c9;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .adm-login-shell {
+    grid-template-columns: 1fr;
+    max-width: 480px;
   }
 
-  .admin-title {
-    font-size: 28px;
+  .adm-login-brand {
+    padding: 36px 34px;
+    gap: 26px;
   }
 
-  .admin-subtitle {
-    font-size: 14px;
+  .adm-login-brand-points {
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 520px) {
+  .adm-login-container {
+    padding: 24px 14px;
+  }
+
+  .adm-login-shell {
+    border-radius: 22px;
+  }
+
+  .adm-login-brand {
+    display: none;
+  }
+
+  .adm-login-panel {
+    padding: 34px 24px;
+  }
+
+  .adm-login-card {
+    max-width: 100%;
+  }
+
+  .adm-login-title {
+    font-size: 24px;
   }
 }

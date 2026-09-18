@@ -11,12 +11,12 @@
 .ratings-header h2 {
   font-size: 24px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--dmg-navy);
   margin: 0 0 8px 0;
 }
 
 .ratings-header p {
-  color: #666;
+  color: var(--dmg-muted);
   margin: 0;
 }
 
@@ -34,13 +34,13 @@
 .overall-rating {
   text-align: center;
   padding-right: 40px;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid var(--dmg-line);
 }
 
 .rating-number {
   font-size: 48px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--dmg-navy);
   line-height: 1;
 }
 
@@ -53,7 +53,7 @@
 }
 
 .rating-count {
-  color: #666;
+  color: var(--dmg-muted);
   font-size: 14px;
 }
 
@@ -74,13 +74,13 @@
 .star-label {
   width: 50px;
   font-size: 13px;
-  color: #666;
+  color: var(--dmg-muted);
 }
 
 .distribution-bar-container {
   flex: 1;
   height: 8px;
-  background: #e0e0e0;
+  background: var(--dmg-line);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -96,12 +96,12 @@
   width: 30px;
   text-align: right;
   font-size: 13px;
-  color: #666;
+  color: var(--dmg-muted);
 }
 
 /* Stars */
 .star {
-  color: #ddd;
+  color: var(--dmg-line);
 }
 
 .star.filled {
@@ -109,14 +109,14 @@
 }
 
 .star.half {
-  background: linear-gradient(90deg, #ffc107 50%, #ddd 50%);
+  background: linear-gradient(90deg, #ffc107 50%, var(--dmg-line) 50%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .star.empty {
-  color: #ddd;
+  color: var(--dmg-line);
 }
 
 /* Reviews Section */
@@ -130,19 +130,19 @@
 .reviews-section h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--dmg-navy);
   margin: 0 0 16px 0;
 }
 
 .no-ratings {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
+  color: var(--dmg-muted);
 }
 
 .no-ratings-icon {
   font-size: 48px;
-  color: #ddd;
+  color: var(--dmg-line);
   margin-bottom: 16px;
 }
 
@@ -202,7 +202,7 @@
 
 .passenger-name {
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--dmg-navy);
   font-size: 15px;
 }
 
@@ -232,7 +232,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #f8f9fa;
+  background: var(--dmg-bg);
   border-radius: 6px;
   margin-bottom: 12px;
 }
@@ -243,12 +243,12 @@
 
 .route-name {
   font-size: 13px;
-  color: #666;
+  color: var(--dmg-muted);
 }
 
 .review-feedback {
   padding: 12px;
-  background: #fafafa;
+  background: var(--dmg-bg);
   border-radius: 8px;
   border-left: 3px solid #2196f3;
 }
@@ -275,7 +275,7 @@
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e0e0e0;
+  border: 3px solid var(--dmg-line);
   border-top-color: #2196f3;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -290,7 +290,7 @@
 .driver-ratings-loading p,
 .driver-ratings-error p {
   margin-top: 16px;
-  color: #666;
+  color: var(--dmg-muted);
 }
 
 .retry-btn {
@@ -319,7 +319,7 @@
   .overall-rating {
     padding-right: 0;
     border-right: none;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--dmg-line);
     padding-bottom: 24px;
   }
 

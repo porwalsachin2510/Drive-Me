@@ -1,3 +1,4 @@
+import { FileText, Calendar } from "lucide-react";
 import "./b2b_contracts.css";
 
 function B2B_Contracts() {
@@ -66,7 +67,9 @@ function B2B_Contracts() {
       <div className="contracts-list">
         {contracts.map((contract) => (
           <div key={contract.id} className="contract-item">
-            <div className="contract-icon">📄</div>
+            <div className="contract-icon">
+              <FileText size={22} />
+            </div>
 
             <div className="contract-main">
               <div className="contract-header">

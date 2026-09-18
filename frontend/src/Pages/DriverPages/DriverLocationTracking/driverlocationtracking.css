@@ -2,7 +2,7 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  background: #f8f9fa;
+  background: var(--dmg-bg);
   min-height: 100vh;
 }
 
@@ -16,13 +16,13 @@
 .tracking-header h1 {
   font-size: 28px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--dmg-navy);
   margin: 0;
 }
 
 .status-badge {
   font-size: 16px;
-  color: #374151;
+  color: var(--dmg-ink);
 }
 
 .status {
@@ -34,8 +34,8 @@
 }
 
 .status.idle {
-  color: #6b7280;
-  background: #f3f4f6;
+  color: var(--dmg-muted);
+  background: var(--dmg-bg);
 }
 
 .status.started {
@@ -44,8 +44,8 @@
 }
 
 .status.completed {
-  color: #3b82f6;
-  background: #dbeafe;
+  color: var(--dmg-teal);
+  background: var(--dmg-teal-050);
 }
 
 .status.emergency {
@@ -74,13 +74,13 @@
 .trip-details h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dmg-navy);
   margin: 0 0 16px 0;
 }
 
 .trip-route p {
   margin: 8px 0;
-  color: #374151;
+  color: var(--dmg-ink);
   font-size: 14px;
 }
 
@@ -94,7 +94,7 @@
 }
 
 .no-trip p {
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-size: 16px;
   margin: 0;
 }
@@ -110,7 +110,7 @@
 .location-info h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dmg-navy);
   margin: 0 0 16px 0;
 }
 
@@ -123,7 +123,7 @@
 .location-coords p,
 .location-address p {
   margin: 8px 0;
-  color: #374151;
+  color: var(--dmg-ink);
   font-size: 14px;
 }
 
@@ -170,12 +170,12 @@
 }
 
 .control-btn.complete {
-  background: #3b82f6;
+  background: var(--dmg-teal);
   color: white;
 }
 
 .control-btn.complete:hover {
-  background: #2563eb;
+  background: var(--dmg-teal-600);
 }
 
 .control-btn.emergency {
@@ -232,13 +232,13 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: #f8f9fa;
+  background: var(--dmg-bg);
   border-radius: 8px;
 }
 
 .status-label {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-weight: 500;
 }
 
@@ -265,7 +265,7 @@
 .location-map h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dmg-navy);
   margin: 0 0 16px 0;
 }
 
@@ -279,13 +279,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8f9fa;
-  border: 2px dashed #e5e7eb;
+  background: var(--dmg-bg);
+  border: 2px dashed var(--dmg-line);
   border-radius: 8px;
 }
 
 .map-loading p {
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-size: 16px;
   margin: 0;
 }
@@ -333,7 +333,7 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .driver-location-tracking {
-    background: #1f2937;
+    background: var(--dmg-navy);
   }
   
   .trip-info,
@@ -342,35 +342,35 @@
   .tracking-controls,
   .tracking-status,
   .location-map {
-    background: #374151;
+    background: var(--dmg-ink);
   }
   
   .trip-details h3,
   .location-info h3,
   .location-map h3 {
-    color: #f3f4f6;
+    color: var(--dmg-bg);
   }
   
   .trip-route p,
   .location-coords p,
   .location-address p {
-    color: #d1d5db;
+    color: var(--dmg-line);
   }
   
   .status-item {
-    background: #4b5563;
+    background: var(--dmg-muted);
   }
   
   .status-label {
-    color: #9ca3af;
+    color: var(--dmg-muted-2);
   }
   
   .map-loading {
-    background: #4b5563;
-    border-color: #6b7280;
+    background: var(--dmg-muted);
+    border-color: var(--dmg-muted);
   }
   
   .map-loading p {
-    color: #9ca3af;
+    color: var(--dmg-muted-2);
   }
 }

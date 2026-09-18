@@ -1,115 +1,154 @@
+/* =====================================================================
+   Admin B2C Management — DriveMeGo brand system
+   Deep navy (#0a2a43) + logo teal (#12b0c4), Plus Jakarta Sans.
+   Matches the redesigned Admin Overview / Commuter / Login experience.
+   ===================================================================== */
 .ad-dash-b2c-management {
-  padding: 24px;
-  background: var(--bg-secondary, #f8fafc);
+  --b2c-navy: #0a2a43;
+  --b2c-navy-600: #1c4d70;
+  --b2c-teal: #12b0c4;
+  --b2c-teal-600: #0e97a8;
+  --b2c-teal-050: #e6f7fa;
+  --b2c-ink: #0f2233;
+  --b2c-muted: #5b6b7b;
+  --b2c-line: #e4ecf3;
+  --b2c-bg: #eef3f8;
+  padding: 28px;
+  background: var(--b2c-bg);
   min-height: 100vh;
-  font-family: var(--font-family, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* ---------- Hero header ---------- */
 .ad-dash-b2c-header {
-  background: var(--bg-primary, #ffffff);
-  padding: 32px;
-  margin-bottom: 32px;
-   box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.07));
-  border: 1px solid var(--border-color, #e2e8f0);
+  position: relative;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  border-radius: 22px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(18, 176, 196, 0.28) 0%, rgba(18, 176, 196, 0) 55%),
+    linear-gradient(135deg, #0a2a43 0%, #123a58 60%, #0e2f49 100%);
+  box-shadow: 0 18px 40px rgba(10, 42, 67, 0.28);
+}
+
+.ad-dash-b2c-header::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  bottom: -80px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(18, 176, 196, 0.35) 0%, rgba(18, 176, 196, 0) 70%);
+  pointer-events: none;
 }
 
 .ad-dash-b2c-title-section {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 32px;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.ad-dash-b2c-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7fe3ef;
 }
 
 .ad-dash-b2c-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary, #1f2937);
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  font-size: 30px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
-.ad-dash-b2c-icon {
-  font-size: 32px;
-  background: var(--secondary-light, rgba(45, 212, 191, 0.1));
-  padding: 12px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .ad-dash-b2c-description {
-  font-size: 15px;
-  color: var(--text-secondary, #4b5563);
+  font-size: 14.5px;
+  color: rgba(226, 240, 248, 0.82);
   line-height: 1.6;
   margin: 0;
   max-width: 600px;
 }
 
+/* ---------- Hero stat chips ---------- */
 .ad-dash-b2c-stats {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
 .stat-item {
-  background: var(--bg-secondary, #f8fafc);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-  transition: var(--transition, all 0.2s ease);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 18px;
+  text-align: left;
+  transition: transform 0.25s ease, background 0.25s ease;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
+  backdrop-filter: blur(6px);
 }
 
 .stat-item:hover {
-  box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.07));
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.13);
 }
 
 .stat-icon {
-  font-size: 28px;
-  background: var(--secondary-light, rgba(45, 212, 191, 0.1));
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  color: var(--secondary-color, #2DD4BF);
+  background: rgba(18, 176, 196, 0.22);
+  color: #7fe3ef;
+}
+
+.stat-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 .stat-number {
   display: block;
   font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary, #1f2937);
-  margin-bottom: 2px;
+  font-weight: 800;
+  color: #ffffff;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 12px;
-  color: var(--text-muted, #6b7280);
+  color: #dbeaf4;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-weight: 700;
 }
 
+/* ---------- Tab bar ---------- */
 .ad-dash-b2c-tabs {
   display: flex;
   gap: 8px;
-   margin-bottom: 24px;
-  background: var(--bg-primary, #ffffff);
+  margin-bottom: 24px;
+  background: #ffffff;
   padding: 8px;
-  border-radius: 12px;
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
-  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.05);
+  border: 1px solid var(--b2c-line);
   overflow-x: auto;
 }
 
@@ -117,36 +156,48 @@
   padding: 12px 20px;
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: 11px;
   cursor: pointer;
   font-size: 14px;
- font-weight: 500;
-  color: var(--text-muted, #6b7280);
-  transition: var(--transition, all 0.2s ease);
+  font-weight: 600;
+  color: var(--b2c-muted);
+  transition: all 0.2s ease;
   white-space: nowrap;
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  font-family: inherit;
+}
+
+.ad-dash-b2c-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ad-dash-b2c-tab-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .ad-dash-b2c-tab:hover {
- color: var(--text-primary, #1f2937);
-  background: var(--bg-secondary, #f8fafc);
+  color: var(--b2c-navy);
+  background: var(--b2c-teal-050);
 }
 
 .ad-dash-b2c-tab.active {
-  background: var(--secondary-color, #2DD4BF);
+  background: linear-gradient(135deg, var(--b2c-teal) 0%, var(--b2c-teal-600) 100%);
   color: white;
-  font-weight: 600;
-  box-shadow: var(--shadow-teal, 0 4px 14px rgba(45, 212, 191, 0.25));
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(18, 176, 196, 0.28);
 }
 
 .tab-count {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.28);
   color: white;
-  padding: 2px 8px;
-  border-radius: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
   min-width: 20px;
@@ -154,20 +205,21 @@
 }
 
 .ad-dash-b2c-tab:not(.active) .tab-count {
- background: var(--border-color, #e2e8f0);
-  color: var(--text-muted, #6b7280);
+  background: var(--b2c-teal-050);
+  color: var(--b2c-teal-600);
 }
 
+/* ---------- Content shell ---------- */
 .ad-dash-b2c-content {
- background: var(--bg-primary, #ffffff);
-  border-radius: 16px;
+  background: #ffffff;
+  border-radius: 20px;
   padding: 28px;
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
-  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.05);
+  border: 1px solid var(--b2c-line);
   min-height: 500px;
 }
 
-/* Loading State */
+/* ---------- Loading State ---------- */
 .ad-dash-b2c-loading {
   display: flex;
   justify-content: center;
@@ -175,13 +227,15 @@
   min-height: 400px;
   flex-direction: column;
   gap: 16px;
+  color: var(--b2c-muted);
+  font-weight: 600;
 }
 
 .ad-dash-b2c-loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid var(--border-color, #e2e8f0);
-  border-top: 4px solid var(--secondary-color, #2DD4BF);
+  border: 4px solid var(--b2c-teal-050);
+  border-top: 4px solid var(--b2c-teal);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -191,33 +245,69 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Error State */
+/* ---------- Error State ---------- */
 .ad-dash-b2c-error {
-  background: var(--danger-bg, rgba(239, 68, 68, 0.08));
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 12px;
-  padding: 24px;
+  background: #ffffff;
+  border: 1px solid var(--b2c-line);
+  border-radius: 20px;
+  padding: 40px 24px;
   text-align: center;
-  color: var(--danger-color, #ef4444);
+  color: var(--b2c-muted);
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .ad-dash-b2c-error-icon {
-  font-size: 48px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: #fdeaea;
+  color: #dc2626;
   margin-bottom: 16px;
+}
+
+.ad-dash-b2c-error-icon svg {
+  width: 28px;
+  height: 28px;
 }
 
 .ad-dash-b2c-error-title {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 800;
+  color: var(--b2c-navy);
   margin-bottom: 8px;
 }
 
 .ad-dash-b2c-error-message {
   font-size: 14px;
-  color: var(--danger-hover, #dc2626);
+  color: var(--b2c-muted);
 }
 
-/* Responsive Design */
+.ad-dash-b2c-retry-btn {
+  margin-top: 18px;
+  padding: 12px 26px;
+  background: linear-gradient(135deg, var(--b2c-teal) 0%, var(--b2c-teal-600) 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  box-shadow: 0 8px 18px rgba(18, 176, 196, 0.28);
+  transition: transform 0.2s ease;
+}
+
+.ad-dash-b2c-retry-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
   .ad-dash-b2c-stats {
     grid-template-columns: repeat(2, 1fr);
@@ -228,53 +318,37 @@
   .ad-dash-b2c-management {
     padding: 16px;
   }
-  
+
   .ad-dash-b2c-header {
-    padding: 24px;
-    margin-bottom: 24px;
+    padding: 22px;
   }
-  
+
   .ad-dash-b2c-title {
-    font-size: 22px;
+    font-size: 24px;
   }
-  
-  .ad-dash-b2c-icon {
-    font-size: 26px;
-    padding: 10px;
-  }
-  
+
   .ad-dash-b2c-description {
     font-size: 14px;
   }
-  
+
   .ad-dash-b2c-stats {
-     grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
   }
-  
+
   .stat-item {
     padding: 16px;
   }
-  
-  .stat-icon {
-    font-size: 24px;
-    width: 44px;
-    height: 44px;
-  }
-  
+
   .stat-number {
     font-size: 20px;
   }
-  
-  .ad-dash-b2c-tabs {
-    padding: 6px;
-  }
-  
+
   .ad-dash-b2c-tab {
     padding: 10px 14px;
     font-size: 13px;
   }
-  
+
   .ad-dash-b2c-content {
     padding: 20px;
   }
@@ -284,37 +358,24 @@
   .ad-dash-b2c-header {
     padding: 20px;
   }
-  
+
   .ad-dash-b2c-title {
-    font-size: 18px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+    font-size: 20px;
   }
-  
-  .ad-dash-b2c-icon {
-    font-size: 22px;
-  }
-  
+
   .stat-item {
     padding: 14px;
   }
-  
-  .stat-icon {
-    font-size: 20px;
-    width: 38px;
-    height: 38px;
-  }
-  
+
   .stat-number {
     font-size: 18px;
   }
-  
+
   .ad-dash-b2c-tab {
-    padding: 8px 10px;
+    padding: 8px 12px;
     font-size: 12px;
   }
-  
+
   .ad-dash-b2c-content {
     padding: 16px;
   }

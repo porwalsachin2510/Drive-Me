@@ -15,7 +15,7 @@
 
 .comparison-header i {
   font-size: 28px;
-  color: #f59e0b;
+  color: #f6a723;
 }
 
 .comparison-header h3 {
@@ -42,7 +42,7 @@
 .comparison-type {
   font-size: 18px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #0a2a43;
   margin-bottom: 5px;
 }
 
@@ -75,7 +75,7 @@
 .price-value {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .price-value.highlight {
@@ -121,11 +121,11 @@
   padding: 15px;
   background: #ffffff;
   border-radius: 8px;
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid #f6a723;
 }
 
 .comparison-note i {
-  color: #f59e0b;
+  color: #f6a723;
   font-size: 20px;
   margin-top: 2px;
 }

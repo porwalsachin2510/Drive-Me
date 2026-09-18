@@ -516,10 +516,16 @@ const AdminNegotiations = () => {
       {/* Header */}
       <div className="drivemego-negotiation-negotiations-header">
         <div className="drivemego-negotiation-header-content">
-          <h1>Negotiation Management</h1>
-          <p>
-            Manage price negotiations between customer organizations and service partners
-          </p>
+          <div className="drivemego-negotiation-header-icon">
+            <BadgeDollarSign size={26} strokeWidth={2.2} />
+          </div>
+          <div>
+            <h1>Negotiation Management</h1>
+            <p>
+              Manage price negotiations between customer organizations and
+              service partners
+            </p>
+          </div>
         </div>
         <button
           className="drivemego-negotiation-refresh-btn"

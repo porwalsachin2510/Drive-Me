@@ -133,7 +133,7 @@ function B2CRouteRequests() {
       PENDING: { bg: "#fff3e0", color: "#e65100", label: "New Demand" },
       UNDER_REVIEW: {
         bg: "#e8f4fd",
-        color: "#0d6efd",
+        color: "#12b0c4",
         label: "Partners Interested",
       },
       OPEN: { bg: "#e0f2fe", color: "#0369a1", label: "Open to Partners" },

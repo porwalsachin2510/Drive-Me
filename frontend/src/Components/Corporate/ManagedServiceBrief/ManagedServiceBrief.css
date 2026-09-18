@@ -1,8 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* DriveMeGo — Managed Service Brief (brand navy + teal) */
 .msb-wrap {
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 24px;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #0a2a43;
+  box-shadow: 0 10px 30px rgba(10, 42, 67, 0.06);
 }
 
 .msb-header {
@@ -16,7 +22,9 @@
 .msb-header h2 {
   margin: 0;
   font-size: 1.25rem;
-  color: #1f2937;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0a2a43;
 }
 
 .msb-subtitle {
@@ -66,7 +74,7 @@
 }
 .msb-progress-fill {
   height: 100%;
-  background: #2c47e0;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
   border-radius: 999px;
   transition: width 0.3s ease;
 }
@@ -94,7 +102,8 @@
 .msb-section-head h3 {
   margin: 0;
   font-size: 1rem;
-  color: #1f2937;
+  font-weight: 700;
+  color: #0a2a43;
 }
 .msb-section-hint {
   font-size: 0.82rem;
@@ -133,8 +142,8 @@
 .msb-field textarea:focus,
 .msb-field select:focus {
   outline: none;
-  border-color: #2c47e0;
-  box-shadow: 0 0 0 3px rgba(44, 71, 224, 0.12);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.15);
 }
 
 .msb-grid {
@@ -175,19 +184,21 @@
   transition: all 0.15s ease;
 }
 .msb-btn.primary {
-  background: #2c47e0;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
   color: #ffffff;
+  box-shadow: 0 8px 18px rgba(18, 176, 196, 0.28);
 }
 .msb-btn.primary:hover {
-  background: #2338c0;
+  box-shadow: 0 12px 24px rgba(18, 176, 196, 0.36);
 }
 .msb-btn.secondary {
   background: #f9fafb;
-  color: #374151;
+  color: #0a2a43;
   border-color: #d1d5db;
 }
 .msb-btn.secondary:hover {
-  background: #eef2ff;
+  background: #e6f7fa;
+  border-color: #12b0c4;
 }
 .msb-btn.danger {
   background: #fff1f2;
@@ -207,11 +218,11 @@
 }
 .msb-btn.ghost {
   background: transparent;
-  color: #2c47e0;
+  color: #0e97a8;
   border-color: transparent;
 }
 .msb-btn.ghost:hover {
-  background: #eef2ff;
+  background: #e6f7fa;
 }
 
 /* Roster header actions (import / template / add) */
@@ -620,8 +631,8 @@
   color: #1e293b;
 }
 .msb-vpicker-item.selected {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: #12b0c4;
+  background: #e6f7fa;
 }
 .msb-vpicker-actions {
   display: flex;

@@ -100,7 +100,7 @@
 }
 
 .detail-card:nth-child(3) {
-  border-left-color: #3b82f6;
+  border-left-color: #12b0c4;
 }
 
 .detail-icon {
@@ -125,7 +125,7 @@
 
 .detail-icon.date {
   background: #eff6ff;
-  color: #3b82f6;
+  color: #12b0c4;
 }
 
 .detail-content {
@@ -222,7 +222,7 @@
   justify-content: center;
   gap: 8px;
   padding: 14px 28px;
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
   border: none;
   border-radius: 10px;
   color: white;
@@ -270,7 +270,7 @@
 
 .appeal-form textarea:focus {
   outline: none;
-  border-color: #0ea5e9;
+  border-color: #12b0c4;
 }
 
 .appeal-error {
@@ -308,7 +308,7 @@
 
 .form-actions .send-btn {
   padding: 12px 24px;
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
   border: none;
   border-radius: 8px;
   color: white;

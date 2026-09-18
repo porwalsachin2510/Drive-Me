@@ -1,6 +1,8 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
 .esd {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1a1a2e;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #0f2233;
   position: relative;
 }
 
@@ -43,16 +45,17 @@
   font-weight: 600;
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e4ecf3;
   background: #fff;
-  color: #1a1a2e;
+  color: #0f2233;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .esd-btn:hover:not(:disabled) {
-  border-color: #1a1a2e;
+  border-color: #12b0c4;
+  color: #0e97a8;
 }
 
 .esd-btn:disabled {
@@ -61,14 +64,15 @@
 }
 
 .esd-btn.primary {
-  background: #dc3545;
-  border-color: #dc3545;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 8px 20px rgba(18, 176, 196, 0.28);
 }
 
 .esd-btn.primary:hover:not(:disabled) {
-  background: #c02c3b;
-  border-color: #c02c3b;
+  background: linear-gradient(135deg, #12b0c4 0%, #0c8695 100%);
+  border-color: transparent;
 }
 
 .esd-btn.danger {
@@ -109,7 +113,7 @@
 .esd-stat-val {
   font-size: 22px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .esd-stat-label {
@@ -145,8 +149,8 @@
 }
 
 .esd-chip.active {
-  background: #1a1a2e;
-  border-color: #1a1a2e;
+  background: #0f2233;
+  border-color: #0f2233;
   color: #fff;
 }
 
@@ -188,7 +192,7 @@
 .esd-purpose {
   font-size: 15px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .esd-status {
@@ -291,8 +295,8 @@
 }
 
 .esd-expand:hover {
-  border-color: #1a1a2e;
-  color: #1a1a2e;
+  border-color: #0f2233;
+  color: #0f2233;
 }
 
 /* Card body */
@@ -325,7 +329,7 @@
 .esd-detail-v {
   font-size: 13px;
   font-weight: 500;
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .esd-block {
@@ -411,7 +415,7 @@
 }
 
 .esd-modal-close:hover {
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .esd-modal-body {
@@ -457,7 +461,7 @@
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   background: #fff;
-  color: #1a1a2e;
+  color: #0f2233;
   width: 100%;
   box-sizing: border-box;
 }
@@ -465,7 +469,7 @@
 .esd-field input:focus,
 .esd-field textarea:focus {
   outline: none;
-  border-color: #1a1a2e;
+  border-color: #0f2233;
 }
 
 .esd-field select {
@@ -475,14 +479,14 @@
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   background: #fff;
-  color: #1a1a2e;
+  color: #0f2233;
   width: 100%;
   box-sizing: border-box;
 }
 
 .esd-field select:focus {
   outline: none;
-  border-color: #1a1a2e;
+  border-color: #0f2233;
 }
 
 .esd-field select:disabled {
@@ -533,7 +537,7 @@
 
 .esd-assign-veh {
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .esd-assign-drv {
@@ -574,7 +578,7 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0f2233;
   background: none;
   border: none;
   cursor: pointer;
@@ -598,7 +602,7 @@
 
 .esd-approve-summary strong {
   font-size: 14px;
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .esd-approve-summary span {
@@ -625,7 +629,7 @@
 }
 
 .esd-radio.active {
-  border-color: #1a1a2e;
+  border-color: #0f2233;
   background: #f8f9fb;
 }
 
@@ -641,7 +645,7 @@
 
 .esd-radio strong {
   font-size: 13px;
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .esd-radio small {
@@ -692,8 +696,8 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #667eea;
-  border-bottom: 2px solid #667eea;
+  color: #0e97a8;
+  border-bottom: 2px solid #0e97a8;
   padding-bottom: 8px;
   margin-bottom: 12px;
 }
@@ -709,7 +713,7 @@
 
 .esd-pay-row > span:last-child {
   text-align: right;
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .esd-pay-strong {
@@ -732,5 +736,5 @@
   border: 1px solid #ffe08a;
   font-weight: 700;
   font-size: 16px;
-  color: #1a1a2e;
+  color: #0f2233;
 }

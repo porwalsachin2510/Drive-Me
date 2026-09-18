@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import CashPaymentDetails from "../CashPaymentDetails/CashPaymentDetails";
 import "./SubscriptionSettings.css";
+import "../../styles/commuter-banner.css";
+import { CalendarSync, BadgeCheck } from "lucide-react";
 
 // Map backend renewal method <-> UI select value
 const METHOD_TO_UI = {
@@ -284,10 +286,34 @@ const SubscriptionSettings = () => {
 
   return (
     <div className="ss-subscription-settings-container">
-      <div className="ss-settings-header">
-        <h2>Subscription Settings</h2>
-        <p>Manage your monthly pass and renewal preferences</p>
-      </div>
+      <header className="dmg-banner">
+        <div className="dmg-banner-main">
+          <span className="dmg-banner-icon">
+            <CalendarSync />
+          </span>
+          <div className="dmg-banner-text">
+            <span className="dmg-banner-eyebrow">
+              <BadgeCheck /> Passes &amp; renewals
+            </span>
+            <h2 className="dmg-banner-title">Subscription Settings</h2>
+            <p className="dmg-banner-sub">
+              Manage your monthly pass and renewal preferences in one place.
+            </p>
+          </div>
+        </div>
+        {activePasses.length > 0 && (
+          <div className="dmg-banner-aside">
+            <div className="dmg-banner-chip">
+              <span className="dmg-banner-chip-value">
+                {activePasses.length}
+              </span>
+              <span className="dmg-banner-chip-label">
+                Active pass{activePasses.length > 1 ? "es" : ""}
+              </span>
+            </div>
+          </div>
+        )}
+      </header>
 
       {error && <div className="ss-error-message">{error}</div>}
       {success && <div className="ss-success-message">{success}</div>}

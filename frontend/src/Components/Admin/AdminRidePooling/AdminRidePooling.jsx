@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Users, Route, Lightbulb, GitMerge, Waypoints } from "lucide-react";
 import "./AdminRidePooling.css";
 import AdminPassengerInterests from "./AdminPassengerInterests/AdminPassengerInterests";
 import AdminUserSuggestedRoutes from "./AdminUserSuggestedRoutes/AdminUserSuggestedRoutes";
@@ -39,27 +40,41 @@ function AdminRidePooling() {
     }
   };
 
+  const statCards = [
+    { icon: Users, label: "Total Passengers", value: stats.totalPassengers },
+    { icon: Route, label: "Active Routes", value: stats.activeRoutes },
+    { icon: Lightbulb, label: "Suggested Routes", value: stats.suggestedRoutes },
+    { icon: GitMerge, label: "Matched Rides", value: stats.matchedRides },
+  ];
+
   return (
     <div className="admin-ride-pooling">
       <div className="ride-pooling-header">
-        <h2>Ride Pooling Management</h2>
+        <div className="rp-header-top">
+          <div className="rp-header-icon">
+            <Waypoints size={26} strokeWidth={2.2} />
+          </div>
+          <div>
+            <h2>Ride Pooling Management</h2>
+            <p className="rp-subtitle">
+              Track commuter interest, review user-suggested routes, and match
+              riders into shared trips.
+            </p>
+          </div>
+        </div>
+
         <div className="ride-pooling-stats">
-          <div className="stat-item">
-            <span className="stat-number">{stats.totalPassengers}</span>
-            <span className="stat-label">Total Passengers</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.activeRoutes}</span>
-            <span className="stat-label">Active Routes</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.suggestedRoutes}</span>
-            <span className="stat-label">Suggested Routes</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.matchedRides}</span>
-            <span className="stat-label">Matched Rides</span>
-          </div>
+          {statCards.map(({ icon: Icon, label, value }) => (
+            <div className="stat-item" key={label}>
+              <div className="rp-stat-icon">
+                <Icon size={20} strokeWidth={2.2} />
+              </div>
+              <div className="rp-stat-text">
+                <span className="stat-number">{value}</span>
+                <span className="stat-label">{label}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -68,12 +83,14 @@ function AdminRidePooling() {
           className={`ride-pooling-tab ${activeSubTab === "passenger-interests" ? "active" : ""}`}
           onClick={() => setActiveSubTab("passenger-interests")}
         >
+          <Users size={16} />
           Passenger Interests
         </button>
         <button
           className={`ride-pooling-tab ${activeSubTab === "user-suggested-routes" ? "active" : ""}`}
           onClick={() => setActiveSubTab("user-suggested-routes")}
         >
+          <Route size={16} />
           User Suggested Routes
         </button>
       </div>

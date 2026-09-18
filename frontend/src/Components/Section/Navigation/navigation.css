@@ -48,8 +48,10 @@
 }
 
 .nav-tab.active {
-  background-color: #2DD4BF;
+  background: var(--dmg-cta, linear-gradient(135deg, #16bccf 0%, #0e97a8 100%));
   color: white;
+  font-weight: 700;
+  box-shadow: 0 6px 16px rgba(18, 176, 196, 0.25);
 }
 
 .nav-icon {

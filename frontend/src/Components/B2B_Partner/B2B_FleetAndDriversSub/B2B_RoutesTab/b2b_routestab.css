@@ -1,7 +1,11 @@
+/* =====================================================================
+   B2B Routes Tab — DriveMeGo brand system. Class names preserved.
+   ===================================================================== */
 .drivemego-btobrt-b2b-routes-tab {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  font-family: var(--dmg-font);
 }
 
 .drivemego-btobrt-b2b-routes-filters {
@@ -19,26 +23,29 @@
 }
 
 .drivemego-btobrt-b2b-filter-btn {
-  padding: 8px 16px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  border-radius: 6px;
+  padding: 9px 18px;
+  border: 1px solid var(--dmg-line);
+  background: var(--dmg-card);
+  border-radius: 100px;
   font-size: 13px;
-  font-weight: 500;
-  color: #6b7280;
+  font-weight: 700;
+  color: var(--dmg-muted);
   cursor: pointer;
+  font-family: inherit;
   transition: all 0.2s;
 }
 
 .drivemego-btobrt-b2b-filter-btn:hover {
-  border-color: #16a085;
-  color: #16a085;
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-700);
+  background: var(--dmg-teal-050);
 }
 
 .drivemego-btobrt-b2b-filter-btn.drivemego-btobrt-active {
-  background: #16a085;
-  border-color: #16a085;
+  background: var(--dmg-teal);
+  border-color: var(--dmg-teal);
   color: #ffffff;
+  box-shadow: 0 6px 16px rgba(18, 176, 196, 0.26);
 }
 
 .drivemego-btobrt-b2b-routes-grid {
@@ -52,60 +59,72 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 64px 20px;
   text-align: center;
-  background: #f9fafb;
-  border-radius: 12px;
-  border: 2px dashed #e5e7eb;
+  background: var(--dmg-card);
+  border-radius: var(--dmg-radius);
+  border: 1.5px dashed var(--dmg-line);
 }
 
 .drivemego-btobrt-b2b-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-600);
   margin-bottom: 16px;
-  color: #9ca3af;
 }
 
 .drivemego-btobrt-b2b-empty-title {
   font-size: 18px;
-  font-weight: 600;
-  color: #374151;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--dmg-navy);
   margin: 0 0 8px 0;
 }
 
 .drivemego-btobrt-b2b-empty-description {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   margin: 0 0 20px 0;
   max-width: 400px;
 }
 
 .drivemego-btobrt-b2b-add-route-btn {
-  padding: 12px 24px;
-  background: #16a085;
+  padding: 13px 26px;
+  background: var(--dmg-cta);
   color: #ffffff;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  font-family: inherit;
+  box-shadow: var(--dmg-cta-shadow);
+  transition: all 0.2s;
 }
 
 .drivemego-btobrt-b2b-add-route-btn:hover {
-  background: #138d7b;
+  background: var(--dmg-cta-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--dmg-cta-shadow-lg);
 }
 
 @media (max-width: 768px) {
   .drivemego-btobrt-b2b-routes-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .drivemego-btobrt-b2b-filter-buttons {
     width: 100%;
     justify-content: flex-start;
   }
-  
+
   .drivemego-btobrt-b2b-filter-btn {
     font-size: 12px;
-    padding: 6px 12px;
+    padding: 7px 14px;
   }
 }

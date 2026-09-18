@@ -1,25 +1,25 @@
+/* Admin User Details Modal — DriveMeGo brand (navy + teal) */
 .admin-user-details-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(10, 42, 67, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .admin-user-details-modal {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 20px;
   max-width: 800px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 30px 70px rgba(10, 42, 67, 0.35);
 }
 
 .admin-user-details-modal-header {
@@ -27,45 +27,50 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 20px;
-  padding: 24px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 26px;
+  background:
+    radial-gradient(120% 160% at 100% 0%, rgba(18, 176, 196, 0.32) 0%, rgba(18, 176, 196, 0) 60%),
+    linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
+  border-radius: 20px 20px 0 0;
 }
 
 .admin-user-details-modal-title {
   font-size: 20px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-weight: 800;
+  color: #ffffff;
   margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
 }
 
 .admin-user-details-modal-subtitle {
   font-size: 14px;
-  color: #6b7280;
+  color: rgba(226, 240, 248, 0.82);
   margin: 0;
 }
 
 .admin-user-details-modal-close {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.15);
   border: none;
   cursor: pointer;
-  padding: 4px;
-  color: #6b7280;
+  padding: 6px;
+  border-radius: 10px;
+  color: #ffffff;
   transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .admin-user-details-modal-close svg {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   stroke-width: 2;
 }
 
 .admin-user-details-modal-close:hover {
-  color: #1a1a1a;
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .admin-user-details-modal-body {
-  padding: 24px;
+  padding: 26px;
 }
 
 .admin-user-details-info-grid {
@@ -83,23 +88,23 @@
 
 .admin-user-details-label {
   font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
+  font-weight: 700;
+  color: #5b6b7b;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
 }
 
 .admin-user-details-value {
   font-size: 14px;
-  font-weight: 500;
-  color: #1a1a1a;
+  font-weight: 600;
+  color: #0a2a43;
 }
 
 .admin-user-details-status {
-  padding: 6px 12px;
-  border-radius: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 700;
   width: fit-content;
 }
 
@@ -114,8 +119,9 @@
 }
 
 .admin-user-details-section {
-  background: #f9fafb;
-  border-radius: 12px;
+  background: #f5fafc;
+  border: 1px solid #e4ecf3;
+  border-radius: 16px;
   padding: 20px;
   margin-bottom: 20px;
 }
@@ -129,8 +135,8 @@
   align-items: center;
   gap: 8px;
   font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-weight: 700;
+  color: #0a2a43;
   margin: 0 0 16px 0;
 }
 
@@ -138,6 +144,7 @@
   width: 20px;
   height: 20px;
   stroke-width: 2;
+  color: #0e97a8;
 }
 
 .admin-user-details-route {
@@ -156,46 +163,49 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 20px 24px;
-  border-top: 1px solid #e5e7eb;
+  padding: 20px 26px;
+  border-top: 1px solid #e4ecf3;
 }
 
 .admin-user-details-btn {
-  padding: 10px 20px;
-  border-radius: 8px;
+  padding: 11px 22px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   border: none;
+  font-family: inherit;
 }
 
 .admin-user-details-btn-secondary {
-  background: #f9fafb;
+  background: #f1f5f9;
   color: #374151;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e4ecf3;
 }
 
 .admin-user-details-btn-secondary:hover {
-  background: #f3f4f6;
+  background: #e9eff5;
 }
 
 .admin-user-details-btn-primary {
-  background: #10b981;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   color: #ffffff;
+  box-shadow: 0 8px 18px rgba(34, 197, 94, 0.26);
 }
 
 .admin-user-details-btn-primary:hover {
-  background: #059669;
+  transform: translateY(-1px);
 }
 
 .admin-user-details-btn-danger {
-  background: #ef4444;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: #ffffff;
+  box-shadow: 0 8px 18px rgba(239, 68, 68, 0.26);
 }
 
 .admin-user-details-btn-danger:hover {
-  background: #dc2626;
+  transform: translateY(-1px);
 }
 
 .admin-user-details-btn:disabled {
@@ -206,7 +216,7 @@
 /* KYC verification */
 .admin-kyc-badge {
   margin-left: auto;
-  padding: 3px 10px;
+  padding: 3px 12px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
@@ -236,10 +246,10 @@
 }
 
 .admin-kyc-image-btn {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border: 1px solid #e4ecf3;
+  border-radius: 12px;
   padding: 8px;
-  background: #f9fafb;
+  background: #ffffff;
   cursor: pointer;
   display: inline-flex;
   flex-direction: column;
@@ -250,19 +260,19 @@
 }
 
 .admin-kyc-image-btn:hover {
-  border-color: #10b981;
+  border-color: #12b0c4;
 }
 
 .admin-kyc-image-thumb {
   max-width: 240px;
   max-height: 160px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .admin-kyc-image-hint {
   font-size: 12px;
-  color: #6b7280;
+  color: #5b6b7b;
 }
 
 .admin-kyc-no-image {
@@ -272,7 +282,7 @@
 }
 
 .admin-kyc-reject-form {
-  padding: 16px 24px 0;
+  padding: 16px 26px 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -280,8 +290,8 @@
 
 .admin-kyc-reject-textarea {
   width: 100%;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid #e4ecf3;
+  border-radius: 10px;
   padding: 10px;
   font-size: 14px;
   font-family: inherit;
@@ -296,7 +306,7 @@
 .admin-kyc-lightbox {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(10, 42, 67, 0.88);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -309,10 +319,9 @@
   max-width: 90vw;
   max-height: 90vh;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .admin-user-details-modal {
     max-height: 95vh;

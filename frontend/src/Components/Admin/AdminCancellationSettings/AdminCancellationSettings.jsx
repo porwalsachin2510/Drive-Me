@@ -229,13 +229,18 @@ const AdminCancellationSettings = () => {
   return (
     <div className="acs-container">
       <div className="acs-header">
-        <div>
-          <h2>Cancellation Policy</h2>
-          <p className="acs-subtitle">
-            Configure the cancellation charges commuters pay based on how far in
-            advance they cancel. These rules apply automatically to every
-            booking cancellation.
-          </p>
+        <div className="acs-header-titles">
+          <div className="acs-header-icon">
+            <Percent size={26} strokeWidth={2.2} />
+          </div>
+          <div>
+            <h2>Cancellation Policy</h2>
+            <p className="acs-subtitle">
+              Configure the cancellation charges commuters pay based on how far in
+              advance they cancel. These rules apply automatically to every
+              booking cancellation.
+            </p>
+          </div>
         </div>
         <button className="acs-save-btn" onClick={handleSave} disabled={saving}>
           <Save size={16} />

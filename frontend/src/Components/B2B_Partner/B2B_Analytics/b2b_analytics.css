@@ -39,12 +39,12 @@
 
 .drivemego-b2b_analytics-period-selector:focus {
   outline: none;
-  border-color: #16a085;
+  border-color: #12b0c4;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
 
 .drivemego-b2b_analytics-period-selector:hover {
-  border-color: #16a085;
+  border-color: #12b0c4;
 }
 
 .drivemego-b2b_analytics-metric-cards {

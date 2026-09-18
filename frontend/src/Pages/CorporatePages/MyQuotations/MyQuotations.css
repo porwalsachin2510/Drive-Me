@@ -1,103 +1,151 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* =====================================================================
+   DriveMeGo — My Quotations (standalone page + embedded content)
+   Covers both the unprefixed classes (MyQuotations.jsx) and the
+   drivemego-corporate- prefixed classes (MyQuotationsContent.jsx).
+   IndiGo-inspired redesign on the brand navy + teal palette.
+   ===================================================================== */
+:root {
+  --dmg-navy: #0a2a43;
+  --dmg-navy-700: #123a58;
+  --dmg-teal: #12b0c4;
+  --dmg-teal-600: #0e97a8;
+  --dmg-teal-050: #e6f7fa;
+  --dmg-cta: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  --dmg-bg: #eef3f8;
+  --dmg-card: #ffffff;
+  --dmg-ink: #0f2233;
+  --dmg-muted: #5b6b7b;
+  --dmg-line: #e4ecf3;
+  --dmg-shadow: 0 10px 30px rgba(10, 42, 67, 0.08);
+  --dmg-jakarta: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.my-quotations-container,
 .drivemego-corporate-my-quotations-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 40px 20px;
   min-height: 100vh;
+  background: var(--dmg-bg);
+  font-family: var(--dmg-jakarta);
 }
 
+/* ============ HEADER ============ */
+.quotations-header,
 .drivemego-corporate-quotations-header {
-  margin-bottom: 30px;
+  margin-bottom: 28px;
 }
 
+.quotations-header h1,
 .drivemego-corporate-quotations-header h1 {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: clamp(26px, 3.4vw, 34px);
+  font-weight: 800;
   margin-bottom: 20px;
-  color: #1a1a1a;
+  color: var(--dmg-navy);
+  letter-spacing: -0.02em;
 }
 
+.filter-tabs,
 .drivemego-corporate-filter-tabs {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
+.filter-tabs button,
 .drivemego-corporate-filter-tabs button {
-  padding: 12px 24px;
-  border: 2px solid #e0e0e0;
-  background: white;
-  border-radius: 8px;
+  padding: 11px 22px;
+  border: 1.5px solid var(--dmg-line);
+  background: var(--dmg-card);
+  border-radius: 100px;
   font-size: 14px;
-  font-weight: 600;
-  color: #666;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--dmg-muted);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
+.filter-tabs button:hover,
 .drivemego-corporate-filter-tabs button:hover {
-  border-color: #0066cc;
-  color: #0066cc;
-  transform: translateY(-2px);
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-600);
+  transform: translateY(-1px);
 }
 
+.filter-tabs button.active,
 .drivemego-corporate-filter-tabs button.drivemego-corporate-active {
-  background: #0066cc;
-  border-color: #0066cc;
-  color: white;
+  background: var(--dmg-cta);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(18, 176, 196, 0.28);
 }
 
-/* Summary Section */
+/* ============ SUMMARY ============ */
+.quotations-summary,
 .drivemego-corporate-quotations-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  gap: 18px;
   margin-bottom: 30px;
 }
 
+.summary-card,
 .drivemego-corporate-summary-card {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  gap: 16px;
+  padding: 22px;
+  border-radius: 18px;
+  color: #fff;
+  background:
+    radial-gradient(500px 200px at 90% -30%, rgba(18, 176, 196, 0.35), transparent 60%),
+    linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 100%);
+  box-shadow: var(--dmg-shadow);
 }
 
+.summary-card:nth-child(2),
 .drivemego-corporate-summary-card:nth-child(2) {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  box-shadow: 0 10px 26px rgba(18, 176, 196, 0.3);
 }
 
+.summary-card:nth-child(3),
 .drivemego-corporate-summary-card:nth-child(3) {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+  background: linear-gradient(135deg, #0a7a45 0%, #12a862 100%);
+  box-shadow: 0 10px 26px rgba(10, 122, 69, 0.28);
 }
 
-.drivemego-corporate-summary-card i {
-  font-size: 32px;
-  opacity: 0.9;
+.summary-card i {
+  font-size: 30px;
+  opacity: 0.92;
 }
 
+.summary-content,
 .drivemego-corporate-summary-content {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
+.summary-label,
 .drivemego-corporate-summary-label {
   font-size: 13px;
-  opacity: 0.9;
-  font-weight: 500;
+  opacity: 0.85;
+  font-weight: 600;
 }
 
+.summary-value,
 .drivemego-corporate-summary-value {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
-/* Quotations Grid */
+/* ============ GRID ============ */
+.quotations-grid,
 .drivemego-corporate-quotations-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -105,14 +153,13 @@
   margin-bottom: 40px;
 }
 
-/* Multi-partner request group: spans the full width and nests the child
-   partner quotation cards in their own grid. */
+/* Multi-partner request group */
 .drivemego-corporate-quotation-group {
   grid-column: 1 / -1;
-  border: 1px solid #d1d5db;
-  border-radius: 16px;
-  padding: 20px;
-  background: #f9fafb;
+  border: 1px solid var(--dmg-line);
+  border-radius: 20px;
+  padding: 22px;
+  background: #f6f9fc;
 }
 
 .drivemego-corporate-quotation-group-header {
@@ -120,27 +167,27 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .drivemego-corporate-quotation-group-badge {
-  background: #059669;
+  background: var(--dmg-cta);
   color: #ffffff;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 999px;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
 .drivemego-corporate-quotation-group-number {
-  font-weight: 700;
-  color: #1f2937;
+  font-weight: 800;
+  color: var(--dmg-navy);
 }
 
 .drivemego-corporate-quotation-group-meta {
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-size: 0.88rem;
 }
 
@@ -150,37 +197,44 @@
   gap: 20px;
 }
 
-/* No Quotations State */
+/* ============ EMPTY STATE ============ */
+.no-quotations,
 .drivemego-corporate-no-quotations {
   grid-column: 1 / -1;
   text-align: center;
-  padding: 80px 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  border-radius: 16px;
+  padding: 72px 20px;
+  background: var(--dmg-card);
+  border: 1px dashed rgba(18, 176, 196, 0.4);
+  border-radius: 20px;
   margin: 20px 0;
 }
 
+.no-quotations i,
 .drivemego-corporate-no-quotations i {
-  font-size: 64px;
-  color: #9ca3af;
+  font-size: 60px;
+  color: var(--dmg-teal);
   margin-bottom: 20px;
 }
 
+.no-quotations h3,
 .drivemego-corporate-no-quotations h3 {
   font-size: 24px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  color: var(--dmg-navy);
   margin-bottom: 10px;
 }
 
+.no-quotations p,
 .drivemego-corporate-no-quotations p {
   font-size: 16px;
-  color: #666;
+  color: var(--dmg-muted);
   max-width: 400px;
   margin: 0 auto;
+  line-height: 1.6;
 }
 
-/* Loading State */
+/* ============ LOADING ============ */
+.quotations-loading,
 .drivemego-corporate-quotations-loading {
   display: flex;
   flex-direction: column;
@@ -190,16 +244,17 @@
   gap: 20px;
 }
 
+.loading-spinner,
 .drivemego-corporate-loading-spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid #f3f4f6;
-  border-top: 4px solid #0066cc;
+  border: 4px solid var(--dmg-teal-050);
+  border-top: 4px solid var(--dmg-teal);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: dmg-spin 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes dmg-spin {
   0% {
     transform: rotate(0deg);
   }
@@ -208,13 +263,15 @@
   }
 }
 
+.loading-text,
 .drivemego-corporate-loading-text {
   font-size: 16px;
-  color: #666;
-  font-weight: 500;
+  color: var(--dmg-muted);
+  font-weight: 600;
 }
 
-/* Error State */
+/* ============ ERROR ============ */
+.quotations-error,
 .drivemego-corporate-quotations-error {
   display: flex;
   flex-direction: column;
@@ -223,163 +280,160 @@
   min-height: 400px;
   text-align: center;
   padding: 40px;
-  background: #fef2f2;
-  border-radius: 16px;
-  border: 2px solid #fecaca;
+  background: #fef4f4;
+  border-radius: 20px;
+  border: 1px solid #f6cccc;
 }
 
+.quotations-error i,
 .drivemego-corporate-quotations-error i {
-  font-size: 64px;
-  color: #ef4444;
+  font-size: 60px;
+  color: #e04545;
   margin-bottom: 20px;
 }
 
+.quotations-error h3,
 .drivemego-corporate-quotations-error h3 {
   font-size: 24px;
-  font-weight: 600;
-  color: #991b1b;
+  font-weight: 700;
+  color: #a12222;
   margin-bottom: 10px;
 }
 
+.quotations-error p,
 .drivemego-corporate-quotations-error p {
   font-size: 16px;
-  color: #dc2626;
+  color: #c93838;
   margin-bottom: 20px;
 }
 
+.retry-btn,
 .drivemego-corporate-retry-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: #ef4444;
+  background: var(--dmg-cta);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 100px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease;
 }
 
+.retry-btn:hover,
 .drivemego-corporate-retry-btn:hover {
-  background: #dc2626;
   transform: translateY(-2px);
 }
 
-/* Pagination */
+/* ============ PAGINATION ============ */
+.pagination,
 .drivemego-corporate-pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
   margin-top: 40px;
   padding: 20px;
 }
 
+.pagination-btn,
 .drivemego-corporate-pagination-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
-  background: white;
-  color: #0066cc;
-  border: 2px solid #0066cc;
-  border-radius: 8px;
+  padding: 10px 22px;
+  background: var(--dmg-card);
+  color: var(--dmg-teal-600);
+  border: 1.5px solid var(--dmg-teal);
+  border-radius: 100px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
+.pagination-btn:hover:not(:disabled),
 .drivemego-corporate-pagination-btn:hover:not(:disabled) {
-  background: #0066cc;
+  background: var(--dmg-cta);
+  border-color: transparent;
   color: white;
   transform: translateY(-2px);
 }
 
+.pagination-btn:disabled,
 .drivemego-corporate-pagination-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  border-color: #e0e0e0;
-  color: #999;
+  border-color: var(--dmg-line);
+  color: #9aabb9;
 }
 
+.pagination-info,
 .drivemego-corporate-pagination-info {
   font-size: 14px;
-  font-weight: 600;
-  color: #666;
+  font-weight: 700;
+  color: var(--dmg-navy);
   padding: 10px 20px;
-  background: #f3f4f6;
-  border-radius: 8px;
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: 100px;
 }
 
-/* Responsive Design */
+/* ============ RESPONSIVE ============ */
 @media (max-width: 1024px) {
+  .quotations-grid,
   .drivemego-corporate-quotations-grid {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
+  .my-quotations-container,
   .drivemego-corporate-my-quotations-container {
-    padding: 20px 15px;
+    padding: 24px 15px;
   }
 
-  .drivemego-corporate-quotations-header h1 {
-    font-size: 24px;
-  }
-
+  .quotations-grid,
   .drivemego-corporate-quotations-grid {
     grid-template-columns: 1fr;
   }
 
+  .filter-tabs,
   .drivemego-corporate-filter-tabs {
     flex-direction: column;
   }
 
+  .filter-tabs button,
   .drivemego-corporate-filter-tabs button {
     width: 100%;
   }
 
+  .quotations-summary,
   .drivemego-corporate-quotations-summary {
     grid-template-columns: 1fr;
   }
 
+  .pagination,
   .drivemego-corporate-pagination {
     flex-wrap: wrap;
     gap: 10px;
   }
-
-  .drivemego-corporate-pagination-btn {
-    padding: 8px 16px;
-    font-size: 13px;
-  }
 }
 
 @media (max-width: 480px) {
-  .drivemego-corporate-quotations-header h1 {
-    font-size: 20px;
-  }
-
+  .filter-tabs button,
   .drivemego-corporate-filter-tabs button {
     padding: 10px 16px;
     font-size: 13px;
   }
 
+  .no-quotations,
   .drivemego-corporate-no-quotations {
-    padding: 60px 15px;
-  }
-
-  .drivemego-corporate-no-quotations i {
-    font-size: 48px;
-  }
-
-  .drivemego-corporate-no-quotations h3 {
-    font-size: 20px;
-  }
-
-  .drivemego-corporate-summary-value {
-    font-size: 24px;
+    padding: 56px 15px;
   }
 }

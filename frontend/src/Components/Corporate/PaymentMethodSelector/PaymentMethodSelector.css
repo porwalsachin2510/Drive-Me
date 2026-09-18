@@ -19,11 +19,14 @@
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 30px 70px rgba(10, 42, 67, 0.3);
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .payment-method-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background:
+    radial-gradient(560px 220px at 90% -40%, rgba(18, 176, 196, 0.36), transparent 60%),
+    linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   padding: 30px;
   border-radius: 20px 20px 0 0;
@@ -34,8 +37,9 @@
 
 .payment-method-header h2 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .payment-method-close {
@@ -89,14 +93,14 @@
 
 .payment-method-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-  border-color: #667eea;
+  box-shadow: 0 12px 28px rgba(10, 42, 67, 0.12);
+  border-color: #12b0c4;
 }
 
 .payment-method-card.selected {
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-  border-color: #667eea;
-  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+  background: #e6f7fa;
+  border-color: #12b0c4;
+  box-shadow: 0 8px 22px rgba(18, 176, 196, 0.28);
 }
 
 .payment-method-icon {
@@ -106,8 +110,9 @@
 
 .payment-method-card h3 {
   margin: 0 0 10px 0;
-  font-size: 20px;
-  color: #333;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0a2a43;
 }
 
 .payment-method-description {
@@ -123,7 +128,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(18, 176, 196, 0.1);
   border-radius: 8px;
   font-size: 13px;
 }
@@ -134,15 +139,15 @@
 }
 
 .processing-time {
-  color: #667eea;
-  font-weight: 600;
+  color: #0e97a8;
+  font-weight: 700;
 }
 
 .payment-method-checkmark {
   position: absolute;
   top: 15px;
   right: 15px;
-  background: #667eea;
+  background: #12b0c4;
   color: white;
   width: 30px;
   height: 30px;
@@ -203,13 +208,14 @@
 }
 
 .btn-proceed {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
   color: white;
+  box-shadow: 0 10px 22px rgba(18, 176, 196, 0.3);
 }
 
 .btn-proceed:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 14px 30px rgba(18, 176, 196, 0.42);
 }
 
 .btn-proceed:disabled {
@@ -246,7 +252,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #667eea;
+  border-top: 3px solid #12b0c4;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

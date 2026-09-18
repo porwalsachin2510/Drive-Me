@@ -359,11 +359,11 @@ function RequirementsView() {
             border: "none",
             backgroundColor: "transparent",
             cursor: "pointer",
-            fontWeight: activeTab === "open" ? "600" : "400",
-            color: activeTab === "open" ? "#3b82f6" : "#64748b",
+            fontWeight: activeTab === "open" ? "700" : "500",
+            color: activeTab === "open" ? "#0e97a8" : "#64748b",
             borderBottom:
               activeTab === "open"
-                ? "2px solid #3b82f6"
+                ? "2px solid #12b0c4"
                 : "2px solid transparent",
             marginBottom: "-2px",
             transition: "all 0.2s",
@@ -378,11 +378,11 @@ function RequirementsView() {
             border: "none",
             backgroundColor: "transparent",
             cursor: "pointer",
-            fontWeight: activeTab === "my-responses" ? "600" : "400",
-            color: activeTab === "my-responses" ? "#3b82f6" : "#64748b",
+            fontWeight: activeTab === "my-responses" ? "700" : "500",
+            color: activeTab === "my-responses" ? "#0e97a8" : "#64748b",
             borderBottom:
               activeTab === "my-responses"
-                ? "2px solid #3b82f6"
+                ? "2px solid #12b0c4"
                 : "2px solid transparent",
             marginBottom: "-2px",
             transition: "all 0.2s",
@@ -432,7 +432,11 @@ function RequirementsView() {
             {requirements.length === 0 ? (
               <div className="b2bpartner-RequirementsTab-no-requirements">
                 <div className="b2bpartner-RequirementsTab-no-requirements-icon">
-                  📋
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                    <rect x="9" y="3" width="6" height="4" rx="2" />
+                    <path d="M9 14l2 2 4-4" />
+                  </svg>
                 </div>
                 <h3>No Open Requirements Found</h3>
                 <p>

@@ -3,7 +3,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background:
+    radial-gradient(600px 240px at 88% -10%, rgba(18, 176, 196, 0.35), transparent 60%),
+    linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 60%, var(--dmg-navy-700) 100%);
   padding: 20px;
 }
 
@@ -18,21 +20,21 @@
 }
 
 .wallet-payment-callback-card h2 {
-  color: #1f2937;
+  color: var(--dmg-navy);
   font-size: 24px;
   font-weight: 600;
   margin: 20px 0 10px 0;
 }
 
 .wallet-payment-callback-card p {
-  color: #6b7280;
+  color: var(--dmg-muted);
   font-size: 16px;
   margin: 10px 0;
 }
 
 .redirect-message {
   font-size: 14px;
-  color: #9ca3af;
+  color: var(--dmg-muted-2);
   margin-top: 20px;
 }
 

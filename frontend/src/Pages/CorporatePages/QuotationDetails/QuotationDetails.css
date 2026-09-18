@@ -1,16 +1,35 @@
-/* ===============================================
-   Quotation Details Page Styles
-   Prefix: single-quotation-
-   =============================================== */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
-/* Container & Layout - Premium Inter Font */
+/* =====================================================================
+   DriveMeGo — Quotation Details
+   Prefix: single-quotation-
+   IndiGo-inspired redesign on the brand navy + teal palette.
+   ===================================================================== */
+:root {
+  --dmg-navy: #0a2a43;
+  --dmg-navy-700: #123a58;
+  --dmg-teal: #12b0c4;
+  --dmg-teal-600: #0e97a8;
+  --dmg-teal-050: #e6f7fa;
+  --dmg-cta: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  --dmg-bg: #eef3f8;
+  --dmg-card: #ffffff;
+  --dmg-ink: #0f2233;
+  --dmg-muted: #5b6b7b;
+  --dmg-line: #e4ecf3;
+  --dmg-shadow: 0 10px 30px rgba(10, 42, 67, 0.08);
+  --dmg-jakarta: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Container & Layout */
 .single-quotation-details-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px 20px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg-secondary, #f8f9fa);
+  font-family: var(--dmg-jakarta);
+  background: var(--dmg-bg);
   min-height: 100vh;
+  color: var(--dmg-ink);
 }
 
 /* Back Button */
@@ -18,35 +37,39 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
-  border: none;
-  background: white;
-  color: #333;
-  border-radius: 10px;
+  padding: 11px 22px;
+  border: 1px solid var(--dmg-line);
+  background: var(--dmg-card);
+  color: var(--dmg-navy);
+  border-radius: 100px;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: inherit;
   margin-bottom: 24px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(10, 42, 67, 0.06);
 }
 
 .single-quotation-back-button:hover {
-  background: #f5f5f5;
   transform: translateX(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-600);
 }
 
-/* Header Section */
+/* Header — navy gradient hero */
 .single-quotation-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
-  padding: 24px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 28px;
+  padding: 32px;
+  color: #fff;
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    radial-gradient(700px 300px at 90% -20%, rgba(18, 176, 196, 0.4), transparent 60%),
+    linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 60%, #0e3350 100%);
 }
 
 .single-quotation-header-left {
@@ -57,84 +80,77 @@
 }
 
 .single-quotation-header-left h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 800;
+  color: #fff;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 /* Status Badge */
 .single-quotation-status-badge {
   padding: 8px 18px;
-  border-radius: 20px;
+  border-radius: 100px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.06em;
 }
 
 .single-quotation-status-badge.status-requested,
 .single-quotation-status-badge.status-pending {
-  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-  color: #856404;
+  background: #fff4d6;
+  color: #92620e;
 }
 
 .single-quotation-status-badge.status-quoted,
 .single-quotation-status-badge.status-responded {
-  background: linear-gradient(135deg, #d1ecf1 0%, #a8daff 100%);
-  color: #0c5460;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-600);
 }
 
 .single-quotation-status-badge.status-accepted {
-  background: linear-gradient(135deg, #d4edda 0%, #a8e6a3 100%);
-  color: #155724;
+  background: #d8f6e4;
+  color: #0a7a45;
 }
 
 .single-quotation-status-badge.status-rejected {
-  background: linear-gradient(135deg, #f8d7da 0%, #ffb3b3 100%);
-  color: #721c24;
+  background: #fde3e3;
+  color: #b02525;
 }
 
 /* Section Wrapper */
 .single-quotation-section {
-  background: white;
-  padding: 32px;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
-  margin-bottom: 24px;
+  background: var(--dmg-card);
+  padding: 30px;
+  border-radius: 20px;
+  border: 1px solid var(--dmg-line);
+  box-shadow: var(--dmg-shadow);
+  transition: box-shadow 0.25s ease;
+  margin-bottom: 22px;
 }
 
 .single-quotation-section:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 16px 38px rgba(10, 42, 67, 0.12);
 }
 
-.single-quotation-section h2 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 24px 0;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
-}
-
-/* Added section title styling */
+.single-quotation-section h2,
 .single-quotation-section-title {
   font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 24px 0;
+  font-weight: 800;
+  color: var(--dmg-navy);
+  margin: 0 0 22px 0;
   padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--dmg-line);
+  letter-spacing: -0.01em;
 }
 
 /* Card Styles */
 .single-quotation-card {
-  background: #fafafa;
+  background: #f6f9fc;
   padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e8e8e8;
+  border-radius: 16px;
+  border: 1px solid var(--dmg-line);
 }
 
 /* Info Grid */
@@ -151,48 +167,47 @@
 }
 
 .single-quotation-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #666;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dmg-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
 .single-quotation-value {
   font-size: 15px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--dmg-ink);
   word-break: break-word;
 }
 
 /* Badges */
 .single-quotation-badge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 12px;
+  padding: 6px 13px;
+  border-radius: 100px;
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
 }
 
 .single-quotation-badge.badge-success {
-  background: linear-gradient(135deg, #d4edda 0%, #a8e6a3 100%);
-  color: #155724;
+  background: #d8f6e4;
+  color: #0a7a45;
 }
 
 .single-quotation-badge.badge-secondary {
-  background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
-  color: #383d41;
+  background: #eef2f6;
+  color: #5b6b7b;
 }
 
 /* Empty Message */
 .single-quotation-empty-message {
   text-align: center;
   padding: 40px;
-  color: #999;
+  color: var(--dmg-muted);
   font-size: 15px;
-  font-style: italic;
 }
 
 /* Vehicles Grid */
@@ -203,18 +218,18 @@
 }
 
 .single-quotation-vehicle-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--dmg-card);
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid #e8e8e8;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--dmg-line);
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(10, 42, 67, 0.06);
 }
 
 .single-quotation-vehicle-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  border-color: #2196f3;
+  box-shadow: 0 14px 32px rgba(10, 42, 67, 0.14);
+  border-color: rgba(18, 176, 196, 0.5);
 }
 
 .single-quotation-vehicle-image {
@@ -222,7 +237,7 @@
   width: 100%;
   height: 200px;
   overflow: hidden;
-  background: #f5f5f5;
+  background: #eef2f6;
 }
 
 .single-quotation-vehicle-image img {
@@ -240,13 +255,13 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(33, 150, 243, 0.95);
+  background: var(--dmg-cta);
   color: white;
   padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: 100px;
   font-size: 12px;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.35);
 }
 
 .single-quotation-vehicle-details {
@@ -255,9 +270,10 @@
 
 .single-quotation-vehicle-details h3 {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0 0 16px 0;
-  color: #1a1a1a;
+  color: var(--dmg-navy);
+  letter-spacing: -0.01em;
 }
 
 .single-quotation-vehicle-specs {
@@ -272,7 +288,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .single-quotation-spec-item:last-child {
@@ -281,30 +297,30 @@
 
 .single-quotation-spec-item span {
   font-size: 13px;
-  color: #666;
+  color: var(--dmg-muted);
 }
 
 .single-quotation-spec-item strong {
   font-size: 14px;
-  color: #1a1a1a;
-  font-weight: 600;
+  color: var(--dmg-ink);
+  font-weight: 700;
 }
 
 /* Facilities */
 .single-quotation-facilities {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--dmg-line);
 }
 
 .single-quotation-facilities-label {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  color: #333;
+  color: var(--dmg-navy);
   margin-bottom: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
 .single-quotation-facilities-list {
@@ -314,22 +330,21 @@
 }
 
 .single-quotation-facility-badge {
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  border-radius: 12px;
+  padding: 6px 13px;
+  background: var(--dmg-teal-050);
+  border-radius: 100px;
   font-size: 11px;
-  font-weight: 600;
-  color: #1976d2;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-weight: 700;
+  color: var(--dmg-teal-600);
 }
 
-/* Added waiting message styles */
+/* Waiting message */
 .single-quotation-waiting-message {
   padding: 40px;
   text-align: center;
-  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-  border-radius: 12px;
-  border: 2px dashed #ffa726;
+  background: #fff9ec;
+  border-radius: 16px;
+  border: 2px dashed #f2c24b;
 }
 
 .single-quotation-waiting-icon {
@@ -339,19 +354,19 @@
 
 .single-quotation-waiting-title {
   font-size: 20px;
-  font-weight: 700;
-  color: #f57c00;
+  font-weight: 800;
+  color: #b8860b;
   margin: 0 0 12px 0;
 }
 
 .single-quotation-waiting-text {
   font-size: 15px;
-  color: #555;
+  color: #6b5a2a;
   margin: 8px 0;
   line-height: 1.6;
 }
 
-/* Added breakdown section styles */
+/* Breakdown */
 .single-quotation-breakdown-section {
   margin-bottom: 24px;
 }
@@ -362,20 +377,22 @@
 
 .single-quotation-breakdown-title {
   font-size: 16px;
-  font-weight: 700;
-  color: #333;
+  font-weight: 800;
+  color: var(--dmg-navy);
   margin: 0 0 16px 0;
   padding-bottom: 8px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid var(--dmg-line);
 }
 
 .single-quotation-vehicle-breakdown-card {
-  background: white;
+  background: #f6f9fc;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 16px;
-  border-left: 4px solid #2196f3;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border-left: 4px solid var(--dmg-teal);
+  border-top: 1px solid var(--dmg-line);
+  border-right: 1px solid var(--dmg-line);
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .single-quotation-vehicle-breakdown-card:last-child {
@@ -384,8 +401,8 @@
 
 .single-quotation-vehicle-breakdown-title {
   font-size: 15px;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-weight: 800;
+  color: var(--dmg-navy);
   margin: 0 0 12px 0;
   display: flex;
   justify-content: space-between;
@@ -394,11 +411,11 @@
 
 .single-quotation-vehicle-breakdown-qty {
   font-size: 13px;
-  font-weight: 600;
-  color: #2196f3;
-  background: #e3f2fd;
-  padding: 4px 10px;
-  border-radius: 12px;
+  font-weight: 700;
+  color: var(--dmg-teal-600);
+  background: var(--dmg-teal-050);
+  padding: 4px 12px;
+  border-radius: 100px;
 }
 
 .single-quotation-breakdown-rows {
@@ -412,7 +429,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .single-quotation-breakdown-row:last-child {
@@ -421,39 +438,37 @@
 
 .single-quotation-breakdown-row span {
   font-size: 14px;
-  color: #666;
+  color: var(--dmg-muted);
   font-weight: 500;
 }
 
 .single-quotation-breakdown-row strong {
   font-size: 15px;
-  color: #1a1a1a;
+  color: var(--dmg-ink);
   font-weight: 700;
 }
 
 .single-quotation-breakdown-row.single-quotation-breakdown-subtotal {
   margin-top: 8px;
-  padding-top: 12px;
-  border-top: 2px solid #e0e0e0;
-  background: #f8f9fa;
   padding: 12px;
-  border-radius: 6px;
+  border-top: 2px solid var(--dmg-line);
+  background: #fff;
+  border-radius: 8px;
   margin-left: -12px;
   margin-right: -12px;
 }
 
 .single-quotation-breakdown-row.single-quotation-breakdown-subtotal strong {
-  color: #2196f3;
+  color: var(--dmg-teal-600);
   font-size: 16px;
 }
 
 .single-quotation-breakdown-row.single-quotation-breakdown-total {
   margin-top: 16px;
-  padding-top: 16px !important;
-  border-top: 3px solid #333 !important;
-  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
-  padding: 16px;
-  border-radius: 8px;
+  padding: 16px !important;
+  border-top: none !important;
+  background: linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 100%);
+  border-radius: 12px;
   margin-left: -8px;
   margin-right: -8px;
 }
@@ -462,78 +477,89 @@
 .single-quotation-breakdown-row.single-quotation-breakdown-total strong {
   font-size: 18px;
   font-weight: 800;
-  color: #1a1a1a;
+  color: #ffffff;
 }
 
-/* Added response message styles */
+/* Response message */
 .single-quotation-response-message {
   padding: 20px;
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  border-left: 5px solid #2196f3;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+  background: var(--dmg-teal-050);
+  border-left: 5px solid var(--dmg-teal);
+  border-radius: 12px;
   margin-top: 20px;
 }
 
 .single-quotation-response-message p {
   font-size: 15px;
   line-height: 1.7;
-  color: #1a1a1a;
+  color: var(--dmg-navy-700);
   margin: 0;
 }
 
-/* Added action buttons styles */
+/* Action buttons */
 .single-quotation-action-buttons {
   display: flex;
   gap: 16px;
   justify-content: center;
   margin-top: 32px;
   padding-top: 24px;
-  border-top: 2px solid #f0f0f0;
+  border-top: 2px solid var(--dmg-line);
+  flex-wrap: wrap;
 }
 
 .single-quotation-btn {
   padding: 14px 32px;
   border: none;
-  border-radius: 10px;
+  border-radius: 100px;
   font-size: 15px;
   font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
 }
 
 .single-quotation-btn-accept {
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  background: linear-gradient(135deg, #12a862 0%, #0a7a45 100%);
   color: white;
+  box-shadow: 0 10px 22px rgba(10, 122, 69, 0.28);
 }
 
 .single-quotation-btn-accept:hover {
-  background: linear-gradient(135deg, #218838 0%, #17a085 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  box-shadow: 0 14px 28px rgba(10, 122, 69, 0.38);
 }
 
 .single-quotation-btn-reject {
-  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  background: linear-gradient(135deg, #e04545 0%, #c22b2b 100%);
   color: white;
+  box-shadow: 0 10px 22px rgba(224, 69, 69, 0.26);
 }
 
 .single-quotation-btn-reject:hover {
-  background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+  box-shadow: 0 14px 28px rgba(224, 69, 69, 0.36);
 }
 
-/* Added success message styles for accepted status */
+.single-quotation-btn-contract {
+  background: var(--dmg-cta);
+  color: white;
+  box-shadow: 0 10px 22px rgba(18, 176, 196, 0.3);
+}
+
+.single-quotation-btn-contract:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(18, 176, 196, 0.4);
+}
+
+/* Success message */
 .single-quotation-success-message {
   padding: 40px;
   text-align: center;
-  background: linear-gradient(135deg, #d4edda 0%, #a8e6a3 100%);
-  border-radius: 12px;
-  border: 2px solid #28a745;
+  background: #eafaf1;
+  border-radius: 16px;
+  border: 1px solid #b6ecca;
   margin-bottom: 24px;
 }
 
@@ -544,24 +570,24 @@
 
 .single-quotation-success-title {
   font-size: 20px;
-  font-weight: 700;
-  color: #155724;
+  font-weight: 800;
+  color: #0a7a45;
   margin: 0 0 12px 0;
 }
 
 .single-quotation-success-text {
   font-size: 15px;
-  color: #155724;
+  color: #157a4c;
   margin: 8px 0;
   line-height: 1.6;
 }
 
-/* Added price summary styles */
+/* Price summary */
 .single-quotation-price-summary {
-  background: white;
+  background: var(--dmg-card);
   padding: 24px;
-  border-radius: 12px;
-  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  border: 1px solid var(--dmg-line);
   margin-bottom: 24px;
 }
 
@@ -570,7 +596,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .single-quotation-price-row:last-child {
@@ -579,67 +605,58 @@
 
 .single-quotation-price-label {
   font-size: 15px;
-  color: #666;
+  color: var(--dmg-muted);
   font-weight: 600;
 }
 
 .single-quotation-price-value {
   font-size: 16px;
-  color: #1a1a1a;
+  color: var(--dmg-ink);
   font-weight: 700;
 }
 
 .single-quotation-total-row {
   margin-top: 12px;
-  padding-top: 16px !important;
-  border-top: 3px solid #333 !important;
-  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
-  padding: 16px;
-  border-radius: 8px;
+  padding: 16px !important;
+  border-top: none !important;
+  background: linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 100%);
+  border-radius: 12px;
+}
+
+.single-quotation-total-row .single-quotation-price-label {
+  color: #cfe0ec;
 }
 
 .single-quotation-total-value {
   font-size: 20px !important;
-  color: #28a745 !important;
+  color: #4fe0c0 !important;
 }
 
-/* Added contract button styles */
-.single-quotation-btn-contract {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  color: white;
-}
-
-.single-quotation-btn-contract:hover {
-  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-/* Added rejected message styles */
+/* Rejected message */
 .single-quotation-rejected-message {
   padding: 40px;
   text-align: center;
-  background: linear-gradient(135deg, #f8d7da 0%, #ffb3b3 100%);
-  border-radius: 12px;
-  border: 2px solid #dc3545;
+  background: #fdecec;
+  border-radius: 16px;
+  border: 1px solid #f5c2c2;
 }
 
 .single-quotation-rejected-icon {
   font-size: 48px;
   margin-bottom: 16px;
-  color: #dc3545;
+  color: #c22b2b;
 }
 
 .single-quotation-rejected-title {
   font-size: 20px;
-  font-weight: 700;
-  color: #721c24;
+  font-weight: 800;
+  color: #a12222;
   margin: 0 0 12px 0;
 }
 
 .single-quotation-rejected-text {
   font-size: 15px;
-  color: #721c24;
+  color: #a12222;
   margin: 8px 0;
   line-height: 1.6;
 }
@@ -648,18 +665,19 @@
   margin-top: 20px;
   padding: 16px;
   background: white;
-  border-radius: 8px;
+  border: 1px solid var(--dmg-line);
+  border-radius: 12px;
   text-align: left;
   display: block;
 }
 
-/* Added pending card styles */
+/* Pending card */
 .single-quotation-pending-card {
   padding: 40px;
   text-align: center;
-  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-  border-radius: 12px;
-  border: 2px dashed #ffa726;
+  background: #fff9ec;
+  border-radius: 16px;
+  border: 2px dashed #f2c24b;
 }
 
 .single-quotation-pending-icon {
@@ -669,25 +687,25 @@
 
 .single-quotation-pending-card h3 {
   font-size: 20px;
-  font-weight: 700;
-  color: #f57c00;
+  font-weight: 800;
+  color: #b8860b;
   margin: 0 0 12px 0;
 }
 
 .single-quotation-pending-card p {
   font-size: 15px;
-  color: #555;
+  color: #6b5a2a;
   margin: 8px 0;
   line-height: 1.6;
 }
 
-/* Added error card styles */
+/* Error card */
 .single-quotation-error-card {
   padding: 32px;
   text-align: center;
-  background: linear-gradient(135deg, #f8d7da 0%, #ffb3b3 100%);
-  border-radius: 12px;
-  border: 2px solid #dc3545;
+  background: #fdecec;
+  border-radius: 16px;
+  border: 1px solid #f5c2c2;
 }
 
 .single-quotation-error-icon {
@@ -697,35 +715,32 @@
 
 .single-quotation-error-card h3 {
   font-size: 20px;
-  font-weight: 700;
-  color: #721c24;
+  font-weight: 800;
+  color: #a12222;
   margin: 0 0 12px 0;
 }
 
 .single-quotation-error-card p {
   font-size: 15px;
-  color: #721c24;
+  color: #a12222;
   margin: 8px 0;
   line-height: 1.6;
 }
 
-/* Added modal styles */
+/* Modal */
 .single-quotation-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background: rgba(10, 42, 67, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   backdrop-filter: blur(4px);
-  animation: fadeIn 0.3s ease;
+  animation: dmg-fadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
+@keyframes dmg-fadeIn {
   from {
     opacity: 0;
   }
@@ -737,14 +752,15 @@
 .single-quotation-modal {
   background: white;
   padding: 32px;
-  border-radius: 16px;
+  border-radius: 24px;
   max-width: 520px;
   width: 90%;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.3s ease;
+  box-shadow: 0 30px 80px rgba(10, 42, 67, 0.35);
+  animation: dmg-slideUp 0.3s ease;
+  font-family: var(--dmg-jakarta);
 }
 
-@keyframes slideUp {
+@keyframes dmg-slideUp {
   from {
     transform: translateY(30px);
     opacity: 0;
@@ -761,35 +777,36 @@
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--dmg-line);
 }
 
 .single-quotation-modal-header h2 {
   font-size: 22px;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-weight: 800;
+  color: var(--dmg-navy);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .single-quotation-modal-close {
   background: none;
   border: none;
   font-size: 32px;
-  color: #999;
+  color: var(--dmg-muted);
   cursor: pointer;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .single-quotation-modal-close:hover {
-  background: #f5f5f5;
-  color: #333;
+  background: #eef2f6;
+  color: var(--dmg-navy);
 }
 
 .single-quotation-modal-body {
@@ -798,7 +815,7 @@
 
 .single-quotation-modal-body p {
   font-size: 15px;
-  color: #555;
+  color: var(--dmg-muted);
   margin-bottom: 16px;
   line-height: 1.6;
 }
@@ -806,21 +823,22 @@
 .single-quotation-textarea {
   width: 100%;
   padding: 14px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border: 1.5px solid var(--dmg-line);
+  border-radius: 12px;
   font-size: 15px;
   font-family: inherit;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   box-sizing: border-box;
   resize: vertical;
   min-height: 20px;
   line-height: 1.6;
+  color: var(--dmg-ink);
 }
 
 .single-quotation-textarea:focus {
   outline: none;
-  border-color: #2196f3;
-  box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.1);
+  border-color: var(--dmg-teal);
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.12);
 }
 
 .single-quotation-modal-footer {
@@ -830,32 +848,30 @@
 }
 
 .single-quotation-btn-secondary {
-  background: #f5f5f5;
-  color: #333;
-  border: 2px solid #e0e0e0;
+  background: var(--dmg-card);
+  color: var(--dmg-navy);
+  border: 1.5px solid var(--dmg-line);
 }
 
 .single-quotation-btn-secondary:hover {
-  background: #e8e8e8;
-  border-color: #d0d0d0;
+  background: #eef2f6;
+  border-color: #cdd8e2;
 }
 
-/* Responsive Design */
+/* Responsive */
 @media (max-width: 768px) {
   .single-quotation-details-container {
-    padding: 20px 16px;
+    padding: 24px 16px;
   }
 
   .single-quotation-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+    padding: 24px;
   }
 
-  .single-quotation-info-grid {
-    grid-template-columns: 1fr;
-  }
-
+  .single-quotation-info-grid,
   .single-quotation-vehicles-grid {
     grid-template-columns: 1fr;
   }
@@ -874,14 +890,13 @@
   }
 }
 
-
 /* ===============================================
    Partial-availability offer banner (corporate view)
    =============================================== */
 .single-quotation-partial-banner {
-  background: linear-gradient(135deg, #fffaf0 0%, #fef3c7 100%);
-  border: 1px solid #fbd38d;
-  border-radius: 12px;
+  background: #fff9ec;
+  border: 1px solid #f2c24b;
+  border-radius: 16px;
   padding: 20px;
   margin-bottom: 24px;
 }
@@ -897,7 +912,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: #dd6b20;
+  background: #d9861f;
   color: #fff;
   display: flex;
   align-items: center;
@@ -907,7 +922,7 @@
 }
 
 .single-quotation-partial-header strong {
-  color: #9c4221;
+  color: #8a5410;
   display: block;
   margin-bottom: 5px;
   font-size: 16px;
@@ -915,7 +930,7 @@
 
 .single-quotation-partial-header p {
   margin: 0;
-  color: #7b341e;
+  color: #6b5a2a;
   font-size: 14px;
   line-height: 1.55;
 }
@@ -924,56 +939,54 @@
   margin-top: 14px;
   padding: 12px 14px;
   background: #fff;
-  border: 1px dashed #fbd38d;
-  border-radius: 8px;
-  color: #744210;
+  border: 1px dashed #f2c24b;
+  border-radius: 10px;
+  color: #6b5a2a;
   font-size: 14px;
   line-height: 1.55;
 }
 
 .single-quotation-partial-future strong {
-  color: #975a16;
+  color: #8a5410;
 }
 
 .single-quotation-qty-requested {
   font-weight: 500;
-  color: #a0aec0;
+  color: #9aabb9;
   font-size: 12px;
 }
 
 /* ===============================================
    Admin Negotiation Styles
    =============================================== */
-
-/* Admin Negotiation Status Banner */
 .admin-negotiation-status-banner {
   display: flex;
   align-items: flex-start;
   gap: 16px;
   padding: 20px;
-  border-radius: 12px;
-  margin: 20px 0px;
+  border-radius: 16px;
+  margin: 20px 0;
   border: 1px solid;
 }
 
 .admin-negotiation-status-banner.status-requested {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-color: #fcd34d;
+  background: #fff9ec;
+  border-color: #f2c24b;
 }
 
 .admin-negotiation-status-banner.status-in_progress {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border-color: #93c5fd;
+  background: var(--dmg-teal-050);
+  border-color: #9bdfe9;
 }
 
 .admin-negotiation-status-banner.status-completed {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  border-color: #6ee7b7;
+  background: #eafaf1;
+  border-color: #b6ecca;
 }
 
 .admin-negotiation-status-banner.status-failed {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  border-color: #fca5a5;
+  background: #fdecec;
+  border-color: #f5c2c2;
 }
 
 .admin-negotiation-status-banner .banner-icon {
@@ -989,19 +1002,19 @@
   display: block;
   font-size: 15px;
   margin-bottom: 6px;
-  color: #1e293b;
+  color: var(--dmg-navy);
 }
 
 .admin-negotiation-status-banner .banner-content p {
   margin: 0;
   font-size: 14px;
-  color: #475569;
+  color: var(--dmg-muted);
   line-height: 1.5;
 }
 
 /* Admin Negotiate Button */
 .admin-negotiate-btn {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
+  background: linear-gradient(135deg, #123a58 0%, #0a2a43 100%) !important;
   color: white !important;
   display: flex;
   align-items: center;
@@ -1009,8 +1022,8 @@
 }
 
 .admin-negotiate-btn:hover {
-  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%) !important;
   transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(10, 42, 67, 0.3);
 }
 
 /* Admin Negotiation Modal */
@@ -1022,15 +1035,15 @@
   display: flex;
   gap: 16px;
   padding: 16px;
-  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-  border-radius: 12px;
+  background: var(--dmg-teal-050);
+  border-radius: 14px;
   margin-bottom: 20px;
-  border: 1px solid #c4b5fd;
+  border: 1px solid #9bdfe9;
 }
 
 .negotiation-info-icon {
   flex-shrink: 0;
-  color: #7c3aed;
+  color: var(--dmg-teal-600);
 }
 
 .negotiation-info-text {
@@ -1040,7 +1053,7 @@
 .negotiation-info-text strong {
   display: block;
   font-size: 14px;
-  color: #5b21b6;
+  color: var(--dmg-navy);
   margin-bottom: 10px;
 }
 
@@ -1048,7 +1061,7 @@
   margin: 0;
   padding-left: 18px;
   font-size: 13px;
-  color: #6b21a8;
+  color: var(--dmg-navy-700);
   line-height: 1.7;
 }
 
@@ -1061,30 +1074,31 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background: #f8fafc;
-  border-radius: 10px;
+  background: #f6f9fc;
+  border-radius: 12px;
   margin-bottom: 20px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
 }
 
 .current-price-display span {
   font-size: 14px;
-  color: #64748b;
+  color: var(--dmg-muted);
 }
 
 .current-price-display strong {
   font-size: 20px;
-  color: #1e293b;
+  color: var(--dmg-navy);
+  font-weight: 800;
 }
 
 .negotiation-error {
   padding: 12px 16px;
-  background: #fee2e2;
-  color: #991b1b;
-  border-radius: 8px;
+  background: #fdecec;
+  color: #a12222;
+  border-radius: 10px;
   margin-bottom: 16px;
   font-size: 14px;
-  border: 1px solid #fca5a5;
+  border: 1px solid #f5c2c2;
 }
 
 .admin-negotiation-modal .form-group {
@@ -1094,15 +1108,15 @@
 .admin-negotiation-modal .form-group label {
   display: block;
   font-size: 13px;
-  font-weight: 600;
-  color: #334155;
+  font-weight: 700;
+  color: var(--dmg-navy);
   margin-bottom: 8px;
 }
 
 .admin-negotiation-modal .form-hint {
   display: block;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--dmg-muted);
   margin-top: 6px;
 }
 
@@ -1129,15 +1143,16 @@
   }
 }
 
-
-/* Negotiation Savings Card Styles */
+/* ===============================================
+   Negotiation Savings Card
+   =============================================== */
 .negotiation-savings-card {
   margin-bottom: 32px;
   padding: 24px;
-  background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
-  border-radius: 12px;
-  border-left: 5px solid #2e7d32;
-  box-shadow: 0 4px 16px rgba(46, 125, 50, 0.15);
+  background: #eafaf1;
+  border-radius: 16px;
+  border-left: 5px solid #0a7a45;
+  box-shadow: 0 8px 24px rgba(10, 122, 69, 0.1);
 }
 
 .negotiation-savings-header {
@@ -1153,7 +1168,7 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: #2e7d32;
+  background: #0a7a45;
   color: white;
   border-radius: 50%;
   font-weight: bold;
@@ -1162,9 +1177,9 @@
 
 .negotiation-savings-header h3 {
   margin: 0;
-  color: #1b5e20;
+  color: #0a5c34;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .negotiation-savings-details {
@@ -1178,7 +1193,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(10, 122, 69, 0.15);
 }
 
 .savings-detail-row:last-child {
@@ -1186,52 +1201,50 @@
 }
 
 .savings-detail-row.highlight {
-  background: rgba(255, 255, 255, 0.6);
-  padding: 12px 12px;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 12px;
+  border-radius: 10px;
   margin-top: 8px;
 }
 
 .savings-label {
-  color: #1b5e20;
-  font-weight: 500;
+  color: #0a5c34;
+  font-weight: 600;
   font-size: 14px;
 }
 
 .savings-value {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 16px;
-  color: #1b5e20;
+  color: #0a5c34;
 }
 
 .savings-value.original-price {
   text-decoration: line-through;
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 .savings-value.new-price {
-  color: #2e7d32;
+  color: #0a7a45;
   font-size: 18px;
 }
 
 .savings-value.savings-amount {
-  color: #1b5e20;
+  color: #0a5c34;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
-/* Explanatory helper text between negotiation rows */
 .savings-detail-note {
   font-size: 12.5px;
   line-height: 1.5;
-  color: #33691e;
-  opacity: 0.85;
+  color: #2f6b45;
+  opacity: 0.9;
   padding: 2px 0 6px;
 }
 
-/* Negotiation service fee row (added on top of the negotiated price) */
 .savings-detail-row.fee-row {
-  border-top: 1px dashed rgba(27, 94, 32, 0.35);
+  border-top: 1px dashed rgba(10, 122, 69, 0.35);
   padding-top: 12px;
 }
 
@@ -1240,11 +1253,10 @@
   font-weight: 700;
 }
 
-/* Final total the corporate actually pays */
 .savings-detail-row.total-payable-row {
-  background: #1b5e20;
+  background: #0a5c34;
   padding: 14px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-top: 8px;
   border-bottom: none;
 }
@@ -1256,7 +1268,7 @@
 .savings-value.total-payable-value {
   color: #ffffff;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 @media (max-width: 768px) {

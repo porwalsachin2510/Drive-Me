@@ -287,8 +287,8 @@
 
 .b2b-vehicle-assignment-settings select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 /* Simplified assignment source group styling - now only displays info message */
@@ -344,8 +344,8 @@
 
 .b2b-vehicle-assignment-route input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .b2b-vehicle-assignment-footer {
@@ -376,7 +376,7 @@
 
 .b2b-vehicle-assignment-btn-submit {
   padding: 10px 28px;
-  background: #3b82f6;
+  background: #12b0c4;
   color: white;
   border: none;
   border-radius: 6px;
@@ -387,9 +387,9 @@
 }
 
 .b2b-vehicle-assignment-btn-submit:hover:not(:disabled) {
-  background: #2563eb;
+  background: #0e97a8;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.3);
 }
 
 .b2b-vehicle-assignment-btn-submit:disabled {
@@ -494,7 +494,7 @@
 .b2b-slot-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--dmg-teal-700);
   margin-bottom: 12px;
 }
 

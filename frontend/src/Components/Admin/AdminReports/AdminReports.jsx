@@ -4,6 +4,7 @@ import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import "./AdminReports.css";
 import api from "../../../utils/api";
+import { BarChart3, ShieldAlert, UserCheck, AlertTriangle } from "lucide-react";
 
 function AdminReports() {
   const [activeTab, setActiveTab] = useState("fraud-detection");
@@ -1169,25 +1170,51 @@ function AdminReports() {
   return (
     <div className="admin-reports">
       <div className="reports-header">
-        <h2>Reports & Analytics</h2>
+        <div className="reports-header-top">
+          <div className="reports-header-icon">
+            <BarChart3 size={26} />
+          </div>
+          <div>
+            <h2>Reports & Analytics</h2>
+            <p className="reports-header-sub">
+              Monitor fraud alerts, user activity, system health and revenue
+              performance across the platform.
+            </p>
+          </div>
+        </div>
         <div className="reports-overview">
           <div className="overview-item">
-            <span className="overview-label">Active Alerts</span>
-            <span className="overview-value">
-              {fraudAlerts.filter((a) => a.status === "ACTIVE").length}
-            </span>
+            <div className="overview-icon alerts">
+              <ShieldAlert size={18} />
+            </div>
+            <div className="overview-text">
+              <span className="overview-value">
+                {fraudAlerts.filter((a) => a.status === "ACTIVE").length}
+              </span>
+              <span className="overview-label">Active Alerts</span>
+            </div>
           </div>
           <div className="overview-item">
-            <span className="overview-label">Flagged Users</span>
-            <span className="overview-value">
-              {userActivity.filter((u) => u.status === "Flagged").length}
-            </span>
+            <div className="overview-icon flagged">
+              <UserCheck size={18} />
+            </div>
+            <div className="overview-text">
+              <span className="overview-value">
+                {userActivity.filter((u) => u.status === "Flagged").length}
+              </span>
+              <span className="overview-label">Flagged Users</span>
+            </div>
           </div>
           <div className="overview-item">
-            <span className="overview-label">System Errors</span>
-            <span className="overview-value">
-              {systemLogs.filter((l) => l.level === "ERROR").length}
-            </span>
+            <div className="overview-icon errors">
+              <AlertTriangle size={18} />
+            </div>
+            <div className="overview-text">
+              <span className="overview-value">
+                {systemLogs.filter((l) => l.level === "ERROR").length}
+              </span>
+              <span className="overview-label">System Errors</span>
+            </div>
           </div>
         </div>
       </div>

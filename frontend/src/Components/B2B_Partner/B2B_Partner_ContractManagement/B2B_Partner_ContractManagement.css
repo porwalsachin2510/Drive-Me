@@ -86,13 +86,13 @@
 }
 
 .b2b-contracts-tab:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #0a2a43;
+  color: #0a2a43;
 }
 
 .b2b-contracts-tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
+  border-color: #0a2a43;
   color: white;
 }
 
@@ -151,7 +151,7 @@
 }
 
 .b2b-contracts-card-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   padding: 20px;
   display: flex;
   justify-content: space-between;
@@ -180,8 +180,8 @@
 }
 
 .status-uploaded {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-700);
 }
 
 .status-signed {
@@ -250,7 +250,7 @@
   flex: 1;
   min-width: 120px;
   padding: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -269,7 +269,7 @@
   flex: 1;
   min-width: 120px;
   padding: 10px;
-  background: linear-gradient(135deg, #16a085 0%, #138d7b 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #138d7b 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -288,13 +288,13 @@
   margin: 0 20px;
   margin-top: 16px;
   padding: 12px 14px;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
-  border-left: 4px solid #667eea;
+  background: var(--dmg-teal-050);
+  border: 1px solid var(--dmg-teal-100);
+  border-left: 4px solid #0a2a43;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #3730a3;
+  color: var(--dmg-teal-700);
   line-height: 1.5;
 }
 .b2b-contracts-manage-ops-btn {

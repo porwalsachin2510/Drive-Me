@@ -14,7 +14,7 @@
 .al-alerts-header h2 {
   font-size: 28px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--dmg-navy);
   margin: 0;
 }
 
@@ -32,8 +32,8 @@
 
 .al-mark-all-read-btn {
   background: none;
-  border: 1px solid #e5e7eb;
-  color: #6b7280;
+  border: 1px solid var(--dmg-line);
+  color: var(--dmg-muted);
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
@@ -43,8 +43,8 @@
 }
 
 .al-mark-all-read-btn:hover {
-  color: #1a1a1a;
-  border-color: #1a1a1a;
+  color: var(--dmg-navy);
+  border-color: var(--dmg-navy);
 }
 
 .al-filter-options {
@@ -53,11 +53,11 @@
 
 .al-filter-select {
   padding: 10px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   border-radius: 8px;
   font-size: 14px;
   background-color: #ffffff;
-  color: #374151;
+  color: var(--dmg-ink);
   cursor: pointer;
   -webkit-appearance: auto;
   -moz-appearance: auto;
@@ -68,7 +68,7 @@
 
 .al-filter-select:focus {
   outline: none;
-  border-color: #3182ce;
+  border-color: var(--dmg-teal);
 }
 
 .al-notifications-list {
@@ -84,7 +84,7 @@
   background-color: white;
   border-radius: 8px;
   padding: 18px;
-  border-left: 3px solid #e5e7eb;
+  border-left: 3px solid var(--dmg-line);
   transition: all 0.3s ease;
 }
 
@@ -123,13 +123,13 @@
 .al-notification-header h4 {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--dmg-navy);
   margin: 0;
 }
 
 .al-notification-date {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--dmg-muted-2);
   text-align: right;
   min-width: 80px;
   flex-shrink: 0;
@@ -138,7 +138,7 @@
 
 .al-notification-message {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   margin: 0;
   line-height: 1.4;
 }
@@ -147,7 +147,7 @@
   display: inline-block;
   margin-top: 6px;
   font-size: 13px;
-  color: #3182ce;
+  color: var(--dmg-teal-600);
   font-weight: 600;
   text-decoration: none;
 }
@@ -164,8 +164,8 @@
 
 .al-mark-read-btn {
   background: none;
-  border: 1px solid #d1d5db;
-  color: #6b7280;
+  border: 1px solid var(--dmg-line);
+  color: var(--dmg-muted);
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
@@ -185,8 +185,8 @@
 
 .al-delete-btn {
   background: none;
-  border: 1px solid #d1d5db;
-  color: #6b7280;
+  border: 1px solid var(--dmg-line);
+  color: var(--dmg-muted);
   cursor: pointer;
   font-size: 16px;
   font-weight: 600;
@@ -207,7 +207,7 @@
 .al-no-notifications {
   text-align: center;
   padding: 40px 20px;
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
 }
 
 .al-no-notifications-icon {
@@ -218,13 +218,13 @@
 .al-no-notifications h3 {
   margin: 0 0 6px 0;
   font-size: 16px;
-  color: #1a1a1a;
+  color: var(--dmg-navy);
 }
 
 .al-no-notifications p {
   margin: 0;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--dmg-muted);
 }
 
 .al-load-more-section {
@@ -234,19 +234,19 @@
 
 .al-load-more-btn {
   padding: 10px 24px;
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--dmg-bg);
+  border: 1px solid var(--dmg-line);
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  color: #4a5568;
+  color: var(--dmg-ink);
   transition: all 0.2s;
 }
 
 .al-load-more-btn:hover {
-  background: #edf2f7;
-  border-color: #cbd5e0;
+  background: var(--dmg-line);
+  border-color: var(--dmg-line);
 }
 
 .al-load-more-btn:disabled {
@@ -257,7 +257,7 @@
 .al-loading {
   text-align: center;
   padding: 40px;
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
 }
 
 /* Tablet */

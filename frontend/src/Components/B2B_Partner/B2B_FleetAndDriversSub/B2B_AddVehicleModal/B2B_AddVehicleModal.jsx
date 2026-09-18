@@ -447,7 +447,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                   </label>
                 )}
 
-                {!isSchoolPartner && (
+                {/* {!isSchoolPartner && (
                   <label
                     className={`b2b-operator-dashboard-add-vehicle-service-type-card ${
                       formData.serviceType === "GOODS_CARRIER"
@@ -468,7 +468,7 @@ const B2B_AddVehicleModal = ({ onClose }) => {
                     <h3>Goods Carrier</h3>
                     <p>Trucks, Pickups for cargo</p>
                   </label>
-                )}
+                )} */}
 
                 <label
                   className={`b2b-operator-dashboard-add-vehicle-service-type-card ${

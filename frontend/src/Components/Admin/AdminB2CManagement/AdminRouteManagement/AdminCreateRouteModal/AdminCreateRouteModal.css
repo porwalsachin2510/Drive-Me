@@ -34,9 +34,11 @@
 
 .route-management-modal-title {
   font-size: 20px;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 800;
+  color: #0a2a43;
   margin: 0 0 4px 0;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .route-management-modal-subtitle {
@@ -112,8 +114,8 @@
 .route-management-form-select:focus,
 .route-management-form-textarea:focus {
   outline: none;
-  border-color: var(--secondary-color, #2DD4BF);
-  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.1));
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 4px #e6f7fa;
 }
 
 .route-management-form-input.error,
@@ -150,8 +152,8 @@
 }
 
 .route-management-day-checkbox:hover {
-  border-color: var(--secondary-color, #2DD4BF);
-  background: var(--secondary-light, rgba(45, 212, 191, 0.08));
+  border-color: #12b0c4;
+  background: #e6f7fa;
 }
 
 .route-management-day-checkbox input[type="checkbox"] {
@@ -165,7 +167,7 @@
 }
 
 .route-management-day-checkbox input[type="checkbox"]:checked + .route-management-day-label {
-   color: var(--secondary-color, #2DD4BF);
+  color: #0e97a8;
 }
 
 .route-management-error {
@@ -340,7 +342,7 @@
 }
 
 .route-management-stop-number {
-  background: var(--secondary-color, #2DD4BF);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
   padding: 4px 12px;
   border-radius: 20px;
@@ -422,13 +424,14 @@
 }
 
 .route-management-btn-primary {
-  background: var(--secondary-color, #2DD4BF);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
+  box-shadow: 0 8px 18px rgba(18, 176, 196, 0.3);
 }
 
 .route-management-btn-primary:hover:not(:disabled) {
-  background: var(--secondary-hover, #26B8A5);
-  box-shadow: var(--shadow-teal, 0 4px 14px rgba(45, 212, 191, 0.25));
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(18, 176, 196, 0.45);
 }
 
 .route-management-btn-secondary:disabled,

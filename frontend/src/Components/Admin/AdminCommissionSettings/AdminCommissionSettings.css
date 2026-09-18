@@ -17,7 +17,7 @@
 .commission-header-content h1 {
   font-size: 28px;
   font-weight: 700;
-  color: #1e293b;
+  color: #0a2a43;
   margin: 0 0 8px 0;
 }
 
@@ -89,11 +89,11 @@
 }
 
 .stat-icon.users-icon {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0c8695 100%);
 }
 
 .stat-icon.custom-icon {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0a2a43 100%);
 }
 
 .stat-icon.rate-icon {
@@ -108,7 +108,7 @@
 .stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: #1e293b;
+  color: #0a2a43;
 }
 
 .stat-label {
@@ -293,7 +293,7 @@
 
 .user-name {
   font-weight: 600;
-  color: #1e293b;
+  color: #0a2a43;
   font-size: 14px;
 }
 
@@ -332,8 +332,8 @@
 }
 
 .admin-commission-settings .role-badge.role-corporate {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #e6f7fa;
+  color: #0e97a8;
 }
 
 .admin-commission-settings .role-badge.role-b2b {
@@ -354,7 +354,7 @@
 
 /* School Partner mirrors B2B Partner (supply side) with its own teal identity */
 .admin-commission-settings .role-badge.role-school-partner {
-  background: #ccfbf1;
+  background: #d3f0f4;
   color: #115e59;
 }
 
@@ -431,34 +431,46 @@
 }
 
 .action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid transparent;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.action-btn svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.2;
 }
 
 .action-btn.view-btn {
-  background: #f1f5f9;
-  color: #64748b;
+  background: #eef2f6;
+  color: #334155;
+  border-color: #dbe3ea;
 }
 
 .action-btn.view-btn:hover {
-  background: #e2e8f0;
-  color: #334155;
+  background: #0a2a43;
+  color: #ffffff;
+  border-color: #0a2a43;
 }
 
 .action-btn.edit-btn {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #e6f7fa;
+  color: #0c8695;
+  border-color: #bfe9ef;
 }
 
 .action-btn.edit-btn:hover {
-  background: #bfdbfe;
+  background: #12b0c4;
+  color: #ffffff;
+  border-color: #12b0c4;
 }
 
 /* Modal */
@@ -506,7 +518,7 @@
 .modal-title h2 {
   margin: 0;
   font-size: 20px;
-  color: #1e293b;
+  color: #0a2a43;
 }
 
 .close-btn {
@@ -545,7 +557,7 @@
 .modal-user-info .user-details h3 {
   margin: 0 0 4px 0;
   font-size: 18px;
-  color: #1e293b;
+  color: #0a2a43;
 }
 
 .modal-user-info .user-details p {
@@ -595,7 +607,7 @@
 
 .add-rule-btn {
   padding: 6px 12px;
-  background: #1a73e8;
+  background: #0e97a8;
   color: white;
   border: none;
   border-radius: 6px;
@@ -606,7 +618,7 @@
 }
 
 .add-rule-btn:hover {
-  background: #1557b0;
+  background: #0c8695;
 }
 
 .form-row {
@@ -641,7 +653,7 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #1a73e8;
+  border-color: #0e97a8;
 }
 
 .form-group input:disabled,
@@ -669,7 +681,7 @@ textarea {
 
 textarea:focus {
   outline: none;
-  border-color: #1a73e8;
+  border-color: #0e97a8;
 }
 
 textarea:disabled {
@@ -769,13 +781,13 @@ textarea:disabled {
 }
 
 .btn-primary {
-  background: #1a73e8;
+  background: #0e97a8;
   border: none;
   color: white;
 }
 
 .btn-primary:hover {
-  background: #1557b0;
+  background: #0c8695;
 }
 
 .btn-primary:disabled {
@@ -848,4 +860,9 @@ textarea:disabled {
 
 .form-row:last-child {
   margin-bottom: 0;
+}
+
+/* DriveMeGo brand font */
+.admin-commission-settings {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }

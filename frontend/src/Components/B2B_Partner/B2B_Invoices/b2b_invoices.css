@@ -1,7 +1,9 @@
-/* Premium B2B Invoices - Inter Font */
+/* =====================================================================
+   DriveMeGo — B2B Invoices (brand navy + teal system, Plus Jakarta Sans)
+   ===================================================================== */
 .b2b-invoices {
-  padding: 20px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 24px;
+  font-family: var(--dmg-font);
 }
 
 .b2b-inv-header {
@@ -10,61 +12,121 @@
   align-items: center;
   margin-bottom: 24px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
 }
 
 .b2b-inv-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a2e;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--dmg-navy);
+  letter-spacing: -0.02em;
 }
 
 .b2b-inv-filters {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
+  gap: 6px;
+  background: var(--dmg-teal-050);
+  padding: 5px;
+  border-radius: 100px;
 }
 
 .b2b-inv-filter-btn {
-  padding: 6px 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 20px;
-  background: #fff;
+  padding: 7px 18px;
+  border: none;
+  border-radius: 100px;
+  background: transparent;
+  font-family: var(--dmg-font);
   font-size: 13px;
-  color: #555;
+  font-weight: 600;
+  color: var(--dmg-navy-600);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .b2b-inv-filter-btn:hover {
-  border-color: #2563eb;
-  color: #2563eb;
+  color: var(--dmg-teal-700);
 }
 
 .b2b-inv-filter-btn.active {
-  background: #2563eb;
-  color: #fff;
-  border-color: #2563eb;
+  background: #ffffff;
+  color: var(--dmg-teal-700);
+  box-shadow: 0 2px 8px rgba(10, 42, 67, 0.1);
 }
 
 .b2b-inv-loading,
 .b2b-inv-error,
 .b2b-inv-empty {
   text-align: center;
-  padding: 40px;
-  color: #666;
+  padding: 48px;
+  color: var(--dmg-muted);
   font-size: 15px;
 }
 
 .b2b-inv-error {
-  color: #dc3545;
+  color: var(--danger-color);
+}
+
+/* Summary cards */
+.b2b-inv-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.b2b-inv-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 22px;
+  border: 1px solid var(--dmg-line);
+  border-radius: 18px;
+  background: var(--dmg-card);
+  box-shadow: 0 2px 10px rgba(10, 42, 67, 0.05);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.b2b-inv-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(18, 176, 196, 0.4);
+  box-shadow: var(--dmg-shadow);
+}
+
+.b2b-inv-card-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dmg-muted-2);
+  font-weight: 600;
+}
+
+.b2b-inv-card-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--dmg-navy);
+  letter-spacing: -0.02em;
+}
+
+.b2b-inv-green {
+  color: var(--success-color);
+}
+
+.b2b-inv-orange {
+  color: var(--warning-color);
+}
+
+.b2b-inv-red {
+  color: var(--danger-color);
 }
 
 /* Table */
 .b2b-inv-table-wrap {
   overflow-x: auto;
-  border: 1px solid #e8e8e8;
-  border-radius: 10px;
+  border: 1px solid var(--dmg-line);
+  border-radius: 18px;
   margin-bottom: 24px;
+  background: var(--dmg-card);
+  box-shadow: 0 2px 10px rgba(10, 42, 67, 0.05);
 }
 
 .b2b-inv-table {
@@ -74,145 +136,86 @@
 }
 
 .b2b-inv-table th {
-  background: #f8f9fa;
-  padding: 12px 16px;
+  background: var(--dmg-bg);
+  padding: 14px 16px;
   text-align: left;
-  font-weight: 600;
-  color: #555;
-  border-bottom: 1px solid #e8e8e8;
+  font-weight: 700;
+  color: var(--dmg-navy-600);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--dmg-line);
   white-space: nowrap;
 }
 
 .b2b-inv-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  color: #333;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--dmg-line);
+  color: var(--dmg-ink);
+}
+
+.b2b-inv-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .b2b-inv-table tbody tr:hover {
-  background: #fafbfc;
+  background: var(--dmg-teal-050);
 }
 
 .b2b-inv-num {
-  font-family: monospace;
-  font-weight: 600;
-  color: #2563eb;
+  font-weight: 700;
+  color: var(--dmg-teal-700);
 }
 
 .b2b-inv-amount {
   font-weight: 700;
+  color: var(--dmg-navy);
 }
 
 /* Status */
 .b2b-inv-status {
   display: inline-block;
-  padding: 4px 10px;
-  border-radius: 20px;
+  padding: 4px 12px;
+  border-radius: 100px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: capitalize;
+  border: 1px solid transparent;
 }
 
 .b2b-inv-status-paid {
-  background: #d4edda;
-  color: #155724;
+  background: var(--success-bg);
+  color: var(--success-hover);
+  border-color: rgba(34, 197, 94, 0.25);
 }
 
 .b2b-inv-status-pending {
-  background: #fff3cd;
-  color: #856404;
+  background: var(--warning-bg);
+  color: var(--warning-hover);
+  border-color: rgba(245, 158, 11, 0.25);
 }
 
 .b2b-inv-status-overdue {
-  background: #f8d7da;
-  color: #721c24;
+  background: var(--danger-bg);
+  color: var(--danger-hover);
+  border-color: rgba(239, 68, 68, 0.25);
 }
 
 .b2b-inv-status-default {
-  background: #e2e3e5;
-  color: #383d41;
-}
-
-/* Summary */
-.b2b-inv-summary {
-  display: flex;
-  gap: 24px;
-  padding: 16px 0;
-  border-top: 1px solid #e8e8e8;
-  flex-wrap: wrap;
-}
-
-.b2b-inv-summary-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.b2b-inv-summary-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #888;
-}
-
-.b2b-inv-summary-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a2e;
-}
-
-.b2b-inv-green {
-  color: #28a745;
-}
-
-.b2b-inv-orange {
-  color: #f59e0b;
-}
-
-.b2b-inv-red {
-  color: #dc2626;
-}
-
-/* Summary cards */
-.b2b-inv-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.b2b-inv-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px 18px;
-  border: 1px solid #e8e8e8;
-  border-radius: 10px;
-  background: #fff;
-}
-
-.b2b-inv-card-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #888;
-}
-
-.b2b-inv-card-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a2e;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-navy-600);
+  border-color: var(--dmg-line);
 }
 
 /* Type pill */
 .b2b-inv-type {
   display: inline-block;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: #eef2ff;
-  color: #4338ca;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-700);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Row clickable */
@@ -223,36 +226,40 @@
 /* Actions */
 .b2b-inv-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .b2b-inv-act-btn {
-  padding: 5px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #fff;
+  padding: 6px 14px;
+  border: 1px solid var(--dmg-line);
+  border-radius: 10px;
+  background: #ffffff;
+  font-family: var(--dmg-font);
   font-size: 12px;
-  font-weight: 600;
-  color: #374151;
+  font-weight: 700;
+  color: var(--dmg-navy-600);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .b2b-inv-act-btn:hover:not(:disabled) {
-  border-color: #2563eb;
-  color: #2563eb;
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-700);
+  background: var(--dmg-teal-050);
 }
 
 .b2b-inv-act-btn.primary {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+  background: var(--dmg-cta);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: var(--dmg-cta-shadow);
 }
 
 .b2b-inv-act-btn.primary:hover:not(:disabled) {
-  background: #1d4ed8;
-  color: #fff;
+  background: var(--dmg-cta-hover);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .b2b-inv-act-btn:disabled {
@@ -264,7 +271,8 @@
 .b2b-inv-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(10, 42, 67, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -273,59 +281,74 @@
 }
 
 .b2b-inv-modal {
-  background: #fff;
-  border-radius: 14px;
+  background: #ffffff;
+  border-radius: 22px;
   width: 100%;
   max-width: 640px;
   max-height: 90vh;
   overflow-y: auto;
-  padding: 24px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  padding: 28px;
+  box-shadow: var(--dmg-shadow-lg);
 }
 
 .b2b-inv-modal-head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
+  gap: 16px;
 }
 
 .b2b-inv-modal-num {
-  font-family: monospace;
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a2e;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--dmg-navy);
   margin-bottom: 8px;
+  letter-spacing: -0.02em;
 }
 
 .b2b-inv-modal-close {
-  background: none;
+  background: var(--dmg-bg);
   border: none;
-  font-size: 28px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 22px;
   line-height: 1;
-  color: #888;
+  color: var(--dmg-muted);
   cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.b2b-inv-modal-close:hover {
+  background: var(--danger-light);
+  color: var(--danger-color);
 }
 
 .b2b-inv-modal-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 18px;
   margin-bottom: 24px;
+  background: var(--dmg-bg);
+  padding: 20px;
+  border-radius: 16px;
 }
 
 .b2b-inv-meta-label {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #999;
+  letter-spacing: 0.05em;
+  color: var(--dmg-muted-2);
+  font-weight: 600;
 }
 
 .b2b-inv-meta-val {
   font-size: 14px;
-  font-weight: 600;
-  color: #333;
-  margin-top: 2px;
+  font-weight: 700;
+  color: var(--dmg-ink);
+  margin-top: 3px;
 }
 
 .b2b-inv-line-table {
@@ -336,46 +359,62 @@
 }
 
 .b2b-inv-line-table th {
-  background: #f8f9fa;
-  padding: 10px 12px;
+  background: var(--dmg-bg);
+  padding: 11px 12px;
   text-align: left;
-  font-weight: 600;
-  color: #555;
+  font-weight: 700;
+  color: var(--dmg-navy-600);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: 0;
+}
+
+.b2b-inv-line-table th:first-child {
+  border-top-left-radius: 10px;
+}
+.b2b-inv-line-table th:last-child {
+  border-top-right-radius: 10px;
 }
 
 .b2b-inv-line-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--dmg-line);
+  color: var(--dmg-ink);
 }
 
 .b2b-inv-modal-totals {
-  border-top: 1px solid #e8e8e8;
-  padding-top: 12px;
+  border-top: 1px solid var(--dmg-line);
+  padding-top: 14px;
   margin-bottom: 16px;
 }
 
 .b2b-inv-total-row {
   display: flex;
   justify-content: space-between;
-  padding: 4px 0;
+  padding: 5px 0;
   font-size: 14px;
-  color: #555;
+  color: var(--dmg-muted);
 }
 
 .b2b-inv-total-row.grand {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1a1a2e;
-  border-top: 1px solid #f0f0f0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--dmg-navy);
+  border-top: 1px solid var(--dmg-line);
   margin-top: 6px;
-  padding-top: 10px;
+  padding-top: 12px;
+  letter-spacing: -0.01em;
 }
 
 .b2b-inv-paid-note {
   font-size: 13px;
-  color: #28a745;
-  font-weight: 600;
+  color: var(--success-hover);
+  font-weight: 700;
   margin-bottom: 16px;
+  background: var(--success-bg);
+  padding: 10px 14px;
+  border-radius: 12px;
 }
 
 .b2b-inv-modal-actions {
@@ -385,7 +424,7 @@
 }
 
 .b2b-inv-modal-actions .b2b-inv-act-btn {
-  padding: 9px 18px;
+  padding: 10px 20px;
   font-size: 13px;
 }
 
@@ -394,24 +433,28 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  padding: 12px 20px;
-  border-radius: 8px;
+  padding: 14px 22px;
+  border-radius: 14px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: #fff;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--dmg-shadow-lg);
   z-index: 1100;
 }
 
 .b2b-inv-toast.success {
-  background: #16a34a;
+  background: var(--success-color);
 }
 
 .b2b-inv-toast.error {
-  background: #dc2626;
+  background: var(--danger-color);
 }
 
 @media (max-width: 768px) {
+  .b2b-invoices {
+    padding: 16px;
+  }
+
   .b2b-inv-header {
     flex-direction: column;
     align-items: flex-start;

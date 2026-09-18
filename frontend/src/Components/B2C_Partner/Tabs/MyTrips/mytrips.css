@@ -1,12 +1,20 @@
+/* B2C Partner — My Trips (DriveMeGo brand) */
 .my-trips {
   width: 100%;
+  font-family: var(--dmg-font);
+  color: var(--dmg-ink);
 }
 
 .trips-sub-tabs {
-  display: flex;
-  gap: 12px;
+  display: inline-flex;
+  gap: 6px;
   margin-bottom: 24px;
   flex-wrap: wrap;
+  padding: 6px;
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: 14px;
+  box-shadow: var(--dmg-shadow-sm);
 }
 
 .sub-tab-btn {
@@ -14,25 +22,26 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  color: #6b7280;
+  background-color: transparent;
+  border: none;
+  border-radius: 10px;
+  color: var(--dmg-muted);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
+  font-family: var(--dmg-font);
 }
 
 .sub-tab-btn:hover {
-  color: #1f2937;
-  border-color: #d1d5db;
+  color: var(--dmg-navy);
+  background: var(--dmg-teal-050);
 }
 
 .sub-tab-btn.active {
-  background-color: #16a34a;
+  background: var(--dmg-cta);
   color: #ffffff;
-  border-color: #16a34a;
+  box-shadow: var(--dmg-cta-shadow);
 }
 
 .sub-tab-btn svg {
@@ -44,10 +53,9 @@
   width: 100%;
 }
 
-/* Tablet (768px and below) */
 @media (max-width: 768px) {
   .trips-sub-tabs {
-    gap: 8px;
+    gap: 4px;
   }
 
   .sub-tab-btn {
@@ -56,10 +64,10 @@
   }
 }
 
-/* Mobile (480px and below) */
 @media (max-width: 480px) {
   .trips-sub-tabs {
-    gap: 8px;
+    display: flex;
+    width: 100%;
   }
 
   .sub-tab-btn {
@@ -68,9 +76,5 @@
     flex: 1;
     min-width: 100px;
     justify-content: center;
-  }
-
-  .sub-tab-btn span:last-child {
-    display: none;
   }
 }

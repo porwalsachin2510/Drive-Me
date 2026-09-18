@@ -1,5 +1,6 @@
 .payment-options-comparison {
     padding: 0;
+    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .comparison-header {
@@ -9,8 +10,9 @@
 
 .comparison-header h2 {
     font-size: 24px;
-    font-weight: 700;
-    color: #111827;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #0a2a43;
     margin: 0 0 8px 0;
 }
 
@@ -46,29 +48,29 @@
 }
 
 .payment-option-card:hover {
-    border-color: #667eea;
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+    border-color: #0a2a43;
+    box-shadow: 0 10px 26px rgba(10, 42, 67, 0.14);
 }
 
 .payment-option-card.selected {
-    border-color: #667eea;
-    box-shadow: 0 4px 24px rgba(102, 126, 234, 0.25);
-    background: linear-gradient(135deg, #f5f7ff 0%, #ffffff 100%);
+    border-color: #0a2a43;
+    box-shadow: 0 12px 30px rgba(10, 42, 67, 0.2);
+    background: linear-gradient(135deg, #f4f8fb 0%, #ffffff 100%);
 }
 
 .payment-option-card.emi-card {
-    border-color: #e0f2fe;
+    border-color: #bfe9ef;
 }
 
 .payment-option-card.emi-card:hover {
-    border-color: #0284c7;
-    box-shadow: 0 4px 20px rgba(2, 132, 199, 0.15);
+    border-color: #12b0c4;
+    box-shadow: 0 10px 26px rgba(18, 176, 196, 0.18);
 }
 
 .payment-option-card.emi-card.selected {
-    border-color: #0284c7;
-    box-shadow: 0 4px 24px rgba(2, 132, 199, 0.25);
-    background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+    border-color: #12b0c4;
+    box-shadow: 0 12px 30px rgba(18, 176, 196, 0.26);
+    background: linear-gradient(135deg, #f4fbfc 0%, #ffffff 100%);
 }
 
 /* Option Header */
@@ -96,19 +98,19 @@
 }
 
 .option-icon.standard-icon {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #123a58 0%, #0a2a43 100%);
     color: white;
 }
 
 .option-icon.emi-icon {
-    background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+    background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
     color: white;
 }
 
 .option-title h3 {
     font-size: 18px;
-    font-weight: 700;
-    color: #111827;
+    font-weight: 800;
+    color: #0a2a43;
     margin: 0;
 }
 
@@ -188,7 +190,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #667eea;
+    background: #12b0c4;
     color: white;
     font-size: 12px;
     font-weight: 700;
@@ -215,13 +217,13 @@
 }
 
 .detail-row.total-row {
-    border-top: 2px solid #667eea;
+    border-top: 2px solid #12b0c4;
     margin-top: 8px;
     padding-top: 12px;
 }
 
 .detail-row.total-row strong {
-    color: #667eea;
+    color: #0e97a8;
 }
 
 .detail-row.commission {
@@ -264,20 +266,20 @@
 }
 
 .tenure-pill:hover {
-    border-color: #0284c7;
-    color: #0284c7;
+    border-color: #12b0c4;
+    color: #0e97a8;
 }
 
 .tenure-pill.active {
-    background: #0284c7;
-    border-color: #0284c7;
+    background: #12b0c4;
+    border-color: #12b0c4;
     color: white;
 }
 
 .emi-calculation {
     text-align: center;
     padding: 20px;
-    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+    background: #f4fbfc;
     border-radius: 12px;
     margin-bottom: 16px;
 }
@@ -289,7 +291,7 @@
 .emi-value {
     font-size: 32px;
     font-weight: 800;
-    color: #0284c7;
+    color: #0e97a8;
 }
 
 .emi-period {
@@ -393,7 +395,7 @@
 .total-amount {
     font-size: 24px;
     font-weight: 800;
-    color: #111827;
+    color: #0a2a43;
 }
 
 .total-note {
@@ -409,16 +411,16 @@
     border: none;
     border-radius: 10px;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #123a58 0%, #0a2a43 100%);
     color: white;
 }
 
 .btn-proceed:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 12px 26px rgba(10, 42, 67, 0.32);
 }
 
 .btn-proceed:disabled {
@@ -427,11 +429,11 @@
 }
 
 .btn-proceed.emi-btn {
-    background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+    background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
 }
 
 .btn-proceed.emi-btn:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    box-shadow: 0 12px 26px rgba(18, 176, 196, 0.4);
 }
 
 /* Comparison Table */
@@ -441,8 +443,8 @@
 
 .comparison-table-section h3 {
     font-size: 18px;
-    font-weight: 700;
-    color: #111827;
+    font-weight: 800;
+    color: #0a2a43;
     margin: 0 0 16px 0;
 }
 
@@ -600,7 +602,7 @@
 
 .total-amount-display strong {
     font-size: 28px;
-    color: #0284c7;
+    color: #0e97a8;
 }
 
 .tenure-options {
@@ -620,12 +622,12 @@
 }
 
 .tenure-option:hover {
-    border-color: #0284c7;
+    border-color: #12b0c4;
 }
 
 .tenure-option.selected {
-    border-color: #0284c7;
-    background: #f0f9ff;
+    border-color: #12b0c4;
+    background: #f4fbfc;
 }
 
 .tenure-main {
@@ -642,8 +644,8 @@
 
 .tenure-emi {
     font-size: 13px;
-    color: #0284c7;
-    font-weight: 600;
+    color: #0e97a8;
+    font-weight: 700;
 }
 
 .tenure-description {
@@ -657,7 +659,7 @@
     right: 8px;
     width: 22px;
     height: 22px;
-    background: #0284c7;
+    background: #12b0c4;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -757,9 +759,9 @@
     padding: 14px 24px;
     border: none;
     border-radius: 10px;
-    background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+    background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -767,7 +769,7 @@
 
 .btn-confirm:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    box-shadow: 0 12px 26px rgba(18, 176, 196, 0.42);
 }
 
 .btn-confirm:disabled,
@@ -928,11 +930,11 @@
 }
 
 .emi-unavailable-message .alternative-suggestion {
-    background: #dbeafe;
+    background: #e6f7fa;
     padding: 12px 16px;
     border-radius: 8px;
     font-size: 13px;
-    color: #1e40af;
+    color: #0c8695;
     margin: 0;
 }
 

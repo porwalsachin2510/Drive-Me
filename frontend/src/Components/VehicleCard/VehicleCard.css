@@ -75,19 +75,20 @@
 
 .view-details-btn {
   padding: 12px 30px;
-  background: #2DD4BF;
+  background: var(--dmg-cta, linear-gradient(135deg, #16bccf 0%, #0e97a8 100%));
   color: #ffffff;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
+  box-shadow: var(--dmg-cta-shadow, 0 12px 26px rgba(18, 176, 196, 0.3));
 }
 
 .view-details-btn:hover {
-  background: #14B8A6;
   transform: scale(1.05);
+  box-shadow: var(--dmg-cta-shadow-lg, 0 16px 34px rgba(18, 176, 196, 0.38));
 }
 
 .vehicle-card-content {
@@ -106,8 +107,9 @@
 
 .vehicle-title {
   font-size: 20px;
-  font-weight: 700;
-  color: #1a1a2e;
+  font-weight: 800;
+  color: var(--dmg-navy, #0a2a43);
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
@@ -135,7 +137,7 @@
 }
 
 .spec-item i {
-  color: #2DD4BF;
+  color: var(--dmg-teal-600, #0e97a8);
   font-size: 16px;
 }
 
@@ -150,8 +152,8 @@
   align-items: center;
   gap: 5px;
   padding: 5px 12px;
-  background: #e0f7ff;
-  color: #0066cc;
+  background: var(--dmg-teal-050, #e6f7fa);
+  color: var(--dmg-teal-600, #0e97a8);
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
@@ -190,8 +192,8 @@
 
 .price-amount {
   font-size: 18px;
-  font-weight: 700;
-  color: #1a1a2e;
+  font-weight: 800;
+  color: var(--dmg-teal-600, #0e97a8);
 }
 
 .price-period {
@@ -238,7 +240,7 @@
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0f2233;
   margin-bottom: 4px;
 }
 
@@ -258,17 +260,17 @@
 .view-portfolio-btn {
   padding: 8px 16px;
   background: transparent;
-  color: #2DD4BF;
-  border: 1px solid #2DD4BF;
-  border-radius: 6px;
+  color: var(--dmg-teal-600, #0e97a8);
+  border: 1px solid var(--dmg-teal, #12b0c4);
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
 }
 
 .view-portfolio-btn:hover {
-  background: #2DD4BF;
+  background: var(--dmg-teal, #12b0c4);
   color: #ffffff;
 }
 

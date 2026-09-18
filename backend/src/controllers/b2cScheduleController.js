@@ -995,6 +995,29 @@ export const getB2CPartnerRoutes = async (req, res) => {
                     };
                 }));
 
+                // Resolve an EFFECTIVE vehicle for display. A route's vehicle may
+                // be assigned at the route level, the schedule level, or per trip
+                // time. Fall through each level so admin/partner views never show
+                // "Not assigned" when a vehicle actually exists.
+                let effectiveVehicle = routeObj.assignedVehicle || null;
+                if (!effectiveVehicle) {
+                    for (const sch of processedSchedules) {
+                        if (sch.assignedVehicle) {
+                            effectiveVehicle = sch.assignedVehicle;
+                            break;
+                        }
+                        const trip = (sch.tripTimes || []).find((t) => t.assignedVehicle);
+                        if (trip?.assignedVehicle) {
+                            const v = await B2CPartnerVehicle.findById(trip.assignedVehicle)
+                                .select('model licensePlate vehicleType seatingCapacity');
+                            if (v) {
+                                effectiveVehicle = v.toObject();
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 return {
                     ...routeObj,
                     startTime: startTime || "",
@@ -1002,6 +1025,7 @@ export const getB2CPartnerRoutes = async (req, res) => {
                     schedules: processedSchedules,
                     driverInfo: driverInfo,
                     isSelfDriver: isSelfDriver,
+                    effectiveVehicle: effectiveVehicle,
                     assignedDriver: driverInfo // Override with processed info for backward compatibility
                 };
             })

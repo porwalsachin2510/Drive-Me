@@ -3,6 +3,7 @@
 import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { Banknote } from "lucide-react";
 import "./AdminFinance.css";
 import api from "../../../utils/api";
 import { notify } from "../../../utils/toast";
@@ -833,7 +834,17 @@ function AdminFinance() {
   return (
     <div className="admin-finance">
       <div className="finance-header">
-        <h2>Finance Management</h2>
+        <div className="finance-header-titles">
+          <div className="finance-header-icon">
+            <Banknote size={26} strokeWidth={2.2} />
+          </div>
+          <div>
+            <h2>Finance Management</h2>
+            <p className="finance-header-subtitle">
+              Revenue, payouts and platform transactions at a glance
+            </p>
+          </div>
+        </div>
         <div className="finance-overview">
           <div className="overview-item">
             <span className="overview-label">Total Revenue</span>

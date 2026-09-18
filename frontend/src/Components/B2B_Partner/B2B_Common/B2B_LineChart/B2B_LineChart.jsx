@@ -100,8 +100,8 @@ function B2B_LineChart({ data, currency }) {
           <Line
             type="monotone"
             dataKey="Profit"
-            stroke="#1677b8"
-            dot={{ fill: "#1677b8", r: 5 }}
+            stroke="#12b0c4"
+            dot={{ fill: "#12b0c4", r: 5 }}
             activeDot={{ r: 7 }}
             strokeWidth={3}
             isAnimationActive={true}

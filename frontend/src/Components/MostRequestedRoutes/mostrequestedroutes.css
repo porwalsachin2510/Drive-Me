@@ -20,8 +20,9 @@
 
 .most-requested-title {
   font-size: 1.35rem;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-weight: 800;
+  color: var(--dmg-navy, #0a2a43);
+  letter-spacing: -0.01em;
   margin: 0 0 0.35rem 0;
   text-wrap: balance;
 }
@@ -152,7 +153,7 @@
 }
 
 .most-requested-arrow {
-  color: #ef4444;
+  color: var(--dmg-teal, #12b0c4);
   font-weight: 700;
 }
 
@@ -171,19 +172,20 @@
 .most-requested-btn {
   margin-top: auto;
   width: 100%;
-  padding: 0.7rem 1rem;
+  padding: 0.75rem 1rem;
   border: none;
-  border-radius: 10px;
-  background: #ef4444;
+  border-radius: 12px;
+  background: var(--dmg-cta, linear-gradient(135deg, #16bccf 0%, #0e97a8 100%));
   color: #ffffff;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .most-requested-btn:hover:not(:disabled) {
-  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: var(--dmg-cta-shadow, 0 12px 26px rgba(18, 176, 196, 0.3));
 }
 
 .most-requested-btn:disabled {

@@ -15,7 +15,14 @@ import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import { useLocale } from "../../../hooks/useLocale";
 import { showSuccess, showError } from "../../../utils/toast";
+import {
+  Wallet as WalletIcon,
+  Sparkles,
+  Receipt,
+  TrendingUp,
+} from "lucide-react";
 import "./walletpage.css";
+import "../../../styles/commuter-banner.css";
 
 function WalletPage() {
   const dispatch = useDispatch();
@@ -272,8 +279,24 @@ function WalletPage() {
           </div>
         )}
 
+        <header className="dmg-banner">
+          <div className="dmg-banner-main">
+            <span className="dmg-banner-icon">
+              <WalletIcon />
+            </span>
+            <div className="dmg-banner-text">
+              <span className="dmg-banner-eyebrow">
+                <Sparkles /> One wallet, every ride
+              </span>
+              <h1 className="dmg-banner-title">My Wallet</h1>
+              <p className="dmg-banner-sub">
+                Add funds, track spending and pay for trips instantly.
+              </p>
+            </div>
+          </div>
+        </header>
+
         <div className="drivemego-wp-wallet-header">
-          <h1>My Wallet</h1>
           <div className="drivemego-wp-wallet-balance-card">
             <div className="drivemego-wp-balance-info">
               <span className="drivemego-wp-balance-label">
@@ -329,7 +352,9 @@ function WalletPage() {
             <div className="drivemego-wp-overview-section">
               <div className="drivemego-wp-overview-cards">
                 <div className="drivemego-wp-overview-card">
-                  <div className="drivemego-wp-card-icon">💰</div>
+                  <div className="drivemego-wp-card-icon">
+                    <WalletIcon size={22} />
+                  </div>
                   <div className="drivemego-wp-card-content">
                     <h3>Total Balance</h3>
                     <p>{formatCurrency(balance)}</p>
@@ -337,7 +362,9 @@ function WalletPage() {
                 </div>
 
                 <div className="drivemego-wp-overview-card">
-                  <div className="drivemego-wp-card-icon">📊</div>
+                  <div className="drivemego-wp-card-icon">
+                    <Receipt size={22} />
+                  </div>
                   <div className="drivemego-wp-card-content">
                     <h3>Total Transactions</h3>
                     <p>{transactions.length}</p>
@@ -345,7 +372,9 @@ function WalletPage() {
                 </div>
 
                 <div className="drivemego-wp-overview-card">
-                  <div className="drivemego-wp-card-icon">📈</div>
+                  <div className="drivemego-wp-card-icon">
+                    <TrendingUp size={22} />
+                  </div>
                   <div className="drivemego-wp-card-content">
                     <h3>This Month</h3>
                     <p>{formatCurrency(thisMonthNet())}</p>

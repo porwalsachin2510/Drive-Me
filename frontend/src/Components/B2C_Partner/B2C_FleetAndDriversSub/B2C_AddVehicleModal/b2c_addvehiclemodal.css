@@ -97,7 +97,7 @@
 
 .b2c-form-input:focus {
   outline: none;
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
@@ -131,8 +131,8 @@
 }
 
 .b2c-feature-checkbox input[type="checkbox"]:checked + .b2c-checkmark {
-  background: #E85D5D;
-  border-color: #E85D5D;
+  background: #12b0c4;
+  border-color: #12b0c4;
 }
 
 .b2c-feature-checkbox input[type="checkbox"]:checked + .b2c-checkmark::after {
@@ -152,7 +152,7 @@
 }
 
 .b2c-add-feature-btn {
-  background: #2DD4BF;
+  background: #12b0c4;
   color: white;
   border: none;
   padding: 10px 16px;
@@ -163,7 +163,7 @@
 }
 
 .b2c-add-feature-btn:hover {
-  background: #14B8A6;
+  background: #0e97a8;
 }
 
 .b2c-selected-features h4 {
@@ -219,7 +219,7 @@
 }
 
 .b2c-image-upload-box:hover {
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   background: rgba(232, 93, 93, 0.05);
 }
 
@@ -296,7 +296,7 @@
 }
 
 .b2c-add-more-image:hover {
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   background: rgba(232, 93, 93, 0.05);
 }
 
@@ -339,12 +339,12 @@
 }
 
 .b2c-btn-submit {
-  background: #2DD4BF;
+  background: #12b0c4;
   color: white;
 }
 
 .b2c-btn-submit:hover {
-  background: #14B8A6;
+  background: #0e97a8;
 }
 
 /* Tags Selector Styles */

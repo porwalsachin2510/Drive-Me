@@ -19,8 +19,29 @@
 
 .drivemego-b2b_linechart-chart-label {
   font-size: 12px;
-  color: #999999;
+  color: var(--dmg-muted, #999999);
   font-weight: 500;
+}
+
+.drivemego-b2b_linechart-custom-tooltip {
+  background-color: var(--dmg-card, #fff);
+  border: 1px solid var(--dmg-line, #e0e0e0);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: var(--dmg-shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.15));
+  font-size: 12px;
+  font-family: var(--dmg-font);
+}
+
+.drivemego-b2b_linechart-tooltip-label {
+  font-weight: 700;
+  color: var(--dmg-navy, #333);
+  margin: 0 0 6px 0;
+}
+
+.drivemego-b2b_linechart-custom-tooltip p {
+  margin: 4px 0;
+  font-size: 12px;
 }
 
 @media (max-width: 768px) {

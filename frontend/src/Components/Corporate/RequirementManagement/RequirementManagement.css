@@ -1,7 +1,10 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
 .drivemego-crm-requirement-management {
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .drivemego-crm-management-header {
@@ -37,8 +40,8 @@
 }
 
 .drivemego-crm-tab-btn.drivemego-crm-active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
+  color: #12b0c4;
+  border-bottom-color: #12b0c4;
 }
 
 .drivemego-crm-management-content {
@@ -57,13 +60,14 @@
 }
 
 .drivemego-crm-stat-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #12b0c4 100%);
   color: white;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   gap: 15px;
+  box-shadow: 0 16px 36px -20px rgba(10, 42, 67, 0.6);
 }
 
 .drivemego-crm-stat-icon {
@@ -113,8 +117,8 @@
 
 .drivemego-crm-search-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.16);
 }
 
 .drivemego-crm-filter-select {
@@ -140,12 +144,13 @@
 }
 
 .drivemego-crm-btn-primary {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
   color: white;
+  box-shadow: 0 10px 22px -12px rgba(18, 176, 196, 0.6);
 }
 
 .drivemego-crm-btn-primary:hover {
-  background: #2563eb;
+  filter: brightness(1.04);
 }
 
 .drivemego-crm-btn-secondary {
@@ -168,12 +173,12 @@
 }
 
 .drivemego-crm-btn-info {
-  background: #0ea5e9;
+  background: #12b0c4;
   color: white;
 }
 
 .drivemego-crm-btn-info:hover {
-  background: #0284c7;
+  background: #0e97a8;
 }
 
 .drivemego-crm-btn-warning {
@@ -395,8 +400,8 @@
 .drivemego-crm-form-row select:focus,
 .drivemego-crm-form-row textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.16);
 }
 
 .drivemego-crm-form-row textarea {
@@ -444,8 +449,8 @@
 .drivemego-crm-form-group select:focus,
 .drivemego-crm-form-group textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.16);
 }
 
 /* Textarea specific styles */
@@ -463,8 +468,8 @@
 
 .drivemego-crm-textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.16);
 }
 
 /* Vehicle requirement card header */

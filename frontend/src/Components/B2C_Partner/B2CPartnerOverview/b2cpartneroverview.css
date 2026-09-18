@@ -1,240 +1,319 @@
-.b2c-overview {
-  padding: 24px;
+/* B2C Partner — Dashboard Overview (DriveMeGo brand) */
+.drivemego-b2c-overview {
+  font-family: var(--dmg-font);
+  color: var(--dmg-ink);
 }
 
 .drivemego-b2c-overview-loading,
-.b2c-overview-error {
+.drivemego-b2c-overview-error {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 72px 20px;
   gap: 16px;
-  color: #6c757d;
+  color: var(--dmg-muted);
+  font-family: var(--dmg-font);
 }
 
 .drivemego-loading-spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid #e9ecef;
-  border-top-color: #0d6efd;
+  width: 38px;
+  height: 38px;
+  border: 3px solid var(--dmg-teal-050);
+  border-top-color: var(--dmg-teal);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.retry-btn {
-  padding: 8px 20px;
-  background: #0d6efd;
-  color: white;
+.drivemego-retry-btn {
+  padding: 11px 24px;
+  background: var(--dmg-cta);
+  color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 14px;
-}
-
-.overview-header {
-  margin-bottom: 28px;
-}
-
-.overview-header h2 {
-  font-size: 22px;
   font-weight: 700;
-  color: #1a1a2e;
+  box-shadow: var(--dmg-cta-shadow);
+}
+
+.drivemego-overview-header {
+  margin-bottom: 26px;
+}
+
+.drivemego-overview-header h2 {
+  font-size: clamp(20px, 2.4vw, 24px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--dmg-navy);
   margin: 0 0 4px 0;
 }
 
-.overview-header p {
-  color: #6c757d;
+.drivemego-overview-header p {
+  color: var(--dmg-muted);
   font-size: 14px;
   margin: 0;
 }
 
-.stats-grid {
+/* ---- KPI cards ---- */
+.drivemego-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
   margin-bottom: 32px;
 }
 
-.stat-card {
+.drivemego-stat-card {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 20px;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e9ecef;
-  transition: box-shadow 0.2s ease;
+  gap: 16px;
+  padding: 22px;
+  background: var(--dmg-card);
+  border-radius: var(--dmg-radius-md);
+  border: 1px solid var(--dmg-line);
+  box-shadow: var(--dmg-shadow-sm);
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
-.stat-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+.drivemego-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--dmg-teal);
+  opacity: 0;
+  transition: opacity 0.18s ease;
 }
 
-.stat-icon {
+.drivemego-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--dmg-shadow);
+  border-color: var(--dmg-teal-100);
+}
+
+.drivemego-stat-card:hover::before {
+  opacity: 1;
+}
+
+.drivemego-stat-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   flex-shrink: 0;
 }
 
-.stat-routes .stat-icon { background: #e8f4fd; color: #0d6efd; }
-.stat-subscribers .stat-icon { background: #e8f8ee; color: #198754; }
-.stat-revenue .stat-icon { background: #fff3e0; color: #f57c00; }
-.stat-trips .stat-icon { background: #f3e8fd; color: #7c3aed; }
-.stat-requests .stat-icon { background: #fce4ec; color: #d32f2f; }
-.stat-renewals .stat-icon { background: #e0f7fa; color: #00838f; }
+.drivemego-stat-routes .drivemego-stat-icon {
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-600);
+}
+.drivemego-stat-subscribers .drivemego-stat-icon {
+  background: var(--dmg-green-050);
+  color: var(--dmg-green);
+}
+.drivemego-stat-revenue .drivemego-stat-icon {
+  background: var(--dmg-amber-050);
+  color: #c77d10;
+}
+.drivemego-stat-trips .drivemego-stat-icon {
+  background: rgba(10, 42, 67, 0.08);
+  color: var(--dmg-navy);
+}
+.drivemego-stat-requests .drivemego-stat-icon {
+  background: var(--dmg-red-050);
+  color: var(--dmg-red-600);
+}
+.drivemego-stat-renewals .drivemego-stat-icon {
+  background: var(--dmg-blue-050);
+  color: var(--dmg-blue);
+}
 
-.stat-info {
+.drivemego-stat-info {
   display: flex;
   flex-direction: column;
 }
 
-.stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a2e;
-  line-height: 1.2;
+.drivemego-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--dmg-navy);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
-.stat-label {
+.drivemego-stat-label {
   font-size: 13px;
-  color: #6c757d;
-  margin-top: 2px;
+  color: var(--dmg-muted);
+  margin-top: 3px;
+  font-weight: 500;
 }
 
-.route-subscribers-section {
+/* ---- Route table ---- */
+.drivemego-route-subscribers-section {
   margin-bottom: 32px;
 }
 
-.route-subscribers-section h3 {
+.drivemego-route-subscribers-section h3 {
   font-size: 18px;
-  font-weight: 600;
-  color: #1a1a2e;
+  font-weight: 700;
+  color: var(--dmg-navy);
   margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
 }
 
-.route-table {
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e9ecef;
+.drivemego-route-table {
+  background: var(--dmg-card);
+  border-radius: var(--dmg-radius-md);
+  border: 1px solid var(--dmg-line);
+  box-shadow: var(--dmg-shadow-sm);
   overflow: hidden;
 }
 
-.table-header,
-.table-row {
+.drivemego-table-header,
+.drivemego-table-row {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr;
-  padding: 12px 20px;
+  padding: 14px 22px;
   gap: 12px;
   align-items: center;
 }
 
-.table-header {
-  background: #f8f9fa;
-  font-weight: 600;
-  font-size: 13px;
-  color: #495057;
-  border-bottom: 1px solid #e9ecef;
+.drivemego-table-header {
+  background: var(--dmg-bg);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--dmg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
-.table-row {
+.drivemego-table-row {
   font-size: 14px;
-  color: #1a1a2e;
-  border-bottom: 1px solid #f1f3f5;
+  color: var(--dmg-ink);
+  border-bottom: 1px solid var(--dmg-line-2);
+  transition: background 0.15s ease;
 }
 
-.table-row:last-child {
+.drivemego-table-row:hover {
+  background: var(--dmg-teal-050);
+}
+
+.drivemego-table-row:last-child {
   border-bottom: none;
 }
 
-.route-name {
-  font-weight: 500;
-}
-
-.subscriber-count {
+.drivemego-route-name {
   font-weight: 600;
-  color: #198754;
+  color: var(--dmg-navy);
 }
 
-.utilization-bar {
+.drivemego-subscriber-count {
+  font-weight: 700;
+  color: var(--dmg-green);
+}
+
+.drivemego-utilization-bar {
   position: relative;
   width: 100%;
-  height: 22px;
-  background: #e9ecef;
-  border-radius: 11px;
+  height: 24px;
+  background: var(--dmg-line);
+  border-radius: 100px;
   overflow: hidden;
 }
 
-.utilization-fill {
+.drivemego-utilization-fill {
   height: 100%;
-  background: linear-gradient(90deg, #0d6efd, #0056b3);
-  border-radius: 11px;
-  transition: width 0.3s ease;
+  background: var(--dmg-cta);
+  border-radius: 100px;
+  transition: width 0.4s ease;
 }
 
-.utilization-text {
+.drivemego-utilization-text {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 11px;
-  font-weight: 600;
-  color: #1a1a2e;
+  font-weight: 700;
+  color: var(--dmg-navy);
 }
 
-.summary-row {
+/* ---- Summary cards ---- */
+.drivemego-summary-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px;
 }
 
-.summary-card {
-  padding: 20px;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e9ecef;
+.drivemego-summary-card {
+  padding: 22px;
+  background: var(--dmg-card);
+  border-radius: var(--dmg-radius-md);
+  border: 1px solid var(--dmg-line);
+  box-shadow: var(--dmg-shadow-sm);
 }
 
-.summary-card h4 {
-  font-size: 13px;
-  font-weight: 500;
-  color: #6c757d;
+.drivemego-summary-card h4 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dmg-muted);
   margin: 0 0 8px 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
-.summary-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a1a2e;
+.drivemego-summary-value {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--dmg-navy);
   margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.drivemego-loading-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--dmg-teal-050);
+  border-top-color: var(--dmg-teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
 }
 
 @media (max-width: 768px) {
-  .stats-grid {
+  .drivemego-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .table-header,
-  .table-row {
+  .drivemego-table-header,
+  .drivemego-table-row {
     grid-template-columns: 1.5fr 1fr 1fr;
     font-size: 12px;
+    padding: 12px 16px;
   }
-  .table-header span:nth-child(4),
-  .table-header span:nth-child(5),
-  .table-row span:nth-child(4),
-  .table-row span:nth-child(5) {
+  .drivemego-table-header span:nth-child(4),
+  .drivemego-table-header span:nth-child(5),
+  .drivemego-table-row span:nth-child(4),
+  .drivemego-table-row span:nth-child(5) {
     display: none;
   }
-  .summary-row {
+  .drivemego-summary-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .drivemego-stats-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   BadgeCheck,
   Repeat2,
-  Sparkles,
+  Route,
 } from "lucide-react";
 import GooglePlacesAutocomplete from "../GooglePlacesAutocomplete/GooglePlacesAutocomplete";
 import "./commute-search-form.css";
@@ -167,8 +167,8 @@ export default function CommuteSearchForm({
         <div className="cmf-head-text">
           <h2 className="cmf-head-title">Find your daily commute</h2>
           <p className="cmf-head-sub">
-            Set your route and days — we&apos;ll match you with verified everyday
-            rides.
+            Set your route and days — we&apos;ll match you with verified
+            everyday rides.
           </p>
         </div>
         <span className="cmf-head-badge">
@@ -180,7 +180,11 @@ export default function CommuteSearchForm({
       <form className="cmf-body" onSubmit={handleSearchCommute}>
         {/* Trip-preference row: day presets on the left, country on the right */}
         <div className="cmf-prefs">
-          <div className="cmf-radios" role="radiogroup" aria-label="Commute days">
+          <div
+            className="cmf-radios"
+            role="radiogroup"
+            aria-label="Commute days"
+          >
             {[
               { id: "weekdays", label: "Weekdays" },
               { id: "all", label: "All Days" },
@@ -221,7 +225,9 @@ export default function CommuteSearchForm({
             <GooglePlacesAutocomplete
               name="pickupLocation"
               value={formData.pickupLocation}
-              onChange={(value) => handleLocationChange("pickupLocation", value)}
+              onChange={(value) =>
+                handleLocationChange("pickupLocation", value)
+              }
               onPlaceSelect={(place) =>
                 handlePlaceSelect("pickupLocation", place)
               }
@@ -279,7 +285,11 @@ export default function CommuteSearchForm({
             className={`cmf-cell cmf-cell-days ${errors.selectedDays ? "cmf-cell-error" : ""}`}
           >
             <span className="cmf-cell-label">
-              <CalendarDays size={13} strokeWidth={2.4} className="cmf-ic-navy" />
+              <CalendarDays
+                size={13}
+                strokeWidth={2.4}
+                className="cmf-ic-navy"
+              />
               Commute days
             </span>
             <button
@@ -305,7 +315,11 @@ export default function CommuteSearchForm({
             </span>
 
             {showDayPicker && (
-              <div className="cmf-day-pop" role="dialog" aria-label="Choose commute days">
+              <div
+                className="cmf-day-pop"
+                role="dialog"
+                aria-label="Choose commute days"
+              >
                 <div className="cmf-day-pop-head">
                   <strong>Select commute days</strong>
                   <button
@@ -393,7 +407,7 @@ export default function CommuteSearchForm({
               className="cmf-request"
               onClick={onRequestRoute}
             >
-              <Sparkles size={15} strokeWidth={2.2} />
+              <Route size={16} strokeWidth={2.2} />
               Request a route
             </button>
             <button type="submit" className="cmf-search">

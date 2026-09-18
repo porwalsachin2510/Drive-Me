@@ -63,7 +63,7 @@ const notifyPayoutTarget = async (payout, { type, title, message, data }) => {
 // Get all users for admin
 export const getAllUsers = async (req, res) => {
     try {
-        const { role, status, page = 1, limit = 20, search } = req.query;
+        const { role, status, page, limit, search } = req.query;
         const query = {};
 
         if (role) query.role = role;
@@ -78,21 +78,53 @@ export const getAllUsers = async (req, res) => {
             ];
         }
 
-        const users = await User.find(query)
-            .select('-password')
-            .sort({ createdAt: -1 })
-            .limit(Number.parseInt(limit))
-            .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
+        // Pagination is OPT-IN. The admin User Management screen loads the full
+        // list (and filters/tabs client-side), so when no `limit`/`page` is
+        // provided we must return EVERY matching user. Previously this defaulted
+        // to limit=20, which silently hid users beyond the 20 most-recent —
+        // making legitimate accounts vanish from the Corporates / B2B tabs even
+        // though the stat badges (counted separately) stayed correct.
+        const usersQuery = User.find(query).select('-password').sort({ createdAt: -1 });
+
+        if (limit) {
+            const parsedLimit = Number.parseInt(limit);
+            const parsedPage = Number.parseInt(page) || 1;
+            usersQuery.limit(parsedLimit).skip((parsedPage - 1) * parsedLimit);
+        }
+
+        const usersDocs = await usersQuery;
 
         const total = await User.countDocuments(query);
 
+        // Enrich B2C partner accounts with their REAL route counts so admin
+        // Service Provider cards/details show accurate figures instead of 0.
+        const users = await Promise.all(
+            usersDocs.map(async (u) => {
+                const obj = u.toObject();
+                if (obj.role === "B2C_PARTNER") {
+                    const [routeCount, activeRouteCount] = await Promise.all([
+                        B2CPartnerRoute.countDocuments({ b2cPartnerId: obj._id }),
+                        B2CPartnerRoute.countDocuments({
+                            b2cPartnerId: obj._id,
+                            status: "Active",
+                            isActive: true,
+                        }),
+                    ]);
+                    obj.routeCount = routeCount;
+                    obj.activeRouteCount = activeRouteCount;
+                }
+                return obj;
+            })
+        );
+
+        const effectiveLimit = limit ? Number.parseInt(limit) : total;
         res.status(200).json({
             success: true,
             users,
             pagination: {
                 total,
-                page: Number.parseInt(page),
-                pages: Math.ceil(total / Number.parseInt(limit)),
+                page: Number.parseInt(page) || 1,
+                pages: effectiveLimit > 0 ? Math.ceil(total / effectiveLimit) : 1,
             },
         });
     } catch (error) {
@@ -114,8 +146,9 @@ export const getUserStats = async (req, res) => {
             corporates,
             b2cPartners,
             b2bPartners,
-            b2bDrivers,
-            corporateDrivers,
+            schoolPartners,
+            schoolCustomers,
+            drivers,
             activeUsers,
             suspendedUsers
         ] = await Promise.all([
@@ -124,8 +157,21 @@ export const getUserStats = async (req, res) => {
             User.countDocuments({ role: "CORPORATE" }),
             User.countDocuments({ role: "B2C_PARTNER" }),
             User.countDocuments({ role: "B2B_PARTNER" }),
-            User.countDocuments({ role: "B2B_PARTNER_DRIVER" }),
-            User.countDocuments({ role: "CORPORATE_DRIVER" }),
+            User.countDocuments({ role: "SCHOOL_PARTNER" }),
+            User.countDocuments({ role: "SCHOOL_CUSTOMER" }),
+            // Count EVERY driver subtype so the Drivers tab/stat matches the
+            // roles that actually exist (B2B, corporate, B2C, and school drivers).
+            User.countDocuments({
+                role: {
+                    $in: [
+                        "B2B_PARTNER_DRIVER",
+                        "CORPORATE_DRIVER",
+                        "B2C_PARTNER_DRIVER",
+                        "SCHOOL_PARTNER_DRIVER",
+                        "SCHOOL_CUSTOMER_DRIVER",
+                    ],
+                },
+            }),
             User.countDocuments({ status: "ACTIVE" }),
             User.countDocuments({ status: "SUSPENDED" })
         ]);
@@ -138,7 +184,9 @@ export const getUserStats = async (req, res) => {
                 corporates,
                 b2cPartners,
                 b2bPartners,
-                drivers: b2bDrivers + corporateDrivers,
+                schoolPartners,
+                schoolCustomers,
+                drivers,
                 activeUsers,
                 suspendedUsers
             }

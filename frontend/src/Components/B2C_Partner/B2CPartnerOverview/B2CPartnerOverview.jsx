@@ -128,9 +128,9 @@ function B2CPartnerOverview() {
 
   if (error) {
     return (
-      <div className="b2c-overview-error">
+      <div className="drivemego-b2c-overview-error">
         <p>{error}</p>
-        <button onClick={fetchDashboardStats} className="retry-btn">
+        <button onClick={fetchDashboardStats} className="drivemego-retry-btn">
           Retry
         </button>
       </div>
@@ -138,15 +138,15 @@ function B2CPartnerOverview() {
   }
 
   return (
-    <div className="b2c-overview">
-      <div className="overview-header">
+    <div className="drivemego-b2c-overview">
+      <div className="drivemego-overview-header">
         <h2>Dashboard Overview</h2>
         <p>Real-time stats for your B2C transport service</p>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card stat-routes">
-          <div className="stat-icon">
+      <div className="drivemego-stats-grid">
+        <div className="drivemego-stat-card drivemego-stat-routes">
+          <div className="drivemego-stat-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
                 d="M3 7L9 3L15 7V14C15 14.5523 14.5523 15 14 15H4C3.44772 15 3 14.5523 3 14V7Z"
@@ -156,14 +156,16 @@ function B2CPartnerOverview() {
               <path d="M7 15V9H11V15" stroke="currentColor" strokeWidth="2" />
             </svg>
           </div>
-          <div className="stat-info">
-            <span className="stat-value">{stats?.activeRoutes || 0}</span>
-            <span className="stat-label">Active Routes</span>
+          <div className="drivemego-stat-info">
+            <span className="drivemego-stat-value">
+              {stats?.activeRoutes || 0}
+            </span>
+            <span className="drivemego-stat-label">Active Routes</span>
           </div>
         </div>
 
-        <div className="stat-card stat-subscribers">
-          <div className="stat-icon">
+        <div className="drivemego-stat-card drivemego-stat-subscribers">
+          <div className="drivemego-stat-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <circle
                 cx="12"
@@ -179,14 +181,16 @@ function B2CPartnerOverview() {
               />
             </svg>
           </div>
-          <div className="stat-info">
-            <span className="stat-value">{stats?.activeSubscribers || 0}</span>
-            <span className="stat-label">Active Subscribers</span>
+          <div className="drivemego-stat-info">
+            <span className="drivemego-stat-value">
+              {stats?.activeSubscribers || 0}
+            </span>
+            <span className="drivemego-stat-label">Active Subscribers</span>
           </div>
         </div>
 
-        <div className="stat-card stat-revenue">
-          <div className="stat-icon">
+        <div className="drivemego-stat-card drivemego-stat-revenue">
+          <div className="drivemego-stat-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <circle
                 cx="12"
@@ -209,17 +213,17 @@ function B2CPartnerOverview() {
               />
             </svg>
           </div>
-          <div className="stat-info">
-            <span className="stat-value">
+          <div className="drivemego-stat-info">
+            <span className="drivemego-stat-value">
               {stats?.currency || activeCurrency}{" "}
               {(stats?.monthlyRevenue || 0).toLocaleString()}
             </span>
-            <span className="stat-label">Monthly Revenue</span>
+            <span className="drivemego-stat-label">Monthly Revenue</span>
           </div>
         </div>
 
-        <div className="stat-card stat-trips">
-          <div className="stat-icon">
+        <div className="drivemego-stat-card drivemego-stat-trips">
+          <div className="drivemego-stat-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <rect
                 x="3"
@@ -245,14 +249,16 @@ function B2CPartnerOverview() {
               <path d="M3 10H21" stroke="currentColor" strokeWidth="2" />
             </svg>
           </div>
-          <div className="stat-info">
-            <span className="stat-value">{stats?.upcomingTrips || 0}</span>
-            <span className="stat-label">Upcoming Trips</span>
+          <div className="drivemego-stat-info">
+            <span className="drivemego-stat-value">
+              {stats?.upcomingTrips || 0}
+            </span>
+            <span className="drivemego-stat-label">Upcoming Trips</span>
           </div>
         </div>
 
-        <div className="stat-card stat-requests">
-          <div className="stat-icon">
+        <div className="drivemego-stat-card drivemego-stat-requests">
+          <div className="drivemego-stat-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
                 d="M4 4H20V16H8L4 20V4Z"
@@ -262,16 +268,16 @@ function B2CPartnerOverview() {
               />
             </svg>
           </div>
-          <div className="stat-info">
-            <span className="stat-value">
+          <div className="drivemego-stat-info">
+            <span className="drivemego-stat-value">
               {stats?.pendingRouteRequests || 0}
             </span>
-            <span className="stat-label">Pending Route Requests</span>
+            <span className="drivemego-stat-label">Pending Route Requests</span>
           </div>
         </div>
 
-        <div className="stat-card stat-renewals">
-          <div className="stat-icon">
+        <div className="drivemego-stat-card drivemego-stat-renewals">
+          <div className="drivemego-stat-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
                 d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C14.8273 3 17.35 4.30367 19 6.34267"
@@ -288,19 +294,21 @@ function B2CPartnerOverview() {
               />
             </svg>
           </div>
-          <div className="stat-info">
-            <span className="stat-value">{stats?.renewalsPending || 0}</span>
-            <span className="stat-label">Renewals Due (7d)</span>
+          <div className="drivemego-stat-info">
+            <span className="drivemego-stat-value">
+              {stats?.renewalsPending || 0}
+            </span>
+            <span className="drivemego-stat-label">Renewals Due (7d)</span>
           </div>
         </div>
       </div>
 
       {/* Subscribers per Route */}
       {stats?.subscribersPerRoute && stats.subscribersPerRoute.length > 0 && (
-        <div className="route-subscribers-section">
+        <div className="drivemego-route-subscribers-section">
           <h3>Subscribers Per Route</h3>
-          <div className="route-table">
-            <div className="table-header">
+          <div className="drivemego-route-table">
+            <div className="drivemego-table-header">
               <span>Route</span>
               <span>Active Subscribers</span>
               <span>Total Seats</span>
@@ -317,20 +325,24 @@ function B2CPartnerOverview() {
                     )
                   : 0;
               return (
-                <div key={route.routeId} className="table-row">
-                  <span className="route-name">{route.routeName}</span>
-                  <span className="subscriber-count">
+                <div key={route.routeId} className="drivemego-table-row">
+                  <span className="drivemego-route-name">
+                    {route.routeName}
+                  </span>
+                  <span className="drivemego-subscriber-count">
                     {route.activeSubscribers}
                   </span>
                   <span>{route.totalSeats}</span>
                   <span>{route.availableSeats}</span>
                   <span>
-                    <div className="utilization-bar">
+                    <div className="drivemego-utilization-bar">
                       <div
-                        className="utilization-fill"
+                        className="drivemego-utilization-fill"
                         style={{ width: `${utilization}%` }}
                       />
-                      <span className="utilization-text">{utilization}%</span>
+                      <span className="drivemego-utilization-text">
+                        {utilization}%
+                      </span>
                     </div>
                   </span>
                 </div>
@@ -341,26 +353,33 @@ function B2CPartnerOverview() {
       )}
 
       {/* Quick Summary */}
-      <div className="summary-row">
-        <div className="summary-card">
+      <div className="drivemego-summary-row">
+        <div className="drivemego-summary-card">
           <h4>Total Revenue</h4>
-          <p className="summary-value">
+          <p className="drivemego-summary-value">
             {stats?.currency || activeCurrency}{" "}
             {(stats?.totalRevenue || 0).toLocaleString()}
           </p>
         </div>
-        <div className="summary-card">
+        <div className="drivemego-summary-card">
           <h4>Total Subscribers (All Time)</h4>
-          <p className="summary-value">{stats?.totalSubscribers || 0}</p>
+          <p className="drivemego-summary-value">
+            {stats?.totalSubscribers || 0}
+          </p>
         </div>
-        <div className="summary-card">
+        <div className="drivemego-summary-card">
           <h4>Total Route Requests</h4>
-          <p className="summary-value">{stats?.totalRouteRequests || 0}</p>
+          <p className="drivemego-summary-value">
+            {stats?.totalRouteRequests || 0}
+          </p>
         </div>
       </div>
 
       {/* Subscription Renewals Section */}
-      <div className="route-subscribers-section" style={{ marginTop: "24px" }}>
+      <div
+        className="drivemego-route-subscribers-section"
+        style={{ marginTop: "24px" }}
+      >
         <div
           style={{
             display: "flex",
@@ -374,15 +393,18 @@ function B2CPartnerOverview() {
             onClick={handleToggleRenewals}
             style={{
               background: showRenewals
-                ? "#e0e0e0"
-                : "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
-              color: showRenewals ? "#333" : "#fff",
-              border: "none",
-              padding: "8px 20px",
-              borderRadius: "6px",
+                ? "#eef3f8"
+                : "linear-gradient(135deg, #16bccf 0%, #0e97a8 100%)",
+              color: showRenewals ? "#0f2233" : "#fff",
+              border: showRenewals ? "1px solid #e4ecf3" : "none",
+              padding: "10px 22px",
+              borderRadius: "12px",
               cursor: "pointer",
               fontSize: "13px",
-              fontWeight: "600",
+              fontWeight: "700",
+              boxShadow: showRenewals
+                ? "none"
+                : "0 12px 26px rgba(18,176,196,.3)",
             }}
           >
             {showRenewals ? "Hide Details" : "View Renewal Status"}
@@ -393,7 +415,7 @@ function B2CPartnerOverview() {
           <>
             {renewalLoading ? (
               <div style={{ textAlign: "center", padding: "24px" }}>
-                <div className="loading-spinner" />
+                <div className="drivemego-loading-spinner" />
                 <p>Loading renewal data...</p>
               </div>
             ) : renewalData ? (
@@ -498,9 +520,9 @@ function B2CPartnerOverview() {
 
                 {/* Renewal Details Table */}
                 {renewalData.renewals && renewalData.renewals.length > 0 ? (
-                  <div className="route-table">
+                  <div className="drivemego-route-table">
                     <div
-                      className="table-header"
+                      className="drivemego-table-header"
                       style={{
                         gridTemplateColumns: "1.5fr 1.5fr 1fr 0.8fr 1fr 0.8fr",
                       }}
@@ -515,7 +537,7 @@ function B2CPartnerOverview() {
                     {renewalData.renewals.map((renewal) => (
                       <div
                         key={renewal.passId}
-                        className="table-row"
+                        className="drivemego-table-row"
                         style={{
                           gridTemplateColumns:
                             "1.5fr 1.5fr 1fr 0.8fr 1fr 0.8fr",

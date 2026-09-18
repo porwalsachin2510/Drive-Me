@@ -1,11 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
 .drivemego-corporate-contract-details-container {
-  padding: 20px;
+  padding: 32px 20px 64px;
   max-width: 1200px;
   margin: 0 auto;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #0f2233;
 }
 
 .drivemego-corporate-contract-back-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -18,7 +22,7 @@
 
 .drivemego-corporate-contract-back-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.4);
 }
 
 .drivemego-corporate-contract-header {
@@ -31,9 +35,10 @@
 }
 
 .drivemego-corporate-contract-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #333;
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 800;
+  color: #0a2a43;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
@@ -75,14 +80,14 @@
 }
 
 .drivemego-corporate-contract-tab:hover {
-  background: #f2f4ff;
-  color: #4f46e5;
+  background: #e6f7fa;
+  color: #0e97a8;
 }
 
 .drivemego-corporate-contract-tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.35);
 }
 
 .drivemego-corporate-contract-tab-icon {
@@ -154,7 +159,7 @@
 }
 
 .drivemego-corporate-contract-vehicle-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   padding: 20px;
   border-radius: 12px;
   color: white;
@@ -283,13 +288,13 @@
 }
 
 .drivemego-corporate-contract-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
 }
 
 .drivemego-corporate-contract-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(18, 176, 196, 0.4);
 }
 
 .drivemego-corporate-contract-btn-success {
@@ -364,7 +369,7 @@
 
 .drivemego-corporate-contract-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #12b0c4;
 }
 
 .drivemego-corporate-contract-modal-actions {
@@ -400,7 +405,7 @@
 }
 
 .drivemego-corporate-contract-details-error button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
   border: none;
   padding: 12px 32px;
@@ -413,12 +418,12 @@
 
 .drivemego-corporate-contract-details-error button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(18, 176, 196, 0.4);
 }
 
 .drivemego-payment-methods-section {
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-  border: 2px solid #667eea;
+  background: linear-gradient(135deg, #12b0c415 0%, #0e97a815 100%);
+  border: 2px solid #12b0c4;
 }
 
 .drivemego-payment-methods-subtitle {
@@ -454,8 +459,8 @@
 
 
 .drivemego-payment-method-badge:hover {
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  border-color: #12b0c4;
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.2);
 }
 
 .drivemego-method-icon {
@@ -493,12 +498,12 @@
 
 /* Adding waiting section styles for contract document pending state */
 .drivemego-corporate-contract-waiting-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   border-radius: 16px;
   padding: 48px 32px;
   text-align: center;
   color: white;
-  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 40px rgba(18, 176, 196, 0.3);
   margin: 20px 0;
 }
 
@@ -572,7 +577,7 @@
 
 .drivemego-waiting-actions .drivemego-btn-secondary {
   background: white;
-  color: #667eea;
+  color: #12b0c4;
   border: none;
   padding: 12px 32px;
   border-radius: 8px;
@@ -705,14 +710,14 @@
 }
 
 .drivemego-financial-item.drivemego-commission-item {
-  background: #f3e8ff;
+  background: #e6f7fa;
   padding: 8px 12px;
   border-radius: 6px;
   margin: 4px 0;
 }
 
 .drivemego-financial-item.drivemego-commission-item .drivemego-value {
-  color: #7c3aed;
+  color: #0a2a43;
   font-weight: 700;
 }
 
@@ -767,8 +772,8 @@
 }
 
 .drivemego-document-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.1);
 }
 
 .drivemego-document-card.drivemego-signed-doc {
@@ -820,25 +825,25 @@
 }
 
 .drivemego-btn-view-doc {
-  background: #667eea;
+  background: #12b0c4;
   color: #fff;
   border: none;
 }
 
 .drivemego-btn-view-doc:hover {
-  background: #5a6fd6;
+  background: #0e97a8;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.3);
 }
 
 .drivemego-btn-download-doc {
   background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
+  color: #12b0c4;
+  border: 2px solid #12b0c4;
 }
 
 .drivemego-btn-download-doc:hover {
-  background: #667eea;
+  background: #12b0c4;
   color: white;
   transform: translateY(-2px);
 }
@@ -870,7 +875,7 @@
 
 /* Upload Signed Document Section */
 .drivemego-upload-signed-section {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  background: linear-gradient(135deg, #f6f9fc 0%, #cbeef4 100%);
   border: 2px dashed #0284c7;
 }
 
@@ -902,7 +907,7 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
   border-radius: 50%;
   font-weight: 700;
@@ -930,7 +935,7 @@
 .drivemego-btn-upload-signed {
   align-self: center;
   padding: 14px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
   border: none;
   border-radius: 10px;
@@ -942,7 +947,7 @@
 
 .drivemego-btn-upload-signed:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(18, 176, 196, 0.4);
 }
 
 /* Waiting Verification Section */
@@ -1083,8 +1088,8 @@
 }
 
 .drivemego-upload-drop-zone:hover {
-  border-color: #667eea;
-  background: #f0f4ff;
+  border-color: #12b0c4;
+  background: #e6f7fa;
 }
 
 .drivemego-upload-icon {

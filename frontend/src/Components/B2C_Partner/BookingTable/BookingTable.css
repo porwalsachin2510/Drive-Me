@@ -1,139 +1,133 @@
-/* B2C Partner Booking Table Styles */
+/* B2C Partner Booking Table (DriveMeGo brand) */
 /* All classes prefixed with b2c- to avoid conflicts */
 
-.b2c-booking-table-container {
+.drivemego-b2c-booking-table-container {
   width: 100%;
+  font-family: var(--dmg-font);
+  color: var(--dmg-ink);
 }
 
 /* Header */
-.b2c-booking-table-header {
+.drivemego-b2c-booking-table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
 }
 
-.b2c-booking-table-header h2 {
+.drivemego-b2c-booking-table-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #1a202c;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--dmg-navy);
 }
 
-.b2c-booking-table-header-right {
+.drivemego-b2c-booking-table-header-right {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.b2c-wallet-balance-display {
+.drivemego-b2c-wallet-balance-display {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  color: #166534;
+  padding: 9px 14px;
+  background-color: var(--dmg-teal-050);
+  border: 1px solid var(--dmg-teal-100);
+  border-radius: 10px;
+  color: var(--dmg-teal-700);
   font-size: 0.85rem;
 }
 
-.b2c-wallet-balance-display svg {
-  color: #16a34a;
+.drivemego-b2c-wallet-balance-display svg {
+  color: var(--dmg-teal-600);
 }
 
-.b2c-wallet-balance-display strong {
+.drivemego-b2c-wallet-balance-display strong {
   font-weight: 700;
-  color: #15803d;
+  color: var(--dmg-teal-700);
 }
 
-.b2c-booking-table-refresh-btn {
+.drivemego-b2c-booking-table-refresh-btn {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background-color: #f7fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  color: #4a5568;
+  background-color: #fff;
+  border: 1px solid var(--dmg-line);
+  border-radius: 10px;
+  color: var(--dmg-navy);
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
+  font-family: var(--dmg-font);
 }
 
-.b2c-booking-table-refresh-btn:hover {
-  background-color: #edf2f7;
-  border-color: #cbd5e0;
+.drivemego-b2c-booking-table-refresh-btn:hover {
+  background-color: var(--dmg-teal-050);
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-700);
 }
 
 /* Stats Row */
-.b2c-booking-table-stats {
+.drivemego-b2c-booking-table-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
 
-.b2c-booking-stat-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 12px;
+.drivemego-b2c-booking-stat-card {
+  background: var(--dmg-card);
+  border-radius: var(--dmg-radius-md);
   padding: 20px 16px;
   text-align: center;
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--dmg-line);
+  transition: all 0.22s ease;
+  box-shadow: var(--dmg-shadow-sm);
   position: relative;
   overflow: hidden;
 }
 
-.b2c-booking-stat-card:nth-child(2)::before {
-  background: linear-gradient(90deg, #F97316, #EA580C);
+.drivemego-b2c-booking-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--dmg-shadow);
+  border-color: var(--dmg-teal-100);
 }
 
-.b2c-booking-stat-card:nth-child(3)::before {
-  background: linear-gradient(90deg, #10B981, #059669);
-}
-
-.b2c-booking-stat-card:nth-child(4)::before {
-  background: linear-gradient(90deg, #8B5CF6, #7C3AED);
-}
-
-.b2c-booking-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-}
-
-.b2c-booking-stat-value {
+.drivemego-b2c-booking-stat-value {
   display: block;
   font-size: 2rem;
   font-weight: 800;
-  color: #2DD4BF;
+  color: var(--dmg-navy);
   margin-bottom: 6px;
   line-height: 1;
 }
 
-.b2c-booking-stat-value.stat-orange {
-  color: #F97316;
+.drivemego-b2c-booking-stat-value.drivemego-stat-orange {
+  color: #c77d10;
 }
 
-.b2c-booking-stat-value.stat-green {
-  color: #10B981;
+.drivemego-b2c-booking-stat-value.drivemego-stat-green {
+  color: var(--dmg-green);
 }
 
-.b2c-booking-stat-value.stat-purple {
-  color: #8B5CF6;
+.drivemego-b2c-booking-stat-value.drivemego-stat-purple {
+  color: var(--dmg-purple);
 }
 
-.b2c-booking-stat-label {
-  color: #64748b;
+.drivemego-b2c-booking-stat-label {
+  color: var(--dmg-muted);
   font-size: 0.8rem;
   font-weight: 500;
   text-transform: capitalize;
 }
 
 /* Table Controls */
-.b2c-booking-table-controls {
+.drivemego-b2c-booking-table-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -142,499 +136,504 @@
   flex-wrap: wrap;
 }
 
-.b2c-booking-search-box {
+.drivemego-b2c-booking-search-box {
   position: relative;
   flex: 1;
   min-width: 280px;
   max-width: 400px;
 }
 
-.b2c-booking-search-icon {
+.drivemego-b2c-booking-search-icon {
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
   width: 18px;
   height: 18px;
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
   pointer-events: none;
 }
 
-.b2c-booking-search-input {
+.drivemego-b2c-booking-search-input {
   width: 100%;
-  padding: 10px 36px 10px 40px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  padding: 11px 36px 11px 40px;
+  border: 1px solid var(--dmg-line);
+  border-radius: 10px;
   font-size: 0.9rem;
-  transition: all 0.2s;
+  transition: all 0.18s;
   background-color: #ffffff;
+  font-family: var(--dmg-font);
+  color: var(--dmg-ink);
 }
 
-.b2c-booking-search-input:focus {
+.drivemego-b2c-booking-search-input:focus {
   outline: none;
-  border-color: #16a34a;
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+  border-color: var(--dmg-teal);
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.14);
 }
 
-.b2c-booking-search-clear {
+.drivemego-b2c-booking-search-clear {
   position: absolute;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  background: #e2e8f0;
+  background: var(--dmg-line);
   border: none;
   width: 20px;
   height: 20px;
   border-radius: 50%;
   cursor: pointer;
   font-size: 12px;
-  color: #718096;
+  color: var(--dmg-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
 }
 
-.b2c-booking-search-clear:hover {
-  background: #cbd5e0;
-  color: #4a5568;
+.drivemego-b2c-booking-search-clear:hover {
+  background: #cbd6e0;
+  color: var(--dmg-navy);
 }
 
-.b2c-booking-filter-group {
+.drivemego-b2c-booking-filter-group {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.b2c-booking-status-filter,
-.b2c-booking-per-page-select {
-  padding: 10px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+.drivemego-b2c-booking-status-filter,
+.drivemego-b2c-booking-per-page-select {
+  padding: 11px 14px;
+  border: 1px solid var(--dmg-line);
+  border-radius: 10px;
   background-color: #ffffff;
-  color: #4a5568;
+  color: var(--dmg-ink);
   font-size: 0.85rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
   font-weight: 500;
+  font-family: var(--dmg-font);
 }
 
-.b2c-booking-status-filter:hover,
-.b2c-booking-status-filter:focus,
-.b2c-booking-per-page-select:hover,
-.b2c-booking-per-page-select:focus {
-  border-color: #16a34a;
+.drivemego-b2c-booking-status-filter:hover,
+.drivemego-b2c-booking-status-filter:focus,
+.drivemego-b2c-booking-per-page-select:hover,
+.drivemego-b2c-booking-per-page-select:focus {
+  border-color: var(--dmg-teal);
   outline: none;
 }
 
-.b2c-booking-results-summary {
+.drivemego-b2c-booking-results-summary {
   font-size: 0.85rem;
-  color: #718096;
+  color: var(--dmg-muted);
   margin-bottom: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid var(--dmg-line-2);
 }
 
-.b2c-booking-search-term {
-  color: #16a34a;
+.drivemego-b2c-booking-search-term {
+  color: var(--dmg-teal-700);
   font-weight: 600;
 }
 
 /* Table Wrapper */
-.b2c-booking-table-wrapper {
+.drivemego-b2c-booking-table-wrapper {
   background-color: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border-radius: var(--dmg-radius-md);
+  border: 1px solid var(--dmg-line);
   overflow: auto;
   margin-bottom: 20px;
+  box-shadow: var(--dmg-shadow-sm);
 }
 
 /* Bookings Table */
-.b2c-booking-table {
+.drivemego-b2c-booking-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
 
-.b2c-booking-table thead {
-  background-color: #f7fafc;
-  border-bottom: 2px solid #e2e8f0;
+.drivemego-b2c-booking-table thead {
+  background-color: var(--dmg-bg);
+  border-bottom: 1px solid var(--dmg-line);
 }
 
-.b2c-booking-table th {
+.drivemego-b2c-booking-table th {
   padding: 14px 12px;
   text-align: left;
-  font-weight: 600;
-  color: #4a5568;
+  font-weight: 700;
+  color: var(--dmg-muted);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
 }
 
-.b2c-th-sortable {
+.drivemego-b2c-th-sortable {
   cursor: pointer;
   user-select: none;
   transition: background-color 0.2s;
 }
 
-.b2c-th-sortable:hover {
-  background-color: #edf2f7;
+.drivemego-b2c-th-sortable:hover {
+  background-color: var(--dmg-teal-050);
 }
 
-.b2c-th-sortable span {
+.drivemego-b2c-th-sortable span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.b2c-sort-icon {
+.drivemego-b2c-sort-icon {
   width: 0;
   height: 0;
   display: inline-block;
 }
 
-.b2c-sort-icon.sort::after {
+.drivemego-b2c-sort-icon.sort::after {
   content: "";
   display: inline-block;
   width: 0;
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-bottom: 5px solid #cbd5e0;
+  border-bottom: 5px solid #cbd6e0;
   margin-left: 4px;
 }
 
-.b2c-sort-icon.sort-up::after {
+.drivemego-b2c-sort-icon.drivemego-sort-up::after {
   content: "";
   display: inline-block;
   width: 0;
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-bottom: 5px solid #16a34a;
+  border-bottom: 5px solid var(--dmg-teal);
   margin-left: 4px;
 }
 
-.b2c-sort-icon.sort-down::after {
+.drivemego-b2c-sort-icon.drivemego-sort-down::after {
   content: "";
   display: inline-block;
   width: 0;
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 5px solid #16a34a;
+  border-top: 5px solid var(--dmg-teal);
   margin-left: 4px;
 }
 
-.b2c-booking-table tbody tr {
-  border-bottom: 1px solid #edf2f7;
+.drivemego-b2c-booking-table tbody tr {
+  border-bottom: 1px solid var(--dmg-line-2);
   transition: background-color 0.15s;
 }
 
-.b2c-booking-table tbody tr:hover {
-  background-color: #f7fafc;
+.drivemego-b2c-booking-table tbody tr:hover {
+  background-color: var(--dmg-teal-050);
 }
 
-.b2c-booking-table tbody tr:last-child {
+.drivemego-b2c-booking-table tbody tr:last-child {
   border-bottom: none;
 }
 
-.b2c-booking-table td {
+.drivemego-b2c-booking-table td {
   padding: 12px;
   vertical-align: middle;
 }
 
 /* Table Cell Styles */
-.b2c-td-id {
+.drivemego-b2c-td-id {
   min-width: 90px;
 }
 
-.b2c-booking-id-badge {
+.drivemego-b2c-booking-id-badge {
   font-family: monospace;
   font-size: 0.8rem;
-  color: #2d3748;
-  background-color: #edf2f7;
+  color: var(--dmg-navy);
+  background-color: var(--dmg-bg);
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   font-weight: 600;
 }
 
-.b2c-td-passenger {
+.drivemego-b2c-td-passenger {
   min-width: 140px;
 }
 
-.b2c-passenger-info {
+.drivemego-b2c-passenger-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.b2c-passenger-name {
+.drivemego-b2c-passenger-name {
   font-weight: 600;
-  color: #1a202c;
+  color: var(--dmg-navy);
   font-size: 0.85rem;
 }
 
-.b2c-passenger-phone {
+.drivemego-b2c-passenger-phone {
   font-size: 0.75rem;
-  color: #718096;
+  color: var(--dmg-muted);
 }
 
-.b2c-td-route {
+.drivemego-b2c-td-route {
   min-width: 180px;
 }
 
-.b2c-route-cell {
+.drivemego-b2c-route-cell {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.b2c-route-from {
-  color: #16a34a;
-  font-weight: 500;
+.drivemego-b2c-route-from {
+  color: var(--dmg-teal-700);
+  font-weight: 600;
   font-size: 0.8rem;
 }
 
-.b2c-route-arrow {
-  color: #a0aec0;
+.drivemego-b2c-route-arrow {
+  color: var(--dmg-muted-2);
   font-weight: 700;
 }
 
-.b2c-route-to {
-  color: #e53e3e;
-  font-weight: 500;
+.drivemego-b2c-route-to {
+  color: var(--dmg-red-600);
+  font-weight: 600;
   font-size: 0.8rem;
 }
 
-.b2c-td-driver {
+.drivemego-b2c-td-driver {
   min-width: 130px;
 }
 
-.b2c-driver-info {
+.drivemego-b2c-driver-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.b2c-driver-name {
+.drivemego-b2c-driver-name {
   font-weight: 500;
-  color: #2d3748;
+  color: var(--dmg-ink);
   font-size: 0.85rem;
 }
 
-.b2c-driver-badge {
+.drivemego-b2c-driver-badge {
   font-size: 0.65rem;
   padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 600;
+  border-radius: 5px;
+  font-weight: 700;
   text-transform: uppercase;
   display: inline-block;
   width: fit-content;
 }
 
-.b2c-driver-badge.self-driver {
-  background-color: #dbeafe;
-  color: #1d4ed8;
+.drivemego-b2c-driver-badge.drivemego-self-driver {
+  background-color: var(--dmg-blue-050);
+  color: var(--dmg-blue);
 }
 
-.b2c-driver-badge.assigned-driver {
-  background-color: #dcfce7;
-  color: #166534;
+.drivemego-b2c-driver-badge.drivemego-assigned-driver {
+  background-color: var(--dmg-green-050);
+  color: var(--dmg-green-600);
 }
 
 /* Round-trip driver display styles */
-.b2c-driver-roundtrip {
+.drivemego-b2c-driver-roundtrip {
   gap: 8px;
 }
 
-.b2c-driver-trip-section {
+.drivemego-b2c-driver-trip-section {
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding-bottom: 6px;
 }
 
-.b2c-driver-trip-section.b2c-driver-return {
-  border-top: 1px dashed #e5e7eb;
+.drivemego-b2c-driver-trip-section.drivemego-b2c-driver-return {
+  border-top: 1px dashed var(--dmg-line);
   padding-top: 6px;
 }
 
-.b2c-trip-label {
+.drivemego-b2c-trip-label {
   font-size: 0.65rem;
-  color: #6b7280;
-  font-weight: 500;
+  color: var(--dmg-muted);
+  font-weight: 600;
 }
 
-.b2c-td-seats {
+.drivemego-b2c-td-seats {
   text-align: center;
 }
 
-.b2c-seats-badge {
+.drivemego-b2c-seats-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 28px;
   height: 28px;
-  background-color: #edf2f7;
-  color: #4a5568;
-  font-weight: 600;
-  border-radius: 6px;
+  background-color: var(--dmg-bg);
+  color: var(--dmg-navy);
+  font-weight: 700;
+  border-radius: 8px;
   font-size: 0.85rem;
 }
 
-.b2c-td-amount {
+.drivemego-b2c-td-amount {
   white-space: nowrap;
 }
 
-.b2c-amount-text {
+.drivemego-b2c-amount-text {
   font-weight: 700;
-  color: #16a34a;
+  color: var(--dmg-green-600);
   font-size: 0.9rem;
 }
 
-.b2c-td-status {
+.drivemego-b2c-td-status {
   min-width: 100px;
 }
 
-.b2c-status-pill {
+.drivemego-b2c-status-pill {
   display: inline-block;
   padding: 5px 10px;
-  border-radius: 20px;
+  border-radius: 100px;
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
-.b2c-status-pill.status-pending,
-.b2c-status-pill.status-confirmed {
-  background-color: #fef3cd;
-  color: #856404;
+.drivemego-b2c-status-pill.drivemego-status-pending,
+.drivemego-b2c-status-pill.drivemego-status-confirmed {
+  background-color: var(--dmg-amber-050);
+  color: #a06a09;
 }
 
-.b2c-status-pill.status-accepted {
-  background-color: #d4edda;
-  color: #155724;
+.drivemego-b2c-status-pill.drivemego-status-accepted {
+  background-color: var(--dmg-green-050);
+  color: var(--dmg-green-600);
 }
 
-.b2c-status-pill.status-in_progress {
-  background-color: #cce5ff;
-  color: #004085;
+.drivemego-b2c-status-pill.drivemego-status-in_progress {
+  background-color: var(--dmg-blue-050);
+  color: var(--dmg-blue);
 }
 
-.b2c-status-pill.status-rejected,
-.b2c-status-pill.status-cancelled {
-  background-color: #f8d7da;
-  color: #721c24;
+.drivemego-b2c-status-pill.drivemego-status-rejected {
+  background-color: var(--dmg-red-050);
+  color: var(--dmg-red-600);
 }
 
-.b2c-status-pill.status-completed {
-  background-color: #e2e8f0;
-  color: #4a5568;
+.drivemego-b2c-status-pill.drivemego-status-completed {
+  background-color: rgba(10, 42, 67, 0.08);
+  color: var(--dmg-navy);
 }
 
-.b2c-td-date {
+.drivemego-b2c-td-date {
   white-space: nowrap;
 }
 
-.b2c-date-text {
+.drivemego-b2c-date-text {
   font-size: 0.8rem;
-  color: #718096;
+  color: var(--dmg-muted);
 }
 
-.b2c-td-actions {
+.drivemego-b2c-td-actions {
   min-width: 160px;
 }
 
-.b2c-action-buttons {
+.drivemego-b2c-action-buttons {
   display: flex;
   gap: 6px;
   align-items: center;
 }
 
-.b2c-btn-view {
-  padding: 6px;
-  background-color: #f7fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+.drivemego-b2c-btn-view {
+  padding: 7px;
+  background-color: #fff;
+  border: 1px solid var(--dmg-line);
+  border-radius: 8px;
   cursor: pointer;
-  color: #4a5568;
-  transition: all 0.2s;
+  color: var(--dmg-navy);
+  transition: all 0.18s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.b2c-btn-view:hover {
-  background-color: #edf2f7;
-  border-color: #cbd5e0;
+.drivemego-b2c-btn-view:hover {
+  background-color: var(--dmg-teal-050);
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-700);
 }
 
-.b2c-btn-accept {
-  padding: 6px 12px;
-  background-color: #16a34a;
+.drivemego-b2c-btn-accept {
+  padding: 7px 12px;
+  background: var(--dmg-cta);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
 }
 
-.b2c-btn-accept:hover {
-  background-color: #15803d;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+.drivemego-b2c-btn-accept:hover {
+  background: var(--dmg-cta-hover);
+  box-shadow: var(--dmg-cta-shadow);
 }
 
-.b2c-btn-reject {
-  padding: 6px 12px;
-  background-color: #fc8181;
-  color: white;
-  border: none;
-  border-radius: 6px;
+.drivemego-b2c-btn-reject {
+  padding: 7px 12px;
+  background-color: #fff;
+  color: var(--dmg-red-600);
+  border: 1px solid #f7c9c9;
+  border-radius: 8px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
 }
 
-.b2c-btn-reject:hover {
-  background-color: #f56565;
+.drivemego-b2c-btn-reject:hover {
+  background-color: var(--dmg-red-050);
+  border-color: var(--dmg-red);
 }
 
 /* Empty State */
-.b2c-booking-empty-state {
+.drivemego-b2c-booking-empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #718096;
+  color: var(--dmg-muted);
 }
 
-.b2c-booking-empty-icon {
+.drivemego-b2c-booking-empty-icon {
   width: 64px;
   height: 64px;
-  color: #cbd5e0;
+  color: #cbd6e0;
   margin-bottom: 16px;
 }
 
-.b2c-booking-empty-state h3 {
-  color: #4a5568;
+.drivemego-b2c-booking-empty-state h3 {
+  color: var(--dmg-navy);
   margin: 0 0 8px 0;
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.b2c-booking-empty-state p {
+.drivemego-b2c-booking-empty-state p {
   margin: 0;
   font-size: 0.9rem;
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
 }
 
 /* Pagination */
-.b2c-booking-pagination {
+.drivemego-b2c-booking-pagination {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -642,84 +641,88 @@
   padding: 16px;
   flex-wrap: wrap;
   background-color: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border-radius: var(--dmg-radius-md);
+  border: 1px solid var(--dmg-line);
+  box-shadow: var(--dmg-shadow-sm);
 }
 
-.b2c-page-btn {
+.drivemego-b2c-page-btn {
   padding: 8px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   background-color: #ffffff;
-  color: #4a5568;
-  border-radius: 6px;
+  color: var(--dmg-ink);
+  border-radius: 8px;
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
+  font-family: var(--dmg-font);
 }
 
-.b2c-page-btn:hover:not(:disabled) {
-  border-color: #16a34a;
-  color: #16a34a;
+.drivemego-b2c-page-btn:hover:not(:disabled) {
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-700);
 }
 
-.b2c-page-btn:disabled {
+.drivemego-b2c-page-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.b2c-page-numbers {
+.drivemego-b2c-page-numbers {
   display: flex;
   gap: 4px;
 }
 
-.b2c-page-num {
+.drivemego-b2c-page-num {
   width: 36px;
   height: 36px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   background-color: #ffffff;
-  color: #4a5568;
-  border-radius: 6px;
+  color: var(--dmg-ink);
+  border-radius: 8px;
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
+  font-family: var(--dmg-font);
 }
 
-.b2c-page-num:hover {
-  border-color: #16a34a;
-  color: #16a34a;
+.drivemego-b2c-page-num:hover {
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-700);
 }
 
-.b2c-page-num.active {
-  background-color: #16a34a;
-  border-color: #16a34a;
+.drivemego-b2c-page-num.drivemego-active {
+  background: var(--dmg-cta);
+  border-color: transparent;
   color: white;
+  box-shadow: var(--dmg-cta-shadow);
 }
 
-.b2c-page-info {
+.drivemego-b2c-page-info {
   font-size: 0.85rem;
-  color: #718096;
+  color: var(--dmg-muted);
   margin-left: 12px;
 }
 
 /* Loading State */
-.b2c-booking-table-loading {
+.drivemego-b2c-booking-table-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: #718096;
+  color: var(--dmg-muted);
 }
 
-.b2c-booking-table-spinner {
+.drivemego-b2c-booking-table-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #16a34a;
+  border: 3px solid var(--dmg-teal-050);
+  border-top-color: var(--dmg-teal);
   border-radius: 50%;
-  animation: b2c-spin 1s linear infinite;
+  animation: b2c-spin 0.8s linear infinite;
   margin-bottom: 16px;
 }
 
@@ -730,373 +733,381 @@
 }
 
 /* Modal Styles */
-.b2c-booking-modal-overlay {
+.drivemego-b2c-booking-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(10, 42, 67, 0.45);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
 }
 
-.b2c-booking-modal {
+.drivemego-b2c-booking-modal {
   background: white;
-  border-radius: 12px;
+  border-radius: var(--dmg-radius);
   padding: 0;
   max-width: 480px;
   width: 92%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--dmg-shadow-lg);
 }
 
-.b2c-booking-modal-header {
+.drivemego-b2c-booking-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid var(--dmg-line-2);
 }
 
-.b2c-booking-modal-header h3 {
+.drivemego-b2c-booking-modal-header h3 {
   margin: 0;
-  color: #1a202c;
+  color: var(--dmg-navy);
   font-size: 1.1rem;
   font-weight: 700;
 }
 
-.b2c-booking-modal-close {
+.drivemego-b2c-booking-modal-close {
   background: none;
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
   padding: 0;
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 0.2s;
 }
 
-.b2c-booking-modal-close:hover {
-  color: #e53e3e;
-  background: #fff5f5;
+.drivemego-b2c-booking-modal-close:hover {
+  color: var(--dmg-red-600);
+  background: var(--dmg-red-050);
 }
 
-.b2c-booking-modal-body {
+.drivemego-b2c-booking-modal-body {
   padding: 24px;
 }
 
-.b2c-booking-modal-body p {
+.drivemego-b2c-booking-modal-body p {
   margin: 0 0 16px 0;
-  color: #4a5568;
+  color: var(--dmg-muted);
 }
 
-.b2c-booking-form-group {
+.drivemego-b2c-booking-form-group {
   margin-bottom: 16px;
 }
 
-.b2c-booking-form-group label {
+.drivemego-b2c-booking-form-group label {
   display: block;
   margin-bottom: 8px;
   font-weight: 600;
-  color: #2d3748;
+  color: var(--dmg-navy);
   font-size: 0.9rem;
 }
 
-.b2c-booking-form-group textarea {
+.drivemego-b2c-booking-form-group textarea {
   width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  padding: 11px 14px;
+  border: 1px solid var(--dmg-line);
+  border-radius: 10px;
   resize: vertical;
-  font-family: inherit;
+  font-family: var(--dmg-font);
   font-size: 0.9rem;
-  transition: border-color 0.2s;
+  transition: border-color 0.18s;
+  color: var(--dmg-ink);
 }
 
-.b2c-booking-form-group textarea:focus {
+.drivemego-b2c-booking-form-group textarea:focus {
   outline: none;
-  border-color: #16a34a;
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+  border-color: var(--dmg-teal);
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.14);
 }
 
-.b2c-booking-modal-actions {
+.drivemego-b2c-booking-modal-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
   padding: 16px 24px;
-  border-top: 1px solid #edf2f7;
+  border-top: 1px solid var(--dmg-line-2);
 }
 
-.b2c-booking-btn-cancel {
-  padding: 10px 20px;
-  background: #edf2f7;
-  color: #4a5568;
-  border: none;
-  border-radius: 6px;
+.drivemego-b2c-booking-btn-cancel {
+  padding: 11px 20px;
+  background: #fff;
+  color: var(--dmg-ink);
+  border: 1px solid var(--dmg-line);
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
   font-size: 0.85rem;
-  transition: all 0.2s;
+  transition: all 0.18s;
+  font-family: var(--dmg-font);
 }
 
-.b2c-booking-btn-cancel:hover {
-  background: #e2e8f0;
+.drivemego-b2c-booking-btn-cancel:hover {
+  background: var(--dmg-bg);
 }
 
-.b2c-booking-btn-confirm-reject {
-  padding: 10px 20px;
-  background: #e53e3e;
+.drivemego-b2c-booking-btn-confirm-reject {
+  padding: 11px 20px;
+  background: var(--dmg-red);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.85rem;
-  transition: all 0.2s;
+  transition: all 0.18s;
+  font-family: var(--dmg-font);
 }
 
-.b2c-booking-btn-confirm-reject:hover:not(:disabled) {
-  background: #c53030;
+.drivemego-b2c-booking-btn-confirm-reject:hover:not(:disabled) {
+  background: var(--dmg-red-600);
 }
 
-.b2c-booking-btn-confirm-reject:disabled {
-  background: #cbd5e0;
+.drivemego-b2c-booking-btn-confirm-reject:disabled {
+  background: #cbd6e0;
   cursor: not-allowed;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .b2c-booking-table-wrapper {
+  .drivemego-b2c-booking-table-wrapper {
     overflow-x: auto;
   }
-  
-  .b2c-booking-table {
+
+  .drivemego-b2c-booking-table {
     min-width: 900px;
+  }
+
+  .drivemego-b2c-booking-table-stats {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .b2c-booking-table-stats {
+  .drivemego-b2c-booking-table-stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  
-  .b2c-booking-stat-card {
+
+  .drivemego-b2c-booking-stat-card {
     padding: 16px 12px;
   }
-  
-  .b2c-booking-stat-value {
+
+  .drivemego-b2c-booking-stat-value {
     font-size: 1.5rem;
   }
-  
-  .b2c-booking-table-controls {
+
+  .drivemego-b2c-booking-table-controls {
     flex-direction: column;
     align-items: stretch;
   }
-  
-  .b2c-booking-search-box {
+
+  .drivemego-b2c-booking-search-box {
     max-width: 100%;
   }
-  
-  .b2c-booking-filter-group {
+
+  .drivemego-b2c-booking-filter-group {
     justify-content: space-between;
   }
-  
-  .b2c-booking-pagination {
+
+  .drivemego-b2c-booking-pagination {
     gap: 6px;
     padding: 12px;
   }
-  
-  .b2c-page-btn {
+
+  .drivemego-b2c-page-btn {
     padding: 6px 10px;
     font-size: 0.75rem;
   }
-  
-  .b2c-page-num {
+
+  .drivemego-b2c-page-num {
     width: 32px;
     height: 32px;
     font-size: 0.8rem;
   }
-  
-  .b2c-page-info {
+
+  .drivemego-b2c-page-info {
     width: 100%;
     text-align: center;
     margin-left: 0;
     margin-top: 8px;
   }
-  
-  .b2c-booking-table-header {
+
+  .drivemego-b2c-booking-table-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
-  
-  .b2c-booking-table-header-right {
+
+  .drivemego-b2c-booking-table-header-right {
     flex-direction: column;
     width: 100%;
     gap: 8px;
   }
-  
-  .b2c-wallet-balance-display {
+
+  .drivemego-b2c-wallet-balance-display {
     width: 100%;
     justify-content: center;
   }
-  
-  .b2c-booking-table-refresh-btn {
+
+  .drivemego-b2c-booking-table-refresh-btn {
     width: 100%;
     justify-content: center;
   }
 }
 
 @media (max-width: 480px) {
-  .b2c-booking-table-stats {
+  .drivemego-b2c-booking-table-stats {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
-  
-  .b2c-booking-stat-value {
+
+  .drivemego-b2c-booking-stat-value {
     font-size: 1.25rem;
   }
-  
-  .b2c-booking-filter-group {
+
+  .drivemego-b2c-booking-filter-group {
     flex-direction: column;
   }
-  
-  .b2c-booking-status-filter,
-  .b2c-booking-per-page-select {
+
+  .drivemego-b2c-booking-status-filter,
+  .drivemego-b2c-booking-per-page-select {
     width: 100%;
   }
-  
-  .b2c-page-numbers {
+
+  .drivemego-b2c-page-numbers {
     display: none;
   }
-  
-  .b2c-booking-modal {
+
+  .drivemego-b2c-booking-modal {
     width: 95%;
     margin: 10px;
   }
-  
-  .b2c-booking-modal-header,
-  .b2c-booking-modal-body,
-  .b2c-booking-modal-actions {
+
+  .drivemego-b2c-booking-modal-header,
+  .drivemego-b2c-booking-modal-body,
+  .drivemego-b2c-booking-modal-actions {
     padding: 16px;
   }
 }
 
 /* Wallet Warning Modal Styles */
-.b2c-wallet-warning-modal {
+.drivemego-b2c-wallet-warning-modal {
   max-width: 420px;
 }
 
-.b2c-wallet-warning-icon {
+.drivemego-b2c-wallet-warning-icon {
   display: flex;
   justify-content: center;
   margin-bottom: 16px;
 }
 
-.b2c-wallet-warning-text {
+.drivemego-b2c-wallet-warning-text {
   text-align: center;
-  color: #4a5568;
+  color: var(--dmg-muted);
   font-size: 0.95rem;
   line-height: 1.5;
   margin-bottom: 20px !important;
 }
 
-.b2c-wallet-warning-text strong {
-  color: #e53e3e;
+.drivemego-b2c-wallet-warning-text strong {
+  color: var(--dmg-red-600);
 }
 
-.b2c-wallet-info-box {
-  background-color: #f7fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+.drivemego-b2c-wallet-info-box {
+  background-color: var(--dmg-bg);
+  border: 1px solid var(--dmg-line);
+  border-radius: 12px;
   padding: 16px;
   margin-bottom: 8px;
 }
 
-.b2c-wallet-info-row {
+.drivemego-b2c-wallet-info-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid var(--dmg-line-2);
   font-size: 0.9rem;
 }
 
-.b2c-wallet-info-row:last-child {
+.drivemego-b2c-wallet-info-row:last-child {
   border-bottom: none;
 }
 
-.b2c-wallet-info-row span:first-child {
-  color: #64748b;
+.drivemego-b2c-wallet-info-row span:first-child {
+  color: var(--dmg-muted);
   font-weight: 500;
 }
 
-.b2c-wallet-balance {
+.drivemego-b2c-wallet-balance {
   font-weight: 700;
-  color: #16a34a;
+  color: var(--dmg-green-600);
 }
 
-.b2c-wallet-required {
+.drivemego-b2c-wallet-required {
   font-weight: 700;
-  color: #f59e0b;
+  color: var(--dmg-amber);
 }
 
-.b2c-wallet-shortage span:last-child {
+.drivemego-b2c-wallet-shortage span:last-child {
   font-weight: 700;
-  color: #e53e3e;
+  color: var(--dmg-red-600);
 }
 
-.b2c-booking-btn-recharge {
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+.drivemego-b2c-booking-btn-recharge {
+  padding: 11px 20px;
+  background: var(--dmg-cta);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.85rem;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2);
+  transition: all 0.18s;
+  box-shadow: var(--dmg-cta-shadow);
+  font-family: var(--dmg-font);
 }
 
-.b2c-booking-btn-recharge:hover {
-  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
-  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+.drivemego-b2c-booking-btn-recharge:hover {
+  background: var(--dmg-cta-hover);
+  box-shadow: var(--dmg-cta-shadow-lg);
   transform: translateY(-1px);
 }
 
 /* CANCELLED Status Styles */
-.b2c-status-pill.status-cancelled {
-  background-color: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+.drivemego-b2c-status-pill.status-cancelled {
+  background-color: var(--dmg-red-050);
+  color: var(--dmg-red-600);
+  border: 1px solid #f7c9c9;
 }
 
 /* Commission Refund Badge */
-.b2c-commission-refund-badge {
+.drivemego-b2c-commission-refund-badge {
   display: block;
   margin-top: 6px;
   padding: 4px 8px;
-  background-color: #d1fae5;
-  color: #047857;
+  background-color: var(--dmg-green-050);
+  color: var(--dmg-green-600);
   font-size: 0.7rem;
-  font-weight: 600;
-  border-radius: 4px;
-  border: 1px solid #a7f3d0;
+  font-weight: 700;
+  border-radius: 5px;
+  border: 1px solid #b7ecca;
 }
 
 /* Red stat color for cancelled */
-.b2c-booking-stat-value.stat-red {
-  color: #dc2626;
+.drivemego-b2c-booking-stat-value.drivemego-stat-red {
+  color: var(--dmg-red-600);
 }

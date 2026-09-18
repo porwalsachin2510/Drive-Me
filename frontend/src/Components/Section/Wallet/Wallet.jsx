@@ -3,6 +3,8 @@ import { getCurrencyDecimals } from "../../../config/localeConfig";
 import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import "./wallet.css";
+import "../../../styles/commuter-banner.css";
+import { Wallet as WalletIcon, Sparkles, Plus } from "lucide-react";
 import api from "../../../utils/api";
 import { notify } from "../../../utils/toast";
 
@@ -126,7 +128,22 @@ export default function Wallet() {
   if (loading) {
     return (
       <div className="wallet-section">
-        <h2>My Wallet</h2>
+        <header className="dmg-banner">
+          <div className="dmg-banner-main">
+            <span className="dmg-banner-icon">
+              <WalletIcon />
+            </span>
+            <div className="dmg-banner-text">
+              <span className="dmg-banner-eyebrow">
+                <Sparkles /> Your money, sorted
+              </span>
+              <h2 className="dmg-banner-title">My Wallet</h2>
+              <p className="dmg-banner-sub">
+                Top up once and pay for every ride in a tap.
+              </p>
+            </div>
+          </div>
+        </header>
         <div className="loading">Loading wallet data...</div>
       </div>
     );
@@ -135,7 +152,22 @@ export default function Wallet() {
   if (!walletData) {
     return (
       <div className="wallet-section">
-        <h2>My Wallet</h2>
+        <header className="dmg-banner">
+          <div className="dmg-banner-main">
+            <span className="dmg-banner-icon">
+              <WalletIcon />
+            </span>
+            <div className="dmg-banner-text">
+              <span className="dmg-banner-eyebrow">
+                <Sparkles /> Your money, sorted
+              </span>
+              <h2 className="dmg-banner-title">My Wallet</h2>
+              <p className="dmg-banner-sub">
+                Top up once and pay for every ride in a tap.
+              </p>
+            </div>
+          </div>
+        </header>
         <div className="error">Failed to load wallet data</div>
       </div>
     );
@@ -143,7 +175,37 @@ export default function Wallet() {
 
   return (
     <div className="wallet-section">
-      <h2>My Wallet</h2>
+      <header className="dmg-banner">
+        <div className="dmg-banner-main">
+          <span className="dmg-banner-icon">
+            <WalletIcon />
+          </span>
+          <div className="dmg-banner-text">
+            <span className="dmg-banner-eyebrow">
+              <Sparkles /> Your money, sorted
+            </span>
+            <h2 className="dmg-banner-title">My Wallet</h2>
+            <p className="dmg-banner-sub">
+              Top up once and pay for every ride in a tap.
+            </p>
+          </div>
+        </div>
+        <div className="dmg-banner-aside">
+          <div className="dmg-banner-chip">
+            <span className="dmg-banner-chip-value">
+              {formatAmount(walletData.balance)}
+            </span>
+            <span className="dmg-banner-chip-label">Available balance</span>
+          </div>
+          <button
+            className="dmg-banner-btn"
+            onClick={() => setShowAddFunds(true)}
+          >
+            <Plus />
+            Add funds
+          </button>
+        </div>
+      </header>
 
       {/* Wallet Balance Card */}
       <div className="wallet-balance-card">

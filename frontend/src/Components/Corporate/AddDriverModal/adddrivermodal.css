@@ -154,7 +154,7 @@
   letter-spacing: 0.5px;
   margin-top: 8px;
   margin-bottom: 4px;
-  border-bottom: 2px solid #16a085;
+  border-bottom: 2px solid #12b0c4;
   padding-bottom: 8px;
 }
 
@@ -199,7 +199,7 @@
 .drivemego-cadm-form-group select:focus,
 .drivemego-cadm-form-group textarea:focus {
   outline: none;
-  border-color: #16a085;
+  border-color: #12b0c4;
   background-color: #ffffff;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
@@ -260,8 +260,8 @@
 
 .drivemego-cadm-file-button:hover:not(:disabled) {
   background-color: #e8e8e8;
-  border-color: #16a085;
-  color: #16a085;
+  border-color: #12b0c4;
+  color: #12b0c4;
 }
 
 .drivemego-cadm-file-button:disabled {
@@ -311,9 +311,9 @@
 }
 
 .drivemego-cadm-btn-register {
-  background-color: #16a085;
+  background-color: #12b0c4;
   color: #ffffff;
-  border: 2px solid #16a085;
+  border: 2px solid #12b0c4;
 }
 
 .drivemego-cadm-btn-register:hover:not(:disabled) {

@@ -1,16 +1,9 @@
-/* Premium B2B Partner Profile - Inter Font */
-html,
-body {
-  width: 100%;
-  height: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-secondary, #f8f9fa);
-  color: var(--text-primary, #202124);
-}
-
-.b2b-fleet-dashboard-container{
+/* =====================================================================
+   DriveMeGo — B2B Partner Profile shell (brand system container)
+   The tab content is rendered by already-branded feature components;
+   this file only styles the dashboard container/canvas.
+   ===================================================================== */
+.b2b-fleet-dashboard-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -19,12 +12,14 @@ body {
   padding: 0 30px;
   min-height: 100vh;
   margin: 80px 0px;
+  font-family: var(--dmg-font);
 }
 
 .b2b-dashboard {
   width: 100%;
   min-height: 100vh;
-  background-color: #fafafa;
+  background-color: var(--dmg-bg);
+  font-family: var(--dmg-font);
 }
 
 .b2b-dashboard-content {
@@ -55,5 +50,3 @@ body {
     padding: 12px;
   }
 }
-
-

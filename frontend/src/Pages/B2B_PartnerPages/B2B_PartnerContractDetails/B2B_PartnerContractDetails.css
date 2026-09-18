@@ -3,7 +3,7 @@
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--dmg-font);
 }
 
 .b2b-contract-back-btn {
@@ -20,8 +20,8 @@
 }
 
 .b2b-contract-back-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #0a2a43;
+  color: #0a2a43;
 }
 
 .b2b-contract-header {
@@ -64,8 +64,8 @@
 }
 
 .status-document-uploaded {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-700);
 }
 
 .status-corporate-signed {
@@ -163,7 +163,7 @@
 }
 
 .b2b-contract-vehicle-category {
-  color: #667eea;
+  color: #0a2a43;
   font-weight: 600;
   font-size: 14px;
   margin: 0 0 4px 0;
@@ -178,8 +178,8 @@
 
 .b2b-contract-vehicle-quantity {
   display: inline-block;
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-700);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 14px;
@@ -250,7 +250,7 @@
 .b2b-contract-select-file-btn {
   display: inline-block;
   padding: 12px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   border-radius: 8px;
   font-weight: 600;
@@ -260,12 +260,12 @@
 
 .b2b-contract-select-file-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10px 20px rgba(10, 42, 67, 0.4);
 }
 
 .b2b-contract-file-selected {
   background: #f9fafb;
-  border: 2px dashed #667eea;
+  border: 2px dashed #0a2a43;
   border-radius: 8px;
   padding: 24px;
   margin-top: 16px;
@@ -298,7 +298,7 @@
 
 .b2b-contract-upload-btn {
   padding: 10px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -341,7 +341,7 @@
 .b2b-contract-view-document-btn {
   display: inline-block;
   padding: 8px 16px;
-  background: #667eea;
+  background: #0a2a43;
   color: white;
   border-radius: 6px;
   text-decoration: none;
@@ -351,11 +351,11 @@
 }
 
 .b2b-contract-view-document-btn:hover {
-  background: #5568d3;
+  background: #123a58;
 }
 
 .b2b-contract-approval-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   border-radius: 12px;
   padding: 40px;
   text-align: center;
@@ -401,7 +401,7 @@
 .b2b-contract-approve-btn {
   padding: 14px 32px;
   background: white;
-  color: #667eea;
+  color: #0a2a43;
   border: none;
   border-radius: 8px;
   font-weight: 700;
@@ -473,7 +473,7 @@
 
 .b2b-contract-form-group textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #0a2a43;
 }
 
 .b2b-contract-modal-actions {
@@ -503,19 +503,19 @@
 }
 
 .b2b-contract-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
 }
 
 .b2b-contract-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10px 20px rgba(10, 42, 67, 0.4);
 }
 
 /* Added status style for pending fleet signature */
 .status-pending-fleet-signature {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-700);
 }
 
 /* Added sign card styles for fleet owner signing section */
@@ -602,8 +602,8 @@
 
 .b2b-contract-signature-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #0a2a43;
+  box-shadow: 0 0 0 3px rgba(10, 42, 67, 0.1);
 }
 
 .b2b-contract-form-group small {
@@ -660,7 +660,7 @@
 .b2b-contract-view-btn {
   padding: 10px 20px;
   background: white;
-  color: #667eea;
+  color: #0a2a43;
   border: none;
   border-radius: 6px;
   font-weight: 600;
@@ -787,8 +787,8 @@
 }
 
 .b2b-document-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  border-color: #0a2a43;
+  box-shadow: 0 4px 12px rgba(10, 42, 67, 0.1);
 }
 
 .b2b-document-card.signed-document {
@@ -818,8 +818,8 @@
 
 .b2b-contract-download-btn {
   background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
+  color: #0a2a43;
+  border: 2px solid #0a2a43;
   padding: 10px 20px;
   border-radius: 8px;
   font-weight: 600;
@@ -828,7 +828,7 @@
 }
 
 .b2b-contract-download-btn:hover {
-  background: #667eea;
+  background: #0a2a43;
   color: white;
 }
 
@@ -860,23 +860,23 @@
 
 /* Corporate Signature Info */
 .b2b-corporate-signature-info {
-  background: #f3e8ff;
+  background: var(--dmg-teal-050);
   padding: 12px 20px;
   border-radius: 8px;
-  border-left: 4px solid #7c3aed;
+  border-left: 4px solid #0a2a43;
 }
 
 .b2b-corporate-signature-info p {
   margin: 0;
-  color: #5b21b6;
+  color: var(--dmg-teal-700);
   font-size: 14px;
   text-align: left;
 }
 
 /* Status badges for new statuses */
 .status-pending-corporate-signature {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-700);
 }
 
 .status-pending-b2b-verification {

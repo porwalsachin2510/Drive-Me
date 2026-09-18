@@ -90,21 +90,44 @@ function AdminB2CManagement() {
   const subTabs = [
     {
       id: "service-providers",
-      label: "🚌 Service Providers",
+      label: "Service Providers",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6v6M15 6v6M2 12h19.6M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3" /><circle cx="7" cy="18" r="2" /><circle cx="16" cy="18" r="2" /></svg>
+      ),
       count: stats.activeProviders,
     },
     {
       id: "route-management",
-      label: "🛣️ Route Management",
+      label: "Route Management",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="19" r="3" /><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" /><circle cx="18" cy="5" r="3" /></svg>
+      ),
       count: stats.activeRoutes,
     },
-    { id: "tags-badges", label: "🏷️ Tags & Badges", count: stats.activeTags },
+    {
+      id: "tags-badges",
+      label: "Tags & Badges",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>
+      ),
+      count: stats.activeTags,
+    },
     {
       id: "passengers",
-      label: "👥 Passengers & Bookings",
+      label: "Passengers & Bookings",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+      ),
       count: stats.totalPassengerBookings,
     },
-    { id: "earnings", label: "💰 Earnings & Payments", count: null },
+    {
+      id: "earnings",
+      label: "Earnings & Payments",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+      ),
+      count: null,
+    },
   ];
 
   const renderSubContent = () => {
@@ -139,21 +162,12 @@ function AdminB2CManagement() {
     return (
       <div className="ad-dash-b2c-management">
         <div className="ad-dash-b2c-error">
-          <div className="ad-dash-b2c-error-icon">⚠️</div>
+          <div className="ad-dash-b2c-error-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+          </div>
           <div className="ad-dash-b2c-error-title">Error Loading Data</div>
           <div className="ad-dash-b2c-error-message">{error}</div>
-          <button
-            onClick={fetchB2CStats}
-            style={{
-              marginTop: "16px",
-              padding: "8px 16px",
-              background: "#2DD4BF",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-          >
+          <button className="ad-dash-b2c-retry-btn" onClick={fetchB2CStats}>
             Retry
           </button>
         </div>
@@ -165,10 +179,8 @@ function AdminB2CManagement() {
     <div className="ad-dash-b2c-management">
       <div className="ad-dash-b2c-header">
         <div className="ad-dash-b2c-title-section">
-          <h2 className="ad-dash-b2c-title">
-            <span className="ad-dash-b2c-icon">🚌</span>
-            B2C Management Console
-          </h2>
+          <span className="ad-dash-b2c-eyebrow">B2C Operations</span>
+          <h2 className="ad-dash-b2c-title">B2C Management Console</h2>
           <p className="ad-dash-b2c-description">
             Comprehensive control over providers, routes, passengers, and B2C
             financials.
@@ -177,24 +189,32 @@ function AdminB2CManagement() {
 
         <div className="ad-dash-b2c-stats">
           <div className="stat-item">
-            <div className="stat-icon">👥</div>
+            <div className="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+            </div>
             <span className="stat-number">{stats.totalProviders}</span>
             <span className="stat-label">Total Providers</span>
           </div>
           <div className="stat-item">
-            <div className="stat-icon">🛣️</div>
+            <div className="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="19" r="3" /><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" /><circle cx="18" cy="5" r="3" /></svg>
+            </div>
             <span className="stat-number">{stats.activeRoutes}</span>
             <span className="stat-label">Active Routes</span>
           </div>
           <div className="stat-item">
-            <div className="stat-icon">🎫</div>
+            <div className="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z" /><line x1="13" y1="5" x2="13" y2="19" strokeDasharray="2 3" /></svg>
+            </div>
             <span className="stat-number">
               {stats.totalBookings.toLocaleString()}
             </span>
             <span className="stat-label">Total Bookings</span>
           </div>
           <div className="stat-item">
-            <div className="stat-icon">💰</div>
+            <div className="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+            </div>
             <span className="stat-number">
               {formatCurrency(stats.totalRevenue)}
             </span>
@@ -210,6 +230,7 @@ function AdminB2CManagement() {
             className={`ad-dash-b2c-tab ${activeSubTab === tab.id ? "active" : ""}`}
             onClick={() => setActiveSubTab(tab.id)}
           >
+            <span className="ad-dash-b2c-tab-icon">{tab.icon}</span>
             {tab.label}
             {tab.count !== null && (
               <span className="tab-count">{tab.count}</span>

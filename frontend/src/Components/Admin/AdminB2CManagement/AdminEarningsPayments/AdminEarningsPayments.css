@@ -1,7 +1,19 @@
-/* ============ EARNINGS & PAYMENTS ============ */
+/* =====================================================================
+   Admin B2C · Earnings & Payments — DriveMeGo brand system
+   Navy (#0a2a43) + logo teal (#12b0c4), Plus Jakarta Sans.
+   ===================================================================== */
 .ad-dash-earnings-payments {
+  --ep-navy: #0a2a43;
+  --ep-teal: #12b0c4;
+  --ep-teal-600: #0e97a8;
+  --ep-teal-050: #e6f7fa;
+  --ep-ink: #0f2233;
+  --ep-muted: #5b6b7b;
+  --ep-line: #e4ecf3;
+  --ep-bg: #f5f8fb;
   width: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ep-ink);
 }
 
 /* Header */
@@ -9,19 +21,20 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .ad-dash-ep-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ep-navy);
   margin: 0 0 4px 0;
 }
 
 .ad-dash-ep-subtitle {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--ep-muted);
   margin: 0;
 }
 
@@ -34,25 +47,24 @@
 }
 
 .ad-dash-ep-filters select {
-  padding: 10px 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  padding: 11px 14px;
+  border: 1px solid var(--ep-line);
+  border-radius: 11px;
   font-size: 14px;
-  background-color: #ffffff;
-  color: #374151;
+  background-color: #fff;
+  color: var(--ep-ink);
   cursor: pointer;
   transition: all 0.2s;
   outline: none;
   min-width: 140px;
-  -webkit-appearance: auto;
-  -moz-appearance: auto;
-  appearance: auto;
+  font-family: inherit;
+  font-weight: 600;
   line-height: 1.5;
 }
 
 .ad-dash-ep-filters select:focus {
- border-color: var(--secondary-color, #2DD4BF);
-  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.1));
+  border-color: var(--ep-teal);
+  box-shadow: 0 0 0 3px var(--ep-teal-050);
 }
 
 /* Summary Cards */
@@ -64,77 +76,70 @@
 }
 
 .ad-dash-ep-summary .summary-card {
-  background-color: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid #e5e7eb;
-  text-align: center;
-  transition: all 0.2s;
+  position: relative;
+  background-color: #fff;
+  border-radius: 18px;
+  padding: 22px;
+  border: 1px solid var(--ep-line);
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.05);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
 }
 
 .ad-dash-ep-summary .summary-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(10, 42, 67, 0.12);
+  transform: translateY(-3px);
 }
 
 .ad-dash-ep-summary .summary-icon {
-  font-size: 28px;
-  margin-bottom: 8px;
-  background: none;
-  width: auto;
-  height: auto;
-  display: block;
-  border-radius: 0;
-  backdrop-filter: none;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--ep-teal-050);
+  color: var(--ep-teal-600);
 }
+
+.ad-dash-ep-summary .summary-icon svg { width: 26px; height: 26px; }
 
 .ad-dash-ep-summary .summary-content {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  text-align: left;
 }
 
 .ad-dash-ep-summary .summary-content h4 {
   margin: 0;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #64748b;
+  color: var(--ep-muted);
 }
 
 .ad-dash-ep-summary .summary-value {
   font-size: 22px;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 800;
+  color: var(--ep-navy);
 }
 
 .ad-dash-ep-summary .summary-change {
   font-size: 12px;
-  color: #10b981;
-  font-weight: 500;
+  color: #16a34a;
+  font-weight: 700;
 }
 
-/* Color Variants for Summary Cards */
-.ad-dash-ep-summary .summary-card.revenue {
-  border-top: 3px solid #f59e0b;
-  background-color: #ffffff;
-}
-
-.ad-dash-ep-summary .summary-card.bookings {
-  border-top: 3px solid #3b82f6;
-  background-color: #ffffff;
-}
-
-.ad-dash-ep-summary .summary-card.commission {
-  border-top: 3px solid #10b981;
-  background-color: #ffffff;
-}
-
-.ad-dash-ep-summary .summary-card.payouts {
-  border-top: 3px solid #8b5cf6;
-  background-color: #ffffff;
-}
+/* Per-card icon tints only (no border/accent bars — clean white cards) */
+.ad-dash-ep-summary .summary-card.revenue .summary-icon { background: #fdf2e2; color: #d97706; }
+.ad-dash-ep-summary .summary-card.commission .summary-icon { background: #e7f7ee; color: #16a34a; }
+.ad-dash-ep-summary .summary-card.payouts .summary-icon { background: #e6f7fa; color: #0e97a8; }
 
 /* Additional Stats */
 .ad-dash-ep-stats {
@@ -145,52 +150,49 @@
 }
 
 .ad-dash-ep-stats .stat-item {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 16px 20px;
+  background-color: #fff;
+  border: 1px solid var(--ep-line);
+  border-radius: 14px;
+  padding: 18px 20px;
   text-align: center;
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.04);
 }
 
 .ad-dash-ep-stats .stat-label {
   display: block;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #64748b;
+  color: var(--ep-muted);
   margin-bottom: 6px;
 }
 
 .ad-dash-ep-stats .stat-value {
   display: block;
   font-size: 20px;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 800;
+  color: var(--ep-navy);
 }
 
-.ad-dash-ep-stats .stat-value.pending {
-  color: #d97706;
-}
-
-.ad-dash-ep-stats .stat-value.completed {
-  color: #059669;
-}
+.ad-dash-ep-stats .stat-value.pending { color: #d97706; }
+.ad-dash-ep-stats .stat-value.completed { color: #16a34a; }
 
 /* Breakdown Section */
 .ad-dash-ep-breakdown {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
+  background-color: #fff;
+  border: 1px solid var(--ep-line);
+  border-radius: 18px;
+  padding: 22px;
   margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.04);
 }
 
 .ad-dash-ep-breakdown h4 {
   margin: 0 0 16px 0;
   font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
+  font-weight: 800;
+  color: var(--ep-navy);
 }
 
 .breakdown-chart {
@@ -200,10 +202,10 @@
 }
 
 .breakdown-item {
-  background-color: #f8fafc;
-  border-radius: 8px;
+  background-color: var(--ep-bg);
+  border-radius: 12px;
   padding: 14px 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--ep-line);
 }
 
 .breakdown-header {
@@ -214,14 +216,14 @@
 }
 
 .breakdown-period {
-  font-weight: 600;
-  color: #1e293b;
+  font-weight: 700;
+  color: var(--ep-navy);
   font-size: 14px;
 }
 
 .breakdown-revenue {
-  font-weight: 700;
-  color: #059669;
+  font-weight: 800;
+  color: #16a34a;
   font-size: 14px;
 }
 
@@ -239,29 +241,30 @@
 
 .breakdown-details .detail-label {
   font-size: 12px;
-  color: #64748b;
-  font-weight: 500;
+  color: var(--ep-muted);
+  font-weight: 600;
 }
 
 .breakdown-details .detail-value {
   font-size: 12px;
-  color: #374151;
-  font-weight: 600;
+  color: var(--ep-ink);
+  font-weight: 700;
 }
 
 /* Providers Section */
 .ad-dash-ep-providers {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
+  background-color: #fff;
+  border: 1px solid var(--ep-line);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.04);
 }
 
 .ad-dash-ep-providers h4 {
   margin: 0 0 16px 0;
   font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
+  font-weight: 800;
+  color: var(--ep-navy);
 }
 
 .ad-dash-ep-providers .providers-table {
@@ -277,28 +280,23 @@
   padding: 12px 16px;
   text-align: left;
   font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
+  font-weight: 700;
+  color: var(--ep-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: #f8fafc;
+  border-bottom: 1px solid var(--ep-line);
+  background-color: var(--ep-bg);
 }
 
 .ad-dash-ep-providers .providers-table td {
-  padding: 12px 16px;
+  padding: 13px 16px;
   font-size: 14px;
-  color: #374151;
+  color: var(--ep-ink);
   border-bottom: 1px solid #f1f5f9;
 }
 
-.ad-dash-ep-providers .providers-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.ad-dash-ep-providers .providers-table tbody tr:hover {
-  background-color: #f8fafc;
-}
+.ad-dash-ep-providers .providers-table tbody tr:last-child td { border-bottom: none; }
+.ad-dash-ep-providers .providers-table tbody tr:hover { background-color: var(--ep-bg); }
 
 .ad-dash-ep-providers .provider-info {
   display: flex;
@@ -307,29 +305,29 @@
 }
 
 .ad-dash-ep-providers .provider-rank {
-  font-weight: 700;
-   color: var(--secondary-color, #2DD4BF);
+  font-weight: 800;
+  color: var(--ep-teal-600);
   font-size: 13px;
 }
 
 .ad-dash-ep-providers .provider-name {
-  font-weight: 500;
-  color: #1e293b;
+  font-weight: 600;
+  color: var(--ep-navy);
 }
 
 /* Performance Bar */
 .performance-bar {
   width: 100%;
   height: 8px;
-  background-color: #e5e7eb;
-  border-radius: 4px;
+  background-color: #e5edf3;
+  border-radius: 999px;
   overflow: hidden;
 }
 
 .performance-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--success-color, #22c55e), var(--secondary-color, #2DD4BF));
-  border-radius: 4px;
+  background: linear-gradient(90deg, var(--ep-teal) 0%, var(--ep-teal-600) 100%);
+  border-radius: 999px;
   min-width: 4px;
   transition: width 0.3s ease;
 }
@@ -338,36 +336,25 @@
 .ad-dash-earnings-payments .loading {
   text-align: center;
   padding: 40px;
-  color: #9ca3af;
+  color: var(--ep-muted);
+  font-weight: 600;
 }
 
 .ad-dash-earnings-payments .error {
   text-align: center;
   padding: 40px;
-  color: #ef4444;
+  color: #dc2626;
+  font-weight: 600;
 }
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 1024px) {
-  .ad-dash-ep-summary {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .ad-dash-ep-stats {
-    grid-template-columns: 1fr;
-  }
+  .ad-dash-ep-summary { grid-template-columns: repeat(2, 1fr); }
+  .ad-dash-ep-stats { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
-  .ad-dash-ep-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .ad-dash-ep-filters {
-    flex-direction: column;
-  }
-
-  .ad-dash-ep-providers .providers-table table {
-    min-width: 600px;
-  }
+  .ad-dash-ep-summary { grid-template-columns: 1fr; }
+  .ad-dash-ep-filters { flex-direction: column; }
+  .ad-dash-ep-providers .providers-table table { min-width: 600px; }
 }

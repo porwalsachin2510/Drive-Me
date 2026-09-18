@@ -26,8 +26,8 @@
 
 .acs-trigger:focus-visible {
     outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    border-color: #0e97a8;
+    box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.15);
 }
 
 .acs-trigger:disabled {
@@ -37,7 +37,7 @@
 
 .acs-globe {
     display: inline-flex;
-    color: #2563eb;
+    color: #0e97a8;
     flex-shrink: 0;
 }
 
@@ -127,11 +127,11 @@
 }
 
 .acs-option-active {
-    background: #eff6ff;
+    background: #e6f7fa;
 }
 
 .acs-option-active:hover {
-    background: #dbeafe;
+    background: #c7eef3;
 }
 
 .acs-option-left {
@@ -173,7 +173,7 @@
 
 .acs-check {
     display: inline-flex;
-    color: #2563eb;
+    color: #0e97a8;
 }
 
 /* Compact on small screens */

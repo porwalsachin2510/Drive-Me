@@ -5,6 +5,7 @@ import Vehicle from "../models/Vehicle.js"
 import B2CPartnerDriver from "../models/B2CPartnerDriver.js"
 import B2CPartnerVehicle from "../models/B2CPartnerVehicle.js"
 import B2CPartnerRoute from "../models/B2CPartnerRoute.js"
+import B2CPartnerSchedule from "../models/B2CPartnerSchedule.js"
 import CorporateEmployee from "../models/CorporateEmployee.js"
 import User from "../models/User.js"
 import { isPartnerRole, isCustomerRole, passengerRoleForOwner } from "../utils/roleFamilies.js"
@@ -39,6 +40,72 @@ const fmtDate = (d) => {
     const date = new Date(d)
     if (isNaN(date)) return ""
     return date.toISOString().slice(0, 10)
+}
+
+/* ------------------------------------------------------------------
+   Route-import helpers (mirror the manual "Add Route" form behaviour)
+------------------------------------------------------------------ */
+const VALID_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+// Normalise a time cell ("08:00", "8:00 AM", "18:30") into the "H:MM AM/PM"
+// shape the schedule schema requires. Returns "" when it can't be parsed.
+const convertToAMPM = (timeString) => {
+    const str = String(timeString || "").trim()
+    if (!str) return ""
+    if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?(AM|PM)$/i.test(str)) {
+        return str.toUpperCase().replace(/\s+/g, " ")
+    }
+    if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/.test(str)) {
+        const [hours, minutes] = str.split(":").map(Number)
+        const period = hours >= 12 ? "PM" : "AM"
+        const displayHours = hours % 12 || 12
+        return `${displayHours}:${String(minutes).padStart(2, "0")} ${period}`
+    }
+    const m = str.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i)
+    if (m) {
+        let [, hours, minutes, period] = m
+        hours = parseInt(hours, 10)
+        minutes = parseInt(minutes, 10)
+        if (!period) {
+            period = hours >= 12 ? "PM" : "AM"
+            hours = hours % 12 || 12
+        }
+        return `${hours}:${String(minutes).padStart(2, "0")} ${period.toUpperCase()}`
+    }
+    return ""
+}
+
+// Parse a stops cell like "Mall of the Emirates @ 08:15; Ibn Battuta @ 08:30"
+// into [{ location, time }] using only stops that have a valid time.
+const parseStopsCell = (cell) =>
+    String(cell || "")
+        .split(/[;\n]/)
+        .map((chunk) => chunk.trim())
+        .filter(Boolean)
+        .map((chunk) => {
+            const [locationPart, timePart] = chunk.split("@")
+            const location = String(locationPart || "").trim()
+            const time = convertToAMPM(timePart)
+            return { location, time }
+        })
+        .filter((s) => s.location && s.time)
+
+// Look up one of the partner's own vehicles by license plate or model (exact, case-insensitive).
+const findB2CVehicle = async (scopeId, term) => {
+    const t = String(term || "").trim()
+    if (!t) return null
+    const rx = new RegExp(`^${escapeRegex(t)}$`, "i")
+    return B2CPartnerVehicle.findOne({ b2cPartnerId: scopeId, $or: [{ licensePlate: rx }, { model: rx }] })
+}
+
+// Look up one of the partner's own drivers by name or email (exact, case-insensitive).
+const findB2CDriver = async (scopeId, term) => {
+    const t = String(term || "").trim()
+    if (!t) return null
+    const rx = new RegExp(`^${escapeRegex(t)}$`, "i")
+    return B2CPartnerDriver.findOne({ b2cPartnerId: scopeId, $or: [{ name: rx }, { email: rx }] })
 }
 
 // Turn a low-level DB/validation error into a human-friendly message.
@@ -461,62 +528,226 @@ const registry = {
     "b2c-routes": {
         label: "Routes",
         role: "B2C_PARTNER",
+        // Columns mirror the manual "Add New Route" form (One Way / Round Trip) so a
+        // partner can fill the template exactly like they would fill the form.
         fields: [
-            { key: "fromLocation", label: "From Location", required: true, type: "string", example: "Salmiya" },
-            { key: "toLocation", label: "To Location", required: true, type: "string", example: "Kuwait City" },
+            { key: "fromLocation", label: "From Location", required: true, type: "string", example: "Dubai Marina" },
+            { key: "toLocation", label: "To Location", required: true, type: "string", example: "Abu Dhabi City" },
             { key: "routeStartDate", label: "Route Start Date", required: true, type: "date", example: "2026-08-01" },
-            { key: "totalSeats", label: "Total Seats", required: true, type: "number", min: 1, example: 14 },
-            { key: "oneWayPrice", label: "One Way Price", required: true, type: "number", min: 0, example: 2 },
-            { key: "roundTripPrice", label: "Round Trip Price", required: false, type: "number", min: 0, example: 3.5 },
-            { key: "monthlyOneWayPrice", label: "Monthly One Way Price", required: false, type: "number", min: 0, example: 40 },
-            { key: "monthlyRoundTripPrice", label: "Monthly Round Trip Price", required: false, type: "number", min: 0, example: 70 },
-            { key: "currency", label: "Currency", required: false, type: "enum", enum: ["AED", "KWD", "SAR", "BHD", "OMR", "QAR"], example: "KWD" },
-            { key: "tripType", label: "Trip Type", required: false, type: "enum", enum: ["One Way", "Round Trip"], example: "One Way" },
-            { key: "startTime", label: "Start Time", required: false, type: "string", example: "08:00 AM" },
-            { key: "availableDays", label: "Available Days", required: false, type: "string", example: "MON, TUE, WED, THU, FRI", hint: "Comma-separated from: MON,TUE,WED,THU,FRI,SAT,SUN" },
-            { key: "description", label: "Description", required: false, type: "string", example: "Morning office shuttle" },
+            { key: "availableDays", label: "Available Days", required: true, type: "string", example: "MON, TUE, WED, THU, FRI", hint: "Comma-separated from: MON, TUE, WED, THU, FRI, SAT, SUN" },
+            { key: "description", label: "Route Description", required: false, type: "string", example: "Morning office shuttle" },
+            { key: "tripType", label: "Trip Type", required: true, type: "enum", enum: ["One Way", "Round Trip"], example: "One Way" },
+            { key: "direction", label: "Direction", required: false, type: "enum", enum: ["From → To", "To → From"], example: "From → To", hint: "One Way only. Which way this one-way trip runs. Defaults to From → To." },
+            { key: "departureTime", label: "Departure Time", required: true, type: "string", example: "08:00", hint: "Bus leaves origin. Use 24h (08:00) or 8:00 AM." },
+            { key: "arrivalTime", label: "Arrival Time", required: false, type: "string", example: "09:30", hint: "Bus reaches destination." },
+            { key: "returnDepartureTime", label: "Return Departure Time", required: false, type: "string", example: "18:00", hint: "Round Trip only. Bus departs destination to head back." },
+            { key: "returnArrivalTime", label: "Return Arrival Time", required: false, type: "string", example: "19:30", hint: "Round Trip only. Bus reaches back origin." },
+            { key: "outboundStops", label: "Outbound Stops", required: false, type: "string", example: "Mall of the Emirates @ 08:15; Ibn Battuta @ 08:30", hint: "Optional. Format: Location @ time; separate multiple stops with a semicolon." },
+            { key: "returnStops", label: "Return Stops", required: false, type: "string", example: "", hint: "Round Trip only. Same format as Outbound Stops." },
+            { key: "driver", label: "Driver", required: true, type: "string", example: "ali.hassan@example.com", hint: "Driver name or email. Must already exist under Fleet & Drivers." },
+            { key: "vehicle", label: "Vehicle", required: true, type: "string", example: "DXB-12345", hint: "Vehicle license plate or model. Seat capacity is taken from this vehicle." },
+            { key: "returnDriver", label: "Return Driver", required: false, type: "string", example: "", hint: "Round Trip only. Leave blank to reuse the outbound driver." },
+            { key: "returnVehicle", label: "Return Vehicle", required: false, type: "string", example: "", hint: "Round Trip only. Leave blank to reuse the outbound vehicle." },
+            { key: "monthlyOneWayPrice", label: "One Way Monthly Price", required: true, type: "number", min: 0, example: 2000, hint: "Fixed price per month for a one-way monthly pass." },
+            { key: "monthlyRoundTripPrice", label: "Round Trip Monthly Price", required: false, type: "number", min: 0, example: 4000, hint: "Fixed price per month for a round-trip monthly pass." },
+            { key: "currency", label: "Currency", required: false, type: "enum", enum: ["AED", "KWD", "SAR", "BHD", "OMR", "QAR"], example: "AED", hint: "Optional. Defaults to your account currency." },
         ],
+        prepareContext: async (scopeId) => {
+            const owner = await User.findById(scopeId).select("country countryCode role adminPermissions")
+            const currency = getCountryCurrency(getEffectiveCountry(owner)) || "AED"
+            return { currency }
+        },
         dedupe: async () => null,
-        createOne: async (scopeId, data) => {
-            const days = parseList(data.availableDays).map((d) => d.slice(0, 3).toUpperCase())
-            return B2CPartnerRoute.create({
+        createOne: async (scopeId, data, ctx) => {
+            const isRoundTrip = data.tripType === "Round Trip"
+
+            // Outbound vehicle is required - the route's seat capacity comes from it,
+            // exactly like the manual form (seats auto-determined by the vehicle).
+            const vehicle = await findB2CVehicle(scopeId, data.vehicle)
+            if (!vehicle) {
+                throw new Error(`Vehicle "${data.vehicle}" was not found in your fleet. Add it under Fleet & Drivers first, or check the license plate / model.`)
+            }
+            if (vehicle.status && vehicle.status !== "Active") {
+                throw new Error(`Vehicle "${data.vehicle}" is "${vehicle.status}" and cannot be assigned. Use an Active vehicle.`)
+            }
+
+            const driver = await findB2CDriver(scopeId, data.driver)
+            if (!driver) {
+                throw new Error(`Driver "${data.driver}" was not found in your fleet. Add them under Fleet & Drivers first, or check the name / email.`)
+            }
+
+            // Optional dedicated return leg (Round Trip only).
+            let returnVehicle = null
+            let returnDriver = null
+            if (isRoundTrip) {
+                if (data.returnVehicle) {
+                    returnVehicle = await findB2CVehicle(scopeId, data.returnVehicle)
+                    if (!returnVehicle) throw new Error(`Return Vehicle "${data.returnVehicle}" was not found in your fleet.`)
+                    if (returnVehicle.status && returnVehicle.status !== "Active") {
+                        throw new Error(`Return Vehicle "${data.returnVehicle}" is "${returnVehicle.status}" and cannot be assigned.`)
+                    }
+                }
+                if (data.returnDriver) {
+                    returnDriver = await findB2CDriver(scopeId, data.returnDriver)
+                    if (!returnDriver) throw new Error(`Return Driver "${data.returnDriver}" was not found in your fleet.`)
+                }
+            }
+
+            const availableDays = parseList(data.availableDays)
+                .map((d) => d.slice(0, 3).toUpperCase())
+                .filter((d) => VALID_DAYS.includes(d))
+            if (!availableDays.length) {
+                throw new Error(`"Available Days" must list at least one of: ${VALID_DAYS.join(", ")}.`)
+            }
+
+            const departureTime = convertToAMPM(data.departureTime)
+            if (!departureTime) {
+                throw new Error(`"Departure Time" is invalid. Use 24h (08:00) or 8:00 AM.`)
+            }
+
+            const direction = String(data.direction || "").includes("To → From") ? "return" : "outbound"
+            const currency = data.currency || ctx?.currency || "AED"
+            const totalSeats = vehicle.seatingCapacity || 20
+
+            // 1) Create the route (same shape the manual Add Route form produces).
+            const route = await B2CPartnerRoute.create({
                 b2cPartnerId: scopeId,
                 fromLocation: data.fromLocation,
                 toLocation: data.toLocation,
                 routeStartDate: data.routeStartDate,
-                totalSeats: data.totalSeats,
-                availableSeats: data.totalSeats,
+                totalSeats,
+                availableSeats: totalSeats,
                 pricing: {
-                    oneWayPrice: data.oneWayPrice,
-                    roundTripPrice: data.roundTripPrice ?? 0,
+                    // Daily prices are no longer used by the form - only monthly passes.
+                    oneWayPrice: 0,
+                    roundTripPrice: 0,
                     monthlyOneWayPrice: data.monthlyOneWayPrice ?? 0,
                     monthlyRoundTripPrice: data.monthlyRoundTripPrice ?? 0,
-                    currency: data.currency || "KWD",
+                    currency,
                 },
-                tripType: data.tripType || "One Way",
-                startTime: data.startTime || "",
-                availableDays: days,
+                tripType: isRoundTrip ? "Round Trip" : "One Way",
+                startTime: departureTime,
+                availableDays,
                 description: data.description || "",
+                assignedVehicle: vehicle._id,
+                assignedDriver: driver._id,
                 status: "Active",
                 isActive: true,
             })
+
+            // 2) Create the schedule + trip time so the route is actually bookable,
+            //    just like creating a trip time in the manual form.
+            const tripTime = {
+                departureTime,
+                // schema.arrivalTime == "Return Departure Time" (bus departs destination to head back)
+                arrivalTime: isRoundTrip ? (convertToAMPM(data.returnDepartureTime) || null) : null,
+                // schema.destinationArrivalTime == "Arrival Time" (bus reaches destination)
+                destinationArrivalTime: convertToAMPM(data.arrivalTime) || null,
+                // schema.returnArrivalTime == bus reaches back origin (Round Trip only)
+                returnArrivalTime: isRoundTrip ? (convertToAMPM(data.returnArrivalTime) || null) : null,
+                tripType: isRoundTrip ? "Round Trip" : "One Way",
+                direction: isRoundTrip ? "outbound" : direction,
+                assignedDriver: driver._id,
+                assignedVehicle: vehicle._id,
+                returnDriver: returnDriver?._id || null,
+                returnVehicle: returnVehicle?._id || null,
+                outboundIsSelfDriver: false,
+                returnIsSelfDriver: false,
+                outboundStopPoints: parseStopsCell(data.outboundStops),
+                returnStopPoints: isRoundTrip ? parseStopsCell(data.returnStops) : [],
+            }
+
+            await B2CPartnerSchedule.create({
+                b2cPartnerId: scopeId,
+                routeId: route._id,
+                scheduleName: `${route.fromLocation} to ${route.toLocation} Schedule`,
+                tripTimes: [tripTime],
+                availableDays,
+                assignedVehicle: vehicle._id,
+                assignedDriver: driver._id,
+                startDate: data.routeStartDate || new Date(),
+                isActive: true,
+                status: "Active",
+                lastTripGenerated: new Date(),
+                nextTripGeneration: new Date(),
+            })
+
+            // Keep driver <-> vehicle cross-links in sync (mirrors manual schedule creation).
+            try {
+                await B2CPartnerDriver.findByIdAndUpdate(driver._id, { $addToSet: { assignedVehicles: vehicle._id } })
+                await B2CPartnerVehicle.findByIdAndUpdate(vehicle._id, { $addToSet: { assignedDrivers: driver._id } })
+            } catch (linkErr) {
+                console.error("[importExport] route driver/vehicle link failed:", linkErr.message)
+            }
+
+            return route
         },
-        exportQuery: (scopeId) => B2CPartnerRoute.find({ b2cPartnerId: scopeId }).sort({ createdAt: -1 }).lean(),
-        toExportRow: (r) => ({
-            "From Location": r.fromLocation,
-            "To Location": r.toLocation,
-            "Route Start Date": fmtDate(r.routeStartDate),
-            "Total Seats": r.totalSeats,
-            "One Way Price": r.pricing?.oneWayPrice ?? "",
-            "Round Trip Price": r.pricing?.roundTripPrice ?? "",
-            "Monthly One Way Price": r.pricing?.monthlyOneWayPrice ?? "",
-            "Monthly Round Trip Price": r.pricing?.monthlyRoundTripPrice ?? "",
-            Currency: r.pricing?.currency || "",
-            "Trip Type": r.tripType || "",
-            "Start Time": r.startTime || "",
-            "Available Days": (r.availableDays || []).join(", "),
-            Description: r.description || "",
-        }),
+        exportQuery: async (scopeId) => {
+            const routes = await B2CPartnerRoute.find({ b2cPartnerId: scopeId }).sort({ createdAt: -1 }).lean()
+            const schedules = await B2CPartnerSchedule.find({ b2cPartnerId: scopeId, isActive: true }).lean()
+
+            const schedByRoute = new Map()
+            for (const s of schedules) {
+                const key = String(s.routeId)
+                if (!schedByRoute.has(key)) schedByRoute.set(key, s)
+            }
+
+            const vehicleIds = new Set()
+            const driverIds = new Set()
+            const rows = routes.map((r) => {
+                const tt = schedByRoute.get(String(r._id))?.tripTimes?.[0] || null
+                ;[r.assignedVehicle, tt?.assignedVehicle, tt?.returnVehicle].forEach((v) => v && vehicleIds.add(String(v)))
+                ;[r.assignedDriver, tt?.assignedDriver, tt?.returnDriver].forEach((d) => d && driverIds.add(String(d)))
+                return { r, tt }
+            })
+
+            const [vehicles, drivers] = await Promise.all([
+                B2CPartnerVehicle.find({ _id: { $in: [...vehicleIds] } }).select("licensePlate model").lean(),
+                B2CPartnerDriver.find({ _id: { $in: [...driverIds] } }).select("name email").lean(),
+            ])
+            const vMap = new Map(vehicles.map((v) => [String(v._id), v]))
+            const dMap = new Map(drivers.map((d) => [String(d._id), d]))
+            const vLabel = (id) => (id && vMap.get(String(id)) ? (vMap.get(String(id)).licensePlate || vMap.get(String(id)).model || "") : "")
+            const dLabel = (id) => (id && dMap.get(String(id)) ? (dMap.get(String(id)).name || dMap.get(String(id)).email || "") : "")
+
+            return rows.map(({ r, tt }) => {
+                r._exp = {
+                    tt,
+                    driver: dLabel(tt?.assignedDriver || r.assignedDriver),
+                    vehicle: vLabel(tt?.assignedVehicle || r.assignedVehicle),
+                    returnDriver: dLabel(tt?.returnDriver),
+                    returnVehicle: vLabel(tt?.returnVehicle),
+                }
+                return r
+            })
+        },
+        toExportRow: (r) => {
+            const tt = r._exp?.tt || null
+            const isRT = (r.tripType || tt?.tripType) === "Round Trip"
+            const stops = (list) => (list || []).map((s) => `${s.location} @ ${s.time}`).join("; ")
+            return {
+                "From Location": r.fromLocation,
+                "To Location": r.toLocation,
+                "Route Start Date": fmtDate(r.routeStartDate),
+                "Available Days": (r.availableDays || []).join(", "),
+                "Route Description": r.description || "",
+                "Trip Type": r.tripType || tt?.tripType || "One Way",
+                Direction: tt?.direction === "return" ? "To → From" : "From → To",
+                "Departure Time": tt?.departureTime || r.startTime || "",
+                "Arrival Time": tt?.destinationArrivalTime || "",
+                "Return Departure Time": isRT ? (tt?.arrivalTime || "") : "",
+                "Return Arrival Time": isRT ? (tt?.returnArrivalTime || "") : "",
+                "Outbound Stops": stops(tt?.outboundStopPoints),
+                "Return Stops": isRT ? stops(tt?.returnStopPoints) : "",
+                Driver: r._exp?.driver || "",
+                Vehicle: r._exp?.vehicle || "",
+                "Return Driver": isRT ? (r._exp?.returnDriver || "") : "",
+                "Return Vehicle": isRT ? (r._exp?.returnVehicle || "") : "",
+                "One Way Monthly Price": r.pricing?.monthlyOneWayPrice ?? "",
+                "Round Trip Monthly Price": r.pricing?.monthlyRoundTripPrice ?? "",
+                Currency: r.pricing?.currency || "",
+            }
+        },
     },
 
     /* ---------------- Corporate Employees (Passengers) ---------------- */

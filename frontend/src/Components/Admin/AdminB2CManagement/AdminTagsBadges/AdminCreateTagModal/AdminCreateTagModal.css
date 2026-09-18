@@ -40,8 +40,10 @@
 .ad-dash-modal-title {
   margin: 0;
   font-size: 18px;
-  font-weight: 700;
-  color: #111827;
+  font-weight: 800;
+  color: #0a2a43;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .ad-dash-modal-close {
@@ -113,8 +115,8 @@ select.ad-dash-form-input {
 }
 
 .ad-dash-form-input:focus {
- border-color: var(--secondary-color, #2DD4BF);
-  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.1));
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 4px #e6f7fa;
 }
 
 .ad-dash-form-input::placeholder {
@@ -148,8 +150,8 @@ select.ad-dash-form-input {
 }
 
 .ad-dash-color-selected {
-  border-color: var(--secondary-color, #2DD4BF) !important;
-  box-shadow: 0 0 0 3px var(--secondary-light, rgba(45, 212, 191, 0.15));
+  border-color: #12b0c4 !important;
+  box-shadow: 0 0 0 4px #e6f7fa;
 }
 
 .ad-dash-color-circle {
@@ -208,18 +210,19 @@ select.ad-dash-form-input {
 .ad-dash-btn-primary {
   padding: 10px 24px;
   border: none;
- background-color: var(--secondary-color, #2DD4BF);
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: #ffffff;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: var(--transition, all 0.2s ease);
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 18px rgba(18, 176, 196, 0.3);
 }
 
 .ad-dash-btn-primary:hover:not(:disabled) {
-background-color: var(--secondary-hover, #26B8A5);
-  box-shadow: var(--shadow-teal, 0 4px 14px rgba(45, 212, 191, 0.25));
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(18, 176, 196, 0.45);
 }
 
 .ad-dash-btn-primary:disabled {

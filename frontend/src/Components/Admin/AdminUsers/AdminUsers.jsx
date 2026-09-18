@@ -26,6 +26,8 @@ function AdminUsers() {
     corporates: 0,
     b2cPartners: 0,
     b2bPartners: 0,
+    schoolPartners: 0,
+    schoolCustomers: 0,
     drivers: 0,
     activeUsers: 0,
     suspendedUsers: 0,
@@ -146,11 +148,19 @@ function AdminUsers() {
         return filteredUsers.filter((user) => user.role === "B2C_PARTNER");
       case "b2b-partners":
         return filteredUsers.filter((user) => user.role === "B2B_PARTNER");
+      case "school-partners":
+        return filteredUsers.filter((user) => user.role === "SCHOOL_PARTNER");
+      case "school-customers":
+        return filteredUsers.filter((user) => user.role === "SCHOOL_CUSTOMER");
       case "drivers":
-        return filteredUsers.filter(
-          (user) =>
-            user.role === "B2B_PARTNER_DRIVER" ||
-            user.role === "CORPORATE_DRIVER",
+        return filteredUsers.filter((user) =>
+          [
+            "B2B_PARTNER_DRIVER",
+            "CORPORATE_DRIVER",
+            "B2C_PARTNER_DRIVER",
+            "SCHOOL_PARTNER_DRIVER",
+            "SCHOOL_CUSTOMER_DRIVER",
+          ].includes(user.role),
         );
       case "suspended":
         return filteredUsers.filter((user) => user.status === "SUSPENDED");
@@ -162,13 +172,13 @@ function AdminUsers() {
   const getStatusColor = (status) => {
     switch (status) {
       case "ACTIVE":
-        return "#28a745";
+        return "#059669";
       case "SUSPENDED":
-        return "#dc3545";
+        return "#dc2626";
       case "PENDING":
-        return "#ffc107";
+        return "#d97706";
       default:
-        return "#6c757d";
+        return "#64748b";
     }
   };
 
@@ -183,21 +193,28 @@ function AdminUsers() {
   };
 
   const getRoleColor = (user) => {
-    if (isSuperAdmin(user)) return "#dc3545";
+    if (isSuperAdmin(user)) return "#b91c1c";
     switch (user?.role) {
       case "COMMUTER":
-        return "#007bff";
+        return "#2563eb";
       case "CORPORATE":
-        return "#6f42c1";
+        return "#7c3aed";
       case "B2C_PARTNER":
-        return "#28a745";
+        return "#059669";
       case "B2B_PARTNER":
-        return "#fd7e14";
+        return "#ea580c";
+      case "SCHOOL_PARTNER":
+        return "#c026d3";
+      case "SCHOOL_CUSTOMER":
+        return "#0891b2";
       case "B2B_PARTNER_DRIVER":
       case "CORPORATE_DRIVER":
-        return "#20c997";
+      case "B2C_PARTNER_DRIVER":
+      case "SCHOOL_PARTNER_DRIVER":
+      case "SCHOOL_CUSTOMER_DRIVER":
+        return "#0e97a8";
       default:
-        return "#6c757d";
+        return "#64748b";
     }
   };
 
@@ -211,6 +228,8 @@ function AdminUsers() {
     { id: "corporates", label: "Corporates", count: stats.corporates },
     { id: "b2c-partners", label: "B2C Partners", count: stats.b2cPartners },
     { id: "b2b-partners", label: "B2B Partners", count: stats.b2bPartners },
+    { id: "school-partners", label: "School Partners", count: stats.schoolPartners },
+    { id: "school-customers", label: "School Customers", count: stats.schoolCustomers },
     { id: "drivers", label: "Drivers", count: stats.drivers },
     { id: "suspended", label: "Suspended", count: stats.suspendedUsers },
   ];
@@ -218,7 +237,13 @@ function AdminUsers() {
   return (
     <div className="admin-users">
       <div className="admin-users-header">
-        <h2>User Management</h2>
+        <div className="admin-users-header-text">
+          <span className="admin-users-eyebrow">People &amp; Accounts</span>
+          <h2>User Management</h2>
+          <p className="admin-users-subtitle">
+            Search, review and manage every account across the DriveMeGo platform.
+          </p>
+        </div>
         <div className="admin-users-stats">
           <div className="stat-card">
             <span className="stat-number">{stats.totalUsers}</span>
@@ -294,13 +319,19 @@ function AdminUsers() {
                   <div className="user-badges">
                     <span
                       className="role-badge"
-                      style={{ backgroundColor: getRoleColor(user) }}
+                      style={{
+                        color: getRoleColor(user),
+                        backgroundColor: `${getRoleColor(user)}1a`,
+                      }}
                     >
                       {getRoleLabel(user)}
                     </span>
                     <span
                       className="status-badge"
-                      style={{ backgroundColor: getStatusColor(user.status) }}
+                      style={{
+                        color: getStatusColor(user.status),
+                        backgroundColor: `${getStatusColor(user.status)}1a`,
+                      }}
                     >
                       {user.status}
                     </span>

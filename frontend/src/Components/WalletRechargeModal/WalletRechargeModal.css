@@ -1,73 +1,76 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* =====================================================================
+   DriveMeGo — Wallet Recharge Modal
+   Brand palette: deep navy + bright teal, gradient CTA. Plus Jakarta Sans.
+   ===================================================================== */
+
 .wallet-recharge-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background: rgba(10, 42, 67, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 99999;
   padding: 20px;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .wallet-recharge-modal {
-  background: white;
-  border-radius: 16px;
+  background: #fff;
+  border-radius: 20px;
   max-width: 500px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  animation: slideUp 0.3s ease-out;
+  box-shadow: 0 24px 60px rgba(10, 42, 67, 0.28);
+  border: 1px solid var(--dmg-line);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 24px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #333;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--dmg-navy);
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 28px;
+  background: var(--dmg-bg);
+  border: 1px solid var(--dmg-line);
+  font-size: 22px;
   cursor: pointer;
-  color: #666;
+  color: var(--dmg-ink);
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s ease;
+  border-radius: 10px;
+  transition: all 0.2s ease;
 }
 
 .close-btn:hover {
-  background: #f8f9fa;
-  color: #333;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-navy);
+  border-color: rgba(18, 176, 196, 0.4);
 }
 
 .modal-body {
@@ -76,10 +79,11 @@
 
 .section-title {
   display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dmg-navy);
   margin-bottom: 12px;
+  letter-spacing: -0.01em;
 }
 
 /* Amount Section */
@@ -90,21 +94,24 @@
 .amount-input-container {
   display: flex;
   align-items: center;
-  border: 2px solid #e9ecef;
-  border-radius: 12px;
-  padding: 12px 16px;
+  border: 1.5px solid var(--dmg-line);
+  border-radius: 14px;
+  padding: 14px 16px;
   margin-bottom: 16px;
-  transition: border-color 0.3s ease;
+  background: var(--dmg-bg);
+  transition: all 0.2s ease;
 }
 
 .amount-input-container:focus-within {
-  border-color: #E85D5D;
+  border-color: var(--dmg-teal);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.14);
 }
 
 .currency-symbol {
   font-size: 18px;
-  font-weight: 600;
-  color: #666;
+  font-weight: 700;
+  color: var(--dmg-ink);
   margin-right: 8px;
 }
 
@@ -113,20 +120,21 @@
   border: none;
   outline: none;
   font-size: 20px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  color: var(--dmg-navy);
   background: transparent;
+  font-family: inherit;
 }
 
 .amount-input::placeholder {
-  color: #999;
+  color: #9fb1c0;
 }
 
 .quick-amount-label {
   display: block;
   font-size: 13px;
-  font-weight: 500;
-  color: #666;
+  font-weight: 600;
+  color: var(--dmg-ink);
   margin-bottom: 8px;
 }
 
@@ -137,21 +145,22 @@
 }
 
 .quick-amount-btn {
-  padding: 8px 16px;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  background: white;
-  color: #666;
+  padding: 9px 16px;
+  border: 1.5px solid var(--dmg-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--dmg-ink);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .quick-amount-btn:hover {
-  border-color: #E85D5D;
-  color: #E85D5D;
-  background: rgba(232, 93, 93, 0.05);
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-600);
+  background: var(--dmg-teal-050);
 }
 
 /* Payment Method Section */
@@ -169,21 +178,21 @@
   display: flex;
   align-items: center;
   padding: 16px;
-  border: 2px solid #e9ecef;
-  border-radius: 12px;
+  border: 1.5px solid var(--dmg-line);
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: white;
+  transition: all 0.2s ease;
+  background: #fff;
 }
 
 .payment-method-option:hover {
-  border-color: #E85D5D;
-  background: rgba(232, 93, 93, 0.05);
+  border-color: var(--dmg-teal);
+  background: var(--dmg-teal-050);
 }
 
 .payment-method-option.selected {
-  border-color: #E85D5D;
-  background: rgba(232, 93, 93, 0.05);
+  border-color: var(--dmg-teal);
+  background: var(--dmg-teal-050);
 }
 
 .payment-icon {
@@ -194,8 +203,8 @@
 .payment-name {
   flex: 1;
   font-size: 14px;
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: var(--dmg-navy);
 }
 
 .payment-radio {
@@ -209,15 +218,15 @@
 .radio-custom {
   width: 20px;
   height: 20px;
-  border: 2px solid #e9ecef;
+  border: 2px solid #cdd9e3;
   border-radius: 50%;
   display: block;
   position: relative;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .payment-method-option.selected .radio-custom {
-  border-color: #E85D5D;
+  border-color: var(--dmg-teal);
 }
 
 .payment-method-option.selected .radio-custom::after {
@@ -228,14 +237,15 @@
   transform: translate(-50%, -50%);
   width: 10px;
   height: 10px;
-  background: #E85D5D;
+  background: var(--dmg-teal);
   border-radius: 50%;
 }
 
 /* Transaction Summary */
 .transaction-summary {
-  background: #f8f9fa;
-  border-radius: 12px;
+  background: var(--dmg-bg);
+  border: 1px solid var(--dmg-line);
+  border-radius: 14px;
   padding: 16px;
   margin-bottom: 24px;
 }
@@ -246,7 +256,7 @@
   align-items: center;
   margin-bottom: 8px;
   font-size: 14px;
-  color: #666;
+  color: var(--dmg-ink);
 }
 
 .summary-item:last-child {
@@ -254,9 +264,9 @@
 }
 
 .summary-item.total {
-  font-weight: 600;
-  color: #333;
-  border-top: 1px solid #e9ecef;
+  font-weight: 800;
+  color: var(--dmg-navy);
+  border-top: 1px solid var(--dmg-line);
   padding-top: 8px;
   margin-top: 8px;
 }
@@ -272,33 +282,34 @@
   flex: 1;
   padding: 14px 20px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .cancel-btn {
-  background: #f8f9fa;
-  color: #666;
-  border: 1px solid #e9ecef;
+  background: var(--dmg-line);
+  color: var(--dmg-navy);
+  border: 1px solid var(--dmg-line);
 }
 
 .cancel-btn:hover:not(:disabled) {
-  background: #e9ecef;
-  color: #333;
+  background: #e2eaf1;
 }
 
 .recharge-btn {
-  background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--dmg-teal) 0%, var(--dmg-teal-600) 100%);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(18, 176, 196, 0.3);
 }
 
 .recharge-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+  background: linear-gradient(135deg, var(--dmg-teal) 0%, var(--dmg-teal-700) 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(45, 212, 191, 0.3);
+  box-shadow: 0 16px 34px rgba(18, 176, 196, 0.38);
 }
 
 .cancel-btn:disabled, .recharge-btn:disabled {
@@ -313,8 +324,8 @@
   align-items: flex-start;
   gap: 12px;
   padding: 16px 24px 24px;
-  background: #f0f8ff;
-  border-radius: 0 0 16px 16px;
+  background: var(--dmg-teal-050);
+  border-radius: 0 0 20px 20px;
 }
 
 .security-icon {
@@ -329,15 +340,15 @@
 .security-text strong {
   display: block;
   font-size: 13px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  color: var(--dmg-navy);
   margin-bottom: 4px;
 }
 
 .security-text p {
   margin: 0;
   font-size: 12px;
-  color: #666;
+  color: var(--dmg-ink);
   line-height: 1.4;
 }
 
@@ -346,45 +357,45 @@
   .wallet-recharge-modal-overlay {
     padding: 16px;
   }
-  
+
   .wallet-recharge-modal {
     max-height: 95vh;
   }
-  
+
   .modal-header {
     padding: 20px 20px 16px;
   }
-  
+
   .modal-body {
     padding: 16px 20px;
   }
-  
+
   .modal-actions {
     padding: 16px 20px 20px;
   }
-  
+
   .security-notice {
     padding: 16px 20px 20px;
   }
-  
+
   .quick-amount-buttons {
     gap: 6px;
   }
-  
+
   .quick-amount-btn {
-    padding: 6px 12px;
+    padding: 7px 12px;
     font-size: 12px;
   }
-  
+
   .payment-method-option {
     padding: 12px;
   }
-  
+
   .payment-icon {
     font-size: 20px;
     margin-right: 10px;
   }
-  
+
   .payment-name {
     font-size: 13px;
   }
@@ -396,7 +407,7 @@
   align-items: center;
   justify-content: center;
   padding: 30px 20px;
-  color: #6b7280;
+  color: var(--dmg-ink);
   font-size: 14px;
 }
 
@@ -406,8 +417,8 @@
   gap: 16px;
   padding: 20px;
   background-color: #fff8e6;
-  border: 1px solid #ffc107;
-  border-radius: 12px;
+  border: 1px solid #f6a723;
+  border-radius: 14px;
   margin: 16px 0;
 }
 
@@ -423,13 +434,13 @@
 .online-payments-disabled-notice .notice-content strong {
   display: block;
   font-size: 15px;
-  color: #856404;
+  color: #8a5a00;
   margin-bottom: 6px;
 }
 
 .online-payments-disabled-notice .notice-content p {
   margin: 0;
   font-size: 13px;
-  color: #856404;
+  color: #8a5a00;
   line-height: 1.5;
 }

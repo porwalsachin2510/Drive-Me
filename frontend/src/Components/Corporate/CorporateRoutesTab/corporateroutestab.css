@@ -1,7 +1,9 @@
-/* Premium Corporate Routes Tab - Inter Font */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* DriveMeGo — Corporate Routes Tab (brand navy + teal) */
 .corp-routes {
   padding: 20px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .corp-routes-header {
@@ -13,8 +15,9 @@
 
 .corp-routes-title {
   font-size: 22px;
-  font-weight: 700;
-  color: #1a1a2e;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0a2a43;
 }
 
 .corp-routes-filters {
@@ -106,8 +109,8 @@
 }
 
 .corp-routes-blue-bg {
-  background-color: #e6f0ff;
-  color: #4169e1;
+  background-color: #e6f7fa;
+  color: #12b0c4;
 }
 
 .corp-routes-green-bg {
@@ -140,7 +143,7 @@
 .corp-routes-card-value {
   font-size: 26px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #0a2a43;
 }
 
 /* Routes List */
@@ -161,8 +164,8 @@
 }
 
 .corp-routes-list-item:hover {
-  border-color: #4169e1;
-  box-shadow: 0 4px 12px rgba(65, 105, 225, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 6px 18px rgba(18, 176, 196, 0.16);
 }
 
 .corp-routes-list-main {
@@ -178,7 +181,7 @@
   gap: 12px;
   font-size: 17px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0a2a43;
 }
 
 .corp-routes-from,
@@ -233,7 +236,7 @@
 }
 
 .corp-routes-stat-dot.scheduled {
-  background: #2563eb;
+  background: #0e97a8;
 }
 
 .corp-routes-stat-dot.in-progress {
@@ -268,8 +271,8 @@
 }
 
 .corp-routes-day-mini.active {
-  background: #e6f0ff;
-  color: #4169e1;
+  background: #e6f7fa;
+  color: #12b0c4;
 }
 
 .corp-routes-list-arrow {
@@ -325,7 +328,7 @@
   gap: 8px;
   background: none;
   border: none;
-  color: #4169e1;
+  color: #12b0c4;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -334,7 +337,7 @@
 }
 
 .corp-routes-back-btn:hover {
-  color: #2563eb;
+  color: #0e97a8;
 }
 
 .corp-routes-details-title {
@@ -347,7 +350,7 @@
 .corp-routes-details-title h2 {
   font-size: 24px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #0a2a43;
   margin: 0;
 }
 
@@ -377,7 +380,7 @@
 .corp-routes-info-value {
   font-size: 22px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #0a2a43;
 }
 
 /* Stats Section */
@@ -388,7 +391,7 @@
 .corp-routes-section-title {
   font-size: 17px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0a2a43;
   margin-bottom: 16px;
 }
 
@@ -409,7 +412,7 @@
 .corp-routes-stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #0a2a43;
   margin-bottom: 4px;
 }
 
@@ -418,7 +421,7 @@
 }
 
 .corp-routes-stat-value.corp-routes-blue {
-  color: #4169e1;
+  color: #12b0c4;
 }
 
 .corp-routes-stat-label {
@@ -447,8 +450,8 @@
 }
 
 .corp-routes-day-badge.active {
-  background: #e6f0ff;
-  color: #4169e1;
+  background: #e6f7fa;
+  color: #12b0c4;
 }
 
 .corp-routes-day-badge.inactive {
@@ -486,7 +489,7 @@
 .corp-routes-schedule-name {
   font-size: 15px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0a2a43;
 }
 
 .corp-routes-trip-time {
@@ -499,7 +502,7 @@
 .corp-routes-trip-number {
   font-size: 13px;
   font-weight: 600;
-  color: #4169e1;
+  color: #12b0c4;
   margin-bottom: 4px;
 }
 
@@ -538,7 +541,7 @@
 }
 
 .corp-routes-stop-time {
-  color: #4169e1;
+  color: #12b0c4;
   font-weight: 600;
   min-width: 50px;
 }
@@ -591,7 +594,7 @@
 .corp-routes-contract-num {
   font-family: monospace;
   font-weight: 600;
-  color: #2563eb;
+  color: #0e97a8;
 }
 
 /* Meta Section */
@@ -612,7 +615,7 @@
 .corp-routes-meta-card h4 {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0a2a43;
   margin: 0 0 12px 0;
   padding-bottom: 8px;
   border-bottom: 1px solid #f0f0f0;

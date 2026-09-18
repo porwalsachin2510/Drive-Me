@@ -1,3 +1,44 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* =====================================================================
+   DriveMeGo — Shared brand design tokens (logo palette: deep navy +
+   bright teal, amber accent). These `--dmg-*` variables are declared
+   globally so every page/component CSS file inherits the exact same
+   IndiGo-inspired system used on the redesigned Home / Login / Register
+   pages, without having to re-declare them per file.
+   ===================================================================== */
+:root {
+  --dmg-navy: #0a2a43;
+  --dmg-navy-700: #123a58;
+  --dmg-navy-600: #1c4d70;
+  --dmg-teal: #12b0c4;
+  --dmg-teal-600: #0e97a8;
+  --dmg-teal-700: #0c8695;
+  --dmg-teal-050: #e6f7fa;
+  --dmg-teal-100: #d1eff3;
+  /* Legacy coral token names kept, mapped to brand teal (logo has no red) */
+  --dmg-coral: #12b0c4;
+  --dmg-coral-600: #0e97a8;
+  --dmg-coral-050: #e6f7fa;
+  --dmg-cta: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  --dmg-cta-hover: linear-gradient(135deg, #12b0c4 0%, #0c8695 100%);
+  --dmg-cta-shadow: 0 12px 26px rgba(18, 176, 196, 0.3);
+  --dmg-cta-shadow-lg: 0 16px 34px rgba(18, 176, 196, 0.38);
+  --dmg-navy-gradient: linear-gradient(135deg, #0a2a43 0%, #123a58 55%, #0e3350 100%);
+  --dmg-amber: #f6a723;
+  --dmg-bg: #eef3f8;
+  --dmg-card: #ffffff;
+  --dmg-ink: #0f2233;
+  --dmg-muted: #5b6b7b;
+  --dmg-muted-2: #8598a8;
+  --dmg-line: #e4ecf3;
+  --dmg-shadow: 0 10px 30px rgba(10, 42, 67, 0.08);
+  --dmg-shadow-lg: 0 24px 60px rgba(10, 42, 67, 0.16);
+  --dmg-radius: 20px;
+  --dmg-radius-sm: 12px;
+  --dmg-font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 /* DriveMe Premium Design System - Brand Color Scheme */
 :root {
   /* ============================================
@@ -46,10 +87,10 @@
   --danger-bg: rgba(239, 68, 68, 0.08);
   
   /* Info Blue - Ongoing, Information */
-  --info-color: #3B82F6;
-  --info-hover: #2563EB;
-  --info-light: rgba(59, 130, 246, 0.1);
-  --info-bg: rgba(59, 130, 246, 0.08);
+  --info-color: #12b0c4;
+  --info-hover: #0e97a8;
+  --info-light: rgba(18, 176, 196, 0.1);
+  --info-bg: rgba(18, 176, 196, 0.08);
   
   /* ============================================
      TEXT COLORS
@@ -112,7 +153,7 @@
   /* ============================================
      TYPOGRAPHY - Inter (Premium Google-like Font)
      ============================================ */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -526,7 +567,7 @@ textarea::placeholder {
 .badge-upcoming {
   background-color: var(--info-bg);
   color: var(--info-color);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(18, 176, 196, 0.2);
 }
 
 /* Primary Badge - Coral */
@@ -548,7 +589,7 @@ textarea::placeholder {
 .badge-b2b {
   background-color: var(--info-bg);
   color: var(--info-color);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(18, 176, 196, 0.3);
   font-size: 10px;
   font-weight: var(--font-semibold);
   padding: 2px 8px;

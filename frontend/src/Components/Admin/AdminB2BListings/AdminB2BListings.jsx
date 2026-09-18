@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Building2, Users, Layers, CheckCircle2 } from "lucide-react"
 import "./AdminB2BListings.css"
 import AdminB2BProviders from "./AdminB2BProviders/AdminB2BProviders"
 import AdminB2CProviders from "./AdminB2CProviders/AdminB2CProviders"
@@ -14,12 +15,12 @@ function AdminB2BListings() {
     totalB2CProviders: 0,
     activeB2CProviders: 0,
     totalListings: 0,
-    activeListings: 0
+    activeListings: 0,
   })
 
   const fetchB2BStats = async () => {
     try {
-      const response = await api.get('/admin/b2b/stats')
+      const response = await api.get("/admin/b2b/stats")
       setStats(response.data.stats)
     } catch (error) {
       console.error("Error fetching B2B stats:", error)
@@ -41,35 +42,42 @@ function AdminB2BListings() {
     }
   }
 
+  const statChips = [
+    { icon: <Building2 size={20} />, value: stats.totalB2BProviders, label: "B2B Providers", tone: "primary" },
+    { icon: <CheckCircle2 size={20} />, value: stats.activeB2BProviders, label: "Active B2B", tone: "active" },
+    { icon: <Users size={20} />, value: stats.totalB2CProviders, label: "B2C Providers", tone: "primary" },
+    { icon: <CheckCircle2 size={20} />, value: stats.activeB2CProviders, label: "Active B2C", tone: "active" },
+    { icon: <Layers size={20} />, value: stats.totalListings, label: "Total Listings", tone: "primary" },
+    { icon: <CheckCircle2 size={20} />, value: stats.activeListings, label: "Active Listings", tone: "active" },
+  ]
+
   return (
     <div className="admin-b2b-listings">
       <div className="b2b-header">
-        <h2>B2B Listings Management</h2>
+        <div className="b2b-header-top">
+          <div className="b2b-title-section">
+            <div className="b2b-header-icon">
+              <Building2 size={26} />
+            </div>
+            <div>
+              <h2 className="b2b-title">B2B Listings Management</h2>
+              <p className="b2b-description">
+                Review, approve and manage fleet providers across your B2B and B2C partner network.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="b2b-stats">
-          <div className="stat-item">
-            <span className="stat-number">{stats.totalB2BProviders}</span>
-            <span className="stat-label">B2B Providers</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.activeB2BProviders}</span>
-            <span className="stat-label">Active B2B</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.totalB2CProviders}</span>
-            <span className="stat-label">B2C Providers</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.activeB2CProviders}</span>
-            <span className="stat-label">Active B2C</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.totalListings}</span>
-            <span className="stat-label">Total Listings</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.activeListings}</span>
-            <span className="stat-label">Active Listings</span>
-          </div>
+          {statChips.map((chip, i) => (
+            <div className="b2b-stat-item" key={i}>
+              <div className={`b2b-stat-icon b2b-stat-icon-${chip.tone}`}>{chip.icon}</div>
+              <div className="b2b-stat-content">
+                <span className="b2b-stat-number">{chip.value}</span>
+                <span className="b2b-stat-label">{chip.label}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -78,19 +86,19 @@ function AdminB2BListings() {
           className={`b2b-tab ${activeSubTab === "b2b-providers" ? "active" : ""}`}
           onClick={() => setActiveSubTab("b2b-providers")}
         >
+          <Building2 size={16} />
           B2B Providers
         </button>
         <button
           className={`b2b-tab ${activeSubTab === "b2c-providers" ? "active" : ""}`}
           onClick={() => setActiveSubTab("b2c-providers")}
         >
+          <Users size={16} />
           B2C Providers
         </button>
       </div>
 
-      <div className="b2b-content">
-        {renderSubContent()}
-      </div>
+      <div className="b2b-content">{renderSubContent()}</div>
     </div>
   )
 }

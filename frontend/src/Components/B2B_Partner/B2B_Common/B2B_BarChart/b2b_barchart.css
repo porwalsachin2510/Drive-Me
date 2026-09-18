@@ -47,7 +47,7 @@
 }
 
 .bar.revenue {
-  background-color: #16a085;
+  background-color: #12b0c4;
 }
 
 .bar.expense {
@@ -97,7 +97,7 @@
 }
 
 .legend-color.revenue {
-  background-color: #16a085;
+  background-color: #12b0c4;
 }
 
 .legend-color.expense {
@@ -106,18 +106,18 @@
 
 /* Added custom tooltip styles for hover information display */
 .custom-tooltip {
-  background-color: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  background-color: var(--dmg-card, #fff);
+  border: 1px solid var(--dmg-line, #e0e0e0);
+  border-radius: 12px;
   padding: 12px 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--dmg-shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.15));
   font-size: 12px;
+  font-family: var(--dmg-font);
 }
 
 .tooltip-label {
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 6px;
+  font-weight: 700;
+  color: var(--dmg-navy, #333);
   margin: 0 0 6px 0;
 }
 

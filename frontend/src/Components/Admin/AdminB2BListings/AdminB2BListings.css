@@ -1,119 +1,228 @@
+/* =====================================================================
+   Admin B2B Listings — DriveMeGo brand system
+   Deep navy (#0a2a43) + logo teal (#12b0c4), Plus Jakarta Sans.
+   ===================================================================== */
 .admin-b2b-listings {
+  --b2b-navy: #0a2a43;
+  --b2b-teal: #12b0c4;
+  --b2b-teal-600: #0e97a8;
+  --b2b-teal-050: #e6f7fa;
+  --b2b-ink: #0f2233;
+  --b2b-muted: #5b6b7b;
+  --b2b-line: #e4ecf3;
+  --b2b-bg: #eef3f8;
   width: 100%;
-  padding: 24px;
+  padding: 0;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--b2b-ink);
 }
 
+/* ---------- Hero header ---------- */
 .b2b-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 28px;
-  gap: 20px;
-  flex-wrap: wrap;
+  position: relative;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  border-radius: 22px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(18, 176, 196, 0.28) 0%, rgba(18, 176, 196, 0) 55%),
+    linear-gradient(135deg, #0a2a43 0%, #123a58 60%, #0e2f49 100%);
+  box-shadow: 0 18px 40px rgba(10, 42, 67, 0.28);
 }
 
-.b2b-header h2 {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1e293b;
+.b2b-header::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  bottom: -80px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(18, 176, 196, 0.32) 0%, rgba(18, 176, 196, 0) 70%);
+  pointer-events: none;
+}
+
+.b2b-header-top {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 22px;
+}
+
+.b2b-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.b2b-header-icon {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  background: rgba(18, 176, 196, 0.22);
+  color: #7fe3ef;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.b2b-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.b2b-description {
+  font-size: 14px;
+  color: rgba(226, 240, 248, 0.82);
   margin: 0;
+  line-height: 1.55;
+  max-width: 560px;
 }
 
+/* ---------- Hero stat chips ---------- */
 .b2b-stats {
-  display: flex;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
-  flex-wrap: wrap;
 }
 
-.b2b-stats .stat-item {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 14px 20px;
+.b2b-stat-item {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.25s ease, background 0.25s ease;
+  backdrop-filter: blur(6px);
+}
+
+.b2b-stat-item:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.b2b-stat-icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+}
+
+.b2b-stat-icon-primary {
+  background: rgba(18, 176, 196, 0.22);
+  color: #7fe3ef;
+}
+
+.b2b-stat-icon-active {
+  background: rgba(34, 197, 94, 0.24);
+  color: #7ff0ab;
+}
+
+.b2b-stat-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  min-width: 100px;
-  transition: box-shadow 0.2s;
+  gap: 1px;
+  min-width: 0;
 }
 
-.b2b-stats .stat-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+.b2b-stat-number {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
 }
 
-.b2b-stats .stat-number {
-  font-size: 28px;
+.b2b-stat-label {
+  font-size: 10.5px;
   font-weight: 700;
-  color: #E85D5D;
-  line-height: 1.2;
-}
-
-.b2b-stats .stat-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #64748b;
+  color: rgba(226, 240, 248, 0.72);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 6px;
+  letter-spacing: 0.05em;
 }
 
+/* ---------- Tabs ---------- */
 .b2b-tabs {
   display: flex;
-  gap: 0;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #e2e8f0;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: #fff;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--b2b-line);
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.05);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .b2b-tab {
-  padding: 12px 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
-  color: #64748b;
+  font-weight: 700;
+  color: var(--b2b-muted);
   cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: -2px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-family: inherit;
 }
 
 .b2b-tab:hover {
-  color: #334155;
+  color: var(--b2b-navy);
+  background: var(--b2b-bg);
 }
 
 .b2b-tab.active {
-  color: #2DD4BF;
-  border-bottom-color: #2DD4BF;
+  color: #fff;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  box-shadow: 0 8px 18px rgba(18, 176, 196, 0.3);
 }
 
+/* ---------- Content ---------- */
 .b2b-content {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid var(--b2b-line);
   overflow: hidden;
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.05);
+}
+
+@media (max-width: 1024px) {
+  .b2b-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-  .admin-b2b-listings {
-    padding: 16px;
+  .b2b-header {
+    padding: 22px;
   }
-
+  .b2b-title {
+    font-size: 22px;
+  }
   .b2b-stats {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .b2b-tabs {
-    overflow-x: auto;
-  }
-
-  .b2b-tab {
-    white-space: nowrap;
   }
 }
 
 @media (max-width: 480px) {
   .b2b-stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
 }

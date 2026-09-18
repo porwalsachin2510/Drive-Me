@@ -67,7 +67,7 @@
 }
 
 .employee-trip-booking-tab-btn.active {
-  background-color: #16a085;
+  background-color: #12b0c4;
   color: white;
 }
 
@@ -260,7 +260,7 @@
   padding: 10px;
   border: none;
   border-radius: 6px;
-  background-color: #16a085;
+  background-color: #12b0c4;
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -269,7 +269,7 @@
 }
 
 .employee-trip-booking-book-btn:hover:not(:disabled) {
-  background-color: #138d75;
+  background-color: #0e97a8;
 }
 
 .employee-trip-booking-book-btn:disabled {
@@ -405,7 +405,7 @@
 .employee-trip-booking-form-group input:focus,
 .employee-trip-booking-form-group select:focus {
   outline: none;
-  border-color: #16a085;
+  border-color: #12b0c4;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
 
@@ -432,7 +432,7 @@
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
-  background-color: #16a085;
+  background-color: #12b0c4;
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -441,7 +441,7 @@
 }
 
 .employee-trip-booking-submit-btn:hover:not(:disabled) {
-  background-color: #138d75;
+  background-color: #0e97a8;
 }
 
 .employee-trip-booking-submit-btn:disabled {
@@ -452,13 +452,13 @@
 /* Driver tracking pulse animation */
 @keyframes driverPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 0 0 rgba(18, 176, 196, 0.6);
   }
   70% {
-    box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 15px rgba(18, 176, 196, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 0 rgba(18, 176, 196, 0);
   }
 }
 
@@ -477,7 +477,7 @@
 .employee-trip-booking-info-banner .info-icon {
   width: 24px;
   height: 24px;
-  background: #16a085;
+  background: #12b0c4;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -495,7 +495,7 @@
 }
 
 .employee-trip-booking-trip-card.corporate-assigned {
-  border: 2px solid #16a085;
+  border: 2px solid #12b0c4;
   position: relative;
 }
 
@@ -503,7 +503,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  background: #16a085;
+  background: #12b0c4;
   color: white;
   font-size: 10px;
   font-weight: 700;
@@ -528,12 +528,12 @@
 }
 
 .employee-trip-booking-stop-arrow {
-  color: #16a085;
+  color: #12b0c4;
   font-weight: 600;
 }
 
 .employee-trip-booking-track-btn {
-  background: #3b82f6;
+  background: #12b0c4;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -546,7 +546,7 @@
 }
 
 .employee-trip-booking-track-btn:hover {
-  background: #2563eb;
+  background: #0e97a8;
 }
 
 .employee-trip-booking-info-btn {

@@ -1,13 +1,15 @@
-/* Premium Commuter Profile - Inter Font */
+/* Premium Commuter Profile - DriveMeGo brand (Plus Jakarta Sans) */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
 html,
 body {
   width: 100%;
   height: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--dmg-font, "Plus Jakarta Sans"), -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-secondary, #f8f9fa);
-  color: var(--text-primary, #202124);
+  background-color: var(--dmg-bg, #eef3f8);
+  color: var(--dmg-ink, #0f2233);
 }
 
 .commuter-profile-page-container {

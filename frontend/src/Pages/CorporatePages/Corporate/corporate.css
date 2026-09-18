@@ -1,126 +1,199 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* =====================================================================
+   DriveMeGo — Corporate "Customize Your Requirements" search page
+   Brand: deep navy (#0a2a43) + bright teal (#12b0c4), Plus Jakarta Sans.
+   Full layout rework: navy hero banner + floating form card.
+   ===================================================================== */
+
 .customize-requirements-container {
+  --dm-navy: #0a2a43;
+  --dm-navy-2: #123a58;
+  --dm-teal: #12b0c4;
+  --dm-teal-2: #0e97a8;
+  --dm-ink: #0f2b41;
+  --dm-muted: #64788a;
+  --dm-line: #e4ecf2;
+  --dm-surface: #f4f8fb;
+  --dm-radius: 16px;
+
   min-height: 100vh;
-  background: #f5f7fa;
-  padding: 80px 20px 40px;
+  background: var(--dm-surface);
+  padding: 0 0 64px;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--dm-ink);
 }
 
-.customize-content {
-  max-width: 1200px;
+/* ---- Hero banner ---- */
+.customize-requirements-container .customize-header {
+  position: relative;
+  text-align: left;
+  margin: 0 0 -72px;
+  padding: 104px 24px 128px;
+  background:
+    radial-gradient(1100px 380px at 85% -10%, rgba(18, 176, 196, 0.35), transparent 60%),
+    linear-gradient(135deg, var(--dm-navy) 0%, var(--dm-navy-2) 100%);
+  overflow: hidden;
+}
+
+.customize-requirements-container .customize-header::after {
+  content: "";
+  position: absolute;
+  right: -80px;
+  bottom: -120px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(18, 176, 196, 0.25), transparent 70%);
+  pointer-events: none;
+}
+
+.customize-requirements-container .customize-header h1 {
+  max-width: 1160px;
+  margin: 0 auto 12px;
+  padding: 0 16px;
+  font-size: clamp(2rem, 4vw, 2.9rem);
+  line-height: 1.1;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.customize-requirements-container .customize-header p {
+  max-width: 1160px;
   margin: 0 auto;
+  padding: 0 16px;
+  font-size: 1.08rem;
+  color: rgba(224, 240, 246, 0.86);
+  font-weight: 500;
 }
 
-.customize-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.customize-header h1 {
-  font-size: 2.5rem;
-  color: #2c3e50;
-  margin-bottom: 10px;
-  font-weight: 700;
-}
-
-.customize-header p {
-  font-size: 1.1rem;
-  color: #7f8c8d;
+/* ---- Floating form card ---- */
+.customize-content {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 16px;
+  position: relative;
+  z-index: 2;
 }
 
 .filter-form {
-  background: white;
-  border-radius: 15px;
+  background: #fff;
+  border-radius: 22px;
   padding: 40px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--dm-line);
+  box-shadow: 0 30px 70px -30px rgba(10, 42, 67, 0.4);
 }
 
 .filter-section {
-  margin-bottom: 35px;
+  margin-bottom: 34px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start
+  align-items: flex-start;
+  padding-bottom: 34px;
+  border-bottom: 1px solid var(--dm-line);
+  width: 100%;
+}
+
+.filter-section:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 
 .filter-section-error {
-  padding: 15px;
-  border-radius: 8px;
-  border: 1px solid #ef4444;
-  background-color: #fef2f2;
+  padding: 18px;
+  border-radius: var(--dm-radius);
+  border: 1px solid #f0a2a2;
+  background-color: #fef4f4;
 }
 
 .filter-section h3 {
-  font-size: 1.3rem;
-  color: #34495e;
-  margin-bottom: 20px;
-  font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--dm-ink);
+  margin-bottom: 6px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .filter-hint {
   font-size: 0.9rem;
-  color: #6b7280;
-  margin: -12px 0 16px;
-  line-height: 1.5;
+  color: var(--dm-muted);
+  margin: 0 0 18px;
+  line-height: 1.55;
 }
 
-/* Helper note shown under the Location select for whole-country markets.
-   Uses positive top spacing (unlike .filter-hint's negative margin) so it sits
-   cleanly below the dropdown instead of overlapping its border. */
+.filter-section h3 + .vehicle-type-grid,
+.filter-section h3 + .duration-options,
+.filter-section h3 + .checkbox-group,
+.filter-section h3 + .features-grid,
+.filter-section h3 + .input-field,
+.filter-section h3 + .select-field {
+  margin-top: 14px;
+}
+
 .location-hint {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--dm-muted);
   margin: 10px 0 0;
   line-height: 1.4;
 }
 
 .location-hint svg {
   flex-shrink: 0;
-  color: #10b981;
+  color: var(--dm-teal);
 }
 
 .validation-error {
-  color: #ef4444;
+  color: #d64545;
   font-size: 0.85rem;
   margin-top: 8px;
   display: block;
+  font-weight: 600;
 }
 
+/* ---- Vehicle type cards ---- */
 .vehicle-type-grid {
   display: flex;
   flex-direction: row;
-  gap: 15px;
+  gap: 14px;
   flex-wrap: wrap;
   align-items: flex-start;
   width: 100%;
 }
 
 .vehicle-type-option {
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
+  background: var(--dm-surface);
+  border: 1.5px solid var(--dm-line);
+  border-radius: var(--dm-radius);
   padding: 20px 12px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 130px;        
-  min-height: 90px
+  gap: 10px;
+  width: 132px;
+  min-height: 100px;
 }
 
 .vehicle-type-option:hover {
-  border-color: #3498db;
+  border-color: var(--dm-teal);
   transform: translateY(-3px);
+  box-shadow: 0 14px 28px -16px rgba(18, 176, 196, 0.55);
 }
 
 .vehicle-type-option.selected {
-  background: #3498db;
-  border-color: #3498db;
-  color: white;
+  background: linear-gradient(135deg, var(--dm-teal) 0%, var(--dm-teal-2) 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 14px 30px -14px rgba(18, 176, 196, 0.7);
 }
 
 .vehicle-icon {
@@ -139,68 +212,84 @@
   text-align: center;
 }
 
+/* ---- Inputs ---- */
 .input-field,
 .select-field {
   width: 100%;
-  padding: 12px 15px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--dm-line);
+  border-radius: 12px;
   font-size: 1rem;
-  transition: border-color 0.3s ease;
+  font-family: inherit;
+  color: var(--dm-ink);
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-field::placeholder {
+  color: #9fb0bd;
 }
 
 .input-field:focus,
 .select-field:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--dm-teal);
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.14);
 }
 
+/* ---- Duration / usage cards ---- */
 .duration-options,
 .usage-options {
   display: grid;
-  grid-template-columns: repeat(4, minmax(200px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(4, minmax(190px, 1fr));
+  gap: 14px;
+  width: 100%;
 }
 
 .duration-option,
 .usage-option {
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
+  background: var(--dm-surface);
+  border: 1.5px solid var(--dm-line);
+  border-radius: var(--dm-radius);
   padding: 20px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .duration-option:hover,
 .usage-option:hover {
-  border-color: #3498db;
+  border-color: var(--dm-teal);
   transform: translateY(-2px);
+  box-shadow: 0 14px 28px -18px rgba(18, 176, 196, 0.5);
 }
 
 .duration-option.selected,
 .usage-option.selected {
-  background: #e3f2fd;
-  border-color: #3498db;
+  background: #e9f8fb;
+  border-color: var(--dm-teal);
+  box-shadow: 0 0 0 1px var(--dm-teal) inset;
 }
 
 .duration-label,
 .usage-label {
-  font-weight: 600;
-  color: #2c3e50;
+  font-weight: 700;
+  color: var(--dm-ink);
   margin-bottom: 8px;
 }
 
 .duration-description,
 .usage-description {
   font-size: 0.9rem;
-  color: #7f8c8d;
+  color: var(--dm-muted);
+  line-height: 1.45;
 }
 
+/* ---- Checkboxes ---- */
 .checkbox-group {
   display: flex;
-  gap: 20px;
+  gap: 14px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .checkbox-label {
@@ -209,90 +298,100 @@
   gap: 10px;
   cursor: pointer;
   font-size: 1rem;
-  color: #2c3e50;
-  padding: 12px 20px;
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  transition: all 0.3s ease;
+  color: var(--dm-ink);
+  padding: 13px 20px;
+  background: var(--dm-surface);
+  border: 1.5px solid var(--dm-line);
+  border-radius: 12px;
+  transition: border-color 0.2s ease, background 0.2s ease;
   user-select: none;
 }
 
 .checkbox-label:hover {
-  border-color: #3498db;
-  background: #edf6ff;
+  border-color: var(--dm-teal);
+  background: #eefafc;
 }
 
 .checkbox-label input[type="checkbox"] {
   width: 20px;
   height: 20px;
   cursor: pointer;
-  accent-color: #3498db;
+  accent-color: var(--dm-teal);
 }
 
 .checkbox-label input[type="checkbox"]:checked + span {
-  color: #3498db;
-  font-weight: 600;
+  color: var(--dm-teal-2);
+  font-weight: 700;
 }
 
+/* ---- Feature chips ---- */
 .features-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
+  width: 100%;
 }
 
 .feature-chip {
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
+  background: var(--dm-surface);
+  border: 1.5px solid var(--dm-line);
   padding: 10px 20px;
-  border-radius: 25px;
+  border-radius: 999px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.15s ease;
   font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .feature-chip:hover {
-  border-color: #3498db;
+  border-color: var(--dm-teal);
+  transform: translateY(-1px);
 }
 
 .feature-chip.selected {
-  background: #3498db;
-  border-color: #3498db;
-  color: white;
+  background: linear-gradient(135deg, var(--dm-teal) 0%, var(--dm-teal-2) 100%);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
 }
 
+/* ---- Actions ---- */
 .filter-actions {
   text-align: center;
   margin-top: 40px;
 }
 
-.btn-filter-actions{
-   display: flex;
-   justify-content: flex-end;
+.btn-filter-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .search-btn {
-  background: #3498db;
-  color: white;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  color: #fff;
   border: none;
-  padding: 18px 60px;
-  font-size: 1.2rem;
-  border-radius: 30px;
+  padding: 17px 56px;
+  font-size: 1.1rem;
+  font-family: inherit;
+  border-radius: 999px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 16px 34px -14px rgba(18, 176, 196, 0.6);
 }
 
 .search-btn:hover:not(:disabled) {
-  background: #2980b9;
-  transform: scale(1.05);
-  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+  transform: translateY(-2px);
+  filter: brightness(1.03);
+  box-shadow: 0 20px 42px -14px rgba(18, 176, 196, 0.7);
 }
 
 .search-btn:disabled {
-  background: #bdc3c7;
+  background: #c3d0d9;
   cursor: not-allowed;
-  opacity: 0.6;
+  box-shadow: none;
+  opacity: 0.75;
 }
 
 .search-btn:disabled:hover {
@@ -301,12 +400,23 @@
 }
 
 @media (max-width: 768px) {
+  .customize-requirements-container .customize-header {
+    padding: 92px 8px 120px;
+    margin-bottom: -80px;
+  }
+
   .filter-form {
-    padding: 25px;
+    padding: 24px 20px;
+    border-radius: 18px;
   }
 
   .vehicle-type-grid {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  }
+
+  .vehicle-type-option {
+    width: 100%;
   }
 
   .duration-options,
@@ -317,5 +427,14 @@
   .checkbox-group {
     flex-direction: column;
     gap: 12px;
+  }
+
+  .btn-filter-actions {
+    justify-content: stretch;
+  }
+
+  .search-btn {
+    width: 100%;
+    padding: 16px 24px;
   }
 }

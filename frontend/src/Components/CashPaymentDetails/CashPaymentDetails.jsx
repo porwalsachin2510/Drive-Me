@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "../../utils/api";
+import { Banknote, Building2, MapPin, Phone } from "lucide-react";
 import "./CashPaymentDetails.css";
 
 // Simple module-level cache so we don't re-fetch the (static) admin details
@@ -120,7 +121,7 @@ const CashPaymentDetails = ({
     <div className="cpd-card" role="region" aria-label={title}>
       <div className="cpd-header">
         <div className="cpd-header-icon" aria-hidden="true">
-          💵
+          <Banknote size={22} />
         </div>
         <div>
           <h3 className="cpd-title">{title}</h3>
@@ -161,7 +162,7 @@ const CashPaymentDetails = ({
             <div className="cpd-section">
               <h4 className="cpd-section-title">
                 <span className="cpd-section-icon" aria-hidden="true">
-                  🏦
+                  <Building2 size={18} />
                 </span>
                 Option 1: Bank Transfer
               </h4>
@@ -185,7 +186,7 @@ const CashPaymentDetails = ({
             <div className="cpd-section">
               <h4 className="cpd-section-title">
                 <span className="cpd-section-icon" aria-hidden="true">
-                  📍
+                  <MapPin size={18} />
                 </span>
                 Option 2: Pay at Our Office
               </h4>
@@ -199,7 +200,7 @@ const CashPaymentDetails = ({
             <div className="cpd-section">
               <h4 className="cpd-section-title">
                 <span className="cpd-section-icon" aria-hidden="true">
-                  ☎️
+                  <Phone size={18} />
                 </span>
                 Need Help?
               </h4>

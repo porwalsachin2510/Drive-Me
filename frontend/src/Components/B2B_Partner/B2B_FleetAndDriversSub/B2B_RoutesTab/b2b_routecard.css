@@ -1,14 +1,17 @@
 .drivemego-b2broutecard-b2b-route-card {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  background: var(--dmg-card);
+  border-radius: 18px;
+  border: 1px solid var(--dmg-line);
   overflow: hidden;
-  transition: box-shadow 0.2s, transform 0.2s;
+  font-family: var(--dmg-font);
+  box-shadow: 0 2px 10px rgba(10, 42, 67, 0.05);
+  transition: box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
 }
 
 .drivemego-b2broutecard-b2b-route-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+  box-shadow: var(--dmg-shadow);
+  border-color: rgba(18, 176, 196, 0.4);
+  transform: translateY(-4px);
 }
 
 .drivemego-b2broutecard-b2b-route-header {
@@ -145,8 +148,8 @@
 
 .drivemego-b2broutecard-b2b-contract-badge {
   padding: 4px 10px;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-700);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
@@ -160,7 +163,7 @@
 .drivemego-b2broutecard-b2b-toggle-details {
   background: none;
   border: none;
-  color: #16a085;
+  color: #12b0c4;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -193,7 +196,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #16a085;
+  background: #12b0c4;
   color: #ffffff;
   border-radius: 50%;
   font-size: 12px;
@@ -232,12 +235,16 @@
 }
 
 .drivemego-b2broutecard-b2b-edit-btn {
-  background: #16a085;
+  background: var(--dmg-teal);
   color: #ffffff;
 }
 
 .drivemego-b2broutecard-b2b-edit-btn:hover {
-  background: #138d7b;
+  background: var(--dmg-teal-600);
+}
+
+.drivemego-b2broutecard-b2b-edit-btn:hover {
+  background: var(--dmg-teal-600);
 }
 
 .drivemego-b2broutecard-b2b-delete-btn {
@@ -359,7 +366,7 @@
 .drivemego-b2broutecard-b2b-edit-field select:focus,
 .drivemego-b2broutecard-b2b-edit-field textarea:focus {
   outline: none;
-  border-color: #16a085;
+  border-color: #12b0c4;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
 }
 
@@ -386,12 +393,12 @@
 }
 
 .drivemego-b2broutecard-b2b-days-grid .drivemego-b2broutecard-b2b-day-btn:hover {
-  border-color: #16a085;
+  border-color: #12b0c4;
 }
 
 .drivemego-b2broutecard-b2b-days-grid .drivemego-b2broutecard-b2b-day-btn.active {
-  background: #16a085;
-  border-color: #16a085;
+  background: #12b0c4;
+  border-color: #12b0c4;
   color: #ffffff;
 }
 
@@ -421,16 +428,17 @@
   flex: 1;
   padding: 12px;
   border: none;
-  background: #16a085;
-  border-radius: 6px;
+  background: var(--dmg-cta);
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   color: #ffffff;
   cursor: pointer;
+  box-shadow: var(--dmg-cta-shadow);
 }
 
 .drivemego-b2broutecard-b2b-save-btn:hover {
-  background: #138d7b;
+  background: var(--dmg-cta-hover);
 }
 
 .drivemego-b2broutecard-b2b-save-btn:disabled {

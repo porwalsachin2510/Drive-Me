@@ -2,6 +2,7 @@
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
+  font-family: var(--dmg-font);
 }
 
 .b2bpartner-RequirementsTab-view-header {
@@ -9,10 +10,11 @@
 }
 
 .b2bpartner-RequirementsTab-view-header h2 {
-  color: #333;
+  color: var(--dmg-navy);
   margin-bottom: 10px;
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .b2bpartner-RequirementsTab-view-header p {
@@ -47,8 +49,8 @@
 
 .b2bpartner-RequirementsTab-search-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .b2bpartner-RequirementsTab-filter-select,
@@ -75,9 +77,20 @@
 }
 
 .b2bpartner-RequirementsTab-no-requirements-icon {
-  font-size: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-600);
   margin-bottom: 20px;
-  opacity: 0.5;
+}
+
+.b2bpartner-RequirementsTab-no-requirements-icon svg {
+  width: 30px;
+  height: 30px;
 }
 
 .b2bpartner-RequirementsTab-no-requirements h3 {
@@ -98,16 +111,18 @@
 }
 
 .b2bpartner-RequirementsTab-requirement-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: 18px;
+  box-shadow: 0 2px 10px rgba(10, 42, 67, 0.05);
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .b2bpartner-RequirementsTab-requirement-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  border-color: rgba(18, 176, 196, 0.4);
+  box-shadow: var(--dmg-shadow);
 }
 
 .b2bpartner-RequirementsTab-card-header {
@@ -281,12 +296,12 @@
 }
 
 .b2bpartner-RequirementsTab-tag {
-  background: #eff6ff;
-  color: #1d4ed8;
-  padding: 4px 8px;
-  border-radius: 4px;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-700);
+  padding: 4px 10px;
+  border-radius: 100px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .b2bpartner-RequirementsTab-card-footer {
@@ -347,12 +362,14 @@
 }
 
 .b2bpartner-RequirementsTab-btn-primary {
-  background: #3b82f6;
+  background: var(--dmg-cta);
   color: white;
+  box-shadow: var(--dmg-cta-shadow);
 }
 
 .b2bpartner-RequirementsTab-btn-primary:hover {
-  background: #2563eb;
+  background: var(--dmg-cta-hover);
+  transform: translateY(-1px);
 }
 
 .b2bpartner-RequirementsTab-btn-secondary {
@@ -535,8 +552,8 @@
 .b2bpartner-RequirementsTab-form-row select:focus,
 .b2bpartner-RequirementsTab-form-row textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .b2bpartner-RequirementsTab-form-group {

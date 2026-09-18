@@ -1,6 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* DriveMeGo — Managed SLA Dashboard (brand navy + teal; SLA ok/breach semantics retained) */
 .msla {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1a1a2e;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #0a2a43;
 }
 
 .msla-loading,
@@ -22,7 +25,9 @@
 
 .msla-title {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0a2a43;
   margin: 0;
 }
 
@@ -57,15 +62,21 @@
   background: #fff;
   border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
-  color: #1a1a2e;
+  font-weight: 700;
+  color: #0a2a43;
   cursor: pointer;
+  font-family: inherit;
   transition: all 0.15s;
 }
 
 .msla-btn:hover { background: #f3f4f6; }
-.msla-btn.primary { background: #b71c1c; border-color: #b71c1c; color: #fff; }
-.msla-btn.primary:hover { background: #991616; }
+.msla-btn.primary {
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(18, 176, 196, 0.28);
+}
+.msla-btn.primary:hover { box-shadow: 0 12px 24px rgba(18, 176, 196, 0.36); }
 .msla-btn.sm { padding: 5px 10px; font-size: 12px; }
 .msla-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 

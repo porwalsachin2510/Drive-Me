@@ -20,7 +20,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(90deg, #0a2a43 0%, #123a58 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -32,7 +32,7 @@
 .b2c-vehicle-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  border-color: #667eea;
+  border-color: #0a2a43;
 }
 
 /* Header Section */
@@ -44,7 +44,7 @@
   position: relative;
   height: 160px;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
 }
 
 .b2c-vehicle-image {
@@ -236,12 +236,12 @@
 }
 
 .b2c-edit-btn {
-  background: #3b82f6;
+  background: #12b0c4;
   color: white;
 }
 
 .b2c-edit-btn:hover {
-  background: #2563eb;
+  background: #0e97a8;
   transform: translateY(-1px);
 }
 
@@ -401,13 +401,13 @@
 
 .b2c-gallery-item:hover {
   transform: scale(1.05);
-  border-color: #667eea;
+  border-color: #0a2a43;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
 .b2c-gallery-item.active {
-  border-color: #667eea;
-  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+  border-color: #0a2a43;
+  box-shadow: 0 8px 16px rgba(10, 42, 67, 0.3);
 }
 
 .b2c-gallery-image {
@@ -561,8 +561,8 @@
   background: linear-gradient(135deg, #10b981, #059669);
 }
 
-.b2c-vehicle-status[style*="#3b82f6"] {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+.b2c-vehicle-status[style*="#12b0c4"] {
+  background: linear-gradient(135deg, #12b0c4, #0e97a8);
 }
 
 .b2c-vehicle-status[style*="#f59e0b"] {

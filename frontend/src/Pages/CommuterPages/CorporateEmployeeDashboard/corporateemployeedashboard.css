@@ -1,9 +1,12 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
 .corporate-employee-dashboard {
   width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #eef3f8 0%, #dbe6f0 100%);
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .corporate-employee-dashboard-with-tabs-container {
@@ -19,22 +22,41 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  background: white;
-  border-radius: 12px;
-  padding: 24px 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: var(--dmg-navy-gradient);
+  border-radius: var(--dmg-radius);
+  padding: 26px 32px;
+  box-shadow: 0 16px 40px rgba(10, 42, 67, 0.24);
+  position: relative;
+  overflow: hidden;
+}
+
+.corporate-employee-dashboard-with-tabs-header::after {
+  content: "";
+  position: absolute;
+  top: -45%;
+  right: -3%;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(18, 176, 196, 0.4) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.corporate-employee-dashboard-with-tabs-header-left {
+  position: relative;
+  z-index: 1;
 }
 
 .corporate-employee-dashboard-with-tabs-header-left h1 {
   font-size: 1.8rem;
-  color: #2c3e50;
+  color: #fff;
   margin: 0 0 4px 0;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .corporate-employee-dashboard-with-tabs-header-left p {
   font-size: 0.95rem;
-  color: #7f8c8d;
+  color: rgba(226, 238, 246, 0.82);
   margin: 0;
 }
 
@@ -42,6 +64,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .corporate-employee-dashboard-with-tabs-logout-btn {
@@ -73,8 +97,8 @@
 .corporate-employee-dashboard-with-tabs-spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid #e0e0e0;
-  border-top-color: #2ecc71;
+  border: 4px solid var(--dmg-line);
+  border-top-color: #12b0c4;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -92,8 +116,8 @@
 
 .corporate-employee-dashboard-with-tabs-tabs {
   display: flex;
-  background: #f8f9fa;
-  border-bottom: 2px solid #e0e0e0;
+  background: var(--dmg-bg);
+  border-bottom: 2px solid var(--dmg-line);
   flex-wrap: wrap;
 }
 
@@ -103,7 +127,7 @@
   padding: 16px 20px;
   border: none;
   background: transparent;
-  color: #7f8c8d;
+  color: var(--dmg-muted);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -112,13 +136,13 @@
 }
 
 .corporate-employee-dashboard-with-tabs-tab-btn:hover {
-  background: #f0f0f0;
-  color: #2c3e50;
+  background: #eef3f8;
+  color: #0a2a43;
 }
 
 .corporate-employee-dashboard-with-tabs-tab-btn.active {
-  color: #2ecc71;
-  border-bottom-color: #2ecc71;
+  color: #0e97a8;
+  border-bottom-color: #12b0c4;
   background: white;
 }
 
@@ -142,8 +166,10 @@
 .corporate-employee-dashboard-with-tabs-assigned-bus-card {
   margin-bottom: 30px;
   padding: 25px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  background:
+    radial-gradient(500px 200px at 90% -30%, rgba(18, 176, 196, 0.4), transparent 60%),
+    linear-gradient(135deg, #0a2a43 0%, #123a58 60%, #0e3350 100%);
+  border-radius: 16px;
   color: white;
 }
 
@@ -225,13 +251,14 @@
   padding: 25px;
   background: white;
   border-radius: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--dmg-line);
 }
 
 .corporate-employee-dashboard-with-tabs-today-trips-card h2 {
-  color: #2c3e50;
+  color: #0a2a43;
   margin-bottom: 20px;
   font-size: 1.4rem;
+  font-weight: 800;
 }
 
 .corporate-employee-dashboard-with-tabs-trips-list {
@@ -245,14 +272,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #2ecc71;
+  background: var(--dmg-bg);
+  border-radius: 10px;
+  border-left: 4px solid #12b0c4;
   transition: all 0.3s ease;
 }
 
 .corporate-employee-dashboard-with-tabs-trip-item:hover {
-  background: #f0f0f0;
+  background: #e6f7fa;
   transform: translateX(5px);
 }
 
@@ -265,17 +292,17 @@
 
 .corporate-employee-dashboard-with-tabs-trip-time {
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--dmg-navy);
   font-size: 1.1rem;
 }
 
 .corporate-employee-dashboard-with-tabs-trip-route {
-  color: #7f8c8d;
+  color: var(--dmg-muted);
   font-size: 0.95rem;
 }
 
 .corporate-employee-dashboard-with-tabs-trip-location {
-  color: #3498db;
+  color: #0e97a8;
   font-size: 0.85rem;
 }
 
@@ -288,23 +315,24 @@
 
 .corporate-employee-dashboard-with-tabs-trip-seats {
   margin: 0 20px;
-  color: #2ecc71;
+  color: #0e97a8;
   font-weight: 600;
 }
 
 .corporate-employee-dashboard-with-tabs-book-btn {
   padding: 10px 20px;
-  background: #2ecc71;
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-weight: 600;
+  border-radius: 8px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.3);
 }
 
 .corporate-employee-dashboard-with-tabs-book-btn:hover {
-  background: #27ae60;
+  filter: brightness(1.06);
   transform: scale(1.05);
 }
 
@@ -314,7 +342,7 @@
 .corporate-employee-dashboard-with-tabs-no-notifications {
   text-align: center;
   padding: 40px 20px;
-  color: #7f8c8d;
+  color: var(--dmg-muted);
 }
 
 /* Bookings Card */
@@ -322,11 +350,11 @@
   padding: 25px;
   background: white;
   border-radius: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--dmg-line);
 }
 
 .corporate-employee-dashboard-with-tabs-bookings-card h2 {
-  color: #2c3e50;
+  color: var(--dmg-navy);
   margin-bottom: 20px;
   font-size: 1.4rem;
 }
@@ -343,16 +371,16 @@
   align-items: center;
   gap: 15px;
   padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #3498db;
+  background: var(--dmg-bg);
+  border-radius: 10px;
+  border-left: 4px solid #0a2a43;
 }
 
 .corporate-employee-dashboard-with-tabs-booking-date {
-  background: #3498db;
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   padding: 10px 15px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 600;
   text-align: center;
   white-space: nowrap;
@@ -366,16 +394,16 @@
 
 .corporate-employee-dashboard-with-tabs-booking-time {
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--dmg-navy);
 }
 
 .corporate-employee-dashboard-with-tabs-booking-route {
-  color: #7f8c8d;
+  color: var(--dmg-muted);
   font-size: 0.95rem;
 }
 
 .corporate-employee-dashboard-with-tabs-booking-seat {
-  color: #2c3e50;
+  color: var(--dmg-navy);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -428,11 +456,11 @@
   padding: 25px;
   background: white;
   border-radius: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--dmg-line);
 }
 
 .corporate-employee-dashboard-with-tabs-history-card h2 {
-  color: #2c3e50;
+  color: var(--dmg-navy);
   margin-bottom: 20px;
   font-size: 1.4rem;
 }
@@ -449,16 +477,16 @@
   align-items: center;
   gap: 15px;
   padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #e74c3c;
+  background: var(--dmg-bg);
+  border-radius: 10px;
+  border-left: 4px solid #12b0c4;
 }
 
 .corporate-employee-dashboard-with-tabs-history-date {
-  background: #e74c3c;
+  background: linear-gradient(135deg, #12b0c4 0%, #0e97a8 100%);
   color: white;
   padding: 10px 15px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 600;
   text-align: center;
   white-space: nowrap;
@@ -466,12 +494,12 @@
 
 .corporate-employee-dashboard-with-tabs-history-info,
 .corporate-employee-dashboard-with-tabs-history-reason {
-  color: #2c3e50;
+  color: var(--dmg-navy);
   font-size: 0.95rem;
 }
 
 .corporate-employee-dashboard-with-tabs-history-reason {
-  color: #7f8c8d;
+  color: var(--dmg-muted);
 }
 
 /* Notifications Card */
@@ -479,11 +507,11 @@
   padding: 25px;
   background: white;
   border-radius: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--dmg-line);
 }
 
 .corporate-employee-dashboard-with-tabs-notifications-card h2 {
-  color: #2c3e50;
+  color: var(--dmg-navy);
   margin-bottom: 20px;
   font-size: 1.4rem;
 }
@@ -500,14 +528,14 @@
   align-items: center;
   gap: 15px;
   padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #9b59b6;
+  background: var(--dmg-bg);
+  border-radius: 10px;
+  border-left: 4px solid #0a2a43;
   transition: all 0.3s ease;
 }
 
 .corporate-employee-dashboard-with-tabs-notification-item:hover {
-  background: #f0f0f0;
+  background: #e6f7fa;
   transform: translateX(5px);
 }
 
@@ -539,19 +567,19 @@
 }
 
 .corporate-employee-dashboard-with-tabs-notification-content h4 {
-  color: #2c3e50;
+  color: var(--dmg-navy);
   margin-bottom: 5px;
   font-size: 1rem;
 }
 
 .corporate-employee-dashboard-with-tabs-notification-content p {
-  color: #7f8c8d;
+  color: var(--dmg-muted);
   font-size: 0.9rem;
   margin: 0;
 }
 
 .corporate-employee-dashboard-with-tabs-notification-date {
-  color: #95a5a6;
+  color: var(--dmg-muted-2);
   font-size: 0.85rem;
   white-space: nowrap;
 }

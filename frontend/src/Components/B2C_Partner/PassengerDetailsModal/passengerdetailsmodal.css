@@ -100,10 +100,10 @@
 .drivemego-passengerdetailsmodal-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #2DD4BF;
+  border: 3px solid var(--dmg-teal-050, #e6f7fa);
+  border-top-color: var(--dmg-teal, #12b0c4);
   border-radius: 50%;
-  animation: drivemego-passengerdetailsmodal-spin 1s linear infinite;
+  animation: drivemego-passengerdetailsmodal-spin 0.8s linear infinite;
 }
 
 @keyframes drivemego-passengerdetailsmodal-spin {
@@ -135,18 +135,20 @@
 
 .drivemego-passengerdetailsmodal-retry-btn {
   padding: 10px 20px;
-  background-color: #2DD4BF;
+  background: var(--dmg-cta, linear-gradient(135deg, #16bccf 0%, #0e97a8 100%));
   color: #ffffff;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
+  font-family: var(--dmg-font);
 }
 
 .drivemego-passengerdetailsmodal-retry-btn:hover {
-  background-color: #14B8A6;
+  box-shadow: var(--dmg-cta-shadow, 0 12px 26px rgba(18, 176, 196, 0.3));
+  transform: translateY(-1px);
 }
 
 /* Profile Section */
@@ -390,7 +392,7 @@
 .drivemego-passengerdetailsmodal-detail-value.status.confirmed,
 .drivemego-passengerdetailsmodal-detail-value.status.accepted {
   background-color: #dbeafe;
-  color: #2563eb;
+  color: #0e97a8;
 }
 
 .drivemego-passengerdetailsmodal-detail-value.status.rejected,

@@ -115,9 +115,10 @@ function WalletIcon() {
   const shownBalance = displayBalance !== null ? displayBalance : balance;
 
   const getBalanceColor = () => {
-    if (shownBalance > 1000) return "#10b981";
-    if (shownBalance > 100) return "#f59e0b";
-    return "#ef4444";
+    // Brand palette only — teal for a healthy balance, deep navy otherwise.
+    // (No alarming red/amber; the amount is informational, not an error.)
+    if (shownBalance > 100) return "#0e97a8";
+    return "#0a2a43";
   };
 
   return (

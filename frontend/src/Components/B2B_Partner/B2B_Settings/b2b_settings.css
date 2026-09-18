@@ -72,7 +72,7 @@
 .b2b-operator-dashboard-b2b-form-group input:focus,
 .b2b-operator-dashboard-b2b-form-group textarea:focus {
   outline: none;
-  border-color: #16a085;
+  border-color: #12b0c4;
 }
 
 .b2b-operator-dashboard-b2b-form-group textarea {
@@ -177,7 +177,7 @@
 }
 
 input:checked + .b2b-operator-dashboard-b2b-slider {
-  background-color: #16a085;
+  background-color: #12b0c4;
 }
 
 input:checked + .b2b-operator-dashboard-b2b-slider:before {
@@ -232,7 +232,7 @@ input:checked + .b2b-operator-dashboard-b2b-b2b-toggle-slider:before {
 .b2b-operator-dashboard-b2b-save-btn {
   margin-top: 16px;
   padding: 12px 24px;
-  background-color: #16a085;
+  background-color: #12b0c4;
   color: #ffffff;
   border: none;
   border-radius: 6px;

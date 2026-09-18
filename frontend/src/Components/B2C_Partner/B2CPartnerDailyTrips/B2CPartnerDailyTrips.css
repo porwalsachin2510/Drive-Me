@@ -44,16 +44,16 @@
 
 .b2c-partner-self-driver-badge.sharing {
   background-color: #dcfce7;
-  color: #16a34a;
+  color: #0e97a8;
   animation: pulse-green 2s infinite;
 }
 
 @keyframes pulse-green {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4);
+    box-shadow: 0 0 0 0 rgba(18, 176, 196, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(22, 163, 74, 0);
+    box-shadow: 0 0 0 8px rgba(18, 176, 196, 0);
   }
 }
 
@@ -78,7 +78,7 @@
 }
 
 .b2c-partner-stat-card:nth-child(2)::before {
-  background: linear-gradient(90deg, #3B82F6, #2563EB);
+  background: linear-gradient(90deg, #12b0c4, #0e97a8);
 }
 
 .b2c-partner-stat-card:nth-child(3)::before {
@@ -86,7 +86,7 @@
 }
 
 .b2c-partner-stat-card:nth-child(4)::before {
-  background: linear-gradient(90deg, #8B5CF6, #7C3AED);
+  background: linear-gradient(90deg, #0e97a8, #0a2a43);
 }
 
 .b2c-partner-stat-card:hover {
@@ -98,13 +98,13 @@
   display: block;
   font-size: 2rem;
   font-weight: 800;
-  color: #16a34a;
+  color: #0e97a8;
   margin-bottom: 6px;
   line-height: 1;
 }
 
 .b2c-partner-stat-value.stat-blue {
-  color: #3B82F6;
+  color: #12b0c4;
 }
 
 .b2c-partner-stat-value.stat-green {
@@ -112,7 +112,7 @@
 }
 
 .b2c-partner-stat-value.stat-purple {
-  color: #8B5CF6;
+  color: #0e97a8;
 }
 
 .b2c-partner-stat-label {
@@ -146,13 +146,13 @@
 }
 
 .b2c-partner-filter-btn:hover {
-  border-color: #16a34a;
-  color: #16a34a;
+  border-color: #0e97a8;
+  color: #0e97a8;
 }
 
 .b2c-partner-filter-btn.active {
-  background-color: #16a34a;
-  border-color: #16a34a;
+  background-color: #0e97a8;
+  border-color: #0e97a8;
   color: white;
 }
 
@@ -225,7 +225,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid #e2e8f0;
-  border-top-color: #16a34a;
+  border-top-color: #0e97a8;
   border-radius: 50%;
   animation: b2c-partner-spin 1s linear infinite;
   margin-bottom: 16px;
@@ -285,7 +285,7 @@
 }
 
 .b2c-partner-trip-card.today-highlight {
-  border-left: 4px solid #16a34a;
+  border-left: 4px solid #0e97a8;
 }
 
 /* Trip Header */
@@ -347,7 +347,7 @@
 
 .b2c-partner-trip-from {
   font-weight: 600;
-  color: #16a34a;
+  color: #0e97a8;
   font-size: 0.95rem;
 }
 
@@ -467,7 +467,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #16a34a;
+  background-color: #0e97a8;
   color: white;
   display: flex;
   align-items: center;
@@ -510,8 +510,8 @@
 }
 
 .b2c-partner-expand-btn:hover {
-  border-color: #16a34a;
-  color: #16a34a;
+  border-color: #0e97a8;
+  color: #0e97a8;
 }
 
 /* Expanded Passenger List */
@@ -547,7 +547,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background-color: #16a34a;
+  background-color: #0e97a8;
   color: white;
   display: flex;
   align-items: center;
@@ -629,7 +629,7 @@
   gap: 8px;
   flex: 1;
   padding: 12px 20px;
-  background-color: #16a34a;
+  background-color: #0e97a8;
   color: white;
   border: none;
   border-radius: 8px;
@@ -640,8 +640,8 @@
 }
 
 .b2c-partner-btn-start-trip:hover:not(:disabled) {
-  background-color: #15803d;
-  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+  background-color: #0c8695;
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.3);
 }
 
 .b2c-partner-btn-start-trip:disabled {
@@ -656,7 +656,7 @@
   gap: 8px;
   flex: 1;
   padding: 12px 20px;
-  background-color: #3b82f6;
+  background-color: #12b0c4;
   color: white;
   border: none;
   border-radius: 8px;
@@ -667,8 +667,8 @@
 }
 
 .b2c-partner-btn-complete-trip:hover:not(:disabled) {
-  background-color: #2563eb;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  background-color: #0e97a8;
+  box-shadow: 0 4px 12px rgba(18, 176, 196, 0.3);
 }
 
 .b2c-partner-btn-complete-trip:disabled {

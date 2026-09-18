@@ -6,6 +6,7 @@ import { useDispatch } from "react-redux";
 import api from "../../../utils/api";
 import { getWalletBalance } from "../../../Redux/slices/walletSlice";
 import LoadingSpinner from "../../../Components/LoadingSpinner/LoadingSpinner";
+import { Check, X, AlertTriangle } from "lucide-react";
 import "./WalletPaymentCallback.css";
 
 const WalletPaymentCallback = () => {
@@ -150,7 +151,9 @@ const WalletPaymentCallback = () => {
 
         {verificationStatus === "success" && (
           <>
-            <div className="success-icon">✓</div>
+            <div className="success-icon">
+              <Check size={30} strokeWidth={3} />
+            </div>
             <h2>Payment Successful!</h2>
             <p>{message}</p>
             <p className="redirect-message">Redirecting to your wallet...</p>
@@ -159,7 +162,9 @@ const WalletPaymentCallback = () => {
 
         {verificationStatus === "failed" && (
           <>
-            <div className="error-icon">✕</div>
+            <div className="error-icon">
+              <X size={30} strokeWidth={3} />
+            </div>
             <h2>Payment Failed</h2>
             <p>{message}</p>
             <p className="redirect-message">Redirecting back to wallet...</p>
@@ -168,7 +173,9 @@ const WalletPaymentCallback = () => {
 
         {verificationStatus === "cancelled" && (
           <>
-            <div className="warning-icon">⚠</div>
+            <div className="warning-icon">
+              <AlertTriangle size={26} strokeWidth={2.5} />
+            </div>
             <h2>Payment Cancelled</h2>
             <p>{message}</p>
             <p className="redirect-message">Redirecting back to wallet...</p>

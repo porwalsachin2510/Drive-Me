@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useSocket } from "../../hooks/useSocket";
 import api from "../../utils/api";
 import "./CommuterRouteRequests.css";
+import "../../styles/commuter-banner.css";
+import { Route } from "lucide-react";
 
 function CommuterRouteRequests() {
   const [routeRequests, setRouteRequests] = useState([]);
@@ -105,25 +107,35 @@ function CommuterRouteRequests() {
 
   return (
     <div className="drivemego-commuter-route-requests">
-      <div className="drivemego-commuter-route-requests-header">
-        <div>
-          <h2>My Route Requests</h2>
-          <p>Track the status of your route requests</p>
+      <header className="dmg-banner">
+        <div className="dmg-banner-main">
+          <span className="dmg-banner-icon">
+            <Route />
+          </span>
+          <div className="dmg-banner-text">
+            <span className="dmg-banner-eyebrow">Requests</span>
+            <h2 className="dmg-banner-title">My Route Requests</h2>
+            <p className="dmg-banner-sub">
+              Track the status of every route you&apos;ve requested.
+            </p>
+          </div>
         </div>
-        <div className="drivemego-filter-group">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="drivemego-status-filter"
-          >
-            <option value="">All Requests</option>
-            <option value="PENDING">Pending</option>
-            <option value="UNDER_REVIEW">Under Review</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
+        <div className="dmg-banner-aside">
+          <div className="drivemego-filter-group">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="drivemego-status-filter"
+            >
+              <option value="">All Requests</option>
+              <option value="PENDING">Pending</option>
+              <option value="UNDER_REVIEW">Under Review</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
         </div>
-      </div>
+      </header>
 
       {error && (
         <div className="drivemego-commuter-route-requests-error">

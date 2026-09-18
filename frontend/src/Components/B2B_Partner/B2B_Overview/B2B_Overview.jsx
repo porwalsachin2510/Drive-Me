@@ -2,6 +2,7 @@
 
 import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect, useCallback } from "react";
+import { Car, FileText, TrendingUp, Gauge } from "lucide-react";
 import B2B_MetricsCard from "../B2B_Common/B2B_MetricsCard/B2B_MetricsCard";
 import B2B_ContractCard from "../B2B_Common/B2B_ContractCard/B2B_ContractCard";
 import B2B_BarChart from "../B2B_Common/B2B_BarChart/B2B_BarChart";
@@ -62,22 +63,26 @@ function B2B_Overview() {
     {
       label: "ACTIVE VEHICLES",
       value: `${overview.vehicles?.active || 0}/${overview.vehicles?.total || 0}`,
-      icon: "🚗",
+      icon: <Car />,
+      tone: "teal",
     },
     {
       label: "ACTIVE CONTRACTS",
       value: overview.contracts?.active || 0,
-      icon: "📄",
+      icon: <FileText />,
+      tone: "navy",
     },
     {
       label: "REVENUE (MO)",
       value: `${overview.revenue?.monthly || 0} ${currency}`,
-      icon: "📈",
+      icon: <TrendingUp />,
+      tone: "success",
     },
     {
       label: "FLEET HEALTH",
       value: overview.vehicles?.utilization || "0%",
-      icon: "✓",
+      icon: <Gauge />,
+      tone: "amber",
     },
   ];
 

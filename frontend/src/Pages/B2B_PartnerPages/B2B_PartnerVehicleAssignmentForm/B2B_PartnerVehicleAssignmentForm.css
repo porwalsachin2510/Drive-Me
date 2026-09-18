@@ -1,6 +1,6 @@
 .vehicle-assignment-form-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   padding: 2rem;
 }
 
@@ -54,7 +54,7 @@
 }
 
 .contract-info-section h2 {
-  color: #667eea;
+  color: #0a2a43;
   margin-bottom: 1.5rem;
   font-size: 1.5rem;
 }
@@ -99,7 +99,7 @@
 
 .available-vehicles-section h2,
 .selected-vehicles-section h2 {
-  color: #667eea;
+  color: #0a2a43;
   margin-bottom: 1.5rem;
   font-size: 1.5rem;
 }
@@ -116,7 +116,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #0a2a43;
 }
 
 .vehicles-list {
@@ -138,8 +138,8 @@
 }
 
 .vehicle-item:hover {
-  border-color: #667eea;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  border-color: #0a2a43;
+  box-shadow: 0 2px 8px rgba(10, 42, 67, 0.2);
 }
 
 .vehicle-info h4 {
@@ -161,7 +161,7 @@
 
 .add-vehicle-btn {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -172,7 +172,7 @@
 
 .add-vehicle-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(10, 42, 67, 0.4);
 }
 
 .add-vehicle-btn:disabled {
@@ -202,7 +202,7 @@
 
 .selected-vehicle-card {
   padding: 1.5rem;
-  border: 2px solid #667eea;
+  border: 2px solid #0a2a43;
   border-radius: 8px;
   background: #f8f9ff;
 }
@@ -216,7 +216,7 @@
 
 .selected-vehicle-header h4 {
   margin: 0;
-  color: #667eea;
+  color: #0a2a43;
   font-size: 1.2rem;
 }
 
@@ -272,7 +272,7 @@
 .driver-selection select:focus,
 .fuel-card-input input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #0a2a43;
 }
 
 .submit-assignment-btn {

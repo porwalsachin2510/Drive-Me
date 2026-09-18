@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import "./settings.css";
+import "../../../styles/commuter-banner.css";
+import { Settings as SettingsIcon, User, Globe, Bell, Lock } from "lucide-react";
 import api from "../../../utils/api";
 import { useLocale } from "../../../hooks/useLocale";
 import { getCurrencyOptions } from "../../../config/localeConfig";
@@ -125,7 +127,20 @@ export default function Settings() {
   if (loading) {
     return (
       <div className="drivemego-cst-settings-section">
-        <h2>Settings</h2>
+        <header className="dmg-banner">
+          <div className="dmg-banner-main">
+            <span className="dmg-banner-icon">
+              <SettingsIcon />
+            </span>
+            <div className="dmg-banner-text">
+              <span className="dmg-banner-eyebrow">Account</span>
+              <h2 className="dmg-banner-title">Settings</h2>
+              <p className="dmg-banner-sub">
+                Manage your profile, preferences and security.
+              </p>
+            </div>
+          </div>
+        </header>
         <div className="drivemego-cst-loading">Loading settings...</div>
       </div>
     );
@@ -133,13 +148,27 @@ export default function Settings() {
 
   return (
     <div className="drivemego-cst-settings-section">
-      <h2>Settings</h2>
+      <header className="dmg-banner">
+        <div className="dmg-banner-main">
+          <span className="dmg-banner-icon">
+            <SettingsIcon />
+          </span>
+          <div className="dmg-banner-text">
+            <span className="dmg-banner-eyebrow">Account</span>
+            <h2 className="dmg-banner-title">Settings</h2>
+            <p className="dmg-banner-sub">
+              Manage your profile, regional preferences, notifications and
+              security — all in one place.
+            </p>
+          </div>
+        </div>
+      </header>
 
       <div className="drivemego-cst-settings-container">
         {/* Profile Information */}
         <div className="drivemego-cst-settings-group">
           <div className="drivemego-cst-settings-header">
-            <h3>👤 Profile Information</h3>
+            <h3><User size={18} /> Profile Information</h3>
             <p>Update your personal information</p>
           </div>
 
@@ -184,7 +213,7 @@ export default function Settings() {
         {/* Regional Preferences */}
         <div className="drivemego-cst-settings-group">
           <div className="drivemego-cst-settings-header">
-            <h3>🌐 Regional Preferences</h3>
+            <h3><Globe size={18} /> Regional Preferences</h3>
             <p>Customize your language and currency</p>
           </div>
 
@@ -226,7 +255,7 @@ export default function Settings() {
         {/* Notification Preferences */}
         <div className="drivemego-cst-settings-group">
           <div className="drivemego-cst-settings-header">
-            <h3>🔔 Notification Preferences</h3>
+            <h3><Bell size={18} /> Notification Preferences</h3>
             <p>Control how you receive notifications</p>
           </div>
 
@@ -296,7 +325,7 @@ export default function Settings() {
         {/* Security Settings */}
         <div className="drivemego-cst-settings-group">
           <div className="drivemego-cst-settings-header">
-            <h3>🔒 Security Settings</h3>
+            <h3><Lock size={18} /> Security Settings</h3>
             <p>Update your password and security preferences</p>
           </div>
 

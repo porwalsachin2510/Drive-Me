@@ -13,10 +13,11 @@
 }
 /* EMI Option Card */
 .emi-option-card {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border: 2px solid #0284c7;
+    background: #f4fbfc;
+    border: 2px solid #12b0c4;
     border-radius: 16px;
     padding: 28px;
+    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .emi-option-header {
@@ -29,7 +30,7 @@
 .emi-icon {
     width: 56px;
     height: 56px;
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
     border-radius: 14px;
     display: flex;
     align-items: center;
@@ -45,14 +46,14 @@
 
 .emi-option-text h3 {
     font-size: 20px;
-    font-weight: 700;
-    color: #0c4a6e;
+    font-weight: 800;
+    color: #0a2a43;
     margin: 0 0 4px 0;
 }
 
 .emi-option-text p {
     font-size: 14px;
-    color: #0369a1;
+    color: #0e97a8;
     margin: 0;
 }
 
@@ -108,7 +109,7 @@
 }
 
 .emi-amount-preview strong {
-    color: #0284c7;
+    color: #0e97a8;
     font-size: 18px;
 }
 
@@ -121,19 +122,20 @@
 .btn-choose-emi {
     width: 100%;
     padding: 16px 24px;
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
     color: white;
     border: none;
     border-radius: 12px;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
+    box-shadow: 0 10px 22px rgba(18, 176, 196, 0.3);
 }
 
 .btn-choose-emi:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+    box-shadow: 0 14px 30px rgba(18, 176, 196, 0.42);
 }
 
 /* Modal Styles */
@@ -184,8 +186,8 @@
 
 .emi-modal-header h2 {
     font-size: 20px;
-    font-weight: 700;
-    color: #1e293b;
+    font-weight: 800;
+    color: #0a2a43;
     margin: 0;
 }
 
@@ -255,14 +257,14 @@
 }
 
 .tenure-option:hover {
-    border-color: #0284c7;
-    background: #f0f9ff;
+    border-color: #12b0c4;
+    background: #f4fbfc;
 }
 
 .tenure-option.selected {
-    border-color: #0284c7;
-    background: #f0f9ff;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+    border-color: #12b0c4;
+    background: #e6f7fa;
+    box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.15);
 }
 
 .tenure-main {
@@ -281,7 +283,7 @@
 .tenure-emi {
     font-size: 16px;
     font-weight: 700;
-    color: #0284c7;
+    color: #0e97a8;
 }
 
 .tenure-description {
@@ -296,7 +298,7 @@
     transform: translateY(-50%);
     width: 24px;
     height: 24px;
-    background: #0284c7;
+    background: #12b0c4;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -382,14 +384,15 @@
 }
 
 .btn-confirm {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
     color: white;
     border: none;
+    box-shadow: 0 10px 22px rgba(18, 176, 196, 0.3);
 }
 
 .btn-confirm:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    box-shadow: 0 14px 30px rgba(18, 176, 196, 0.42);
 }
 
 .btn-confirm:disabled {
@@ -418,8 +421,8 @@
 
 .emi-plan-title h3 {
     font-size: 20px;
-    font-weight: 700;
-    color: #1e293b;
+    font-weight: 800;
+    color: #0a2a43;
     margin: 0;
 }
 
@@ -437,8 +440,8 @@
 }
 
 .emi-status.completed {
-    background: #dbeafe;
-    color: #1e40af;
+    background: #e6f7fa;
+    color: #0a2a43;
 }
 
 .emi-status.suspended {
@@ -754,12 +757,12 @@
 
 .btn-pay-now {
     padding: 8px 16px;
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
     color: white;
     border: none;
     border-radius: 8px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
@@ -767,14 +770,14 @@
 
 .btn-pay-now:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    box-shadow: 0 8px 18px rgba(18, 176, 196, 0.36);
 }
 
 /* Payment Modal */
 .pay-modal .payment-amount-display {
     text-align: center;
     padding: 24px;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    background: #f4fbfc;
     border-radius: 12px;
     margin-bottom: 24px;
 }
@@ -782,14 +785,14 @@
 .payment-amount-display span:first-child {
     display: block;
     font-size: 14px;
-    color: #0369a1;
+    color: #0e97a8;
     margin-bottom: 8px;
 }
 
 .payment-amount-display strong {
     font-size: 32px;
-    font-weight: 700;
-    color: #0284c7;
+    font-weight: 800;
+    color: #0e97a8;
 }
 
 .includes-late-fee {
@@ -824,12 +827,12 @@
 }
 
 .method-option:hover {
-    border-color: #0284c7;
+    border-color: #12b0c4;
 }
 
 .method-option.selected {
-    border-color: #0284c7;
-    background: #f0f9ff;
+    border-color: #12b0c4;
+    background: #f4fbfc;
 }
 
 .method-icon {
@@ -845,7 +848,7 @@
     transform: translateY(-50%);
     width: 20px;
     height: 20px;
-    background: #0284c7;
+    background: #12b0c4;
     border-radius: 50%;
 }
 

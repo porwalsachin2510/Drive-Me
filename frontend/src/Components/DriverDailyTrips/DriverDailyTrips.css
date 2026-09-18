@@ -19,13 +19,13 @@
   margin: 0;
   font-size: 24px;
   font-weight: 700;
-  color: #1a202c;
+  color: var(--dmg-navy);
 }
 
 .driver-trips-subtitle {
   margin: 4px 0 0 0;
   font-size: 14px;
-  color: #718096;
+  color: var(--dmg-muted);
 }
 
 .driver-location-badge {
@@ -53,8 +53,8 @@
 .driver-stat-card {
   flex: 1;
   min-width: 100px;
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--dmg-bg);
+  border: 1px solid var(--dmg-line);
   border-radius: 10px;
   padding: 16px;
   text-align: center;
@@ -64,13 +64,13 @@
   display: block;
   font-size: 28px;
   font-weight: 700;
-  color: #2d3748;
+  color: var(--dmg-navy);
 }
 
 .driver-stat-label {
   display: block;
   font-size: 12px;
-  color: #718096;
+  color: var(--dmg-muted);
   margin-top: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -86,76 +86,76 @@
 
 .driver-filter-btn {
   padding: 8px 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   background: #ffffff;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #4a5568;
+  color: var(--dmg-ink);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .driver-filter-btn:hover {
-  background: #f7fafc;
-  border-color: #cbd5e0;
+  background: var(--dmg-bg);
+  border-color: var(--dmg-line);
 }
 
 .driver-filter-btn.active {
-  background: #3182ce;
+  background: var(--dmg-teal);
   color: white;
-  border-color: #3182ce;
+  border-color: var(--dmg-teal);
 }
 
 .driver-refresh-btn {
   padding: 8px 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   background: #ffffff;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #4a5568;
+  color: var(--dmg-ink);
   cursor: pointer;
   margin-left: auto;
   transition: all 0.2s;
 }
 
 .driver-refresh-btn:hover {
-  background: #edf2f7;
+  background: var(--dmg-line);
 }
 
 /* Empty State */
 .driver-trips-empty {
   text-align: center;
   padding: 60px 20px;
-  background: #f7fafc;
+  background: var(--dmg-bg);
   border-radius: 12px;
-  border: 1px dashed #e2e8f0;
+  border: 1px dashed var(--dmg-line);
 }
 
 .driver-trips-empty .empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
 }
 
 .driver-trips-empty h3 {
   margin: 0 0 8px 0;
   font-size: 18px;
-  color: #2d3748;
+  color: var(--dmg-navy);
 }
 
 .driver-trips-empty p {
   margin: 0;
   font-size: 14px;
-  color: #718096;
+  color: var(--dmg-muted);
 }
 
 /* Loading */
 .driver-trips-loading {
   text-align: center;
   padding: 40px;
-  color: #718096;
+  color: var(--dmg-muted);
   font-size: 14px;
 }
 
@@ -201,20 +201,20 @@
 /* Trip Card */
 .driver-trip-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   border-radius: 12px;
   overflow: hidden;
   transition: all 0.2s;
 }
 
 .driver-trip-card:hover {
-  border-color: #cbd5e0;
+  border-color: var(--dmg-line);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .driver-trip-card.today-highlight {
   border-color: #90cdf4;
-  background: linear-gradient(to right, #ebf8ff, #ffffff);
+  background: linear-gradient(to right, var(--dmg-teal-050), #ffffff);
 }
 
 /* Trip Header */
@@ -236,28 +236,28 @@
   align-items: center;
   min-width: 50px;
   padding: 8px;
-  background: #f7fafc;
+  background: var(--dmg-bg);
   border-radius: 8px;
 }
 
 .trip-day {
   font-size: 10px;
   font-weight: 600;
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
   text-transform: uppercase;
 }
 
 .trip-date-num {
   font-size: 22px;
   font-weight: 700;
-  color: #2d3748;
+  color: var(--dmg-navy);
   line-height: 1.1;
 }
 
 .trip-month {
   font-size: 10px;
   font-weight: 500;
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
   text-transform: uppercase;
 }
 
@@ -272,7 +272,7 @@
   gap: 8px;
   font-size: 15px;
   font-weight: 600;
-  color: #2d3748;
+  color: var(--dmg-navy);
   margin-bottom: 6px;
   flex-wrap: wrap;
 }
@@ -284,7 +284,7 @@
 }
 
 .trip-arrow {
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
   font-size: 12px;
   flex-shrink: 0;
 }
@@ -298,21 +298,21 @@
 
 .trip-time {
   font-size: 13px;
-  color: #4a5568;
+  color: var(--dmg-ink);
   font-weight: 500;
 }
 
 .trip-type {
   font-size: 11px;
   padding: 2px 8px;
-  background: #edf2f7;
+  background: var(--dmg-line);
   border-radius: 4px;
-  color: #4a5568;
+  color: var(--dmg-ink);
 }
 
 .trip-seats {
   font-size: 12px;
-  color: #718096;
+  color: var(--dmg-muted);
   font-weight: 500;
 }
 
@@ -334,7 +334,7 @@
 }
 
 .status-inprogress {
-  background: #bee3f8;
+  background: var(--dmg-teal-100);
   color: #2a4365;
 }
 
@@ -359,13 +359,13 @@
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
-  background: #f7fafc;
+  background: var(--dmg-bg);
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .trip-passengers-summary:hover {
-  background: #edf2f7;
+  background: var(--dmg-line);
 }
 
 .passengers-count {
@@ -378,12 +378,12 @@
 .count-number {
   font-size: 24px;
   font-weight: 700;
-  color: #3182ce;
+  color: var(--dmg-teal);
 }
 
 .count-label {
   font-size: 11px;
-  color: #718096;
+  color: var(--dmg-muted);
   text-transform: uppercase;
 }
 
@@ -396,13 +396,13 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #e2e8f0;
+  background: var(--dmg-line);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
   font-weight: 600;
-  color: #4a5568;
+  color: var(--dmg-ink);
   margin-left: -8px;
   border: 2px solid #ffffff;
   overflow: hidden;
@@ -419,7 +419,7 @@
 }
 
 .passenger-avatar.more {
-  background: #3182ce;
+  background: var(--dmg-teal);
   color: white;
   font-size: 11px;
 }
@@ -427,25 +427,25 @@
 .expand-btn {
   padding: 6px 12px;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: #4a5568;
+  color: var(--dmg-ink);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .expand-btn:hover {
-  background: #edf2f7;
-  border-color: #cbd5e0;
+  background: var(--dmg-line);
+  border-color: var(--dmg-line);
 }
 
 /* Expanded Passenger List */
 .trip-passengers-list {
   padding: 16px;
   background: #ffffff;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--dmg-line);
   max-height: 300px;
   overflow-y: auto;
 }
@@ -453,7 +453,7 @@
 .no-passengers {
   text-align: center;
   padding: 20px;
-  color: #a0aec0;
+  color: var(--dmg-muted-2);
   font-size: 14px;
 }
 
@@ -462,7 +462,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: #f7fafc;
+  background: var(--dmg-bg);
   border-radius: 8px;
   margin-bottom: 8px;
 }
@@ -475,13 +475,13 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #e2e8f0;
+  background: var(--dmg-line);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   font-weight: 600;
-  color: #4a5568;
+  color: var(--dmg-ink);
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -501,14 +501,14 @@
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #2d3748;
+  color: var(--dmg-navy);
   margin-bottom: 2px;
 }
 
 .passenger-contact {
   display: block;
   font-size: 12px;
-  color: #718096;
+  color: var(--dmg-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -541,14 +541,14 @@
 
 .seats-info {
   font-size: 11px;
-  color: #718096;
+  color: var(--dmg-muted);
 }
 
 /* Action Buttons */
 .trip-actions {
   padding: 16px;
-  background: #f7fafc;
-  border-top: 1px solid #e2e8f0;
+  background: var(--dmg-bg);
+  border-top: 1px solid var(--dmg-line);
   display: flex;
   justify-content: center;
 }
@@ -578,7 +578,7 @@
 
 .btn-complete-trip {
   padding: 12px 32px;
-  background: linear-gradient(135deg, #4299e1, #3182ce);
+  background: linear-gradient(135deg, var(--dmg-teal), var(--dmg-teal));
   color: white;
   border: none;
   border-radius: 8px;
@@ -590,7 +590,7 @@
 }
 
 .btn-complete-trip:hover:not(:disabled) {
-  background: linear-gradient(135deg, #3182ce, #2b6cb0);
+  background: linear-gradient(135deg, var(--dmg-teal), var(--dmg-teal-700));
   box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
 }
 
@@ -619,12 +619,12 @@
 }
 
 .trip-passengers-list::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+  background: var(--dmg-line);
   border-radius: 4px;
 }
 
 .trip-passengers-list::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0;
+  background: var(--dmg-muted-2);
 }
 
 /* Responsive */

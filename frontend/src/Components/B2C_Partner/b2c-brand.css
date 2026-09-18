@@ -1,0 +1,171 @@
+/* =====================================================================
+   DriveMeGo — B2C Partner brand system
+   Shared design tokens + reusable primitives for every B2C Partner
+   page, component and modal. Built on the logo palette (deep navy +
+   bright teal/cyan) and the Plus Jakarta Sans type system, matching
+   the redesigned CommuterHomePage / Login / Register experience.
+
+   Tokens are declared on :root so portaled modals (rendered outside
+   the dashboard shell) inherit the same palette. Only NEW token names
+   are introduced here, so no existing role styling is overridden.
+   ===================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --dmg-navy: #0a2a43;
+  --dmg-navy-700: #123a58;
+  --dmg-navy-600: #1c4d70;
+  --dmg-teal: #12b0c4;
+  --dmg-teal-600: #0e97a8;
+  --dmg-teal-700: #0c8695;
+  --dmg-teal-050: #e6f7fa;
+  --dmg-teal-100: #d1eff4;
+  --dmg-amber: #f6a723;
+  --dmg-amber-050: #fef4e2;
+  --dmg-green: #16a34a;
+  --dmg-green-600: #15803d;
+  --dmg-green-050: #e7f6ee;
+  --dmg-red: #ef4444;
+  --dmg-red-600: #dc2626;
+  --dmg-red-050: #fdecec;
+  --dmg-blue: #2563eb;
+  --dmg-blue-050: #e8f0fe;
+  --dmg-purple: #7c3aed;
+  --dmg-purple-050: #f2ecfe;
+
+  --dmg-bg: #eef3f8;
+  --dmg-card: #ffffff;
+  --dmg-ink: #0f2233;
+  --dmg-muted: #5b6b7b;
+  --dmg-muted-2: #8598a8;
+  --dmg-line: #e4ecf3;
+  --dmg-line-2: #eef2f7;
+
+  --dmg-shadow-sm: 0 2px 10px rgba(10, 42, 67, 0.05);
+  --dmg-shadow: 0 10px 30px rgba(10, 42, 67, 0.08);
+  --dmg-shadow-lg: 0 24px 60px rgba(10, 42, 67, 0.16);
+
+  --dmg-cta: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  --dmg-cta-hover: linear-gradient(135deg, #12b0c4 0%, #0c8695 100%);
+  --dmg-cta-shadow: 0 12px 26px rgba(18, 176, 196, 0.3);
+  --dmg-cta-shadow-lg: 0 16px 34px rgba(18, 176, 196, 0.38);
+  --dmg-navy-grad: linear-gradient(135deg, #0a2a43 0%, #123a58 55%, #0e3350 100%);
+
+  --dmg-radius: 20px;
+  --dmg-radius-md: 16px;
+  --dmg-radius-sm: 12px;
+  --dmg-radius-xs: 10px;
+  --dmg-font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* ---------------------------------------------------------------------
+   Reusable primitives (use directly in JSX where helpful).
+   All are namespaced `dmgx-` to avoid collisions with legacy classes.
+   --------------------------------------------------------------------- */
+
+/* Page/section heading block */
+.dmgx-head {
+  margin-bottom: 24px;
+}
+.dmgx-head h2 {
+  font-size: clamp(20px, 2.4vw, 24px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--dmg-navy);
+  margin: 0 0 4px;
+}
+.dmgx-head p {
+  font-size: 14px;
+  color: var(--dmg-muted);
+  margin: 0;
+}
+
+/* Surface card */
+.dmgx-card {
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: var(--dmg-radius-md);
+  box-shadow: var(--dmg-shadow-sm);
+}
+
+/* Primary (teal gradient) button */
+.dmgx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 12px;
+  background: var(--dmg-cta);
+  color: #fff;
+  font-family: var(--dmg-font);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--dmg-cta-shadow);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.dmgx-btn:hover {
+  background: var(--dmg-cta-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--dmg-cta-shadow-lg);
+}
+.dmgx-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Secondary / ghost button */
+.dmgx-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border: 1px solid var(--dmg-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--dmg-ink);
+  font-family: var(--dmg-font);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.dmgx-btn-ghost:hover {
+  border-color: var(--dmg-teal);
+  color: var(--dmg-teal-600);
+  background: var(--dmg-teal-050);
+}
+
+/* Status pill */
+.dmgx-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* Spinner */
+.dmgx-spinner {
+  width: 38px;
+  height: 38px;
+  border: 3px solid var(--dmg-teal-050);
+  border-top-color: var(--dmg-teal);
+  border-radius: 50%;
+  animation: dmgx-spin 0.8s linear infinite;
+}
+@keyframes dmgx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

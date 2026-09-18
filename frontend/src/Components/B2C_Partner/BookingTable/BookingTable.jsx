@@ -412,9 +412,9 @@ function BookingTable() {
 
   if (loading) {
     return (
-      <div className="b2c-booking-table-container">
-        <div className="b2c-booking-table-loading">
-          <div className="b2c-booking-table-spinner"></div>
+      <div className="drivemego-b2c-booking-table-container">
+        <div className="drivemego-b2c-booking-table-loading">
+          <div className="drivemego-b2c-booking-table-spinner"></div>
           <p>Loading bookings...</p>
         </div>
       </div>
@@ -422,12 +422,12 @@ function BookingTable() {
   }
 
   return (
-    <div className="b2c-booking-table-container">
+    <div className="drivemego-b2c-booking-table-container">
       {/* Header */}
-      <div className="b2c-booking-table-header">
+      <div className="drivemego-b2c-booking-table-header">
         <h2>Booking Management</h2>
-        <div className="b2c-booking-table-header-right">
-          <div className="b2c-wallet-balance-display">
+        <div className="drivemego-b2c-booking-table-header-right">
+          <div className="drivemego-b2c-wallet-balance-display">
             <svg
               width="16"
               height="16"
@@ -447,7 +447,7 @@ function BookingTable() {
             </span>
           </div>
           <button
-            className="b2c-booking-table-refresh-btn"
+            className="drivemego-b2c-booking-table-refresh-btn"
             onClick={() => {
               refreshBookings();
               fetchWalletBalance();
@@ -470,44 +470,48 @@ function BookingTable() {
       </div>
 
       {/* Stats Row */}
-      <div className="b2c-booking-table-stats">
-        <div className="b2c-booking-stat-card">
-          <span className="b2c-booking-stat-value">
+      <div className="drivemego-b2c-booking-table-stats">
+        <div className="drivemego-b2c-booking-stat-card">
+          <span className="drivemego-b2c-booking-stat-value">
             {bookingStats.totalBookings}
           </span>
-          <span className="b2c-booking-stat-label">Total Bookings</span>
+          <span className="drivemego-b2c-booking-stat-label">
+            Total Bookings
+          </span>
         </div>
-        <div className="b2c-booking-stat-card">
-          <span className="b2c-booking-stat-value stat-orange">
+        <div className="drivemego-b2c-booking-stat-card">
+          <span className="drivemego-b2c-booking-stat-value stat-orange">
             {bookingStats.confirmedBookings}
           </span>
-          <span className="b2c-booking-stat-label">Pending Approval</span>
+          <span className="drivemego-b2c-booking-stat-label">
+            Pending Approval
+          </span>
         </div>
-        <div className="b2c-booking-stat-card">
-          <span className="b2c-booking-stat-value stat-green">
+        <div className="drivemego-b2c-booking-stat-card">
+          <span className="drivemego-b2c-booking-stat-value stat-green">
             {bookingStats.acceptedBookings}
           </span>
-          <span className="b2c-booking-stat-label">Accepted</span>
+          <span className="drivemego-b2c-booking-stat-label">Accepted</span>
         </div>
-        <div className="b2c-booking-stat-card">
-          <span className="b2c-booking-stat-value stat-purple">
+        <div className="drivemego-b2c-booking-stat-card">
+          <span className="drivemego-b2c-booking-stat-value stat-purple">
             {bookingStats.completedBookings}
           </span>
-          <span className="b2c-booking-stat-label">Completed</span>
+          <span className="drivemego-b2c-booking-stat-label">Completed</span>
         </div>
-        <div className="b2c-booking-stat-card">
-          <span className="b2c-booking-stat-value stat-red">
+        <div className="drivemego-b2c-booking-stat-card">
+          <span className="drivemego-b2c-booking-stat-value stat-red">
             {bookingStats.cancelledBookings}
           </span>
-          <span className="b2c-booking-stat-label">Cancelled</span>
+          <span className="drivemego-b2c-booking-stat-label">Cancelled</span>
         </div>
       </div>
 
       {/* Filters and Search */}
-      <div className="b2c-booking-table-controls">
-        <div className="b2c-booking-search-box">
+      <div className="drivemego-b2c-booking-table-controls">
+        <div className="drivemego-b2c-booking-search-box">
           <svg
-            className="b2c-booking-search-icon"
+            className="drivemego-b2c-booking-search-icon"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -521,11 +525,11 @@ function BookingTable() {
             placeholder="Search by passenger, location, or booking ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="b2c-booking-search-input"
+            className="drivemego-b2c-booking-search-input"
           />
           {searchQuery && (
             <button
-              className="b2c-booking-search-clear"
+              className="drivemego-b2c-booking-search-clear"
               onClick={() => setSearchQuery("")}
             >
               x
@@ -533,11 +537,11 @@ function BookingTable() {
           )}
         </div>
 
-        <div className="b2c-booking-filter-group">
+        <div className="drivemego-b2c-booking-filter-group">
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="b2c-booking-status-filter"
+            className="drivemego-b2c-booking-status-filter"
           >
             <option value="ALL">All Status</option>
             <option value="PENDING">Pending Approval</option>
@@ -551,7 +555,7 @@ function BookingTable() {
           <select
             value={itemsPerPage}
             onChange={(e) => setItemsPerPage(Number(e.target.value))}
-            className="b2c-booking-per-page-select"
+            className="drivemego-b2c-booking-per-page-select"
           >
             <option value={5}>5 per page</option>
             <option value={10}>10 per page</option>
@@ -562,10 +566,10 @@ function BookingTable() {
       </div>
 
       {/* Results Summary */}
-      <div className="b2c-booking-results-summary">
+      <div className="drivemego-b2c-booking-results-summary">
         Showing {paginatedBookings.length} of {filteredBookings.length} bookings
         {searchQuery && (
-          <span className="b2c-booking-search-term">
+          <span className="drivemego-b2c-booking-search-term">
             {" "}
             matching &quot;{searchQuery}&quot;
           </span>
@@ -573,11 +577,11 @@ function BookingTable() {
       </div>
 
       {/* Bookings Table */}
-      <div className="b2c-booking-table-wrapper">
+      <div className="drivemego-b2c-booking-table-wrapper">
         {paginatedBookings.length === 0 ? (
-          <div className="b2c-booking-empty-state">
+          <div className="drivemego-b2c-booking-empty-state">
             <svg
-              className="b2c-booking-empty-icon"
+              className="drivemego-b2c-booking-empty-icon"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -591,45 +595,45 @@ function BookingTable() {
             <p>No bookings match your current filters</p>
           </div>
         ) : (
-          <table className="b2c-booking-table">
+          <table className="drivemego-b2c-booking-table">
             <thead>
               <tr>
                 <th
                   onClick={() => handleSort("createdAt")}
-                  className="b2c-th-sortable"
+                  className="drivemego-b2c-th-sortable"
                 >
                   <span>Booking ID</span>
                   <span
-                    className={`b2c-sort-icon ${getSortIcon("createdAt")}`}
+                    className={`drivemego-b2c-sort-icon ${getSortIcon("createdAt")}`}
                   ></span>
                 </th>
                 <th
                   onClick={() => handleSort("passengerName")}
-                  className="b2c-th-sortable"
+                  className="drivemego-b2c-th-sortable"
                 >
                   <span>Passenger</span>
                   <span
-                    className={`b2c-sort-icon ${getSortIcon("passengerName")}`}
+                    className={`drivemego-b2c-sort-icon ${getSortIcon("passengerName")}`}
                   ></span>
                 </th>
                 <th
                   onClick={() => handleSort("pickupLocation")}
-                  className="b2c-th-sortable"
+                  className="drivemego-b2c-th-sortable"
                 >
                   <span>Route</span>
                   <span
-                    className={`b2c-sort-icon ${getSortIcon("pickupLocation")}`}
+                    className={`drivemego-b2c-sort-icon ${getSortIcon("pickupLocation")}`}
                   ></span>
                 </th>
                 <th>Driver</th>
                 <th>Seats</th>
                 <th
                   onClick={() => handleSort("paymentAmount")}
-                  className="b2c-th-sortable"
+                  className="drivemego-b2c-th-sortable"
                 >
                   <span>Amount</span>
                   <span
-                    className={`b2c-sort-icon ${getSortIcon("paymentAmount")}`}
+                    className={`drivemego-b2c-sort-icon ${getSortIcon("paymentAmount")}`}
                   ></span>
                 </th>
                 <th>Status</th>
@@ -642,59 +646,59 @@ function BookingTable() {
                 const driverInfo = getDriverInfo(booking);
                 return (
                   <tr key={booking._id}>
-                    <td className="b2c-td-id">
-                      <span className="b2c-booking-id-badge">
+                    <td className="drivemego-b2c-td-id">
+                      <span className="drivemego-b2c-booking-id-badge">
                         #{booking._id.slice(-8)}
                       </span>
                     </td>
-                    <td className="b2c-td-passenger">
-                      <div className="b2c-passenger-info">
-                        <span className="b2c-passenger-name">
+                    <td className="drivemego-b2c-td-passenger">
+                      <div className="drivemego-b2c-passenger-info">
+                        <span className="drivemego-b2c-passenger-name">
                           {getPassengerName(booking)}
                         </span>
-                        <span className="b2c-passenger-phone">
+                        <span className="drivemego-b2c-passenger-phone">
                           {getPassengerPhone(booking)}
                         </span>
                       </div>
                     </td>
-                    <td className="b2c-td-route">
-                      <div className="b2c-route-cell">
-                        <span className="b2c-route-from">
+                    <td className="drivemego-b2c-td-route">
+                      <div className="drivemego-b2c-route-cell">
+                        <span className="drivemego-b2c-route-from">
                           {booking.pickupLocation || "N/A"}
                         </span>
-                        <span className="b2c-route-arrow">-</span>
-                        <span className="b2c-route-to">
+                        <span className="drivemego-b2c-route-arrow">-</span>
+                        <span className="drivemego-b2c-route-to">
                           {booking.dropoffLocation || "N/A"}
                         </span>
                       </div>
                     </td>
-                    <td className="b2c-td-driver">
+                    <td className="drivemego-b2c-td-driver">
                       {driverInfo.isRoundTrip ? (
-                        <div className="b2c-driver-info b2c-driver-roundtrip">
-                          <div className="b2c-driver-trip-section">
-                            <span className="b2c-trip-label">
+                        <div className="drivemego-b2c-driver-info drivemego-b2c-driver-roundtrip">
+                          <div className="drivemego-b2c-driver-trip-section">
+                            <span className="drivemego-b2c-trip-label">
                               Outbound ({driverInfo.outbound.time}):
                             </span>
-                            <span className="b2c-driver-name">
+                            <span className="drivemego-b2c-driver-name">
                               {driverInfo.outbound.name}
                             </span>
                             <span
-                              className={`b2c-driver-badge ${driverInfo.outbound.badge}`}
+                              className={`drivemego-b2c-driver-badge ${driverInfo.outbound.badge}`}
                             >
                               {driverInfo.outbound.badge === "self-driver"
                                 ? "Self-Driving"
                                 : "Assigned Driver"}
                             </span>
                           </div>
-                          <div className="b2c-driver-trip-section b2c-driver-return">
-                            <span className="b2c-trip-label">
+                          <div className="drivemego-b2c-driver-trip-section drivemego-b2c-driver-return">
+                            <span className="drivemego-b2c-trip-label">
                               Return ({driverInfo.return.time}):
                             </span>
-                            <span className="b2c-driver-name">
+                            <span className="drivemego-b2c-driver-name">
                               {driverInfo.return.name}
                             </span>
                             <span
-                              className={`b2c-driver-badge ${driverInfo.return.badge}`}
+                              className={`drivemego-b2c-driver-badge ${driverInfo.return.badge}`}
                             >
                               {driverInfo.return.badge === "self-driver"
                                 ? "Self-Driving"
@@ -703,13 +707,13 @@ function BookingTable() {
                           </div>
                         </div>
                       ) : (
-                        <div className="b2c-driver-info">
-                          <span className="b2c-driver-name">
+                        <div className="drivemego-b2c-driver-info">
+                          <span className="drivemego-b2c-driver-name">
                             {driverInfo.name}
                           </span>
                           {driverInfo.badge && (
                             <span
-                              className={`b2c-driver-badge ${driverInfo.badge}`}
+                              className={`drivemego-b2c-driver-badge ${driverInfo.badge}`}
                             >
                               {driverInfo.badge === "self-driver"
                                 ? "Self-Driving"
@@ -719,20 +723,20 @@ function BookingTable() {
                         </div>
                       )}
                     </td>
-                    <td className="b2c-td-seats">
-                      <span className="b2c-seats-badge">
+                    <td className="drivemego-b2c-td-seats">
+                      <span className="drivemego-b2c-seats-badge">
                         {booking.numberOfSeats || 1}
                       </span>
                     </td>
-                    <td className="b2c-td-amount">
-                      <span className="b2c-amount-text">
+                    <td className="drivemego-b2c-td-amount">
+                      <span className="drivemego-b2c-amount-text">
                         {booking.paymentAmount?.toLocaleString() || "0"}{" "}
                         {booking.currency || activeCurrency}
                       </span>
                     </td>
-                    <td className="b2c-td-status">
+                    <td className="drivemego-b2c-td-status">
                       <span
-                        className={`b2c-status-pill status-${booking.bookingStatus?.toLowerCase()}`}
+                        className={`drivemego-b2c-status-pill drivemego-status-${booking.bookingStatus?.toLowerCase()}`}
                       >
                         {/* PENDING and legacy CONFIRMED both mean "awaiting the
                             partner's approval"; ACCEPTED means the ride is confirmed. */}
@@ -747,7 +751,7 @@ function BookingTable() {
                       {/* Show commission refund badge for CANCELLED bookings */}
                       {booking.bookingStatus === "CANCELLED" &&
                         booking.commissionRefunded && (
-                          <span className="b2c-commission-refund-badge">
+                          <span className="drivemego-b2c-commission-refund-badge">
                             Refunded:{" "}
                             {booking.commissionRefundAmount?.toLocaleString() ||
                               0}{" "}
@@ -755,15 +759,15 @@ function BookingTable() {
                           </span>
                         )}
                     </td>
-                    <td className="b2c-td-date">
-                      <span className="b2c-date-text">
+                    <td className="drivemego-b2c-td-date">
+                      <span className="drivemego-b2c-date-text">
                         {formatDate(booking.createdAt)}
                       </span>
                     </td>
-                    <td className="b2c-td-actions">
-                      <div className="b2c-action-buttons">
+                    <td className="drivemego-b2c-td-actions">
+                      <div className="drivemego-b2c-action-buttons">
                         <button
-                          className="b2c-btn-view"
+                          className="drivemego-b2c-btn-view"
                           onClick={() => handleViewPassenger(booking._id)}
                           title="View Details"
                         >
@@ -785,14 +789,14 @@ function BookingTable() {
                           !booking.acceptedAt && (
                             <>
                               <button
-                                className="b2c-btn-accept"
+                                className="drivemego-b2c-btn-accept"
                                 onClick={() => handleAccept(booking)}
                                 title="Accept Booking"
                               >
                                 Accept
                               </button>
                               <button
-                                className="b2c-btn-reject"
+                                className="drivemego-b2c-btn-reject"
                                 onClick={() => handleRejectClick(booking)}
                                 title="Reject Booking"
                               >
@@ -812,23 +816,23 @@ function BookingTable() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="b2c-booking-pagination">
+        <div className="drivemego-b2c-booking-pagination">
           <button
-            className="b2c-page-btn"
+            className="drivemego-b2c-page-btn"
             onClick={() => setCurrentPage(1)}
             disabled={currentPage === 1}
           >
             First
           </button>
           <button
-            className="b2c-page-btn"
+            className="drivemego-b2c-page-btn"
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
           >
             Prev
           </button>
 
-          <div className="b2c-page-numbers">
+          <div className="drivemego-b2c-page-numbers">
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let pageNum;
               if (totalPages <= 5) {
@@ -843,7 +847,7 @@ function BookingTable() {
               return (
                 <button
                   key={pageNum}
-                  className={`b2c-page-num ${currentPage === pageNum ? "active" : ""}`}
+                  className={`drivemego-b2c-page-num ${currentPage === pageNum ? "drivemego-active" : ""}`}
                   onClick={() => setCurrentPage(pageNum)}
                 >
                   {pageNum}
@@ -853,7 +857,7 @@ function BookingTable() {
           </div>
 
           <button
-            className="b2c-page-btn"
+            className="drivemego-b2c-page-btn"
             onClick={() =>
               setCurrentPage((prev) => Math.min(totalPages, prev + 1))
             }
@@ -862,14 +866,14 @@ function BookingTable() {
             Next
           </button>
           <button
-            className="b2c-page-btn"
+            className="drivemego-b2c-page-btn"
             onClick={() => setCurrentPage(totalPages)}
             disabled={currentPage === totalPages}
           >
             Last
           </button>
 
-          <span className="b2c-page-info">
+          <span className="drivemego-b2c-page-info">
             Page {currentPage} of {totalPages}
           </span>
         </div>
@@ -877,12 +881,12 @@ function BookingTable() {
 
       {/* Reject Modal */}
       {showRejectModal && selectedBooking && (
-        <div className="b2c-booking-modal-overlay">
-          <div className="b2c-booking-modal">
-            <div className="b2c-booking-modal-header">
+        <div className="drivemego-b2c-booking-modal-overlay">
+          <div className="drivemego-b2c-booking-modal">
+            <div className="drivemego-b2c-booking-modal-header">
               <h3>Reject Booking</h3>
               <button
-                className="b2c-booking-modal-close"
+                className="drivemego-b2c-booking-modal-close"
                 onClick={() => {
                   setShowRejectModal(false);
                   setSelectedBooking(null);
@@ -892,9 +896,9 @@ function BookingTable() {
                 x
               </button>
             </div>
-            <div className="b2c-booking-modal-body">
+            <div className="drivemego-b2c-booking-modal-body">
               <p>Are you sure you want to reject this booking?</p>
-              <div className="b2c-booking-form-group">
+              <div className="drivemego-b2c-booking-form-group">
                 <label>Reason for rejection:</label>
                 <textarea
                   value={rejectionReason}
@@ -904,9 +908,9 @@ function BookingTable() {
                 />
               </div>
             </div>
-            <div className="b2c-booking-modal-actions">
+            <div className="drivemego-b2c-booking-modal-actions">
               <button
-                className="b2c-booking-btn-cancel"
+                className="drivemego-b2c-booking-btn-cancel"
                 onClick={() => {
                   setShowRejectModal(false);
                   setSelectedBooking(null);
@@ -916,7 +920,7 @@ function BookingTable() {
                 Cancel
               </button>
               <button
-                className="b2c-booking-btn-confirm-reject"
+                className="drivemego-b2c-booking-btn-confirm-reject"
                 onClick={handleRejectSubmit}
                 disabled={!rejectionReason.trim()}
               >
@@ -939,12 +943,12 @@ function BookingTable() {
 
       {/* Wallet Warning Modal for Cash Bookings */}
       {showWalletWarning && pendingAcceptBooking && (
-        <div className="b2c-booking-modal-overlay">
-          <div className="b2c-booking-modal b2c-wallet-warning-modal">
-            <div className="b2c-booking-modal-header">
+        <div className="drivemego-b2c-booking-modal-overlay">
+          <div className="drivemego-b2c-booking-modal drivemego-b2c-wallet-warning-modal">
+            <div className="drivemego-b2c-booking-modal-header">
               <h3>Insufficient Wallet Balance</h3>
               <button
-                className="b2c-booking-modal-close"
+                className="drivemego-b2c-booking-modal-close"
                 onClick={() => {
                   setShowWalletWarning(false);
                   setPendingAcceptBooking(null);
@@ -953,8 +957,8 @@ function BookingTable() {
                 x
               </button>
             </div>
-            <div className="b2c-booking-modal-body">
-              <div className="b2c-wallet-warning-icon">
+            <div className="drivemego-b2c-booking-modal-body">
+              <div className="drivemego-b2c-wallet-warning-icon">
                 <svg
                   width="48"
                   height="48"
@@ -967,7 +971,7 @@ function BookingTable() {
                   <path d="M12 8v4M12 16h.01" />
                 </svg>
               </div>
-              <p className="b2c-wallet-warning-text">
+              <p className="drivemego-b2c-wallet-warning-text">
                 You need sufficient wallet balance to accept cash bookings. The
                 admin commission of{" "}
                 <strong>
@@ -976,17 +980,17 @@ function BookingTable() {
                 </strong>{" "}
                 will be deducted from your wallet.
               </p>
-              <div className="b2c-wallet-info-box">
-                <div className="b2c-wallet-info-row">
+              <div className="drivemego-b2c-wallet-info-box">
+                <div className="drivemego-b2c-wallet-info-row">
                   <span>Current Balance:</span>
-                  <span className="b2c-wallet-balance">
+                  <span className="drivemego-b2c-wallet-balance">
                     {walletBalance}{" "}
                     {pendingAcceptBooking?.currency || activeCurrency}
                   </span>
                 </div>
-                <div className="b2c-wallet-info-row">
+                <div className="drivemego-b2c-wallet-info-row">
                   <span>Required Amount:</span>
-                  <span className="b2c-wallet-required">
+                  <span className="drivemego-b2c-wallet-required">
                     {(pendingAcceptBooking?.adminCommissionAmount || 0) +
                       getCashAcceptanceBuffer(
                         pendingAcceptBooking?.currency || activeCurrency,
@@ -994,7 +998,7 @@ function BookingTable() {
                     {pendingAcceptBooking?.currency || activeCurrency}
                   </span>
                 </div>
-                <div className="b2c-wallet-info-row b2c-wallet-shortage">
+                <div className="drivemego-b2c-wallet-info-row drivemego-b2c-wallet-shortage">
                   <span>Shortage:</span>
                   <span>
                     {Math.max(
@@ -1010,9 +1014,9 @@ function BookingTable() {
                 </div>
               </div>
             </div>
-            <div className="b2c-booking-modal-actions">
+            <div className="drivemego-b2c-booking-modal-actions">
               <button
-                className="b2c-booking-btn-cancel"
+                className="drivemego-b2c-booking-btn-cancel"
                 onClick={() => {
                   setShowWalletWarning(false);
                   setPendingAcceptBooking(null);
@@ -1021,7 +1025,7 @@ function BookingTable() {
                 Cancel
               </button>
               <button
-                className="b2c-booking-btn-recharge"
+                className="drivemego-b2c-booking-btn-recharge"
                 onClick={() => {
                   setShowWalletWarning(false);
                   setShowRechargeModal(true);

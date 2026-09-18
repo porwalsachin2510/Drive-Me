@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import "./find-routes.css";
+import "../../../styles/commuter-banner.css";
+import { Route, MapPin, Search } from "lucide-react";
 import api from "../../../utils/api";
 import BookingModal from "../../BookingModal/BookingModal";
 import { useLocale } from "../../../hooks/useLocale";
@@ -109,27 +111,69 @@ export default function FindRoutes() {
   if (loading) {
     return (
       <div className="fr-find-routes-section">
-        <h2>Find Routes</h2>
-        <div className="fr-loading">Loading routes...</div>
+        <header className="dmg-banner">
+          <div className="dmg-banner-main">
+            <span className="dmg-banner-icon">
+              <Route />
+            </span>
+            <div className="dmg-banner-text">
+              <span className="dmg-banner-eyebrow">
+                <MapPin />
+                Partner routes
+              </span>
+              <h2 className="dmg-banner-title">Find Your Route</h2>
+              <p className="dmg-banner-sub">
+                Browse verified partner routes near you.
+              </p>
+            </div>
+          </div>
+        </header>
+        <div className="fr-routes-panel">
+          <div className="fr-loading">Loading routes...</div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="fr-find-routes-section">
-      <h2>Find Routes</h2>
-      <p className="fr-routes-count">
-        {bookedCount} Booked &bull; {savedCount} Saved
-      </p>
-      {userNationality && (
-        <p className="fr-routes-location">
-          {"\uD83D\uDCCD"} Showing routes for:{" "}
-          <strong>{userNationality}</strong>
-        </p>
-      )}
+      <header className="dmg-banner">
+        <div className="dmg-banner-main">
+          <span className="dmg-banner-icon">
+            <Route />
+          </span>
+          <div className="dmg-banner-text">
+            <span className="dmg-banner-eyebrow">
+              <MapPin />
+              {userNationality
+                ? `Routes in ${userNationality}`
+                : "Partner routes"}
+            </span>
+            <h2 className="dmg-banner-title">Find Your Route</h2>
+            <p className="dmg-banner-sub">
+              Browse verified partner routes and lock in a monthly pass in just
+              a few taps.
+            </p>
+          </div>
+        </div>
+        <div className="dmg-banner-aside">
+          <div className="dmg-banner-chip">
+            <span className="dmg-banner-chip-value">{bookedCount}</span>
+            <span className="dmg-banner-chip-label">Booked</span>
+          </div>
+          <div className="dmg-banner-chip">
+            <span className="dmg-banner-chip-value">{savedCount}</span>
+            <span className="dmg-banner-chip-label">Saved</span>
+          </div>
+        </div>
+      </header>
 
+      <div className="fr-routes-panel">
       <div className="fr-routes-controls">
         <div className="fr-search-box">
+          <span className="fr-search-icon">
+            <Search />
+          </span>
           <input
             type="text"
             placeholder="Search routes..."
@@ -319,6 +363,7 @@ export default function FindRoutes() {
             </div>
           ))
         )}
+      </div>
       </div>
 
       {selectedRoute && (

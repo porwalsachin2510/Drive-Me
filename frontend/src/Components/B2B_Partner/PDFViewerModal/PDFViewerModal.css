@@ -29,7 +29,7 @@
   align-items: center;
   padding: 20px 30px;
   border-bottom: 1px solid #e5e7eb;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   border-radius: 12px 12px 0 0;
 }
 
@@ -48,7 +48,7 @@
 
 .pdf-viewer-download-btn {
   background: white;
-  color: #667eea;
+  color: #0a2a43;
   border: none;
   padding: 10px 20px;
   border-radius: 8px;

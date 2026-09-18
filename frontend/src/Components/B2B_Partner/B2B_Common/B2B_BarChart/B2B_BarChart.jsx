@@ -100,14 +100,14 @@ function B2B_BarChart({ data, currency }) {
           <Legend />
           <Bar
             dataKey="Revenue"
-            fill="#16a085"
+            fill="#12b0c4"
             radius={[8, 8, 0, 0]}
             isAnimationActive={true}
             animationDuration={800}
           />
           <Bar
             dataKey="Expenses"
-            fill="#e74c3c"
+            fill="#0a2a43"
             radius={[8, 8, 0, 0]}
             isAnimationActive={true}
             animationDuration={800}

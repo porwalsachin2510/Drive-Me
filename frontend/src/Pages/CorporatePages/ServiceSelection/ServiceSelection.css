@@ -1,76 +1,208 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* =====================================================================
+   DriveMeGo — Corporate Service Selection (Step 1)
+   IndiGo-inspired redesign on the brand navy + teal palette.
+   ===================================================================== */
+:root {
+  --dmg-navy: #0a2a43;
+  --dmg-navy-700: #123a58;
+  --dmg-teal: #12b0c4;
+  --dmg-teal-600: #0e97a8;
+  --dmg-teal-050: #e6f7fa;
+  --dmg-cta: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  --dmg-cta-hover: linear-gradient(135deg, #12b0c4 0%, #0c8695 100%);
+  --dmg-bg: #eef3f8;
+  --dmg-card: #ffffff;
+  --dmg-ink: #0f2233;
+  --dmg-muted: #5b6b7b;
+  --dmg-line: #e4ecf3;
+  --dmg-jakarta: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 .drivemego-service-selection-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 80px 20px 40px;
+  background:
+    radial-gradient(900px 340px at 82% -10%, rgba(18, 176, 196, 0.12), transparent 60%),
+    var(--dmg-bg);
+  padding: 48px 20px 64px;
+  font-family: var(--dmg-jakarta);
 }
 
 .drivemego-service-selection-content {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
-.drivemego-service-header {
-  text-align: center;
-  margin-bottom: 50px;
+/* ============ STEPPER ============ */
+.drivemego-service-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 36px;
 }
 
-.drivemego-service-header h1 {
-  font-size: 2.5rem;
-  color: #2c3e50;
-  margin-bottom: 15px;
-  font-weight: 700;
-}
-
-.drivemego-service-header p {
-  font-size: 1.2rem;
-  color: #7f8c8d;
-}
-
-.drivemego-services-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 30px;
-  margin-bottom: 40px;
-}
-
-.drivemego-service-card {
-  background: white;
-  border-radius: 15px;
-  padding: 30px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 3px solid transparent;
-  position: relative;
-}
-
-.drivemego-service-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-}
-
-.drivemego-service-card.drivemego-selected {
-  border-color: #3498db;
-  box-shadow: 0 10px 40px rgba(52, 152, 219, 0.3);
-}
-
-.drivemego-service-icon {
-  font-size: 4rem;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.drivemego-service-card h3 {
-  font-size: 1.8rem;
-  color: #2c3e50;
-  margin-bottom: 15px;
+.drivemego-service-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--dmg-muted);
+  font-size: 13.5px;
   font-weight: 600;
 }
 
-.drivemego-service-description {
-  font-size: 1rem;
-  color: #7f8c8d;
+.drivemego-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1.5px solid var(--dmg-line);
+  color: var(--dmg-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.drivemego-step-active .drivemego-step-dot {
+  background: var(--dmg-cta);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(18, 176, 196, 0.32);
+}
+
+.drivemego-step-active .drivemego-step-label {
+  color: var(--dmg-navy);
+}
+
+.drivemego-step-line {
+  width: 48px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--dmg-line);
+}
+
+/* ============ HEADER ============ */
+.drivemego-service-header {
+  text-align: center;
+  margin-bottom: 44px;
+}
+
+.drivemego-service-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dmg-teal-600);
+  background: var(--dmg-teal-050);
+  border: 1px solid rgba(18, 176, 196, 0.25);
+  padding: 6px 14px;
+  border-radius: 100px;
+  margin-bottom: 16px;
+}
+
+.drivemego-service-header h1 {
+  font-size: clamp(28px, 4vw, 40px);
+  color: var(--dmg-navy);
+  margin-bottom: 12px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.drivemego-service-header p {
+  font-size: 16px;
+  color: var(--dmg-muted);
+  max-width: 620px;
+  margin: 0 auto;
   line-height: 1.6;
-  margin-bottom: 25px;
+}
+
+/* ============ SERVICE CARDS ============ */
+.drivemego-services-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.drivemego-services-grid.drivemego-single {
+  grid-template-columns: minmax(0, 480px);
+  justify-content: center;
+}
+
+.drivemego-service-card {
+  background: var(--dmg-card);
+  border-radius: 22px;
+  padding: 30px 28px;
+  cursor: pointer;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+  border: 1.5px solid var(--dmg-line);
+  position: relative;
+  box-shadow: 0 2px 12px rgba(10, 42, 67, 0.05);
+  outline: none;
+}
+
+.drivemego-service-card:hover,
+.drivemego-service-card:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 54px rgba(10, 42, 67, 0.14);
+  border-color: rgba(18, 176, 196, 0.4);
+}
+
+.drivemego-service-card.drivemego-selected {
+  border-color: var(--dmg-teal);
+  box-shadow: 0 22px 52px rgba(18, 176, 196, 0.24);
+}
+
+.drivemego-service-card.drivemego-selected::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  padding: 1.5px;
+  background: var(--dmg-cta);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.drivemego-service-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  color: var(--dmg-teal-600);
+  background: var(--dmg-teal-050);
+  transition: all 0.28s ease;
+}
+
+.drivemego-service-card:hover .drivemego-service-icon,
+.drivemego-service-card.drivemego-selected .drivemego-service-icon {
+  background: var(--dmg-cta);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(18, 176, 196, 0.3);
+}
+
+.drivemego-service-card h3 {
+  font-size: 1.35rem;
+  color: var(--dmg-navy);
+  margin-bottom: 10px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.drivemego-service-description {
+  font-size: 0.94rem;
+  color: var(--dmg-muted);
+  line-height: 1.6;
+  margin-bottom: 22px;
 }
 
 .drivemego-service-features {
@@ -78,97 +210,138 @@
 }
 
 .drivemego-service-features h4 {
-  font-size: 1.1rem;
-  color: #34495e;
+  font-size: 0.72rem;
+  color: var(--dmg-navy);
   margin-bottom: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .drivemego-service-features ul {
   list-style: none;
   padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
 }
 
 .drivemego-service-features li {
-  padding: 8px 0;
-  color: #555;
-  position: relative;
-  padding-left: 25px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--dmg-ink);
+  font-size: 0.9rem;
 }
 
-.drivemego-service-features li::before {
-  content: "✓";
-  position: absolute;
-  left: 0;
-  color: #27ae60;
-  font-weight: bold;
+.drivemego-service-features li svg {
+  flex-shrink: 0;
+  color: var(--dmg-teal-600);
 }
 
 .drivemego-service-use-case {
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 20px;
+  background: linear-gradient(135deg, rgba(18, 176, 196, 0.07), rgba(18, 176, 196, 0));
+  border: 1px solid var(--dmg-line);
+  padding: 14px 16px;
+  border-radius: 14px;
 }
 
 .drivemego-service-use-case p {
   margin: 0;
-  font-size: 0.95rem;
-  color: #555;
+  font-size: 0.88rem;
+  color: var(--dmg-muted);
   line-height: 1.5;
+}
+
+.drivemego-service-use-case strong {
+  display: block;
+  color: var(--dmg-navy);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
 }
 
 .drivemego-selected-indicator {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: #3498db;
+  top: 18px;
+  right: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--dmg-cta);
   color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.9rem;
+  padding: 6px 13px;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  box-shadow: 0 6px 16px rgba(18, 176, 196, 0.32);
 }
 
+/* ============ ACTIONS ============ */
 .drivemego-service-actions {
   text-align: center;
-  margin-top: 40px;
+  margin-top: 8px;
 }
 
 .drivemego-continue-btn {
-  background: #3498db;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--dmg-cta);
   color: white;
   border: none;
-  padding: 18px 50px;
-  font-size: 1.1rem;
-  border-radius: 30px;
+  padding: 16px 40px;
+  font-size: 1rem;
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 600;
+  transition: all 0.2s ease;
+  font-weight: 700;
+  font-family: inherit;
+  box-shadow: 0 14px 30px rgba(18, 176, 196, 0.3);
 }
 
 .drivemego-continue-btn:hover:not(:disabled) {
-  background: #2980b9;
-  transform: scale(1.05);
-  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+  background: var(--dmg-cta-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 38px rgba(18, 176, 196, 0.4);
 }
 
 .drivemego-continue-btn:disabled {
-  background: #bdc3c7;
+  background: #c3d0dc;
   cursor: not-allowed;
-  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  .drivemego-services-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 @media (max-width: 768px) {
+  .drivemego-service-selection-container {
+    padding: 32px 16px 48px;
+  }
+
   .drivemego-service-header h1 {
-    font-size: 2rem;
+    font-size: 1.75rem;
   }
 
-  .drivemego-services-grid {
-    grid-template-columns: 1fr;
+  .drivemego-step-label {
+    display: none;
   }
 
-  .drivemego-service-card {
-    padding: 25px;
+  .drivemego-step-line {
+    width: 32px;
+  }
+
+  .drivemego-continue-btn {
+    width: 100%;
+    justify-content: center;
   }
 }

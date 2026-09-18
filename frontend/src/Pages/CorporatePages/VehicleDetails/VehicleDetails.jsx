@@ -4,6 +4,7 @@ import { getActiveCurrency } from "../../../config/localeConfig";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { Star, Check, ArrowRight } from "lucide-react";
 import { getVehicleById } from "../../../Redux/slices/vehicleSlice";
 import LoadingSpinner from "../../../Components/LoadingSpinner/LoadingSpinner";
 import "./VehicleDetails.css";
@@ -115,7 +116,8 @@ const VehicleDetails = () => {
               </span>
               {vehicle.rating > 0 && (
                 <span className="rating">
-                  ⭐ {vehicle.rating.toFixed(1)} ({vehicle.totalReviews || 0}{" "}
+                  <Star size={15} fill="currentColor" strokeWidth={0} />
+                  {vehicle.rating.toFixed(1)} ({vehicle.totalReviews || 0}{" "}
                   reviews)
                 </span>
               )}
@@ -233,6 +235,7 @@ const VehicleDetails = () => {
               onClick={handleRequestQuotation}
             >
               Request Quotation
+              <ArrowRight size={18} />
             </button>
           </div>
 
@@ -315,25 +318,25 @@ const VehicleDetails = () => {
             <div className="options-grid">
               {vehicle.driverAvailability?.withDriver && (
                 <div className="option-item">
-                  <i className="fas fa-check-circle"></i>
+                  <Check size={16} strokeWidth={2.5} />
                   <span>With Driver</span>
                 </div>
               )}
               {vehicle.driverAvailability?.withoutDriver && (
                 <div className="option-item">
-                  <i className="fas fa-check-circle"></i>
+                  <Check size={16} strokeWidth={2.5} />
                   <span>Without Driver</span>
                 </div>
               )}
               {vehicle.fuelOptions?.fuelIncluded && (
                 <div className="option-item">
-                  <i className="fas fa-check-circle"></i>
+                  <Check size={16} strokeWidth={2.5} />
                   <span>Fuel Included</span>
                 </div>
               )}
               {vehicle.fuelOptions?.withoutFuel && (
                 <div className="option-item">
-                  <i className="fas fa-check-circle"></i>
+                  <Check size={16} strokeWidth={2.5} />
                   <span>Without Fuel</span>
                 </div>
               )}

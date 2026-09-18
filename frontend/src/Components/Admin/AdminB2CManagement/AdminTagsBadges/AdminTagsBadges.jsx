@@ -5,6 +5,22 @@ import "./AdminTagsBadges.css";
 import AdminCreateTagModal from "./AdminCreateTagModal/AdminCreateTagModal";
 import api from "../../../../utils/api";
 
+const svg = (paths) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths}</svg>
+);
+const ICONS = {
+  route: svg(<><circle cx="6" cy="19" r="3" /><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" /><circle cx="18" cy="5" r="3" /></>),
+  vehicle: svg(<><path d="M8 6v6M15 6v6M2 12h19.6M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3" /><circle cx="7" cy="18" r="2" /><circle cx="16" cy="18" r="2" /></>),
+  service: svg(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />),
+  promo: svg(<><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" /></>),
+  general: svg(<><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></>),
+  check: svg(<polyline points="20 6 9 17 4 12" />),
+  x: svg(<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>),
+  info: svg(<><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></>),
+  plus: svg(<><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>),
+  help: svg(<><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></>),
+};
+
 function AdminTagsBadges() {
   const [hoveredTag, setHoveredTag] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -29,7 +45,7 @@ function AdminTagsBadges() {
   const categoryUsageGuide = {
     route: {
       title: "Route Tags",
-      icon: "🛣️",
+      icon: ICONS.route,
       description: "Describe route characteristics and features",
       examples: [
         "Express",
@@ -43,7 +59,7 @@ function AdminTagsBadges() {
     },
     vehicle: {
       title: "Vehicle Tags",
-      icon: "🚐",
+      icon: ICONS.vehicle,
       description: "Describe vehicle features and amenities",
       examples: [
         "AC Vehicle",
@@ -57,7 +73,7 @@ function AdminTagsBadges() {
     },
     service: {
       title: "Service Tags",
-      icon: "⭐",
+      icon: ICONS.service,
       description: "Describe service quality and type",
       examples: ["Premium", "Budget Friendly", "Corporate", "VIP", "Standard"],
       whereUsed: ["Route Listings", "Partner Profiles", "Booking Pages"],
@@ -65,7 +81,7 @@ function AdminTagsBadges() {
     },
     promo: {
       title: "Promotion Tags",
-      icon: "🎉",
+      icon: ICONS.promo,
       description: "Highlight special offers and promotions",
       examples: [
         "New Route",
@@ -79,7 +95,7 @@ function AdminTagsBadges() {
     },
     general: {
       title: "General Tags",
-      icon: "🏷️",
+      icon: ICONS.general,
       description: "General-purpose tags for various uses",
       examples: ["Popular", "Recommended", "Verified", "Featured", "Top Rated"],
       whereUsed: ["Any route or vehicle", "General categorization"],
@@ -215,10 +231,10 @@ function AdminTagsBadges() {
         >
           <span className="ad-dash-tb-notification-icon">
             {notification.type === "success"
-              ? "✓"
+              ? ICONS.check
               : notification.type === "error"
-                ? "✕"
-                : "i"}
+                ? ICONS.x
+                : ICONS.info}
           </span>
           <span>{notification.message}</span>
         </div>
@@ -237,13 +253,14 @@ function AdminTagsBadges() {
             className="ad-dash-tb-guide-btn"
             onClick={() => setShowUsageGuide(!showUsageGuide)}
           >
-            <span>?</span> {showUsageGuide ? "Hide Guide" : "Usage Guide"}
+            <span className="ad-dash-tb-btn-icon">{ICONS.help}</span>{" "}
+            {showUsageGuide ? "Hide Guide" : "Usage Guide"}
           </button>
           <button
             className="ad-dash-tb-create-btn"
             onClick={() => setShowCreateModal(true)}
           >
-            <span>+</span> Create Tag
+            <span className="ad-dash-tb-btn-icon">{ICONS.plus}</span> Create Tag
           </button>
         </div>
       </div>

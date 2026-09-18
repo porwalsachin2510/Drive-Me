@@ -103,13 +103,13 @@
 }
 
 .action-btn.primary {
-  background-color: #16a34a;
+  background-color: #0e97a8;
   color: #ffffff;
-  border-color: #16a34a;
+  border-color: #0e97a8;
 }
 
 .action-btn.primary:hover {
-  background-color: #15803d;
+  background-color: #0c8695;
 }
 
 .action-btn.secondary {

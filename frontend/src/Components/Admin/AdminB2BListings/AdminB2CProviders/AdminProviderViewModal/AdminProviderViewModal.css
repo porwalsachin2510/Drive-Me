@@ -14,12 +14,14 @@
 
 .ad-dash-provider-view-modal {
   background: white;
-  border-radius: 12px;
+  border-radius: 20px;
   width: 100%;
   max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 24px 60px rgba(10, 42, 67, 0.28);
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #0f2233;
 }
 
 .ad-dash-provider-view-modal-header {
@@ -40,13 +42,13 @@
   width: 24px;
   height: 24px;
   stroke-width: 2;
-  color: #0891b2;
+  color: #0e97a8;
 }
 
 .ad-dash-provider-view-modal-title-wrapper h3 {
   font-size: 20px;
-  font-weight: 600;
-  color: #1e293b;
+  font-weight: 800;
+  color: #0a2a43;
   margin: 0;
 }
 
@@ -177,8 +179,8 @@
 
 .ad-dash-provider-view-modal-route-path {
   font-size: 16px;
-  font-weight: 600;
-  color: #0891b2;
+  font-weight: 800;
+  color: #0e97a8;
 }
 
 .ad-dash-provider-view-modal-route-details {
@@ -217,9 +219,9 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: #dbeafe;
-  color: #1e40af;
-  border-radius: 8px;
+  background: #e6f7fa;
+  color: #0e97a8;
+  border-radius: 11px;
 }
 
 .ad-dash-provider-view-modal-driver-icon svg {
@@ -317,12 +319,12 @@
 
 .ad-dash-provider-view-modal-info-btn {
   background: white;
-  color: #0891b2;
-  border: 1px solid #0891b2;
+  color: #0e97a8;
+  border: 1px solid #0e97a8;
 }
 
 .ad-dash-provider-view-modal-info-btn:hover {
-  background: #f0fdfa;
+  background: #e6f7fa;
 }
 
 @media (max-width: 768px) {

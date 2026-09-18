@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Car, User, Route, Plus } from "lucide-react";
 import B2B_VehiclesTab from "../B2B_FleetAndDriversSub/B2B_VehiclesTab/B2B_VehiclesTab";
 import B2B_DriversTab from "../B2B_FleetAndDriversSub/B2B_DriversTab/B2B_DriversTab";
 import B2B_RoutesTab from "../B2B_FleetAndDriversSub/B2B_RoutesTab/B2B_RoutesTab";
@@ -141,21 +142,21 @@ function B2B_FleetAndDrivers() {
               className="drivemego-fad-b2b-operator-dashboard-add-btn"
               onClick={() => setShowAddDriverModal(true)}
             >
-              + Add Driver
+              <Plus size={16} /> Add Driver
             </button>
           ) : activeSubTab === "routes" ? (
             <button
               className="drivemego-fad-b2b-operator-dashboard-add-btn"
               onClick={() => setShowAddRouteModal(true)}
             >
-              + Add Route
+              <Plus size={16} /> Add Route
             </button>
           ) : (
             <button
               className="drivemego-fad-b2b-operator-dashboard-add-btn"
               onClick={() => setShowAddVehicleModal(true)}
             >
-              + Add Vehicle
+              <Plus size={16} /> Add Vehicle
             </button>
           )}
         </div>

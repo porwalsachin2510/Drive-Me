@@ -1,17 +1,20 @@
 .ride-card {
-  background-color: white;
-  border-left: 5px solid #2DD4BF;
-  border-radius: 8px;
+  background-color: #fff;
+  border: 1px solid var(--dmg-line, #e4ecf3);
+  border-left: 4px solid var(--dmg-teal, #12b0c4);
+  border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(10, 42, 67, 0.05);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
 .ride-card:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+  border-left-color: var(--dmg-teal, #12b0c4);
+  box-shadow: 0 12px 30px rgba(10, 42, 67, 0.1);
 }
 
 .ride-card-header {
@@ -22,8 +25,9 @@
 
 .ride-title {
   font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-weight: 800;
+  color: var(--dmg-navy, #0a2a43);
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
@@ -79,9 +83,9 @@
 
 .detail-item p {
   font-size: 14px;
-  color: #1a1a1a;
+  color: var(--dmg-ink, #0f2233);
   margin: 0;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .ride-footer {
@@ -102,21 +106,32 @@
 
 .view-ticket-btn,
 .rate-btn {
-  background-color: #1E293B;
+  background: var(--dmg-cta, linear-gradient(135deg, #16bccf 0%, #0e97a8 100%));
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 9px 18px;
+  border-radius: 10px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
-.view-ticket-btn:hover,
-.rate-btn:hover {
-  background-color: #0F172A;
+.rate-btn {
+  background: #ffffff;
+  color: var(--dmg-navy, #0a2a43);
+  border: 1px solid var(--dmg-line, #e4ecf3);
+}
+
+.view-ticket-btn:hover {
   transform: translateY(-2px);
+  box-shadow: var(--dmg-cta-shadow, 0 12px 26px rgba(18, 176, 196, 0.3));
+}
+
+.rate-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--dmg-teal, #12b0c4);
+  color: var(--dmg-teal-600, #0e97a8);
 }
 
 /* Tablet */

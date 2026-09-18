@@ -13,22 +13,13 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const getVehicleIcon = (category) => {
-    switch (category?.toLowerCase()) {
-      case "coaster_bus":
-        return "🚌";
-      case "minibus":
-        return "🚐";
-      case "van":
-        return "🚐";
-      case "sedan":
-        return "🚗";
-      case "suv":
-        return "🚙";
-      default:
-        return "🚗";
-    }
-  };
+  const getVehicleIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
+      <circle cx="6.5" cy="16.5" r="2.5" />
+      <circle cx="16.5" cy="16.5" r="2.5" />
+    </svg>
+  );
 
   // Approval must come first: a vehicle that isn't APPROVED yet should never
   // read as "available", regardless of its operational status field.
@@ -116,7 +107,11 @@ function B2B_VehiclesTab({ vehicles, onRefresh }) {
     return (
       <div className="b2b-operator-dashboard-vehicles-tab-no-vehicles">
         <div className="b2b-operator-dashboard-vehicles-tab-no-vehicles-icon">
-          🚗
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
+            <circle cx="6.5" cy="16.5" r="2.5" />
+            <circle cx="16.5" cy="16.5" r="2.5" />
+          </svg>
         </div>
         <h3>No Vehicles Added</h3>
         <p>Start by adding your first vehicle to your fleet.</p>

@@ -24,8 +24,9 @@
 
 .filter-header h3 {
   font-size: 20px;
-  font-weight: 700;
-  color: #1a1a2e;
+  font-weight: 800;
+  color: var(--dmg-navy, #0a2a43);
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
@@ -84,7 +85,7 @@
 .filter-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0f2233;
   margin: 0 0 15px 0;
 }
 
@@ -105,7 +106,7 @@
 }
 
 .filter-option:hover {
-  color: #1a1a2e;
+  color: #0f2233;
 }
 
 .filter-option input[type="checkbox"],
@@ -113,7 +114,7 @@
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #00d4ff;
+  accent-color: var(--dmg-teal, #12b0c4);
 }
 
 .range-filter {
@@ -133,8 +134,8 @@
 
 .range-input:focus {
   outline: none;
-  border-color: #00d4ff;
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+  border-color: var(--dmg-teal, #12b0c4);
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.14);
 }
 
 .range-filter span {

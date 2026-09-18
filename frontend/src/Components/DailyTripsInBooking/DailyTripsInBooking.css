@@ -1,6 +1,6 @@
 /* Daily Trips - Compact Collapsible Design */
 .daily-trips-wrapper {
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--dmg-bg);
   margin-top: 5px;
 }
 
@@ -10,14 +10,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, var(--dmg-bg) 0%, var(--dmg-bg) 100%);
   cursor: pointer;
   transition: background 0.2s;
   user-select: none;
 }
 
 .daily-trips-toggle:hover {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, var(--dmg-bg) 0%, var(--dmg-line) 100%);
 }
 
 .toggle-left {
@@ -27,13 +27,13 @@
 }
 
 .toggle-left svg {
-  color: #667eea;
+  color: var(--dmg-navy);
 }
 
 .toggle-text {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--dmg-ink);
 }
 
 .badge-live {
@@ -52,7 +52,7 @@
 }
 
 .badge-today {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 100%);
   color: white;
   padding: 2px 8px;
   border-radius: 10px;
@@ -68,12 +68,12 @@
 
 .trips-count {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--dmg-muted-2);
   font-weight: 500;
 }
 
 .chevron-icon {
-  color: #94a3b8;
+  color: var(--dmg-muted-2);
   transition: transform 0.3s ease;
 }
 
@@ -107,30 +107,30 @@
 
 .filter-pill {
   padding: 4px 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   background: white;
   border-radius: 14px;
   font-size: 11px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--dmg-muted);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .filter-pill:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: var(--dmg-navy);
+  color: var(--dmg-navy);
 }
 
 .filter-pill.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-navy-700) 100%);
   color: white;
   border-color: transparent;
 }
 
 .refresh-btn {
   padding: 4px 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   background: white;
   border-radius: 6px;
   cursor: pointer;
@@ -142,11 +142,11 @@
 }
 
 .refresh-btn:hover {
-  background: #f1f5f9;
+  background: var(--dmg-bg);
 }
 
 .refresh-btn svg {
-  color: #64748b;
+  color: var(--dmg-muted);
 }
 
 /* Compact Trip List */
@@ -163,12 +163,12 @@
 }
 
 .compact-trips-list::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--dmg-bg);
   border-radius: 4px;
 }
 
 .compact-trips-list::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+  background: var(--dmg-line);
   border-radius: 4px;
 }
 
@@ -180,17 +180,17 @@
   padding: 10px 12px;
   background: white;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dmg-line);
   transition: all 0.2s;
 }
 
 .compact-trip-item:hover {
-  border-color: #cbd5e0;
+  border-color: var(--dmg-line);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .compact-trip-item.today {
-  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+  background: linear-gradient(135deg, var(--dmg-teal-050) 0%, #f0f9ff 100%);
   border-color: #93c5fd;
 }
 
@@ -206,14 +206,14 @@
 .date-num {
   font-size: 16px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--dmg-navy);
   line-height: 1;
 }
 
 .date-month {
   font-size: 9px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--dmg-muted-2);
   text-transform: uppercase;
 }
 
@@ -229,7 +229,7 @@
   gap: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: #334155;
+  color: var(--dmg-ink);
   margin-bottom: 2px;
 }
 
@@ -242,13 +242,13 @@
 }
 
 .route-mini svg {
-  color: #94a3b8;
+  color: var(--dmg-muted-2);
   flex-shrink: 0;
 }
 
 .trip-time-mini {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--dmg-muted-2);
 }
 
 /* Trip Status Mini */
@@ -257,13 +257,16 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .status-dot {
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 10px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
 .status-dot.status-scheduled {
@@ -272,8 +275,8 @@
 }
 
 .status-dot.status-inprogress {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--dmg-teal-050);
+  color: var(--dmg-teal-700);
 }
 
 .status-dot.status-completed {
@@ -319,13 +322,13 @@
 }
 
 .mini-complete-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--dmg-teal) 0%, var(--dmg-teal-600) 100%);
   color: white;
 }
 
 .mini-complete-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 6px rgba(18, 176, 196, 0.3);
 }
 
 .mini-start-btn:disabled,
@@ -338,11 +341,11 @@
 .no-trips-msg {
   padding: 16px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--dmg-muted-2);
   font-size: 12px;
   background: white;
   border-radius: 10px;
-  border: 1px dashed #e2e8f0;
+  border: 1px dashed var(--dmg-line);
 }
 
 /* More Trips Message */
@@ -350,7 +353,7 @@
   text-align: center;
   padding: 8px;
   font-size: 11px;
-  color: #667eea;
+  color: var(--dmg-navy);
   font-weight: 500;
   cursor: pointer;
 }

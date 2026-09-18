@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  Bus,
+  Star,
+  Car,
+  Lock,
+  MapPin,
+  Camera,
+  UserCog,
+  Fuel,
+} from "lucide-react";
 import Navbar from "../../../Components/Navbar/Navbar";
 import Footer from "../../../Components/Footer/Footer";
 import ManagedServiceBriefModal from "../../../Components/Corporate/ManagedServiceBrief/ManagedServiceBriefModal";
@@ -470,7 +481,8 @@ const SingleVehicleOwnerDetails = () => {
             className="single-owner-vehicle-back-btn"
             onClick={() => window.history.back()}
           >
-            ← Back to Results
+            <ArrowLeft size={18} />
+            Back to Results
           </button>
         </div>
 
@@ -487,7 +499,9 @@ const SingleVehicleOwnerDetails = () => {
                 )}
               </div>
               <div className="single-owner-vehicle-rating">
-                <span className="single-owner-vehicle-star">⭐</span>
+                <span className="single-owner-vehicle-star">
+                  <Star size={16} fill="currentColor" strokeWidth={0} />
+                </span>
                 <span className="single-owner-vehicle-rating-value">
                   {ownerData.rating} ({ownerData.totalReviews})
                 </span>
@@ -500,11 +514,15 @@ const SingleVehicleOwnerDetails = () => {
                 contacts the partner only after a request is confirmed through
                 DriveMeGo, so the platform stays in the loop and can't be bypassed. */}
             <div className="single-owner-vehicle-detail-item">
-              <span className="single-owner-vehicle-detail-icon">🚗</span>
+              <span className="single-owner-vehicle-detail-icon">
+                <Car size={20} strokeWidth={2} />
+              </span>
               <span>{filteredVehicles.length} Vehicles Available</span>
             </div>
             <div className="single-owner-vehicle-detail-item">
-              <span className="single-owner-vehicle-detail-icon">🔒</span>
+              <span className="single-owner-vehicle-detail-icon">
+                <Lock size={20} strokeWidth={2} />
+              </span>
               <span>Contact shared after booking</span>
             </div>
           </div>
@@ -634,7 +652,8 @@ const SingleVehicleOwnerDetails = () => {
                       className="single-owner-vehicle-main-image"
                     />
                     <div className="single-owner-vehicle-gallery-count">
-                      📷 {vehicle.photos.length} photos
+                      <Camera size={14} strokeWidth={2} />
+                      {vehicle.photos.length} photos
                     </div>
                   </div>
                 )}
@@ -664,8 +683,9 @@ const SingleVehicleOwnerDetails = () => {
                     <span className="single-owner-vehicle-label">
                       Location:
                     </span>
-                    <span className="single-owner-vehicle-value">
-                      📍 {vehicle.location}
+                    <span className="single-owner-vehicle-value single-owner-vehicle-value-loc">
+                      <MapPin size={14} strokeWidth={2} />
+                      {vehicle.location}
                     </span>
                   </div>
                   <div className="single-owner-vehicle-detail-row">
@@ -686,21 +706,21 @@ const SingleVehicleOwnerDetails = () => {
                   <div className="single-owner-vehicle-options-grid">
                     {corporateuserrequirements.driverRequired ? (
                       <span className="single-owner-vehicle-option-badge">
-                        👨‍✈️ With Driver
+                        <UserCog size={15} strokeWidth={2} /> With Driver
                       </span>
                     ) : (
                       <span className="single-owner-vehicle-option-badge">
-                        👨‍✈️ Without Driver
+                        <UserCog size={15} strokeWidth={2} /> Without Driver
                       </span>
                     )}
 
                     {corporateuserrequirements.fuelIncluded ? (
                       <span className="single-owner-vehicle-option-badge">
-                        ⛽ Fuel Included
+                        <Fuel size={15} strokeWidth={2} /> Fuel Included
                       </span>
                     ) : (
                       <span className="single-owner-vehicle-option-badge">
-                        ⛽ Without Fuel
+                        <Fuel size={15} strokeWidth={2} /> Without Fuel
                       </span>
                     )}
                   </div>

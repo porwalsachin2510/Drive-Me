@@ -1,90 +1,172 @@
 .admin-ride-pooling {
   width: 100%;
   padding: 24px;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* ===== Hero header ===== */
 .ride-pooling-header {
-  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 22px;
+  padding: 28px 32px;
+  border-radius: 22px;
+  color: #fff;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(18, 176, 196, 0.28) 0%, rgba(18, 176, 196, 0) 55%),
+    linear-gradient(135deg, #0a2a43 0%, #123a58 60%, #0e2f49 100%);
+  box-shadow: 0 18px 40px rgba(10, 42, 67, 0.28);
+}
+
+.ride-pooling-header::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  bottom: -90px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(18, 176, 196, 0.3) 0%, rgba(18, 176, 196, 0) 70%);
+  pointer-events: none;
+}
+
+.rp-header-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.rp-header-icon {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  background: rgba(18, 176, 196, 0.22);
+  color: #7fe3ef;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ride-pooling-header h2 {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 20px 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.rp-subtitle {
+  color: rgba(226, 240, 248, 0.82);
+  font-size: 14px;
+  margin: 0;
+  max-width: 620px;
+  line-height: 1.5;
 }
 
 .ride-pooling-stats {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .ride-pooling-stats .stat-item {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 16px 18px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  transition: box-shadow 0.2s;
+  gap: 14px;
+  backdrop-filter: blur(6px);
+  transition: transform 0.2s, background 0.2s;
 }
 
 .ride-pooling-stats .stat-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.rp-stat-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: rgba(18, 176, 196, 0.28);
+  color: #a6ecf5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rp-stat-text {
+  display: flex;
+  flex-direction: column;
 }
 
 .ride-pooling-stats .stat-number {
-  font-size: 28px;
-  font-weight: 700;
-  color: #0891b2;
-  line-height: 1.2;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
 }
 
 .ride-pooling-stats .stat-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #64748b;
+  color: rgba(226, 240, 248, 0.72);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
+/* ===== Pill tabs ===== */
 .ride-pooling-tabs {
   display: flex;
-  gap: 0;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #e2e8f0;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .ride-pooling-tab {
-  padding: 12px 24px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: #fff;
+  border: 1px solid #e4ecf3;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
-  color: #64748b;
+  font-weight: 600;
+  font-family: inherit;
+  color: #5b6b7b;
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: -2px;
 }
 
 .ride-pooling-tab:hover {
-  color: #334155;
+  color: #0a2a43;
+  border-color: #12b0c4;
+  transform: translateY(-1px);
 }
 
 .ride-pooling-tab.active {
-  color: #0891b2;
-  border-bottom-color: #0891b2;
+  color: #fff;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  border-color: transparent;
+  box-shadow: 0 10px 22px rgba(18, 176, 196, 0.3);
 }
 
 .ride-pooling-content {
   background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  border: 1px solid #e4ecf3;
+  box-shadow: 0 10px 30px rgba(10, 42, 67, 0.06);
   overflow: hidden;
 }
 
@@ -102,12 +184,17 @@
     padding: 16px;
   }
 
+  .ride-pooling-header {
+    padding: 22px;
+  }
+
   .ride-pooling-stats {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .ride-pooling-tabs {
     overflow-x: auto;
+    flex-wrap: nowrap;
   }
 
   .ride-pooling-tab {

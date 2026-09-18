@@ -1,8 +1,13 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* DriveMeGo — Managed Activity Log (brand navy + teal) */
 .managed-activity-log {
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 24px;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 10px 30px rgba(10, 42, 67, 0.06);
 }
 
 .managed-activity-header {
@@ -15,7 +20,9 @@
 .managed-activity-header h2 {
   margin: 0;
   font-size: 1.25rem;
-  color: #1f2937;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0a2a43;
 }
 
 .managed-activity-refresh {
@@ -30,7 +37,9 @@
 }
 
 .managed-activity-refresh:hover {
-  background: #eef2ff;
+  background: #e6f7fa;
+  border-color: #12b0c4;
+  color: #0e97a8;
 }
 
 .managed-activity-subtitle {
@@ -44,12 +53,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f5f7ff;
-  border: 1px solid #dbe2ff;
-  border-radius: 8px;
+  background: #e6f7fa;
+  border: 1px solid #bfe9ef;
+  border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 18px;
-  color: #3a3f63;
+  color: #0a2a43;
+  font-weight: 600;
   font-size: 0.95rem;
 }
 
@@ -76,7 +86,7 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: #2c47e0;
+  background: #12b0c4;
   margin-top: 6px;
   flex-shrink: 0;
 }
@@ -86,9 +96,9 @@
 }
 
 .managed-activity-title {
-  color: #1f2937;
+  color: #0a2a43;
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 6px;
 }
 

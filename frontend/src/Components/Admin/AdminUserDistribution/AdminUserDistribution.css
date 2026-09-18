@@ -1,10 +1,19 @@
 .ad-dash-user-distribution {
   width: 100%;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.ad-dash-user-distribution .ad-dash-chart-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0a2a43;
+  margin-bottom: 20px;
+  letter-spacing: -0.01em;
 }
 
 .ad-dash-donut-container {
   position: relative;
-  margin-bottom: 20px;
+  width: 100%;
 }
 
 .ad-dash-donut-center {
@@ -17,50 +26,64 @@
 }
 
 .ad-dash-donut-value {
-  font-size: 36px;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 30px;
+  font-weight: 800;
+  color: #0a2a43;
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .ad-dash-donut-label {
-  font-size: 13px;
-  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5b6b7b;
   margin-top: 4px;
 }
 
 .ad-dash-legend {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .ad-dash-legend-item {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #eef3f8;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.ad-dash-legend-item:hover {
+  background: #f5fafc;
+  border-color: #e4ecf3;
 }
 
 .ad-dash-legend-color {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: 4px;
   flex-shrink: 0;
 }
 
 .ad-dash-legend-info {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   flex: 1;
 }
 
 .ad-dash-legend-name {
-  font-size: 14px;
-  color: #1f2937;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f2233;
 }
 
 .ad-dash-legend-value {
-  font-size: 14px;
-  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+  color: #5b6b7b;
 }

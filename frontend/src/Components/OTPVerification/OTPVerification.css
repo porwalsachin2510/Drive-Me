@@ -4,7 +4,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+  background: linear-gradient(135deg, var(--dmg-navy) 0%, var(--dmg-ink) 100%);
   padding: 20px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -30,7 +30,7 @@
   left: 20px;
   background: none;
   border: none;
-  color: #E85D5D;
+  color: #12b0c4;
   font-size: 16px;
   cursor: pointer;
   padding: 8px 12px;
@@ -50,7 +50,7 @@
 }
 
 .otp-subtitle {
-  color: #666;
+  color: var(--dmg-muted);
   font-size: 16px;
   line-height: 1.5;
   margin: 0;
@@ -78,13 +78,13 @@
   font-size: 24px;
   font-weight: 600;
   color: #333;
-  background-color: #f8f9fa;
+  background-color: var(--dmg-bg);
   transition: all 0.3s ease;
   outline: none;
 }
 
 .otp-input:focus {
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   background-color: white;
   box-shadow: 0 0 0 4px rgba(232, 93, 93, 0.1);
   transform: scale(1.05);
@@ -100,13 +100,13 @@
 }
 
 .timer-text {
-  color: #666;
+  color: var(--dmg-muted);
   font-size: 14px;
   margin: 0;
 }
 
 .timer-value {
-  color: #E85D5D;
+  color: #12b0c4;
   font-weight: 600;
   font-family: 'Courier New', monospace;
 }
@@ -118,7 +118,7 @@
 }
 
 .otp-verify-btn {
-  background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
+  background: linear-gradient(135deg, var(--dmg-teal) 0%, var(--dmg-teal-600) 100%);
   color: white;
   border: none;
   padding: 16px 32px;
@@ -133,7 +133,7 @@
 
 .otp-verify-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(45, 212, 191, 0.3);
+  box-shadow: 0 8px 25px rgba(18, 176, 196, 0.3);
 }
 
 .otp-verify-btn:disabled {
@@ -153,15 +153,15 @@
 }
 
 .resend-text {
-  color: #666;
+  color: var(--dmg-muted);
   font-size: 14px;
   margin: 0 0 15px 0;
 }
 
 .otp-resend-btn {
   background: none;
-  border: 2px solid #E85D5D;
-  color: #E85D5D;
+  border: 2px solid #12b0c4;
+  color: #12b0c4;
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
@@ -171,7 +171,7 @@
 }
 
 .otp-resend-btn.enabled:hover {
-  background-color: #E85D5D;
+  background-color: #12b0c4;
   color: white;
   transform: translateY(-2px);
 }

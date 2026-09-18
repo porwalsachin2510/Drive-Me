@@ -102,7 +102,7 @@
 
 .b2c-form-input:focus {
   outline: none;
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
@@ -143,9 +143,9 @@
 }
 
 .b2c-day-btn.selected {
-  background: #E85D5D;
+  background: #12b0c4;
   color: white;
-  border-color: #E85D5D;
+  border-color: #12b0c4;
 }
 
 .b2c-stop-points-section {
@@ -175,7 +175,7 @@
 .b2c-stop-point-number {
   width: 28px;
   height: 28px;
-  background: #E85D5D;
+  background: #12b0c4;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -211,7 +211,7 @@
 }
 
 .b2c-add-stop-btn {
-  background: #2DD4BF;
+  background: #12b0c4;
   color: white;
   border: none;
   padding: 10px 16px;
@@ -223,7 +223,7 @@
 }
 
 .b2c-add-stop-btn:hover {
-  background: #14B8A6;
+  background: #0e97a8;
 }
 
 .b2c-modal-actions {
@@ -259,12 +259,12 @@
 }
 
 .b2c-btn-submit {
-  background: #2DD4BF;
+  background: #12b0c4;
   color: white;
 }
 
 .b2c-btn-submit:hover {
-  background: #14B8A6;
+  background: #0e97a8;
 }
 
 .b2c-pricing-preview {
@@ -505,13 +505,13 @@
 }
 
 .b2c-route-mode-btn:hover:not(:disabled) {
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   background: #fff5f5;
 }
 
 .b2c-route-mode-btn.active {
-  border-color: #E85D5D;
-  background: #E85D5D;
+  border-color: #12b0c4;
+  background: #12b0c4;
   color: white;
 }
 
@@ -554,7 +554,7 @@
 /* Selected Route Card */
 .b2c-selected-route-card {
   background: white;
-  border: 2px solid #2DD4BF;
+  border: 2px solid #12b0c4;
   border-radius: 12px;
   padding: 16px;
   margin-top: 16px;

@@ -7,8 +7,9 @@
 
 .drivemego-cst-settings-section h2{
     font-size: 24px;
-    font-weight: 600;
-    color: #111827;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--dmg-navy, var(--dmg-navy));
 }
 
 .drivemego-cst-settings-container {
@@ -23,19 +24,19 @@
   background-color: white;
   border-radius: 12px;
   padding: 30px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--dmg-line);
 }
 
 .drivemego-cst-settings-header {
   margin-bottom: 25px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .drivemego-cst-settings-header h3 {
   font-size: 16px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--dmg-navy);
   margin-bottom: 5px;
   display: flex;
   align-items: center;
@@ -44,7 +45,7 @@
 
 .drivemego-cst-settings-header p {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   margin: 0;
 }
 
@@ -63,32 +64,32 @@
 .drivemego-cst-form-group label {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--dmg-navy);
   text-transform: capitalize;
 }
 
 .drivemego-cst-form-group select,
 .drivemego-cst-form-group input {
   padding: 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--dmg-line);
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   background-color: white;
-  color: #1a1a1a;
+  color: var(--dmg-navy);
   transition: all 0.3s ease;
 }
 
 .drivemego-cst-form-group select:hover,
 .drivemego-cst-form-group input:hover {
-  border-color: #9ca3af;
+  border-color: var(--dmg-muted-2);
 }
 
 .drivemego-cst-form-group select:focus,
 .drivemego-cst-form-group input:focus {
   outline: none;
-  border-color: #E85D5D;
-  box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
+  border-color: var(--dmg-teal, var(--dmg-teal));
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.14);
 }
 
 .drivemego-cst-form-group select {
@@ -117,20 +118,20 @@
   justify-content: space-between;
   align-items: center;
   padding: 15px;
-  background-color: #f9fafb;
+  background-color: var(--dmg-bg);
   border-radius: 8px;
 }
 
 .drivemego-cst-toggle-label {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--dmg-navy);
   margin-bottom: 4px;
 }
 
 .drivemego-cst-toggle-description {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--dmg-muted);
   margin: 0;
 }
 
@@ -145,7 +146,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--dmg-bg);
 }
 
 .drivemego-cst-preference-item:last-child {
@@ -154,7 +155,7 @@
 
 .drivemego-cst-pref-label {
   font-size: 16px;
-  color: #1f2937;
+  color: var(--dmg-navy);
   font-weight: 500;
 }
 
@@ -164,7 +165,7 @@
   cursor: pointer;
   width: 50px;
   height: 28px;
-  background-color: #d1d5db;
+  background-color: var(--dmg-line);
   border-radius: 14px;
   padding: 2px;
   position: relative;
@@ -192,15 +193,15 @@
 }
 
 .drivemego-cst-toggle-switch input:checked {
-  background-color: #E85D5D;
+  background-color: var(--dmg-teal, var(--dmg-teal));
 }
 
 .drivemego-cst-toggle-switch:has(input:checked) {
-  background-color: #E85D5D;
+  background-color: var(--dmg-teal, var(--dmg-teal));
 }
 
 .drivemego-cst-save-btn {
-  background-color: #1a1a1a;
+  background: var(--dmg-cta, linear-gradient(135deg, var(--dmg-teal) 0%, var(--dmg-teal-600) 100%));
   color: white;
   border: none;
   padding: 14px 28px;
@@ -218,9 +219,9 @@
 }
 
 .drivemego-cst-save-btn:hover {
-  background-color: #2d2d2d;
+  background: var(--dmg-cta-hover, linear-gradient(135deg, var(--dmg-teal) 0%, var(--dmg-teal-700) 100%));
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--dmg-cta-shadow, 0 12px 26px rgba(18, 176, 196, 0.3));
 }
 
 .drivemego-cst-save-btn:active {

@@ -5,6 +5,7 @@ import store from "./Redux/store";
 import { initLocale } from "./Redux/slices/localeSlice";
 import { SocketProvider } from "./context/SocketContext";
 import { Toaster } from "react-hot-toast";
+import "./Components/B2C_Partner/b2c-brand.css";
 import HomePage from "./Pages/HomePage/index";
 import CommuterProfilePage from "./Pages/CommuterPages/CommuterProfilePage/CommuterProfilePage";
 import Login from "./Pages/Login/Login";

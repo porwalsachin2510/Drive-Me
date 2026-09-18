@@ -1,6 +1,7 @@
 import { getActiveCurrency } from "../../../config/localeConfig";
 import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
+import { Scale, Calculator, Wallet } from "lucide-react";
 import api from "../../../utils/api";
 import "./adminsettlement.css";
 import { notify } from "../../../utils/toast";
@@ -195,7 +196,11 @@ function AdminSettlement() {
   return (
     <div className="drivemego-st-admin-settlement">
       <div className="drivemego-st-settlement-header">
-        <div>
+        <div className="drivemego-st-header-title">
+          <div className="drivemego-st-header-icon">
+            <Scale size={26} strokeWidth={2.2} />
+          </div>
+          <div>
           <h2>Settlement Management</h2>
           <p className="drivemego-st-settlement-subtitle">
             Monthly reconciliation statements &mdash; B2C partners from
@@ -206,6 +211,7 @@ function AdminSettlement() {
             collected when the client pays the negotiated contract. This is a
             read-only earnings statement plus a debt / receivable ledger.
           </p>
+          </div>
         </div>
         <div className="drivemego-st-header-actions">
           <button

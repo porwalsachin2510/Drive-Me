@@ -603,7 +603,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                 style={{
                   color: dependencies.hasCriticalDependencies
                     ? "#dc2626"
-                    : "#16a34a",
+                    : "#0e97a8",
                   margin: 0,
                   display: "flex",
                   alignItems: "center",
@@ -624,7 +624,7 @@ function B2C_RouteCard({ route, onRouteUpdated, onAddSchedule }) {
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path
                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      stroke="#16a34a"
+                      stroke="#0e97a8"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"

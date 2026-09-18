@@ -1,5 +1,8 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
 .account-settings {
   width: 100%;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .security-section {
@@ -140,7 +143,8 @@
 
 .password-form-group input:focus {
   outline: none;
-  border-color: #4169e1;
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.14);
 }
 
 .password-form-actions {
@@ -168,19 +172,21 @@
 }
 
 .submit-password-btn {
-  padding: 10px 24px;
-  background: #4169e1;
+  padding: 11px 26px;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: white;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow: 0 12px 26px -14px rgba(18, 176, 196, 0.6);
 }
 
 .submit-password-btn:hover {
-  background: #3457c9;
+  transform: translateY(-2px);
+  filter: brightness(1.03);
 }
 
 .submit-password-btn:disabled {

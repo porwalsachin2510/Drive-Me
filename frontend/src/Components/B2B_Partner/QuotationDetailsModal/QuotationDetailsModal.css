@@ -30,7 +30,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   border-radius: 12px 12px 0 0;
 }
 
@@ -112,7 +112,7 @@
 
 .b2b-quotation-details-status-badge-large.b2b-quotation-details-accepted {
   background: #dbeafe;
-  color: #3b82f6;
+  color: #12b0c4;
 }
 
 .b2b-quotation-details-dates-info {
@@ -183,13 +183,13 @@
 }
 
 .b2b-quotation-details-detail-value.b2b-quotation-details-highlight {
-  color: #667eea;
+  color: #0a2a43;
   font-size: 1.1rem;
 }
 
 .b2b-quotation-details-detail-value.b2b-quotation-details-email-value {
   word-break: break-all;
-  color: #667eea;
+  color: #0a2a43;
 }
 
 .b2b-quotation-details-detail-value.b2b-quotation-details-yes {
@@ -216,7 +216,7 @@
 
 .b2b-quotation-details-vehicle-card-header {
   padding: 15px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a2a43 0%, #123a58 100%);
   display: flex;
   justify-content: space-between;
   align-items: center;

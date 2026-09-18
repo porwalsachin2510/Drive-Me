@@ -106,8 +106,8 @@
 
 .b2c-form-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .b2c-repeat-patterns {
@@ -127,9 +127,9 @@
 }
 
 .b2c-pattern-btn.selected {
-  background: #3b82f6;
+  background: #12b0c4;
   color: white;
-  border-color: #3b82f6;
+  border-color: #12b0c4;
 }
 
 .b2c-days-selector {
@@ -183,12 +183,12 @@
 }
 
 .b2c-btn-submit {
-  background: #3b82f6;
+  background: #12b0c4;
   color: white;
 }
 
 .b2c-btn-submit:hover {
-  background: #2563eb;
+  background: #0e97a8;
 }
 
 .b2c-btn:disabled {

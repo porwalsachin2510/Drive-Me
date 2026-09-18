@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../utils/api";
 import "./TravelHistory.css";
+import "../../styles/commuter-banner.css";
+import { History } from "lucide-react";
 
 const TravelHistory = ({ userId: _userId }) => {
   const [travelHistory, setTravelHistory] = useState([]);
@@ -123,9 +125,22 @@ const TravelHistory = ({ userId: _userId }) => {
 
   return (
     <div className="travel-history-container">
-      <div className="travel-history-header">
-        <h3>My Travel History</h3>
+      <header className="dmg-banner">
+        <div className="dmg-banner-main">
+          <span className="dmg-banner-icon">
+            <History />
+          </span>
+          <div className="dmg-banner-text">
+            <span className="dmg-banner-eyebrow">Your journeys</span>
+            <h3 className="dmg-banner-title">My Travel History</h3>
+            <p className="dmg-banner-sub">
+              Review every trip you&apos;ve taken and track your spend.
+            </p>
+          </div>
+        </div>
+      </header>
 
+      <div className="travel-history-header">
         <div className="filters">
           <select
             value={filter.period}

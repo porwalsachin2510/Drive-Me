@@ -1,38 +1,86 @@
-/* Corporate Driver Dashboard - Content Styles */
-/* Note: Layout, header, tabs, and sidebar are handled by DashboardLayout component */
+/* =====================================================================
+   DriveMeGo — Corporate Driver Dashboard (content styles)
+   Brand navy + teal system. Layout/header/sidebar come from
+   DashboardLayout. Tokens (--dmg-*) are declared globally in index.css.
+   ===================================================================== */
 
-/* Tab Header */
+.corp-driver-tab-content {
+  font-family: var(--dmg-font);
+  color: var(--dmg-ink);
+  animation: corp-driver-fade 0.35s ease;
+}
+
+@keyframes corp-driver-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.corp-driver-tab-content > h2 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--dmg-navy);
+  margin: 0 0 20px;
+}
+
+/* ============ Tab Header ============ */
 .corp-driver-tab-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding: 22px 26px;
+  border-radius: var(--dmg-radius);
+  background: var(--dmg-navy-gradient);
+  color: #fff;
+  box-shadow: 0 16px 40px rgba(10, 42, 67, 0.24);
+  position: relative;
+  overflow: hidden;
   flex-wrap: wrap;
   gap: 12px;
 }
 
+.corp-driver-tab-header::after {
+  content: "";
+  position: absolute;
+  top: -45%;
+  right: -4%;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(18, 176, 196, 0.4) 0%, transparent 70%);
+  pointer-events: none;
+}
+
 .corp-driver-tab-header h2 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+  position: relative;
+  z-index: 1;
 }
 
 .corp-driver-location-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 8px 16px;
-  border-radius: 20px;
+  border-radius: 100px;
   font-size: 13px;
-  font-weight: 500;
-  background: #f3f4f6;
-  color: #6b7280;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.88);
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
 }
 
 .corp-driver-location-badge.active {
-  background: #dcfce7;
-  color: #15803d;
+  background: rgba(34, 197, 94, 0.18);
+  color: #eafff1;
+  border-color: rgba(34, 197, 94, 0.45);
 }
 
 .corp-driver-location-badge.active::before {
@@ -46,44 +94,47 @@
 
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.2); }
+  50% { opacity: 0.5; transform: scale(1.25); }
 }
 
-/* Booking Tabs - Sub navigation */
+/* ============ Booking sub-tabs ============ */
 .corp-driver-booking-tabs {
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
-  padding: 4px;
-  background: #f3f4f6;
-  border-radius: 10px;
+  padding: 6px;
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(10, 42, 67, 0.05);
   width: fit-content;
 }
 
 .corp-driver-booking-tab {
-  padding: 10px 20px;
+  padding: 10px 22px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  font-family: var(--dmg-font);
   font-size: 14px;
-  font-weight: 500;
-  color: #6b7280;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  color: var(--dmg-muted);
+  transition: all 0.25s ease;
 }
 
 .corp-driver-booking-tab:hover {
-  color: #374151;
-  background: rgba(255, 255, 255, 0.5);
+  color: var(--dmg-teal-700);
+  background: var(--dmg-teal-050);
 }
 
 .corp-driver-booking-tab.active {
-  background: white;
-  color: #1f2937;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--dmg-cta);
+  color: #fff;
+  box-shadow: var(--dmg-cta-shadow);
 }
 
-/* Booking Cards Grid */
+/* ============ Booking cards ============ */
 .corp-driver-bookings-list {
   display: flex;
   flex-direction: column;
@@ -91,47 +142,56 @@
 }
 
 .corp-driver-booking-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
+  background: var(--dmg-card);
+  border-radius: var(--dmg-radius-sm);
+  padding: 22px;
+  border: 1px solid var(--dmg-line);
+  box-shadow: 0 2px 10px rgba(10, 42, 67, 0.05);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.corp-driver-booking-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--dmg-teal);
 }
 
 .corp-driver-booking-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: #d1d5db;
+  transform: translateY(-3px);
+  box-shadow: var(--dmg-shadow);
+  border-color: rgba(18, 176, 196, 0.4);
 }
 
-.corp-driver-booking-card.confirmed {
-  border-left: 4px solid #3b82f6;
-}
+.corp-driver-booking-card.confirmed::before { background: var(--dmg-teal); }
+.corp-driver-booking-card.in-progress::before { background: var(--dmg-amber); }
+.corp-driver-booking-card.completed::before { background: #22c55e; }
 
 .corp-driver-booking-card.in-progress {
-  border-left: 4px solid #f59e0b;
-  background: linear-gradient(to right, #fffbeb, white);
-}
-
-.corp-driver-booking-card.completed {
-  border-left: 4px solid #22c55e;
+  background: linear-gradient(120deg, #fffdf5, var(--dmg-card) 40%);
 }
 
 .corp-driver-booking-info h3 {
-  margin: 0 0 12px 0;
+  margin: 0 0 14px;
   font-size: 18px;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--dmg-navy);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Booking Meta Info */
+/* Booking meta */
 .corp-driver-booking-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 10px 16px;
   margin-bottom: 16px;
 }
 
@@ -139,30 +199,36 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
-  color: #4b5563;
+  font-size: 13.5px;
+  color: var(--dmg-ink);
+  background: var(--dmg-bg);
+  border: 1px solid var(--dmg-line);
+  padding: 6px 12px;
+  border-radius: 100px;
 }
 
 .corp-driver-meta-item strong {
-  color: #6b7280;
-  font-weight: 500;
+  color: var(--dmg-muted);
+  font-weight: 600;
 }
 
-/* Passenger List */
+/* Passenger list */
 .corp-driver-passenger-list {
   margin-top: 16px;
-  background: #f9fafb;
+  background: var(--dmg-bg);
   padding: 16px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  border: 1px solid var(--dmg-line);
 }
 
 .corp-driver-passenger-list > strong {
   display: block;
   margin-bottom: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--dmg-teal-700);
 }
 
 .corp-driver-passenger-list ul {
@@ -180,14 +246,14 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  background: var(--dmg-card);
+  border-radius: 10px;
+  border: 1px solid var(--dmg-line);
 }
 
 .corp-driver-passenger-list .passenger-name {
-  font-weight: 600;
-  color: #1f2937;
+  font-weight: 700;
+  color: var(--dmg-navy);
   font-size: 14px;
   min-width: 150px;
 }
@@ -196,38 +262,40 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
-  background: #f3f4f6;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #4b5563;
+  padding: 5px 12px;
+  background: var(--dmg-teal-050);
+  border-radius: 100px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dmg-teal-700);
 }
 
 .corp-driver-passenger-list .passenger-seat {
   background: #dcfce7;
   color: #15803d;
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 5px 12px;
+  border-radius: 100px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-/* Booking Actions */
+/* Booking actions */
 .corp-driver-booking-actions {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--dmg-line);
   display: flex;
   gap: 12px;
 }
 
 .corp-driver-action-btn {
-  padding: 10px 20px;
+  padding: 12px 22px;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
+  font-family: var(--dmg-font);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
@@ -235,140 +303,242 @@
 }
 
 .corp-driver-action-btn.start {
-  background: #3b82f6;
-  color: white;
+  background: var(--dmg-cta);
+  color: #fff;
+  box-shadow: var(--dmg-cta-shadow);
 }
 
 .corp-driver-action-btn.start:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  background: var(--dmg-cta-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--dmg-cta-shadow-lg);
 }
 
 .corp-driver-action-btn.complete {
-  background: #22c55e;
-  color: white;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(34, 197, 94, 0.3);
 }
 
 .corp-driver-action-btn.complete:hover {
-  background: #16a34a;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(34, 197, 94, 0.4);
 }
 
-/* Empty State */
+.corp-driver-action-btn.stop {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(239, 68, 68, 0.3);
+}
+
+.corp-driver-action-btn.stop:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(239, 68, 68, 0.4);
+}
+
+/* Empty state */
 .corp-driver-empty-state {
   text-align: center;
-  padding: 48px 24px;
-  background: #f9fafb;
-  border-radius: 12px;
-  border: 2px dashed #e5e7eb;
+  padding: 56px 24px;
+  color: var(--dmg-muted);
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--dmg-card);
+  border-radius: var(--dmg-radius);
+  border: 1.5px dashed var(--dmg-line);
 }
 
 .corp-driver-empty-state p {
-  color: #6b7280;
-  font-size: 16px;
+  color: var(--dmg-muted);
+  font-size: 15px;
   margin: 0;
 }
 
-/* Location Section */
+/* ============ Location section ============ */
+.corp-driver-location-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .corp-driver-location-section h3 {
-  margin: 0 0 20px 0;
-  color: #1f2937;
-  font-size: 20px;
-  font-weight: 600;
+  margin: 0 0 16px;
+  color: var(--dmg-navy);
+  font-size: 18px;
+  font-weight: 800;
 }
 
-.corp-driver-location-info {
-  background: #f0fdf4;
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid #bbf7d0;
-  margin-bottom: 20px;
+.corp-driver-location-status-card {
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: var(--dmg-radius);
+  padding: 24px;
+  box-shadow: var(--dmg-shadow);
 }
 
-.corp-driver-location-info p {
-  margin: 10px 0;
+.corp-driver-location-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 100px;
+  font-weight: 700;
   font-size: 14px;
-  color: #374151;
+  background: var(--dmg-bg);
+  color: var(--dmg-muted);
+  border: 1px solid var(--dmg-line);
 }
 
-.corp-driver-location-info strong {
-  color: #1f2937;
+.corp-driver-location-indicator.active {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.corp-driver-location-icon { font-size: 16px; }
+
+.corp-driver-location-coords {
+  margin-top: 18px;
+  display: grid;
+  gap: 8px;
+  background: var(--dmg-bg);
+  border: 1px solid var(--dmg-line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.corp-driver-location-coords p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--dmg-ink);
+}
+
+.corp-driver-location-coords strong { color: var(--dmg-muted); font-weight: 600; }
+
+.corp-driver-active-trip {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--dmg-teal-050);
+  border: 1px solid var(--dmg-teal-100);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--dmg-navy);
+}
+
+.corp-driver-active-trip strong { color: var(--dmg-teal-700); }
+
+.corp-driver-location-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
 }
 
 .corp-driver-location-map {
-  border-radius: 12px;
+  border-radius: var(--dmg-radius);
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--dmg-line);
+  box-shadow: 0 2px 10px rgba(10, 42, 67, 0.05);
 }
 
+.corp-driver-map-iframe,
 .corp-driver-live-map {
   width: 100%;
-  height: 300px;
+  height: 400px;
   border: none;
+  display: block;
 }
 
 .corp-driver-no-location {
   text-align: center;
-  padding: 48px 24px;
-  color: #6b7280;
-  background: #f9fafb;
-  border-radius: 12px;
-  border: 2px dashed #e5e7eb;
+  padding: 56px 24px;
+  color: var(--dmg-muted);
+  background: var(--dmg-card);
+  border-radius: var(--dmg-radius);
+  border: 1.5px dashed var(--dmg-line);
 }
 
-/* Notifications Section */
-.corp-driver-notifications-section h3 {
-  margin: 0 0 20px 0;
-  color: #1f2937;
-  font-size: 20px;
-  font-weight: 600;
+.corp-driver-location-info {
+  background: var(--dmg-teal-050);
+  border-radius: var(--dmg-radius);
+  padding: 22px 24px;
+  border: 1px solid var(--dmg-teal-100);
 }
 
-.corp-driver-notification-list {
-  max-height: 500px;
-  overflow-y: auto;
+.corp-driver-location-info h3 {
+  margin: 0 0 14px;
+  color: var(--dmg-navy);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.corp-driver-location-info ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.corp-driver-location-info li {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--dmg-ink);
+}
+
+.corp-driver-location-info p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: var(--dmg-ink);
+}
+
+.corp-driver-location-info strong { color: var(--dmg-navy); }
+
+/* ============ Notifications ============ */
+.corp-driver-notifications-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .corp-driver-notification-item {
-  background: white;
-  border-left: 4px solid #22c55e;
-  border-radius: 8px;
-  padding: 16px;
-  border: 1px solid #e5e7eb;
-  border-left: 4px solid #22c55e;
-  transition: all 0.2s ease;
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-left: 4px solid var(--dmg-teal);
+  border-radius: 12px;
+  padding: 16px 18px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .corp-driver-notification-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--dmg-shadow);
+  transform: translateY(-2px);
 }
 
-.corp-driver-notification-content p {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #1f2937;
+.corp-driver-notification-item.unread {
+  border-left-color: var(--dmg-amber);
+  background: linear-gradient(120deg, #fffdf5, var(--dmg-card) 40%);
 }
 
-.corp-driver-notification-time {
+.corp-driver-notif-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--dmg-navy);
+  margin-bottom: 4px;
+}
+
+.corp-driver-notif-message {
+  font-size: 13.5px;
+  color: var(--dmg-ink);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.corp-driver-notif-time {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--dmg-muted-2);
 }
 
-.corp-driver-no-notifications {
-  text-align: center;
-  padding: 48px 24px;
-  color: #6b7280;
-  background: #f9fafb;
-  border-radius: 12px;
-  border: 2px dashed #e5e7eb;
-}
-
-/* Responsive */
+/* ============ Responsive ============ */
 @media (max-width: 768px) {
   .corp-driver-tab-header {
     flex-direction: column;
@@ -381,13 +551,14 @@
   }
 
   .corp-driver-booking-tab {
-    padding: 8px 16px;
+    padding: 9px 16px;
     font-size: 13px;
     white-space: nowrap;
   }
-  
+
   .corp-driver-booking-meta {
     flex-direction: column;
+    align-items: flex-start;
     gap: 8px;
   }
 
@@ -397,20 +568,12 @@
     gap: 8px;
   }
 
-  .corp-driver-passenger-list .passenger-name {
-    min-width: auto;
-  }
-  
-  .corp-driver-booking-actions {
-    flex-direction: column;
-  }
+  .corp-driver-passenger-list .passenger-name { min-width: auto; }
 
-  .corp-driver-action-btn {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .corp-driver-live-map {
-    height: 250px;
-  }
+  .corp-driver-booking-actions { flex-direction: column; }
+
+  .corp-driver-action-btn { width: 100%; justify-content: center; }
+
+  .corp-driver-map-iframe,
+  .corp-driver-live-map { height: 280px; }
 }

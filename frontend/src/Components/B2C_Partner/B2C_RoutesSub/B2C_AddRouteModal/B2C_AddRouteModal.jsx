@@ -1178,6 +1178,10 @@ function B2C_AddRouteModal({ onClose }) {
                       <span className="b2c-detail-label">Vehicle:</span>
                       <span className="b2c-detail-value">
                         {selectedExistingRoute.assignedVehicle?.model ||
+                          selectedExistingRoute.effectiveVehicle?.model ||
+                          selectedExistingRoute.schedules?.find(
+                            (s) => s.assignedVehicle?.model,
+                          )?.assignedVehicle?.model ||
                           "Not assigned"}
                       </span>
                     </div>

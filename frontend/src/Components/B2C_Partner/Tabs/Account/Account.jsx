@@ -191,7 +191,7 @@ function Account() {
                     height: "100px",
                     borderRadius: "50%",
                     objectFit: "cover",
-                    border: "3px solid #e74c3c",
+                    border: "3px solid #12b0c4",
                     background: "#f0f0f0",
                   }}
                   onError={(e) => {
@@ -205,13 +205,15 @@ function Account() {
               <label
                 htmlFor="profileImageUpload"
                 style={{
-                  padding: "8px 16px",
-                  background: "#e74c3c",
+                  padding: "10px 18px",
+                  background: "linear-gradient(135deg, #16bccf 0%, #0e97a8 100%)",
                   color: "white",
-                  borderRadius: "6px",
+                  borderRadius: "12px",
                   cursor: uploadingImage ? "not-allowed" : "pointer",
                   fontSize: "14px",
+                  fontWeight: 700,
                   display: "inline-block",
+                  boxShadow: "0 12px 26px rgba(18,176,196,.3)",
                   opacity: uploadingImage ? 0.7 : 1,
                 }}
               >

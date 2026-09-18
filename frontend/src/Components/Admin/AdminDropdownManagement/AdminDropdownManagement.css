@@ -2,7 +2,7 @@
 .admin-dropdown-management {
   width: 100%;
   padding: 24px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .admin-dropdown-header {
@@ -34,7 +34,7 @@
 
 .seed-btn {
   padding: 10px 20px;
-  background: #E85D5D;
+  background: #12b0c4;
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -75,7 +75,7 @@
 .admin-dropdown-stats .stat-number {
   font-size: 28px;
   font-weight: 700;
-  color: #2DD4BF;
+  color: #0e97a8;
   line-height: 1.2;
 }
 
@@ -155,7 +155,7 @@
 }
 
 .search-input:focus {
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
@@ -184,7 +184,7 @@
 
 .category-item.active {
   background: rgba(232, 93, 93, 0.08);
-  border-left: 3px solid #E85D5D;
+  border-left: 3px solid #12b0c4;
 }
 
 .category-icon {
@@ -230,7 +230,7 @@
 .system-badge {
   font-size: 10px;
   font-weight: 600;
-  color: #3b82f6;
+  color: #0e97a8;
   background: rgba(59, 130, 246, 0.1);
   padding: 3px 8px;
   border-radius: 4px;
@@ -254,7 +254,7 @@
 
 .add-option-btn {
   padding: 8px 16px;
-  background: #2DD4BF;
+  background: #0e97a8;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -265,7 +265,7 @@
 }
 
 .add-option-btn:hover {
-  background: #14b8a6;
+  background: #0c8695;
 }
 
 .options-list {
@@ -379,13 +379,13 @@
 }
 
 .edit-btn {
-  color: #3b82f6;
+  color: #0e97a8;
 }
 
 .edit-btn:hover {
-  background: #3b82f6;
+  background: #0e97a8;
   color: #ffffff;
-  border-color: #3b82f6;
+  border-color: #0e97a8;
 }
 
 .delete-btn {
@@ -417,7 +417,7 @@
 }
 
 .edit-input:focus {
-  border-color: #3b82f6;
+  border-color: #0e97a8;
 }
 
 .edit-actions {
@@ -427,7 +427,7 @@
 
 .save-btn {
   padding: 8px 16px;
-  background: #2DD4BF;
+  background: #0e97a8;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -501,7 +501,7 @@
 
 .add-first-btn {
   padding: 10px 20px;
-  background: #E85D5D;
+  background: #12b0c4;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -578,7 +578,7 @@
 .modal-category-name {
   display: inline-block;
   padding: 4px 10px;
-  background: linear-gradient(135deg, #E85D5D, #ff7b7b);
+  background: linear-gradient(135deg, #12b0c4, #ff7b7b);
   color: #ffffff;
   border-radius: 20px;
   font-size: 12px;
@@ -681,7 +681,7 @@
 
 .form-group input:focus,
 .form-group textarea:focus {
-  border-color: #E85D5D;
+  border-color: #12b0c4;
   box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.1);
 }
 
@@ -743,7 +743,7 @@
 
 .submit-btn {
   padding: 10px 24px;
-  background: #E85D5D;
+  background: #12b0c4;
   color: #ffffff;
   border: none;
   border-radius: 8px;

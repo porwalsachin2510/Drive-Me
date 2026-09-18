@@ -1,5 +1,6 @@
 .ad-dash-b2c-providers {
   padding: 24px;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .ad-dash-b2c-providers-table-container {
@@ -57,24 +58,24 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: #fee2e2;
-  color: #991b1b;
-  border-radius: 8px;
-  font-weight: 600;
+  background: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  color: #fff;
+  border-radius: 11px;
+  font-weight: 800;
   font-size: 16px;
 }
 
 .ad-dash-b2c-providers-name {
-  font-weight: 500;
-  color: #1e293b;
+  font-weight: 700;
+  color: #0a2a43;
 }
 
 .ad-dash-b2c-providers-routes {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #0891b2;
-  font-weight: 500;
+  color: #0e97a8;
+  font-weight: 700;
 }
 
 .ad-dash-b2c-providers-routes svg {
@@ -118,8 +119,8 @@
 }
 
 .ad-dash-b2c-providers-status-more-details-requested {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #e6f7fa;
+  color: #0e97a8;
 }
 
 .ad-dash-b2c-providers-status-active {
@@ -156,13 +157,13 @@
 }
 
 .ad-dash-b2c-providers-view-btn {
-  background: #f8fafc;
-  color: #64748b;
+  background: #e6f7fa;
+  color: #0e97a8;
 }
 
 .ad-dash-b2c-providers-view-btn:hover {
-  background: #e2e8f0;
-  color: #334155;
+  background: #d3f0f4;
+  color: #0a2a43;
 }
 
 .ad-dash-b2c-providers-approve-btn {

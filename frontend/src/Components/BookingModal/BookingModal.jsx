@@ -30,6 +30,7 @@ import {
   FaWallet,
   FaCheck,
   FaSpinner,
+  FaInfoCircle,
 } from "react-icons/fa";
 import "./bookingmodal.css";
 
@@ -600,7 +601,17 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
         direction: isReturnDirection ? "return" : "outbound",
         fromLocation: isReturnDirection ? route.toLocation : route.fromLocation,
         toLocation: isReturnDirection ? route.fromLocation : route.toLocation,
-        stopPoints: trip.outboundStopPoints || trip.stopPoints || [],
+        // The arrival time at THIS trip's destination is `destinationArrivalTime`.
+        // A One Way trip has no return leg, so its legacy `arrivalTime` is a safe
+        // fallback for old data. (For Round Trips `arrivalTime` is the return-leg
+        // departure and is handled separately below.)
+        arrivalTime: trip.destinationArrivalTime || trip.arrivalTime || "",
+        // Use the leg-specific stop points so a return-direction trip never
+        // leaks outbound stops (and vice-versa). Only fall back to the generic
+        // `stopPoints` list when the leg-specific field is absent.
+        stopPoints: isReturnDirection
+          ? trip.returnStopPoints || trip.stopPoints || []
+          : trip.outboundStopPoints || trip.stopPoints || [],
       });
     } else if (trip.tripType === "Round Trip") {
       // Split round trip into 2 separate one way trips
@@ -614,7 +625,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
           fromLocation: route.fromLocation,
           toLocation: route.toLocation,
           departureTime: trip.departureTime,
-          arrivalTime: trip.arrivalTime,
+          // Outbound leg ARRIVES at the "To" location at destinationArrivalTime.
+          // `trip.arrivalTime` is the RETURN-leg departure and must not appear here.
+          arrivalTime: trip.destinationArrivalTime || "",
           stopPoints: trip.outboundStopPoints || [],
         });
       }
@@ -632,8 +645,10 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
           direction: "return",
           fromLocation: route.toLocation,
           toLocation: route.fromLocation,
+          // Return leg DEPARTS the destination at `arrivalTime` (legacy naming)
+          // and ARRIVES back at the origin at `returnArrivalTime`.
           departureTime: trip.arrivalTime,
-          arrivalTime: null,
+          arrivalTime: trip.returnArrivalTime || "",
           stopPoints: trip.returnStopPoints || [],
           // Show the return-leg (aane) assignment, falling back to the outbound
           // leg only when no dedicated return driver/vehicle was configured.
@@ -2724,7 +2739,9 @@ const BookingModal = ({ route, isOpen, onClose, isCorporate, onSuccess }) => {
                     {/* Message when online payments are disabled */}
                     {!onlinePaymentsEnabled && (
                       <div className="payment-disabled-notice">
-                        <span className="notice-icon">ℹ️</span>
+                        <span className="notice-icon">
+                          <FaInfoCircle />
+                        </span>
                         <span>
                           Online payment methods are currently unavailable.
                           Please use cash payment.

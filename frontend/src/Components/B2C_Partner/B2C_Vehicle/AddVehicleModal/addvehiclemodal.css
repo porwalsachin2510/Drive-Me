@@ -107,8 +107,8 @@
 
 .form-input:focus {
   outline: none;
-  border-color: #16a34a;
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+  border-color: #0e97a8;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .form-input:invalid {
@@ -149,12 +149,12 @@
 }
 
 .btn-submit {
-  background-color: #16a34a;
+  background-color: #0e97a8;
   color: #ffffff;
 }
 
 .btn-submit:hover {
-  background-color: #15803d;
+  background-color: #0c8695;
 }
 
 /* Tablet (768px and below) */

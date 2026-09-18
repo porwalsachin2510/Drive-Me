@@ -1283,12 +1283,12 @@ const CommuterBookingDetailsPage = () => {
                           style={{
                             width: "40px",
                             height: "40px",
-                            backgroundColor: "#007bff",
+                            backgroundColor: "#0e97a8",
                             borderRadius: "50%",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            boxShadow: "0 2px 10px rgba(0, 123, 255, 0.5)",
+                            boxShadow: "0 2px 10px rgba(18, 176, 196, 0.5)",
                             border: "3px solid white",
                             animation: "driverPulse 2s infinite",
                           }}

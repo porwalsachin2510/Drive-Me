@@ -1794,7 +1794,7 @@ const CommuterMyBookingsPage = () => {
                     style={{
                       height: "100%",
                       background:
-                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        "linear-gradient(135deg, #0a2a43 0%, #123a58 100%)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -2100,7 +2100,7 @@ const CommuterMyBookingsPage = () => {
                 onClick={() => startRealTimeTracking(selectedBooking)}
                 style={{
                   background:
-                    "linear-gradient(135deg, #007bff 0%, #0056b3 100%)",
+                    "linear-gradient(135deg, #16bccf 0%, #0e97a8 100%)",
                   color: "white",
                   border: "none",
                   padding: "8px 16px",
@@ -2109,16 +2109,16 @@ const CommuterMyBookingsPage = () => {
                   fontSize: "14px",
                   fontWeight: "600",
                   transition: "all 0.3s ease",
-                  boxShadow: "0 2px 8px rgba(0, 123, 255, 0.3)",
+                  boxShadow: "0 2px 8px rgba(18, 176, 196, 0.3)",
                 }}
                 onMouseOver={(e) => {
                   e.target.style.transform = "translateY(-2px)";
                   e.target.style.boxShadow =
-                    "0 4px 12px rgba(0, 123, 255, 0.4)";
+                    "0 4px 12px rgba(18, 176, 196, 0.4)";
                 }}
                 onMouseOut={(e) => {
                   e.target.style.transform = "translateY(0)";
-                  e.target.style.boxShadow = "0 2px 8px rgba(0, 123, 255, 0.3)";
+                  e.target.style.boxShadow = "0 2px 8px rgba(18, 176, 196, 0.3)";
                 }}
               >
                 🗺️ Track Driver
@@ -2458,7 +2458,7 @@ const CommuterMyBookingsPage = () => {
                   border: "none",
                   borderRadius: "10px",
                   background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    "linear-gradient(135deg, #16bccf 0%, #0e97a8 100%)",
                   color: "white",
                   cursor: "pointer",
                   fontSize: "15px",
@@ -2468,7 +2468,7 @@ const CommuterMyBookingsPage = () => {
                 onMouseOver={(e) => {
                   e.target.style.transform = "translateY(-2px)";
                   e.target.style.boxShadow =
-                    "0 4px 12px rgba(102, 126, 234, 0.4)";
+                    "0 4px 12px rgba(18, 176, 196, 0.4)";
                 }}
                 onMouseOut={(e) => {
                   e.target.style.transform = "translateY(0)";

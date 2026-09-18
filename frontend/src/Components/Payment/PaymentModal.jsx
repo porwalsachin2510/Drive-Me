@@ -5,6 +5,7 @@ import api from "../../utils/api";
 import { useLocale } from "../../hooks/useLocale";
 import { getPaymentMethods } from "../../config/localeConfig";
 import "./PaymentModal.css";
+import { Lock, ShieldCheck, Info } from "lucide-react";
 import { notify } from "../../utils/toast";
 
 const METHOD_ICONS = {
@@ -145,7 +146,9 @@ function PaymentModal({
               </div>
             ) : !onlinePaymentsEnabled ? (
               <div className="drivemego-wppm-disabled-notice">
-                <div className="drivemego-wppm-notice-icon">ℹ️</div>
+                <div className="drivemego-wppm-notice-icon">
+                  <Info size={20} />
+                </div>
                 <div className="drivemego-wppm-notice-content">
                   <strong>Online Payments Unavailable</strong>
                   <p>
@@ -177,7 +180,9 @@ function PaymentModal({
 
           {onlinePaymentsEnabled && !loadingPaymentSettings && (
             <div className="drivemego-wppm-redirect-notice">
-              <div className="drivemego-wppm-redirect-icon">🔐</div>
+              <div className="drivemego-wppm-redirect-icon">
+                <Lock size={20} />
+              </div>
               <div className="drivemego-wppm-redirect-text">
                 You&apos;ll be redirected to a secure {selectedMethodName} page
                 to enter your payment details and complete this top-up. We never
@@ -214,7 +219,10 @@ function PaymentModal({
         </form>
 
         <div className="drivemego-wppm-security-info">
-          <div className="drivemego-wppm-security-badge">🔒 Secure Payment</div>
+          <div className="drivemego-wppm-security-badge">
+            <ShieldCheck size={16} style={{ verticalAlign: "-3px", marginRight: 6 }} />
+            Secure Payment
+          </div>
           <div className="drivemego-wppm-security-text">
             Your payment is processed on the provider&apos;s PCI-compliant
             gateway. We use industry-standard security measures.

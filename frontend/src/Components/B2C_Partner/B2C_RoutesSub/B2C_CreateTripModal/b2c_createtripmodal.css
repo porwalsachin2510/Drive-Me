@@ -139,8 +139,8 @@
 
 .route-create-trip-b2c-form-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #12b0c4;
+  box-shadow: 0 0 0 3px rgba(18, 176, 196, 0.1);
 }
 
 .route-create-trip-b2c-notification-settings {
@@ -172,8 +172,8 @@
 }
 
 .route-create-trip-b2c-checkbox:checked + .route-create-trip-b2c-checkmark {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: #12b0c4;
+  border-color: #12b0c4;
 }
 
 .route-create-trip-b2c-checkbox:checked + .route-create-trip-b2c-checkmark::after {
@@ -214,12 +214,12 @@
 }
 
 .route-create-trip-b2c-btn-submit {
-  background: #3b82f6;
+  background: #12b0c4;
   color: white;
 }
 
 .route-create-trip-b2c-btn-submit:hover {
-  background: #2563eb;
+  background: #0e97a8;
 }
 
 @media (max-width: 640px) {

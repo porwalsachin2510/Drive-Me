@@ -23,7 +23,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background-color: #16a34a;
+  background-color: #0e97a8;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -34,7 +34,7 @@
 }
 
 .b2c-add-vehicle-btn:hover {
-  background-color: #15803d;
+  background-color: #0c8695;
 }
 
 .b2c-add-vehicle-btn svg {

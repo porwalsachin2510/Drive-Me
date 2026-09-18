@@ -1,32 +1,58 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* =====================================================================
+   DriveMeGo — Request Review (multi-partner cart)
+   IndiGo-inspired redesign on the brand navy + teal palette.
+   ===================================================================== */
+:root {
+  --dmg-navy: #0a2a43;
+  --dmg-navy-700: #123a58;
+  --dmg-teal: #12b0c4;
+  --dmg-teal-600: #0e97a8;
+  --dmg-teal-050: #e6f7fa;
+  --dmg-cta: linear-gradient(135deg, #16bccf 0%, #0e97a8 100%);
+  --dmg-bg: #eef3f8;
+  --dmg-card: #ffffff;
+  --dmg-ink: #0f2233;
+  --dmg-muted: #5b6b7b;
+  --dmg-line: #e4ecf3;
+  --dmg-shadow: 0 10px 30px rgba(10, 42, 67, 0.08);
+  --dmg-jakarta: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 .request-review {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 20px 80px;
+  padding: 40px 20px 80px;
+  font-family: var(--dmg-jakarta);
+  color: var(--dmg-ink);
 }
 
 .request-review-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: clamp(26px, 3.4vw, 34px);
+  font-weight: 800;
+  color: var(--dmg-navy);
   margin-bottom: 8px;
+  letter-spacing: -0.02em;
 }
 
 .request-review-header p {
-  color: #6b7280;
+  color: var(--dmg-muted);
   line-height: 1.6;
   max-width: 640px;
 }
 
 .request-review-empty {
   text-align: center;
-  padding: 60px 20px;
-  background: #f9fafb;
-  border-radius: 16px;
+  padding: 64px 20px;
+  background: var(--dmg-card);
+  border: 1px dashed rgba(18, 176, 196, 0.4);
+  border-radius: 20px;
   margin-top: 32px;
 }
 
 .request-review-empty p {
-  color: #6b7280;
+  color: var(--dmg-muted);
   margin-bottom: 20px;
   font-size: 1.1rem;
 }
@@ -52,11 +78,11 @@
 }
 
 .request-review-partner-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--dmg-shadow);
 }
 
 .request-review-partner-head {
@@ -64,18 +90,22 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--dmg-line);
 }
 
 .request-review-partner-head h2 {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--dmg-navy);
+  letter-spacing: -0.01em;
 }
 
 .request-review-partner-meta {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--dmg-muted);
+  font-weight: 500;
 }
 
 .request-review-vehicle-list {
@@ -92,25 +122,27 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border-radius: 10px;
+  padding: 14px 16px;
+  background: #f6f9fc;
+  border: 1px solid var(--dmg-line);
+  border-radius: 14px;
   flex-wrap: wrap;
 }
 
 .request-review-vehicle-info {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .request-review-vehicle-name {
-  font-weight: 600;
-  color: #1f2937;
+  font-weight: 700;
+  color: var(--dmg-navy);
 }
 
 .request-review-vehicle-cat {
   font-size: 0.82rem;
-  color: #6b7280;
+  color: var(--dmg-muted);
 }
 
 .request-review-vehicle-actions {
@@ -124,15 +156,25 @@
   align-items: center;
   gap: 6px;
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--dmg-muted);
+  font-weight: 600;
 }
 
 .request-review-qty-input {
   width: 64px;
-  padding: 6px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--dmg-line);
+  border-radius: 10px;
   font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--dmg-ink);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.request-review-qty-input:focus {
+  outline: none;
+  border-color: var(--dmg-teal);
+  box-shadow: 0 0 0 4px rgba(18, 176, 196, 0.12);
 }
 
 .request-review-brief-row {
@@ -142,73 +184,82 @@
   gap: 12px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px dashed #e5e7eb;
+  border-top: 1px dashed var(--dmg-line);
   flex-wrap: wrap;
 }
 
 .request-review-brief-ok {
-  color: #059669;
+  color: #0a7a45;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .request-review-brief-missing {
   color: #b45309;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .request-review-summary {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 24px;
+  background: var(--dmg-card);
+  border: 1px solid var(--dmg-line);
+  border-radius: 20px;
+  padding: 26px;
   position: sticky;
   top: 20px;
+  box-shadow: var(--dmg-shadow);
 }
 
 .request-review-summary h3 {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--dmg-navy);
   margin-bottom: 16px;
+  letter-spacing: -0.01em;
 }
 
 .request-review-summary-row {
   display: flex;
   justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid #f3f4f6;
-  color: #374151;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--dmg-line);
+  color: var(--dmg-muted);
   font-size: 0.95rem;
 }
 
 .request-review-summary-row span:last-child {
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--dmg-ink);
 }
 
 .request-review-error {
-  color: #dc2626;
+  color: #c93838;
   font-size: 0.88rem;
   margin: 14px 0 0;
   line-height: 1.5;
+  padding: 12px 14px;
+  background: #fef4f4;
+  border: 1px solid #f6cccc;
+  border-radius: 12px;
 }
 
 .request-review-btn-primary {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: var(--dmg-cta);
   color: #ffffff;
   border: none;
-  padding: 14px 22px;
-  border-radius: 12px;
+  padding: 15px 24px;
+  border-radius: 100px;
   font-size: 1rem;
   font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  box-shadow: 0 10px 24px rgba(18, 176, 196, 0.3);
 }
 
 .request-review-btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 14px 30px rgba(18, 176, 196, 0.42);
 }
 
 .request-review-btn-primary:disabled {
@@ -222,29 +273,31 @@
 }
 
 .request-review-btn-secondary {
-  background: #ffffff;
-  color: #059669;
-  border: 2px solid #10b981;
-  padding: 12px 20px;
-  border-radius: 12px;
+  background: var(--dmg-card);
+  color: var(--dmg-teal-600);
+  border: 1.5px solid var(--dmg-teal);
+  padding: 13px 20px;
+  border-radius: 100px;
   font-size: 0.95rem;
   font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
   width: 100%;
   margin-top: 12px;
 }
 
 .request-review-btn-secondary:hover:not(:disabled) {
-  background: #ecfdf5;
+  background: var(--dmg-teal-050);
 }
 
 .request-review-btn-link-danger {
   background: none;
   border: none;
-  color: #dc2626;
+  color: #c93838;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
   padding: 4px;
 }
